@@ -4,16 +4,16 @@
 
 setfpscap(300) -- nigga roblox
 
-if not isfolder("bitchbot") then 
+if not isfolder("bitchbot") then
 	makefolder("bitchbot")
 end
 
-if not isfolder("bitchbot/pf") then 
+if not isfolder("bitchbot/pf") then
 	makefolder("bitchbot/pf")
 end
 
-for i = 1, 6 do 
-	if not isfile("bitchbot/pf/config"..tostring(i)..".bb") then 
+for i = 1, 6 do
+	if not isfile("bitchbot/pf/config"..tostring(i)..".bb") then
 		writefile("bitchbot/pf/config"..tostring(i)..".bb", "")
 	end
 end
@@ -23,107 +23,112 @@ local Players = game:GetService("Players")
 local mouse = MainPlayer:GetMouse()
 local Input = game:GetService("UserInputService")
 
-local gamenet     --copied this shit straight from v1 fix later if need be
-local gamesound
-local gamelogic
-local gamechar
-local gamecam
-local gamehud
-local gamereplication
-local gamebulletcheck
-local gametraj
-local gamedeploy
-local gameparticle
-local gameround
+local client = {}
 
 for k, v in pairs(getgc(true)) do
 	if type(v) == "function" then
 		if getinfo(v).name == "bulletcheck" then
-			gamebulletcheck = v
+			client.bulletcheck = v
 		elseif getinfo(v).name == "trajectory" then
-			gametraj = v
+			client.trajectory = v
 		end
 		for k1, v1 in pairs(debug.getupvalues(v)) do
 			if type(v1) == "table" then
 				if rawget(v1, "send") then
-					gamenet = v1
+					client.net = v1
 				elseif rawget(v1, "gammo") then
-					gamelogic = v1
+					client.logic = v1
 				elseif rawget(v1, "loadknife") then
-					gamechar = v1
+					client.char = v1
 				elseif rawget(v1, "basecframe") then
-					gamecam = v1
+					client.cam = v1
 				elseif rawget(v1, "votestep") then
-					gamehud = v1
+					client.hud = v1
 				elseif rawget(v1, "getbodyparts") then
-					gamereplication = v1
+					client.replication = v1
 				elseif rawget(v1, "play") then
-					gamesound = v1
+					client.sound = v1
 				elseif rawget(v1, "checkkillzone") then
-					gameround = v1
+					client.roundsystem = v1
 				end
 			end
 		end
 	end
 	if type(v) == "table" then
 		if rawget(v, "deploy") then
-			gamedeploy = v
+			client.deploy = v
 		elseif rawget(v, "new") and rawget(v, "step") then
-			gameparticle = v
+			client.particle = v
 		end
 	end
 end
 
-local function table_contains(table, element)
-	for _, value in pairs(table) do
-		if value == element then
-			return true
+do -- table shitz
+	setreadonly(table, false)
+
+	table.contains = function(table, element)
+		for _, value in pairs(table) do
+			if value == element then
+				return true
+			end
+		end
+		return false
+	end
+
+	setreadonly(table, true)
+end
+
+do -- math stuffz
+	setreadonly(math, false)
+
+	math.map = function(X, A, B, C, D)
+		return (X-A)/(B-A) * (D-C) + C
+	end
+
+	math.clamp = function(a, lowerNum, higher)
+		if a > higher then
+			return higher
+		elseif a < lowerNum then
+			return lowerNum
+		else
+			return a
 		end
 	end
-	return false
-end
 
-local function Clamp(a, lowerNum, higher) 
-    if a > higher then
-        return higher
-    elseif a < lowerNum then
-        return lowerNum 
-    else
-        return a 
-    end
-end
-
-local function Lerp(delta, from, to)
-	if (delta > 1) then 
-		return to
-	end
-	if (delta < 0) then 
-		return from 
-	end
-	return from + ( to - from ) * delta
-end
-
-local function ColorRange(value, ranges) -- ty tony for dis function u a homie
-	if value <= ranges[1].start then return ranges[1].color end
-	if value >= ranges[#ranges].start then return ranges[#ranges].color end
-	
-	local selected = #ranges
-	for i = 1, #ranges - 1 do
-		if value < ranges[i + 1].start then
-			selected = i
-			break
+	math.Lerp = function(delta, from, to)
+		if (delta > 1) then
+			return to
 		end
+		if (delta < 0) then
+			return from
+		end
+		return from + ( to - from ) * delta
 	end
-	local minColor = ranges[selected]
-	local maxColor = ranges[selected + 1]
-	local lerpValue = (value - minColor.start) / (maxColor.start - minColor.start)
-	return Color3.new(Lerp( lerpValue, minColor.color.r, maxColor.color.r ), Lerp( lerpValue, minColor.color.g, maxColor.color.g ), Lerp( lerpValue, minColor.color.b, maxColor.color.b ))
+
+	math.ColorRange = function(value, ranges) -- ty tony for dis function u a homie
+		if value <= ranges[1].start then return ranges[1].color end
+		if value >= ranges[#ranges].start then return ranges[#ranges].color end
+
+		local selected = #ranges
+		for i = 1, #ranges - 1 do
+			if value < ranges[i + 1].start then
+				selected = i
+				break
+			end
+		end
+		local minColor = ranges[selected]
+		local maxColor = ranges[selected + 1]
+		local lerpValue = (value - minColor.start) / (maxColor.start - minColor.start)
+		return Color3.new(math.Lerp( lerpValue, minColor.color.r, maxColor.color.r ), math.Lerp( lerpValue, minColor.color.g, maxColor.color.g ), math.Lerp( lerpValue, minColor.color.b, maxColor.color.b ))
+	end
+
+	setreadonly(math, true)
 end
 
 local allrender = {}
 local function unrender()
-	for k, v in pairs(allrender) do 
-		for k1, v1 in pairs(v) do 
+	for k, v in pairs(allrender) do
+		for k1, v1 in pairs(v) do
 			v1:Remove()
 		end
 	end
@@ -141,7 +146,7 @@ local function draw_outlined_rect(visible, pos_x, pos_y, width, hieght, clr, tab
 	temptable.Thickness = 0
 	temptable.Transparency = clr[4] / 255
 	table.insert(tablename, temptable)
-	if not table_contains(allrender, tablename) then
+	if not table.contains(allrender, tablename) then
 		table.insert(allrender, tablename)
 	end
 end
@@ -156,7 +161,7 @@ local function draw_filled_rect(visible, pos_x, pos_y, width, hieght, clr, table
 	temptable.Thickness = 0
 	temptable.Transparency = clr[4] / 255
 	table.insert(tablename, temptable)
-	if not table_contains(allrender, tablename) then
+	if not table.contains(allrender, tablename) then
 		table.insert(allrender, tablename)
 	end
 end
@@ -170,7 +175,7 @@ local function draw_line(visible, thickness, start_x, start_y, end_x, end_y, clr
 	temptable.Color = RGB(clr[1], clr[2], clr[3])
 	temptable.Transparency = clr[4] / 255
 	table.insert(tablename, temptable)
-	if not table_contains(allrender, tablename) then
+	if not table.contains(allrender, tablename) then
 		table.insert(allrender, tablename)
 	end
 end
@@ -183,7 +188,7 @@ local function draw_image(visible, imagedata, pos_x, pos_y, width, hieght, trans
 	temptable.Transparency = transparency
 	temptable.Data = game:HttpGet(imagedata)
 	table.insert(tablename, temptable)
-	if not table_contains(allrender, tablename) then
+	if not table.contains(allrender, tablename) then
 		table.insert(allrender, tablename)
 	end
 end
@@ -200,7 +205,7 @@ local function draw_text(text, font, visible, pos_x, pos_y, size, centered, clr,
 	temptable.Outline = false
 	temptable.Font = font
 	table.insert(tablename, temptable)
-	if not table_contains(allrender, tablename) then
+	if not table.contains(allrender, tablename) then
 		table.insert(allrender, tablename)
 	end
 end
@@ -218,7 +223,7 @@ local function draw_outlined_text(text, font, visible, pos_x, pos_y, size, cente
 	temptable.OutlineColor = RGB(clr2[1], clr2[2], clr2[3])
 	temptable.Font = font
 	table.insert(tablename, temptable)
-	if not table_contains(allrender, tablename) then
+	if not table.contains(allrender, tablename) then
 		table.insert(allrender, tablename)
 	end
 end
@@ -234,12 +239,12 @@ local function draw_tri(visible, filled, pa, pb, pc, clr, tablename)
 	temptable.PointC = Vector2.new(pc[1], pc[2])
 	temptable.Filled = filled
 	table.insert(tablename, temptable)
-	if not table_contains(allrender, tablename) then
+	if not table.contains(allrender, tablename) then
 		table.insert(allrender, tablename)
 	end
 end
 
--- gonna put esp right here so it renders bellow everything 
+-- gonna put esp right here so it renders bellow everything
 local allesp = {
 	skel = {
 		[1] = {},
@@ -278,22 +283,22 @@ for i = 1, 35 do
 end
 
 local mp = { -- this is for menu stuffs n shi
-	w = 500,
-	h = 600,
-	x = 200,
-	y = 200,
-	activetab = 1, -- do not change this value please its not made to be fucked with sorry
-	open = true,
-	fadespeed = 10,
-	fading = false,
-	postable = {},
-	options = {},
-	clrs = {
-		norm = {},
-		dark = {},
-		togz = {}
-	},
-	mc = {127, 72, 163}
+w = 500,
+h = 600,
+x = 200,
+y = 200,
+activetab = 1, -- do not change this value please its not made to be fucked with sorry
+open = true,
+fadespeed = 10,
+fading = false,
+postable = {},
+options = {},
+clrs = {
+	norm = {},
+	dark = {},
+	togz = {}
+},
+mc = {127, 72, 163}
 }
 
 local function menu_outlined_rect(visible, pos_x, pos_y, width, hieght, clr, tablename)
@@ -312,7 +317,7 @@ local function menu_big_text(text, visible, centered, pos_x, pos_y, tablename)
 end
 
 local bbmenu = {} -- this one is for the rendering n shi
-menu_outlined_rect(true, 0, 0, mp.w, mp.h, {0, 0, 0, 255}, bbmenu)  -- first gradent or whatever 
+menu_outlined_rect(true, 0, 0, mp.w, mp.h, {0, 0, 0, 255}, bbmenu)  -- first gradent or whatever
 menu_outlined_rect(true, 1, 1, mp.w - 2, mp.h - 2, {20, 20, 20, 255}, bbmenu)
 menu_outlined_rect(true, 2, 2, mp.w - 3, 1, {127, 72, 163, 255}, bbmenu)
 table.insert(mp.clrs.norm, bbmenu[#bbmenu])
@@ -322,13 +327,13 @@ menu_outlined_rect(true, 2, 4, mp.w - 3, 1, {20, 20, 20, 255}, bbmenu)
 
 for i = 0, 19 do
 	menu_filled_rect(true, 2, 5 + i, mp.w - 4, 1, {20, 20, 20, 255}, bbmenu)
-	bbmenu[6 + i].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 20, color = RGB(35, 35, 35)}})
+	bbmenu[6 + i].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 20, color = RGB(35, 35, 35)}})
 end
 menu_filled_rect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35, 255}, bbmenu)
 
 menu_big_text("BitchBot - Phantom Forces", true, false, 6, 6, bbmenu)
 
-menu_outlined_rect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent 
+menu_outlined_rect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
 menu_outlined_rect(true, 9, 23, mp.w - 18, mp.h - 32, {20, 20, 20, 255}, bbmenu)
 menu_outlined_rect(true, 10, 24, mp.w - 19, 1, {127, 72, 163, 255}, bbmenu)
 table.insert(mp.clrs.norm, bbmenu[#bbmenu])
@@ -338,13 +343,13 @@ menu_outlined_rect(true, 10, 26, mp.w - 19, 1, {20, 20, 20, 255}, bbmenu)
 
 for i = 0, 14 do
 	menu_filled_rect(true, 10, 27 + (i * 2), mp.w - 20, 2, {45, 45, 45, 255}, bbmenu)
-	bbmenu[#bbmenu].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 15, color = RGB(35, 35, 35)}})
+	bbmenu[#bbmenu].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 15, color = RGB(35, 35, 35)}})
 end
 menu_filled_rect(true, 10, 57, mp.w - 20, mp.h - 67, {35, 35, 35, 255}, bbmenu)
 
 -- ok now the cool part :D
 
-local menutable = { 
+local menutable = {
 	{
 		name = "Legit",
 		content = {
@@ -687,7 +692,7 @@ local menutable = {
 						}
 					},
 					{
-						type = "toggle",	
+						type = "toggle",
 						name = "Held Weapon",
 						value = false,
 						extra = {
@@ -744,7 +749,7 @@ local menutable = {
 				}
 			},
 			{
-				name = "Team ESP", 
+				name = "Team ESP",
 				x = 253,
 				y = 66,
 				width = 230,
@@ -796,7 +801,7 @@ local menutable = {
 						}
 					},
 					{
-						type = "toggle",	
+						type = "toggle",
 						name = "Held Weapon",
 						value = false,
 						extra = {
@@ -974,7 +979,7 @@ local menutable = {
 					},
 					{
 						type = "toggle",
-						name = "Custom Sleeve Reflectivity", 
+						name = "Custom Sleeve Reflectivity",
 						value = false,
 					},
 					{
@@ -1002,7 +1007,7 @@ local menutable = {
 					},
 					{
 						type = "toggle",
-						name = "Custom Hand Reflectivity", 
+						name = "Custom Hand Reflectivity",
 						value = false,
 					},
 					{
@@ -1030,7 +1035,7 @@ local menutable = {
 					},
 					{
 						type = "toggle",
-						name = "Custom Weapon Reflectivity", 
+						name = "Custom Weapon Reflectivity",
 						value = false,
 					},
 					{
@@ -1055,7 +1060,7 @@ local menutable = {
 					},
 					{
 						type = "toggle",
-						name = "Disable ADS FOV", 
+						name = "Disable ADS FOV",
 						value = false,
 					},
 					{
@@ -1228,7 +1233,7 @@ local menutable = {
 }
 
 local tabz = {}
-for i = 1, #menutable do 
+for i = 1, #menutable do
 	tabz[i] = {}
 end
 
@@ -1289,23 +1294,23 @@ local function keyenum2name(key) -- did this all in a function cuz why not
 		keyname = string.gsub(keyname, "Keypad", "")
 	end
 
-	if keyname == "Unknown" or key.Value == 27 then 
+	if keyname == "Unknown" or key.Value == 27 then
 		return "None"
 	end
 
-	for k, v in pairs(keynamereturn) do 
+	for k, v in pairs(keynamereturn) do
 		if keynamereturn[keyname] then
 			return keynamereturn[keyname]
 		end
-	end 
+	end
 	return keyname
 end
 
 local function cool_box(name, x, y, width, height, tab)
 	menu_outlined_rect(true, x, y, width, height, {0, 0, 0, 255}, tab)
 	menu_outlined_rect(true, x + 1, y + 1, width - 2, height - 2, {20, 20, 20, 255}, tab)
- 	menu_outlined_rect(true, x + 2, y + 2, width - 3, 1, {127, 72, 163, 255}, tab)
- 	table.insert(mp.clrs.norm, tab[#tab])
+	menu_outlined_rect(true, x + 2, y + 2, width - 3, 1, {127, 72, 163, 255}, tab)
+	table.insert(mp.clrs.norm, tab[#tab])
 	menu_outlined_rect(true, x + 2, y + 3, width - 3, 1, {87, 32, 123, 255}, tab)
 	table.insert(mp.clrs.dark, tab[#tab])
 	menu_outlined_rect(true, x + 2, y + 4, width - 3, 1, {20, 20, 20, 255}, tab)
@@ -1321,9 +1326,9 @@ local function draw_tog(name, value, x, y, tab)
 		menu_filled_rect(true, x + 2, y + 2 + (i * 2), 8, 2, {0, 0, 0, 255}, tab)
 		table.insert(temptable, tab[#tab])
 		if value then
-			tab[#tab].Color = ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
 		else
-			tab[#tab].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
+			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
 		end
 	end
 
@@ -1365,14 +1370,14 @@ local function draw_slider(name, stradd, value, minvalue, maxvalue, x, y, length
 
 	for i = 0, 3 do
 		menu_filled_rect(true, x + 2, y + 14 + (i * 2), length - 4, 2, {0, 0, 0, 255}, tab)
-		tab[#tab].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
+		tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
 	end
 
 	local temptable = {}
 	for i = 0, 3 do
 		menu_filled_rect(true, x + 2, y + 14 + (i * 2), (length - 4) * ((value - minvalue) / (maxvalue - minvalue)), 2, {0, 0, 0, 255}, tab)
 		table.insert(temptable, tab[#tab])
-		tab[#tab].Color = ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+		tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
 	end
 	menu_outlined_rect(true, x, y + 12, length, 12, {30, 30, 30, 255}, tab)
 	menu_outlined_rect(true, x + 1, y + 13, length - 2, 10, {0, 0, 0, 255}, tab)
@@ -1386,13 +1391,13 @@ local function draw_slider(name, stradd, value, minvalue, maxvalue, x, y, length
 	return temptable
 end
 
-local function draw_dropbox(name, value, values, x, y, length, tab) 
+local function draw_dropbox(name, value, values, x, y, length, tab)
 	local temptable = {}
 	menu_big_text(name, true, false, x, y - 3, tab)
-	
+
 	for i = 0, 7 do
 		menu_filled_rect(true, x + 2, y + 14 + (i * 2), length - 4, 2, {0, 0, 0, 255}, tab)
-		tab[#tab].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 7, color = RGB(35, 35, 35)}})
+		tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 7, color = RGB(35, 35, 35)}})
 	end
 
 	menu_outlined_rect(true, x, y + 12, length, 22, {30, 30, 30, 255}, tab)
@@ -1413,7 +1418,7 @@ local function draw_combobox(name, values, x, y, length, tab)
 
 	for i = 0, 7 do
 		menu_filled_rect(true, x + 2, y + 14 + (i * 2), length - 4, 2, {0, 0, 0, 255}, tab)
-		tab[#tab].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 7, color = RGB(35, 35, 35)}})
+		tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 7, color = RGB(35, 35, 35)}})
 	end
 
 	menu_outlined_rect(true, x, y + 12, length, 22, {30, 30, 30, 255}, tab)
@@ -1440,10 +1445,10 @@ end
 
 local function draw_button(name, x, y, length, tab)
 	local temptable = {}
-	
+
 	for i = 0, 8 do
 		menu_filled_rect(true, x + 2, y + 2 + (i * 2), length - 4, 2, {0, 0, 0, 255}, tab)
-		tab[#tab].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 8, color = RGB(35, 35, 35)}})
+		tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 8, color = RGB(35, 35, 35)}})
 		table.insert(temptable, tab[#tab])
 	end
 
@@ -1515,7 +1520,7 @@ for k, v in pairs(menutable) do
 						mp.options[v.name][v1.name][v2.name][1] = v2.value
 						mp.options[v.name][v1.name][v2.name][2] = v2.type
 						mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-						mp.options[v.name][v1.name][v2.name][5] = false 
+						mp.options[v.name][v1.name][v2.name][5] = false
 						mp.options[v.name][v1.name][v2.name][6] = {v2.minvalue, v2.maxvalue}
 						y_pos += 30
 					elseif v2.type == "dropbox" then
@@ -1568,7 +1573,7 @@ local function set_barguy(slot)
 	end
 
 	for k, v in pairs(tabz) do
-		if k == slot then 
+		if k == slot then
 			for k1, v1 in pairs(v) do
 				v1.Visible = true
 			end
@@ -1577,7 +1582,7 @@ local function set_barguy(slot)
 				v1.Visible = false
 			end
 		end
-	end 
+	end
 end
 
 set_barguy(mp.activetab)
@@ -1653,7 +1658,7 @@ local function set_comboboxthingy(visible, x, y, length, values)
 			v.Visible = false
 		end
 	end
-end 
+end
 
 set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 
@@ -1779,7 +1784,7 @@ table.insert(dragbar_b, colorpickerthingy[#colorpickerthingy])
 table.insert(alphabar, colorpickerthingy[#colorpickerthingy])
 
 local dragbar_m = {}
-draw_outlined_rect(true, 30, 30, 5, 5, {0, 0, 0, 255}, colorpickerthingy)	
+draw_outlined_rect(true, 30, 30, 5, 5, {0, 0, 0, 255}, colorpickerthingy)
 table.insert(dragbar_m, colorpickerthingy[#colorpickerthingy])
 draw_outlined_rect(true, 31, 31, 3, 3, {255, 255, 255, 255}, colorpickerthingy)
 table.insert(dragbar_m, colorpickerthingy[#colorpickerthingy])
@@ -1817,7 +1822,7 @@ local function set_colorpicker(visible, color, value, alpha, text, x, y)
 		cp.hsv.h = h
 		cp.hsv.s = s
 		cp.hsv.v = v
-		
+
 		set_dragbar_r(cp.x + 175, cp.y + 23 + math.floor((1 - h)*156 ))
 		set_dragbar_m(cp.x + 9 + math.floor(s * 156), cp.y + 23 + math.floor((1 - v)* 156))
 		if not alpha then
@@ -1830,7 +1835,7 @@ local function set_colorpicker(visible, color, value, alpha, text, x, y)
 			cp.h = 191
 			for i = 1, 2 do
 				colorpickerthingy[i].Size = Vector2.new(cp.w, cp.h)
-			end 
+			end
 			colorpickerthingy[3].Size = Vector2.new(cp.w - 2, cp.h - 2)
 		else
 			cp.hsv.a = color[4]
@@ -1840,7 +1845,7 @@ local function set_colorpicker(visible, color, value, alpha, text, x, y)
 			cp.h = 211
 			for i = 1, 2 do
 				colorpickerthingy[i].Size = Vector2.new(cp.w, cp.h)
-			end 
+			end
 			colorpickerthingy[3].Size = Vector2.new(cp.w - 2, cp.h - 2)
 			set_dragbar_b(cp.x + 12 + math.floor(156 * (color[4]/255)), cp.y + 188)
 		end
@@ -1884,16 +1889,16 @@ local function set_menu_color(r, g, b)
 				if v2[2] == "toggle" then
 					if not v2[1] then
 						for i = 0, 3 do
-							v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
+							v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
 						end
 					else
 						for i = 0, 3 do
-							v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+							v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
 						end
 					end
 				elseif v2[2] == "slider" then
 					for i = 0, 3 do
-						v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+						v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
 					end
 				end
 			end
@@ -1908,20 +1913,20 @@ local colorpickeropen = false
 local colorpickerthatisopen = nil
 local shooties = {}
 local keycheck = Input.InputBegan:Connect(function(key)
-	if gamelogic.currentgun and gamelogic.currentgun.shoot then
-		local shootgun = gamelogic.currentgun.shoot
-		if not shooties[gamelogic.currentgun.shoot] then
-			gamelogic.currentgun.shoot = function(self, ...)
+	if client.logic.currentgun and client.logic.currentgun.shoot then
+		local shootgun = client.logic.currentgun.shoot
+		if not shooties[client.logic.currentgun.shoot] then
+			client.logic.currentgun.shoot = function(self, ...)
 				if not mp.open then
 					shootgun(self, ...)
 				end
 			end
 		end
-		shooties[gamelogic.currentgun.shoot] = true
+		shooties[client.logic.currentgun.shoot] = true
 	end
 	if key.KeyCode == Enum.KeyCode.Delete then
 		cp.dragging_m = false
-		cp.dragging_r = false 
+		cp.dragging_r = false
 		cp.dragging_b = false
 		if mp.open and not mp.fading then
 			for k, v in pairs(mp.options) do
@@ -1945,9 +1950,9 @@ local keycheck = Input.InputBegan:Connect(function(key)
 						elseif v2[2] == "button" then
 							if v2[1] then
 								for i = 0, 8 do
-									v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 8, color = RGB(35, 35, 35)}})
+									v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 8, color = RGB(35, 35, 35)}})
 								end
-								v2[1] = false 
+								v2[1] = false
 							end
 						end
 					end
@@ -1982,7 +1987,7 @@ local keycheck = Input.InputBegan:Connect(function(key)
 				game.RunService.Stepped:wait()
 			end
 			for k, v in pairs(bbmenu) do
-			 	v.Visible = false
+				v.Visible = false
 			end
 			for k, v in pairs(tabz) do
 				for k1, v1 in pairs(v) do
@@ -1993,7 +1998,7 @@ local keycheck = Input.InputBegan:Connect(function(key)
 		elseif not mp.open and not mp.fading then
 			mp.fading = true
 			for k, v in pairs(bbmenu) do
-			 	v.Visible = true
+				v.Visible = true
 			end
 			set_barguy(mp.activetab)
 			while not mp.open do
@@ -2050,7 +2055,7 @@ end)
 
 local function set_menu_pos(x, y)
 	for k, v in pairs(mp.postable) do
-		if v[1].Visible then 
+		if v[1].Visible then
 			v[1].Position = Vector2.new(x + v[2], y + v[3])
 		end
 	end
@@ -2211,7 +2216,7 @@ local function buttonpressed(bp)
 		writefile("bitchbot/pf/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb", figgy)
 		print("save ".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]))
 	elseif bp == mp.options["Settings"]["Configuration"]["Load Config"] then
-		
+
 		local loadedcfg = readfile("bitchbot/pf/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb")
 		local lines = {}
 		for s in loadedcfg:gmatch("[^\r\n]+") do
@@ -2221,7 +2226,7 @@ local function buttonpressed(bp)
 		if lines[1] == "BitchBot v2" then
 			local start = nil
 			for i, v in next, lines do
-				if v == "toggles {" then 
+				if v == "toggles {" then
 					start = i
 					break
 				end
@@ -2244,7 +2249,7 @@ local function buttonpressed(bp)
 
 			local start = nil
 			for i, v in next, lines do
-				if v == "sliders {" then 
+				if v == "sliders {" then
 					start = i
 					break
 				end
@@ -2263,7 +2268,7 @@ local function buttonpressed(bp)
 
 			local start = nil
 			for i, v in next, lines do
-				if v == "dropboxs {" then 
+				if v == "dropboxs {" then
 					start = i
 					break
 				end
@@ -2282,7 +2287,7 @@ local function buttonpressed(bp)
 
 			local start = nil
 			for i, v in next, lines do
-				if v == "comboboxes {" then 
+				if v == "comboboxes {" then
 					start = i
 					break
 				end
@@ -2311,7 +2316,7 @@ local function buttonpressed(bp)
 
 			local start = nil
 			for i, v in next, lines do
-				if v == "keybinds {" then 
+				if v == "keybinds {" then
 					start = i
 					break
 				end
@@ -2334,7 +2339,7 @@ local function buttonpressed(bp)
 
 			local start = nil
 			for i, v in next, lines do
-				if v == "colorpickers {" then 
+				if v == "colorpickers {" then
 					start = i
 					break
 				end
@@ -2362,7 +2367,7 @@ local function buttonpressed(bp)
 
 			local start = nil
 			for i, v in next, lines do
-				if v == "double colorpickers {" then 
+				if v == "double colorpickers {" then
 					start = i
 					break
 				end
@@ -2380,7 +2385,7 @@ local function buttonpressed(bp)
 
 				for i, v in ipairs(subs) do
 					print(i)
-					for i1, v1 in ipairs(v) do 
+					for i1, v1 in ipairs(v) do
 						if mp.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] == nil then
 							break
 						end
@@ -2398,11 +2403,11 @@ local function buttonpressed(bp)
 						if v2[2] == "toggle" then
 							if not v2[1] then
 								for i = 0, 3 do
-									v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
+									v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
 								end
 							else
 								for i = 0, 3 do
-									v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+									v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
 								end
 							end
 							if v2[5] ~= nil then
@@ -2455,7 +2460,7 @@ local function buttonpressed(bp)
 					end
 				end
 			end
-		end 
+		end
 	end
 end
 
@@ -2547,18 +2552,18 @@ local function mousebutton1downfunc()
 		end
 	else
 		for k, v in pairs(mp.options) do
-			if tabnum2str[mp.activetab] == k then 
+			if tabnum2str[mp.activetab] == k then
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
 						if v2[2] == "toggle" and not dropboxopen then
 							if mouse_pressed_in_menu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
 								if v2[1] then
 									for i = 0, 3 do
-										v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
+										v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
 									end
 								else
 									for i = 0, 3 do
-										v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+										v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
 									end
 								end
 								v2[1] = not v2[1]
@@ -2606,7 +2611,7 @@ local function mousebutton1downfunc()
 								end
 							end
 							if mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
-								if not v2[5] then 
+								if not v2[5] then
 									set_dropboxthingy(true, v2[3][1] + mp.x + 1, v2[3][2] + mp.y + 13, v2[3][3], v2[1], v2[6])
 									v2[5] = true
 								else
@@ -2630,7 +2635,7 @@ local function mousebutton1downfunc()
 								end
 							end
 							if mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
-								if not v2[5] then 
+								if not v2[5] then
 									set_comboboxthingy(true, v2[3][1] + mp.x + 1, v2[3][2] + mp.y + 13, v2[3][3], v2[1], v2[6])
 									v2[5] = true
 								else
@@ -2662,7 +2667,7 @@ local function mousebutton1downfunc()
 								if not v2[1] then
 									buttonpressed(v2)
 									for i = 0, 8 do
-										v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(35, 35, 35)}, [2] = {start = 8, color = RGB(50, 50, 50)}})
+										v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(35, 35, 35)}, [2] = {start = 8, color = RGB(50, 50, 50)}})
 									end
 									v2[1] = true
 								end
@@ -2696,7 +2701,7 @@ local function mousebutton1upfunc()
 	cp.dragging_r = false
 	cp.dragging_b = false
 	for k, v in pairs(mp.options) do
-		if tabnum2str[mp.activetab] == k then 
+		if tabnum2str[mp.activetab] == k then
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
 					if v2[2] == "slider" and v2[5] then
@@ -2704,9 +2709,9 @@ local function mousebutton1upfunc()
 					end
 					if v2[2] == "button" and v2[1] then
 						for i = 0, 8 do
-							v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 8, color = RGB(35, 35, 35)}})
+							v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 8, color = RGB(35, 35, 35)}})
 						end
-						v2[1] = false 
+						v2[1] = false
 					end
 				end
 			end
@@ -2721,13 +2726,13 @@ mouse.Button1Up:Connect(function()
 	end
 end)
 
-local dragging = false 
+local dragging = false
 local dontdrag = false
 local clickspot_x, clickspot_y, original_menu_x, original_menu_y = 0, 0, 0, 0
 
 local function rendersteppedfunc()
 	---------------------------------------------------------------------i pasted the old menu working ingame shit from the old source nate pls fix ty
-	local localply = nil  -----------------------------------------------this is the really shitty alive check that we've been using since day 
+	local localply = nil  -----------------------------------------------this is the really shitty alive check that we've been using since day
 	local players = workspace.Players.Ghosts:GetChildren()
 	table.move(workspace.Players.Phantoms:GetChildren(), 1, #workspace.Players.Phantoms:GetChildren(), #players + 1, players)
 	for k, v in pairs(players) do
@@ -2742,7 +2747,7 @@ local function rendersteppedfunc()
 			if mousedown then
 				if dragging == false then
 					clickspot_x = mouse.X
-					clickspot_y = mouse.Y - 36 
+					clickspot_y = mouse.Y - 36
 					original_menu_X = mp.x
 					original_menu_y = mp.y
 					dragging = true
@@ -2760,27 +2765,27 @@ local function rendersteppedfunc()
 		end
 		if colorpickeropen then
 			if cp.dragging_m then
-				set_dragbar_m(Clamp(mouse.X, cp.x + 12, cp.x + 167) - 2, Clamp(mouse.Y + 36, cp.y + 25, cp.y + 180) - 2)
+				set_dragbar_m(math.clamp(mouse.X, cp.x + 12, cp.x + 167) - 2, math.clamp(mouse.Y + 36, cp.y + 25, cp.y + 180) - 2)
 
-				cp.hsv.s = (Clamp(mouse.x, cp.x + 12, cp.x + 167) - cp.x - 12)/155
-				cp.hsv.v = 1 - ((Clamp(mouse.Y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
+				cp.hsv.s = (math.clamp(mouse.x, cp.x + 12, cp.x + 167) - cp.x - 12)/155
+				cp.hsv.v = 1 - ((math.clamp(mouse.Y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
 				newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 			elseif cp.dragging_r then
-				set_dragbar_r(cp.x + 175, Clamp(mouse.Y + 36, cp.y + 23, cp.y + 178)) 
+				set_dragbar_r(cp.x + 175, math.clamp(mouse.Y + 36, cp.y + 23, cp.y + 178))
 
-				maincolor.Color = Color3.fromHSV(1 - ((Clamp(mouse.Y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155), 1, 1)
+				maincolor.Color = Color3.fromHSV(1 - ((math.clamp(mouse.Y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155), 1, 1)
 
-				cp.hsv.h = 1 - ((Clamp(mouse.Y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
+				cp.hsv.h = 1 - ((math.clamp(mouse.Y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
 				newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 			elseif cp.dragging_b then
-				set_dragbar_b(Clamp(mouse.x, cp.x + 10, cp.x + 168 ), cp.y + 188)
-				newcolor.Transparency = (Clamp(mouse.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158
-				cp.hsv.a = math.floor(((Clamp(mouse.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158) * 255)
+				set_dragbar_b(math.clamp(mouse.x, cp.x + 10, cp.x + 168 ), cp.y + 188)
+				newcolor.Transparency = (math.clamp(mouse.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158
+				cp.hsv.a = math.floor(((math.clamp(mouse.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158) * 255)
 			end
 		end
 
 		for k, v in pairs(mp.options) do
-			if tabnum2str[mp.activetab] == k then 
+			if tabnum2str[mp.activetab] == k then
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
 						if v2[2] == "slider" and v2[5] then
@@ -2832,21 +2837,20 @@ local mats = {"SmoothPlastic", "ForceField", "Neon", "Foil", "Glass"}
 
 local skelparts = {"Head", "Right Arm", "Right Leg", "Left Leg", "Left Arm"}
 
-local renderstepped = game.RunService.RenderStepped:Connect(function()
-	rendersteppedfunc()
+local function renderVisuals()
 	--------------------------------------world funnies
 	if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
-		game.Lighting:SetMinutesAfterMidnight(mp.options["Visuals"]["World Visuals"]["Custom Time"][1])	
+		game.Lighting:SetMinutesAfterMidnight(mp.options["Visuals"]["World Visuals"]["Custom Time"][1])
 	end
 	if mp.options["Visuals"]["World Visuals"]["Ambience"][1] then
 		game.Lighting.Ambient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
 		game.Lighting.OutdoorAmbient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
-	else 
+	else
 		game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
 		game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
 	end
 	if mp.open then
-		gamechar.unaimedfov = mp.options["Visuals"]["Local Visuals"]["Camera FOV"][1]
+		client.char.unaimedfov = mp.options["Visuals"]["Local Visuals"]["Camera FOV"][1]
 
 		if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
 			game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
@@ -2857,13 +2861,13 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 		end
 	end
 	if mp.options["Visuals"]["Local Visuals"]["Disable ADS FOV"][1] then
-		gamecam.basefov = gamechar.unaimedfov
+		client.cam.basefov = client.char.unaimedfov
 	else
-		gamecam.basefov = 80
+		client.cam.basefov = 80
 	end
 	for k, v in pairs(allesp) do
 		for k1, v1 in ipairs(v) do
-			if v1.Visible then 
+			if v1.Visible then
 				v1.Visible = false
 			end
 		end
@@ -2884,11 +2888,11 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	local localteam = MainPlayer.Team 
+	local localteam = MainPlayer.Team
 	playerz.Enemy = {}
 	playerz.Team = {}
 	for Index, Player in pairs(Players:GetPlayers()) do
-		local Body = gamereplication.getbodyparts(Player)
+		local Body = client.replication.getbodyparts(Player)
 		if Body and typeof(Body) == 'table' and rawget(Body, 'rootpart') then
 			Player.Character = Body.rootpart.Parent
 			if Player.Team ~= localteam then
@@ -2908,9 +2912,9 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(ply_pos.x, ply_pos.y - 2.9, ply_pos.z))
 				local box_width = (bottom.y - top.y) / 2
 				local teem = k.." ESP" -- I MISSPELLEDS IT ONPURPOSE NIGGA
-				local health = math.ceil(gamehud:getplayerhealth(v1))
+				local health = math.ceil(client.hud:getplayerhealth(v1))
 				local spoty = 0
-				if (top_isrendered or bottom_isrendered) and gamehud:isplayeralive(v1) then
+				if (top_isrendered or bottom_isrendered) and client.hud:isplayeralive(v1) then
 					playernum += 1
 					if mp.options["ESP"][teem]["Name"][1] then
 						local name = tostring(v1.Name)
@@ -2970,7 +2974,7 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 
 						allesp.hpinner[playernum].Visible = true
 						allesp.hpinner[playernum].Position = Vector2.new(math.floor(bottom.x - box_width / 2 - 1) - 5, math.floor(top.y + 36) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)))
-						allesp.hpinner[playernum].Color = ColorRange(health, {
+						allesp.hpinner[playernum].Color = math.ColorRange(health, {
 							[1] = {start = 0, color = Color3.fromRGB(mp.options["ESP"][teem]["Health Bar"][5][1][1][1][1], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][2], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][3])},
 							[2] = {start = 100, color = Color3.fromRGB(mp.options["ESP"][teem]["Health Bar"][5][1][2][1][1], mp.options["ESP"][teem]["Health Bar"][5][1][2][1][2], mp.options["ESP"][teem]["Health Bar"][5][1][2][1][3])}
 						})
@@ -3046,7 +3050,7 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 						v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][3])
 						v1.Transparency = 1 + (mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][4]/-255)
 						v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Hand Material"][1]]
-						
+
 						if mp.options["Visuals"]["Local Visuals"]["Custom Hand Reflectivity"][1] then
 							v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Hand Reflectivity"][1]/100
 						end
@@ -3079,16 +3083,16 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 			for k, v in pairs(vm) do
 				if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
 					for k1, v1 in pairs(v:GetChildren()) do
-						
+
 						v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][3])
-						
+
 						if v1.Transparency ~= 1 then
 							v1.Transparency = 0.99999+(mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
 						end
 						if mp.options["Visuals"]["Local Visuals"]["Remove Weapon Skin"][1] then
 							for i2, v2 in pairs(v1:GetChildren()) do
 								if v2:IsA("Texture") or v2:IsA("Decal") then
-								    v2:Destroy()
+									v2:Destroy()
 								end
 							end
 						end
@@ -3101,10 +3105,10 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 				end
 			end
 		end
-		------------------------------------------------------ragdoll chasms 
+		------------------------------------------------------ragdoll chasms
 		if mp.getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
 			for k, v in ipairs(workspace.Ignore.DeadBody:GetChildren()) do
-				for k1, v1 in pairs(v:GetChildren()) do 
+				for k1, v1 in pairs(v:GetChildren()) do
 					if v1.Material ~= mats[mp.getval("Visuals", "Misc Visuals", "Ragdoll Material")] then
 						if v1.Name == "Torso" and v1:FindFirstChild("Pant") then
 							v1.Pant:Destroy()
@@ -3120,6 +3124,102 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 			end
 		end
 	end
+end
+
+local camera = {}
+local aimbot = {}
+
+
+do
+	camera.GetGun = function()
+		for k, v in pairs(workspace.Camera:GetChildren()) do
+			if v.Name ~= "Right Arm" and v.Name ~= "Left Arm" then
+				return v
+			end
+		end
+	end
+
+	aimbot.GetBodyParts = function(partTypes)
+
+		local partInterperet = {
+			["Head"] = false,
+			["Torso"] = false,
+			["Right Arm"] = false, ["Left Arm"] = false, 
+			["Right Leg"] = false, ["Left Leg"] = false
+		}
+		partTypes = partTypes and partTypes or {true, true, false, false}
+
+		
+		partInterperet["Head"] = partTypes[1]
+
+		partInterperet["Torso"] = partTypes[2]
+
+		partInterperet["Right Arm"] = partTypes[3]
+		partInterperet["Left Arm"] = partTypes[3]
+
+		partInterperet["Right Leg"] = partTypes[4]
+		partInterperet["Left Leg"] = partTypes[4]
+
+		local BodyParts = {}
+
+		for i, Player in ipairs(game.Players:GetPlayers()) do
+			if Player.Team ~= MainPlayer.Team then
+				local PlayerBodyParts = client.replication.getbodyparts(Player)
+				if PlayerBodyParts then
+					for i1, Part in ipairs(PlayerBodyParts) do
+						if partInterperet[Part.Name] then
+							BodyParts[Part] = Part
+						end
+					end
+				end
+			end
+		end
+
+		return BodyParts
+	end
+
+	aimbot.GetTargetLegit = function(fov, partPreference, hitscan)
+		local closest, closestPart = math.map(fov, 0, 180, 1, -1)
+		partPreference = partPreference and partPreference or "head"
+		hitscan = hitscan and true or false
+
+		for i, Player in pairs(game.Players:GetPlayers()) do
+			if Player.Team == MainPlayer.Team then continue end
+			local Parts = client.replication.getbodyparts(Player)
+			if Parts then
+				local dot = client.cam.cframe.LookVector:Dot((Parts[partPreference].Position - client.cam.cframe.p).Unit)
+				if dot > closest then
+					closest = dot
+					closestPart = Parts.head
+				end
+			end
+		end
+
+		return closestPart, math.map(closest, -1, 1, 180, 0)
+	end
+
+	aimbot.TriggerBot = function()
+		if Input:IsKeyDown(mp.getval("Legit", "Trigger Bot", "Enabled", "keybind")) then
+			print("Key Is Down")
+			local gun = camera.GetGun()
+			if gun then
+				local barrel = gun.Flame
+				if barrel then
+					local parts = aimbot.GetBodyParts(mp.getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
+					local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {workspace.Camera})
+					if parts[hit] then
+						client.logic.currentgun:shoot(true)
+					end
+				end
+			end
+		end
+	end
+end
+
+local renderstepped = game.RunService.RenderStepped:Connect(function()
+	rendersteppedfunc()
+	renderVisuals()
+	aimbot.TriggerBot()
 end)
 -- wait(20)
 -- unrender()
