@@ -3195,7 +3195,7 @@ do
 			local gun = camera.GetGun()
 			if gun then
 				local barrel = gun.Flame
-				if barrel and client.logic.currentgun.type ~= "KNIFE" then
+				if barrel and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then
 					local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {workspace.Camera, workspace.Players[MainPlayer.Team.Name]})
 					if parts[hit.Name] then
 						client.logic.currentgun:shoot(true)
