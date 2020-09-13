@@ -3139,26 +3139,7 @@ do
 		end
 	end
 
-	aimbot.GetBodyParts = function(partTypes)
-
-		local partInterperet = {
-			["Head"] = false,
-			["Torso"] = false,
-			["Right Arm"] = false, ["Left Arm"] = false, 
-			["Right Leg"] = false, ["Left Leg"] = false
-		}
-		partTypes = partTypes and partTypes or {true, true, false, false}
-
-		
-		partInterperet["Head"] = partTypes[1]
-
-		partInterperet["Torso"] = partTypes[2]
-
-		partInterperet["Right Arm"] = partTypes[3]
-		partInterperet["Left Arm"] = partTypes[3]
-
-		partInterperet["Right Leg"] = partTypes[4]
-		partInterperet["Left Leg"] = partTypes[4]
+	aimbot.GetBodyParts = function()
 
 		local BodyParts = {}
 
@@ -3200,15 +3181,26 @@ do
 
 	aimbot.TriggerBot = function()
 		if Input:IsKeyDown(mp.getval("Legit", "Trigger Bot", "Enabled", "keybind")) then
-			print("Key Is Down")
+			--table.foreach(mp.getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes"), print)
+			--print("Key Is Down")
+			local parts = mp.getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes")
+
+			parts["Head"] = parts[1]
+			parts["Torso"] = parts[2]
+			parts["Right Arm"] = parts[3]
+			parts["Left Arm"] = parts[3]
+			parts["Right Leg"] = parts[4]
+			parts["Left Leg"] = parts[4]
+
 			local gun = camera.GetGun()
 			if gun then
 				local barrel = gun.Flame
-				if barrel then
-					local parts = aimbot.GetBodyParts(mp.getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
-					local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {workspace.Camera})
-					if parts[hit] then
+				if barrel and client.logic.currentgun.type ~= "KNIFE" then
+					local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {workspace.Camera, workspace.Players[MainPlayer.Team.Name]})
+					if parts[hit.Name] then
 						client.logic.currentgun:shoot(true)
+					else
+						client.logic.currentgun:shoot(false)
 					end
 				end
 			end
