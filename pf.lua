@@ -1946,7 +1946,8 @@ local dropboxthatisopen = nil
 local colorpickeropen = false
 local colorpickerthatisopen = nil
 local shooties = {}
-local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
+
+function inputBeganMenu(key)
 	if client.logic.currentgun and client.logic.currentgun.shoot then
 		local shootgun = client.logic.currentgun.shoot
 		if not shooties[client.logic.currentgun.shoot] then
@@ -2091,7 +2092,7 @@ local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 
 		end
 	end
-end)
+end
 
 local function set_menu_pos(x, y)
 	for k, v in pairs(mp.postable) do
@@ -2956,8 +2957,8 @@ local function renderVisuals()
 
 				local fovMult = 80 / workspace.CurrentCamera.FieldOfView
 
-				local sizeX = math.floor(2000 / top.Z * fovMult)
-				local sizeY = math.floor(math.max(math.abs(top.Y - bottom.Y), sizeX * 0.5))
+				local sizeX = math.ceil(2000 / top.Z * fovMult)
+				local sizeY = math.ceil(math.max(top.Y - bottom.Y, sizeX * 0.5))
 
 				local boxSize = Vector2.new(sizeX, sizeY)
 				local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(top.Y))
@@ -3182,11 +3183,39 @@ local function renderVisuals()
 	end
 end
 
+local keybindtoggles = { -- ANCHOR keybind toggles
+	fly = false,
+	thirdperson = false,
+}
+
+do --ANCHOR metatable hookz
+
+	local mt = getrawmetatable(game)
+
+	local oldNewIndex = mt.__newindex
+
+	setreadonly(mt, false)
+
+	mt.__newindex = newcclosure(function(self, id, val)
+		if mp.getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson and self == workspace.Camera and id == "CFrame" then
+			local hit = workspace:Raycast(val.p, -val.LookVector * 6)
+			local mag = hit and (hit.Position - val.p).Magnitude or nil
+			val *= CFrame.new(0, 0, mag and mag or 6)
+		end
+		return oldNewIndex(self, id, val)
+	end)
+
+	setreadonly(mt, true)
+
+end
+
 local camera = {}
+
 local aimbot = {}
 
 
-do
+
+do -- defining 
 	function camera:GetGun()
 
 
@@ -3328,6 +3357,13 @@ do
 
 
 end
+
+local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
+	inputBeganMenu(key)
+	if mp.getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp.getval("Visuals", "Local Visuals", "Third Person", "keybind") then
+		keybindtoggles.thirdperson = not keybindtoggles.thirdperson
+	end
+end)
 
 local renderstepped = game.RunService.RenderStepped:Connect(function()
 	renderSteppedMenu()
