@@ -3203,7 +3203,7 @@ do
 
 	function aimbot:DoYourThing()
 
-		if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and mp.getval("Legit", "Aim Assist", "Enabled") then
+		if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and mp.getval("Legit", "Aim Assist", "Enabled") and client.logic.currentgun then
 			local keybind = mp.getval("Legit", "Aim Assist", "Aimbot Key") - 1
 			local smoothing = (mp.getval("Legit", "Aim Assist", "Smoothing Factor") + 2) / GAME_SETTINGS.MouseSensitivity
 			local fov = mp.getval("Legit", "Aim Assist", "Aimbot FOV")
