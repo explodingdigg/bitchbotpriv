@@ -2064,8 +2064,11 @@ local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 
 	if mp.open and not mp.fading then
 		for k, v in pairs(mp.options) do
+
 			for k1, v1 in pairs(v) do
+
 				for k2, v2 in pairs(v1) do
+
 					if v2[2] == "toggle" then
 						if v2[5] ~= nil then
 							if v2[5][2] == "keybind" and v2[5][5] and key.KeyCode.Value ~= 0 then
@@ -2081,8 +2084,11 @@ local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 							end
 						end
 					end
+
 				end
+
 			end
+
 		end
 	end
 end)
@@ -3199,11 +3205,14 @@ do
 
 		if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and mp.getval("Legit", "Aim Assist", "Enabled") then
 			local keybind = mp.getval("Legit", "Aim Assist", "Aimbot Key") - 1
-			local smoothing = ((mp.getval("Legit", "Aim Assist", "Smoothing Factor") + 2) / 2) / gameSettings.MouseSensitivity
+			local smoothing = (mp.getval("Legit", "Aim Assist", "Smoothing Factor") + 2) / GAME_SETTINGS.MouseSensitivity
 			local fov = mp.getval("Legit", "Aim Assist", "Aimbot FOV")
 
-			if INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
-				local targetPart = aimbot:GetTargetLegit(fov, "head", true)
+			local hitboxPriority = mp.getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
+			local hitscan = not mp.getval("Legit", "Aim Assist", "Force Priority Hitbox")
+
+			if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
+				local targetPart = aimbot:GetTargetLegit(fov, hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
 				if targetPart then
 					aimbot:AimAtTarget(targetPart, smoothing)
 				end
@@ -3264,6 +3273,7 @@ do
 				if Parts then
 					if hitscan then
 						for i1, Bone in pairs(Parts) do
+
 							if Bone.ClassName == "Part" then
 								if aimbot:GetFOV(Bone) < closest then
 									if aimbot:IsVisible(Bone) then
@@ -3297,12 +3307,7 @@ do
 		if INPUT_SERVICE:IsKeyDown(mp.getval("Legit", "Trigger Bot", "Enabled", "keybind")) then
 			local parts = mp.getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes")
 
-			parts["Head"] = parts[1]
-			parts["Torso"] = parts[2]
-			parts["Right Arm"] = parts[3]
-			parts["Left Arm"] = parts[3]
-			parts["Right Leg"] = parts[4]
-			parts["Left Leg"] = parts[4]
+			
 
 			local gun = camera:GetGun()
 			if gun then
