@@ -1238,6 +1238,7 @@ local menutable = {
 						value = 0,
 						minvalue = 0,
 						maxvalue = 100,
+						stradd = "%",
 					},
 					{
 						type = "toggle",
@@ -1266,6 +1267,7 @@ local menutable = {
 						value = 0,
 						minvalue = 0,
 						maxvalue = 100,
+						stradd = "%",
 					},
 					{
 						type = "toggle",
@@ -1294,6 +1296,7 @@ local menutable = {
 						value = 0,
 						minvalue = 0,
 						maxvalue = 100,
+						stradd = "%",
 					},
 					{
 						type = "toggle",
@@ -1332,6 +1335,13 @@ local menutable = {
 							key = nil
 						}
 					},
+					{
+						type = "slider",
+						name = "Third Person Distance",
+						value = 60,
+						minvalue = 1,
+						maxvalue = 150,
+					}
 
 				}
 			},
@@ -1379,7 +1389,8 @@ local menutable = {
 						name = "Saturation Density",
 						value = 0,
 						minvalue = 0,
-						maxvalue = 20,
+						maxvalue = 100,
+						stradd = "%",
 					},
 				}
 			},
@@ -2893,7 +2904,7 @@ local function renderVisuals()
 
 		if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
 			game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
-			game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/5
+			game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
 		else
 			game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
 			game.Lighting.MapSaturation.Saturation = -0.25
@@ -2958,7 +2969,7 @@ local function renderVisuals()
 				local fovMult = 80 / workspace.CurrentCamera.FieldOfView
 
 				local sizeX = math.ceil(2000 / top.Z * fovMult)
-				local sizeY = math.ceil(math.max(top.Y - bottom.Y, sizeX * 0.5))
+				local sizeY = math.ceil(math.max(bottom.Y - top.Y, sizeX * 0.5))
 
 				local boxSize = Vector2.new(sizeX, sizeY)
 				local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(top.Y))
@@ -2971,7 +2982,7 @@ local function renderVisuals()
 				if (topIsRendered or bottomIsRendered) and client.hud:isplayeralive(v1) then
 					playernum += 1
 					if mp.options["ESP"][teem]["Name"][1] then
-						local name = tostring(v1.Name)
+						local name = v1.Name
 						if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
 							name = string.lower(name)
 						elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
@@ -2985,18 +2996,17 @@ local function renderVisuals()
 						allesp.nametext[playernum].Transparency = mp.options["ESP"][teem]["Name"][5][1][4]/255
 					end
 					if mp.options["ESP"][teem]["Box"][1] then
-						local size = Vector2.new(math.floor(sizeX), math.floor(bottom.y - top.y))
 						local transparency = (mp.options["ESP"][teem]["Box"][5][1][4] - 40) / 255
 
 						allesp.outerbox[playernum].Visible = true
 						allesp.outerbox[playernum].Position = boxPosition
-						allesp.outerbox[playernum].Size = size
+						allesp.outerbox[playernum].Size = boxSize
 						allesp.outerbox[playernum].Thickness = 3
 						allesp.outerbox[playernum].Transparency = transparency
 
 						allesp.box[playernum].Visible = true
 						allesp.box[playernum].Position = boxPosition
-						allesp.box[playernum].Size = size
+						allesp.box[playernum].Size = boxSize
 						allesp.box[playernum].Color = RGB(mp.options["ESP"][teem]["Box"][5][1][1], mp.options["ESP"][teem]["Box"][5][1][2], mp.options["ESP"][teem]["Box"][5][1][3])
 						allesp.box[playernum].Transparency = transparency
 
@@ -3056,7 +3066,7 @@ local function renderVisuals()
 								if v1.Name == nil then
 									wepname = "KNIFE"
 								else
-									wepname = tostring(v2.Name)
+									wepname = v2.Name
 								end
 							end
 						end
@@ -3073,8 +3083,7 @@ local function renderVisuals()
 						allesp.weptext[playernum].Transparency = mp.options["ESP"][teem]["Held Weapon"][5][1][4]/255
 					end
 					if mp.options["ESP"][teem]["Distance"][1] then
-
-						allesp.disttext[playernum].Text = tostring(math.ceil(bottom.z / 5)).."m"
+						allesp.disttext[playernum].Text = tostring(math.ceil(bottom.z / 5)).."m" --TODO alan i told you to make this not worldtoscreen based.
 						allesp.disttext[playernum].Visible = true
 						allesp.disttext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y - 2) + spoty)
 						allesp.disttext[playernum].Color = RGB(mp.options["ESP"][teem]["Distance"][5][1][1], mp.options["ESP"][teem]["Distance"][5][1][2], mp.options["ESP"][teem]["Distance"][5][1][3])
@@ -3083,12 +3092,14 @@ local function renderVisuals()
 					if mp.options["ESP"][teem]["Skeleton"][1] then
 						local torso = Camera:WorldToViewportPoint(Vector3.new(v1.Character.Torso.Position.x, v1.Character.Torso.Position.y, v1.Character.Torso.Position.z))
 						for k2, v2 in ipairs(skelparts) do
+
 							local posie = Camera:WorldToViewportPoint(Vector3.new(v1.Character:FindFirstChild(v2).Position.x, v1.Character:FindFirstChild(v2).Position.y, v1.Character:FindFirstChild(v2).Position.z))
 							allesp.skel[k2][playernum].From = Vector2.new(posie.x, posie.y)
 							allesp.skel[k2][playernum].To = Vector2.new(torso.x, torso.y)
 							allesp.skel[k2][playernum].Visible = true
 							allesp.skel[k2][playernum].Color = RGB(mp.options["ESP"][teem]["Skeleton"][5][1][1], mp.options["ESP"][teem]["Skeleton"][5][1][2], mp.options["ESP"][teem]["Skeleton"][5][1][3])
 							allesp.skel[k2][playernum].Transparency = mp.options["ESP"][teem]["Skeleton"][5][1][4]/255
+						
 						end
 					end
 				end
@@ -3198,9 +3209,10 @@ do --ANCHOR metatable hookz
 
 	mt.__newindex = newcclosure(function(self, id, val)
 		if mp.getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson and self == workspace.Camera and id == "CFrame" then
-			local hit = workspace:Raycast(val.p, -val.LookVector * 6)
+			local dist = mp.getval("Visuals", "Local Visuals", "Third Person Distance") / 10
+			local hit = workspace:Raycast(val.p, -val.LookVector * dist)
 			local mag = hit and (hit.Position - val.p).Magnitude or nil
-			val *= CFrame.new(0, 0, mag and mag or 6)
+			val *= CFrame.new(0, 0, mag and mag or dist)
 		end
 		return oldNewIndex(self, id, val)
 	end)
