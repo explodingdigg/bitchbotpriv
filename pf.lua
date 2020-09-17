@@ -882,6 +882,48 @@ local menutable = {
 						name = "Force Priority",
 						value = false
 					},
+				},
+			},
+			{
+				name = "Hack vs. Hack", 
+				x = 253,
+				y = 66,
+				width = 230,
+				height = 272,
+				content = {
+					{
+						type = "toggle",
+						name = "Multipoint Resolver",
+						value = false
+					},
+					{
+						type = "slider",
+						name = "Multipoint Size",
+						value = 2,
+						minvalue = 1,
+						maxvalue = 10
+					},
+					{
+						type = "toggle",
+						name = "Autowall Resolver",
+						value = false
+					},
+					{
+						type = "slider",
+						name = "Autowall Resolver Points",
+						value = 0,
+						minvalue = 0,
+						maxvalue = 10,
+						stradd = " points"
+					},
+					{
+						type = "slider",
+						name = "Autowall Resolver Step",
+						value = 50,
+						minvalue = 5,
+						maxvalue = 100,
+						stradd = " studs"
+					}
 				}
 			},
 		}
@@ -2979,6 +3021,7 @@ local function renderVisuals()
 				local spoty = 0
 
 
+				
 				if (topIsRendered or bottomIsRendered) and client.hud:isplayeralive(v1) then
 					playernum += 1
 					if mp.options["ESP"][teem]["Name"][1] then
