@@ -3,6 +3,11 @@ local mp = { -- this is for menu stuffs n shi
 	h = 600,
 	x = 200,
 	y = 200,
+	columns = {
+		width = 230,
+		left = 17,
+		right = 253
+	},
 	activetab = 1, -- do not change this value please its not made to be fucked with sorry
 	open = true,
 	fadespeed = 10,
@@ -31,7 +36,7 @@ do
 			for _,u in pairs(debug.getupvalues(v)) do
 				if type(u) == 'table' then
 					if rawget(u, 'send') then
-						gamenet = u;
+						gamenet = u
 					end
 				end
 			end
@@ -598,16 +603,16 @@ do
 	end
 end
 -- ok now the cool part :D
-
+--ANCHOR menu stuffz
 local menutable = {
-	{
+	{--ANCHOR Legit
 		name = "Legit",
 		content = {
 			{
 				name = "Aim Assist",
 				x = 17,
 				y = 66,
-				width = 230,
+				width = mp.columns.width,
 				height = 332,
 				content = {
 					{
@@ -687,9 +692,9 @@ local menutable = {
 			},
 			{
 				name = "Position Adjustment",
-				x = 17,
+				x = mp.columns.left,
 				y = 404,
-				width = 230,
+				width = mp.columns.width,
 				height = 179,
 				content = {
 					{
@@ -709,9 +714,9 @@ local menutable = {
 			},
 			{
 				name = "Trigger Bot",
-				x = 253,
+				x = mp.columns.right,
 				y = 66,
-				width = 230,
+				width = mp.columns.width,
 				height = 254,
 				content = {
 					{
@@ -769,9 +774,9 @@ local menutable = {
 			},
 			{
 				name = "Recoil Control",
-				x = 253,
+				x = mp.columns.right,
 				y = 326,
-				width = 230,
+				width = mp.columns.width,
 				height = 257,
 				content = {
 					{
@@ -812,14 +817,14 @@ local menutable = {
 			}
 		}
 	},
-	{
+	{--ANCHOR Rage
 		name = "Rage",
 		content = {
 			{
 				name = "Aimbot",
-				x = 17,
+				x = mp.columns.left,
 				y = 66,
-				width = 230,
+				width = mp.columns.width,
 				height = 272,
 				content = {
 					{
@@ -879,17 +884,17 @@ local menutable = {
 					},
 					{
 						type = "toggle",
-						name = "Force Priority",
+						name = "Force Priority Hitbox",
 						value = false
 					},
 				},
 			},
 			{
 				name = "Hack vs. Hack", 
-				x = 253,
+				x = mp.columns.right,
 				y = 66,
-				width = 230,
-				height = 272,
+				width = mp.columns.width,
+				height = 156,
 				content = {
 					{
 						type = "toggle",
@@ -926,16 +931,73 @@ local menutable = {
 					}
 				}
 			},
+			{
+				name = "Extra",
+				x = mp.columns.left,
+				y = 344,
+				width = mp.columns.width,
+				height = 200,
+				content = {
+					{
+						type = "toggle",
+						name = "Knife Bot",
+						value = false,
+						extra = {
+							type = "keybind",
+						}
+					},
+					{
+						type = "dropbox",
+						name = "Knife Bot Type",
+						value = 2,
+						values = {"Assist", "Aura"}
+					},
+				},
+			},
+			{
+				name = "Anti Aim",
+				x = mp.columns.right,
+				y = 228,
+				width = mp.columns.width,
+				height = 250,
+				content = {
+					{
+						type = "toggle",
+						name = "Enabled",
+						value = false,
+						extra = {
+							type = "keybind"
+						},
+					},
+					{
+						type = "dropbox",
+						name = "Pitch",
+						value = 4,
+						values = {"Off", "Up", "Zero", "Down", "Upside Down", "Random"}
+					},
+					{
+						type = "dropbox",
+						name = "Yaw",
+						value = 2,
+						values = {"Off", "Backward", "Spin", "Random"}
+					},
+					{
+						type = "toggle",
+						name = "Hide In Floor",
+						value = true
+					}
+				}
+			},
 		}
 	},
-	{
+	{--ANCHOR ESP
 		name = "ESP",
 		content = {
 			{
 				name = "Enemy ESP",
-				x = 17,
+				x = mp.columns.left,
 				y = 66,
-				width = 230,
+				width = mp.columns.width,
 				height = 224,
 				content = {
 					{
@@ -1042,9 +1104,9 @@ local menutable = {
 			},
 			{
 				name = "Team ESP",
-				x = 253,
+				x = mp.columns.right,
 				y = 66,
-				width = 230,
+				width = mp.columns.width,
 				height = 188,
 				content = {
 					{
@@ -1136,9 +1198,9 @@ local menutable = {
 			},
 			{
 				name = "ESP Settings",
-				x = 253,
+				x = mp.columns.right,
 				y = 260,
-				width = 230,
+				width = mp.columns.width,
 				height = 323,
 				content = {
 					{
@@ -1194,9 +1256,9 @@ local menutable = {
 			},
 			{
 				name = "Dropped Esp",
-				x = 17,
+				x = mp.columns.left,
 				y = 296,
-				width = 230,
+				width = mp.columns.width,
 				height = 287,
 				content = {
 					{
@@ -1243,14 +1305,14 @@ local menutable = {
 			},
 		}
 	},
-	{
+	{--ANCHOR Visuals
 		name = "Visuals",
 		content = {
 			{
 				name = "Local Visuals",
-				x = 17,
+				x = mp.columns.left,
 				y = 66,
-				width = 230,
+				width = mp.columns.width,
 				height = 517,
 				content = {
 					{
@@ -1389,9 +1451,9 @@ local menutable = {
 			},
 			{
 				name = "World Visuals",
-				x = 253,
+				x = mp.columns.right,
 				y = 66,
-				width = 230,
+				width = mp.columns.width,
 				height = 175,
 				content = {
 					{
@@ -1438,9 +1500,9 @@ local menutable = {
 			},
 			{
 				name = "Misc Visuals",
-				x = 253,
+				x = mp.columns.right,
 				y = 371,
-				width = 230,
+				width = mp.columns.width,
 				height = 212,
 				content = {
 					{
@@ -1483,17 +1545,29 @@ local menutable = {
 			}
 		}
 	},
-	{
-		name = "Misc"
+	{--ANCHOR Misc
+		name = "Misc",
+		content = {
+			{
+				name = "Movement",
+				x = mp.columns.left, 
+				y = 66,
+				width = mp.columns.width,
+				height = 170,
+				content = {
+
+				},
+			},
+		}
 	},
-	{
+	{--ANCHOR Settings
 		name = "Settings",
 		content = {
 			{
 				name = "Menu Settings",
-				x = 17,
+				x = mp.columns.left,
 				y = 66,
-				width = 230,
+				width = mp.columns.width,
 				height = 170,
 				content = {
 					{
@@ -1510,9 +1584,9 @@ local menutable = {
 			},
 			{
 				name = "Configuration",
-				x = 253,
+				x = mp.columns.right,
 				y = 66,
-				width = 230,
+				width = mp.columns.width,
 				height = 170,
 				content = {
 					{
@@ -3008,10 +3082,10 @@ local function renderVisuals()
 				local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 				local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 
-				local fovMult = 80 / workspace.CurrentCamera.FieldOfView
+				local fovMult = 80 / Camera.FieldOfView
 
 				local sizeX = math.ceil(2000 / top.Z * fovMult)
-				local sizeY = math.ceil(math.max(bottom.Y - top.Y, sizeX * 0.5))
+				local sizeY = math.ceil(math.max(math.abs(bottom.Y - top.Y), sizeX))
 
 				local boxSize = Vector2.new(sizeX, sizeY)
 				local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(top.Y))
@@ -3068,25 +3142,28 @@ local function renderVisuals()
 								end
 							end
 							if math.floor(top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)) + 12 > bottom.y then
-								allesp.hptext[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX / 2 - 1) - math.ceil(allesp.hptext[playernum].TextBounds.x) - hp_sub, math.floor((top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)) - (math.floor(top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)) + 12 - (bottom.y))))
+								allesp.hptext[playernum].Position = Vector2.new(math.floor(boxPosition.x) - math.ceil(allesp.hptext[playernum].TextBounds.x) - hp_sub, math.floor((top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)) - (math.floor(top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)) + 12 - (bottom.y))))
 							else
-								allesp.hptext[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX / 2 - 1) - math.ceil(allesp.hptext[playernum].TextBounds.x) - hp_sub, math.floor(top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)))
+								allesp.hptext[playernum].Position = Vector2.new(math.floor(boxPosition.x) - math.ceil(allesp.hptext[playernum].TextBounds.x) - hp_sub, math.floor(top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)))
 							end
 							allesp.hptext[playernum].Color = RGB(mp.options["ESP"][teem]["Health Number"][5][1][1], mp.options["ESP"][teem]["Health Number"][5][1][2], mp.options["ESP"][teem]["Health Number"][5][1][3])
 							allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
 						end
 
 						allesp.hpouter[playernum].Visible = true
-						allesp.hpouter[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX / 2 - 1) - 6, math.floor(top.y - 1))
-						allesp.hpouter[playernum].Size = Vector2.new(4, math.floor(bottom.y - top.y + 2))
+						allesp.hpouter[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 6, math.floor(boxPosition.y) - 1)
+						allesp.hpouter[playernum].Size = Vector2.new(4, boxSize.Y + 2)
 
 						allesp.hpinner[playernum].Visible = true
-						allesp.hpinner[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX / 2 - 1) - 5, math.floor(top.y) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)))
+						allesp.hpinner[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
+						
+						allesp.hpinner[playernum].Size = Vector2.new(2, -math.floor(boxSize.Y * health / 100))
+
 						allesp.hpinner[playernum].Color = math.ColorRange(health, {
 							[1] = {start = 0, color = Color3.fromRGB(mp.options["ESP"][teem]["Health Bar"][5][1][1][1][1], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][2], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][3])},
 							[2] = {start = 100, color = Color3.fromRGB(mp.options["ESP"][teem]["Health Bar"][5][1][2][1][1], mp.options["ESP"][teem]["Health Bar"][5][1][2][1][2], mp.options["ESP"][teem]["Health Bar"][5][1][2][1][3])}
 						})
-						allesp.hpinner[playernum].Size = Vector2.new(2, math.floor((bottom.y - top.y)*(health/100)))
+
 					elseif mp.options["ESP"][teem]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
 						local hp_sub = 0
 						if health < 100 then
@@ -3289,7 +3366,7 @@ do -- defining
 
 		if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and mp.getval("Legit", "Aim Assist", "Enabled") and client.logic.currentgun then
 			local keybind = mp.getval("Legit", "Aim Assist", "Aimbot Key") - 1
-			local smoothing = (mp.getval("Legit", "Aim Assist", "Smoothing Factor") + 2) / GAME_SETTINGS.MouseSensitivity
+			local smoothing = (mp.getval("Legit", "Aim Assist", "Smoothing Factor") + 2) * 0.2 / GAME_SETTINGS.MouseSensitivity
 			local fov = mp.getval("Legit", "Aim Assist", "Aimbot FOV")
 
 			local hitboxPriority = mp.getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
@@ -3335,6 +3412,7 @@ do -- defining
 
 		local origin = Camera.CFrame.Position
 		local hit, position = workspace:FindPartOnRayWithIgnoreList(Ray.new(origin, Part.Position - origin), {Camera, workspace.Ignore, workspace.Players})
+		--print(position, Part.Position)
 		return position == Part.Position
 
 
@@ -3391,20 +3469,25 @@ do -- defining
 		if INPUT_SERVICE:IsKeyDown(mp.getval("Legit", "Trigger Bot", "Enabled", "keybind")) then
 			local parts = mp.getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes")
 
-			
+			parts["Head"] = parts[1]
+			parts["Torso"] = parts[2]
+			parts["Right Arm"] = parts[3]
+			parts["Left Arm"] = parts[3]
+			parts["Right Leg"] = parts[4]
+			parts["Left Leg"] = parts[4]
 
 			local gun = camera:GetGun()
-			if gun then
-				local barrel = gun.Flame
-				if barrel and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then
-					local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
+			if not gun then return end
 
-					if parts[hit.Name] then
-						if not aimbot:IsVisible(hit) then return end
-						client.logic.currentgun:shoot(true)
-					else
-						client.logic.currentgun:shoot(false)
-					end
+			local barrel = gun.Flame
+			if barrel and client.logic.currentgun then
+				local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
+
+				if hit and parts[hit.Name] then
+					if not aimbot:IsVisible(hit) then return end
+					client.logic.currentgun:shoot(true)
+				else
+					client.logic.currentgun:shoot(false)
 				end
 			end
 		end
