@@ -973,7 +973,7 @@ local menutable = {
 						type = "dropbox",
 						name = "Pitch",
 						value = 4,
-						values = {"Off", "Up", "Zero", "Down", "Upside Down", "Random"}
+						values = {"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"}
 					},
 					{
 						type = "dropbox",
@@ -982,10 +982,16 @@ local menutable = {
 						values = {"Off", "Backward", "Spin", "Random"}
 					},
 					{
+						type = "dropbox",
+						name = "Force Stance",
+						value = 1,
+						values = {"Off", "Stand", "Crouch", "Prone"}
+					},
+					{
 						type = "toggle",
 						name = "Hide In Floor",
 						value = true
-					}
+					},
 				}
 			},
 		}
@@ -2290,7 +2296,7 @@ end
 local simpcfgnamez = {"toggle", "slider", "dropbox"}
 local function buttonpressed(bp)
 	if bp == mp.options["Settings"]["Configuration"]["Save Config"] then
-		local figgy = "BitchBot v2\nmade with <3 by Nate, Bitch, and Zarzel\n\n"
+		local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, and Zarzel\n\n"
 
 		for k, v in next, simpcfgnamez do
 			figgy = figgy.. v.. "s {\n"
@@ -3318,6 +3324,53 @@ local keybindtoggles = { -- ANCHOR keybind toggles
 	fly = false,
 	thirdperson = false,
 }
+local send = client.net.send 
+
+do--ANCHOR send hook 
+	client.net.send = function(self, ...) 
+		local args = {...}
+		if args[1] == "stance" and mp.getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
+		if args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
+			local pitch = args[2].X
+			local yaw = args[2].Y
+			
+			local pitchChoice = mp.getval("Rage", "Anti Aim", "Pitch")
+			local yawChoice = mp.getval("Rage", "Anti Aim", "Yaw")
+			---"off,down,up,roll,upside down,random"
+			--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
+			--{"Off", "Backward", "Spin", "Random"} yaw
+
+			if pitchChoice == 2 then 
+				pitch = -4
+			elseif pitchChoice == 3 then 
+				pitch = 0
+			elseif pitchChoice == 4 then
+				pitch = 4.7
+			elseif pitchChoice == 5 then
+				pitch = -math.pi
+			elseif pitchChoice == 6 then
+				pitch = tick() * 0.01
+			elseif pitchChoice == 7 then
+				pitch = -tick() * 0.01
+			elseif pitchChoice == 8 then
+				pitch = math.random(100)
+			end
+			
+			if yawChoice == 2 then
+				yaw += math.pi
+			elseif yawChoice == 3 then
+				yaw = (tick() * 0.01) % 12
+			elseif yawChoice == 4 then
+				yaw = math.random(100)
+			end
+
+			-- yaw += jitter
+			
+			args[2]= Vector3.new(pitch, yaw, 0)
+		end
+		return send(self, unpack(args))
+	end
+end
 
 do --ANCHOR metatable hookz
 
@@ -3330,8 +3383,13 @@ do --ANCHOR metatable hookz
 	mt.__newindex = newcclosure(function(self, id, val)
 		if mp.getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson and self == workspace.Camera and id == "CFrame" then
 			local dist = mp.getval("Visuals", "Local Visuals", "Third Person Distance") / 10
-			local hit = workspace:Raycast(val.p, -val.LookVector * dist)
+			local params = RaycastParams.new()
+			params.FilterType = Enum.RaycastFilterType.Blacklist
+			params.FilterDescendantsInstances = {Camera, workspace.Ignore, workspace.Players}
+
+			local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
 			local mag = hit and (hit.Position - val.p).Magnitude or nil
+
 			val *= CFrame.new(0, 0, mag and mag or dist)
 		end
 		return oldNewIndex(self, id, val)
@@ -3345,9 +3403,28 @@ local camera = {}
 
 local aimbot = {}
 
-
-
+local StanceLoop
 do -- defining 
+
+	local lastTick
+	StanceLoop = function()
+		local curTick = math.floor(tick())
+		if curTick % 1 == 0 and curTick ~= lastTick then
+			lastTick = curTick
+			if mp.getval("Rage", "Anti Aim", "Enabled") then
+				local stanceId = mp.getval("Rage", "Anti Aim", "Force Stance")
+				if standeId ~= 1 then
+					local newStance = --ternary sex
+						stanceId == 2 and "stand"
+						or stanceId == 3 and "crouch"
+						or stanceId == 4 and "prone"
+
+					send(client.net, "stance", newStance)
+				end
+			end
+		end
+	end 
+
 	function camera:GetGun()
 
 
@@ -3508,4 +3585,9 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 	renderVisuals()
 	aimbot:TriggerBot()
 	aimbot:DoYourThing()
+end)
+
+
+local heartbeat = game.RunService.Heartbeat:Connect(function()
+	StanceLoop()
 end)
