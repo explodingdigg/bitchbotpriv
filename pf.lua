@@ -701,7 +701,7 @@ local menutable = {
 				x = mp.columns.left,
 				y = 404,
 				width = mp.columns.width,
-				height = 179,
+				height = 76,
 				content = {
 					{
 						type = "toggle",
@@ -717,6 +717,28 @@ local menutable = {
 						stradd = "ms"
 					},
 				},
+			},
+			{
+				name = "Bullet Redirection",
+				x = mp.columns.left,
+				y = 486,
+				width = mp.columns.width,
+				height = 97,
+				content = {
+					{
+						type = "toggle",
+						name = "Silent Aim",
+						value = false
+					},
+					{
+						type = "slider",
+						name = "Silent Aim FOV",
+						value = 5,
+						minvalue = 0,
+						maxvalue = 180,
+						stradd = "°"
+					}
+				}
 			},
 			{
 				name = "Trigger Bot",
