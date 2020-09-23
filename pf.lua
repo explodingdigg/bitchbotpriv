@@ -21,6 +21,7 @@ local mp = { -- this is for menu stuffs n shi
 	},
 	mc = {127, 72, 163}
 }
+
 local COLORPICKER_IMAGES = {
 	game:HttpGet("https://i.imgur.com/9NMuFcQ.png"),
 	game:HttpGet("https://i.imgur.com/jG3NjxN.png"),
@@ -28,7 +29,10 @@ local COLORPICKER_IMAGES = {
 	game:HttpGet("https://i.imgur.com/kNGuTlj.png"),
 	game:HttpGet("https://i.imgur.com/kNGuTlj.png"),
 }
+
 -- nate i miss u D:
+
+-- im back
 
 do
 	for _,v in pairs(getgc()) do
@@ -330,6 +334,7 @@ do
 			table.insert(allrender, tablename)
 		end
 	end
+
 	function Draw:OutlinedText(text, font, visible, pos_x, pos_y, size, centered, clr, clr2, tablename)
 		local temptable = Drawing.new("Text")
 		temptable.Text = text
@@ -363,6 +368,7 @@ do
 			table.insert(allrender, tablename)
 		end
 	end
+
 	function Draw:MenuOutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
 		Draw:OutlinedRect(visible, pos_x + mp.x, pos_y + mp.y, width, hieght, clr, tablename)
 		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
@@ -378,7 +384,7 @@ do
 		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 end
--- gonna put esp right here so it renders bellow everything
+-- gonna put esp right here so it renders below everything
 local allesp = {
 	skel = {
 		[1] = {},
@@ -597,7 +603,7 @@ do
 
 		Draw:MenuOutlinedRect(true, x, y, length, 22, {30, 30, 30, 255}, tab)
 		Draw:MenuOutlinedRect(true, x + 1, y + 1, length - 2, 20, {0, 0, 0, 255}, tab)
-		Draw:MenuBigText(name, true, true, x + math.floor(length / 2), y + 4 , tab)
+		Draw:MenuBigText(name, true, true, x + math.floor(length * 0.5), y + 4 , tab)
 
 		return temptable
 	end
@@ -989,8 +995,13 @@ local menutable = {
 					},
 					{
 						type = "toggle",
-						name = "Hide In Floor",
-						value = true
+						name = "Hide in Floor",
+						value = true,
+					},
+					{
+						type = "toggle",
+						name = "Lower Arms",
+						value = false,
 					},
 				}
 			},
@@ -1559,9 +1570,62 @@ local menutable = {
 				x = mp.columns.left, 
 				y = 66,
 				width = mp.columns.width,
-				height = 170,
+				height = 517,
 				content = {
-
+					{
+						type = "toggle",
+						name = "Fly Hack",
+						value = false,
+						extra = {
+							type = "keybind",
+							key = Enum.KeyCode.B
+						}
+					},
+					{
+						type = "slider",
+						name = "Fly Hack Speed",
+						value = 70,
+						minvalue = 1,
+						maxvalue = 200,
+						stradd = " stud/s"
+					},
+					{
+						type = "toggle",
+						name = "Auto Jump",
+						value = false
+					},
+					{
+						type = "dropbox",
+						name = "Speed Hack",
+						value = 1,
+						values = {"Off", "Always", "In Air", "On Hop"}
+					},
+					{
+						type = "slider",
+						name = "Speed Hack Speed",
+						value = 40,
+						minvalue = 1,
+						maxvalue = 200,
+						stradd = " stud/s"
+					},
+					{
+						type = "toggle",
+						name = "Gravity Shift",
+						value = false	
+					},
+					{
+						type = "slider",
+						name = "Gravity Percentage",
+						value = -50,
+						minvalue = -100,
+						maxvalue = 100,
+						stradd = "%"
+					},
+					{
+						type = "toggle",
+						name = "Prevent Fall Damage",
+						value = false
+					},
 				},
 			},
 		}
@@ -2905,14 +2969,9 @@ local clickspot_x, clickspot_y, original_menu_x, original_menu_y = 0, 0, 0, 0
 
 local function renderSteppedMenu()
 	---------------------------------------------------------------------i pasted the old menu working ingame shit from the old source nate pls fix ty
-	local localply = nil  -----------------------------------------------this is the really shitty alive check that we've been using since day one
-	local players = workspace.Players[LOCAL_PLAYER.Team.Name]:GetChildren()
-	for k, v in pairs(players) do
-		if v:FindFirstChild("Humanoid") then
-			localply = v
-			break
-		end
-	end
+	-----------------------------------------------this is the really shitty alive check that we've been using since day one 
+	-- removed it :DDD
+	
 
 	if mp.open then
 		if ((LOCAL_MOUSE.X > mp.x and LOCAL_MOUSE.X < mp.x + mp.w and LOCAL_MOUSE.y > mp.y - 32 and LOCAL_MOUSE.Y < mp.y - 11) or dragging) and not dontdrag then
@@ -2976,13 +3035,13 @@ local function renderSteppedMenu()
 				end
 			end
 		end
-		if localply then
+		if client.deploy.isdeployed() then
 			INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
 		else
 			INPUT_SERVICE.MouseIconEnabled = false
 		end
 	else
-		if localply then
+		if client.deploy.isdeployed() then
 			INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.LockCenter
 			INPUT_SERVICE.MouseIconEnabled = false
 		else
@@ -3050,14 +3109,6 @@ local function renderVisuals()
 		end
 	end
 
-	local localply = nil
-	local players = workspace.Players[LOCAL_PLAYER.Team.Name]:GetChildren()
-	for k, v in pairs(players) do
-		if v:FindFirstChild("Humanoid") then
-			localply = v
-			break
-		end
-	end
 
 	local localteam = LOCAL_PLAYER.Team
 	playerz.Enemy = {}
@@ -3075,7 +3126,7 @@ local function renderVisuals()
 	end
 
 	local playernum = 0
-	if localply then
+	if client.deploy.isdeployed() then
 		for k, v in pairs(playerz) do
 
 			for k1, v1 in ipairs(v) do
@@ -3088,7 +3139,7 @@ local function renderVisuals()
 				local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 				local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 
-				local fovMult = 80 / Camera.FieldOfView
+				local fovMult = mp.getval("Visuals", "Local Visuals", "Camera FOV") / Camera.FieldOfView
 
 				local sizeX = math.ceil(2000 / top.Z * fovMult)
 				local sizeY = math.ceil(math.max(math.abs(bottom.Y - top.Y), sizeX))
@@ -3096,7 +3147,7 @@ local function renderVisuals()
 				local boxSize = Vector2.new(sizeX, sizeY)
 				local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(top.Y))
 
-				local teem = k.." ESP" -- I MISSPELLEDS IT ONPURPOSE NIGGA
+				local teem = k .." ESP" -- I MISSPELLEDS IT ONPURPOSE NIGGA
 				local health = math.ceil(client.hud:getplayerhealth(v1))
 				local spoty = 0
 
@@ -3105,6 +3156,7 @@ local function renderVisuals()
 				if (topIsRendered or bottomIsRendered) and client.hud:isplayeralive(v1) then
 					playernum += 1
 					if mp.options["ESP"][teem]["Name"][1] then
+						
 						local name = v1.Name
 						if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
 							name = string.lower(name)
@@ -3117,8 +3169,10 @@ local function renderVisuals()
 						allesp.nametext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(top.y - 15))
 						allesp.nametext[playernum].Color = RGB(mp.options["ESP"][teem]["Name"][5][1][1], mp.options["ESP"][teem]["Name"][5][1][2], mp.options["ESP"][teem]["Name"][5][1][3])
 						allesp.nametext[playernum].Transparency = mp.options["ESP"][teem]["Name"][5][1][4]/255
+					
 					end
 					if mp.options["ESP"][teem]["Box"][1] then
+						
 						local transparency = (mp.options["ESP"][teem]["Box"][5][1][4] - 40) / 255
 
 						allesp.outerbox[playernum].Visible = true
@@ -3132,26 +3186,17 @@ local function renderVisuals()
 						allesp.box[playernum].Size = boxSize
 						allesp.box[playernum].Color = RGB(mp.options["ESP"][teem]["Box"][5][1][1], mp.options["ESP"][teem]["Box"][5][1][2], mp.options["ESP"][teem]["Box"][5][1][3])
 						allesp.box[playernum].Transparency = transparency
-
-
+					
 					end
 					if mp.options["ESP"][teem]["Health Bar"][1] then
+						local ySizeBar = -math.floor(boxSize.Y * health / 100)
 						if mp.options["ESP"][teem]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
 							allesp.hptext[playernum].Visible = true
 							allesp.hptext[playernum].Text = tostring(health)
-							local hp_sub = 0
-							if health < 100 then
-								if health < 10 then
-									hp_sub = 4
-								else
-									hp_sub = 2
-								end
-							end
-							if math.floor(top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)) + 12 > bottom.y then
-								allesp.hptext[playernum].Position = Vector2.new(math.floor(boxPosition.x) - math.ceil(allesp.hptext[playernum].TextBounds.x) - hp_sub, math.floor((top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)) - (math.floor(top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)) + 12 - (bottom.y))))
-							else
-								allesp.hptext[playernum].Position = Vector2.new(math.floor(boxPosition.x) - math.ceil(allesp.hptext[playernum].TextBounds.x) - hp_sub, math.floor(top.y - 5) + ((bottom.y - top.y) - (bottom.y - top.y)*(health/100)))
-							end
+
+							local tb = allesp.hptext[playernum].TextBounds
+
+							allesp.hptext[playernum].Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y * 0.5, -tb.Y * 0.5, boxSize.Y))
 							allesp.hptext[playernum].Color = RGB(mp.options["ESP"][teem]["Health Number"][5][1][1], mp.options["ESP"][teem]["Health Number"][5][1][2], mp.options["ESP"][teem]["Health Number"][5][1][3])
 							allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
 						end
@@ -3163,7 +3208,7 @@ local function renderVisuals()
 						allesp.hpinner[playernum].Visible = true
 						allesp.hpinner[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
 						
-						allesp.hpinner[playernum].Size = Vector2.new(2, -math.floor(boxSize.Y * health / 100))
+						allesp.hpinner[playernum].Size = Vector2.new(2, ySizeBar)
 
 						allesp.hpinner[playernum].Color = math.ColorRange(health, {
 							[1] = {start = 0, color = Color3.fromRGB(mp.options["ESP"][teem]["Health Bar"][5][1][1][1][1], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][2], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][3])},
@@ -3186,21 +3231,15 @@ local function renderVisuals()
 						allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
 					end
 					if mp.options["ESP"][teem]["Held Weapon"][1] then
-						local wepname = "KNIFE"
-						for k2, v2 in ipairs(v1.Character:GetChildren()) do
-							if k2 == 8 then
-								if v1.Name == nil then
-									wepname = "KNIFE"
-								else
-									wepname = v2.Name
-								end
-							end
-						end
+						local charWeapon = v1.Character:GetChildren()[8]
+						local wepname = charWeapon and charWeapon.Name or "KNIFE"
+
 						if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
 							wepname = string.lower(wepname)
 						elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
 							wepname = string.upper(wepname)
 						end
+
 						spoty += 12
 						allesp.weptext[playernum].Text = wepname
 						allesp.weptext[playernum].Visible = true
@@ -3281,11 +3320,11 @@ local function renderVisuals()
 						v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][3])
 
 						if v1.Transparency ~= 1 then
-							v1.Transparency = 0.99999+(mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+							v1.Transparency = 0.99999 + (mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
 						end
 						if mp.options["Visuals"]["Local Visuals"]["Remove Weapon Skin"][1] then
 							for i2, v2 in pairs(v1:GetChildren()) do
-								if v2:IsA("Texture") or v2:IsA("Decal") then
+								if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
 									v2:Destroy()
 								end
 							end
@@ -3330,6 +3369,7 @@ do--ANCHOR send hook
 	client.net.send = function(self, ...) 
 		local args = {...}
 		if args[1] == "stance" and mp.getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
+		if args[1] == "sprint" and mp.getval("Rage", "Anti Aim", "Lower Arms") then return end
 		if args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
 			local pitch = args[2].X
 			local yaw = args[2].Y
@@ -3353,7 +3393,7 @@ do--ANCHOR send hook
 			elseif pitchChoice == 7 then
 				pitch = -tick() * 0.01
 			elseif pitchChoice == 8 then
-				pitch = math.random(100)
+				pitch = math.random(0)
 			end
 			
 			if yawChoice == 2 then
@@ -3361,7 +3401,7 @@ do--ANCHOR send hook
 			elseif yawChoice == 3 then
 				yaw = (tick() * 0.01) % 12
 			elseif yawChoice == 4 then
-				yaw = math.random(100)
+				yaw = math.random(0)
 			end
 
 			-- yaw += jitter
@@ -3400,30 +3440,7 @@ do --ANCHOR metatable hookz
 end
 
 local camera = {}
-
-local aimbot = {}
-
-local StanceLoop
-do -- defining 
-
-	local lastTick
-	StanceLoop = function()
-		local curTick = math.floor(tick())
-		if curTick % 1 == 0 and curTick ~= lastTick then
-			lastTick = curTick
-			if mp.getval("Rage", "Anti Aim", "Enabled") then
-				local stanceId = mp.getval("Rage", "Anti Aim", "Force Stance")
-				if standeId ~= 1 then
-					local newStance = --ternary sex
-						stanceId == 2 and "stand"
-						or stanceId == 3 and "crouch"
-						or stanceId == 4 and "prone"
-
-					send(client.net, "stance", newStance)
-				end
-			end
-		end
-	end 
+do--ANCHOR camera function definitions.
 
 	function camera:GetGun()
 
@@ -3438,8 +3455,104 @@ do -- defining
 
 
 	end
+	
+	function camera:GetFOV(Part)
 
-	function aimbot:DoYourThing()
+
+		local directional = CFrame.new(workspace.Camera.CFrame.Position, Part.Position)
+		local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(workspace.Camera.CFrame:ToOrientation())
+		return math.deg(ang.Magnitude)
+
+
+	end
+
+	function camera:IsVisible(Part)
+
+
+		local origin = Camera.CFrame.Position
+		local hit, position = workspace:FindPartOnRayWithIgnoreList(Ray.new(origin, Part.Position - origin), {Camera, workspace.Ignore, workspace.Players})
+		--print(position, Part.Position)
+		return position == Part.Position
+
+
+	end
+	
+	function camera:GetVector()
+		return Camera.CFrame.LookVector
+	end
+
+end
+
+local ragebot = {}
+do--ANCHOR ragebot definitions
+
+
+
+	local lastTick
+	function ragebot:StanceLoop()
+
+		if LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid") then
+			if mp.getval("Rage", "Anti Aim", "Hide in Floor") and mp.getval("Rage", "Anti Aim", "Enabled") then
+				LOCAL_PLAYER.Character.Humanoid.HipHeight = -2
+			else
+				LOCAL_PLAYER.Character.Humanoid.HipHeight = 0
+			end
+		end
+		local curTick = math.floor(tick())
+		if curTick % 1 == 0 and curTick ~= lastTick then
+			lastTick = curTick
+			if mp.getval("Rage", "Anti Aim", "Enabled") then
+				local stanceId = mp.getval("Rage", "Anti Aim", "Force Stance")
+				if standeId ~= 1 then
+					local newStance = --ternary sex
+						stanceId == 2 and "stand"
+						or stanceId == 3 and "crouch"
+						or stanceId == 4 and "prone"
+
+					send(client.net, "stance", newStance)
+				end
+				if mp.getval("Rage", "Anti Aim", "Force Stance") then
+					send("sprint", true)
+				end
+			end
+		end
+	
+	
+	end 
+
+
+end
+do--ANCHOR misc hooks
+	--anti afk
+	local VirtualUser = game:GetService("VirtualUser")
+	LOCAL_PLAYER.Idled:Connect(function()
+		VirtualUser:CaptureController()
+		VirtualUser:ClickButton2(Vector2new)
+	end)
+
+	local shake = client.cam.shake
+	client.cam.shake = function(self, magnitude)
+		if mp.getval("Legit", "Recoil Control", "Reduce Camera Recoil") then
+			local scale = mp.getval("Legit", "Recoil Control", "Camera Recoil Amount") * 0.01 
+			magnitude *= scale
+		end
+		return shake(client.cam, magnitude)
+	end
+
+	local suppress = client.cam.suppress
+	client.cam.suppress = function(...)
+		--if mp.getval("") reduce suppresion then return
+		return suppress(...) 
+	end
+
+end
+
+
+local legitbot = {}
+do -- ANCHOR Legitbot definition defines legit functions
+
+	function legitbot:MainLoop()
+
 
 		if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and mp.getval("Legit", "Aim Assist", "Enabled") and client.logic.currentgun then
 			local keybind = mp.getval("Legit", "Aim Assist", "Aimbot Key") - 1
@@ -3450,9 +3563,9 @@ do -- defining
 			local hitscan = not mp.getval("Legit", "Aim Assist", "Force Priority Hitbox")
 
 			if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
-				local targetPart = aimbot:GetTargetLegit(fov, hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
+				local targetPart = legitbot:GetTargetLegit(fov, hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
 				if targetPart then
-					aimbot:AimAtTarget(targetPart, smoothing)
+					legitbot:AimAtTarget(targetPart, smoothing)
 				end
 			end
 		end
@@ -3460,44 +3573,28 @@ do -- defining
 
 	end
 
-	function aimbot:AimAtTarget(targetPart, smoothing)
+	function legitbot:AimAtTarget(targetPart, smoothing)
 
 
 		if not targetPart then return end
 
 		local Pos, visCheck = workspace.Camera:WorldToScreenPoint(targetPart.Position)
 
+		if mp.getval("Legit", "Aim Assist", "Enable Randomization") then
+			local randMag = mp.getval("Legit", "Aim Assist", "Randomization") * 5
+			Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1,time()) * randMag, 0)
+		end
+
 		local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
 		
 		mousemoverel(aimbotMovement.X / smoothing, aimbotMovement.Y / smoothing)
-
-
 	end
 
-	function aimbot:GetFOV(Part)
+
+	
 
 
-		local directional = CFrame.new(workspace.Camera.CFrame.Position, Part.Position)
-		local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(workspace.Camera.CFrame:ToOrientation())
-		return math.deg(ang.Magnitude)
-
-
-	end
-
-	function aimbot:IsVisible(Part)
-
-
-		local origin = Camera.CFrame.Position
-		local hit, position = workspace:FindPartOnRayWithIgnoreList(Ray.new(origin, Part.Position - origin), {Camera, workspace.Ignore, workspace.Players})
-		--print(position, Part.Position)
-		return position == Part.Position
-
-
-	end
-
-	--function
-
-	function aimbot:GetTargetLegit(fov, partPreference, hitscan, players)
+	function legitbot:GetTargetLegit(fov, partPreference, hitscan, players)
 
 
 		local closest, closestPart = fov
@@ -3514,9 +3611,9 @@ do -- defining
 						for i1, Bone in pairs(Parts) do
 
 							if Bone.ClassName == "Part" then
-								if aimbot:GetFOV(Bone) < closest then
-									if aimbot:IsVisible(Bone) then
-										closest = aimbot:GetFOV(Bone)
+								if camera:GetFOV(Bone) < closest then
+									if camera:IsVisible(Bone) then
+										closest = camera:GetFOV(Bone)
 										closestPart = Bone
 									end
 								end
@@ -3525,9 +3622,9 @@ do -- defining
 						end
 					end
 					local PriorityBone = Parts[partPreference]
-					if PriorityBone and aimbot:GetFOV(PriorityBone) < closest then
-						if aimbot:IsVisible(PriorityBone) then
-							closest = aimbot:GetFOV(PriorityBone)
+					if PriorityBone and camera:GetFOV(PriorityBone) < closest then
+						if camera:IsVisible(PriorityBone) then
+							closest = camera:GetFOV(PriorityBone)
 							closestPart = PriorityBone
 						end
 					end
@@ -3540,7 +3637,7 @@ do -- defining
 
 	end
 
-	function aimbot:TriggerBot()
+	function legitbot:TriggerBot()
 
 
 		if INPUT_SERVICE:IsKeyDown(mp.getval("Legit", "Trigger Bot", "Enabled", "keybind")) then
@@ -3561,13 +3658,15 @@ do -- defining
 				local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
 
 				if hit and parts[hit.Name] then
-					if not aimbot:IsVisible(hit) then return end
+					if not camera:IsVisible(hit) then return end
 					client.logic.currentgun:shoot(true)
 				else
 					client.logic.currentgun:shoot(false)
 				end
 			end
 		end
+
+
 	end
 
 
@@ -3583,11 +3682,11 @@ end)
 local renderstepped = game.RunService.RenderStepped:Connect(function()
 	renderSteppedMenu()
 	renderVisuals()
-	aimbot:TriggerBot()
-	aimbot:DoYourThing()
+	legitbot:TriggerBot()
+	legitbot:MainLoop()
 end)
 
 
 local heartbeat = game.RunService.Heartbeat:Connect(function()
-	StanceLoop()
+	ragebot:StanceLoop()
 end)
