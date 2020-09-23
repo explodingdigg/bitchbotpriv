@@ -178,6 +178,29 @@ do -- math stuffz
 
 	setreadonly(math, true)
 end
+
+do -- metatable additions strings and such
+
+	local strMt = getrawmetatable("")
+
+	strMt.__add = function(s1, s2)
+		return s1 .. s2
+	end
+	strMt.__mul = function(s1, num)
+		return string.rep(s1, num)
+	end
+	strMt.__unm = function(s1)
+		return string.reverse(s1)
+	end
+	strMt.__div = function(s1, num)
+		return num == 0 and s1 or string.sub(s1, 1, num)
+	end
+	strMt.__sub = function(s1, num)
+		return string.sub(s1, 1, #s1-num)
+	end
+
+end
+
 local keynamereturn = {
 	One    = "1",
 	Two    = "2",
@@ -671,7 +694,7 @@ local menutable = {
 						type = "dropbox",
 						name = "Aimbot Key",
 						value = 1,
-						values = {"Mouse 1", "Mouse 2", "Smart"}
+						values = {"Mouse 1", "Mouse 2", "Always"}
 					},
 					{
 						type = "dropbox",
@@ -1007,12 +1030,12 @@ local menutable = {
 						type = "dropbox",
 						name = "Yaw",
 						value = 2,
-						values = {"Off", "Backward", "Spin", "Random"}
+						values = {"Forward", "Backward", "Spin", "Random"}
 					},
 					{
 						type = "dropbox",
 						name = "Force Stance",
-						value = 1,
+						value = 4,
 						values = {"Off", "Stand", "Crouch", "Prone"}
 					},
 					{
@@ -1023,6 +1046,11 @@ local menutable = {
 					{
 						type = "toggle",
 						name = "Lower Arms",
+						value = false,
+					},
+					{
+						type = "toggle",
+						name = "Anti Grenade Teleport",
 						value = false,
 					},
 				}
@@ -1259,7 +1287,14 @@ local menutable = {
 						type = "dropbox",
 						name = "Text Case",
 						value = 2,
-						values = {"lowercase", "Normal", "CAPS"}
+						values = {"lowercase", "Normal", "UPPERCASE"}
+					},
+					{
+						type = "slider",
+						name = "Max Text Length",
+						value = 0,
+						minvalue = 0,
+						maxvalue = 32
 					},
 					{
 						type = "toggle",
@@ -3186,7 +3221,7 @@ local function renderVisuals()
 							name = string.upper(name)
 						end
 
-						allesp.nametext[playernum].Text = name
+						allesp.nametext[playernum].Text = name / mp.getval("ESP", "ESP Settings", "Max Text Length")
 						allesp.nametext[playernum].Visible = true
 						allesp.nametext[playernum].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
 						allesp.nametext[playernum].Color = RGB(mp.options["ESP"][teem]["Name"][5][1][1], mp.options["ESP"][teem]["Name"][5][1][2], mp.options["ESP"][teem]["Name"][5][1][3])
@@ -3263,7 +3298,7 @@ local function renderVisuals()
 						end
 
 						spoty += 12
-						allesp.weptext[playernum].Text = wepname
+						allesp.weptext[playernum].Text = wepname / mp.getval("ESP", "ESP Settings", "Max Text Length")
 						allesp.weptext[playernum].Visible = true
 						allesp.weptext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y))
 						allesp.weptext[playernum].Color = RGB(mp.options["ESP"][teem]["Held Weapon"][5][1][1], mp.options["ESP"][teem]["Held Weapon"][5][1][2], mp.options["ESP"][teem]["Held Weapon"][5][1][3])
@@ -3467,52 +3502,7 @@ local keybindtoggles = { -- ANCHOR keybind toggles
 }
 local send = client.net.send
 
-do--ANCHOR send hook
-	client.net.send = function(self, ...)
-		local args = {...}
-		if args[1] == "stance" and mp.getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
-		if args[1] == "sprint" and mp.getval("Rage", "Anti Aim", "Lower Arms") then return end
-		if args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
-			local pitch = args[2].X
-			local yaw = args[2].Y
 
-			local pitchChoice = mp.getval("Rage", "Anti Aim", "Pitch")
-			local yawChoice = mp.getval("Rage", "Anti Aim", "Yaw")
-			---"off,down,up,roll,upside down,random"
-			--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
-			--{"Off", "Backward", "Spin", "Random"} yaw
-
-			if pitchChoice == 2 then
-				pitch = -4
-			elseif pitchChoice == 3 then
-				pitch = 0
-			elseif pitchChoice == 4 then
-				pitch = 4.7
-			elseif pitchChoice == 5 then
-				pitch = -math.pi
-			elseif pitchChoice == 6 then
-				pitch = tick() * 0.01
-			elseif pitchChoice == 7 then
-				pitch = -tick() * 0.01
-			elseif pitchChoice == 8 then
-				pitch = math.random(0)
-			end
-
-			if yawChoice == 2 then
-				yaw += math.pi
-			elseif yawChoice == 3 then
-				yaw = (tick() * 0.01) % 12
-			elseif yawChoice == 4 then
-				yaw = math.random(0)
-			end
-
-			-- yaw += jitter
-
-			args[2]= Vector3.new(pitch, yaw, 0)
-		end
-		return send(self, unpack(args))
-	end
-end
 
 do --ANCHOR metatable hookz
 
@@ -3587,8 +3577,21 @@ end
 
 local ragebot = {}
 do--ANCHOR ragebot definitions
+	local tpIgnore = {workspace.Players, workspace.Ignore, workspace.CurrentCamera}
+	local nadeSize = Vector3.new(0, 50, 0)
+	local tpSelfDecreaseOffset = Vector3.new(0, 2, 0)
 
+	function ragebot:AntiNade(char, cam)
+		if mp.getval("Rage", "Anti Aim", "Anti Grenade Teleport") and mp.getval("Rage", "Anti Aim", "Enabled") then
+			local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(char, nadeSize), tpIgnore, true, true)
+			if hit then return false end
+			
+			local cf = client.cam.cframe
 
+			send(client.net, "newpos", cf.p + nadeSize, CFrame.new(cf.p + nadeSize, cf.p + nadeSize + cf.LookVector))
+			return true
+		end
+	end
 
 	local lastTick
 	function ragebot:StanceLoop()
@@ -3605,7 +3608,7 @@ do--ANCHOR ragebot definitions
 			lastTick = curTick
 			if mp.getval("Rage", "Anti Aim", "Enabled") then
 				local stanceId = mp.getval("Rage", "Anti Aim", "Force Stance")
-				if standeId ~= 1 then
+				if stanceId ~= 1 then
 					local newStance = --ternary sex
 						stanceId == 2 and "stand"
 						or stanceId == 3 and "crouch"
@@ -3613,7 +3616,7 @@ do--ANCHOR ragebot definitions
 
 					send(client.net, "stance", newStance)
 				end
-				if mp.getval("Rage", "Anti Aim", "Force Stance") then
+				if mp.getval("Rage", "Anti Aim", "Lower Arms") then
 					send("sprint", true)
 				end
 			end
@@ -3649,6 +3652,53 @@ do--ANCHOR misc hooks
 
 end
 
+do--ANCHOR send hook
+	client.net.send = function(self, ...)
+		local args = {...}
+		if args[1] == "stance" and mp.getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
+		if args[1] == "sprint" and mp.getval("Rage", "Anti Aim", "Lower Arms") then return end
+		if args[1] == "newpos" and ragebot:AntiNade(args[2], args[3]) then return end
+		if args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
+			local pitch = args[2].X
+			local yaw = args[2].Y
+
+			local pitchChoice = mp.getval("Rage", "Anti Aim", "Pitch")
+			local yawChoice = mp.getval("Rage", "Anti Aim", "Yaw")
+			---"off,down,up,roll,upside down,random"
+			--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
+			--{"Off", "Backward", "Spin", "Random"} yaw
+
+			if pitchChoice == 2 then
+				pitch = -4
+			elseif pitchChoice == 3 then
+				pitch = 0
+			elseif pitchChoice == 4 then
+				pitch = 4.7
+			elseif pitchChoice == 5 then
+				pitch = -math.pi
+			elseif pitchChoice == 6 then
+				pitch = tick() * 0.01
+			elseif pitchChoice == 7 then
+				pitch = -tick() * 0.01
+			elseif pitchChoice == 8 then
+				pitch = math.random(0)
+			end
+
+			if yawChoice == 2 then
+				yaw += math.pi
+			elseif yawChoice == 3 then
+				yaw = (tick() * 0.01) % 12
+			elseif yawChoice == 4 then
+				yaw = math.random(0)
+			end
+
+			-- yaw += jitter
+
+			args[2]= Vector3.new(pitch, yaw, 0)
+		end
+		return send(self, unpack(args))
+	end
+end
 
 local legitbot = {}
 do -- ANCHOR Legitbot definition defines legit functions
