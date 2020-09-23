@@ -534,7 +534,7 @@ do
 		if stradd == nil then
 			stradd = ""
 		end
-		Draw:MenuBigText(tostring(value).. stradd, true, true, x + (length / 2) , y + 11 , tab)
+		Draw:MenuBigText(tostring(value).. stradd, true, true, x + (length * 0.5) , y + 11 , tab)
 		table.insert(temptable, tab[#tab])
 		table.insert(temptable, stradd)
 		return temptable
@@ -1695,7 +1695,7 @@ local tabnum2str = {} -- its used to change the tab num to the string (did it li
 for k, v in pairs(menutable) do
 	Draw:MenuFilledRect(true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)), 27, math.floor((mp.w - 20)/#menutable), 32, {30, 30, 30, 255}, bbmenu)
 	Draw:MenuOutlinedRect(true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)), 27, math.floor((mp.w - 20)/#menutable), 32, {20, 20, 20, 255}, bbmenu)
-	Draw:MenuBigText(v.name, true, true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)) + math.floor(math.floor((mp.w - 20)/#menutable)/2), 35, bbmenu)
+	Draw:MenuBigText(v.name, true, true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)) + math.floor(math.floor((mp.w - 20)/#menutable)*0.5), 35, bbmenu)
 	table.insert(tabbies, {bbmenu[#bbmenu - 2], bbmenu[#bbmenu - 1], bbmenu[#bbmenu]})
 	table.insert(tabnum2str, v.name)
 
@@ -2054,7 +2054,7 @@ local function set_colorpicker(visible, color, value, alpha, text, x, y)
 		cp.hsv.s = s
 		cp.hsv.v = v
 
-		set_dragbar_r(cp.x + 175, cp.y + 23 + math.floor((1 - h)*156 ))
+		set_dragbar_r(cp.x + 175, cp.y + 23 + math.floor((1 - h) * 156))
 		set_dragbar_m(cp.x + 9 + math.floor(s * 156), cp.y + 23 + math.floor((1 - v)* 156))
 		if not alpha then
 			set_newcolor(color[1], color[2], color[3])
@@ -3226,7 +3226,7 @@ local function renderVisuals()
 						end
 						allesp.hptext[playernum].Visible = true
 						allesp.hptext[playernum].Text = tostring(health)
-						allesp.hptext[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX / 2 - 1) - math.ceil(allesp.hptext[playernum].TextBounds.x) + 6 - hp_sub, math.floor(top.y - 4))
+						allesp.hptext[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX * 0.5 - 1) - math.ceil(allesp.hptext[playernum].TextBounds.x) + 6 - hp_sub, math.floor(top.y - 4))
 						allesp.hptext[playernum].Color = RGB(mp.options["ESP"][teem]["Health Number"][5][1][1], mp.options["ESP"][teem]["Health Number"][5][1][2], mp.options["ESP"][teem]["Health Number"][5][1][3])
 						allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
 					end
