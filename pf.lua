@@ -3353,8 +3353,10 @@ local function renderVisuals()
 		end
 		if mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][1] then ---------------------------------------------view model shit
 			for k, v in pairs(vm) do
+
 				if v.Name == "Left Arm" or v.Name == "Right Arm" then
 					for k1, v1 in pairs(v:GetChildren()) do
+
 						if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
 							v1.Name = "Sleeve"
 							v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][3])
@@ -3365,8 +3367,10 @@ local function renderVisuals()
 							end
 							v1:ClearAllChildren()
 						end
+					
 					end
 				end
+			
 			end
 		end
 		if mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][1] then
@@ -3398,7 +3402,9 @@ local function renderVisuals()
 		------------------------------------------------------ragdoll chasms
 		if mp.getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
 			for k, v in ipairs(workspace.Ignore.DeadBody:GetChildren()) do
+
 				for k1, v1 in pairs(v:GetChildren()) do
+
 					if v1.Material ~= mats[mp.getval("Visuals", "Misc Visuals", "Ragdoll Material")] then
 						if v1.Name == "Torso" and v1:FindFirstChild("Pant") then
 							v1.Pant:Destroy()
@@ -3410,7 +3416,9 @@ local function renderVisuals()
 							v1.Mesh:Destroy()
 						end
 					end
+
 				end
+
 			end
 		end
 	end
@@ -3418,6 +3426,7 @@ end
 
 local function renderChams()
 	for k, Player in pairs(Players:GetPlayers()) do
+
 		local Body = client.replication.getbodyparts(Player)
 		if Body then
 			local enabled
@@ -3824,19 +3833,94 @@ do -- ANCHOR Legitbot definition defines legit functions
 
 end
 
+local movement = {}
+do -- ANCHOR movement definitionz
+	
+	function movement:toggleFlyHack()
+		local rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
+		rootpart.Anchored = false
+	end
+
+	function movement:FlyHack()
+
+
+		local rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
+		if rootpart then
+
+			if mp.getval("Misc", "Movement", "Fly Hack") and keybindtoggles.flyhack then
+				local speed = mp.getval("Misc", "Movement", "Fly Hack Speed")
+				
+				local travel = Vector3.new()
+				local looking = Camera.CFrame.lookVector --getting camera looking vector
+				local upVector = Camera.CFrame.UpVector
+				
+
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
+					travel += looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
+					travel -= looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
+					travel += Vector3.new(-looking.Z, 0, looking.X)
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
+					travel += Vector3.new(looking.Z, 0, -looking.X)
+				end
+				
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+					travel += upVector
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+					travel -= upVector
+				end
+				
+				if travel.Unit.X == travel.Unit.X then
+					rootpart.Anchored = false
+					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
+				else
+					rootpart.Velocity = Vector3.new(0, 0, 0)
+					rootpart.Anchored = true
+				end
+
+			elseif keybindtoggles.flyhack then
+
+				rootpart.Anchored = false
+
+			end
+
+		end
+	
+	
+	end
+
+
+end
+
 local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 	inputBeganMenu(key)
 	if mp.getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp.getval("Visuals", "Local Visuals", "Third Person", "keybind") then
 		keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 	end
+	if mp.getval("Misc", "Movement", "Fly Hack") and key.KeyCode == mp.getval("Misc", "Movement", "Fly Hack", "keybind") then
+		keybindtoggles.flyhack = not keybindtoggles.flyhack
+		movement:toggleFlyHack()
+	end
 end)
 
 local renderstepped = game.RunService.RenderStepped:Connect(function()
-	renderSteppedMenu()
-	renderVisuals()
-	renderChams()
-	legitbot:TriggerBot()
-	legitbot:MainLoop()
+	do --rendering
+		renderSteppedMenu()
+		renderVisuals()
+		renderChams()
+	end
+	do--legitbot
+		legitbot:TriggerBot()
+		legitbot:MainLoop()
+	end
+	do --movement
+		movement:FlyHack()
+	end
 end)
 
 
