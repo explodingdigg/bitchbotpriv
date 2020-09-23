@@ -629,7 +629,7 @@ local menutable = {
 					{
 						type = "slider",
 						name = "Aimbot FOV",
-						value = 80,
+						value = 20,
 						minvalue = 0,
 						maxvalue = 180,
 						stradd = "°"
@@ -896,7 +896,7 @@ local menutable = {
 				},
 			},
 			{
-				name = "Hack vs. Hack", 
+				name = "Hack vs. Hack",
 				x = mp.columns.right,
 				y = 66,
 				width = mp.columns.width,
@@ -1020,7 +1020,7 @@ local menutable = {
 					{
 						type = "toggle",
 						name = "Name",
-						value = false,
+						value = true,
 						extra = {
 							type = "single colorpicker",
 							name = "Enemy Name",
@@ -1035,7 +1035,7 @@ local menutable = {
 					{
 						type = "toggle",
 						name = "Box",
-						value = false,
+						value = true,
 						extra = {
 							type = "single colorpicker",
 							name = "Enemy Box",
@@ -1045,7 +1045,7 @@ local menutable = {
 					{
 						type = "toggle",
 						name = "Health Bar",
-						value = false,
+						value = true,
 						extra = {
 							type = "double colorpicker",
 							name = {"Enemy Low Health", "Enemy Max Health"},
@@ -1055,7 +1055,7 @@ local menutable = {
 					{
 						type = "toggle",
 						name = "Health Number",
-						value = false,
+						value = true,
 						extra = {
 							type = "single colorpicker",
 							name = "Enemy Health Number",
@@ -1085,11 +1085,11 @@ local menutable = {
 					{
 						type = "toggle",
 						name = "Chams",
-						value = false,
+						value = true,
 						extra = {
 							type = "double colorpicker",
 							name = {"Visible Enemy Chams", "Invisible Enemy Chams"},
-							color = {{255, 0, 0, 255}, {255, 255, 255, 100}}
+							color = {{255, 0, 0, 200}, {100, 0, 0, 100}}
 						}
 					},
 					{
@@ -1144,7 +1144,7 @@ local menutable = {
 					{
 						type = "toggle",
 						name = "Box",
-						value = false,
+						value = true,
 						extra = {
 							type = "single colorpicker",
 							name = "Team Box",
@@ -1198,7 +1198,7 @@ local menutable = {
 						extra = {
 							type = "double colorpicker",
 							name = {"Visible Team Chams", "Invisible Team Chams"},
-							color = {{0, 255, 0, 255}, {255, 255, 255, 100}}
+							color = {{0, 255, 0, 200}, {0, 100, 0, 100}}
 						}
 					},
 					{
@@ -1480,7 +1480,7 @@ local menutable = {
 						extra = {
 							type = "double colorpicker",
 							name = {"Inside Ambience", "Outside Ambience"},
-							color = {{255, 255, 255, 255}, {255, 255, 255, 100}}
+							color = {{255, 255, 255}, {255, 255, 255}}
 						}
 					},
 					{
@@ -1502,7 +1502,7 @@ local menutable = {
 						extra = {
 							type = "single colorpicker",
 							name = "Saturation Tint",
-							color = {255, 255, 255, 255}
+							color = {255, 255, 255}
 						}
 					},
 					{
@@ -1567,7 +1567,7 @@ local menutable = {
 		content = {
 			{
 				name = "Movement",
-				x = mp.columns.left, 
+				x = mp.columns.left,
 				y = 66,
 				width = mp.columns.width,
 				height = 517,
@@ -1611,7 +1611,7 @@ local menutable = {
 					{
 						type = "toggle",
 						name = "Gravity Shift",
-						value = false	
+						value = false
 					},
 					{
 						type = "slider",
@@ -2969,9 +2969,9 @@ local clickspot_x, clickspot_y, original_menu_x, original_menu_y = 0, 0, 0, 0
 
 local function renderSteppedMenu()
 	---------------------------------------------------------------------i pasted the old menu working ingame shit from the old source nate pls fix ty
-	-----------------------------------------------this is the really shitty alive check that we've been using since day one 
+	-----------------------------------------------this is the really shitty alive check that we've been using since day one
 	-- removed it :DDD
-	
+
 
 	if mp.open then
 		if ((LOCAL_MOUSE.X > mp.x and LOCAL_MOUSE.X < mp.x + mp.w and LOCAL_MOUSE.y > mp.y - 32 and LOCAL_MOUSE.Y < mp.y - 11) or dragging) and not dontdrag then
@@ -3152,11 +3152,11 @@ local function renderVisuals()
 				local spoty = 0
 
 
-				
+
 				if (topIsRendered or bottomIsRendered) and client.hud:isplayeralive(v1) then
 					playernum += 1
 					if mp.options["ESP"][teem]["Name"][1] then
-						
+
 						local name = v1.Name
 						if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
 							name = string.lower(name)
@@ -3166,13 +3166,13 @@ local function renderVisuals()
 
 						allesp.nametext[playernum].Text = name
 						allesp.nametext[playernum].Visible = true
-						allesp.nametext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(top.y - 15))
+						allesp.nametext[playernum].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
 						allesp.nametext[playernum].Color = RGB(mp.options["ESP"][teem]["Name"][5][1][1], mp.options["ESP"][teem]["Name"][5][1][2], mp.options["ESP"][teem]["Name"][5][1][3])
 						allesp.nametext[playernum].Transparency = mp.options["ESP"][teem]["Name"][5][1][4]/255
-					
+
 					end
 					if mp.options["ESP"][teem]["Box"][1] then
-						
+
 						local transparency = (mp.options["ESP"][teem]["Box"][5][1][4] - 40) / 255
 
 						allesp.outerbox[playernum].Visible = true
@@ -3186,7 +3186,7 @@ local function renderVisuals()
 						allesp.box[playernum].Size = boxSize
 						allesp.box[playernum].Color = RGB(mp.options["ESP"][teem]["Box"][5][1][1], mp.options["ESP"][teem]["Box"][5][1][2], mp.options["ESP"][teem]["Box"][5][1][3])
 						allesp.box[playernum].Transparency = transparency
-					
+
 					end
 					if mp.options["ESP"][teem]["Health Bar"][1] then
 						local ySizeBar = -math.floor(boxSize.Y * health / 100)
@@ -3196,7 +3196,7 @@ local function renderVisuals()
 
 							local tb = allesp.hptext[playernum].TextBounds
 
-							allesp.hptext[playernum].Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y * 0.5, -tb.Y * 0.5, boxSize.Y))
+							allesp.hptext[playernum].Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y * 0.5, -tb.Y / 4, boxSize.Y - tb.Y))
 							allesp.hptext[playernum].Color = RGB(mp.options["ESP"][teem]["Health Number"][5][1][1], mp.options["ESP"][teem]["Health Number"][5][1][2], mp.options["ESP"][teem]["Health Number"][5][1][3])
 							allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
 						end
@@ -3207,7 +3207,7 @@ local function renderVisuals()
 
 						allesp.hpinner[playernum].Visible = true
 						allesp.hpinner[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
-						
+
 						allesp.hpinner[playernum].Size = Vector2.new(2, ySizeBar)
 
 						allesp.hpinner[playernum].Color = math.ColorRange(health, {
@@ -3264,7 +3264,7 @@ local function renderVisuals()
 							allesp.skel[k2][playernum].Visible = true
 							allesp.skel[k2][playernum].Color = RGB(mp.options["ESP"][teem]["Skeleton"][5][1][1], mp.options["ESP"][teem]["Skeleton"][5][1][2], mp.options["ESP"][teem]["Skeleton"][5][1][3])
 							allesp.skel[k2][playernum].Transparency = mp.options["ESP"][teem]["Skeleton"][5][1][4]/255
-						
+
 						end
 					end
 				end
@@ -3359,30 +3359,110 @@ local function renderVisuals()
 	end
 end
 
+local function renderChams()
+	for k, Player in pairs(Players:GetPlayers()) do
+		local Body = client.replication.getbodyparts(Player)
+		if Body then
+			local enabled
+			local col
+			local vTransparency
+
+			local xqz
+			local ivTransparency
+
+			if Player.Team ~= Players.LocalPlayer.Team then
+				enabled = mp.getval("ESP", "Enemy ESP", "Chams")
+				col = mp.getval("ESP", "Enemy ESP", "Chams", "color2", true)
+				vTransparency = 1 - mp.getval("ESP", "Enemy ESP", "Chams", "color2")[4]/255
+				xqz = mp.getval("ESP", "Enemy ESP", "Chams", "color1", true)
+				ivTransparency = 1 - mp.getval("ESP", "Enemy ESP", "Chams", "color1")[4]/255
+			else
+				enabled = mp.getval("ESP", "Team ESP", "Chams")
+				col = mp.getval("ESP", "Team ESP", "Chams", "color2", true)
+				vTransparency = 1 - mp.getval("ESP", "Team ESP", "Chams", "color2")[4]/255
+				xqz = mp.getval("ESP", "Team ESP", "Chams", "color1", true)
+				ivTransparency = 1 - mp.getval("ESP", "Team ESP", "Chams", "color1")[4]/255
+			end
+
+
+			Player.Character = Body.rootpart.Parent
+			for k1, Part in pairs(Player.Character:GetChildren()) do
+
+				if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
+					if not Part:FindFirstChild("c88") then
+
+						for i = 0, 1 do
+
+							local box
+
+							if Part.Name ~= "Head" then
+								box = Instance.new("BoxHandleAdornment", Part)
+								box.Size = Part.Size + Vector3.new(0.1, 0.1, 0.1)
+								if i == 0 then
+									box.Size -= Vector3.new(0.25, 0.25, 0.25)
+								end
+							else
+								box = Instance.new("CylinderHandleAdornment", Part)
+								box.Height = Part.Size.Y + 0.3
+								box.Radius = Part.Size.X * 0.5 + 0.2
+								if i == 0 then
+									box.Height -= 0.2
+									box.Radius -= 0.2
+								end
+								box.CFrame = CFrame.new(Vector3.new(), Vector3.new(0,1,0))
+							end
+
+							box.Name = i == 0 and "c88" or "c99"
+							box.Adornee = Part
+							box.ZIndex = 1
+
+							box.AlwaysOnTop = i == 0 -- ternary sex
+							box.Color3 = i == 0 and col or xqz
+							box.Transparency = i == 0 and vTransparency or ivTransparency
+
+							box.Visible = enabled
+
+						end
+					else
+						for i = 0, 1 do
+
+							local adorn = i == 0 and Part.c88 or Part.c99
+							adorn.Color3 = i == 0 and col or xqz
+							adorn.Visible = enabled
+
+						end
+					end
+				end
+
+			end
+		end
+	end
+end
+
 local keybindtoggles = { -- ANCHOR keybind toggles
 	fly = false,
 	thirdperson = false,
 }
-local send = client.net.send 
+local send = client.net.send
 
-do--ANCHOR send hook 
-	client.net.send = function(self, ...) 
+do--ANCHOR send hook
+	client.net.send = function(self, ...)
 		local args = {...}
 		if args[1] == "stance" and mp.getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 		if args[1] == "sprint" and mp.getval("Rage", "Anti Aim", "Lower Arms") then return end
 		if args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
 			local pitch = args[2].X
 			local yaw = args[2].Y
-			
+
 			local pitchChoice = mp.getval("Rage", "Anti Aim", "Pitch")
 			local yawChoice = mp.getval("Rage", "Anti Aim", "Yaw")
 			---"off,down,up,roll,upside down,random"
 			--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
 			--{"Off", "Backward", "Spin", "Random"} yaw
 
-			if pitchChoice == 2 then 
+			if pitchChoice == 2 then
 				pitch = -4
-			elseif pitchChoice == 3 then 
+			elseif pitchChoice == 3 then
 				pitch = 0
 			elseif pitchChoice == 4 then
 				pitch = 4.7
@@ -3395,7 +3475,7 @@ do--ANCHOR send hook
 			elseif pitchChoice == 8 then
 				pitch = math.random(0)
 			end
-			
+
 			if yawChoice == 2 then
 				yaw += math.pi
 			elseif yawChoice == 3 then
@@ -3405,7 +3485,7 @@ do--ANCHOR send hook
 			end
 
 			-- yaw += jitter
-			
+
 			args[2]= Vector3.new(pitch, yaw, 0)
 		end
 		return send(self, unpack(args))
@@ -3455,7 +3535,7 @@ do--ANCHOR camera function definitions.
 
 
 	end
-	
+
 	function camera:GetFOV(Part)
 
 
@@ -3476,7 +3556,7 @@ do--ANCHOR camera function definitions.
 
 
 	end
-	
+
 	function camera:GetVector()
 		return Camera.CFrame.LookVector
 	end
@@ -3516,9 +3596,9 @@ do--ANCHOR ragebot definitions
 				end
 			end
 		end
-	
-	
-	end 
+
+
+	end
 
 
 end
@@ -3533,7 +3613,7 @@ do--ANCHOR misc hooks
 	local shake = client.cam.shake
 	client.cam.shake = function(self, magnitude)
 		if mp.getval("Legit", "Recoil Control", "Reduce Camera Recoil") then
-			local scale = mp.getval("Legit", "Recoil Control", "Camera Recoil Amount") * 0.01 
+			local scale = mp.getval("Legit", "Recoil Control", "Camera Recoil Amount") * 0.01
 			magnitude *= scale
 		end
 		return shake(client.cam, magnitude)
@@ -3541,8 +3621,8 @@ do--ANCHOR misc hooks
 
 	local suppress = client.cam.suppress
 	client.cam.suppress = function(...)
-		--if mp.getval("") reduce suppresion then return
-		return suppress(...) 
+		if mp.getval("Visuals", "Local Visuals", "No Visual Suppression") then return end
+		return suppress(...)
 	end
 
 end
@@ -3586,12 +3666,12 @@ do -- ANCHOR Legitbot definition defines legit functions
 		end
 
 		local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
-		
+
 		mousemoverel(aimbotMovement.X / smoothing, aimbotMovement.Y / smoothing)
 	end
 
 
-	
+
 
 
 	function legitbot:GetTargetLegit(fov, partPreference, hitscan, players)
@@ -3682,6 +3762,7 @@ end)
 local renderstepped = game.RunService.RenderStepped:Connect(function()
 	renderSteppedMenu()
 	renderVisuals()
+	renderChams()
 	legitbot:TriggerBot()
 	legitbot:MainLoop()
 end)
