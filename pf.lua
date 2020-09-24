@@ -70,6 +70,8 @@ do
 end
 -- framework finished loading
 
+game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge)
+
 setfpscap(300) -- nigga roblox
 
 if not isfolder("bitchbot") then
@@ -92,6 +94,8 @@ local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
 local INPUT_SERVICE = game:GetService("UserInputService")
 local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
 local CACHED_VEC3 = Vector3.new()
+local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
+local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
 
 local Camera = workspace.CurrentCamera
 --TODO rename all the constants to be SNAKE_CASED_LOUD
@@ -1700,6 +1704,11 @@ local menutable = {
 						type = "toggle",
 						name = "Prevent Fall Damage",
 						value = false
+					},
+					{
+						type = "toggle",
+						name = "Ignore Round Freeze",
+						value = false,
 					},
 				},
 			},
@@ -3536,6 +3545,7 @@ do --ANCHOR metatable hookz
 	local mt = getrawmetatable(game)
 
 	local oldNewIndex = mt.__newindex
+	local oldIndex = mt.__index
 
 	setreadonly(mt, false)
 
@@ -3552,6 +3562,9 @@ do --ANCHOR metatable hookz
 			val *= CFrame.new(0, 0, mag and mag or dist)
 		end
 		return oldNewIndex(self, id, val)
+	end)
+	mt.__index = newcclosure(function(table, key)
+		return oldIndex(table, key)
 	end)
 
 	setreadonly(mt, true)
@@ -3631,13 +3644,60 @@ do--ANCHOR ragebot definitions
 
 	end
 
+	function ragebot:GetFirstKnifeTarget()
+
+
+		for i, ply in ipairs(Players:GetPlayers()) do
+
+			if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
+				local parts = client.replication.getbodyparts(ply)
+				if not parts then continue end
+
+				if (parts.rootpart.Position - client.cam.cframe.p).Magnitude < 40 then
+					return ply, parts.head
+				end
+			end
+
+		end
+
+
+	end
+
+	function ragebot:KnifeBotMain()
+		local key = mp.getval("Rage", "Extra", "Knife Bot", "keybind")
+		if mp.getval("Rage", "Extra", "Knife Bot") and (key == nil or INPUT_SERVICE:IsKeyDown(key)) then
+			if mp.getval("Rage", "Extra", "Knife Bot Type") == 2 then
+				ragebot:KnifeAura(true)
+			end
+		end
+	end
+
+	function ragebot:KnifeAura(stab)
+
+		local target, part = ragebot:GetFirstKnifeTarget()
+		if target then
+			ragebot:KnifeTarget(target, part, stab)
+		end
+
+	end
+
+	
+
+	function ragebot:KnifeTarget(target, part, stab)
+		local cfc = client.cam.cframe
+		send(client.net, "newpos", cfc.p, cfc) -- Makes knife aura work with anti nade tp
+		if stab then send(client.net, "stab") end
+		send(client.net, "knifehit", target, tick(), part)
+	end
+
+
 	local lastTick
 	function ragebot:StanceLoop()
 
 
 		if LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid") then
 			if mp.getval("Rage", "Anti Aim", "Hide in Floor") and mp.getval("Rage", "Anti Aim", "Enabled") then
-				LOCAL_PLAYER.Character.Humanoid.HipHeight = -2
+				LOCAL_PLAYER.Character.Humanoid.HipHeight = -1.9
 			else
 				LOCAL_PLAYER.Character.Humanoid.HipHeight = 0
 			end
@@ -3698,6 +3758,14 @@ do--ANCHOR send hook
 		if args[1] == "sprint" and mp.getval("Rage", "Anti Aim", "Lower Arms") then return end
 		if args[1] == "newpos" and ragebot:AntiNade(args[2], args[3]) then return end
 		if args[1] == "changehealthx" and args[3] ~= "BFG 50" and mp.getval("Misc", "Movement", "Prevent Fall Damage") then return end
+		if args[1] == "stab" then
+			local key = mp.getval("Rage", "Extra", "Knife Bot", "keybind")
+			if mp.getval("Rage", "Extra", "Knife Bot") and not key or INPUT_SERVICE:IsKeyDown(key) then
+				if mp.getval("Rage", "Extra", "Knife Bot Type") == 1 then
+					ragebot:KnifeTarget(ragebot:GetFirstKnifeTarget())
+				end
+			end
+		end
 		if args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
 			local pitch = args[2].X
 			local yaw = args[2].Y
@@ -3750,14 +3818,18 @@ do -- ANCHOR Legitbot definition defines legit functions
 			local keybind = mp.getval("Legit", "Aim Assist", "Aimbot Key") - 1
 			local smoothing = (mp.getval("Legit", "Aim Assist", "Smoothing Factor") + 2) * 0.2 / GAME_SETTINGS.MouseSensitivity
 			local fov = mp.getval("Legit", "Aim Assist", "Aimbot FOV")
+			local sFov = mp.getval("Legit", "Bullet Redirection", "Silent Aim FOV")
 
 			local hitboxPriority = mp.getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
 			local hitscan = not mp.getval("Legit", "Aim Assist", "Force Priority Hitbox")
 
 			if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
-				local targetPart = legitbot:GetTargetLegit(fov, hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
-				if targetPart then
+				local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
+				if targetPart and closest < fov then
 					legitbot:AimAtTarget(targetPart, smoothing)
+				end
+				if targetPart and closest < sFov then
+					legitbot:SilentAimAtTarget(targetPart)
 				end
 			end
 		end
@@ -3770,8 +3842,13 @@ do -- ANCHOR Legitbot definition defines legit functions
 
 		if not targetPart then return end
 
-		local Pos, visCheck = workspace.Camera:WorldToScreenPoint(targetPart.Position)
+		local Pos, visCheck
 
+		if mp.getval("Legit", "Aim Assist", "Adjust for Bullet Drop") then
+			pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
+		else
+			Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
+		end
 		if mp.getval("Legit", "Aim Assist", "Enable Randomization") then
 			local randMag = mp.getval("Legit", "Aim Assist", "Randomization") * 5
 			Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1,time()) * randMag, 0)
@@ -3791,15 +3868,14 @@ do -- ANCHOR Legitbot definition defines legit functions
 
 
 
-
 	end
 
 
 
-	function legitbot:GetTargetLegit(fov, partPreference, hitscan, players)
+	function legitbot:GetTargetLegit(partPreference, hitscan, players)
 
 
-		local closest, closestPart = fov
+		local closest, closestPart = math.huge
 		partPreference = partPreference or "head"
 		hitscan = hitscan or false
 		players = players or game.Players:GetPlayers()
@@ -3878,6 +3954,12 @@ local movement = {}
 do -- ANCHOR movement definitionz
 	local rootpart
 	local humanoid
+
+	function movement:RoundFreeze()
+		if mp.getval("Misc", "Movement", "Ignore Round Freeze") then
+			client.roundsystem.lock = false
+		end
+	end
 
 	function movement:FlyHack()
 
@@ -3997,10 +4079,15 @@ do -- ANCHOR movement definitionz
 		rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
 		humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
 		if rootpart and humanoid then
-			movement:FlyHack()
-			movement:SpeedHack()
-			movement:AutoJump()
-			movement:GravityShift()
+			if not CHAT_BOX.Active then
+				movement:FlyHack()
+				movement:SpeedHack()
+				movement:AutoJump()
+				movement:GravityShift()
+				movement:RoundFreeze()
+			elseif keybindtoggles.flyhack then
+				rootpart.Anchored = true
+			end
 		end
 
 
@@ -4026,6 +4113,9 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 	do--legitbot
 		legitbot:TriggerBot()
 		legitbot:MainLoop()
+	end
+	do--ragebot
+		ragebot:KnifeBotMain()
 	end
 	do --movement
 		movement:MainLoop()
