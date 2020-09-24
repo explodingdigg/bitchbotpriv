@@ -21,15 +21,32 @@ local mp = { -- this is for menu stuffs n shi
 	},
 	mc = {127, 72, 163}
 }
+function CreateThread(func) 
+   local thread = coroutine.create(func)
+   coroutine.resume(thread)
+   return thread
+end
 
-local COLORPICKER_IMAGES = {
-	game:HttpGet("https://i.imgur.com/9NMuFcQ.png"),
-	game:HttpGet("https://i.imgur.com/jG3NjxN.png"),
-	game:HttpGet("https://i.imgur.com/2Ty4u2O.png"),
-	game:HttpGet("https://i.imgur.com/kNGuTlj.png"),
-	game:HttpGet("https://i.imgur.com/kNGuTlj.png"),
-}
+local COLORPICKER_IMAGES = {}
+CreateThread(function()
+	COLORPICKER_IMAGES[1] = game:HttpGet("https://i.imgur.com/9NMuFcQ.png")
+end)
+CreateThread(function()
+	COLORPICKER_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png")
+end)
+CreateThread(function()
+	COLORPICKER_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png")
+end)
+CreateThread(function()
+	COLORPICKER_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png")
+end)
+CreateThread(function()
+	COLORPICKER_IMAGES[5] = game:HttpGet("https://i.imgur.com/kNGuTlj.png")
+end)
 
+repeat
+	wait(0.1)
+until COLORPICKER_IMAGES[5] and COLORPICKER_IMAGES[4] and COLORPICKER_IMAGES[3] and COLORPICKER_IMAGES[2] and COLORPICKER_IMAGES[1]
 -- nate i miss u D:
 
 -- im back
@@ -74,6 +91,7 @@ local LOCAL_PLAYER = Players.LocalPlayer
 local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
 local INPUT_SERVICE = game:GetService("UserInputService")
 local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
+local CACHED_VEC3 = Vector3.new()
 
 local Camera = workspace.CurrentCamera
 --TODO rename all the constants to be SNAKE_CASED_LOUD
@@ -1672,7 +1690,7 @@ local menutable = {
 					},
 					{
 						type = "slider",
-						name = "Gravity Percentage",
+						name = "Gravity Shift Percentage",
 						value = -50,
 						minvalue = -100,
 						maxvalue = 100,
@@ -3475,7 +3493,7 @@ local function renderChams()
 									box.Height -= 0.2
 									box.Radius -= 0.2
 								end
-								box.CFrame = CFrame.new(Vector3.new(), Vector3.new(0,1,0))
+								box.CFrame = CFrame.new(CACHED_VEC3, Vector3.new(0,1,0))
 							end
 
 							box.Name = i == 0 and "c88" or "c99"
@@ -3567,10 +3585,11 @@ do--ANCHOR camera function definitions.
 
 	end
 
-	function camera:IsVisible(Part)
+	function camera:IsVisible(Part, origin)
 
 
-		local origin = Camera.CFrame.Position
+		origin = origin or Camera.CFrame.Position
+
 		local hit, position = workspace:FindPartOnRayWithIgnoreList(Ray.new(origin, Part.Position - origin), {Camera, workspace.Ignore, workspace.Players})
 		--print(position, Part.Position)
 		return position == Part.Position
@@ -3578,8 +3597,14 @@ do--ANCHOR camera function definitions.
 
 	end
 
-	function camera:GetVector()
-		return Camera.CFrame.LookVector
+	function camera:GetTrajectory(pos, origin)
+
+
+		origin = origin or Camera.CFrame.Position
+
+		return origin + client.trajectory(origin, CACHED_VEC3, GRAVITY, pos, CACHED_VEC3, CACHED_VEC3, client.logic.currentgun.data.bulletspeed)
+
+
 	end
 
 end
@@ -3591,6 +3616,8 @@ do--ANCHOR ragebot definitions
 	local tpSelfDecreaseOffset = Vector3.new(0, 2, 0)
 
 	function ragebot:AntiNade(char, cam)
+
+
 		if mp.getval("Rage", "Anti Aim", "Anti Grenade Teleport") and mp.getval("Rage", "Anti Aim", "Enabled") then
 			local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(char, nadeSize), tpIgnore, true, true)
 			if hit then return false end
@@ -3600,10 +3627,13 @@ do--ANCHOR ragebot definitions
 			send(client.net, "newpos", cf.p + nadeSize, CFrame.new(cf.p + nadeSize, cf.p + nadeSize + cf.LookVector))
 			return true
 		end
+
+
 	end
 
 	local lastTick
 	function ragebot:StanceLoop()
+
 
 		if LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid") then
 			if mp.getval("Rage", "Anti Aim", "Hide in Floor") and mp.getval("Rage", "Anti Aim", "Enabled") then
@@ -3667,6 +3697,7 @@ do--ANCHOR send hook
 		if args[1] == "stance" and mp.getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 		if args[1] == "sprint" and mp.getval("Rage", "Anti Aim", "Lower Arms") then return end
 		if args[1] == "newpos" and ragebot:AntiNade(args[2], args[3]) then return end
+		if args[1] == "changehealthx" and args[3] ~= "BFG 50" and mp.getval("Misc", "Movement", "Prevent Fall Damage") then return end
 		if args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
 			local pitch = args[2].X
 			local yaw = args[2].Y
@@ -3749,9 +3780,19 @@ do -- ANCHOR Legitbot definition defines legit functions
 		local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
 
 		mousemoverel(aimbotMovement.X / smoothing, aimbotMovement.Y / smoothing)
+
+
 	end
 
+	function legitbot:SilentAimAtTarget(targetPart)
 
+
+		if not targetPart then return end
+
+
+
+
+	end
 
 
 
@@ -3835,66 +3876,135 @@ end
 
 local movement = {}
 do -- ANCHOR movement definitionz
-	
-	function movement:toggleFlyHack()
-		local rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
-		rootpart.Anchored = false
-	end
+	local rootpart
+	local humanoid
 
 	function movement:FlyHack()
 
 
-		local rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
-		if rootpart then
+		if mp.getval("Misc", "Movement", "Fly Hack") and keybindtoggles.flyhack then
+			local speed = mp.getval("Misc", "Movement", "Fly Hack Speed")
+			
+			local travel = CACHED_VEC3
+			local looking = Camera.CFrame.lookVector --getting camera looking vector
+			local upVector = Camera.CFrame.UpVector
+			local rightVector = Camera.CFrame.RightVector
+			
 
-			if mp.getval("Misc", "Movement", "Fly Hack") and keybindtoggles.flyhack then
-				local speed = mp.getval("Misc", "Movement", "Fly Hack Speed")
-				
-				local travel = Vector3.new()
-				local looking = Camera.CFrame.lookVector --getting camera looking vector
-				local upVector = Camera.CFrame.UpVector
-				
-
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
-					travel += looking
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
-					travel -= looking
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-					travel += Vector3.new(-looking.Z, 0, looking.X)
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-					travel += Vector3.new(looking.Z, 0, -looking.X)
-				end
-				
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
-					travel += upVector
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-					travel -= upVector
-				end
-				
-				if travel.Unit.X == travel.Unit.X then
-					rootpart.Anchored = false
-					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
-				else
-					rootpart.Velocity = Vector3.new(0, 0, 0)
-					rootpart.Anchored = true
-				end
-
-			elseif keybindtoggles.flyhack then
-
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
+				travel += looking
+			end
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
+				travel -= looking
+			end
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
+				travel += rightVector
+			end
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
+				travel -= rightVector
+			end
+			
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+				travel += upVector
+			end
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+				travel -= upVector
+			end
+			
+			if travel.Unit.X == travel.Unit.X then
 				rootpart.Anchored = false
-
+				rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
+			else
+				rootpart.Velocity = Vector3.new(0, 0, 0)
+				rootpart.Anchored = true
 			end
 
+		elseif not keybindtoggles.flyhack then
+
+			rootpart.Anchored = false
+
+		end
+
+	
+	end
+
+	function movement:SpeedHack()
+
+
+		local type = mp.getval("Misc", "Movement", "Speed Hack")
+		if type ~= 1 then
+			local speed = mp.getval("Misc", "Movement", "Speed Hack Speed")
+
+			local travel = CACHED_VEC3
+			local looking = Camera.CFrame.LookVector
+			local rightVector = Camera.CFrame.RightVector
+
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
+				travel += looking
+			end
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
+				travel -= looking
+			end
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
+				travel += rightVector
+			end
+			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
+				travel -= rightVector
+			end
+
+			travel = Vector2.new(travel.X, travel.Z).Unit
+
+			if travel.X == travel.X then
+				if type == 3 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+					return
+				elseif type == 4 and not humanoid.Jump then
+					return
+				end
+				rootpart.Velocity = Vector3.new(travel.X * speed, rootpart.Velocity.Y, travel.Y * speed)
+			end
 		end
 	
 	
 	end
+	
+	function movement:AutoJump()
 
 
+		if mp.getval("Misc", "Movement", "Auto Jump") and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+			humanoid.Jump = true
+		end
+
+
+	end
+
+	function movement:GravityShift()
+
+
+		if mp.getval("Misc", "Movement", "Gravity Shift") then
+			local scaling = mp.getval("Misc", "Movement", "Gravity Shift Percentage")
+			local mappedGrav = math.map(scaling, -100, 100, 0, 196.2)
+			workspace.Gravity = 196.2 + mappedGrav
+		else
+			workspace.Gravity = 196.2
+		end
+
+
+	end
+
+	function movement:MainLoop()
+
+
+		rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
+		humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
+		if rootpart and humanoid then
+			movement:FlyHack()
+			movement:SpeedHack()
+			movement:AutoJump()
+			movement:GravityShift()
+		end
+
+
+	end
 end
 
 local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
@@ -3904,7 +4014,6 @@ local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 	end
 	if mp.getval("Misc", "Movement", "Fly Hack") and key.KeyCode == mp.getval("Misc", "Movement", "Fly Hack", "keybind") then
 		keybindtoggles.flyhack = not keybindtoggles.flyhack
-		movement:toggleFlyHack()
 	end
 end)
 
@@ -3919,7 +4028,7 @@ local renderstepped = game.RunService.RenderStepped:Connect(function()
 		legitbot:MainLoop()
 	end
 	do --movement
-		movement:FlyHack()
+		movement:MainLoop()
 	end
 end)
 
