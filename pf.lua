@@ -27,26 +27,27 @@ function CreateThread(func)
    return thread
 end
 
-local COLORPICKER_IMAGES = {}
-CreateThread(function()
-	COLORPICKER_IMAGES[1] = game:HttpGet("https://i.imgur.com/9NMuFcQ.png")
-end)
-CreateThread(function()
-	COLORPICKER_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png")
-end)
-CreateThread(function()
-	COLORPICKER_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png")
-end)
-CreateThread(function()
-	COLORPICKER_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png")
-end)
-CreateThread(function()
-	COLORPICKER_IMAGES[5] = game:HttpGet("https://i.imgur.com/kNGuTlj.png")
-end)
+function MultiThreadList(obj)
+	for i, v in pairs(obj) do
+		CreateThread(v)
+	end
+end
 
-repeat
-	wait(0.1)
-until COLORPICKER_IMAGES[5] and COLORPICKER_IMAGES[4] and COLORPICKER_IMAGES[3] and COLORPICKER_IMAGES[2] and COLORPICKER_IMAGES[1]
+
+local COLORPICKER_IMAGES = {}
+MultiThreadList({
+	function() COLORPICKER_IMAGES[1] = game:HttpGet("https://i.imgur.com/9NMuFcQ.png") end,
+	function() COLORPICKER_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png") end,
+	function() COLORPICKER_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png") end,
+	function() COLORPICKER_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end,
+	function() COLORPICKER_IMAGES[5] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end
+})
+
+-- MULTITHREAD DAT LOADING SO FAST!!!!
+while #COLORPICKER_IMAGES ~= 5 do
+	wait()
+end
+
 -- nate i miss u D:
 
 -- im back
@@ -445,9 +446,26 @@ local allesp = {
 	hptext = {},
 	nametext = {},
 	weptext = {},
-	disttext = {}
-
+	disttext = {},
+	watermark = {},
 }
+do
+	local wm = allesp.watermark
+   wm.textString = "BitchBot | Developer | " .. os.date("%b. %d, %Y")
+   wm.pos = Vector2.new(40, 10)
+   wm.text = {}
+   wm.width = (#wm.textString) * 7 + 10
+   wm.rect = {}
+
+   Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 1, wm.width, 2, {mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[2] - 40, 255}, wm.rect)
+   Draw:FilledRect(true, wm.pos.X, wm.pos.Y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
+   Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
+   for i = 0, 14 do
+      Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
+   end
+   Draw:OutlinedRect(true, wm.pos.X, wm.pos.Y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
+   Draw:OutlinedText(wm.textString, 2, true, wm.pos.X + 5, wm.pos.Y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
+end
 
 for i = 1, 35 do
 	for i1, v in ipairs(allesp.skel) do
@@ -485,7 +503,7 @@ do
 	end
 	Draw:MenuFilledRect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35, 255}, bbmenu)
 
-	Draw:MenuBigText("BitchBot | " .. os.date("%b %d %Y"), true, false, 6, 6, bbmenu)
+	Draw:MenuBigText("BitchBot", true, false, 6, 6, bbmenu)
 
 	Draw:MenuOutlinedRect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
 	Draw:MenuOutlinedRect(true, 9, 23, mp.w - 18, mp.h - 32, {20, 20, 20, 255}, bbmenu)
@@ -1730,9 +1748,14 @@ local menutable = {
 						value = false,
 						extra = {
 							type = "single colorpicker",
-							name = "Menu Accent",
+							name = "Accent Color",
 							color = {127, 72, 163}
 						}
+					},
+					{
+						type = "toggle",
+						name = "Watermark",
+						value = true,
 					}
 				}
 			},
@@ -2191,6 +2214,9 @@ local function set_mouse_pos(x, y)
 end
 
 local function set_menu_color(r, g, b)
+	allesp.watermark.rect[1].Color = RGB(r - 40, g - 40, b - 40)
+	allesp.watermark.rect[2].Color = RGB(r, g, b)
+
 	for k, v in pairs(mp.clrs.norm) do
 		v.Color = RGB(r, g, b)
 	end
@@ -2219,6 +2245,7 @@ local function set_menu_color(r, g, b)
 			end
 		end
 	end
+	
 end
 
 
@@ -3447,6 +3474,14 @@ local function renderVisuals()
 				end
 
 			end
+		end
+
+		do --watermark shittiez
+			local wme = mp.getval("Settings", "Menu Settings", "Watermark")
+			for k, v in pairs(allesp.watermark.rect) do
+				v.Visible = wme
+			end
+			allesp.watermark.text[1].Visible = wme
 		end
 	end
 end
