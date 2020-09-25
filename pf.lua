@@ -1,7 +1,7 @@
 local mp = { -- this is for menu stuffs n shi
 	w = 500,
 	h = 600,
-	x = 200,
+	x = 400,
 	y = 200,
 	columns = {
 		width = 230,
@@ -42,10 +42,9 @@ MultiThreadList({
 	function() COLORPICKER_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end,
 	function() COLORPICKER_IMAGES[5] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end
 })
-
 -- MULTITHREAD DAT LOADING SO FAST!!!!
 while #COLORPICKER_IMAGES ~= 5 do
-	wait()
+	wait(1)
 end
 
 -- nate i miss u D:
@@ -95,6 +94,7 @@ local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
 local INPUT_SERVICE = game:GetService("UserInputService")
 local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
 local CACHED_VEC3 = Vector3.new()
+local CACHED_GRAVITY = Vector3.new(0, -192.6, 0)
 local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
 local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
 
@@ -307,33 +307,41 @@ do
 	end
 	--TODO rename all the functions to be CamelCased and
 	--put all related funcs into tables
-	function Draw:OutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
+	function Draw:OutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
 		local temptable = Drawing.new("Square")
 		temptable.Visible = visible
 		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, hieght)
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		temptable.Size = Vector2.new(width, height)
+		temptable.Color = RGB(clr[1], clr[2] or clr[1], clr[3] or clr[1])
 		temptable.Filled = false
 		temptable.Thickness = 0
-		temptable.Transparency = clr[4] / 255
-		table.insert(tablename, temptable)
+		temptable.Transparency = clr[4] or 255 / 255
 		if not table.contains(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
+		if tablename then
+			table.insert(tablename, temptable)
+		else
+			return temptable
+		end
 	end
 
-	function Draw:FilledRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
+	function Draw:FilledRect(visible, pos_x, pos_y, width, height, clr, tablename)
 		local temptable = Drawing.new("Square")
 		temptable.Visible = visible
 		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, hieght)
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		temptable.Size = Vector2.new(width, height)
+		temptable.Color = RGB(clr[1], clr[2] or clr[1], clr[3] or clr[1])
 		temptable.Filled = true
 		temptable.Thickness = 0
-		temptable.Transparency = clr[4] / 255
-		table.insert(tablename, temptable)
+		temptable.Transparency = clr[4] or 255 / 255
 		if not table.contains(allrender, tablename) then
 			table.insert(allrender, tablename)
+		end
+		if tablename then
+			table.insert(tablename, temptable)
+		else
+			return temptable
 		end
 	end
 
@@ -343,24 +351,32 @@ do
 		temptable.Thickness = thickness
 		temptable.From = Vector2.new(start_x, start_y)
 		temptable.To = Vector2.new(end_x, end_y)
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
-		temptable.Transparency = clr[4] / 255
-		table.insert(tablename, temptable)
+		temptable.Color = RGB(clr[1], clr[2] or clr[1], clr[3] or clr[1])
+		temptable.Transparency = clr[4] or 255 / 255
 		if not table.contains(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
+		if tablename then
+			table.insert(tablename, temptable)
+		else
+			return temptable
+		end
 	end
 
-	function Draw:Image(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
+	function Draw:Image(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
 		local temptable = Drawing.new("Image")
 		temptable.Visible = visible
 		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, hieght)
+		temptable.Size = Vector2.new(width, height)
 		temptable.Transparency = transparency
 		temptable.Data = imagedata
-		table.insert(tablename, temptable)
 		if not table.contains(allrender, tablename) then
 			table.insert(allrender, tablename)
+		end
+		if tablename then
+			table.insert(tablename, temptable)
+		else
+			return temptable
 		end
 	end
 
@@ -371,8 +387,8 @@ do
 		temptable.Position = Vector2.new(pos_x, pos_y)
 		temptable.Size = size
 		temptable.Center = centered
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
-		temptable.Transparency = clr[4] / 255
+		temptable.Color = RGB(clr[1], clr[2] or clr[1], clr[3] or clr[1])
+		temptable.Transparency = clr[4] or 255 / 255
 		temptable.Outline = false
 		temptable.Font = font
 		table.insert(tablename, temptable)
@@ -388,45 +404,53 @@ do
 		temptable.Position = Vector2.new(pos_x, pos_y)
 		temptable.Size = size
 		temptable.Center = centered
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
-		temptable.Transparency = clr[4] / 255
+		temptable.Color = RGB(clr[1], clr[2] or clr[1], clr[3] or clr[1])
+		temptable.Transparency = clr[4] or 255 / 255
 		temptable.Outline = true
-		temptable.OutlineColor = RGB(clr2[1], clr2[2], clr2[3])
+		temptable.OutlineColor = RGB(clr2[1], clr2[2] or clr2[1], clr2[3] or clr2[1])
 		temptable.Font = font
-		table.insert(tablename, temptable)
 		if not table.contains(allrender, tablename) then
 			table.insert(allrender, tablename)
+		end
+		if tablename then
+			table.insert(tablename, temptable)
+		else
+			return temptable
 		end
 	end
 
 	function Draw:Triangle(visible, filled, pa, pb, pc, clr, tablename)
 		local temptable = Drawing.new("Triangle")
 		temptable.Visible = visible
-		temptable.Transparency = clr[4]
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		temptable.Transparency = clr[4] or 255 / 255
+		temptable.Color = RGB(clr[1], clr[2] or clr[1], clr[3] or clr[1])
 		temptable.Thickness = 4.1
 		temptable.PointA = Vector2.new(pa[1], pa[2])
 		temptable.PointB = Vector2.new(pb[1], pb[2])
 		temptable.PointC = Vector2.new(pc[1], pc[2])
 		temptable.Filled = filled
-		table.insert(tablename, temptable)
 		if not table.contains(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
+		if tablename then
+			table.insert(tablename, temptable)
+		else
+			return temptable
+		end
 	end
 
-	function Draw:MenuOutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		Draw:OutlinedRect(visible, pos_x + mp.x, pos_y + mp.y, width, hieght, clr, tablename)
+	function Draw:MenuOutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		Draw:OutlinedRect(visible, pos_x + mp.x, pos_y + mp.y, width, height, clr, tablename)
 		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 
-	function Draw:MenuFilledRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		Draw:FilledRect(visible, pos_x + mp.x, pos_y + mp.y, width, hieght, clr, tablename)
+	function Draw:MenuFilledRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		Draw:FilledRect(visible, pos_x + mp.x, pos_y + mp.y, width, height, clr, tablename)
 		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 
 	function Draw:MenuBigText(text, visible, centered, pos_x, pos_y, tablename)
-		Draw:OutlinedText(text, 2, visible, pos_x + mp.x, pos_y + mp.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
+		Draw:OutlinedText(text, 2, visible, pos_x + mp.x, pos_y + mp.y, 13, centered, {255}, {0, 0, 0}, tablename)
 		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 end
@@ -459,28 +483,29 @@ do
 
    Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 1, wm.width, 2, {mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[2] - 40, 255}, wm.rect)
    Draw:FilledRect(true, wm.pos.X, wm.pos.Y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
-   Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
+   Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2, wm.width, 16, {50}, wm.rect)
    for i = 0, 14 do
-      Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
+      Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2 + i, wm.width, 1, {50 - i * 1.7}, wm.rect)
    end
-   Draw:OutlinedRect(true, wm.pos.X, wm.pos.Y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
-   Draw:OutlinedText(wm.textString, 2, true, wm.pos.X + 5, wm.pos.Y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
+   Draw:OutlinedRect(true, wm.pos.X, wm.pos.Y, wm.width, 18, {0}, wm.rect)
+	Draw:Text(wm.textString, 2, true, wm.pos.X + 5, wm.pos.Y + 3, 13, false, {0}, wm.text)
+	Draw:OutlinedText(wm.textString, 2, true, wm.pos.X + 5, wm.pos.Y + 2, 13, false, {255}, {0}, wm.text)
 end
 
 for i = 1, 35 do
 	for i1, v in ipairs(allesp.skel) do
-		Draw:Line(false, 1, 30, 30, 50, 50, {255, 255, 255, 255}, v)
+		Draw:Line(false, 1, 30, 30, 50, 50, {255}, v)
 	end
 	Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.outerbox)
-	Draw:OutlinedRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.box)
+	Draw:OutlinedRect(false, 20, 20, 20, 20, {255}, allesp.box)
 
 	Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 215}, allesp.hpouter)
-	Draw:FilledRect(false, 20, 20, 20, 20, {0, 255, 0, 255}, allesp.hpinner)
-	Draw:OutlinedText("100", 1, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.hptext)
+	Draw:FilledRect(false, 20, 20, 20, 20, {0, 255, 0}, allesp.hpinner)
+	Draw:OutlinedText("100", 1, false, 20, 20, 13, true, {255}, {0, 0, 0}, allesp.hptext)
 
-	Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.disttext)
-	Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.weptext)
-	Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.nametext)
+	Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255}, {0, 0, 0}, allesp.disttext)
+	Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255}, {0, 0, 0}, allesp.weptext)
+	Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255}, {0, 0, 0}, allesp.nametext)
 end
 
 
@@ -489,53 +514,53 @@ end
 
 local bbmenu = {} -- this one is for the rendering n shi
 do
-	Draw:MenuOutlinedRect(true, 0, 0, mp.w, mp.h, {0, 0, 0, 255}, bbmenu)  -- first gradent or whatever
-	Draw:MenuOutlinedRect(true, 1, 1, mp.w - 2, mp.h - 2, {20, 20, 20, 255}, bbmenu)
-	Draw:MenuOutlinedRect(true, 2, 2, mp.w - 3, 1, {127, 72, 163, 255}, bbmenu)
+	Draw:MenuOutlinedRect(true, 0, 0, mp.w, mp.h, {0, 0, 0}, bbmenu)  -- first gradent or whatever
+	Draw:MenuOutlinedRect(true, 1, 1, mp.w - 2, mp.h - 2, {20}, bbmenu)
+	Draw:MenuOutlinedRect(true, 2, 2, mp.w - 3, 1, {127, 72, 163}, bbmenu)
 	table.insert(mp.clrs.norm, bbmenu[#bbmenu])
-	Draw:MenuOutlinedRect(true, 2, 3, mp.w - 3, 1, {87, 32, 123, 255}, bbmenu)
+	Draw:MenuOutlinedRect(true, 2, 3, mp.w - 3, 1, {87, 32, 123}, bbmenu)
 	table.insert(mp.clrs.dark, bbmenu[#bbmenu])
-	Draw:MenuOutlinedRect(true, 2, 4, mp.w - 3, 1, {20, 20, 20, 255}, bbmenu)
+	Draw:MenuOutlinedRect(true, 2, 4, mp.w - 3, 1, {20}, bbmenu)
 
 	for i = 0, 19 do
-		Draw:MenuFilledRect(true, 2, 5 + i, mp.w - 4, 1, {20, 20, 20, 255}, bbmenu)
+		Draw:MenuFilledRect(true, 2, 5 + i, mp.w - 4, 1, {20, 20, 20}, bbmenu)
 		bbmenu[6 + i].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 20, color = RGB(35, 35, 35)}})
 	end
-	Draw:MenuFilledRect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35, 255}, bbmenu)
+	Draw:MenuFilledRect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35}, bbmenu)
 
 	Draw:MenuBigText("BitchBot", true, false, 6, 6, bbmenu)
 
-	Draw:MenuOutlinedRect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
-	Draw:MenuOutlinedRect(true, 9, 23, mp.w - 18, mp.h - 32, {20, 20, 20, 255}, bbmenu)
-	Draw:MenuOutlinedRect(true, 10, 24, mp.w - 19, 1, {127, 72, 163, 255}, bbmenu)
+	Draw:MenuOutlinedRect(true, 8, 22, mp.w - 16, mp.h - 30, {0}, bbmenu)    -- all this shit does the 2nd gradent
+	Draw:MenuOutlinedRect(true, 9, 23, mp.w - 18, mp.h - 32, {20}, bbmenu)
+	Draw:MenuOutlinedRect(true, 10, 24, mp.w - 19, 1, {127, 72, 163}, bbmenu)
 	table.insert(mp.clrs.norm, bbmenu[#bbmenu])
-	Draw:MenuOutlinedRect(true, 10, 25, mp.w - 19, 1, {87, 32, 123, 255}, bbmenu)
+	Draw:MenuOutlinedRect(true, 10, 25, mp.w - 19, 1, {87, 32, 123}, bbmenu)
 	table.insert(mp.clrs.dark, bbmenu[#bbmenu])
-	Draw:MenuOutlinedRect(true, 10, 26, mp.w - 19, 1, {20, 20, 20, 255}, bbmenu)
+	Draw:MenuOutlinedRect(true, 10, 26, mp.w - 19, 1, {20}, bbmenu)
 
 	for i = 0, 14 do
-		Draw:MenuFilledRect(true, 10, 27 + (i * 2), mp.w - 20, 2, {45, 45, 45, 255}, bbmenu)
+		Draw:MenuFilledRect(true, 10, 27 + (i * 2), mp.w - 20, 2, {45}, bbmenu)
 		bbmenu[#bbmenu].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 15, color = RGB(35, 35, 35)}})
 	end
-	Draw:MenuFilledRect(true, 10, 57, mp.w - 20, mp.h - 67, {35, 35, 35, 255}, bbmenu)
+	Draw:MenuFilledRect(true, 10, 57, mp.w - 20, mp.h - 67, {35}, bbmenu)
 	function Draw:CoolBox(name, x, y, width, height, tab)
-		Draw:MenuOutlinedRect(true, x, y, width, height, {0, 0, 0, 255}, tab)
-		Draw:MenuOutlinedRect(true, x + 1, y + 1, width - 2, height - 2, {20, 20, 20, 255}, tab)
-		Draw:MenuOutlinedRect(true, x + 2, y + 2, width - 3, 1, {127, 72, 163, 255}, tab)
+		Draw:MenuOutlinedRect(true, x, y, width, height, {0}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, width - 2, height - 2, {20}, tab)
+		Draw:MenuOutlinedRect(true, x + 2, y + 2, width - 3, 1, {127, 72, 163}, tab)
 		table.insert(mp.clrs.norm, tab[#tab])
-		Draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, {87, 32, 123, 255}, tab)
+		Draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, {87, 32, 123}, tab)
 		table.insert(mp.clrs.dark, tab[#tab])
-		Draw:MenuOutlinedRect(true, x + 2, y + 4, width - 3, 1, {20, 20, 20, 255}, tab)
+		Draw:MenuOutlinedRect(true, x + 2, y + 4, width - 3, 1, {20}, tab)
 		Draw:MenuBigText(name, true, false, x + 6, y + 5, tab)
 	end
 
 	function Draw:Toggle(name, value, x, y, tab)
-		Draw:MenuOutlinedRect(true, x, y, 12, 12, {30, 30, 30, 255}, tab)
-		Draw:MenuOutlinedRect(true, x + 1, y + 1, 10, 10, {0, 0, 0, 255}, tab)
+		Draw:MenuOutlinedRect(true, x, y, 12, 12, {30}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, 10, 10, {0}, tab)
 
 		local temptable = {}
 		for i = 0, 3 do
-			Draw:MenuFilledRect(true, x + 2, y + 2 + (i * 2), 8, 2, {0, 0, 0, 255}, tab)
+			Draw:MenuFilledRect(true, x + 2, y + 2 + (i * 2), 8, 2, {0}, tab)
 			table.insert(temptable, tab[#tab])
 			if value then
 				tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
@@ -551,12 +576,12 @@ do
 
 	function Draw:Keybind(key, x, y, tab)
 		local temptable = {}
-		Draw:MenuFilledRect(true, x, y, 44, 16, {25, 25, 25, 255}, tab)
+		Draw:MenuFilledRect(true, x, y, 44, 16, {25}, tab)
 		Draw:MenuBigText(keyenum2name(key), true, true, x + 22, y + 1, tab)
 		table.insert(temptable, tab[#tab])
-		Draw:MenuOutlinedRect(true, x, y, 44, 16, {30, 30, 30, 255}, tab)
+		Draw:MenuOutlinedRect(true, x, y, 44, 16, {30}, tab)
 		table.insert(temptable, tab[#tab])
-		Draw:MenuOutlinedRect(true, x + 1, y + 1, 42, 14, {0, 0, 0, 255}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, 42, 14, {0}, tab)
 
 		return temptable
 	end
@@ -564,14 +589,14 @@ do
 	function Draw:ColorPicker(color, x, y, tab)
 		local temptable = {}
 
-		Draw:MenuOutlinedRect(true, x, y, 28, 14, {30, 30, 30, 255}, tab)
-		Draw:MenuOutlinedRect(true, x + 1, y + 1, 26, 12, {0, 0, 0, 255}, tab)
+		Draw:MenuOutlinedRect(true, x, y, 28, 14, {30}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, 26, 12, {0}, tab)
 
-		Draw:MenuFilledRect(true, x + 2, y + 2, 24, 10, {color[1], color[2], color[3], 255}, tab)
+		Draw:MenuFilledRect(true, x + 2, y + 2, 24, 10, {color[1], color[2], color[3]}, tab)
 		table.insert(temptable, tab[#tab])
-		Draw:MenuOutlinedRect(true, x + 2, y + 2, 24, 10, {color[1] - 40, color[2] - 40, color[3] - 40, 255}, tab)
+		Draw:MenuOutlinedRect(true, x + 2, y + 2, 24, 10, {color[1] - 40, color[2] - 40, color[3] - 40}, tab)
 		table.insert(temptable, tab[#tab])
-		Draw:MenuOutlinedRect(true, x + 3, y + 3, 22, 8, {color[1] - 40, color[2] - 40, color[3] - 40, 255}, tab)
+		Draw:MenuOutlinedRect(true, x + 3, y + 3, 22, 8, {color[1] - 40, color[2] - 40, color[3] - 40}, tab)
 		table.insert(temptable, tab[#tab])
 
 		return temptable
@@ -581,18 +606,18 @@ do
 		Draw:MenuBigText(name, true, false, x, y - 3, tab)
 
 		for i = 0, 3 do
-			Draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), length - 4, 2, {0, 0, 0, 255}, tab)
+			Draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), length - 4, 2, {0}, tab)
 			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
 		end
 
 		local temptable = {}
 		for i = 0, 3 do
-			Draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), (length - 4) * ((value - minvalue) / (maxvalue - minvalue)), 2, {0, 0, 0, 255}, tab)
+			Draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), (length - 4) * ((value - minvalue) / (maxvalue - minvalue)), 2, {0}, tab)
 			table.insert(temptable, tab[#tab])
 			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
 		end
-		Draw:MenuOutlinedRect(true, x, y + 12, length, 12, {30, 30, 30, 255}, tab)
-		Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 10, {0, 0, 0, 255}, tab)
+		Draw:MenuOutlinedRect(true, x, y + 12, length, 12, {30}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 10, {0}, tab)
 
 		if stradd == nil then
 			stradd = ""
@@ -608,12 +633,12 @@ do
 		Draw:MenuBigText(name, true, false, x, y - 3, tab)
 
 		for i = 0, 7 do
-			Draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), length - 4, 2, {0, 0, 0, 255}, tab)
+			Draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), length - 4, 2, {0}, tab)
 			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 7, color = RGB(35, 35, 35)}})
 		end
 
-		Draw:MenuOutlinedRect(true, x, y + 12, length, 22, {30, 30, 30, 255}, tab)
-		Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 20, {0, 0, 0, 255}, tab)
+		Draw:MenuOutlinedRect(true, x, y + 12, length, 22, {30}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 20, {0}, tab)
 
 		Draw:MenuBigText(tostring(values[value]), true, false, x + 6, y + 16 , tab)
 		table.insert(temptable, tab[#tab])
@@ -629,12 +654,12 @@ do
 		Draw:MenuBigText(name, true, false, x, y - 3, tab)
 
 		for i = 0, 7 do
-			Draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), length - 4, 2, {0, 0, 0, 255}, tab)
+			Draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), length - 4, 2, {0}, tab)
 			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 7, color = RGB(35, 35, 35)}})
 		end
 
-		Draw:MenuOutlinedRect(true, x, y + 12, length, 22, {30, 30, 30, 255}, tab)
-		Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 20, {0, 0, 0, 255}, tab)
+		Draw:MenuOutlinedRect(true, x, y + 12, length, 22, {30}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 20, {0}, tab)
 		local textthing = ""
 		for k, v in pairs(values) do
 			if v[2] then
@@ -659,13 +684,13 @@ do
 		local temptable = {}
 
 		for i = 0, 8 do
-			Draw:MenuFilledRect(true, x + 2, y + 2 + (i * 2), length - 4, 2, {0, 0, 0, 255}, tab)
+			Draw:MenuFilledRect(true, x + 2, y + 2 + (i * 2), length - 4, 2, {0}, tab)
 			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 8, color = RGB(35, 35, 35)}})
 			table.insert(temptable, tab[#tab])
 		end
 
-		Draw:MenuOutlinedRect(true, x, y, length, 22, {30, 30, 30, 255}, tab)
-		Draw:MenuOutlinedRect(true, x + 1, y + 1, length - 2, 20, {0, 0, 0, 255}, tab)
+		Draw:MenuOutlinedRect(true, x, y, length, 22, {30}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, length - 2, 20, {0}, tab)
 		Draw:MenuBigText(name, true, true, x + math.floor(length * 0.5), y + 4 , tab)
 
 		return temptable
@@ -2019,18 +2044,18 @@ local cp = {
 	postable = {}
 }
 
-local function colorpicker_outlined_rect(visible, pos_x, pos_y, width, hieght, clr, tablename)    -- doing all this shit to make it easier for me to make this beat look nice and shit ya fell dog :dog_head:
-	Draw:OutlinedRect(visible, pos_x + cp.x, pos_y + cp.y, width, hieght, clr, tablename)
+local function colorpicker_outlined_rect(visible, pos_x, pos_y, width, height, clr, tablename)    -- doing all this shit to make it easier for me to make this beat look nice and shit ya fell dog :dog_head:
+	Draw:OutlinedRect(visible, pos_x + cp.x, pos_y + cp.y, width, height, clr, tablename)
 	table.insert(cp.postable, {tablename[#tablename], pos_x, pos_y})
 end
 
-local function colorpicker_filled_rect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-	Draw:FilledRect(visible, pos_x + cp.x, pos_y + cp.y, width, hieght, clr, tablename)
+local function colorpicker_filled_rect(visible, pos_x, pos_y, width, height, clr, tablename)
+	Draw:FilledRect(visible, pos_x + cp.x, pos_y + cp.y, width, height, clr, tablename)
 	table.insert(cp.postable, {tablename[#tablename], pos_x, pos_y})
 end
 
-local function colorpicker_image(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
-	Draw:Image(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
+local function colorpicker_image(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+	Draw:Image(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
 	table.insert(cp.postable, {tablename[#tablename], pos_x, pos_y})
 end
 
@@ -2092,7 +2117,7 @@ local function set_newcolor(r, g, b, a)
 
 	newcolor.Color = RGB(r, g, b)
 	if a ~= nil then
-		newcolor.Transparency = a/255
+		newcolor.Transparency = a / 255
 	else
 		newcolor.Transparency = 1
 	end
@@ -2101,7 +2126,7 @@ end
 local function set_oldcolor(r, g, b, a)
 	oldcolor.Color = RGB(r, g, b)
 	if a ~= nil then
-		oldcolor.Transparency = a/255
+		oldcolor.Transparency = a / 255
 	else
 		oldcolor.Transparency = 1
 	end
@@ -2259,9 +2284,9 @@ function inputBeganMenu(key)
 	if client.logic.currentgun and client.logic.currentgun.shoot then
 		local shootgun = client.logic.currentgun.shoot
 		if not shooties[client.logic.currentgun.shoot] then
-			client.logic.currentgun.shoot = function(self, ...)
+			client.logic.currentgun.shoot = function(...)
 				if not mp.open then
-					shootgun(self, ...)
+					shootgun(...)
 				end
 			end
 		end
@@ -3475,13 +3500,15 @@ local function renderVisuals()
 
 			end
 		end
-
+		
 		do --watermark shittiez
 			local wme = mp.getval("Settings", "Menu Settings", "Watermark")
 			for k, v in pairs(allesp.watermark.rect) do
 				v.Visible = wme
 			end
-			allesp.watermark.text[1].Visible = wme
+			for k, v in pairs(allesp.watermark.text) do
+				v.Visible = wme
+			end
 		end
 	end
 end
@@ -3650,7 +3677,7 @@ do--ANCHOR camera function definitions.
 
 		origin = origin or Camera.CFrame.Position
 
-		return origin + client.trajectory(origin, CACHED_VEC3, GRAVITY, pos, CACHED_VEC3, CACHED_VEC3, client.logic.currentgun.data.bulletspeed)
+		return origin + client.trajectory(origin, CACHED_VEC3, CACHED_GRAVITY, pos, CACHED_VEC3, CACHED_VEC3, client.logic.currentgun.data.bulletspeed)
 
 
 	end
@@ -3795,7 +3822,7 @@ do--ANCHOR send hook
 		if args[1] == "changehealthx" and args[3] ~= "BFG 50" and mp.getval("Misc", "Movement", "Prevent Fall Damage") then return end
 		if args[1] == "stab" then
 			local key = mp.getval("Rage", "Extra", "Knife Bot", "keybind")
-			if mp.getval("Rage", "Extra", "Knife Bot") and not key or INPUT_SERVICE:IsKeyDown(key) then
+			if mp.getval("Rage", "Extra", "Knife Bot") and (not key or INPUT_SERVICE:IsKeyDown(key)) then
 				if mp.getval("Rage", "Extra", "Knife Bot Type") == 1 then
 					ragebot:KnifeTarget(ragebot:GetFirstKnifeTarget())
 				end
@@ -3877,19 +3904,19 @@ do -- ANCHOR Legitbot definition defines legit functions
 
 		if not targetPart then return end
 
-		local Pos, visCheck
+		local visPos, visCheck
 
 		if mp.getval("Legit", "Aim Assist", "Adjust for Bullet Drop") then
-			pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
+			visPos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
 		else
-			Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
+			visPos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
 		end
 		if mp.getval("Legit", "Aim Assist", "Enable Randomization") then
 			local randMag = mp.getval("Legit", "Aim Assist", "Randomization") * 5
-			Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1,time()) * randMag, 0)
+			visPos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1,time()) * randMag, 0)
 		end
 
-		local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
+		local aimbotMovement = Vector2.new(visPos.X - LOCAL_MOUSE.X, visPos.Y - LOCAL_MOUSE.Y)
 
 		mousemoverel(aimbotMovement.X / smoothing, aimbotMovement.Y / smoothing)
 
