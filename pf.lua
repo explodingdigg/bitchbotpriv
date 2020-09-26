@@ -30,6 +30,7 @@ end
 function MultiThreadList(obj)
 	for i, v in pairs(obj) do
 		CreateThread(v)
+		wait(0.1)
 	end
 end
 
@@ -475,7 +476,7 @@ local allesp = {
 }
 do
 	local wm = allesp.watermark
-   wm.textString = "BitchBot | Developer | " .. os.date("%b. %d, %Y")
+   wm.textString = os.date("BitchBot | Developer | %b. %d, %Y")
    wm.pos = Vector2.new(40, 10)
    wm.text = {}
    wm.width = (#wm.textString) * 7 + 10
@@ -3269,7 +3270,7 @@ local function renderVisuals()
 
 				local playerTorso = v1.Character.Torso
 
-				local vTop = playerTorso.CFrame.Position + playerTorso.CFrame.UpVector * 2.3
+				local vTop = playerTorso.CFrame.Position + (playerTorso.CFrame.UpVector * 1.5) + Vector3.new(0, 1, 0)
 				local vBottom = playerTorso.CFrame.Position - playerTorso.CFrame.UpVector * 3
 
 				local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
@@ -3277,7 +3278,7 @@ local function renderVisuals()
 
 				local fovMult = mp.getval("Visuals", "Local Visuals", "Camera FOV") / Camera.FieldOfView
 
-				local sizeX = math.ceil(2000 / top.Z * fovMult)
+				local sizeX = math.ceil(1700 / top.Z * fovMult)
 				local sizeY = math.ceil(math.max(math.abs(bottom.Y - top.Y), sizeX))
 
 				local boxSize = Vector2.new(sizeX, sizeY)
@@ -3379,14 +3380,14 @@ local function renderVisuals()
 						spoty += 12
 						allesp.weptext[playernum].Text = wepname / mp.getval("ESP", "ESP Settings", "Max Text Length")
 						allesp.weptext[playernum].Visible = true
-						allesp.weptext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y))
+						allesp.weptext[playernum].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y)
 						allesp.weptext[playernum].Color = RGB(mp.options["ESP"][teem]["Held Weapon"][5][1][1], mp.options["ESP"][teem]["Held Weapon"][5][1][2], mp.options["ESP"][teem]["Held Weapon"][5][1][3])
 						allesp.weptext[playernum].Transparency = mp.options["ESP"][teem]["Held Weapon"][5][1][4]/255
 					end
 					if mp.options["ESP"][teem]["Distance"][1] then
 						allesp.disttext[playernum].Text = tostring(math.ceil(bottom.z / 5)).."m" --TODO alan i told you to make this not worldtoscreen based.
 						allesp.disttext[playernum].Visible = true
-						allesp.disttext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y - 2) + spoty)
+						allesp.disttext[playernum].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y + spoty)
 						allesp.disttext[playernum].Color = RGB(mp.options["ESP"][teem]["Distance"][5][1][1], mp.options["ESP"][teem]["Distance"][5][1][2], mp.options["ESP"][teem]["Distance"][5][1][3])
 						allesp.disttext[playernum].Transparency = mp.options["ESP"][teem]["Distance"][5][1][4]/255
 					end
@@ -3502,11 +3503,12 @@ local function renderVisuals()
 		end
 		
 		do --watermark shittiez
+			local wm = allesp.watermark
 			local wme = mp.getval("Settings", "Menu Settings", "Watermark")
-			for k, v in pairs(allesp.watermark.rect) do
+			for k, v in pairs(wm.rect) do
 				v.Visible = wme
 			end
-			for k, v in pairs(allesp.watermark.text) do
+			for k, v in pairs(wm.text) do
 				v.Visible = wme
 			end
 		end
@@ -3612,7 +3614,7 @@ do --ANCHOR metatable hookz
 	setreadonly(mt, false)
 
 	mt.__newindex = newcclosure(function(self, id, val)
-		if mp.getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson and self == workspace.Camera and id == "CFrame" then
+		if mp.getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson and self == Camera and id == "CFrame" then
 			local dist = mp.getval("Visuals", "Local Visuals", "Third Person Distance") / 10
 			local params = RaycastParams.new()
 			params.FilterType = Enum.RaycastFilterType.Blacklist
@@ -3653,8 +3655,8 @@ do--ANCHOR camera function definitions.
 	function camera:GetFOV(Part)
 
 
-		local directional = CFrame.new(workspace.Camera.CFrame.Position, Part.Position)
-		local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(workspace.Camera.CFrame:ToOrientation())
+		local directional = CFrame.new(Camera.CFrame.Position, Part.Position)
+		local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(Camera.CFrame:ToOrientation())
 		return math.deg(ang.Magnitude)
 
 
@@ -3684,9 +3686,96 @@ do--ANCHOR camera function definitions.
 
 end
 
+local autowall = {}
+do
+	local ignore
+	local pen
+	local vel
+	local pos
+
+	local VecDot = CACHED_VEC3.Dot
+
+	local function BulletStep(delta, tick, parts)
+		if tick > 1.5 then
+			return 1
+		end
+
+		local dir = delta * vel + delta * delta / 2 * CACHED_GRAVITY
+		local hit, hitPos = workspace:FindPartOnRayWithIgnoreList(Ray.new(pos, dir), ignore, true, true)
+
+		if hit then
+			if parts[hit] then
+				return 0, hitPos
+			end
+
+			if hit.Name == "killbullet" then
+				return 1
+			end
+
+			if hit.CanCollide and hit.Transparency ~= 1 then
+				local size = hit.Size.Magnitude * dir.unit
+				local _, opposite = workspace:FindPartOnRayWithIgnoreList(Ray.new(hitPos + size, -size), {hit}, true)
+				local amount = VecDot(dir.unit, opposite - hitPos)
+				if amount < pen then
+					pen = pen - amount
+				else
+					return 1
+				end
+			end
+
+			pos = hitPos + 0.01 * dir.unit
+			vel = vel + VecDot(dir, hitPos - pos) / VecDot(dir, dir) * delta * CACHED_GRAVITY
+
+			ignore[#ignore + 1] = hit
+		else
+			pos = pos + dir
+			vel = vel + delta * CACHED_GRAVITY
+		end
+	end
+
+	function autowall:CanPenetrate(origin, target, targetPos, parts)
+		if parts and client.logic.currentgun then
+			local data = client.logic.currentgun.data
+			if data then
+				ignore = {
+					workspace.Terrain,
+					workspace.Ignore,
+					Camera,
+					workspace.Players[LOCAL_PLAYER.Team.Name]
+				}
+
+				vel = (targetPos - origin).Unit * data.bulletspeed
+				pos = origin
+				pen = data.penetrationdepth
+
+				local step = 1 / 144
+				for i = 1, 1000 do
+					local ret, hitPos = BulletStep(step, i * step, parts)
+					if ret ~= nil then
+						return ret <= 0, hitPos
+					end
+				end
+			end
+		end
+		return false
+	end
+
+	function autowall:IsVisible(origin, targetPos, ignore)
+		local result = workspace:FindPartOnRayWithIgnoreList(Ray.new(origin, targetPos - origin), ignore, true, true)
+
+		if not result then
+			return true
+		elseif ignoreList[result] then
+			ignore[#ignore + 1] = result
+
+			return self:IsVisible(origin, targetPos, ignore)
+		end
+	end
+end
+
 local ragebot = {}
 do--ANCHOR ragebot definitions
-	local tpIgnore = {workspace.Players, workspace.Ignore, workspace.CurrentCamera}
+	local tpIgnore = {workspace.Players, workspace.Ignore, Camera}
 	local nadeSize = Vector3.new(0, 50, 0)
 	local tpSelfDecreaseOffset = Vector3.new(0, 2, 0)
 
@@ -3784,6 +3873,38 @@ do--ANCHOR ragebot definitions
 		end
 
 
+	end
+
+	
+	local sphereHitbox = Instance.new("Part", workspace)
+	do
+		local diameter = 10 -- up to 12 works
+		sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
+		sphereHitbox.Position = CACHED_VEC3
+		sphereHitbox.Shape = Enum.PartType.Ball
+		sphereHitbox.Transparency = 1
+		sphereHitbox.Anchored = true
+		sphereHitbox.CanCollide = false
+	end
+
+	local sphereParts = {[sphereHitbox] = true}
+
+	function ragebot:CanHitTarget(target, origin)
+		origin = origin or Camera.CFrame.Position
+
+		local t = client.replication.getbodyparts(target)
+		if t then
+			local targetPos = t.rootpart.Position
+			sphereHitbox.Position = targetPos
+			local aimPos = camera:GetTrajectory(targetPos, origin)
+			local canPenetrate, hitPos = autowall:CanPenetrate(origin, target, aimPos, sphereParts)
+
+			if canPenetrate then
+				return true, aimPos, hitPos
+			end
+
+		end
+		return false
 	end
 
 
@@ -3886,7 +4007,8 @@ do -- ANCHOR Legitbot definition defines legit functions
 			local hitscan = not mp.getval("Legit", "Aim Assist", "Force Priority Hitbox")
 
 			if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
-				local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
+				local targetPart, closest, targetPlayer = legitbot:GetTargetLegit(hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
+				
 				if targetPart and closest < fov then
 					legitbot:AimAtTarget(targetPart, smoothing)
 				end
@@ -3937,7 +4059,7 @@ do -- ANCHOR Legitbot definition defines legit functions
 	function legitbot:GetTargetLegit(partPreference, hitscan, players)
 
 
-		local closest, closestPart = math.huge
+		local closest, closestPart, closestPlayer = math.huge
 		partPreference = partPreference or "head"
 		hitscan = hitscan or false
 		players = players or game.Players:GetPlayers()
@@ -3955,6 +4077,7 @@ do -- ANCHOR Legitbot definition defines legit functions
 									if camera:IsVisible(Bone) then
 										closest = camera:GetFOV(Bone)
 										closestPart = Bone
+										closestPlayer = Player
 									end
 								end
 							end
@@ -3966,13 +4089,14 @@ do -- ANCHOR Legitbot definition defines legit functions
 						if camera:IsVisible(PriorityBone) then
 							closest = camera:GetFOV(PriorityBone)
 							closestPart = PriorityBone
+							closestPlayer = Player
 						end
 					end
 				end
 			end
 
 		end
-		return closestPart, closest
+		return closestPart, closest, closestPlayer
 
 
 	end
@@ -4166,7 +4290,7 @@ local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 	end
 end)
 
-local renderstepped = game.RunService.RenderStepped:Connect(function()
+local renderstepped = game.RunService.RenderStepped:Connect(function(frameDelta)
 	do --rendering
 		renderSteppedMenu()
 		renderVisuals()
