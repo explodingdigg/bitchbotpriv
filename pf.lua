@@ -98,12 +98,14 @@ local CACHED_VEC3 = Vector3.new()
 local CACHED_GRAVITY = Vector3.new(0, -192.6, 0)
 local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
 local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
+local TELEPORT_SERVICE = game:GetService("TeleportService")
 
 local Camera = workspace.CurrentCamera
 --TODO rename all the constants to be SNAKE_CASED_LOUD
 local client = {}
 
 for k, v in pairs(getgc(true)) do
+
 	if type(v) == "function" then
 		if getinfo(v).name == "bulletcheck" then
 			client.bulletcheck = v
@@ -111,6 +113,7 @@ for k, v in pairs(getgc(true)) do
 			client.trajectory = v
 		end
 		for k1, v1 in pairs(debug.getupvalues(v)) do
+
 			if type(v1) == "table" then
 				if rawget(v1, "send") then
 					client.net = v1
@@ -130,6 +133,7 @@ for k, v in pairs(getgc(true)) do
 					client.roundsystem = v1
 				end
 			end
+
 		end
 	end
 	if type(v) == "table" then
@@ -139,6 +143,7 @@ for k, v in pairs(getgc(true)) do
 			client.particle = v
 		end
 	end
+
 end
 
 do -- table shitz
@@ -1807,7 +1812,20 @@ local menutable = {
 						name = "Save Config"
 					},
 				}
-			}
+			},
+			{
+				name = "Tools",
+				x = mp.columns.left,
+				y = 242,
+				width = mp.columns.width,
+				height = 100,
+				content = {
+					{
+						type = "button",
+						name = "Set Clipboard Game id"
+					},
+				}
+			},
 		}
 	},
 }
@@ -2835,7 +2853,10 @@ local function buttonpressed(bp)
 				end
 			end
 		end
+	elseif bp == mp.options["Settings"]["Tools"]["Set Clipboard Game id"] then
+		setclipboard(game.JobId)
 	end
+
 end
 
 local function mousebutton1downfunc()
@@ -3502,15 +3523,16 @@ local function renderVisuals()
 			end
 		end
 		
-		do --watermark shittiez
-			local wm = allesp.watermark
-			local wme = mp.getval("Settings", "Menu Settings", "Watermark")
-			for k, v in pairs(wm.rect) do
-				v.Visible = wme
-			end
-			for k, v in pairs(wm.text) do
-				v.Visible = wme
-			end
+		
+	end
+	do --watermark shittiez
+		local wm = allesp.watermark
+		local wme = mp.getval("Settings", "Menu Settings", "Watermark")
+		for k, v in pairs(wm.rect) do
+			v.Visible = wme
+		end
+		for k, v in pairs(wm.text) do
+			v.Visible = wme
 		end
 	end
 end
@@ -3779,6 +3801,23 @@ do--ANCHOR ragebot definitions
 	local nadeSize = Vector3.new(0, 50, 0)
 	local tpSelfDecreaseOffset = Vector3.new(0, 2, 0)
 
+	ragebot.pitchTable = {
+		[1] = function(a) return a end,
+		[2] = function(a) return -4 end, -- up
+		[3] = function(a) return 0 end, -- zero
+		[4] = function(a) return 4.7 end, -- down
+		[5] = function(a) return -math.pi end, -- upside down
+		[6] = function(a) return tick() * 0.01 end, -- roll forwards
+		[7] = function(a) return -tick() * 0.01 end, --roll backwards
+		[8] = function(a) return math.random(0) end, -- random
+	}
+	ragebot.yawTable = {
+		[1] = function(a) return a end, -- default
+		[2] = function(a) return a + math.pi end, --back
+		[3] = function(a) return (tick() * 0.01) % 12 end, -- spinny
+		[4] = function(a) return math.random(0) end, --random
+	}
+
 	function ragebot:AntiNade(char, cam)
 
 
@@ -3814,20 +3853,45 @@ do--ANCHOR ragebot definitions
 
 	end
 
+	function ragebot:GetKnifeTargets()
+
+		local t = {}
+		for i, ply in ipairs(Players:GetPlayers()) do
+
+			if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
+				local parts = client.replication.getbodyparts(ply)
+				if not parts then continue end
+
+				if (parts.rootpart.Position - client.cam.cframe.p).Magnitude < 40 then
+					t[#t+1] = {ply, parts.head}
+				end
+			end
+
+		end
+		return t
+
+
+	end
+
 	function ragebot:KnifeBotMain()
+		
 		local key = mp.getval("Rage", "Extra", "Knife Bot", "keybind")
 		if mp.getval("Rage", "Extra", "Knife Bot") and (key == nil or INPUT_SERVICE:IsKeyDown(key)) then
 			if mp.getval("Rage", "Extra", "Knife Bot Type") == 2 then
 				ragebot:KnifeAura(true)
 			end
 		end
+
 	end
 
 	function ragebot:KnifeAura(stab)
 
-		local target, part = ragebot:GetFirstKnifeTarget()
-		if target then
-			ragebot:KnifeTarget(target, part, stab)
+		local targets = ragebot:GetKnifeTargets()
+		
+		for i, target in pairs(targets) do
+			if target[1] then
+				ragebot:KnifeTarget(target[1], target[2], stab)
+			end
 		end
 
 	end
@@ -3835,10 +3899,14 @@ do--ANCHOR ragebot definitions
 	
 
 	function ragebot:KnifeTarget(target, part, stab)
+
+
 		local cfc = client.cam.cframe
 		send(client.net, "newpos", cfc.p, cfc) -- Makes knife aura work with anti nade tp
 		if stab then send(client.net, "stab") end
 		send(client.net, "knifehit", target, tick(), part)
+
+
 	end
 
 
@@ -3941,6 +4009,7 @@ do--ANCHOR send hook
 		if args[1] == "sprint" and mp.getval("Rage", "Anti Aim", "Lower Arms") then return end
 		if args[1] == "newpos" and ragebot:AntiNade(args[2], args[3]) then return end
 		if args[1] == "changehealthx" and args[3] ~= "BFG 50" and mp.getval("Misc", "Movement", "Prevent Fall Damage") then return end
+
 		if args[1] == "stab" then
 			local key = mp.getval("Rage", "Extra", "Knife Bot", "keybind")
 			if mp.getval("Rage", "Extra", "Knife Bot") and (not key or INPUT_SERVICE:IsKeyDown(key)) then
@@ -3948,45 +4017,16 @@ do--ANCHOR send hook
 					ragebot:KnifeTarget(ragebot:GetFirstKnifeTarget())
 				end
 			end
-		end
-		if args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
-			local pitch = args[2].X
-			local yaw = args[2].Y
-
+		elseif args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
 			local pitchChoice = mp.getval("Rage", "Anti Aim", "Pitch")
 			local yawChoice = mp.getval("Rage", "Anti Aim", "Yaw")
-			---"off,down,up,roll,upside down,random"
-			--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
-			--{"Off", "Backward", "Spin", "Random"} yaw
 
-			if pitchChoice == 2 then
-				pitch = -4
-			elseif pitchChoice == 3 then
-				pitch = 0
-			elseif pitchChoice == 4 then
-				pitch = 4.7
-			elseif pitchChoice == 5 then
-				pitch = -math.pi
-			elseif pitchChoice == 6 then
-				pitch = tick() * 0.01
-			elseif pitchChoice == 7 then
-				pitch = -tick() * 0.01
-			elseif pitchChoice == 8 then
-				pitch = math.random(0)
-			end
-
-			if yawChoice == 2 then
-				yaw += math.pi
-			elseif yawChoice == 3 then
-				yaw = (tick() * 0.01) % 12
-			elseif yawChoice == 4 then
-				yaw = math.random(0)
-			end
-
-			-- yaw += jitter
+			local pitch = ragebot.pitchTable[pitchChoice](args[2].X)
+			local yaw =  ragebot.yawTable[yawChoice](args[2].Y)
 
 			args[2]= Vector3.new(pitch, yaw, 0)
 		end
+
 		return send(self, unpack(args))
 	end
 end
@@ -4250,7 +4290,7 @@ do -- ANCHOR movement definitionz
 
 		if mp.getval("Misc", "Movement", "Gravity Shift") then
 			local scaling = mp.getval("Misc", "Movement", "Gravity Shift Percentage")
-			local mappedGrav = math.map(scaling, -100, 100, 0, 196.2)
+			local mappedGrav = math.map(scaling, 0, 100, 0, 196.2)
 			workspace.Gravity = 196.2 + mappedGrav
 		else
 			workspace.Gravity = 196.2
