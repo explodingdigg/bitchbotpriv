@@ -1752,10 +1752,18 @@ local menutable = {
 						value = false
 					},
 					{
-						type = "dropbox",
+						type = "toggle",
 						name = "Speed Hack",
+						extra = {
+							type = "keybind",
+							key = nil
+						}
+					},
+					{
+						type = "dropbox",
+						name = "Speed Hack Type",
 						value = 1,
-						values = {"Off", "Always", "In Air", "On Hop"}
+						values = {"Always", "In Air", "On Hop"}
 					},
 					{
 						type = "slider",
@@ -3320,13 +3328,13 @@ local function renderVisuals()
 
 				local playerTorso = v1.Character.Torso
 
-				local vTop = playerTorso.CFrame.Position + (playerTorso.CFrame.UpVector * 1.7) + Camera.CFrame.UpVector
-				local vBottom = playerTorso.CFrame.Position - (playerTorso.CFrame.UpVector * 2) - Camera.CFrame.UpVector
+				local vTop = playerTorso.CFrame.Position + (playerTorso.CFrame.UpVector * 1.7) + Camera.CFrame.UpVector - Camera.CFrame.RightVector
+				local vBottom = playerTorso.CFrame.Position - (playerTorso.CFrame.UpVector * 2) - Camera.CFrame.UpVector + Camera.CFrame.RightVector
 
 				local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 				local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 
-				local fovMult = mp.getval("Visuals", "Local Visuals", "Camera FOV") / Camera.FieldOfView
+				local fovMult = 90 / Camera.FieldOfView
 
 				local sizeX = math.ceil(math.max(1700 / top.Z * fovMult, math.abs(bottom.X - top.X)))
 				local sizeY = math.ceil(math.max(math.abs(bottom.Y - top.Y), sizeX/2))
@@ -3876,15 +3884,18 @@ do--ANCHOR ragebot definitions
 
 	function ragebot:GetFirstKnifeTarget()
 
+
 		local closest = mp.getval("Rage", "Knife Bot", "Range")
 		local Target, Part 
+
+		local hitbox = mp.getval("Rage", "Knife Bot", "Hitbox") == 1 and "head" or "torso"
 
 		for i, ply in ipairs(Players:GetPlayers()) do
 
 			if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
 				local parts = client.replication.getbodyparts(ply)
 				if not parts then continue end
-				local hitbox = mp.getval("Rage", "Knife Bot", "Hitbox") == 1 and "head" or "torso"
+
 
 				local dist = (parts.rootpart.Position - client.cam.cframe.p).Magnitude
 				if dist < closest then
@@ -3899,10 +3910,14 @@ do--ANCHOR ragebot definitions
 
 		return Target, Part
 
+
 	end
 
 	function ragebot:GetKnifeTargets()
+
+
 		local range = mp.getval("Rage", "Knife Bot", "Range")
+		local hitbox = mp.getval("Rage", "Knife Bot", "Hitbox") == 1 and "head" or "torso"
 
 		local t = {}
 		for i, ply in ipairs(Players:GetPlayers()) do
@@ -3913,7 +3928,7 @@ do--ANCHOR ragebot definitions
 				
 				if (parts.rootpart.Position - client.cam.cframe.p).Magnitude < range then
 					if not mp.getval("Rage", "Knife Bot", "Visibility Check") or camera:IsVisible(parts[hitbox]) then
-						t[#t+1] = {ply, parts.head}
+						t[#t+1] = {ply, parts[hitbox]}
 					end
 				end
 			end
@@ -3926,15 +3941,18 @@ do--ANCHOR ragebot definitions
 
 	function ragebot:KnifeBotMain()
 
+
 		if mp.getval("Rage", "Knife Bot", "Enabled") and isKeybindDown("Rage", "Knife Bot", "Enabled") then
 			if mp.getval("Rage", "Knife Bot", "Type") == 3 then
 				ragebot:KnifeAura(true)
 			end
 		end
 
+
 	end
 
 	function ragebot:KnifeAura(stab)
+
 
 		local targets = ragebot:GetKnifeTargets()
 		
@@ -3943,6 +3961,7 @@ do--ANCHOR ragebot definitions
 				ragebot:KnifeTarget(target[1], target[2], stab)
 			end
 		end
+
 
 	end
 
@@ -4295,10 +4314,10 @@ do -- ANCHOR movement definitionz
 
 	function movement:SpeedHack()
 
+		if mp.getval("Misc", "Movement", "Speed Hack") and isKeybindDown("Misc", "Movement", "Speed Hack") then
 
-		local type = mp.getval("Misc", "Movement", "Speed Hack")
-		if type ~= 1 then
 			local speed = mp.getval("Misc", "Movement", "Speed Hack Speed")
+			local type = mp.getval("Misc", "Movement", "Speed Hack Type")
 
 			local travel = CACHED_VEC3
 			local looking = Camera.CFrame.LookVector
@@ -4320,13 +4339,14 @@ do -- ANCHOR movement definitionz
 			travel = Vector2.new(travel.X, travel.Z).Unit
 
 			if travel.X == travel.X then
-				if type == 3 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+				if type == 2 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
 					return
-				elseif type == 4 and not humanoid.Jump then
+				elseif type == 3 and not humanoid.Jump then
 					return
 				end
 				rootpart.Velocity = Vector3.new(travel.X * speed, rootpart.Velocity.Y, travel.Y * speed)
 			end
+
 		end
 	
 	
