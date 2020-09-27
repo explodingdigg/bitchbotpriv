@@ -1054,7 +1054,7 @@ local menutable = {
 				}
 			},
 			{
-				name = "Extra",
+				name = "Knife Bot",
 				x = mp.columns.left,
 				y = 344,
 				width = mp.columns.width,
@@ -1062,18 +1062,47 @@ local menutable = {
 				content = {
 					{
 						type = "toggle",
-						name = "Knife Bot",
+						name = "Enabled",
 						value = false,
 						extra = {
 							type = "keybind",
 						}
 					},
 					{
-						type = "dropbox",
-						name = "Knife Bot Type",
-						value = 2,
-						values = {"Assist", "Aura"}
+						type = "toggle",
+						name = "Visibility Check",
+						value = false,
 					},
+					{
+						type = "dropbox",
+						name = "Type",
+						value = 3,
+						values = {"Assist", "Instant Kill Assist", "Multi Aura"}
+					},
+					{
+						type = "dropbox", 
+						name = "Hitbox",
+						value = 1,
+						values = {"Head", "Body"}
+					},
+					{
+						type = "toggle",
+						name = "Display Range",
+						extra = {
+							type = "single colorpicker",
+							name = "Knife Bot Range",
+							color = {255, 120, 170, 255}
+						}
+					},
+					{
+						type = "slider",
+						name = "Range",
+						value = 30,
+						minvalue = 1,
+						maxvalue = 35,
+						stradd = " studs"
+					},
+
 				},
 			},
 			{
@@ -3291,19 +3320,19 @@ local function renderVisuals()
 
 				local playerTorso = v1.Character.Torso
 
-				local vTop = playerTorso.CFrame.Position + (playerTorso.CFrame.UpVector * 1.5) + Vector3.new(0, 1, 0)
-				local vBottom = playerTorso.CFrame.Position - playerTorso.CFrame.UpVector * 3
+				local vTop = playerTorso.CFrame.Position + (playerTorso.CFrame.UpVector * 1.7) + Camera.CFrame.UpVector
+				local vBottom = playerTorso.CFrame.Position - (playerTorso.CFrame.UpVector * 2) - Camera.CFrame.UpVector
 
 				local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 				local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 
 				local fovMult = mp.getval("Visuals", "Local Visuals", "Camera FOV") / Camera.FieldOfView
 
-				local sizeX = math.ceil(1700 / top.Z * fovMult)
-				local sizeY = math.ceil(math.max(math.abs(bottom.Y - top.Y), sizeX))
+				local sizeX = math.ceil(math.max(1700 / top.Z * fovMult, math.abs(bottom.X - top.X)))
+				local sizeY = math.ceil(math.max(math.abs(bottom.Y - top.Y), sizeX/2))
 
 				local boxSize = Vector2.new(sizeX, sizeY)
-				local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(top.Y))
+				local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(math.min(top.Y, bottom.Y)))
 
 				local teem = k .." ESP" -- I MISSPELLEDS IT ONPURPOSE NIGGA
 				local health = math.ceil(client.hud:getplayerhealth(v1))
@@ -3315,7 +3344,7 @@ local function renderVisuals()
 					playernum += 1
 					if mp.options["ESP"][teem]["Name"][1] then
 
-						local name = v1.Name
+						local name = tostring(v1.Name)
 						if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
 							name = string.lower(name)
 						elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
@@ -3384,7 +3413,8 @@ local function renderVisuals()
 						end
 						allesp.hptext[playernum].Visible = true
 						allesp.hptext[playernum].Text = tostring(health)
-						allesp.hptext[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX * 0.5 - 1) - math.ceil(allesp.hptext[playernum].TextBounds.x) + 6 - hp_sub, math.floor(top.y - 4))
+						local tb = allesp.hptext[playernum].TextBounds
+						allesp.hptext[playernum].Position = boxPosition + Vector2.new(-tb.X*0.8, -tb.Y*0.25)
 						allesp.hptext[playernum].Color = RGB(mp.options["ESP"][teem]["Health Number"][5][1][1], mp.options["ESP"][teem]["Health Number"][5][1][2], mp.options["ESP"][teem]["Health Number"][5][1][3])
 						allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
 					end
@@ -3476,6 +3506,7 @@ local function renderVisuals()
 		end
 		if mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][1] then
 			for k, v in pairs(vm) do
+
 				if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
 					for k1, v1 in pairs(v:GetChildren()) do
 
@@ -3496,8 +3527,10 @@ local function renderVisuals()
 						if mp.options["Visuals"]["Local Visuals"]["Custom Weapon Reflectivity"][1] then
 							v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Weapon Reflectivity"][1]/100
 						end
+
 					end
 				end
+
 			end
 		end
 		------------------------------------------------------ragdoll chasms
@@ -3616,6 +3649,13 @@ local function renderChams()
 			end
 		end
 	end
+end
+
+local function isKeybindDown(s1, s2, s3, nokey)
+	if nokey then
+		return mp.getval(s1,s2,s3,"keybind") and INPUT_SERVICE:IsKeyDown(mp.getval(s1,s2,s3,"keybind"))
+	end
+	return not mp.getval(s1,s2,s3,"keybind") or INPUT_SERVICE:IsKeyDown(mp.getval(s1,s2,s3,"keybind"))
 end
 
 local keybindtoggles = { -- ANCHOR keybind toggles
@@ -3836,24 +3876,33 @@ do--ANCHOR ragebot definitions
 
 	function ragebot:GetFirstKnifeTarget()
 
+		local closest = mp.getval("Rage", "Knife Bot", "Range")
+		local Target, Part 
 
 		for i, ply in ipairs(Players:GetPlayers()) do
 
 			if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
 				local parts = client.replication.getbodyparts(ply)
 				if not parts then continue end
+				local hitbox = mp.getval("Rage", "Knife Bot", "Hitbox") == 1 and "head" or "torso"
 
-				if (parts.rootpart.Position - client.cam.cframe.p).Magnitude < 40 then
-					return ply, parts.head
+				local dist = (parts.rootpart.Position - client.cam.cframe.p).Magnitude
+				if dist < closest then
+					if not mp.getval("Rage", "Knife Bot", "Visibility Check") or camera:IsVisible(parts[hitbox]) then
+						Target, Part = ply, parts[hitbox]
+						closest = dist
+					end
 				end
 			end
 
 		end
 
+		return Target, Part
 
 	end
 
 	function ragebot:GetKnifeTargets()
+		local range = mp.getval("Rage", "Knife Bot", "Range")
 
 		local t = {}
 		for i, ply in ipairs(Players:GetPlayers()) do
@@ -3861,9 +3910,11 @@ do--ANCHOR ragebot definitions
 			if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
 				local parts = client.replication.getbodyparts(ply)
 				if not parts then continue end
-
-				if (parts.rootpart.Position - client.cam.cframe.p).Magnitude < 40 then
-					t[#t+1] = {ply, parts.head}
+				
+				if (parts.rootpart.Position - client.cam.cframe.p).Magnitude < range then
+					if not mp.getval("Rage", "Knife Bot", "Visibility Check") or camera:IsVisible(parts[hitbox]) then
+						t[#t+1] = {ply, parts.head}
+					end
 				end
 			end
 
@@ -3874,10 +3925,9 @@ do--ANCHOR ragebot definitions
 	end
 
 	function ragebot:KnifeBotMain()
-		
-		local key = mp.getval("Rage", "Extra", "Knife Bot", "keybind")
-		if mp.getval("Rage", "Extra", "Knife Bot") and (key == nil or INPUT_SERVICE:IsKeyDown(key)) then
-			if mp.getval("Rage", "Extra", "Knife Bot Type") == 2 then
+
+		if mp.getval("Rage", "Knife Bot", "Enabled") and isKeybindDown("Rage", "Knife Bot", "Enabled") then
+			if mp.getval("Rage", "Knife Bot", "Type") == 3 then
 				ragebot:KnifeAura(true)
 			end
 		end
@@ -3915,27 +3965,29 @@ do--ANCHOR ragebot definitions
 
 
 		if LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid") then
-			if mp.getval("Rage", "Anti Aim", "Hide in Floor") and mp.getval("Rage", "Anti Aim", "Enabled") then
+			if mp.getval("Rage", "Anti Aim", "Hide in Floor") and mp.getval("Rage", "Anti Aim", "Enabled") and isKeybindDown("Rage", "Anti Aim", "Enabled") then
 				LOCAL_PLAYER.Character.Humanoid.HipHeight = -1.9
 			else
 				LOCAL_PLAYER.Character.Humanoid.HipHeight = 0
 			end
 		end
-		local curTick = math.floor(tick())
-		if curTick % 1 == 0 and curTick ~= lastTick then
-			lastTick = curTick
-			if mp.getval("Rage", "Anti Aim", "Enabled") then
-				local stanceId = mp.getval("Rage", "Anti Aim", "Force Stance")
-				if stanceId ~= 1 then
-					local newStance = --ternary sex
-						stanceId == 2 and "stand"
-						or stanceId == 3 and "crouch"
-						or stanceId == 4 and "prone"
+		if isKeybindDown("Rage", "Anti Aim", "Enabled") then
+			local curTick = math.floor(tick())
+			if curTick % 1 == 0 and curTick ~= lastTick then
+				lastTick = curTick
+				if mp.getval("Rage", "Anti Aim", "Enabled") then
+					local stanceId = mp.getval("Rage", "Anti Aim", "Force Stance")
+					if stanceId ~= 1 then
+						local newStance = --ternary sex
+							stanceId == 2 and "stand"
+							or stanceId == 3 and "crouch"
+							or stanceId == 4 and "prone"
 
-					send(client.net, "stance", newStance)
-				end
-				if mp.getval("Rage", "Anti Aim", "Lower Arms") then
-					send("sprint", true)
+						send(client.net, "stance", newStance)
+					end
+					if mp.getval("Rage", "Anti Aim", "Lower Arms") then
+						send("sprint", true)
+					end
 				end
 			end
 		end
@@ -4005,19 +4057,24 @@ end
 do--ANCHOR send hook
 	client.net.send = function(self, ...)
 		local args = {...}
-		if args[1] == "stance" and mp.getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
-		if args[1] == "sprint" and mp.getval("Rage", "Anti Aim", "Lower Arms") then return end
+		if args[1] == "newbullets" then send(self, "newpos", client.cam.cframe.p, client.cam.cframe) end -- fixes shooting with nade tp
+		if args[1] == "stance" and mp.getval("Rage", "Anti Aim", "Force Stance") ~= 1 and isKeybindDown("Rage", "Anti Aim", "Enabled") then return end
+		if args[1] == "sprint" and mp.getval("Rage", "Anti Aim", "Lower Arms") and isKeybindDown("Rage", "Anti Aim", "Enabled") then return end
 		if args[1] == "newpos" and ragebot:AntiNade(args[2], args[3]) then return end
 		if args[1] == "changehealthx" and args[3] ~= "BFG 50" and mp.getval("Misc", "Movement", "Prevent Fall Damage") then return end
 
 		if args[1] == "stab" then
-			local key = mp.getval("Rage", "Extra", "Knife Bot", "keybind")
-			if mp.getval("Rage", "Extra", "Knife Bot") and (not key or INPUT_SERVICE:IsKeyDown(key)) then
-				if mp.getval("Rage", "Extra", "Knife Bot Type") == 1 then
+			if mp.getval("Rage", "Knife Bot", "Enabled") and isKeybindDown("Rage", "Knife Bot", "Enabled") then
+				if mp.getval("Rage", "Knife Bot", "Type") ~= 3 then
+					if mp.getval("Rage", "Knife Bot", "Type") == 2 then
+						for i = 1, 5 do
+							ragebot:KnifeTarget(ragebot:GetFirstKnifeTarget())
+						end
+					end
 					ragebot:KnifeTarget(ragebot:GetFirstKnifeTarget())
 				end
 			end
-		elseif args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") then
+		elseif args[1] == "lookangles" and mp.getval("Rage", "Anti Aim", "Enabled") and isKeybindDown("Rage", "Anti Aim", "Enabled") then
 			local pitchChoice = mp.getval("Rage", "Anti Aim", "Pitch")
 			local yawChoice = mp.getval("Rage", "Anti Aim", "Yaw")
 
@@ -4144,7 +4201,7 @@ do -- ANCHOR Legitbot definition defines legit functions
 	function legitbot:TriggerBot()
 
 
-		if INPUT_SERVICE:IsKeyDown(mp.getval("Legit", "Trigger Bot", "Enabled", "keybind")) then
+		if isKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
 			local parts = mp.getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes")
 
 			parts["Head"] = parts[1]
