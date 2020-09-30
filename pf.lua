@@ -2565,7 +2565,6 @@ local function buttonpressed(bp)
 		end
 		figgy = figgy.."}\n"
 		writefile("bitchbot/".. mp.dir .."/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb", figgy)
-		print("{BitchBot} save ".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]))
 	elseif bp == mp.options["Settings"]["Configuration"]["Load Config"] then
 
 		local loadedcfg = readfile("bitchbot/".. mp.dir .."/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb")
