@@ -19,8 +19,10 @@ local mp = { -- this is for menu stuffs n shi
 		dark = {},
 		togz = {}
 	},
+	dir = "pf"
 	mc = {127, 72, 163}
 }
+
 function CreateThread(func) 
    local thread = coroutine.create(func)
    coroutine.resume(thread)
@@ -80,12 +82,12 @@ if not isfolder("bitchbot") then
 end
 
 if not isfolder("bitchbot/pf") then
-	makefolder("bitchbot/pf")
+	makefolder("bitchbot/".. mp.dir)
 end
 
 for i = 1, 6 do
-	if not isfile("bitchbot/pf/config"..tostring(i)..".bb") then
-		writefile("bitchbot/pf/config"..tostring(i)..".bb", "")
+	if not isfile("bitchbot/".. mp.dir .."/config"..tostring(i)..".bb") then
+		writefile("bitchbot/".. mp.dir .."/config"..tostring(i)..".bb", "")
 	end
 end
 
@@ -2562,11 +2564,11 @@ local function buttonpressed(bp)
 			end
 		end
 		figgy = figgy.."}\n"
-		writefile("bitchbot/pf/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb", figgy)
+		writefile("bitchbot/".. mp.dir .."/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb", figgy)
 		print("{BitchBot} save ".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]))
 	elseif bp == mp.options["Settings"]["Configuration"]["Load Config"] then
 
-		local loadedcfg = readfile("bitchbot/pf/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb")
+		local loadedcfg = readfile("bitchbot/".. mp.dir .."/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb")
 		local lines = {}
 		for s in loadedcfg:gmatch("[^\r\n]+") do
 			table.insert(lines, s)
