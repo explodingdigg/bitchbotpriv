@@ -1,13 +1,8 @@
-local gamemode = "uni"
-if game.PlaceId == 292439477 or game.PlaceId == 299659045 then
-	gamemode = "pf"
-end
-
 local mp = { -- this is for menu stuffs n shi
 	w = 500,
 	h = 600,
 	x = 200,
-	y = 200,
+	y = 300,
 	columns = {
 		width = 230,
 		left = 17,
@@ -17,6 +12,7 @@ local mp = { -- this is for menu stuffs n shi
 	open = true,
 	fadespeed = 10,
 	fading = false,
+	mousedown = false,
 	postable = {},
 	options = {},
 	clrs = {
@@ -25,8 +21,10 @@ local mp = { -- this is for menu stuffs n shi
 		togz = {}
 	},
 	mc = {127, 72, 163},
+	watermark = {},
 	connections = {},
-	list = {}
+	list = {},
+	tabnum2str = {} -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
 }
 
 mp.dir = "uni"
@@ -48,17 +46,17 @@ function MultiThreadList(obj)
 end
 
 
-local COLORPICKER_IMAGES = {}
+local BBOT_IMAGES = {}
 MultiThreadList({
-	function() COLORPICKER_IMAGES[1] = game:HttpGet("https://i.imgur.com/9NMuFcQ.png") end,
-	function() COLORPICKER_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png") end,
-	function() COLORPICKER_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png") end,
-	function() COLORPICKER_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end,
-	function() COLORPICKER_IMAGES[5] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end
+	function() BBOT_IMAGES[1] = game:HttpGet("https://i.imgur.com/9NMuFcQ.png") end,
+	function() BBOT_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png") end,
+	function() BBOT_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png") end,
+	function() BBOT_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end,
+	function() BBOT_IMAGES[5] = game:HttpGet("https://i.imgur.com/OZUR3EY.png") end
 })
 
 -- MULTITHREAD DAT LOADING SO FAST!!!!
-while #COLORPICKER_IMAGES ~= 5 do
+while #BBOT_IMAGES ~= 5 do
 	wait(1)
 end
 
@@ -90,7 +88,6 @@ local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
 local INPUT_SERVICE = game:GetService("UserInputService")
 local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
 local CACHED_VEC3 = Vector3.new()
-
 local Camera = workspace.CurrentCamera
 
 do -- table shitz
@@ -378,62 +375,33 @@ do
 		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 
+	function Draw:MenuImage(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
+		Draw:Image(visible, imagedata, pos_x + mp.x, pos_y + mp.y, width, hieght, transparency, tablename)
+		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+	end
+
 	function Draw:MenuBigText(text, visible, centered, pos_x, pos_y, tablename)
 		Draw:OutlinedText(text, 2, visible, pos_x + mp.x, pos_y + mp.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
 		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 end
--- gonna put esp right here so it renders below everything
-local allesp = {
-	skel = {
-		[1] = {},
-		[2] = {},
-		[3] = {},
-		[4] = {},
-		[5] = {},
-	},
-	outerbox = {},
-	box = {},
-	hpouter = {},
-	hpinner = {},
-	hptext = {},
-	nametext = {},
-	weptext = {},
-	disttext = {},
-	watermark = {},
-}
+
 do
-	local wm = allesp.watermark
-   wm.textString = "BitchBot | Developer | " .. os.date("%b. %d, %Y")
-   wm.pos = Vector2.new(40, 10)
-   wm.text = {}
-   wm.width = (#wm.textString) * 7 + 10
-   wm.rect = {}
+	local wm = mp.watermark
+	wm.textString = "BitchBot | Developer | " .. os.date("%b. %d, %Y")
+	wm.pos = Vector2.new(40, 10)
+	wm.text = {}
+	wm.width = (#wm.textString) * 7 + 10
+	wm.rect = {}
 
-   Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 1, wm.width, 2, {mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[2] - 40, 255}, wm.rect)
-   Draw:FilledRect(true, wm.pos.X, wm.pos.Y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
-   Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
-   for i = 0, 14 do
-      Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
-   end
-   Draw:OutlinedRect(true, wm.pos.X, wm.pos.Y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
-   Draw:OutlinedText(wm.textString, 2, true, wm.pos.X + 5, wm.pos.Y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
-end
-
-for i = 1, 35 do
-	for i1, v in ipairs(allesp.skel) do
-		Draw:Line(false, 1, 30, 30, 50, 50, {255, 255, 255, 255}, v)
+	Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 1, wm.width, 2, {mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[2] - 40, 255}, wm.rect)
+	Draw:FilledRect(true, wm.pos.X, wm.pos.Y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
+	Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
+	for i = 0, 14 do
+	  Draw:FilledRect(true, wm.pos.X, wm.pos.Y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
 	end
-	Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.outerbox)
-	Draw:OutlinedRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.box)
-
-	Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 215}, allesp.hpouter)
-	Draw:FilledRect(false, 20, 20, 20, 20, {0, 255, 0, 255}, allesp.hpinner)
-	Draw:OutlinedText("100", 1, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.hptext)
-
-	Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.disttext)
-	Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.weptext)
-	Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.nametext)
+	Draw:OutlinedRect(true, wm.pos.X, wm.pos.Y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
+	Draw:OutlinedText(wm.textString, 2, true, wm.pos.X + 5, wm.pos.Y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
 end
 
 local function BBMenuInit(menutable)
@@ -624,7 +592,9 @@ local function BBMenuInit(menutable)
 		function Draw:List(name, x, y, length, maxammount, colums, tab)
 			local temptable = {uparrow = {}, downarrow = {}, liststuff = {rows = {}, words = {}}}
 
-			Draw:MenuBigText(name, true, false, x, y - 3, tab)
+			for i, v in ipairs(name) do
+				Draw:MenuBigText(v, true, false, (math.floor(length/colums) * i) - math.floor(length/colums) + 30, y - 3, tab)
+			end
 
 			Draw:MenuOutlinedRect(true, x, y + 12, length, 22 * maxammount + 4, {30, 30, 30, 255}, tab)
 			Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 22 * maxammount + 2, {0, 0, 0, 255}, tab)
@@ -678,6 +648,21 @@ local function BBMenuInit(menutable)
 
 			return temptable
 		end
+
+		function Draw:ImageWithText(size, image, text, x, y, tab)
+			local temptable = {}
+			Draw:MenuOutlinedRect(true, x, y, size + 4, size + 4, {30, 30, 30, 255}, tab)
+			Draw:MenuOutlinedRect(true, x + 1, y + 1, size + 2, size + 2, {0, 0, 0, 255}, tab)
+			Draw:MenuFilledRect(true, x + 2, y + 2, size, size, {40, 40, 40, 255}, tab)
+
+			Draw:MenuBigText(text, true, false, x + size + 8, y, tab)
+			table.insert(temptable, tab[#tab])
+
+			Draw:MenuImage(true, BBOT_IMAGES[5], x + 2, y + 2, size, size, 1, tab)
+			table.insert(temptable, tab[#tab])
+
+			return temptable
+		end
 	end
 	-- ok now the cool part :D
 	--ANCHOR menu stuffz
@@ -688,13 +673,13 @@ local function BBMenuInit(menutable)
 	end
 
 	local tabbies = {} -- i like tabby catz 🐱🐱🐱
-	local tabnum2str = {} -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
+	
 	for k, v in pairs(menutable) do
 		Draw:MenuFilledRect(true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)), 27, math.floor((mp.w - 20)/#menutable), 32, {30, 30, 30, 255}, bbmenu)
 		Draw:MenuOutlinedRect(true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)), 27, math.floor((mp.w - 20)/#menutable), 32, {20, 20, 20, 255}, bbmenu)
 		Draw:MenuBigText(v.name, true, true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)) + math.floor(math.floor((mp.w - 20)/#menutable)*0.5), 35, bbmenu)
 		table.insert(tabbies, {bbmenu[#bbmenu - 2], bbmenu[#bbmenu - 1], bbmenu[#bbmenu]})
-		table.insert(tabnum2str, v.name)
+		table.insert(mp.tabnum2str, v.name)
 
 		mp.options[v.name] = {}
 		if v.content ~= nil then
@@ -777,7 +762,7 @@ local function BBMenuInit(menutable)
 							y_pos += 28
 						elseif v2.type == "list" then
 							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][4] = Draw:List(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
+							mp.options[v.name][v1.name][v2.name][4] = Draw:List(v2.multiname, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
 							mp.options[v.name][v1.name][v2.name][1] = nil
 							mp.options[v.name][v1.name][v2.name][2] = v2.type
 							mp.options[v.name][v1.name][v2.name][3] = 1
@@ -785,6 +770,11 @@ local function BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name][6] = v2.size
 							mp.options[v.name][v1.name][v2.name][7] = v2.colums
 							mp.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
+							y_pos += 22 + (22 * v2.size)
+						elseif v2.type == "image" then
+							mp.options[v.name][v1.name][v2.name] = {}
+							mp.options[v.name][v1.name][v2.name][1] = Draw:ImageWithText(v2.size, nil, v2.text, v1.x + 8, v1.y + y_pos, tabz[k])
+							mp.options[v.name][v1.name][v2.name][2] = v2.type
 						end
 					end
 				end
@@ -812,6 +802,10 @@ local function BBMenuInit(menutable)
 				end
 			end
 		end
+	end
+
+	mp.list.setval = function(list, value)
+		list[1] = value
 	end
 
 	Draw:MenuOutlinedRect(true, 10, 59, mp.w - 20, mp.h - 69, {20, 20, 20, 255}, bbmenu)
@@ -975,7 +969,7 @@ local function BBMenuInit(menutable)
 	colorpicker_outlined_rect(false, 11, 24, 158, 158, {0, 0, 0, 255}, colorpickerthingy)
 	colorpicker_filled_rect(false, 12, 25, 156, 156, {0, 0, 0, 255}, colorpickerthingy)
 	local maincolor = colorpickerthingy[#colorpickerthingy]
-	colorpicker_image(false, COLORPICKER_IMAGES[1], 12, 25, 156, 156, 1, colorpickerthingy)
+	colorpicker_image(false, BBOT_IMAGES[1], 12, 25, 156, 156, 1, colorpickerthingy)
 
 	--https://i.imgur.com/jG3NjxN.png
 	local alphabar = {}
@@ -983,18 +977,18 @@ local function BBMenuInit(menutable)
 	table.insert(alphabar, colorpickerthingy[#colorpickerthingy])
 	colorpicker_outlined_rect(false, 11, 190, 158, 12, {0, 0, 0, 255}, colorpickerthingy)
 	table.insert(alphabar, colorpickerthingy[#colorpickerthingy])
-	colorpicker_image(false, COLORPICKER_IMAGES[2], 12, 191, 159, 10, 1, colorpickerthingy)
+	colorpicker_image(false, BBOT_IMAGES[2], 12, 191, 159, 10, 1, colorpickerthingy)
 	table.insert(alphabar, colorpickerthingy[#colorpickerthingy])
 
 	colorpicker_outlined_rect(false, 176, 23, 14, 160, {30, 30, 30, 255}, colorpickerthingy)
 	colorpicker_outlined_rect(false, 177, 24, 12, 158, {0, 0, 0, 255}, colorpickerthingy)
 	--https://i.imgur.com/2Ty4u2O.png
-	colorpicker_image(false, COLORPICKER_IMAGES[3], 178, 25, 10, 156, 1, colorpickerthingy)
+	colorpicker_image(false, BBOT_IMAGES[3], 178, 25, 10, 156, 1, colorpickerthingy)
 
 	colorpicker_big_text("New Color", false, false, 198, 23, colorpickerthingy)
 	colorpicker_outlined_rect(false, 197, 37, 75, 40, {30, 30, 30, 255}, colorpickerthingy)
 	colorpicker_outlined_rect(false, 198, 38, 73, 38, {0, 0, 0, 255}, colorpickerthingy)
-	colorpicker_image(false, COLORPICKER_IMAGES[4], 199, 39, 71, 36, 1, colorpickerthingy)
+	colorpicker_image(false, BBOT_IMAGES[4], 199, 39, 71, 36, 1, colorpickerthingy)
 
 	colorpicker_filled_rect(false, 199, 39, 71, 36, {255, 0, 0, 255}, colorpickerthingy)
 	local newcolor = colorpickerthingy[#colorpickerthingy]
@@ -1002,7 +996,7 @@ local function BBMenuInit(menutable)
 	colorpicker_big_text("Old Color", false, false, 198, 77, colorpickerthingy)
 	colorpicker_outlined_rect(false, 197, 91, 75, 40, {30, 30, 30, 255}, colorpickerthingy)
 	colorpicker_outlined_rect(false, 198, 92, 73, 38, {0, 0, 0, 255}, colorpickerthingy)
-	colorpicker_image(false, COLORPICKER_IMAGES[5], 199, 93, 71, 36, 1, colorpickerthingy)
+	colorpicker_image(false, BBOT_IMAGES[4], 199, 93, 71, 36, 1, colorpickerthingy)
 
 	colorpicker_filled_rect(false, 199, 93, 71, 36, {255, 0, 0, 255}, colorpickerthingy)
 	local oldcolor = colorpickerthingy[#colorpickerthingy]
@@ -1136,8 +1130,8 @@ local function BBMenuInit(menutable)
 	end
 
 	local function set_menu_color(r, g, b)
-		allesp.watermark.rect[1].Color = RGB(r - 40, g - 40, b - 40)
-		allesp.watermark.rect[2].Color = RGB(r, g, b)
+		mp.watermark.rect[1].Color = RGB(r - 40, g - 40, b - 40)
+		mp.watermark.rect[2].Color = RGB(r, g, b)
 
 		for k, v in pairs(mp.clrs.norm) do
 			v.Color = RGB(r, g, b)
@@ -1145,7 +1139,7 @@ local function BBMenuInit(menutable)
 		for k, v in pairs(mp.clrs.dark) do
 			v.Color = RGB(r - 40, g - 40, b - 40)
 		end
-		mp.mc = {r, g, b}
+		local menucolor = {r, g, b}
 		for k, v in pairs(mp.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
@@ -1156,12 +1150,12 @@ local function BBMenuInit(menutable)
 							end
 						else
 							for i = 0, 3 do
-								v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+								v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(menucolor[1], menucolor[2], menucolor[3])}, [2] = {start = 3, color = RGB(menucolor[1] - 40, menucolor[2] - 40, menucolor[3] - 40)}})
 							end
 						end
 					elseif v2[2] == "slider" then
 						for i = 0, 3 do
-							v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+							v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(menucolor[1], menucolor[2], menucolor[3])}, [2] = {start = 3, color = RGB(menucolor[1] - 40, menucolor[2] - 40, menucolor[3] - 40)}})
 						end
 					end
 				end
@@ -1313,7 +1307,7 @@ local function BBMenuInit(menutable)
 		end
 	end
 
-	local function set_menu_pos(x, y)
+	function mp:set_menu_pos(x, y)
 		for k, v in pairs(mp.postable) do
 			if v[1].Visible then
 				v[1].Position = Vector2.new(x + v[2], y + v[3])
@@ -1321,7 +1315,7 @@ local function BBMenuInit(menutable)
 		end
 	end
 
-	local function mouse_pressed_in_menu(x, y, width, height)
+	function mp:mouse_in_menu(x, y, width, height)
 		if LOCAL_MOUSE.X > mp.x + x and LOCAL_MOUSE.X < mp.x + x + width and LOCAL_MOUSE.y > mp.y - 36 + y and LOCAL_MOUSE.Y < mp.y - 36 + y + height then
 			return true
 		else
@@ -1329,7 +1323,7 @@ local function BBMenuInit(menutable)
 		end
 	end
 
-	local function mouse_pressed_in_colorpicker(x, y, width, height)
+	function mp:mouse_in_colorpicker(x, y, width, height)
 		if LOCAL_MOUSE.X > cp.x + x and LOCAL_MOUSE.X < cp.x + x + width and LOCAL_MOUSE.y > cp.y - 36 + y and LOCAL_MOUSE.Y < cp.y - 36 + y + height then
 			return true
 		else
@@ -1342,7 +1336,7 @@ local function BBMenuInit(menutable)
 		keyz[v.Value] = v
 	end
 
-	mp.getval = function(...)
+	function mp:getval(...)
 		local args = {...}
 
 		if args[4] == nil then
@@ -1736,7 +1730,7 @@ local function BBMenuInit(menutable)
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
 					if v2[2] == "dropbox" and v2[5] then
-						if not mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) then
+						if not mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) then
 							set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 							v2[5] = false
 						else
@@ -1745,7 +1739,7 @@ local function BBMenuInit(menutable)
 						end
 					end
 					if v2[2] == "combobox" and v2[5] then
-						if not mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) then
+						if not mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) then
 							set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 							v2[5] = false
 						else
@@ -1762,7 +1756,7 @@ local function BBMenuInit(menutable)
 								end
 							elseif v2[5][2] == "single colorpicker" then
 								if v2[5][5] == true then
-									if not mouse_pressed_in_colorpicker(0, 0, cp.w, cp.h) then
+									if not mp:mouse_in_colorpicker(0, 0, cp.w, cp.h) then
 										set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 										v2[5][5] = false
 										colorpickerthatisopen = nil
@@ -1772,7 +1766,7 @@ local function BBMenuInit(menutable)
 							elseif v2[5][2] == "double colorpicker" then
 								for k3, v3 in pairs(v2[5][1]) do
 									if v3[5] == true then
-										if not mouse_pressed_in_colorpicker(0, 0, cp.w, cp.h) then
+										if not mp:mouse_in_colorpicker(0, 0, cp.w, cp.h) then
 											set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 											v3[5] = false
 											colorpickerthatisopen = nil
@@ -1783,25 +1777,18 @@ local function BBMenuInit(menutable)
 							end
 						end
 					end
-					if v2[2] == "list" then
-						for i = 1, v2[6] do
-							if mouse_pressed_in_menu(v2[8][1], v2[8][2] + (i * 20) + 2, v2[8][3], 20) then
-								print(i)
-							end
-						end
-					end
 				end
 			end
 		end
 		for i = 1, #menutable do
-			if mouse_pressed_in_menu(10 + ((i - 1) * math.floor((mp.w - 20)/#menutable)), 27, math.floor((mp.w - 20)/#menutable), 32) then
+			if mp:mouse_in_menu(10 + ((i - 1) * math.floor((mp.w - 20)/#menutable)), 27, math.floor((mp.w - 20)/#menutable), 32) then
 				mp.activetab = i
 				set_barguy(mp.activetab)
-				set_menu_pos(mp.x, mp.y)
+				mp:set_menu_pos(mp.x, mp.y)
 			end
 		end
 		if colorpickeropen then
-			if mouse_pressed_in_colorpicker(197, cp.h - 25, 75, 20) then
+			if mp:mouse_in_colorpicker(197, cp.h - 25, 75, 20) then
 				local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 				colorpickerthatisopen[4][1].Color = tempclr
 				for i = 2, 3 do
@@ -1816,20 +1803,20 @@ local function BBMenuInit(menutable)
 				colorpickerthatisopen = nil
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 			end
-			if mouse_pressed_in_colorpicker(10, 23, 160, 160) then
+			if mp:mouse_in_colorpicker(10, 23, 160, 160) then
 				cp.dragging_m = true
-			elseif mouse_pressed_in_colorpicker(176, 23, 14, 160) then
+			elseif mp:mouse_in_colorpicker(176, 23, 14, 160) then
 				cp.dragging_r = true
-			elseif mouse_pressed_in_colorpicker(10, 189, 160, 14) and cp.alpha then
+			elseif mp:mouse_in_colorpicker(10, 189, 160, 14) and cp.alpha then
 				cp.dragging_b = true
 			end
 		else
 			for k, v in pairs(mp.options) do
-				if tabnum2str[mp.activetab] == k then
+				if mp.tabnum2str[mp.activetab] == k then
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "toggle" and not dropboxopen then
-								if mouse_pressed_in_menu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
+								if mp:mouse_in_menu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
 									if v2[1] then
 										for i = 0, 3 do
 											v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
@@ -1843,12 +1830,12 @@ local function BBMenuInit(menutable)
 								end
 								if v2[5] ~= nil then
 									if v2[5][2] == "keybind" then
-										if mouse_pressed_in_menu(v2[5][3][1], v2[5][3][2], 44, 16) then
+										if mp:mouse_in_menu(v2[5][3][1], v2[5][3][2], 44, 16) then
 											v2[5][4][2].Color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])
 											v2[5][5] = true
 										end
 									elseif v2[5][2] == "single colorpicker" then
-										if mouse_pressed_in_menu(v2[5][3][1], v2[5][3][2], 28, 14) then
+										if mp:mouse_in_menu(v2[5][3][1], v2[5][3][2], 28, 14) then
 											v2[5][5] = true
 											colorpickeropen = true
 											colorpickerthatisopen = v2[5]
@@ -1860,7 +1847,7 @@ local function BBMenuInit(menutable)
 										end
 									elseif v2[5][2] == "double colorpicker" then
 										for k3, v3 in pairs(v2[5][1]) do
-											if mouse_pressed_in_menu(v3[3][1], v3[3][2], 28, 14) then
+											if mp:mouse_in_menu(v3[3][1], v3[3][2], 28, 14) then
 												v3[5] = true
 												colorpickeropen = true
 												colorpickerthatisopen = v3
@@ -1874,7 +1861,7 @@ local function BBMenuInit(menutable)
 									end
 								end
 							elseif v2[2] == "slider" and not dropboxopen then
-								if mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 28) then
+								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 28) then
 									v2[5] = true
 								end
 							elseif v2[2] == "dropbox" then
@@ -1883,7 +1870,7 @@ local function BBMenuInit(menutable)
 										continue
 									end
 								end
-								if mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
+								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
 									if not v2[5] then
 										set_dropboxthingy(true, v2[3][1] + mp.x + 1, v2[3][2] + mp.y + 13, v2[3][3], v2[1], v2[6])
 										v2[5] = true
@@ -1891,9 +1878,9 @@ local function BBMenuInit(menutable)
 										set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 										v2[5] = false
 									end
-								elseif mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5] then
+								elseif mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5] then
 									for i = 1, #v2[6] do
-										if mouse_pressed_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 22), v2[3][3], 23) then
+										if mp:mouse_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 22), v2[3][3], 23) then
 											v2[4][1].Text = v2[6][i]
 											v2[1] = i
 											set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
@@ -1907,7 +1894,7 @@ local function BBMenuInit(menutable)
 										continue
 									end
 								end
-								if mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
+								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
 									if not v2[5] then
 										set_comboboxthingy(true, v2[3][1] + mp.x + 1, v2[3][2] + mp.y + 13, v2[3][3], v2[1], v2[6])
 										v2[5] = true
@@ -1915,9 +1902,9 @@ local function BBMenuInit(menutable)
 										set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 										v2[5] = false
 									end
-								elseif mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) and v2[5] then
+								elseif mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) and v2[5] then
 									for i = 1, #v2[1] do
-										if mouse_pressed_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 22), v2[3][3], 23) then
+										if mp:mouse_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 22), v2[3][3], 23) then
 											v2[1][i][2] = not v2[1][i][2]
 											local textthing = ""
 											for k, v in pairs(v2[1]) do
@@ -1936,7 +1923,7 @@ local function BBMenuInit(menutable)
 									end
 								end
 							elseif v2[2] == "button" and not dropboxopen then
-								if mouse_pressed_in_menu(v2[3][1], v2[3][2], v2[3][3], 22) then
+								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 22) then
 									if not v2[1] then
 										buttonpressed(v2)
 										for i = 0, 8 do
@@ -1945,42 +1932,67 @@ local function BBMenuInit(menutable)
 										v2[1] = true
 									end
 								end
+							elseif v2[2] == "list" then
+								--[[
+									mp.options[v.name][v1.name][v2.name] = {}
+									mp.options[v.name][v1.name][v2.name][4] = Draw:List(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
+									mp.options[v.name][v1.name][v2.name][1] = nil
+									mp.options[v.name][v1.name][v2.name][2] = v2.type
+									mp.options[v.name][v1.name][v2.name][3] = 1
+									mp.options[v.name][v1.name][v2.name][5] = {}
+									mp.options[v.name][v1.name][v2.name][6] = v2.size
+									mp.options[v.name][v1.name][v2.name][7] = v2.colums
+									mp.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
+								]]--
+								if #v2[5] > v2[6] then
+									for i = 1, v2[6] do
+										if mp:mouse_in_menu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
+											if v2[1] == tostring(v2[5][i + v2[3] - 1][1][1]) then
+												v2[1] = nil
+											else
+												v2[1] = tostring(v2[5][i + v2[3] - 1][1][1])
+											end
+										end
+									end
+								else
+									for i = 1, #v2[5] do
+										if mp:mouse_in_menu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
+											if v2[1] == tostring(v2[5][i + v2[3] - 1][1][1]) then
+												v2[1] = nil
+											else
+												v2[1] = tostring(v2[5][i + v2[3] - 1][1][1])
+											end
+										end
+									end
+								end
 							end
 						end
 					end
 				end
 			end
 		end
-		if tabnum2str[mp.activetab] == "Settings" then
+		if mp.tabnum2str[mp.activetab] == "Settings" then
 			if mp.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
 				local clr = mp.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
 				set_menu_color(clr[1], clr[2], clr[3])
 			else
-				set_menu_color(127, 72, 163)
+				set_menu_color(mp.mc[1], mp.mc[2], mp.mc[3])
 			end
 
-			local wme = mp.getval("Settings", "Menu Settings", "Watermark")
-			for k, v in pairs(allesp.watermark.rect) do
+			local wme = mp:getval("Settings", "Menu Settings", "Watermark")
+			for k, v in pairs(mp.watermark.rect) do
 				v.Visible = wme
 			end
-			allesp.watermark.text[1].Visible = wme
+			mp.watermark.text[1].Visible = wme
 		end
 	end
-
-	local mousedown = false
-	mp.connections.mousedownconnect = LOCAL_MOUSE.Button1Down:Connect(function()
-		mousedown = true
-		if mp.open and not mp.fading then
-			mousebutton1downfunc()
-		end
-	end)
 
 	local function mousebutton1upfunc()
 		cp.dragging_m = false
 		cp.dragging_r = false
 		cp.dragging_b = false
 		for k, v in pairs(mp.options) do
-			if tabnum2str[mp.activetab] == k then
+			if mp.tabnum2str[mp.activetab] == k then
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
 						if v2[2] == "slider" and v2[5] then
@@ -1998,12 +2010,6 @@ local function BBMenuInit(menutable)
 		end
 	end
 
-	mp.connections.mouseupconnect = LOCAL_MOUSE.Button1Up:Connect(function()
-		mousedown = false
-		if mp.open and not mp.fading then
-			mousebutton1upfunc()
-		end
-	end)
 
 	local dragging = false
 	local dontdrag = false
@@ -2012,7 +2018,7 @@ local function BBMenuInit(menutable)
 	mp.connections.mwf = LOCAL_MOUSE.WheelForward:Connect(function()
 		if mp.open then
 			for k, v in pairs(mp.options) do
-				if tabnum2str[mp.activetab] == k then
+				if mp.tabnum2str[mp.activetab] == k then
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "list" then
@@ -2030,7 +2036,7 @@ local function BBMenuInit(menutable)
 	mp.connections.mwb = LOCAL_MOUSE.WheelBackward:Connect(function()
 		if mp.open then
 			for k, v in pairs(mp.options) do
-				if tabnum2str[mp.activetab] == k then
+				if mp.tabnum2str[mp.activetab] == k then
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "list" then
@@ -2051,9 +2057,9 @@ local function BBMenuInit(menutable)
 		-- removed it :DDD
 
 
-		if mp.open then
+		if mp.open or mp.fading then
 			for k, v in pairs(mp.options) do
-				if tabnum2str[mp.activetab] == k then
+				if mp.tabnum2str[mp.activetab] == k then
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "slider" and v2[5] then
@@ -2077,35 +2083,65 @@ local function BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name][6] = v2.size
 							mp.options[v.name][v1.name][v2.name][7] = v2.colums]]
 							elseif v2[2] == "list" then
+								for k3, v3 in pairs(v2[4].liststuff) do 
+									for i, v4 in ipairs(v3) do
+										for i1, v5 in ipairs(v4) do
+											v5.Visible = false
+										end
+									end
+								end
 								for i = 1, v2[6] do
 									if v2[5][i + v2[3] - 1] ~= nil then
 										for i1 = 1, v2[7] do
-											v2[4].liststuff.words[i][i1].Text = v2[5][i + v2[3] - 1][i1]
+											v2[4].liststuff.words[i][i1].Text = v2[5][i + v2[3] - 1][i1][1]
 											v2[4].liststuff.words[i][i1].Visible = true
+											
+											if v2[5][i + v2[3] - 1][i1][1] == v2[1] and i1 == 1 then
+												
+												if mp.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
+													local clr = mp.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
+													v2[4].liststuff.words[i][i1].Color = RGB(clr[1], clr[2], clr[3])
+												else
+													v2[4].liststuff.words[i][i1].Color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])
+												end
+											else
+												v2[4].liststuff.words[i][i1].Color = v2[5][i + v2[3] - 1][i1][2]
+											end
 										end
 										for k3, v3 in pairs(v2[4].liststuff.rows[i]) do
 											v3.Visible = true
 										end
 									elseif v2[3] > 1 then
+										
 										v2[3] -= 1
 									end
 								end
 								if v2[3] == 1 then
 									for k3, v3 in pairs(v2[4].uparrow) do
-										v3.Visible = false
+										if v3.Visible then
+											v3.Visible = false
+										end
 									end
 								else
 									for k3, v3 in pairs(v2[4].uparrow) do
-										v3.Visible = true
+										if not v3.Visible then
+											v3.Visible = true
+											mp:set_menu_pos(mp.x, mp.y)
+										end
 									end
 								end
 								if v2[5][v2[3] + v2[6]] == nil then
 									for k3, v3 in pairs(v2[4].downarrow) do
-										v3.Visible = false
+										if v3.Visible then
+											v3.Visible = false
+										end
 									end
 								else
 									for k3, v3 in pairs(v2[4].downarrow) do
-										v3.Visible = true
+										if not v3.Visible then
+											v3.Visible = true
+											mp:set_menu_pos(mp.x, mp.y)
+										end
 									end
 								end
 							end
@@ -2115,7 +2151,7 @@ local function BBMenuInit(menutable)
 			end
 
 			if ((LOCAL_MOUSE.X > mp.x and LOCAL_MOUSE.X < mp.x + mp.w and LOCAL_MOUSE.y > mp.y - 32 and LOCAL_MOUSE.Y < mp.y - 11) or dragging) and not dontdrag then
-				if mousedown then
+				if mp.mousedown then
 					if dragging == false then
 						clickspot_x = LOCAL_MOUSE.X
 						clickspot_y = LOCAL_MOUSE.Y - 36
@@ -2125,13 +2161,13 @@ local function BBMenuInit(menutable)
 					end
 					mp.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.X
 					mp.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.Y - 36
-					set_menu_pos(mp.x, mp.y)
+					mp:set_menu_pos(mp.x, mp.y)
 				else
 					dragging = false
 				end
-			elseif mousedown then
+			elseif mp.mousedown then
 				dontdrag = true
-			elseif not mousedown then
+			elseif not mp.mousedown then
 				dontdrag = false
 			end
 			if colorpickeropen then
@@ -2165,8 +2201,23 @@ local function BBMenuInit(menutable)
 		end
 	end
 
-	mp.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
-		inputBeganMenu(key)
+	mp.connections.inputstart = INPUT_SERVICE.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			mp.mousedown = true
+			if mp.open and not mp.fading then
+				mousebutton1downfunc()
+			end
+		end
+		inputBeganMenu(input)
+	end)
+
+	mp.connections.inputended = INPUT_SERVICE.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			mp.mousedown = false
+			if mp.open and not mp.fading then
+				mousebutton1upfunc()
+			end
+		end
 	end)
 
 	mp.connections.renderstepped = game.RunService.RenderStepped:Connect(function()
@@ -2300,9 +2351,16 @@ if mp.dir == "uni" then
 						{
 							type = "list",
 							name = "Players",
-							size = 10,
+							multiname = {"Name", "Team", "Status"},
+							size = 9,
 							colums = 3
 						},
+						{
+							type = "image",
+							name = "Player Info",
+							text = "No Player Selected",
+							size = 72
+						}
 					}
 				},
 				{
@@ -2376,25 +2434,111 @@ if mp.dir == "uni" then
 			}
 		},
 	})
-	mp.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
-		if mp.open then
-			if mp.activetab == 4 then
-				mp.list.removeall(mp.options["Settings"]["Player List"]["Players"])
-				local players = game.Players:GetPlayers()
-				for k, v in pairs(players) do
-					local teamtext = "None"
-					local plyrstatus = "None"
-					if v.Team ~= nil then
-						teamtext = v.Team.Name
-					end
-					if v == LOCAL_PLAYER then
-						plyrstatus = "Local Player"
-					end
-					mp.list.addval(mp.options["Settings"]["Player List"]["Players"], {v.Name, teamtext, plyrstatus})
+
+
+	local selected_plyr = nil
+	local plistinfo = mp.options["Settings"]["Player List"]["Player Info"][1]
+	local plist = mp.options["Settings"]["Player List"]["Players"]
+	local playerpictures = {}
+	local function updateplist()
+		local playerlistval = mp:getval("Settings", "Player List", "Players")
+		local playerz = game.Players:GetPlayers()
+		local templist = {}
+		for k, v in pairs(playerz) do
+			local plyrname = {v.Name, RGB(255, 255, 255)}
+			local teamtext = {"None", RGB(255, 255, 255)}
+			local plyrstatus = {"None", RGB(255, 255, 255)}
+			if v.Team ~= nil then
+				teamtext[1] = v.Team.Name
+				teamtext[2] = v.TeamColor.Color
+			end
+			if v == LOCAL_PLAYER then
+				plyrstatus[1] = "Local Player"
+				plyrstatus[2] = RGB(66, 135, 245)
+			end
+			table.insert(templist, {plyrname, teamtext, plyrstatus})
+		end
+		plist[5] = templist
+		if playerlistval ~= nil then
+			for i, v in ipairs(playerz) do
+				if v.Name == playerlistval then
+					selected_plyr = v
+					break
+				end
+				if i == #playerz then
+					selected_plyr = nil
+					mp.list.setval(plist, nil)
+				end
+			end
+		end
+		mp:set_menu_pos(mp.x, mp.y)
+	end
+
+	local function cacheAvatars()
+		for i, v in ipairs(game.Players:GetPlayers()) do
+			if not table.contains(playerpictures, v) then
+				local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+				playerpictures[v] = game:HttpGet(content)
+			end
+		end
+	end
+
+	local function setplistinfo(player)
+		if player ~= nil then
+			plistinfo[2].Data = BBOT_IMAGES[5]	
+			local playerteam = "None"
+			if player.Team ~= nil then
+				playerteam = player.Team.Name
+			end
+			local playerhealth = "?"
+			-- if player.Health ~= nil then
+			--  	playerhealth = tostring(player.Health).. "/".. tostring(player.MaxHealth)
+			-- end
+			plistinfo[1].Text = "Name: ".. player.Name.."\nTeam: ".. playerteam.. "\nRAP: ".. "poop" .."\nHealth: ".. playerhealth
+
+			plistinfo[2].Data = playerpictures[player]
+		else
+			plistinfo[2].Data = BBOT_IMAGES[5]	
+			plistinfo[1].Text = "No Player Selected"
+		end
+	end
+
+	mp.list.removeall(mp.options["Settings"]["Player List"]["Players"])
+	updateplist()
+	cacheAvatars()
+	setplistinfo(nil)
+
+	mp.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if mp.tabnum2str[mp.activetab] == "Settings" and mp.open then
+				game.RunService.Stepped:wait()
+				updateplist()
+				if plist[1] ~= nil then
+					setplistinfo(selected_plyr)
+				else
+					setplistinfo(nil)
 				end
 			end
 		end
 	end)
+
+	mp.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
+
+	end)
+
+	mp.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
+		updateplist()
+		cacheAvatars()
+		if plist[1] ~= nil then
+			setplistinfo(selected_plyr)
+		else
+			setplistinfo(nil)
+		end
+	end)
+	 
+	mp.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
+		updateplist()
+	end)	
 
 --[[ 	mp.connections.mousedownconnect2 = LOCAL_MOUSE.Button1Down:Connect(function()
 		if mp.open then
