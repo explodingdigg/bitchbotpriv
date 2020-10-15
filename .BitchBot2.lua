@@ -10,7 +10,7 @@ local mp = { -- this is for menu stuffs n shi
 	},
 	activetab = 1, -- do not change this value please its not made to be fucked with sorry
 	open = true,
-	fadespeed = 10,
+	fadestart = 0,
 	fading = false,
 	mousedown = false,
 	postable = {},
@@ -1210,69 +1210,10 @@ local function BBMenuInit(menutable)
 				colorpickerthatisopen = nil
 				colorpickeropen = false
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
+			end
+			if not mp.fading then
 				mp.fading = true
-				while mp.open do
-					for k, v in pairs(bbmouse) do
-						v.Transparency = (v.Transparency * 255 - mp.fadespeed)/ 255
-						if v.Transparency <= 0 then
-							v.Transparency = 0
-						end
-					end
-					for k, v in pairs(bbmenu) do
-						v.Transparency = (v.Transparency * 255 - mp.fadespeed)/ 255
-						if v.Transparency <= 0 then
-							v.Transparency = 0
-							mp.open = false
-						end
-					end
-					for k, v in pairs(tabz[mp.activetab]) do
-						v.Transparency = (v.Transparency * 255 - mp.fadespeed)/ 255
-						if v.Transparency <= 0 then
-							v.Transparency = 0
-							mp.open = false
-						end
-					end
-					game.RunService.Stepped:wait()
-				end
-				for k, v in pairs(bbmenu) do
-					v.Visible = false
-				end
-				for k, v in pairs(tabz) do
-					for k1, v1 in pairs(v) do
-						v1.Visible = false
-					end
-				end
-				mp.fading = false
-			elseif not mp.open and not mp.fading then
-				mp.fading = true
-				for k, v in pairs(bbmenu) do
-					v.Visible = true
-				end
-				set_barguy(mp.activetab)
-				while not mp.open do
-					for k, v in pairs(bbmouse) do
-						v.Transparency = (v.Transparency * 255 + mp.fadespeed)/ 255
-						if v.Transparency >= 1 then
-							v.Transparency = 1
-						end
-					end
-					for k, v in pairs(bbmenu) do
-						v.Transparency = (v.Transparency * 255 + mp.fadespeed)/ 255
-						if v.Transparency >= 1 then
-							v.Transparency = 1
-							mp.open = true
-						end
-					end
-					for k, v in pairs(tabz[mp.activetab]) do
-						v.Transparency = (v.Transparency * 255 + mp.fadespeed)/ 255
-						if v.Transparency >= 1 then
-							v.Transparency = 1
-							mp.open = true
-						end
-					end
-					game.RunService.Stepped:wait()
-				end
-				mp.fading = false
+				mp.fadestart = tick()
 			end
 		end
 
@@ -1377,10 +1318,6 @@ local function BBMenuInit(menutable)
 	local function buttonpressed(bp)
 		if bp == mp.options["Settings"]["Extra"]["Unload Cheat"] then
 			mp:unload()
-			Draw:UnRender()
-			allrender = nil
-			mp = nil
-			Draw = nil
 		elseif bp == mp.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
 		elseif bp == mp.options["Settings"]["Configuration"]["Save Config"] then
@@ -1974,10 +1911,11 @@ local function BBMenuInit(menutable)
 		if mp.tabnum2str[mp.activetab] == "Settings" then
 			if mp.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
 				local clr = mp.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
-				set_menu_color(clr[1], clr[2], clr[3])
+				mp.mc = {clr[1], clr[2], clr[3]}
 			else
-				set_menu_color(mp.mc[1], mp.mc[2], mp.mc[3])
+				mp.mc = {127, 72, 163}
 			end
+			set_menu_color(mp.mc[1], mp.mc[2], mp.mc[3])
 
 			local wme = mp:getval("Settings", "Menu Settings", "Watermark")
 			for k, v in pairs(mp.watermark.rect) do
@@ -2050,6 +1988,30 @@ local function BBMenuInit(menutable)
 			end
 		end
 	end)
+
+	function mp:setmenutransparency(transparency)
+		for k, v in pairs(bbmouse) do
+			v.Transparency = transparency/255
+		end
+		for k, v in pairs(bbmenu) do
+			v.Transparency = transparency/255
+		end
+		for k, v in pairs(tabz[mp.activetab]) do
+			v.Transparency = transparency/255
+		end
+	end
+
+	function mp:setmenuvisibility(visible)
+		for k, v in pairs(bbmouse) do
+			v.Visible = visible
+		end
+		for k, v in pairs(bbmenu) do
+			v.Visible = visible
+		end
+		for k, v in pairs(tabz[mp.activetab]) do
+			v.Visible = visible
+		end
+	end
 
 	local function renderSteppedMenu()
 		---------------------------------------------------------------------i pasted the old menu working ingame shit from the old source nate pls fix ty
@@ -2199,6 +2161,35 @@ local function BBMenuInit(menutable)
 		if mp.open or mp.fading then
 			set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
 		end
+
+		if mp.fading then
+			if mp.open then
+				local timesincefade = tick() - mp.fadestart
+				local fade_amount = 255 - math.floor((timesincefade * 10) * 255)
+				mp:setmenutransparency(fade_amount)
+				if fade_amount <= 0 then
+					mp.open = false
+					mp.fading = false
+					mp:setmenutransparency(0)
+					mp:setmenuvisibility(false)
+				else
+					mp:setmenutransparency(fade_amount)
+				end
+			else
+				mp:setmenuvisibility(true)
+				set_barguy(mp.activetab)
+				local timesincefade = tick() - mp.fadestart
+				local fade_amount = math.floor((timesincefade * 10) * 255)
+				mp:setmenutransparency(fade_amount)
+				if fade_amount >= 255 then
+					mp.open = true
+					mp.fading = false
+					mp:setmenutransparency(255)
+				else
+					mp:setmenutransparency(fade_amount)
+				end
+			end
+		end
 	end
 
 	mp.connections.inputstart = INPUT_SERVICE.InputBegan:Connect(function(input)
@@ -2225,13 +2216,47 @@ local function BBMenuInit(menutable)
 	end)
 
 	function mp:unload()
-		for k, v in pairs(mp.connections) do
+		for k, v in pairs(self.connections) do
 			v:Disconnect()
 		end
+		Draw:UnRender()
+		allrender = nil
+		mp = nil
+		Draw = nil
 	end 
 end
 
+local function GetPlayerHumanoid(player)
+    local character = player.Character
+
+    if character then
+        return character:FindFirstChildOfClass("Humanoid")
+    else
+    	return nil
+    end
+end
+
+
 if mp.dir == "uni" then
+	local allesp = {
+		name = {},
+		outerbox = {},
+		box = {},
+		innerbox = {},
+		distance = {},
+		team = {},
+	}
+
+	for i = 1, Players.MaxPlayers do
+		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.outerbox)
+		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.innerbox)
+		Draw:OutlinedRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.box)
+
+		Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.distance)
+		Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.name)
+		Draw:OutlinedText("fart nigga 420", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.team)
+	end
+
 	BBMenuInit({
 		{
 			name = "Aimbot",
@@ -2246,15 +2271,83 @@ if mp.dir == "uni" then
 					width = 230,
 					height = 332,
 					content = {
-
+						{
+							type = "toggle",
+							name = "Name",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Name ESP",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Box",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Box ESP",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Health Bar",
+							value = false,
+							extra = {
+								type = "double colorpicker",
+								name = {"Low Health", "Max Health"},
+								color = {{255, 0, 0}, {0, 255, 0}}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Team",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Team ESP",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Team Color Based",
+							value = false,
+						},
+						{
+							type = "toggle",
+							name = "Distance",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Distance ESP",
+								color = {255, 255, 255, 255}
+							}
+						},
+					}
+				},
+				{
+					name = "ESP Settings",
+					x = 253,
+					y = 66,
+					width = 230,
+					height = 332,
+					content = {
+						{
+							type = "combobox",
+							name = "Checks",
+							values = {{"Alive", true}, {"Same Team", false}}
+						},
 					}
 				},
 				{
 					name = "Local Visuals",
 					x = 253,
-					y = 66,
+					y = 306,
 					width = 230,
-					height = 332,
+					height = 100,
 					content = {
 						{
 							type = "slider",
@@ -2442,7 +2535,7 @@ if mp.dir == "uni" then
 	local playerpictures = {}
 	local function updateplist()
 		local playerlistval = mp:getval("Settings", "Player List", "Players")
-		local playerz = game.Players:GetPlayers()
+		local playerz = Players:GetPlayers()
 		local templist = {}
 		for k, v in pairs(playerz) do
 			local plyrname = {v.Name, RGB(255, 255, 255)}
@@ -2475,7 +2568,7 @@ if mp.dir == "uni" then
 	end
 
 	local function cacheAvatars()
-		for i, v in ipairs(game.Players:GetPlayers()) do
+		for i, v in ipairs(Players:GetPlayers()) do
 			if not table.contains(playerpictures, v) then
 				local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
 				playerpictures[v] = game:HttpGet(content)
@@ -2483,20 +2576,31 @@ if mp.dir == "uni" then
 		end
 	end
 
-	local function setplistinfo(player)
-		if player ~= nil then
-			plistinfo[2].Data = BBOT_IMAGES[5]	
+	local function setplistinfo(player, textonly)
+		if player ~= nil then	
 			local playerteam = "None"
 			if player.Team ~= nil then
 				playerteam = player.Team.Name
 			end
 			local playerhealth = "?"
-			-- if player.Health ~= nil then
-			--  	playerhealth = tostring(player.Health).. "/".. tostring(player.MaxHealth)
-			-- end
-			plistinfo[1].Text = "Name: ".. player.Name.."\nTeam: ".. playerteam.. "\nRAP: ".. "poop" .."\nHealth: ".. playerhealth
 
-			plistinfo[2].Data = playerpictures[player]
+			
+			local humanoid = GetPlayerHumanoid(player)
+			if humanoid ~= nil then 
+				if humanoid.Health ~= nil then
+				 	playerhealth = tostring(humanoid.Health).. "/".. tostring(humanoid.MaxHealth)
+				else
+					playerhealth = "No health found"
+				end
+			else
+				playerhealth = "Humanoid not found"
+			end
+
+			plistinfo[1].Text = "Name: ".. player.Name.."\nTeam: ".. playerteam .."\nHealth: ".. playerhealth
+
+			if textonly == nil then
+				plistinfo[2].Data = playerpictures[player]
+			end
 		else
 			plistinfo[2].Data = BBOT_IMAGES[5]	
 			plistinfo[1].Text = "No Player Selected"
@@ -2523,7 +2627,101 @@ if mp.dir == "uni" then
 	end)
 
 	mp.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
+		if mp.open then
+			if mp.tabnum2str[mp.activetab] == "Settings" then
+				if plist[1] ~= nil then
+					setplistinfo(selected_plyr, true)
+				end
+			end
+		end
+		for k, v in pairs(allesp) do
+			for k1, v1 in ipairs(v) do
+				if v1.Visible then
+					v1.Visible = false
+				end
+			end
+		end
+		for i, v in ipairs(Players:GetPlayers()) do
+			if v == LOCAL_PLAYER then
+				continue 
+			end
 
+			local player = v.Character
+			if v.Character ~= nil and v.Character.HumanoidRootPart ~= nil then
+
+				local checks = mp:getval("Visuals", "ESP Settings", "Checks")
+				if checks[1] and player.Humanoid.Health <= 0 then
+					continue
+				end
+				if v.Team ~= nil then
+					if checks[2] and v.Team == LOCAL_PLAYER.Team then
+						continue
+					end
+				end
+				local rootpart = v.Character.HumanoidRootPart.Position
+				local top, top_isrendered = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(rootpart.x, rootpart.y + 2.5, rootpart.z))
+				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(rootpart.x, rootpart.y - 2.9, rootpart.z))
+				local box_width = (bottom.y - top.y) / 2
+
+				if top_isrendered or bottom_isrendered then
+					if mp:getval("Visuals", "Player ESP", "Box") then
+						local boxtop = {x = math.floor(bottom.x - box_width / 2), y = math.floor(top.y + 36)}
+						local boxsize = {w = math.floor(box_width), h =  math.floor(bottom.y - top.y)}
+						allesp.outerbox[i].Position = Vector2.new(boxtop.x - 1, boxtop.y - 1)
+						allesp.outerbox[i].Size = Vector2.new(boxsize.w + 2, boxsize.h + 2)
+						allesp.outerbox[i].Visible = true
+						allesp.outerbox[i].Transparency = mp:getval("Visuals", "Player ESP", "Box", "color")[4]/255
+
+						allesp.innerbox[i].Position = Vector2.new(boxtop.x + 1, boxtop.y + 1)
+						allesp.innerbox[i].Size = Vector2.new(boxsize.w - 2, boxsize.h - 2)
+						allesp.innerbox[i].Visible = true
+						allesp.innerbox[i].Transparency = mp:getval("Visuals", "Player ESP", "Box", "color")[4]/255
+
+
+						allesp.box[i].Position = Vector2.new(boxtop.x, boxtop.y)
+						allesp.box[i].Size = Vector2.new(boxsize.w, boxsize.h)
+						allesp.box[i].Visible = true
+						allesp.box[i].Color = mp:getval("Visuals", "Player ESP", "Box", "color", true)
+						allesp.box[i].Transparency = mp:getval("Visuals", "Player ESP", "Box", "color")[4]/255
+					end
+					if mp:getval("Visuals", "Player ESP", "Name") then
+						allesp.name[i].Text = v.Name
+						allesp.name[i].Position = Vector2.new(math.floor(bottom.x), math.floor(top.y + 22))
+						allesp.name[i].Visible = true
+						allesp.name[i].Color = mp:getval("Visuals", "Player ESP", "Name", "color", true)
+						allesp.name[i].Transparency = mp:getval("Visuals", "Player ESP", "Name", "color")[4]/255
+					end
+					local y_spot = 0
+					if mp:getval("Visuals", "Player ESP", "Team") then
+						if v.Team == nil then
+							allesp.team[i].Text = "None"
+						else
+							allesp.team[i].Text = v.Team.Name
+						end
+						if mp:getval("Visuals", "Player ESP", "Team Color Based") then
+							if v.Team == nil then
+								allesp.team[i].Color = RGB(255, 255, 255)
+							else
+								allesp.team[i].Color = v.TeamColor.Color
+							end
+						else
+							allesp.team[i].Color = mp:getval("Visuals", "Player ESP", "Team", "color", true)
+						end
+						allesp.team[i].Transparency = mp:getval("Visuals", "Player ESP", "Team", "color")[4]/255
+						allesp.team[i].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y + 36))
+						allesp.team[i].Visible = true
+						y_spot += 15
+					end
+					if mp:getval("Visuals", "Player ESP", "Distance") then
+						allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(rootpart) / 5)).. "m"
+						allesp.distance[i].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y + 36) + y_spot)
+						allesp.distance[i].Visible = true
+						allesp.distance[i].Color = mp:getval("Visuals", "Player ESP", "Distance", "color", true)
+						allesp.distance[i].Transparency = mp:getval("Visuals", "Player ESP", "Distance", "color")[4]/255
+					end
+				end
+			end
+		end
 	end)
 
 	mp.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
@@ -2540,13 +2738,6 @@ if mp.dir == "uni" then
 		updateplist()
 	end)	
 
---[[ 	mp.connections.mousedownconnect2 = LOCAL_MOUSE.Button1Down:Connect(function()
-		if mp.open then
-			if mp.activetab == 4 then
-
-			end
-		end
-	end)--]] 
 elseif mp.dir == "pf" then
 	BBMenuInit({
 		{--ANCHOR Legit
@@ -3611,11 +3802,33 @@ elseif mp.dir == "pf" then
 			name = "Settings",
 			content = {
 				{
-					name = "Menu Settings",
+					name = "Player List",
 					x = mp.columns.left,
 					y = 66,
+					width = 466,
+					height = 328,
+					content = {
+						{
+							type = "list",
+							name = "Players",
+							multiname = {"Name", "Team", "Status"},
+							size = 9,
+							colums = 3
+						},
+						{
+							type = "image",
+							name = "Player Info",
+							text = "No Player Selected",
+							size = 72
+						}
+					}
+				},
+				{
+					name = "Menu Settings",
+					x = mp.columns.left,
+					y = 400,
 					width = mp.columns.width,
-					height = 170,
+					height = 62,
 					content = {
 						{
 							type = "toggle",
@@ -3631,15 +3844,32 @@ elseif mp.dir == "pf" then
 							type = "toggle",
 							name = "Watermark",
 							value = true,
+						},
+					}
+				},
+				{
+					name = "Extra",
+					x = mp.columns.left,
+					y = 468,
+					width = mp.columns.width,
+					height = 115,
+					content = {
+						{
+							type = "button",
+							name = "Set Clipboard Game ID"
+						},
+						{
+							type = "button",
+							name = "Unload Cheat"
 						}
 					}
 				},
 				{
 					name = "Configuration",
 					x = mp.columns.right,
-					y = 66,
+					y = 400,
 					width = mp.columns.width,
-					height = 170,
+					height = 183,
 					content = {
 						{
 							type = "dropbox",
@@ -3655,9 +3885,134 @@ elseif mp.dir == "pf" then
 							type = "button",
 							name = "Save Config"
 						},
+						{
+							type = "button",
+							name = "Delete Config"
+						},
 					}
 				}
 			}
 		},
 	})
+
+	local selected_plyr = nil
+	local plistinfo = mp.options["Settings"]["Player List"]["Player Info"][1]
+	local plist = mp.options["Settings"]["Player List"]["Players"]
+	local playerpictures = {}
+	local function updateplist()
+		local playerlistval = mp:getval("Settings", "Player List", "Players")
+		local playerz = Players:GetPlayers()
+		local templist = {}
+		for k, v in pairs(playerz) do
+			local plyrname = {v.Name, RGB(255, 255, 255)}
+			local teamtext = {"None", RGB(255, 255, 255)}
+			local plyrstatus = {"None", RGB(255, 255, 255)}
+			if v.Team ~= nil then
+				teamtext[1] = v.Team.Name
+				teamtext[2] = v.TeamColor.Color
+			end
+			if v == LOCAL_PLAYER then
+				plyrstatus[1] = "Local Player"
+				plyrstatus[2] = RGB(66, 135, 245)
+			end
+			table.insert(templist, {plyrname, teamtext, plyrstatus})
+		end
+		plist[5] = templist
+		if playerlistval ~= nil then
+			for i, v in ipairs(playerz) do
+				if v.Name == playerlistval then
+					selected_plyr = v
+					break
+				end
+				if i == #playerz then
+					selected_plyr = nil
+					mp.list.setval(plist, nil)
+				end
+			end
+		end
+		mp:set_menu_pos(mp.x, mp.y)
+	end
+
+	local function cacheAvatars()
+		for i, v in ipairs(Players:GetPlayers()) do
+			if not table.contains(playerpictures, v) then
+				local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+				playerpictures[v] = game:HttpGet(content)
+			end
+		end
+	end
+
+	local function setplistinfo(player, textonly)
+		if player ~= nil then	
+			local playerteam = "None"
+			if player.Team ~= nil then
+				playerteam = player.Team.Name
+			end
+			local playerhealth = "?"
+
+			
+			local humanoid = GetPlayerHumanoid(player)
+			if humanoid ~= nil then 
+				if humanoid.Health ~= nil then
+				 	playerhealth = tostring(humanoid.Health).. "/".. tostring(humanoid.MaxHealth)
+				else
+					playerhealth = "No health found"
+				end
+			else
+				playerhealth = "Humanoid not found"
+			end
+
+			plistinfo[1].Text = "Name: ".. player.Name.."\nTeam: ".. playerteam .."\nHealth: ".. playerhealth
+
+			if textonly == nil then
+				plistinfo[2].Data = playerpictures[player]
+			end
+		else
+			plistinfo[2].Data = BBOT_IMAGES[5]	
+			plistinfo[1].Text = "No Player Selected"
+		end
+	end
+
+	mp.list.removeall(mp.options["Settings"]["Player List"]["Players"])
+	updateplist()
+	cacheAvatars()
+	setplistinfo(nil)
+
+	mp.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if mp.tabnum2str[mp.activetab] == "Settings" and mp.open then
+				game.RunService.Stepped:wait()
+				updateplist()
+				if plist[1] ~= nil then
+					setplistinfo(selected_plyr)
+				else
+					setplistinfo(nil)
+				end
+			end
+		end
+	end)
+
+	mp.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
+		if mp.open then
+			if mp.tabnum2str[mp.activetab] == "Settings" then
+				if plist[1] ~= nil then
+					setplistinfo(selected_plyr, true)
+				end
+			end
+		end
+	end)
+
+	mp.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
+		updateplist()
+		cacheAvatars()
+		if plist[1] ~= nil then
+			setplistinfo(selected_plyr)
+		else
+			setplistinfo(nil)
+		end
+	end)
+	 
+	mp.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
+		updateplist()
+	end)
 end
