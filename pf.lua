@@ -19,7 +19,7 @@ local mp = { -- this is for menu stuffs n shi
 		dark = {},
 		togz = {}
 	},
-	dir = "pf"
+	dir = "pf",
 	mc = {127, 72, 163}
 }
 
