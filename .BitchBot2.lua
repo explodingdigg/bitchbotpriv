@@ -54,20 +54,30 @@ MultiThreadList({
 })
 
 -- MULTITHREAD DAT LOADING SO FAST!!!!
-while #BBOT_IMAGES ~= 5 do
-	wait(1)
-end
+do 
+	local function Loopy_Image_Checky()
+		for i = 1, 5 do
+			local v = BBOT_IMAGES[i]
+			if v == nil then 
+				
+				return true 
+			end
+		end
+		return false
+	end 
+	while Loopy_Image_Checky() do
+		wait(0)
+	end
 
+end
 if game.PlaceId == 292439477 or game.PlaceId == 299659045 then
 	mp.game = "pf"
 	do
 		for _,v in pairs(getgc()) do
 			if type(v) == 'function' then
 				for _,u in pairs(debug.getupvalues(v)) do
-					if type(u) == 'table' then
-						if rawget(u, 'send') then
-							net = u
-						end
+					if type(u) == 'table'and rawget(u, 'send') then
+						net = u
 					end
 				end
 			end
@@ -75,7 +85,7 @@ if game.PlaceId == 292439477 or game.PlaceId == 299659045 then
 	
 		repeat
 			game.RunService.Heartbeat:wait()
-		until not net.add
+		until net and not net.add
 	end -- wait for framwork to load
 end
 
@@ -175,20 +185,15 @@ do -- metatable additions strings and such
 
 	local strMt = getrawmetatable("")
 
-	strMt.__add = function(s1, s2)
-		return s1 .. s2
-	end
 	strMt.__mul = function(s1, num)
 		return string.rep(s1, num)
 	end
-	strMt.__unm = function(s1)
-		return string.reverse(s1)
-	end
-	strMt.__div = function(s1, num)
-		return num == 0 and s1 or string.sub(s1, 1, num)
-	end
 	strMt.__sub = function(s1, num)
 		return string.sub(s1, 1, #s1-num)
+	end
+
+	function string_cut(s1, num)
+		return num == 0 and s1 or string.sub(s1, 1, num)
 	end
 
 end
@@ -2837,20 +2842,7 @@ elseif mp.game == "pf" then
 	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
 
 	local shooties = {}
-	local oldbegan = inputBeganMenu
-	inputBeganMenu = function(...) -- idk
-		if client.logic.currentgun and client.logic.currentgun.shoot then
-			local shootgun = client.logic.currentgun.shoot
-			if not shooties[client.logic.currentgun.shoot] then
-				client.logic.currentgun.shoot = function(self, ...)
-					if mp.open then return end
-					shootgun(self, ...)
-				end
-			end
-			shooties[client.logic.currentgun.shoot] = true
-		end
-		return oldbegan(...)
-	end
+	
 
 	
 
@@ -2865,7 +2857,17 @@ elseif mp.game == "pf" then
 	
 	local skelparts = {"Head", "Right Arm", "Right Leg", "Left Leg", "Left Arm"}
 	
-	local function mouseUnlocking()
+	local function MouseUnlockAndShootHook()
+		if client.logic.currentgun and client.logic.currentgun.shoot then
+			local shootgun = client.logic.currentgun.shoot
+			if not shooties[client.logic.currentgun.shoot] then
+				client.logic.currentgun.shoot = function(self, ...)
+					if mp.open then return end
+					shootgun(self, ...)
+				end
+			end
+			shooties[client.logic.currentgun.shoot] = true
+		end
 		if mp.open then
 			if client.deploy.isdeployed() then
 				INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
@@ -2973,14 +2975,14 @@ elseif mp.game == "pf" then
 						playernum += 1
 						if mp.options["ESP"][teem]["Name"][1] then
 	
-							local name = tostring(v1.Name)
+							local name = v1.Name
 							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
 								name = string.lower(name)
 							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
 								name = string.upper(name)
 							end
 	
-							allesp.nametext[playernum].Text = name / mp:getval("ESP", "ESP Settings", "Max Text Length")
+							allesp.nametext[playernum].Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
 							allesp.nametext[playernum].Visible = true
 							allesp.nametext[playernum].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
 							allesp.nametext[playernum].Color = RGB(mp.options["ESP"][teem]["Name"][5][1][1], mp.options["ESP"][teem]["Name"][5][1][2], mp.options["ESP"][teem]["Name"][5][1][3])
@@ -3057,7 +3059,7 @@ elseif mp.game == "pf" then
 							end
 	
 							spoty += 12
-							allesp.weptext[playernum].Text = wepname / mp:getval("ESP", "ESP Settings", "Max Text Length")
+							allesp.weptext[playernum].Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
 							allesp.weptext[playernum].Visible = true
 							allesp.weptext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y))
 							allesp.weptext[playernum].Color = RGB(mp.options["ESP"][teem]["Held Weapon"][5][1][1], mp.options["ESP"][teem]["Held Weapon"][5][1][2], mp.options["ESP"][teem]["Held Weapon"][5][1][3])
@@ -3402,7 +3404,7 @@ elseif mp.game == "pf" then
 
 					local ray_distance = (target_pos - ray_pos).Magnitude
 
-					table.insert(results, {player = ply, part = parts.head, tppos = ray_pos, direction = target_direction, dist = target_dist, fly = ray_distance < 15 and part1 == part2})
+					table.insert(results, {player = ply, part = parts.head, tppos = ray_pos, direction = target_direction, dist = target_dist, insight = ray_distance < 15 and part1 == part2})
 				end
 	
 			end
@@ -3422,6 +3424,8 @@ elseif mp.game == "pf" then
 					ragebot:KnifeAura()
 				elseif knifetype == 3 then
 					ragebot:FlightAura()
+				elseif knifetype == 4 then 
+					ragebot:TPAura()
 				end
 			end
 		end
@@ -3430,11 +3434,21 @@ elseif mp.game == "pf" then
 			local targets = ragebot:GetKnifeTargets()
 			
 			for i, target in pairs(targets) do
-				if not target.fly then continue end
+				if not target.insight then continue end
 				
-				if target.fly then
-					LOCAL_PLAYER.Character.HumanoidRootPart.Velocity = target.direction.Unit * 200
-				end
+				LOCAL_PLAYER.Character.HumanoidRootPart.Velocity = target.direction.Unit * 200
+
+				return ragebot:KnifeAura(targets)
+			end
+		end
+
+		function ragebot:TPAura()
+			local targets = ragebot:GetKnifeTargets()
+			
+			for i, target in pairs(targets) do
+				if not target.insight then continue end
+				
+				LOCAL_PLAYER.Character:SetPrimaryPartCFrame(CFrame.new(target.tppos + Vector3.new(0,2,0)))
 
 				return ragebot:KnifeAura(targets)
 			end
@@ -3875,7 +3889,7 @@ elseif mp.game == "pf" then
 	end)
 	
 	local renderstepped = game.RunService.RenderStepped:Connect(function()
-		mouseUnlocking()
+		MouseUnlockAndShootHook()
 		do --rendering
 			renderVisuals()
 			renderChams()
@@ -4264,7 +4278,7 @@ elseif mp.game == "pf" then
 							type = "dropbox",
 							name = "Knife Bot Type",
 							value = 2,
-							values = {"Assist", "Multi Aura", "Flight Aura"}
+							values = {"Assist", "Multi Aura", "Flight Aura", "Teleport Aura"}
 						},
 					},
 				},
