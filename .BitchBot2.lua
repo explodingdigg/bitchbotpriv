@@ -691,12 +691,26 @@ local function BBMenuInit(menutable)
 		table.insert(mp.tabnum2str, v.name)
 
 		mp.options[v.name] = {}
+
+		local y_offies = {left = 66, right = 66}
 		if v.content ~= nil then
 			for k1, v1 in pairs(v.content) do
-				Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, v1.height, tabz[k])
+				if v1.autopos ~= nil then
+					v1.width = 230
+					if v1.autopos == "left" then
+						v1.x = 17
+						v1.y = y_offies.left
+					elseif v1.autopos == "right" then
+						v1.x = 253
+						v1.y = y_offies.right
+					end
+				end
+
+				local y_pos = 24
+
 				mp.options[v.name][v1.name] = {}
 				if v1.content ~= nil then
-					local y_pos = 24
+					
 					for k2, v2 in pairs(v1.content) do
 						if v2.type == "toggle" then
 							mp.options[v.name][v1.name][v2.name] = {}
@@ -753,7 +767,7 @@ local function BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
 							mp.options[v.name][v1.name][v2.name][5] = false
 							mp.options[v.name][v1.name][v2.name][6] = v2.values
-							y_pos += 39
+							y_pos += 40
 						elseif v2.type == "combobox" then
 							mp.options[v.name][v1.name][v2.name] = {}
 							mp.options[v.name][v1.name][v2.name][4] = Draw:Combobox(v2.name, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
@@ -761,7 +775,7 @@ local function BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name][2] = v2.type
 							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
 							mp.options[v.name][v1.name][v2.name][5] = false
-							y_pos += 39
+							y_pos += 40
 						elseif v2.type == "button" then
 							mp.options[v.name][v1.name][v2.name] = {}
 							mp.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
@@ -786,6 +800,16 @@ local function BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name][2] = v2.type
 						end
 					end
+				end
+				y_pos += 2
+				if v1.autopos == nil then
+					Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, v1.height, tabz[k])
+				else
+					if v1.autofill then
+						y_pos = (mp.h - 17) - (v1.y)
+					end
+					Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, y_pos, tabz[k])
+					y_offies[v1.autopos] += y_pos + 6
 				end
 			end
 		end
@@ -2268,6 +2292,9 @@ if mp.game == "uni" then
 		outerbox = {},
 		box = {},
 		innerbox = {},
+		healthouter = {},
+		healthinner = {},
+		hptext = {},
 		distance = {},
 		team = {},
 	}
@@ -2277,6 +2304,10 @@ if mp.game == "uni" then
 		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.innerbox)
 		Draw:OutlinedRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.box)
 
+		Draw:FilledRect(false, 20, 20, 4, 20, {10, 10, 10, 215}, allesp.healthouter)
+		Draw:FilledRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.healthinner)
+
+		Draw:OutlinedText("", 2, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, allesp.hptext)
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.distance)
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.name)
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.team)
@@ -2291,10 +2322,8 @@ if mp.game == "uni" then
 			content = {
 				{
 					name = "Player ESP",
-					x = 17,
-					y = 66,
-					width = 230,
-					height = 332,
+					autopos = "left", 
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -2328,6 +2357,16 @@ if mp.game == "uni" then
 						},
 						{
 							type = "toggle",
+							name = "Health Number",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Health Number ESP",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
 							name = "Team",
 							value = false,
 							extra = {
@@ -2355,24 +2394,24 @@ if mp.game == "uni" then
 				},
 				{
 					name = "ESP Settings",
-					x = 253,
-					y = 66,
-					width = 230,
-					height = 332,
+					autopos = "right",
 					content = {
 						{
 							type = "combobox",
 							name = "Checks",
 							values = {{"Alive", true}, {"Same Team", false}}
 						},
+						{
+							type = "toggle",
+							name = "Text Box Outlines",
+							value = false,
+						}
 					}
 				},
 				{
 					name = "Local Visuals",
-					x = 253,
-					y = 306,
-					width = 230,
-					height = 100,
+					autopos = "right",
+					autofill = true, 
 					content = {
 						{
 							type = "slider",
@@ -2609,16 +2648,17 @@ if mp.game == "uni" then
 			end
 			local playerhealth = "?"
 
-			
-			local humanoid = GetPlayerHumanoid(player)
-			if humanoid ~= nil then 
-				if humanoid.Health ~= nil then
-				 	playerhealth = tostring(humanoid.Health).. "/".. tostring(humanoid.MaxHealth)
+			if player.Character ~= nil then 
+				local humanoid = player.Character:FindFirstChild("Humanoid")
+				if humanoid ~= nil then 
+					if humanoid.Health ~= nil then
+					 	playerhealth = tostring(humanoid.Health).. "/".. tostring(humanoid.MaxHealth)
+					else
+						playerhealth = "No health found"
+					end
 				else
-					playerhealth = "No health found"
+					playerhealth = "Humanoid not found"
 				end
-			else
-				playerhealth = "Humanoid not found"
 			end
 
 			plistinfo[1].Text = "Name: ".. player.Name.."\nTeam: ".. playerteam .."\nHealth: ".. playerhealth
@@ -2672,11 +2712,14 @@ if mp.game == "uni" then
 			end
 
 			local player = v.Character
-			if v.Character ~= nil and v.Character.HumanoidRootPart ~= nil then
+			if v.Character ~= nil and v.Character.HumanoidRootPart ~= nil  then
 
 				local checks = mp:getval("Visuals", "ESP Settings", "Checks")
-				if checks[1] and player.Humanoid.Health <= 0 then
-					continue
+				if player:FindFirstChild("Humandoid") then
+					print("hi")
+					if checks[1] and player.Humanoid.Health <= 0 then
+						continue
+					end
 				end
 				if v.Team ~= nil then
 					if checks[2] and v.Team == LOCAL_PLAYER.Team then
@@ -2689,9 +2732,9 @@ if mp.game == "uni" then
 				local box_width = (bottom.y - top.y) / 2
 
 				if top_isrendered or bottom_isrendered then
+					local boxtop = {x = math.floor(bottom.x - box_width / 2), y = math.floor(top.y + 36)}
+					local boxsize = {w = math.floor(box_width), h =  math.floor(bottom.y - top.y)}
 					if mp:getval("Visuals", "Player ESP", "Box") then
-						local boxtop = {x = math.floor(bottom.x - box_width / 2), y = math.floor(top.y + 36)}
-						local boxsize = {w = math.floor(box_width), h =  math.floor(bottom.y - top.y)}
 						allesp.outerbox[i].Position = Vector2.new(boxtop.x - 1, boxtop.y - 1)
 						allesp.outerbox[i].Size = Vector2.new(boxsize.w + 2, boxsize.h + 2)
 						allesp.outerbox[i].Visible = true
@@ -2708,6 +2751,24 @@ if mp.game == "uni" then
 						allesp.box[i].Visible = true
 						allesp.box[i].Color = mp:getval("Visuals", "Player ESP", "Box", "color", true)
 						allesp.box[i].Transparency = mp:getval("Visuals", "Player ESP", "Box", "color")[4]/255
+					end
+					if humanoid then
+						local health = humanoid.Health
+						local maxhealth = humanoid.MaxHealth
+						if mp:getval("Visuals", "Player ESP", "Health Bar") then
+							allesp.healthouter[i].Position = Vector2.new(boxtop.x - 6, boxtop.y - 1)
+							allesp.healthouter[i].Size = Vector2.new(4, boxsize.h + 2)
+							allesp.healthouter[i].Visible = true
+
+							allesp.healthinner[i].Position = Vector2.new(boxtop.x - 5, boxtop.y)
+							allesp.healthinner[i].Size = Vector2.new(2, boxsize.h)
+							allesp.healthinner[i].Visible = true
+						elseif mp:getval("Visuals", "Player ESP", "Health Number") then
+							allesp.hptext[i].Text = tostring(health)
+							local textsize = allesp.hptext[i].TextBounds
+							allesp.hptext[i].Position = Vector2.new(boxtop.x - 1 - textsize.x, boxtop.y - 1)
+							allesp.hptext[i].Visible = true
+						end
 					end
 					if mp:getval("Visuals", "Player ESP", "Name") then
 						allesp.name[i].Text = v.Name
@@ -5121,7 +5182,7 @@ elseif mp.game == "pf" then
 				local playerhealth = "?"
 
 				
-				local humanoid = GetPlayerHumanoid(player)
+				local humanoid = player:FindFirstChild("Humanoid")
 				if humanoid ~= nil then 
 					if humanoid.Health ~= nil then
 						playerhealth = tostring(humanoid.Health).. "/".. tostring(humanoid.MaxHealth)
