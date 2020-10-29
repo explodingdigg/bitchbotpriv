@@ -118,6 +118,7 @@ local INPUT_SERVICE = game:GetService("UserInputService")
 local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
 local CACHED_VEC3 = Vector3.new()
 local Camera = workspace.CurrentCamera
+local SCREEN_SIZE = Vector2.new()
 
 do -- table shitz
 	setreadonly(table, false)
@@ -181,6 +182,30 @@ do -- math stuffz
 	setreadonly(math, true)
 end
 
+local bVector2 = {}
+do -- vector functions
+	function bVector2:getRotate(Vec, Rads)
+		local vec = Vec.Unit
+		--x2 = cos β x1 − sin β y1
+		--y2 = sin β x1 + cos β y1
+		local sin = math.sin(Rads)
+		local cos = math.cos(Rads)
+		local x = (cos * vec.X) - (sin * vec.Y)
+		local y = (sin * vec.X) + (cos * vec.Y)
+	
+		return Vector2.new(x, y).Unit * Vec.Magnitude
+	end
+end
+local bColor = {}
+do -- color functions
+	function bColor:Mult(col, mult) 
+		return Color3.new(col.R*mult,col.G*mult,col.B*mult)
+	end
+	function bColor:Add(col, num)
+		return Color3.new(col.R+num,col.G+num,col.B+num)
+	end
+
+end
 do -- metatable additions strings and such
 
 	local strMt = getrawmetatable("")
@@ -375,17 +400,20 @@ do
 	end
 
 	function Draw:Triangle(visible, filled, pa, pb, pc, clr, tablename)
+		clr = clr or {255,255,255,1}
 		local temptable = Drawing.new("Triangle")
 		temptable.Visible = visible
-		temptable.Transparency = clr[4]
+		temptable.Transparency = clr[4] or 1
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		temptable.Thickness = 4.1
-		temptable.PointA = Vector2.new(pa[1], pa[2])
-		temptable.PointB = Vector2.new(pb[1], pb[2])
-		temptable.PointC = Vector2.new(pc[1], pc[2])
+		if pa and pb and pc then
+			temptable.PointA = Vector2.new(pa[1], pa[2])
+			temptable.PointB = Vector2.new(pb[1], pb[2])
+			temptable.PointC = Vector2.new(pc[1], pc[2])
+		end
 		temptable.Filled = filled
 		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
+		if tablename and not table.contains(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -2841,10 +2869,17 @@ elseif mp.game == "pf" then
 		nametext = {},
 		weptext = {},
 		disttext = {},
+		arrows = {
+			[1] = {},
+			[2] = {},
+		},
 		watermark = {},
 	}
 
 	for i = 1, 35 do
+		for i_ = 1, 2 do
+			Draw:Triangle(false, i_ == 1, nil, nil, nil, {255}, allesp.arrows[i_])
+		end
 		for i_, v in ipairs(allesp.skel) do
 			Draw:Line(false, 1, 30, 30, 50, 50, {255, 255, 255, 255}, v)
 		end
@@ -2947,312 +2982,7 @@ elseif mp.game == "pf" then
 	end
 
 
-	local function renderVisuals()
-		--------------------------------------world funnies
-		if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
-			game.Lighting:SetMinutesAfterMidnight(mp.options["Visuals"]["World Visuals"]["Custom Time"][1])
-		end
-		if mp.options["Visuals"]["World Visuals"]["Ambience"][1] then
-			game.Lighting.Ambient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
-			game.Lighting.OutdoorAmbient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
-		else
-			game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
-			game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
-		end
-		if mp.open then
-			client.char.unaimedfov = mp.options["Visuals"]["Local Visuals"]["Camera FOV"][1]
 	
-			if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
-				game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
-				game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
-			else
-				game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
-				game.Lighting.MapSaturation.Saturation = -0.25
-			end
-		end
-		if mp.options["Visuals"]["Local Visuals"]["Disable ADS FOV"][1] then
-			client.cam.basefov = client.char.unaimedfov
-		else
-			client.cam.basefov = 80
-		end
-		for k, v in pairs(allesp) do
-			for k1, v1 in ipairs(v) do
-				if v1.Visible then
-					v1.Visible = false
-				end
-			end
-		end
-		for k, v in ipairs(allesp.skel) do
-			for k1, v1 in ipairs(v) do
-				v1.Visible = false
-			end
-		end
-	
-	
-		local localteam = LOCAL_PLAYER.Team
-		playerz.Enemy = {}
-		playerz.Team = {}
-		for Index, Player in pairs(Players:GetPlayers()) do
-			local Body = client.replication.getbodyparts(Player)
-			if Body and typeof(Body) == 'table' and rawget(Body, 'rootpart') then
-				Player.Character = Body.rootpart.Parent
-				if Player.Team ~= localteam then
-					table.insert(playerz.Enemy, Player)
-				else
-					table.insert(playerz.Team, Player)
-				end
-			end
-		end
-	
-		local playernum = 0
-		if client.deploy.isdeployed() then
-			for k, v in pairs(playerz) do
-	
-				for k1, v1 in ipairs(v) do
-	
-					local playerTorso = v1.Character.Torso
-	
-					local vTop = playerTorso.CFrame.Position + playerTorso.CFrame.UpVector * 2.3
-					local vBottom = playerTorso.CFrame.Position - playerTorso.CFrame.UpVector * 3
-	
-					local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
-					local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
-	
-					local fovMult = mp:getval("Visuals", "Local Visuals", "Camera FOV") / Camera.FieldOfView
-	
-					local sizeX = math.ceil(2000 / top.Z * fovMult)
-					local sizeY = math.ceil(math.max(math.abs(bottom.Y - top.Y), sizeX))
-	
-					local boxSize = Vector2.new(sizeX, sizeY)
-					local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(top.Y))
-	
-					local teem = k .." ESP" -- I MISSPELLEDS IT ONPURPOSE NIGGA
-					local health = math.ceil(client.hud:getplayerhealth(v1))
-					local spoty = 0
-	
-	
-	
-					if (topIsRendered or bottomIsRendered) and client.hud:isplayeralive(v1) then
-						playernum += 1
-						if mp.options["ESP"][teem]["Name"][1] then
-	
-							local name = v1.Name
-							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
-								name = string.lower(name)
-							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
-								name = string.upper(name)
-							end
-	
-							allesp.nametext[playernum].Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
-							allesp.nametext[playernum].Visible = true
-							allesp.nametext[playernum].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
-							allesp.nametext[playernum].Color = RGB(mp.options["ESP"][teem]["Name"][5][1][1], mp.options["ESP"][teem]["Name"][5][1][2], mp.options["ESP"][teem]["Name"][5][1][3])
-							allesp.nametext[playernum].Transparency = mp.options["ESP"][teem]["Name"][5][1][4]/255
-	
-						end
-						if mp.options["ESP"][teem]["Box"][1] then
-	
-							local transparency = (mp.options["ESP"][teem]["Box"][5][1][4] - 40) / 255
-	
-							allesp.outerbox[playernum].Visible = true
-							allesp.outerbox[playernum].Position = boxPosition
-							allesp.outerbox[playernum].Size = boxSize
-							allesp.outerbox[playernum].Thickness = 3
-							allesp.outerbox[playernum].Transparency = transparency
-	
-							allesp.box[playernum].Visible = true
-							allesp.box[playernum].Position = boxPosition
-							allesp.box[playernum].Size = boxSize
-							allesp.box[playernum].Color = RGB(mp.options["ESP"][teem]["Box"][5][1][1], mp.options["ESP"][teem]["Box"][5][1][2], mp.options["ESP"][teem]["Box"][5][1][3])
-							allesp.box[playernum].Transparency = transparency
-	
-						end
-						if mp.options["ESP"][teem]["Health Bar"][1] then
-							local ySizeBar = -math.floor(boxSize.Y * health / 100)
-							if mp.options["ESP"][teem]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
-								allesp.hptext[playernum].Visible = true
-								allesp.hptext[playernum].Text = tostring(health)
-	
-								local tb = allesp.hptext[playernum].TextBounds
-	
-								allesp.hptext[playernum].Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y * 0.5, -tb.Y / 4, boxSize.Y - tb.Y))
-								allesp.hptext[playernum].Color = RGB(mp.options["ESP"][teem]["Health Number"][5][1][1], mp.options["ESP"][teem]["Health Number"][5][1][2], mp.options["ESP"][teem]["Health Number"][5][1][3])
-								allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
-							end
-	
-							allesp.hpouter[playernum].Visible = true
-							allesp.hpouter[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 6, math.floor(boxPosition.y) - 1)
-							allesp.hpouter[playernum].Size = Vector2.new(4, boxSize.Y + 2)
-	
-							allesp.hpinner[playernum].Visible = true
-							allesp.hpinner[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
-	
-							allesp.hpinner[playernum].Size = Vector2.new(2, ySizeBar)
-	
-							allesp.hpinner[playernum].Color = math.ColorRange(health, {
-								[1] = {start = 0, color = Color3.fromRGB(mp.options["ESP"][teem]["Health Bar"][5][1][1][1][1], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][2], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][3])},
-								[2] = {start = 100, color = Color3.fromRGB(mp.options["ESP"][teem]["Health Bar"][5][1][2][1][1], mp.options["ESP"][teem]["Health Bar"][5][1][2][1][2], mp.options["ESP"][teem]["Health Bar"][5][1][2][1][3])}
-							})
-	
-						elseif mp.options["ESP"][teem]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
-							local hp_sub = 0
-							if health < 100 then
-								if health < 10 then
-									hp_sub = 4
-								else
-									hp_sub = 2
-								end
-							end
-							allesp.hptext[playernum].Visible = true
-							allesp.hptext[playernum].Text = tostring(health)
-							allesp.hptext[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX * 0.5 - 1) - math.ceil(allesp.hptext[playernum].TextBounds.x) + 6 - hp_sub, math.floor(top.y - 4))
-							allesp.hptext[playernum].Color = RGB(mp.options["ESP"][teem]["Health Number"][5][1][1], mp.options["ESP"][teem]["Health Number"][5][1][2], mp.options["ESP"][teem]["Health Number"][5][1][3])
-							allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
-						end
-						if mp.options["ESP"][teem]["Held Weapon"][1] then
-							local charWeapon = v1.Character:GetChildren()[8]
-							local wepname = charWeapon and charWeapon.Name or "KNIFE"
-	
-							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
-								wepname = string.lower(wepname)
-							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
-								wepname = string.upper(wepname)
-							end
-	
-							spoty += 12
-							allesp.weptext[playernum].Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
-							allesp.weptext[playernum].Visible = true
-							allesp.weptext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y))
-							allesp.weptext[playernum].Color = RGB(mp.options["ESP"][teem]["Held Weapon"][5][1][1], mp.options["ESP"][teem]["Held Weapon"][5][1][2], mp.options["ESP"][teem]["Held Weapon"][5][1][3])
-							allesp.weptext[playernum].Transparency = mp.options["ESP"][teem]["Held Weapon"][5][1][4]/255
-						end
-						if mp.options["ESP"][teem]["Distance"][1] then
-							allesp.disttext[playernum].Text = tostring(math.ceil(bottom.z / 5)).."m" --TODO alan i told you to make this not worldtoscreen based.
-							allesp.disttext[playernum].Visible = true
-							allesp.disttext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y - 2) + spoty)
-							allesp.disttext[playernum].Color = RGB(mp.options["ESP"][teem]["Distance"][5][1][1], mp.options["ESP"][teem]["Distance"][5][1][2], mp.options["ESP"][teem]["Distance"][5][1][3])
-							allesp.disttext[playernum].Transparency = mp.options["ESP"][teem]["Distance"][5][1][4]/255
-						end
-						if mp.options["ESP"][teem]["Skeleton"][1] then
-							local torso = Camera:WorldToViewportPoint(Vector3.new(v1.Character.Torso.Position.x, v1.Character.Torso.Position.y, v1.Character.Torso.Position.z))
-							for k2, v2 in ipairs(skelparts) do
-	
-								local posie = Camera:WorldToViewportPoint(Vector3.new(v1.Character:FindFirstChild(v2).Position.x, v1.Character:FindFirstChild(v2).Position.y, v1.Character:FindFirstChild(v2).Position.z))
-								allesp.skel[k2][playernum].From = Vector2.new(posie.x, posie.y)
-								allesp.skel[k2][playernum].To = Vector2.new(torso.x, torso.y)
-								allesp.skel[k2][playernum].Visible = true
-								allesp.skel[k2][playernum].Color = RGB(mp.options["ESP"][teem]["Skeleton"][5][1][1], mp.options["ESP"][teem]["Skeleton"][5][1][2], mp.options["ESP"][teem]["Skeleton"][5][1][3])
-								allesp.skel[k2][playernum].Transparency = mp.options["ESP"][teem]["Skeleton"][5][1][4]/255
-	
-							end
-						end
-					end
-	
-				end
-	
-			end
-			--------------------------------------------------end of player esp!!!! now 4 da oder vizualz
-			--poop
-			--------------------------------------------------viewmodle shit hahahhaha
-			local vm = Camera:GetChildren()
-			if mp.options["Visuals"]["Local Visuals"]["Hand Chams"][1] then ---------------------------------------------view model shit
-				for k, v in pairs(vm) do
-					if v.Name == "Left Arm" or v.Name == "Right Arm" then
-						for k1, v1 in pairs(v:GetChildren()) do
-							v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][3])
-							v1.Transparency = 1 + (mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][4]/-255)
-							v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Hand Material"][1]]
-	
-							if mp.options["Visuals"]["Local Visuals"]["Custom Hand Reflectivity"][1] then
-								v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Hand Reflectivity"][1]/100
-							end
-							if v1.ClassName == "MeshPart" then
-								v1.TextureID = ""
-							end
-						end
-					end
-				end
-			end
-			if mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][1] then ---------------------------------------------view model shit
-				for k, v in pairs(vm) do
-	
-					if v.Name == "Left Arm" or v.Name == "Right Arm" then
-						for k1, v1 in pairs(v:GetChildren()) do
-	
-							if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
-								v1.Name = "Sleeve"
-								v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][3])
-								v1.Transparency = 1 + (mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][4]/-255)
-								v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Sleeve Material"][1]]
-								if mp.options["Visuals"]["Local Visuals"]["Custom Sleeve Reflectivity"][1] then
-									v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Sleeve Reflectivity"][1]/100
-								end
-								v1:ClearAllChildren()
-							end
-						
-						end
-					end
-				
-				end
-			end
-			if mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][1] then
-				for k, v in pairs(vm) do
-					if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
-						for k1, v1 in pairs(v:GetChildren()) do
-	
-							v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][3])
-	
-							if v1.Transparency ~= 1 then
-								v1.Transparency = 0.99999 + (mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
-							end
-							if mp.options["Visuals"]["Local Visuals"]["Remove Weapon Skin"][1] then
-								for i2, v2 in pairs(v1:GetChildren()) do
-									if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
-										v2:Destroy()
-									end
-								end
-							end
-							v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Weapon Material"][1]]
-	
-							if mp.options["Visuals"]["Local Visuals"]["Custom Weapon Reflectivity"][1] then
-								v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Weapon Reflectivity"][1]/100
-							end
-						end
-					end
-				end
-			end
-			------------------------------------------------------ragdoll chasms
-			if mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
-				for k, v in ipairs(workspace.Ignore.DeadBody:GetChildren()) do
-	
-					for k1, v1 in pairs(v:GetChildren()) do
-	
-						if v1.Material ~= mats[mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")] then
-							if v1.Name == "Torso" and v1:FindFirstChild("Pant") then
-								v1.Pant:Destroy()
-							end
-							v1.Color = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
-							v1.Transparency = 1+(mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color")[4]/-255)
-							v1.Material = mats[mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")]
-							if v1:FindFirstChild("Mesh") then
-								v1.Mesh:Destroy()
-							end
-						end
-	
-					end
-	
-				end
-			end
-	
-			-- do --watermark shittiez
-			-- 	local wme = mp:getval("Settings", "Menu Settings", "Watermark")
-			-- 	for k, v in pairs(allesp.watermark.rect) do
-			-- 		v.Visible = wme
-			-- 	end
-			-- 	allesp.watermark.text[1].Visible = wme
-			-- end
-		end
-	end
 	
 	local function renderChams()
 		for k, Player in pairs(Players:GetPlayers()) do
@@ -3409,6 +3139,24 @@ elseif mp.game == "pf" then
 			local hit, position = workspace:FindPartOnRayWithIgnoreList(Ray.new(origin, Part.Position - origin), {Camera, workspace.Ignore, workspace.Players})
 			--print(position, Part.Position)
 			return position == Part.Position
+	
+	
+		end
+
+		function camera:GetAngles()
+
+
+			local pitch, yaw = Camera.CFrame:ToOrientation()
+			return {["pitch"] = pitch, ["yaw"] = yaw}
+	
+	
+		end
+		
+		function camera:GetAnglesTo(Pos)
+	
+	
+			local pitch, yaw = CFrame.new(Camera.CFrame.Position, Pos):ToOrientation()
+			return {["pitch"] = pitch, ["yaw"] = yaw}
 	
 	
 		end
@@ -3938,7 +3686,345 @@ elseif mp.game == "pf" then
 	
 		end
 	end
+
+
+
+	local function renderVisuals()
+		SCREEN_SIZE = Camera.ViewportSize
+		--------------------------------------world funnies
+		if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
+			game.Lighting:SetMinutesAfterMidnight(mp.options["Visuals"]["World Visuals"]["Custom Time"][1])
+		end
+		if mp.options["Visuals"]["World Visuals"]["Ambience"][1] then
+			game.Lighting.Ambient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
+			game.Lighting.OutdoorAmbient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
+		else
+			game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
+			game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
+		end
+		if mp.open then
+			client.char.unaimedfov = mp.options["Visuals"]["Local Visuals"]["Camera FOV"][1]
 	
+			if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
+				game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
+				game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
+			else
+				game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
+				game.Lighting.MapSaturation.Saturation = -0.25
+			end
+		end
+		if mp.options["Visuals"]["Local Visuals"]["Disable ADS FOV"][1] then
+			client.cam.basefov = client.char.unaimedfov
+		else
+			client.cam.basefov = 80
+		end
+		for k, v in pairs(allesp) do
+			for k1, v1 in ipairs(v) do
+				v1.Visible = false
+				if type(v1) == "table" then
+					for k2, v2 in ipairs(v1) do
+						v2.Visible = false
+					end
+				end
+			end
+		end
+		for k, v in ipairs(allesp.skel) do
+			for k1, v1 in ipairs(v) do
+				v1.Visible = false
+			end
+		end
+	
+	
+		local localteam = LOCAL_PLAYER.Team
+		playerz.Enemy = {}
+		playerz.Team = {}
+		for Index, Player in pairs(Players:GetPlayers()) do
+			local Body = client.replication.getbodyparts(Player)
+			if Body and typeof(Body) == 'table' and rawget(Body, 'rootpart') then
+				Player.Character = Body.rootpart.Parent
+				if Player.Team ~= localteam then
+					table.insert(playerz.Enemy, Player)
+				else
+					table.insert(playerz.Team, Player)
+				end
+			end
+		end
+	
+		local playernum = 0
+		if client.deploy.isdeployed() then
+			for k, v in pairs(playerz) do
+	
+				for k1, v1 in ipairs(v) do
+					playernum += 1
+	
+					local playerTorso = v1.Character.Torso
+	
+					local vTop = playerTorso.CFrame.Position + playerTorso.CFrame.UpVector * 2.3
+					local vBottom = playerTorso.CFrame.Position - playerTorso.CFrame.UpVector * 3
+	
+					local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
+					local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
+	
+					local fovMult = mp:getval("Visuals", "Local Visuals", "Camera FOV") / Camera.FieldOfView
+	
+					local sizeX = math.ceil(2000 / top.Z * fovMult)
+					local sizeY = math.ceil(math.max(math.abs(bottom.Y - top.Y), sizeX))
+	
+					local boxSize = Vector2.new(sizeX, sizeY)
+					local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(top.Y))
+	
+					local groupbox_name = k .." ESP" 
+					local health = math.ceil(client.hud:getplayerhealth(v1))
+					local spoty = 0
+	
+	
+	
+					if (topIsRendered or bottomIsRendered) and client.hud:isplayeralive(v1) then
+						if mp.options["ESP"][groupbox_name]["Name"][1] then
+	
+							local name = v1.Name
+							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+								name = string.lower(name)
+							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+								name = string.upper(name)
+							end
+	
+							allesp.nametext[playernum].Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+							allesp.nametext[playernum].Visible = true
+							allesp.nametext[playernum].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
+							allesp.nametext[playernum].Color = RGB(mp.options["ESP"][groupbox_name]["Name"][5][1][1], mp.options["ESP"][groupbox_name]["Name"][5][1][2], mp.options["ESP"][groupbox_name]["Name"][5][1][3])
+							allesp.nametext[playernum].Transparency = mp.options["ESP"][groupbox_name]["Name"][5][1][4]/255
+	
+						end
+						if mp.options["ESP"][groupbox_name]["Box"][1] then
+	
+							local transparency = (mp.options["ESP"][groupbox_name]["Box"][5][1][4] - 40) / 255
+	
+							allesp.outerbox[playernum].Visible = true
+							allesp.outerbox[playernum].Position = boxPosition
+							allesp.outerbox[playernum].Size = boxSize
+							allesp.outerbox[playernum].Thickness = 3
+							allesp.outerbox[playernum].Transparency = transparency
+	
+							allesp.box[playernum].Visible = true
+							allesp.box[playernum].Position = boxPosition
+							allesp.box[playernum].Size = boxSize
+							allesp.box[playernum].Color = RGB(mp.options["ESP"][groupbox_name]["Box"][5][1][1], mp.options["ESP"][groupbox_name]["Box"][5][1][2], mp.options["ESP"][groupbox_name]["Box"][5][1][3])
+							allesp.box[playernum].Transparency = transparency
+	
+						end
+						if mp.options["ESP"][groupbox_name]["Health Bar"][1] then
+							local ySizeBar = -math.floor(boxSize.Y * health / 100)
+							if mp.options["ESP"][groupbox_name]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+								allesp.hptext[playernum].Visible = true
+								allesp.hptext[playernum].Text = tostring(health)
+	
+								local tb = allesp.hptext[playernum].TextBounds
+	
+								allesp.hptext[playernum].Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y * 0.5, -tb.Y / 4, boxSize.Y - tb.Y))
+								allesp.hptext[playernum].Color = RGB(mp.options["ESP"][groupbox_name]["Health Number"][5][1][1], mp.options["ESP"][groupbox_name]["Health Number"][5][1][2], mp.options["ESP"][groupbox_name]["Health Number"][5][1][3])
+								allesp.hptext[playernum].Transparency = mp.options["ESP"][groupbox_name]["Health Number"][5][1][4]/255
+							end
+	
+							allesp.hpouter[playernum].Visible = true
+							allesp.hpouter[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 6, math.floor(boxPosition.y) - 1)
+							allesp.hpouter[playernum].Size = Vector2.new(4, boxSize.Y + 2)
+	
+							allesp.hpinner[playernum].Visible = true
+							allesp.hpinner[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
+	
+							allesp.hpinner[playernum].Size = Vector2.new(2, ySizeBar)
+	
+							allesp.hpinner[playernum].Color = math.ColorRange(health, {
+								[1] = {start = 0, color = Color3.fromRGB(mp.options["ESP"][groupbox_name]["Health Bar"][5][1][1][1][1], mp.options["ESP"][groupbox_name]["Health Bar"][5][1][1][1][2], mp.options["ESP"][groupbox_name]["Health Bar"][5][1][1][1][3])},
+								[2] = {start = 100, color = Color3.fromRGB(mp.options["ESP"][groupbox_name]["Health Bar"][5][1][2][1][1], mp.options["ESP"][groupbox_name]["Health Bar"][5][1][2][1][2], mp.options["ESP"][groupbox_name]["Health Bar"][5][1][2][1][3])}
+							})
+	
+						elseif mp.options["ESP"][groupbox_name]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+							local hp_sub = 0
+							if health < 100 then
+								if health < 10 then
+									hp_sub = 4
+								else
+									hp_sub = 2
+								end
+							end
+							allesp.hptext[playernum].Visible = true
+							allesp.hptext[playernum].Text = tostring(health)
+							allesp.hptext[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX * 0.5 - 1) - math.ceil(allesp.hptext[playernum].TextBounds.x) + 6 - hp_sub, math.floor(top.y - 4))
+							allesp.hptext[playernum].Color = RGB(mp.options["ESP"][groupbox_name]["Health Number"][5][1][1], mp.options["ESP"][groupbox_name]["Health Number"][5][1][2], mp.options["ESP"][groupbox_name]["Health Number"][5][1][3])
+							allesp.hptext[playernum].Transparency = mp.options["ESP"][groupbox_name]["Health Number"][5][1][4]/255
+						end
+						if mp.options["ESP"][groupbox_name]["Held Weapon"][1] then
+							local charWeapon = v1.Character:GetChildren()[8]
+							local wepname = charWeapon and charWeapon.Name or "KNIFE"
+	
+							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+								wepname = string.lower(wepname)
+							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+								wepname = string.upper(wepname)
+							end
+	
+							spoty += 12
+							allesp.weptext[playernum].Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+							allesp.weptext[playernum].Visible = true
+							allesp.weptext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y))
+							allesp.weptext[playernum].Color = RGB(mp.options["ESP"][groupbox_name]["Held Weapon"][5][1][1], mp.options["ESP"][groupbox_name]["Held Weapon"][5][1][2], mp.options["ESP"][groupbox_name]["Held Weapon"][5][1][3])
+							allesp.weptext[playernum].Transparency = mp.options["ESP"][groupbox_name]["Held Weapon"][5][1][4]/255
+						end
+						if mp.options["ESP"][groupbox_name]["Distance"][1] then
+							allesp.disttext[playernum].Text = tostring(math.ceil(bottom.z / 5)).."m" --TODO alan i told you to make this not worldtoscreen based.
+							allesp.disttext[playernum].Visible = true
+							allesp.disttext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y - 2) + spoty)
+							allesp.disttext[playernum].Color = RGB(mp.options["ESP"][groupbox_name]["Distance"][5][1][1], mp.options["ESP"][groupbox_name]["Distance"][5][1][2], mp.options["ESP"][groupbox_name]["Distance"][5][1][3])
+							allesp.disttext[playernum].Transparency = mp.options["ESP"][groupbox_name]["Distance"][5][1][4]/255
+						end
+						if mp.options["ESP"][groupbox_name]["Skeleton"][1] then
+							local torso = Camera:WorldToViewportPoint(Vector3.new(v1.Character.Torso.Position.x, v1.Character.Torso.Position.y, v1.Character.Torso.Position.z))
+							for k2, v2 in ipairs(skelparts) do
+	
+								local posie = Camera:WorldToViewportPoint(Vector3.new(v1.Character:FindFirstChild(v2).Position.x, v1.Character:FindFirstChild(v2).Position.y, v1.Character:FindFirstChild(v2).Position.z))
+								allesp.skel[k2][playernum].From = Vector2.new(posie.x, posie.y)
+								allesp.skel[k2][playernum].To = Vector2.new(torso.x, torso.y)
+								allesp.skel[k2][playernum].Visible = true
+								allesp.skel[k2][playernum].Color = RGB(mp.options["ESP"][groupbox_name]["Skeleton"][5][1][1], mp.options["ESP"][groupbox_name]["Skeleton"][5][1][2], mp.options["ESP"][groupbox_name]["Skeleton"][5][1][3])
+								allesp.skel[k2][playernum].Transparency = mp.options["ESP"][groupbox_name]["Skeleton"][5][1][4]/255
+	
+							end
+						end
+						
+					elseif groupbox_name == "Enemy ESP" and mp:getval("ESP", "Enemy ESP", "Out of View") then
+
+						local color = mp:getval("ESP", "Enemy ESP", "Out of View", "color", true)
+						for i = 1, 2 do
+							local Tri = allesp.arrows[i][playernum]
+							
+							local partCFrame = v1.Character.Torso.CFrame
+		
+							Tri.Visible = true
+							
+							local anglesTo = camera:GetAnglesTo(partCFrame.Position)
+							local direction = -camera:GetAngles().yaw + anglesTo.yaw - math.pi
+							
+							direction = Vector2.new(math.sin(direction), math.cos(direction))
+		
+							local pos = (direction * SCREEN_SIZE.Y * 0.35) + (SCREEN_SIZE * 0.5)
+		
+							Tri.PointA = pos
+							Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * 15
+							Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * 15
+		
+							Tri.Color = i == 1 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+							Tri.Transparency = mp:getval("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
+						end
+					end
+	
+				end
+	
+			end
+			--------------------------------------------------end of player esp!!!! now 4 da oder vizualz
+			--poop
+			--------------------------------------------------viewmodle shit hahahhaha
+			local vm = Camera:GetChildren()
+			if mp.options["Visuals"]["Local Visuals"]["Hand Chams"][1] then ---------------------------------------------view model shit
+				for k, v in pairs(vm) do
+					if v.Name == "Left Arm" or v.Name == "Right Arm" then
+						for k1, v1 in pairs(v:GetChildren()) do
+							v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][3])
+							v1.Transparency = 1 + (mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][4]/-255)
+							v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Hand Material"][1]]
+	
+							if mp.options["Visuals"]["Local Visuals"]["Custom Hand Reflectivity"][1] then
+								v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Hand Reflectivity"][1]/100
+							end
+							if v1.ClassName == "MeshPart" then
+								v1.TextureID = ""
+							end
+						end
+					end
+				end
+			end
+			if mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][1] then ---------------------------------------------view model shit
+				for k, v in pairs(vm) do
+	
+					if v.Name == "Left Arm" or v.Name == "Right Arm" then
+						for k1, v1 in pairs(v:GetChildren()) do
+	
+							if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
+								v1.Name = "Sleeve"
+								v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][3])
+								v1.Transparency = 1 + (mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][4]/-255)
+								v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Sleeve Material"][1]]
+								if mp.options["Visuals"]["Local Visuals"]["Custom Sleeve Reflectivity"][1] then
+									v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Sleeve Reflectivity"][1]/100
+								end
+								v1:ClearAllChildren()
+							end
+						
+						end
+					end
+				
+				end
+			end
+			if mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][1] then
+				for k, v in pairs(vm) do
+					if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
+						for k1, v1 in pairs(v:GetChildren()) do
+	
+							v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][3])
+	
+							if v1.Transparency ~= 1 then
+								v1.Transparency = 0.99999 + (mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+							end
+							if mp.options["Visuals"]["Local Visuals"]["Remove Weapon Skin"][1] then
+								for i2, v2 in pairs(v1:GetChildren()) do
+									if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
+										v2:Destroy()
+									end
+								end
+							end
+							v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Weapon Material"][1]]
+	
+							if mp.options["Visuals"]["Local Visuals"]["Custom Weapon Reflectivity"][1] then
+								v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Weapon Reflectivity"][1]/100
+							end
+						end
+					end
+				end
+			end
+			------------------------------------------------------ragdoll chasms
+			if mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
+				for k, v in ipairs(workspace.Ignore.DeadBody:GetChildren()) do
+	
+					for k1, v1 in pairs(v:GetChildren()) do
+	
+						if v1.Material ~= mats[mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")] then
+							if v1.Name == "Torso" and v1:FindFirstChild("Pant") then
+								v1.Pant:Destroy()
+							end
+							v1.Color = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
+							v1.Transparency = 1+(mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color")[4]/-255)
+							v1.Material = mats[mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")]
+							if v1:FindFirstChild("Mesh") then
+								v1.Mesh:Destroy()
+							end
+						end
+	
+					end
+	
+				end
+			end
+	
+			-- do --watermark shittiez
+			-- 	local wme = mp:getval("Settings", "Menu Settings", "Watermark")
+			-- 	for k, v in pairs(allesp.watermark.rect) do
+			-- 		v.Visible = wme
+			-- 	end
+			-- 	allesp.watermark.text[1].Visible = wme
+			-- end
+		end
+	end
+
 	local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 		inputBeganMenu(key)
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
@@ -4403,7 +4489,7 @@ elseif mp.game == "pf" then
 					x = mp.columns.left,
 					y = 66,
 					width = mp.columns.width,
-					height = 224,
+					height = 250,
 					content = {
 						{
 							type = "toggle",
@@ -4504,6 +4590,16 @@ elseif mp.game == "pf" then
 							type = "toggle",
 							name = "Show Only Last Backtack",
 							value = false
+						},
+						{
+							type = "toggle",
+							name = "Out of View",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Arrow Color",
+								color = {255, 255, 255, 255}
+							}
 						},
 					}
 				},
@@ -4669,9 +4765,9 @@ elseif mp.game == "pf" then
 				{
 					name = "Dropped Esp",
 					x = mp.columns.left,
-					y = 296,
+					y = 322,
 					width = mp.columns.width,
-					height = 287,
+					height = 261,
 					content = {
 						{
 							type = "toggle",
