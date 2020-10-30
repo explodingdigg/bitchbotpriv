@@ -119,6 +119,7 @@ local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
 local CACHED_VEC3 = Vector3.new()
 local Camera = workspace.CurrentCamera
 local SCREEN_SIZE = Vector2.new()
+local ButtonPressed = Instance.new("BindableEvent")
 
 do -- table shitz
 	setreadonly(table, false)
@@ -1377,6 +1378,8 @@ local function BBMenuInit(menutable)
 
 	local simpcfgnamez = {"toggle", "slider", "dropbox"}
 	local function buttonpressed(bp)
+		table.foreach(bp, print)
+		ButtonPressed:Fire(bp)
 		if bp == mp.options["Settings"]["Extra"]["Unload Cheat"] then
 			mp:unload()
 		elseif bp == mp.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
@@ -1719,6 +1722,7 @@ local function BBMenuInit(menutable)
 					end
 				end
 			end
+		
 		end
 	end
 
@@ -2521,6 +2525,7 @@ if mp.game == "uni" then
 						},
 					}
 				},
+				
 			}
 		},
 		{--ANCHOR Settings
@@ -3543,18 +3548,75 @@ elseif mp.game == "pf" then
 	
 	end
 	
-	local movement = {}
-	do -- ANCHOR movement definitionz
+	local misc = {}
+	do -- ANCHOR misc definitionz
 		local rootpart
 		local humanoid
-	
-		function movement:RoundFreeze()
+
+		function misc:SpotPlayers() 
+			if not mp:getval("Misc", "Extra", "Auto Spot") then return end 
+			local players = {}
+			for k, player in pairs(game.Players:GetPlayers()) do
+				if player == game.Players.LocalPlayer then continue end
+				table.insert(players, player)
+			end
+			return client.net:send("spotplayers", players)
+		end
+
+		ButtonPressed.Event:Connect(function(bp)
+			function Print_Table(t)
+				if type(t) == "table" then 
+					for k, v in pairs(t) do
+						Print_Table(v)
+					end
+				else
+					print(t)
+				end
+			end
+			Print_Table(bp)
+			if bp == mp.options["Misc"]["Extra"]["Invisibility"] then
+				local send = client.net.send
+
+				client.net.send = function(self, event, ...)
+					if event == "repupdate" then return end
+					send(self, event, ...)
+				end
+
+				local char = game.Players.LocalPlayer.Character
+				local getChild = char.FindFirstChild
+
+				local op = getChild(char, "HumanoidRootPart").CFrame
+				getChild(char, "HumanoidRootPart").CFrame = CFrame.new(9e9, math.huge, 9e9)
+				--yes
+				wait(1)
+				do 
+					local p = Instance.new("Model", workspace)
+					local char = game.Players.LocalPlayer.Character
+					for k, v in pairs(char:GetChildren()) do
+						if v.ClassName == 'Part' then
+							copy = v:Clone()
+							v.Parent = p
+							copy.Parent = char
+						end
+					end
+				end
+				wait(0)
+				getChild(char, "HumanoidRootPart").CFrame = op
+				-- come bak
+				client.net.send = function(self, event, ...)
+					if event == "falldamage" then return end
+					send(self, event, ...)
+				end
+			end
+		end)
+
+		function misc:RoundFreeze()
 			if mp:getval("Misc", "Movement", "Ignore Round Freeze") then
 				client.roundsystem.lock = false
 			end
 		end
 	
-		function movement:FlyHack()
+		function misc:FlyHack()
 	
 	
 			if mp:getval("Misc", "Movement", "Fly Hack") and keybindtoggles.flyhack then
@@ -3603,7 +3665,7 @@ elseif mp.game == "pf" then
 		
 		end
 	
-		function movement:SpeedHack()
+		function misc:SpeedHack()
 	
 	
 			local type = mp:getval("Misc", "Movement", "Speed Hack")
@@ -3642,7 +3704,7 @@ elseif mp.game == "pf" then
 		
 		end
 		
-		function movement:AutoJump()
+		function misc:AutoJump()
 	
 	
 			if mp:getval("Misc", "Movement", "Auto Jump") and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
@@ -3652,7 +3714,7 @@ elseif mp.game == "pf" then
 	
 		end
 	
-		function movement:GravityShift()
+		function misc:GravityShift()
 	
 	
 			if mp:getval("Misc", "Movement", "Gravity Shift") then
@@ -3666,18 +3728,19 @@ elseif mp.game == "pf" then
 	
 		end
 	
-		function movement:MainLoop()
+		function misc:MainLoop()
 	
 	
 			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
 			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
 			if rootpart and humanoid then
+				misc:SpotPlayers()
 				if not CHAT_BOX.Active then
-					movement:FlyHack()
-					movement:SpeedHack()
-					movement:AutoJump()
-					movement:GravityShift()
-					movement:RoundFreeze()
+					misc:FlyHack()
+					misc:SpeedHack()
+					misc:AutoJump()
+					misc:GravityShift()
+					misc:RoundFreeze()
 				elseif keybindtoggles.flyhack then
 					rootpart.Anchored = true
 				end
@@ -4045,8 +4108,8 @@ elseif mp.game == "pf" then
 			legitbot:TriggerBot()
 			legitbot:MainLoop()
 		end
-		do --movement
-			movement:MainLoop()
+		do --misc
+			misc:MainLoop()
 		end
 		do--ragebot
 			ragebot:KnifeBotMain()
@@ -5123,6 +5186,24 @@ elseif mp.game == "pf" then
 							value = false,
 						},
 					},
+				},
+				{
+					name = "Extra",
+					x = mp.columns.right,
+					y = 66,
+					width = 230,
+					height = 50,
+					content = {
+						{
+							type = "button",
+							name = "Invisibility"
+						},
+						{
+							type = "toggle",
+							name = "Auto Spot",
+							value = false
+						},
+					}
 				},
 			}
 		},
