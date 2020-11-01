@@ -3746,7 +3746,7 @@ local function renderVisuals()
 		--poop
 		--------------------------------------------------viewmodle shit hahahhaha
 		local vm = Camera:GetChildren()
-		if mp.options["Visuals"]["Local Visuals"]["Hand Chams"][1] then ---------------------------------------------view model shit
+		if mp.options["Visuals"]["Local Viãwhhsuals"]["Hand Chams"][1] then ---------------------------------------------view model shit
 			for k, v in pairs(vm) do
 				if v.Name == "Left Arm" or v.Name == "Right Arm" then
 					for k1, v1 in pairs(v:GetChildren()) do
