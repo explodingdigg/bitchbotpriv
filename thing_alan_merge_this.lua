@@ -3807,9 +3807,13 @@ elseif mp.game == "pf" then
 	end
 	
 	
-
-
-
+	--ADS Fov hook
+	do
+		local oldmag = client.cam.setmagnification
+		client.cam.setmagnification = function(self, v)
+			return oldmag(self, mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and 1 or v)
+		end
+	end
 	local function renderVisuals()
 		SCREEN_SIZE = Camera.ViewportSize
 		--------------------------------------world funnies
@@ -3833,11 +3837,6 @@ elseif mp.game == "pf" then
 				game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
 				game.Lighting.MapSaturation.Saturation = -0.25
 			end
-		end
-		if mp.options["Visuals"]["Local Visuals"]["Disable ADS FOV"][1] then
-			client.cam.basefov = client.char.unaimedfov
-		else
-			client.cam.basefov = 80
 		end
 
 		for k, v in pairs(allesp) do
@@ -5199,7 +5198,7 @@ elseif mp.game == "pf" then
 						},
 						{
 							type = "toggle", 
-							name = "Run and Gun",
+							name = "Run and Gun (not in yet)",
 							value = false
 						},
 					},
