@@ -3198,6 +3198,7 @@ elseif mp.game == "pf" then
 				
 				return pos + nadeSize
 			end
+			return pos
 	
 	
 		end
@@ -3630,7 +3631,6 @@ elseif mp.game == "pf" then
 				local yawChoice = mp:getval("Rage",   "Anti Aim", "Yaw")
 				---"off,down,up,roll,upside down,random"
 				--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
-				--{"Off", "Backward", "Spin", "Random"} yaw
 	
 				if pitchChoice == 2 then
 					pitch = -4
@@ -3641,13 +3641,14 @@ elseif mp.game == "pf" then
 				elseif pitchChoice == 5 then
 					pitch = -math.pi
 				elseif pitchChoice == 6 then
-					pitch = tick() * 0.01
+					pitch = (tick() * 0.01) % 6.28
 				elseif pitchChoice == 7 then
-					pitch = -tick() * 0.01
+					pitch = (-tick() * 0.01) % 6.28
 				elseif pitchChoice == 8 then
 					pitch = math.random(99999)
 				end
 	
+				--{"Off", "Backward", "Spin", "Random"} yaw
 				if yawChoice == 2 then
 					yaw += math.pi
 				elseif yawChoice == 3 then
