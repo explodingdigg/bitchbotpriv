@@ -3262,14 +3262,22 @@ elseif mp.game == "pf" then
 			end
 		end
 
+		local last_tp = 0
+
 		function ragebot:TPAura()
 			local targets = ragebot:GetKnifeTargets()
 			
 			for i, target in pairs(targets) do
-				if not target.insight then continue end
-				
-				LOCAL_PLAYER.Character:SetPrimaryPartCFrame(CFrame.new(target.tppos + Vector3.new(0,2,0)))
+				if last_tp <= 0 then
+					local rp = LOCAL_PLAYER.Character.HumanoidRootPart
+					local op = rp.CFrame.Position
 
+					rp.CFrame = CFrame.new(op.X, math.huge, op.Y)
+					wait()
+					rp.CFrame = CFrame.new(target.part.Position)
+					last_tp = 10
+				end
+				last_tp -= 1
 				return ragebot:KnifeAura(targets)
 			end
 		end
@@ -3377,7 +3385,7 @@ elseif mp.game == "pf" then
 			local recoil_scale = mp:getval("Misc", "Weapon Modifications", "Recoil Scale") / 100
 			local instant_reload = mp:getval("Misc", "Weapon Modifications", "Instant Reload")
 			local instant_equip = mp:getval("Misc", "Weapon Modifications", "Instant Equip")
-			
+			local fully_auto = mp:getval("Misc", "Weapon Modifications", "Fully Automatic")
 			
 			for i, gun_module in pairs(CUR_GUNS:GetChildren()) do
 				local gun = require(gun_module)
@@ -3395,6 +3403,9 @@ elseif mp.game == "pf" then
 						elseif gun.firerate then
 							gun.firerate *= firerate_scale
 						end
+					end
+					if fully_auto and gun.firemodes then
+						gun.firemodes = {true, 3, 1}
 					end
 					if gun.camkickmin then	--recoil
 						gun.camkickmin *= recoil_scale
@@ -3418,16 +3429,19 @@ elseif mp.game == "pf" then
 					end
 					if instant_reload then
 						if gun.animations  and type(gun.animations) == "table" then
-							for o, p in pairs(gun.animations) do
-								if type(p) == "table" and p ~= rawget(gun.animations, "inspect") then
-									p.timescale = 0
-									p.resettime = 0
-									p.stdtimescale = 0
+							for name, anim in pairs(gun.animations) do
+								if name:match("stab") then continue end
+								if type(anim) == "table" and anim ~= gun.animations.inspect then
+									anim.timescale = 0
+									anim.resettime = 0
+									anim.stdtimescale = 0
 								end
 							end
 						end
 					end
-
+					-- if type(data.sprintoffset) == "CFrame" then
+					-- 	data.sprintoffset = CFrame.new()
+					-- end
 				end
 			end
 		end
@@ -3611,6 +3625,7 @@ elseif mp.game == "pf" then
 		client.net.send = function(self, ...)
 			local args = {...}
 			if args[1] == "spawn" then misc:ApplyGunMods() end
+			if args[1] == "bullethit" and mp:getval("Misc", "Extra", "Suppress Only") then return end
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
@@ -3887,155 +3902,157 @@ elseif mp.game == "pf" then
 					local health = math.ceil(client.hud:getplayerhealth(Player))
 					local spoty = 0
 					local boxtransparency = mp:getval("ESP", GroupBox, "Box", "color")[4] / 255
-		
-					if (topIsRendered or bottomIsRendered) and client.hud:isplayeralive(Player) then
-						if mp.options["ESP"][GroupBox]["Name"][1] then
-		
-							local name = tostring(Player.Name)
-							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
-								name = string.lower(name)
-							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
-								name = string.upper(name)
+					if client.hud:isplayeralive(Player) then
+			
+						if (topIsRendered or bottomIsRendered) then
+							if mp.options["ESP"][GroupBox]["Name"][1] then
+			
+								local name = tostring(Player.Name)
+								if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+									name = string.lower(name)
+								elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+									name = string.upper(name)
+								end
+								nametext = allesp.text.name[Index]
+								
+								nametext.Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+								nametext.Visible = true
+								nametext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
+								nametext.Color = RGB(mp.options["ESP"][GroupBox]["Name"][5][1][1], mp.options["ESP"][GroupBox]["Name"][5][1][2], mp.options["ESP"][GroupBox]["Name"][5][1][3])
+								nametext.Transparency = mp.options["ESP"][GroupBox]["Name"][5][1][4]/255
+			
 							end
-							nametext = allesp.text.name[Index]
-							
-							nametext.Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
-							nametext.Visible = true
-							nametext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
-							nametext.Color = RGB(mp.options["ESP"][GroupBox]["Name"][5][1][1], mp.options["ESP"][GroupBox]["Name"][5][1][2], mp.options["ESP"][GroupBox]["Name"][5][1][3])
-							nametext.Transparency = mp.options["ESP"][GroupBox]["Name"][5][1][4]/255
-		
-						end
-						if mp.options["ESP"][GroupBox]["Box"][1] then
-							
-							local color = mp:getval("ESP", GroupBox, "Box", "color", true)
-							for i = -1, 0 do
-								local box = allesp.box[i+2][Index]
-								box.Visible = true
-								box.Position = boxPosition + Vector2.new(i, i)
-								box.Size = boxSize - Vector2.new(i*2, i*2)
-								box.Transparency = boxtransparency
-								if i == 0 then box.Color = color end
+							if mp.options["ESP"][GroupBox]["Box"][1] then
+								
+								local color = mp:getval("ESP", GroupBox, "Box", "color", true)
+								for i = -1, 0 do
+									local box = allesp.box[i+2][Index]
+									box.Visible = true
+									box.Position = boxPosition + Vector2.new(i, i)
+									box.Size = boxSize - Vector2.new(i*2, i*2)
+									box.Transparency = boxtransparency
+									if i == 0 then box.Color = color end
+								end
+			
 							end
-		
-						end
-						if mp.options["ESP"][GroupBox]["Health Bar"][1] then
-							local ySizeBar = -math.floor(boxSize.Y * health / 100)
-							if mp:getval("ESP", GroupBox, "Health Number") and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+							if mp.options["ESP"][GroupBox]["Health Bar"][1] then
+								local ySizeBar = -math.floor(boxSize.Y * health / 100)
+								if mp:getval("ESP", GroupBox, "Health Number") and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+									local hptext = allesp.hp.text[Index]
+									hptext.Visible = true
+									hptext.Text = tostring(health)
+			
+									local tb = hptext.TextBounds
+			
+									hptext.Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y * 0.5, -tb.Y * 0.5, boxSize.Y))
+									hptext.Color = mp:getval("ESP", GroupBox, "Health Number", "color", true)
+									hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
+								end
+			
+								allesp.hp.outer[Index].Visible = true
+								allesp.hp.outer[Index].Position = Vector2.new(math.floor(boxPosition.X) - 6, math.floor(boxPosition.y) - 1)
+								allesp.hp.outer[Index].Size = Vector2.new(4, boxSize.Y + 2)
+								allesp.hp.outer[Index].Transparency = boxtransparency
+			
+								allesp.hp.inner[Index].Visible = true
+								allesp.hp.inner[Index].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
+			
+								allesp.hp.inner[Index].Size = Vector2.new(2, ySizeBar)
+			
+								allesp.hp.inner[Index].Color = math.ColorRange(health, {
+									[1] = {start = 0, color = mp:getval("ESP", GroupBox, "Health Bar", "color1", true)},
+									[2] = {start = 100, color = mp:getval("ESP", GroupBox, "Health Bar", "color2", true)}
+								})
+			
+							elseif mp.options["ESP"][GroupBox]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+			
 								local hptext = allesp.hp.text[Index]
+			
 								hptext.Visible = true
 								hptext.Text = tostring(health)
-		
+			
 								local tb = hptext.TextBounds
-		
-								hptext.Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y * 0.5, -tb.Y * 0.5, boxSize.Y))
+			
+								hptext.Position = boxPosition + Vector2.new(-tb.X, 0)
 								hptext.Color = mp:getval("ESP", GroupBox, "Health Number", "color", true)
-								hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
+								hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
+			
 							end
-		
-							allesp.hp.outer[Index].Visible = true
-							allesp.hp.outer[Index].Position = Vector2.new(math.floor(boxPosition.X) - 6, math.floor(boxPosition.y) - 1)
-							allesp.hp.outer[Index].Size = Vector2.new(4, boxSize.Y + 2)
-							allesp.hp.outer[Index].Transparency = boxtransparency
-		
-							allesp.hp.inner[Index].Visible = true
-							allesp.hp.inner[Index].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
-		
-							allesp.hp.inner[Index].Size = Vector2.new(2, ySizeBar)
-		
-							allesp.hp.inner[Index].Color = math.ColorRange(health, {
-								[1] = {start = 0, color = mp:getval("ESP", GroupBox, "Health Bar", "color1", true)},
-								[2] = {start = 100, color = mp:getval("ESP", GroupBox, "Health Bar", "color2", true)}
-							})
-		
-						elseif mp.options["ESP"][GroupBox]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
-		
-							local hptext = allesp.hp.text[Index]
-		
-							hptext.Visible = true
-							hptext.Text = tostring(health)
-		
-							local tb = hptext.TextBounds
-		
-							hptext.Position = boxPosition + Vector2.new(-tb.X, 0)
-							hptext.Color = mp:getval("ESP", GroupBox, "Health Number", "color", true)
-							hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
-		
-						end
-						if mp.options["ESP"][GroupBox]["Held Weapon"][1] then
-							
-							local charWeapon = Player.Character:GetChildren()[8]
-							local wepname = charWeapon and charWeapon.Name or "KNIFE"
-		
-							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
-								wepname = string.lower(wepname)
-							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
-								wepname = string.upper(wepname)
+							if mp.options["ESP"][GroupBox]["Held Weapon"][1] then
+								
+								local charWeapon = Player.Character:GetChildren()[8]
+								local wepname = charWeapon and charWeapon.Name or "KNIFE"
+			
+								if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+									wepname = string.lower(wepname)
+								elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+									wepname = string.upper(wepname)
+								end
+			
+								local weptext = allesp.text.weapon[Index]
+			
+								spoty += 12
+								weptext.Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+								weptext.Visible = true
+								weptext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y)
+								weptext.Color = mp:getval("ESP", GroupBox, "Held Weapon", "color", true)
+								weptext.Transparency = mp.options["ESP"][GroupBox]["Held Weapon"][5][1][4]/255
+			
 							end
-		
-							local weptext = allesp.text.weapon[Index]
-		
-							spoty += 12
-							weptext.Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
-							weptext.Visible = true
-							weptext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y)
-							weptext.Color = mp:getval("ESP", GroupBox, "Held Weapon", "color", true)
-							weptext.Transparency = mp.options["ESP"][GroupBox]["Held Weapon"][5][1][4]/255
-		
-						end
-						if mp.options["ESP"][GroupBox]["Distance"][1] then
-		
-							local disttext = allesp.text.distance[Index]
-		
-							disttext.Text = tostring(bottom.z).."s" --TODO alan i told you to make this not worldtoscreen based.
-							disttext.Visible = true
-							disttext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y + spoty)
-							disttext.Color = mp:getval("ESP", GroupBox, "Distance", "color", true)
-							disttext.Transparency = mp.options["ESP"][GroupBox]["Distance"][5][1][4]/255
-		
-						end
-						if mp.options["ESP"][GroupBox]["Skeleton"][1] then
-		
-							local torso = Camera:WorldToViewportPoint(Player.Character.Torso.Position)
-							for k2, v2 in ipairs(skelparts) do
-								local line = allesp.skel[k2][Index]
-		
-								local posie = Camera:WorldToViewportPoint(Player.Character:FindFirstChild(v2).Position)
-								line.From = Vector2.new(posie.x, posie.y)
-								line.To = Vector2.new(torso.x, torso.y)
-								line.Visible = true
-								line.Color = mp:getval("ESP", GroupBox, "Skeleton", "color", true)
-								line.Transparency = mp.options["ESP"][GroupBox]["Skeleton"][5][1][4]/255
-		
+							if mp.options["ESP"][GroupBox]["Distance"][1] then
+			
+								local disttext = allesp.text.distance[Index]
+			
+								disttext.Text = tostring(bottom.z).."s" --TODO alan i told you to make this not worldtoscreen based.
+								disttext.Visible = true
+								disttext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y + spoty)
+								disttext.Color = mp:getval("ESP", GroupBox, "Distance", "color", true)
+								disttext.Transparency = mp.options["ESP"][GroupBox]["Distance"][5][1][4]/255
+			
 							end
-		
+							if mp.options["ESP"][GroupBox]["Skeleton"][1] then
+			
+								local torso = Camera:WorldToViewportPoint(Player.Character.Torso.Position)
+								for k2, v2 in ipairs(skelparts) do
+									local line = allesp.skel[k2][Index]
+			
+									local posie = Camera:WorldToViewportPoint(Player.Character:FindFirstChild(v2).Position)
+									line.From = Vector2.new(posie.x, posie.y)
+									line.To = Vector2.new(torso.x, torso.y)
+									line.Visible = true
+									line.Color = mp:getval("ESP", GroupBox, "Skeleton", "color", true)
+									line.Transparency = mp.options["ESP"][GroupBox]["Skeleton"][5][1][4]/255
+			
+								end
+			
+							end
+			
+						elseif GroupBox == "Enemy ESP" and mp:getval("ESP", "Enemy ESP", "Out of View") then
+			
+							local color = mp:getval("ESP", "Enemy ESP", "Out of View", "color", true)
+							for i = 1, 2 do
+								local Tri = allesp.arrows[i][Index]
+								
+								local partCFrame = Player.Character.Torso.CFrame
+			
+								Tri.Visible = true
+								
+								local anglesTo = camera:GetAnglesTo(partCFrame.Position)
+								local direction = -camera:GetAngles().yaw + anglesTo.yaw - math.pi
+								
+								direction = Vector2.new(math.sin(direction), math.cos(direction))
+			
+								local pos = (direction * SCREEN_SIZE.Y * 0.35) + (SCREEN_SIZE * 0.5)
+			
+								Tri.PointA = pos
+								Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * 15
+								Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * 15
+			
+								Tri.Color = i == 1 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+								Tri.Transparency = mp:getval("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
+							end
+			
 						end
-		
-					elseif GroupBox == "Enemy ESP" and mp:getval("ESP", "Enemy ESP", "Out of View") then
-		
-						local color = mp:getval("ESP", "Enemy ESP", "Out of View", "color", true)
-						for i = 1, 2 do
-							local Tri = allesp.arrows[i][Index]
-							
-							local partCFrame = Player.Character.Torso.CFrame
-		
-							Tri.Visible = true
-							
-							local anglesTo = camera:GetAnglesTo(partCFrame.Position)
-							local direction = -camera:GetAngles().yaw + anglesTo.yaw - math.pi
-							
-							direction = Vector2.new(math.sin(direction), math.cos(direction))
-		
-							local pos = (direction * SCREEN_SIZE.Y * 0.35) + (SCREEN_SIZE * 0.5)
-		
-							Tri.PointA = pos
-							Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * 15
-							Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * 15
-		
-							Tri.Color = i == 1 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
-							Tri.Transparency = mp:getval("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
-						end
-		
 					end
 				end)
 			end
@@ -5157,6 +5174,11 @@ elseif mp.game == "pf" then
 							name = "Auto Spot",
 							value = false
 						},
+						{
+							type = "toggle",
+							name = "Suppress Only",
+							value = false
+						},
 					}
 				},
 				{
@@ -5198,8 +5220,13 @@ elseif mp.game == "pf" then
 							value = true
 						},
 						{
+							type = "toggle",
+							name = "Fully Automatic",
+							value = true
+						},
+						{
 							type = "toggle", 
-							name = "Run and Gun (not in yet)",
+							name = "Run and Gun",
 							value = false
 						},
 					},
