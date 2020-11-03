@@ -2944,7 +2944,12 @@ elseif mp.game == "pf" then
 
 	local shooties = {}
 	
-
+	local OLD_GUNS = game:GetService("ReplicatedStorage").GunModules:Clone()
+	OLD_GUNS.Name = tostring(math.random(1e5, 9e5))
+	OLD_GUNS.Parent = game:GetService("ReplicatedStorage")
+	
+	local CUR_GUNS = game:GetService("ReplicatedStorage").GunModules
+	
 	
 
 	local selected_plyr = nil
@@ -3329,7 +3334,7 @@ elseif mp.game == "pf" then
 		local VirtualUser = game:GetService("VirtualUser")
 		LOCAL_PLAYER.Idled:Connect(function()
 			VirtualUser:CaptureController()
-			VirtualUser:ClickButton2(Vector2new)
+			VirtualUser:ClickButton2(Vector2.new())
 		end)
 	
 		local shake = client.cam.shake
@@ -3349,205 +3354,6 @@ elseif mp.game == "pf" then
 	
 	end
 	
-	do--ANCHOR send hook
-		client.net.send = function(self, ...)
-			local args = {...}
-			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
-			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
-			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
-			if args[1] == "stab" then
-				local key = mp:getval("Rage", "Extra", "Knife Bot", "keybind")
-				if mp:getval("Rage", "Extra", "Knife Bot") and (not key or INPUT_SERVICE:IsKeyDown(key)) then
-					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
-						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
-					end
-				end
-			end
-			if args[1] == "repupdate" and mp:getval("Rage", "Anti Aim", "Enabled") then
-				args[2] = ragebot:AntiNade(args[2])
-				local pitch = args[3].X
-				local yaw = args[3].Y
-	
-				local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
-				local yawChoice = mp:getval("Rage",   "Anti Aim", "Yaw")
-				---"off,down,up,roll,upside down,random"
-				--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
-				--{"Off", "Backward", "Spin", "Random"} yaw
-	
-				if pitchChoice == 2 then
-					pitch = -4
-				elseif pitchChoice == 3 then
-					pitch = 0
-				elseif pitchChoice == 4 then
-					pitch = 4.7
-				elseif pitchChoice == 5 then
-					pitch = -math.pi
-				elseif pitchChoice == 6 then
-					pitch = tick() * 0.01
-				elseif pitchChoice == 7 then
-					pitch = -tick() * 0.01
-				elseif pitchChoice == 8 then
-					pitch = math.random(0)
-				end
-	
-				if yawChoice == 2 then
-					yaw += math.pi
-				elseif yawChoice == 3 then
-					yaw = (tick() * 0.01) % 12
-				elseif yawChoice == 4 then
-					yaw = math.random(0)
-				end
-	
-				-- yaw += jitter
-	
-				args[3] = Vector3.new(pitch, yaw, 0)
-			end
-			return send(self, unpack(args))
-		end
-	end
-	
-	local legitbot = {}
-	do -- ANCHOR Legitbot definition defines legit functions
-	
-		function legitbot:MainLoop()
-	
-	
-			if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and mp:getval("Legit", "Aim Assist", "Enabled") and client.logic.currentgun then
-				local keybind = mp:getval("Legit", "Aim Assist", "Aimbot Key") - 1
-				local smoothing = (mp:getval("Legit", "Aim Assist", "Smoothing Factor") + 2) * 0.2 / GAME_SETTINGS.MouseSensitivity
-				local fov = mp:getval("Legit", "Aim Assist", "Aimbot FOV")
-				local sFov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
-	
-				local hitboxPriority = mp:getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
-				local hitscan = not mp:getval("Legit", "Aim Assist", "Force Priority Hitbox")
-	
-				if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
-					local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
-					if targetPart and closest < fov then
-						legitbot:AimAtTarget(targetPart, smoothing)
-					end
-					if targetPart and closest < sFov then
-						legitbot:SilentAimAtTarget(targetPart)
-					end
-				end
-			end
-	
-	
-		end
-	
-		function legitbot:AimAtTarget(targetPart, smoothing)
-	
-	
-			if not targetPart then return end
-	
-			local Pos, visCheck
-	
-			if mp:getval("Legit", "Aim Assist", "Adjust for Bullet Drop") then
-				pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
-			else
-				Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
-			end
-			if mp:getval("Legit", "Aim Assist", "Enable Randomization") then
-				local randMag = mp:getval("Legit", "Aim Assist", "Randomization") * 5
-				Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1,time()) * randMag, 0)
-			end
-	
-			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
-	
-			mousemoverel(aimbotMovement.X / smoothing, aimbotMovement.Y / smoothing)
-	
-	
-		end
-	
-		function legitbot:SilentAimAtTarget(targetPart)
-	
-	
-			if not targetPart then return end
-	
-	
-	
-		end
-	
-	
-	
-		function legitbot:GetTargetLegit(partPreference, hitscan, players)
-	
-	
-			local closest, closestPart = math.huge
-			partPreference = partPreference or "head"
-			hitscan = hitscan or false
-			players = players or game.Players:GetPlayers()
-	
-			for i, Player in pairs(players) do
-	
-				if Player.Team ~= LOCAL_PLAYER.Team then
-					local Parts = client.replication.getbodyparts(Player)
-					if Parts then
-						if hitscan then
-							for i1, Bone in pairs(Parts) do
-	
-								if Bone.ClassName == "Part" then
-									if camera:GetFOV(Bone) < closest then
-										if camera:IsVisible(Bone) then
-											closest = camera:GetFOV(Bone)
-											closestPart = Bone
-										end
-									end
-								end
-	
-							end
-						end
-						local PriorityBone = Parts[partPreference]
-						if PriorityBone and camera:GetFOV(PriorityBone) < closest then
-							if camera:IsVisible(PriorityBone) then
-								closest = camera:GetFOV(PriorityBone)
-								closestPart = PriorityBone
-							end
-						end
-					end
-				end
-	
-			end
-			return closestPart, closest
-	
-	
-		end
-	
-		function legitbot:TriggerBot()
-	
-	
-			if INPUT_SERVICE:IsKeyDown(mp:getval("Legit", "Trigger Bot", "Enabled", "keybind")) then
-				local parts = mp:getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes")
-	
-				parts["Head"] = parts[1]
-				parts["Torso"] = parts[2]
-				parts["Right Arm"] = parts[3]
-				parts["Left Arm"] = parts[3]
-				parts["Right Leg"] = parts[4]
-				parts["Left Leg"] = parts[4]
-	
-				local gun = camera:GetGun()
-				if not gun then return end
-	
-				local barrel = gun.Flame
-				if barrel and client.logic.currentgun then
-					local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
-	
-					if hit and parts[hit.Name] then
-						if not camera:IsVisible(hit) then return end
-						client.logic.currentgun:shoot(true)
-					else
-						client.logic.currentgun:shoot(false)
-					end
-				end
-			end
-	
-	
-		end
-	
-	
-	end
-	
 	local misc = {}
 	do -- ANCHOR misc definitionz
 		local rootpart
@@ -3561,6 +3367,68 @@ elseif mp.game == "pf" then
 				table.insert(players, player)
 			end
 			return client.net:send("spotplayers", players)
+		end
+		
+		function misc:ApplyGunMods() 
+			
+			local mods_enabled = mp:getval("Misc", "Weapon Modifications", "Enabled")
+			local firerate_scale = mp:getval("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
+			local recoil_scale = mp:getval("Misc", "Weapon Modifications", "Recoil Scale") / 100
+			local instant_reload = mp:getval("Misc", "Weapon Modifications", "Instant Reload")
+			local instant_equip = mp:getval("Misc", "Weapon Modifications", "Instant Equip")
+			
+			
+			for i, gun_module in pairs(CUR_GUNS:GetChildren()) do
+				local gun = require(gun_module)
+				local old_gun = require(OLD_GUNS[gun_module.Name])
+				for k, v in pairs(old_gun) do
+					gun[k] = v
+				end
+				
+				if mods_enabled then
+					do --firerate
+						if gun.variablefirerate then 
+							for k, v in pairs(gun.firerate) do
+								v *= firerate_scale
+							end
+						elseif gun.firerate then
+							gun.firerate *= firerate_scale
+						end
+					end
+					if gun.camkickmin then	--recoil
+						gun.camkickmin *= recoil_scale
+						gun.camkickmax *= recoil_scale
+						gun.aimcamkickmin *= recoil_scale
+						gun.aimcamkickmax *= recoil_scale
+						gun.aimtranskickmin *= recoil_scale
+						gun.aimtranskickmax *= recoil_scale
+						gun.transkickmin *= recoil_scale
+						gun.transkickmax *= recoil_scale
+						gun.rotkickmin *= recoil_scale
+						gun.rotkickmax *= recoil_scale
+						gun.aimrotkickmin *= recoil_scale
+						gun.aimrotkickmax *= recoil_scale
+						gun.hipfirespreadrecover *= recoil_scale
+						gun.hipfirespread *= recoil_scale
+						gun.hipfirestability *= recoil_scale
+					end
+					if instant_equip then
+						gun.equipspeed = 99999
+					end
+					if instant_reload then
+						if gun.animations  and type(gun.animations) == "table" then
+							for o, p in pairs(gun.animations) do
+								if type(p) == "table" and p ~= rawget(gun.animations, "inspect") then
+									p.timescale = 0
+									p.resettime = 0
+									p.stdtimescale = 0
+								end
+							end
+						end
+					end
+
+				end
+			end
 		end
 
 		ButtonPressed.Event:Connect(function(tab, gb, name)
@@ -3737,6 +3605,208 @@ elseif mp.game == "pf" then
 	
 		end
 	end
+
+	do--ANCHOR send hook
+		client.net.send = function(self, ...)
+			local args = {...}
+			if args[1] == "spawn" then misc:ApplyGunMods() end
+			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
+			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
+			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
+			if args[1] == "stab" then
+				local key = mp:getval("Rage", "Extra", "Knife Bot", "keybind")
+				if mp:getval("Rage", "Extra", "Knife Bot") and (not key or INPUT_SERVICE:IsKeyDown(key)) then
+					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
+						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
+					end
+				end
+			end
+			if args[1] == "repupdate" and mp:getval("Rage", "Anti Aim", "Enabled") then
+				args[2] = ragebot:AntiNade(args[2])
+				local pitch = args[3].X
+				local yaw = args[3].Y
+	
+				local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
+				local yawChoice = mp:getval("Rage",   "Anti Aim", "Yaw")
+				---"off,down,up,roll,upside down,random"
+				--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
+				--{"Off", "Backward", "Spin", "Random"} yaw
+	
+				if pitchChoice == 2 then
+					pitch = -4
+				elseif pitchChoice == 3 then
+					pitch = 0
+				elseif pitchChoice == 4 then
+					pitch = 4.7
+				elseif pitchChoice == 5 then
+					pitch = -math.pi
+				elseif pitchChoice == 6 then
+					pitch = tick() * 0.01
+				elseif pitchChoice == 7 then
+					pitch = -tick() * 0.01
+				elseif pitchChoice == 8 then
+					pitch = math.random(99999)
+				end
+	
+				if yawChoice == 2 then
+					yaw += math.pi
+				elseif yawChoice == 3 then
+					yaw = (tick() * 0.01) % 12
+				elseif yawChoice == 4 then
+					yaw = math.random(99999)
+				end
+	
+				-- yaw += jitter
+	
+				args[3] = Vector3.new(pitch, yaw, 0)
+			end
+			return send(self, unpack(args))
+		end
+	end
+	
+	local legitbot = {}
+	do -- ANCHOR Legitbot definition defines legit functions
+	
+		function legitbot:MainLoop()
+	
+	
+			if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and mp:getval("Legit", "Aim Assist", "Enabled") and client.logic.currentgun then
+				local keybind = mp:getval("Legit", "Aim Assist", "Aimbot Key") - 1
+				local smoothing = (mp:getval("Legit", "Aim Assist", "Smoothing Factor") + 2) * 0.2 / GAME_SETTINGS.MouseSensitivity
+				local fov = mp:getval("Legit", "Aim Assist", "Aimbot FOV")
+				local sFov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
+	
+				local hitboxPriority = mp:getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
+				local hitscan = not mp:getval("Legit", "Aim Assist", "Force Priority Hitbox")
+	
+				if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
+					local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
+					if targetPart and closest < fov then
+						legitbot:AimAtTarget(targetPart, smoothing)
+					end
+					if targetPart and closest < sFov then
+						legitbot:SilentAimAtTarget(targetPart)
+					end
+				end
+			end
+	
+	
+		end
+	
+		function legitbot:AimAtTarget(targetPart, smoothing)
+	
+	
+			if not targetPart then return end
+	
+			local Pos, visCheck
+	
+			if mp:getval("Legit", "Aim Assist", "Adjust for Bullet Drop") then
+				pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
+			else
+				Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
+			end
+			if mp:getval("Legit", "Aim Assist", "Enable Randomization") then
+				local randMag = mp:getval("Legit", "Aim Assist", "Randomization") * 5
+				Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1,time()) * randMag, 0)
+			end
+	
+			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
+	
+			mousemoverel(aimbotMovement.X / smoothing, aimbotMovement.Y / smoothing)
+	
+	
+		end
+	
+		function legitbot:SilentAimAtTarget(targetPart)
+	
+	
+			if not targetPart then return end
+	
+	
+	
+		end
+	
+	
+	
+		function legitbot:GetTargetLegit(partPreference, hitscan, players)
+	
+	
+			local closest, closestPart = math.huge
+			partPreference = partPreference or "head"
+			hitscan = hitscan or false
+			players = players or game.Players:GetPlayers()
+	
+			for i, Player in pairs(players) do
+	
+				if Player.Team ~= LOCAL_PLAYER.Team then
+					local Parts = client.replication.getbodyparts(Player)
+					if Parts then
+						if hitscan then
+							for i1, Bone in pairs(Parts) do
+	
+								if Bone.ClassName == "Part" then
+									if camera:GetFOV(Bone) < closest then
+										if camera:IsVisible(Bone) then
+											closest = camera:GetFOV(Bone)
+											closestPart = Bone
+										end
+									end
+								end
+	
+							end
+						end
+						local PriorityBone = Parts[partPreference]
+						if PriorityBone and camera:GetFOV(PriorityBone) < closest then
+							if camera:IsVisible(PriorityBone) then
+								closest = camera:GetFOV(PriorityBone)
+								closestPart = PriorityBone
+							end
+						end
+					end
+				end
+	
+			end
+			return closestPart, closest
+	
+	
+		end
+	
+		function legitbot:TriggerBot()
+	
+	
+			if INPUT_SERVICE:IsKeyDown(mp:getval("Legit", "Trigger Bot", "Enabled", "keybind")) then
+				local parts = mp:getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes")
+	
+				parts["Head"] = parts[1]
+				parts["Torso"] = parts[2]
+				parts["Right Arm"] = parts[3]
+				parts["Left Arm"] = parts[3]
+				parts["Right Leg"] = parts[4]
+				parts["Left Leg"] = parts[4]
+	
+				local gun = camera:GetGun()
+				if not gun then return end
+	
+				local barrel = gun.Flame
+				if barrel and client.logic.currentgun then
+					local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
+	
+					if hit and parts[hit.Name] then
+						if not camera:IsVisible(hit) then return end
+						client.logic.currentgun:shoot(true)
+					else
+						client.logic.currentgun:shoot(false)
+					end
+				end
+			end
+	
+	
+		end
+	
+	
+	end
+	
+	
 
 
 
@@ -5088,6 +5158,51 @@ elseif mp.game == "pf" then
 							value = false
 						},
 					}
+				},
+				{
+					name = "Weapon Modifications",
+					x = mp.columns.right,
+					y = 272,
+					width = 230,
+					height = 200,
+					content = {
+						{
+							type = "toggle",
+							name = "Enabled",
+							value = false
+						},
+						{
+							type = "slider", 
+							name = "Fire Rate Scale",
+							value = 150,
+							minvalue = 50, 
+							maxvalue = 250,
+							stradd = "%"
+						},
+						{	
+							type = "slider",
+							name = "Recoil Scale",
+							value = 10,
+							minvalue = 1, 
+							maxvalue = 100,
+							stradd = "%"
+						},
+						{
+							type = "toggle", 
+							name = "Instant Reload",
+							value = true
+						},
+						{
+							type = "toggle", 
+							name = "Instant Equip",
+							value = true
+						},
+						{
+							type = "toggle", 
+							name = "Run and Gun",
+							value = false
+						},
+					},
 				},
 			}
 		},
