@@ -121,6 +121,7 @@ local CACHED_VEC3 = Vector3.new()
 local Camera = workspace.CurrentCamera
 local SCREEN_SIZE = Vector2.new()
 local ButtonPressed = Instance.new("BindableEvent")
+local PATHFINDING = game:GetService("PathfindingService")
 
 local function IsKeybindDown(tab, group, name, on_nil)
 	local key = mp:getval(tab, group, name, "keybind")
@@ -3276,31 +3277,41 @@ elseif mp.game == "pf" then
 			end
 		end
 
-		local last_tp = 0
 		local tp_unlock = true
 
 		function ragebot:TPAura()
-			if misc:GetLifetime() > 100 and tp_unlock then
+			if misc:GetLifetime() > 100 then
 				CreateThread(function()
-					local targets = ragebot:GetKnifeTargets()
 					tp_unlock = false
-					local target = targets[1]
-					if target then
-						local rp = LOCAL_PLAYER.Character.HumanoidRootPart
-						local op = rp.CFrame.Position
-						if last_tp <= 0 then
-							rp.CFrame = CFrame.new(op.X, math.huge, op.Y)
-							wait()
-							rp.CFrame = CFrame.new(target.part.Position)
-							wait()
-							rp.CFrame = CFrame.new(op.X, math.huge, op.Y)
-							wait()
-							rp.CFrame = CFrame.new(op)
-							last_tp = 10
+					local rp = LOCAL_PLAYER.Character.HumanoidRootPart
+					local targets = ragebot:GetKnifeTargets()
+
+					for k, target in pairs(targets) do
+						if target.insight then
+							rp.CFrame = CFrame.new(target.tppos)
+							tp_unlock = true
+							return
 						end
 					end
 					
-					last_tp -= 1
+					if tp_unlock then return end
+
+					local path = PATHFINDING:CreatePath({AgentRadius = 4})
+
+					for k, target in pairs(targets) do
+						path:ComputeAsync(rp.Position, target.part.Position)
+
+						if path.Status ~= Enum.PathStatus.Success then continue end
+						
+						local path_points = path:GetWaypoints()
+
+						for i, point in pairs(path_points) do
+							if tp_unlock then return end
+							rp.CFrame = CFrame.new(point.Position + Vector3.new(0,2,0))
+							game.RunService.RenderStepped:Wait()
+						end
+						break
+					end
 					tp_unlock = true
 				end)
 			end
@@ -3365,11 +3376,21 @@ elseif mp.game == "pf" then
 	end
 	do--ANCHOR misc hooks
 		--anti afk
+		
 		local VirtualUser = game:GetService("VirtualUser")
 		LOCAL_PLAYER.Idled:Connect(function()
 			VirtualUser:CaptureController()
 			VirtualUser:ClickButton2(Vector2.new())
 		end)
+		local oldmag = client.cam.setmagnification
+		client.cam.setmagnification = function(self, v)
+			return oldmag(self, mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and 1 or v)
+		end
+		local oldmenufov = client.cam.changemenufov
+		client.cam.changemenufov = function(...)
+			if mp.open then return end
+			oldmenufov(...)
+		end
 	
 		local shake = client.cam.shake
 		client.cam.shake = function(self, magnitude)
@@ -3628,6 +3649,31 @@ elseif mp.game == "pf" then
 	
 	
 		end
+
+		function misc:CollectTags()
+			if not mp:getval("Misc", "Extra", "Collect Dog Tags") then return end
+			local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
+			if rootpart then
+				local dogTag = workspace.Ignore.GunDrop:FindFirstChild("DogTag")
+				if dogTag then
+					client.net:send("capturedogtag", dogTag)
+					local oldsend = client.net.send
+					client.net.send = function(self, e, ...)
+						if e == "repupdate" then return end
+						oldsend(self, e, ...)
+					end
+					do
+						local oldpos = rootpart.CFrame
+						
+						rootpart.CFrame = dogTag.Tag.CFrame
+						oldsend(oldsend, "capturedogtag", dogTag)
+						wait()
+						rootpart.CFrame = oldpos
+					end
+					client.net.send = oldsend
+				end
+			end
+		end
 	
 		function misc:MainLoop()
 			if keybindtoggles.crash then return end
@@ -3647,6 +3693,7 @@ elseif mp.game == "pf" then
 					rootpart.Anchored = true
 				end
 			end
+			misc:CollectTags()
 	
 	
 		end
@@ -3855,13 +3902,9 @@ elseif mp.game == "pf" then
 	
 	
 	--ADS Fov hook
-	do
-		local oldmag = client.cam.setmagnification
-		client.cam.setmagnification = function(self, v)
-			return oldmag(self, mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and 1 or v)
-		end
-	end
+	
 	local function renderVisuals()
+		setconstant(client.cam.step, 11, mp:getval("Visuals", "Local Visuals", "No Camera Bob") and 0 or 0.5)
 		SCREEN_SIZE = Camera.ViewportSize
 		--------------------------------------world funnies
 		if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
@@ -4997,6 +5040,11 @@ elseif mp.game == "pf" then
 							stradd = "°"
 						},
 						{
+							type = "toggle", 
+							name = "No Camera Bob",
+							value = false
+						},
+						{
 							type = "toggle",
 							name = "Disable ADS FOV",
 							value = false,
@@ -5216,6 +5264,11 @@ elseif mp.game == "pf" then
 								type = "keybind",
 								key = Enum.KeyCode.Y
 							}
+						},
+						{
+							type = "toggle", 
+							name = "Collect Dog Tags",
+							value = false
 						},
 						{
 							type = "toggle",
