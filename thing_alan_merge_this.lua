@@ -122,6 +122,16 @@ local Camera = workspace.CurrentCamera
 local SCREEN_SIZE = Vector2.new()
 local ButtonPressed = Instance.new("BindableEvent")
 
+local function IsKeybindDown(tab, group, name, on_nil)
+	local key = mp:getval(tab, group, name, "keybind")
+	if on_nil then
+		return key == nil or INPUT_SERVICE:IsKeyDown(key)
+	elseif key ~= nil then
+		return INPUT_SERVICE:IsKeyDown(key)
+	end
+	return false
+end
+
 do -- table shitz
 	setreadonly(table, false)
 
@@ -3077,6 +3087,7 @@ elseif mp.game == "pf" then
 	end
 	
 	local keybindtoggles = { -- ANCHOR keybind toggles
+		crash = false,
 		fly = false,
 		thirdperson = false,
 	}
@@ -3237,11 +3248,11 @@ elseif mp.game == "pf" then
 		end
 	
 		function ragebot:KnifeBotMain()
+			if keybindtoggles.crash then return end
 			if not client.deploy.isdeployed() then return end
 			if not LOCAL_PLAYER.Character or not LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart") then return end
 
-			local key = mp:getval("Rage", "Extra", "Knife Bot", "keybind")
-			if mp:getval("Rage", "Extra", "Knife Bot") and (key == nil or INPUT_SERVICE:IsKeyDown(key)) then
+			if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 				local knifetype = mp:getval("Rage", "Extra", "Knife Bot Type")
 				if knifetype == 2 then
 					ragebot:KnifeAura()
@@ -3395,7 +3406,7 @@ elseif mp.game == "pf" then
 				if player == game.Players.LocalPlayer then continue end
 				table.insert(players, player)
 			end
-			return client.net:send("spotplayers", players)
+			return send("spotplayers", players)
 		end
 		
 		function misc:ApplyGunMods() 
@@ -3515,7 +3526,6 @@ elseif mp.game == "pf" then
 				
 				local travel = CACHED_VEC3
 				local looking = Camera.CFrame.lookVector --getting camera looking vector
-				local upVector = Camera.CFrame.UpVector
 				local rightVector = Camera.CFrame.RightVector
 				
 	
@@ -3533,10 +3543,10 @@ elseif mp.game == "pf" then
 				end
 				
 				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
-					travel += upVector
+					travel += Vector3.new(0,1,0)
 				end
 				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-					travel -= upVector
+					travel -= Vector3.new(0,1,0)
 				end
 				
 				if travel.Unit.X == travel.Unit.X then
@@ -3620,6 +3630,7 @@ elseif mp.game == "pf" then
 		end
 	
 		function misc:MainLoop()
+			if keybindtoggles.crash then return end
 			lifetime += 1
 	
 			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
@@ -3653,8 +3664,7 @@ elseif mp.game == "pf" then
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
 			if args[1] == "stab" then
-				local key = mp:getval("Rage", "Extra", "Knife Bot", "keybind")
-				if mp:getval("Rage", "Extra", "Knife Bot") and (not key or INPUT_SERVICE:IsKeyDown(key)) then
+				if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
 						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
 					end
@@ -3811,8 +3821,7 @@ elseif mp.game == "pf" then
 	
 		function legitbot:TriggerBot()
 	
-			local key = mp:getval("Legit", "Trigger Bot", "Enabled", "keybind")
-			if not key or INPUT_SERVICE:IsKeyDown(key) then
+			if IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
 				local parts = mp:getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes")
 	
 				parts["Head"] = parts[1]
@@ -3892,7 +3901,6 @@ elseif mp.game == "pf" then
 			end
 		end
 	
-		local fovMult = 90/Camera.FieldOfView
 		if client.deploy.isdeployed() then
 		
 			for Index, Player in ipairs(Players:GetPlayers()) do
@@ -3904,16 +3912,17 @@ elseif mp.game == "pf" then
 		
 					Player.Character = parts.rootpart.Parent
 		
-					local playerTorso = parts.torso
+					local torso = parts.torso.CFrame
+					local cam = Camera.CFrame
 		
-					local vTop = playerTorso.CFrame.Position + (playerTorso.CFrame.UpVector * 1.7) + Camera.CFrame.UpVector - Camera.CFrame.RightVector * 1.5
-					local vBottom = playerTorso.CFrame.Position - (playerTorso.CFrame.UpVector * 2) - Camera.CFrame.UpVector + Camera.CFrame.RightVector * 1.5
+					local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
+					local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
 		
 					local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 					local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 		
 					local minY = math.abs(bottom.Y - top.Y)
-					local sizeX = math.ceil(math.max(math.abs(bottom.X - top.X), minY / 2))
+					local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.X - top.X) * 2, 0, minY), minY / 2))
 					local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 		
 					local boxSize = Vector2.new(sizeX, sizeY)
@@ -4078,9 +4087,19 @@ elseif mp.game == "pf" then
 			end
 		end
 	end
-
+	local oldpos = nil
 	local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 		inputBeganMenu(key)
+		if mp:getval("Misc", "Extra", "Crash Spectators")and key.KeyCode == mp:getval("Misc", "Extra", "Crash Spectators", "keybind") then
+			keybindtoggles.crash = not keybindtoggles.crash
+			if keybindtoggles.crash then
+				oldpos = LOCAL_PLAYER.Character.HumanoidRootPart.CFrame.Position
+				LOCAL_PLAYER.Character.HumanoidRootPart.CFrame = CFrame.new(oldpos.X, math.huge, oldpos.Y)
+			elseif oldpos then
+				LOCAL_PLAYER.Character.HumanoidRootPart.Velocity = Vector3.new()
+				LOCAL_PLAYER.Character.HumanoidRootPart.CFrame = CFrame.new(oldpos)
+			end
+		end
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
 			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 		end
@@ -5188,6 +5207,15 @@ elseif mp.game == "pf" then
 						{
 							type = "button",
 							name = "Invisibility"
+						},
+						{
+							type = "toggle",
+							name = "Crash Spectators",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.Y
+							}
 						},
 						{
 							type = "toggle",
