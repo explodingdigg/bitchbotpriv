@@ -3384,7 +3384,8 @@ elseif mp.game == "pf" then
 		end)
 		local oldmag = client.cam.setmagnification
 		client.cam.setmagnification = function(self, v)
-			return oldmag(self, mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and 1 or v)
+			if mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and INPUT_SERVICE:IsMouseButtonPressed(1) then return end
+			return oldmag(self, v)
 		end
 		local oldmenufov = client.cam.changemenufov
 		client.cam.changemenufov = function(...)
@@ -3491,13 +3492,25 @@ elseif mp.game == "pf" then
 							end
 						end
 					end
-					-- if type(data.sprintoffset) == "CFrame" then
-					-- 	data.sprintoffset = CFrame.new()
-					-- end
 				end
 			end
 		end
-
+		do
+			local spring = debug.getupvalue(client.char.setsprint, 10)
+			local mt = getrawmetatable(spring)
+			local old_index = mt.__index
+			setreadonly(mt, false)
+			mt.__index = newcclosure(function(t, k)
+				local result = old_index(t, k)
+				if k == "p" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then 
+					if client.logic.currentgun.type ~= "KNIFE" then
+						debug.setupvalue(client.logic.currentgun.step, 28, function() return CFrame.new() end)
+					end
+					return 0 
+				end
+				return result
+			end)
+		end
 		ButtonPressed.Event:Connect(function(tab, gb, name)
 			if tab == "Misc" and name == "Invisibility" then
 				local oldsend = client.net.send
