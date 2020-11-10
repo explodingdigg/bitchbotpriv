@@ -4029,16 +4029,23 @@ elseif mp.game == "pf" then
 					if instant_equip then
 						gun.equipspeed = 99999
 					end
-					if instant_reload then
-						if gun.animations  and type(gun.animations) == "table" then
-							for name, anim in pairs(gun.animations) do
-								if name:match("stab") then continue end
-								if type(anim) == "table" and anim ~= gun.animations.inspect then
-									anim.timescale = 0
-									anim.resettime = 0
-									anim.stdtimescale = 0
-								end
-							end
+					if instant_reload and gun.animations then
+						for name, animations in pairs(gun.animations) do
+							if name:match("stab") or name == "inspect" then continue end
+							gun.animations[name] = {
+								stdtimescale = 0,
+								timescale = 0,
+								resettime = 0,
+								{
+									{
+										part = "Trigger",
+										c1 = CFrame.new(),
+										t = 1,
+										eq = "accelerate"
+									},
+									delay = 0
+								}
+							}
 						end
 					end
 				end

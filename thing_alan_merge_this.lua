@@ -95,7 +95,7 @@ end
 
 game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge)
 
-setfpscap(300) -- nigga roblox
+setfpscap(300)
 
 if not isfolder("bitchbot") then
 	makefolder("bitchbot")
@@ -3505,6 +3505,7 @@ elseif mp.game == "pf" then
 				if k == "p" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then 
 					if client.logic.currentgun.type ~= "KNIFE" then
 						debug.setupvalue(client.logic.currentgun.step, 28, function() return CFrame.new() end)
+						debug.setupvalue(client.logic.currentgun.step, 29, function() return CFrame.new() end)
 					end
 					return 0 
 				end
