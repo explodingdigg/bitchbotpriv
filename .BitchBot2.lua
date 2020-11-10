@@ -29,6 +29,8 @@ local mp = { -- this is for menu stuffs n shi
 	tabnum2str = {} -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
 }
 
+
+
 function CreateThread(func) 
    local thread = coroutine.create(func)
    coroutine.resume(thread)
@@ -112,10 +114,24 @@ end
 local Players = game:GetService("Players")
 local LOCAL_PLAYER = Players.LocalPlayer
 local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
+local TEAMS = game:GetService("Teams")
 local INPUT_SERVICE = game:GetService("UserInputService")
 local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
 local CACHED_VEC3 = Vector3.new()
 local Camera = workspace.CurrentCamera
+local SCREEN_SIZE = Vector2.new()
+local ButtonPressed = Instance.new("BindableEvent")
+local PATHFINDING = game:GetService("PathfindingService")
+
+local function IsKeybindDown(tab, group, name, on_nil)
+	local key = mp:getval(tab, group, name, "keybind")
+	if on_nil then
+		return key == nil or INPUT_SERVICE:IsKeyDown(key)
+	elseif key ~= nil then
+		return INPUT_SERVICE:IsKeyDown(key)
+	end
+	return false
+end
 
 do -- table shitz
 	setreadonly(table, false)
@@ -179,6 +195,30 @@ do -- math stuffz
 	setreadonly(math, true)
 end
 
+local bVector2 = {}
+do -- vector functions
+	function bVector2:getRotate(Vec, Rads)
+		local vec = Vec.Unit
+		--x2 = cos β x1 − sin β y1
+		--y2 = sin β x1 + cos β y1
+		local sin = math.sin(Rads)
+		local cos = math.cos(Rads)
+		local x = (cos * vec.X) - (sin * vec.Y)
+		local y = (sin * vec.X) + (cos * vec.Y)
+	
+		return Vector2.new(x, y).Unit * Vec.Magnitude
+	end
+end
+local bColor = {}
+do -- color functions
+	function bColor:Mult(col, mult) 
+		return Color3.new(col.R*mult,col.G*mult,col.B*mult)
+	end
+	function bColor:Add(col, num)
+		return Color3.new(col.R+num,col.G+num,col.B+num)
+	end
+
+end
 do -- metatable additions strings and such
 
 	local strMt = getrawmetatable("")
@@ -373,17 +413,20 @@ do
 	end
 
 	function Draw:Triangle(visible, filled, pa, pb, pc, clr, tablename)
+		clr = clr or {255,255,255,1}
 		local temptable = Drawing.new("Triangle")
 		temptable.Visible = visible
-		temptable.Transparency = clr[4]
+		temptable.Transparency = clr[4] or 1
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		temptable.Thickness = 4.1
-		temptable.PointA = Vector2.new(pa[1], pa[2])
-		temptable.PointB = Vector2.new(pb[1], pb[2])
-		temptable.PointC = Vector2.new(pc[1], pc[2])
+		if pa and pb and pc then
+			temptable.PointA = Vector2.new(pa[1], pa[2])
+			temptable.PointB = Vector2.new(pb[1], pb[2])
+			temptable.PointC = Vector2.new(pc[1], pc[2])
+		end
 		temptable.Filled = filled
 		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
+		if tablename and not table.contains(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -798,6 +841,9 @@ local function BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name][1] = false
 							mp.options[v.name][v1.name][v2.name][2] = v2.type
 							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+							mp.options[v.name][v1.name][v2.name].name = v2.name
+							mp.options[v.name][v1.name][v2.name].groupbox = v1.name
+							mp.options[v.name][v1.name][v2.name].tab = v.name -- why is it all v, v1, v2 so ugly
 							y_pos += 28
 						elseif v2.type == "list" then
 							mp.options[v.name][v1.name][v2.name] = {}
@@ -1366,6 +1412,7 @@ local function BBMenuInit(menutable)
 
 	local simpcfgnamez = {"toggle", "slider", "dropbox"}
 	local function buttonpressed(bp)
+		ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
 		if bp == mp.options["Settings"]["Extra"]["Unload Cheat"] then
 			mp:unload()
 		elseif bp == mp.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
@@ -1704,7 +1751,7 @@ local function BBMenuInit(menutable)
 								textthing = textthing ~= "" and textthing or "None"
 								if string.len(textthing) > 25 then
 									textthing = string_cut(textthing, 25)
-								end
+								end		
 								v2[4][1].Text = textthing
 							end
 						end
@@ -2651,10 +2698,8 @@ if mp.game == "uni" then
 			content = {
 				{
 					name = "Movement",
-					x = 17,
-					y = 66,
-					width = 230,
-					height = 332,
+					autopos = "left",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -2714,6 +2759,30 @@ if mp.game == "uni" then
 						},
 					}
 				},
+				{
+					name = "Exploits",
+					autopos = "right",
+					autofill = true,
+					content = {
+						{
+							type = "toggle",
+							name = "Shift Tick Base",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.E,
+							},
+						},
+						{
+							type = "slider",
+							name = "Shifted Tick Base Add",
+							value = 20,
+							minvalue = 1,
+							maxvalue = 5000,
+							stradd = "ms"
+						}
+					}
+				}
 			}
 		},
 		{--ANCHOR Settings
@@ -2895,6 +2964,8 @@ if mp.game == "uni" then
 		end
 	end
 
+
+
 	mp.list.removeall(mp.options["Settings"]["Player List"]["Players"])
 	updateplist()
 	cacheAvatars()
@@ -2942,6 +3013,18 @@ if mp.game == "uni" then
 			allesp.teamoutline[i].Transparency = value
 		end
 	end
+
+	mp.tickbaseadd = 0
+	shared.tick_ref = hookfunction(tick, function()
+		if mp == nil then
+			return shared.tick_ref() 
+		elseif mp:getval("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(mp:getval("Misc", "Exploits", "Shift Tick Base", "keybind")) then
+			mp.tickbaseadd += mp:getval("Misc", "Exploits", "Shifted Tick Base Add") * 0.001
+			return shared.tick_ref() + mp.tickbaseadd
+		else
+			return shared.tick_ref() 
+		end
+	end)
 
 	local function SpeedHack()
 		local speed = mp:getval("Misc", "Movement", "Speed")
@@ -3026,6 +3109,9 @@ if mp.game == "uni" then
 	end
 
 	mp.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
+		if input.KeyCode == mp:getval("Misc", "Exploits", "Shift Tick Base", "keybind") then
+			mp.tickbaseadd = 0
+		end
 		if mp:getval("Misc", "Movement", "Fly Hack") and input.KeyCode == mp:getval("Misc", "Movement", "Fly Hack", "keybind") then
 			cachedValues.FlyToggle = not cachedValues.FlyToggle
 			LOCAL_PLAYER.Character.HumanoidRootPart.Anchored = false
@@ -3343,33 +3429,38 @@ elseif mp.game == "pf" then
 			[4] = {},
 			[5] = {},
 		},
-		outerbox = {},
-		box = {},
-		hpouter = {},
-		hpinner = {},
-		hptext = {},
-		nametext = {},
-		weptext = {},
-		disttext = {},
+		box = {[1] = {}, [2] = {}},
+		hp = {outer = {}, inner = {}, text = {}},
+		text = {name = {}, weapon = {}, distance = {}},
+		arrows = {
+			[1] = {},
+			[2] = {},
+		},
 		watermark = {},
 	}
 
 	for i = 1, 35 do
+		for i_ = 1, 2 do
+			Draw:Triangle(false, i_ == 1, nil, nil, nil, {255}, allesp.arrows[i_])
+		end
 		for i_, v in ipairs(allesp.skel) do
 			Draw:Line(false, 1, 30, 30, 50, 50, {255, 255, 255, 255}, v)
 		end
-		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.outerbox)
-		Draw:OutlinedRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.box)
-	
-		Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 215}, allesp.hpouter)
-		Draw:FilledRect(false, 20, 20, 20, 20, {0, 255, 0, 255}, allesp.hpinner)
-		Draw:OutlinedText("", 1, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, allesp.hptext)
-	
-		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.disttext)
-		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.weptext)
-		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.nametext)
+		for i_, v in pairs(allesp.box) do
+			Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, v)
+		end
+		for i_, v in pairs(allesp.hp) do
+			if i_ ~= "text" then
+				Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 215}, v)
+			else
+				Draw:OutlinedText("", 1, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, v)
+			end
+		end
+		for i_, v in pairs(allesp.text) do
+			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, v)
+		end
 	end
-
+	
 	local client = {}
 	
 	for k, v in pairs(getgc(true)) do
@@ -3414,12 +3505,17 @@ elseif mp.game == "pf" then
 
 	local shooties = {}
 	
-
+	local OLD_GUNS = game:GetService("ReplicatedStorage").GunModules:Clone()
+	OLD_GUNS.Name = tostring(math.random(1e5, 9e5))
+	OLD_GUNS.Parent = game:GetService("ReplicatedStorage")
+	
+	local CUR_GUNS = game:GetService("ReplicatedStorage").GunModules
+	
 	
 
 	local selected_plyr = nil
 	
-	local playerz = {
+	local players = {
 		Enemy = {},
 		Team = {}
 	}
@@ -3432,9 +3528,9 @@ elseif mp.game == "pf" then
 		if client.logic.currentgun and client.logic.currentgun.shoot then
 			local shootgun = client.logic.currentgun.shoot
 			if not shooties[client.logic.currentgun.shoot] then
-				client.logic.currentgun.shoot = function(self, ...)
+				client.logic.currentgun.shoot = function(...)
 					if mp.open then return end
-					shootgun(self, ...)
+					shootgun(...)
 				end
 			end
 			shooties[client.logic.currentgun.shoot] = true
@@ -3457,304 +3553,7 @@ elseif mp.game == "pf" then
 	end
 
 
-	local function renderVisuals()
-		--------------------------------------world funnies
-		if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
-			game.Lighting:SetMinutesAfterMidnight(mp.options["Visuals"]["World Visuals"]["Custom Time"][1])
-		end
-		if mp.options["Visuals"]["World Visuals"]["Ambience"][1] then
-			game.Lighting.Ambient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
-			game.Lighting.OutdoorAmbient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
-		else
-			game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
-			game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
-		end
-		if mp.open then
-			client.char.unaimedfov = mp.options["Visuals"]["Local Visuals"]["Camera FOV"][1]
 	
-			if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
-				game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
-				game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
-			else
-				game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
-				game.Lighting.MapSaturation.Saturation = -0.25
-			end
-		end
-		if mp.options["Visuals"]["Local Visuals"]["Disable ADS FOV"][1] then
-			client.cam.basefov = client.char.unaimedfov
-		else
-			client.cam.basefov = 80
-		end
-		for k, v in pairs(allesp) do
-			for k1, v1 in ipairs(v) do
-				if v1.Visible then
-					v1.Visible = false
-				end
-			end
-		end
-		for k, v in ipairs(allesp.skel) do
-			for k1, v1 in ipairs(v) do
-				v1.Visible = false
-			end
-		end
-	
-	
-		local localteam = LOCAL_PLAYER.Team
-		playerz.Enemy = {}
-		playerz.Team = {}
-		for Index, Player in pairs(Players:GetPlayers()) do
-			local Body = client.replication.getbodyparts(Player)
-			if Body and typeof(Body) == 'table' and rawget(Body, 'rootpart') then
-				Player.Character = Body.rootpart.Parent
-				if Player.Team ~= localteam then
-					table.insert(playerz.Enemy, Player)
-				else
-					table.insert(playerz.Team, Player)
-				end
-			end
-		end
-	
-		local playernum = 0
-		if client.deploy.isdeployed() then
-			for k, v in pairs(playerz) do
-	
-				for k1, v1 in ipairs(v) do
-	
-					local playerTorso = v1.Character.Torso
-	
-					local vTop = playerTorso.CFrame.Position + playerTorso.CFrame.UpVector * 2.3
-					local vBottom = playerTorso.CFrame.Position - playerTorso.CFrame.UpVector * 3
-	
-					local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
-					local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
-	
-					local fovMult = mp:getval("Visuals", "Local Visuals", "Camera FOV") / Camera.FieldOfView
-	
-					local sizeX = math.ceil(2000 / top.Z * fovMult)
-					local sizeY = math.ceil(math.max(math.abs(bottom.Y - top.Y), sizeX))
-	
-					local boxSize = Vector2.new(sizeX, sizeY)
-					local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(top.Y))
-	
-					local teem = k .." ESP" -- I MISSPELLEDS IT ONPURPOSE NIGGA
-					local health = math.ceil(client.hud:getplayerhealth(v1))
-					local spoty = 0
-	
-	
-	
-					if (topIsRendered or bottomIsRendered) and client.hud:isplayeralive(v1) then
-						playernum += 1
-						if mp.options["ESP"][teem]["Name"][1] then
-	
-							local name = v1.Name
-							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
-								name = string.lower(name)
-							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
-								name = string.upper(name)
-							end
-	
-							allesp.nametext[playernum].Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
-							allesp.nametext[playernum].Visible = true
-							allesp.nametext[playernum].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
-							allesp.nametext[playernum].Color = RGB(mp.options["ESP"][teem]["Name"][5][1][1], mp.options["ESP"][teem]["Name"][5][1][2], mp.options["ESP"][teem]["Name"][5][1][3])
-							allesp.nametext[playernum].Transparency = mp.options["ESP"][teem]["Name"][5][1][4]/255
-	
-						end
-						if mp.options["ESP"][teem]["Box"][1] then
-	
-							local transparency = (mp.options["ESP"][teem]["Box"][5][1][4] - 40) / 255
-	
-							allesp.outerbox[playernum].Visible = true
-							allesp.outerbox[playernum].Position = boxPosition
-							allesp.outerbox[playernum].Size = boxSize
-							allesp.outerbox[playernum].Thickness = 3
-							allesp.outerbox[playernum].Transparency = transparency
-	
-							allesp.box[playernum].Visible = true
-							allesp.box[playernum].Position = boxPosition
-							allesp.box[playernum].Size = boxSize
-							allesp.box[playernum].Color = RGB(mp.options["ESP"][teem]["Box"][5][1][1], mp.options["ESP"][teem]["Box"][5][1][2], mp.options["ESP"][teem]["Box"][5][1][3])
-							allesp.box[playernum].Transparency = transparency
-	
-						end
-						if mp.options["ESP"][teem]["Health Bar"][1] then
-							local ySizeBar = -math.floor(boxSize.Y * health / 100)
-							if mp.options["ESP"][teem]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
-								allesp.hptext[playernum].Visible = true
-								allesp.hptext[playernum].Text = tostring(health)
-	
-								local tb = allesp.hptext[playernum].TextBounds
-	
-								allesp.hptext[playernum].Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y, -tb.Y / 4, boxSize.Y - tb.Y))
-								allesp.hptext[playernum].Color = RGB(mp.options["ESP"][teem]["Health Number"][5][1][1], mp.options["ESP"][teem]["Health Number"][5][1][2], mp.options["ESP"][teem]["Health Number"][5][1][3])
-								allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
-							end
-	
-							allesp.hpouter[playernum].Visible = true
-							allesp.hpouter[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 6, math.floor(boxPosition.y) - 1)
-							allesp.hpouter[playernum].Size = Vector2.new(4, boxSize.Y + 2)
-	
-							allesp.hpinner[playernum].Visible = true
-							allesp.hpinner[playernum].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
-	
-							allesp.hpinner[playernum].Size = Vector2.new(2, ySizeBar)
-	
-							allesp.hpinner[playernum].Color = math.ColorRange(health, {
-								[1] = {start = 0, color = Color3.fromRGB(mp.options["ESP"][teem]["Health Bar"][5][1][1][1][1], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][2], mp.options["ESP"][teem]["Health Bar"][5][1][1][1][3])},
-								[2] = {start = 100, color = Color3.fromRGB(mp.options["ESP"][teem]["Health Bar"][5][1][2][1][1], mp.options["ESP"][teem]["Health Bar"][5][1][2][1][2], mp.options["ESP"][teem]["Health Bar"][5][1][2][1][3])}
-							})
-	
-						elseif mp.options["ESP"][teem]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
-							allesp.hptext[playernum].Visible = true
-							allesp.hptext[playernum].Text = tostring(health)
-							allesp.hptext[playernum].Position = Vector2.new(math.floor(bottom.x - sizeX * 0.5 - 1) - math.ceil(allesp.hptext[playernum].TextBounds.x) + 6, math.floor(top.y - 4))
-							allesp.hptext[playernum].Color = RGB(mp.options["ESP"][teem]["Health Number"][5][1][1], mp.options["ESP"][teem]["Health Number"][5][1][2], mp.options["ESP"][teem]["Health Number"][5][1][3])
-							allesp.hptext[playernum].Transparency = mp.options["ESP"][teem]["Health Number"][5][1][4]/255
-						end
-						if mp.options["ESP"][teem]["Held Weapon"][1] then
-							local charWeapon = v1.Character:GetChildren()[8]
-							local wepname = charWeapon and charWeapon.Name or "KNIFE"
-	
-							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
-								wepname = string.lower(wepname)
-							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
-								wepname = string.upper(wepname)
-							end
-	
-							spoty += 12
-							allesp.weptext[playernum].Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
-							allesp.weptext[playernum].Visible = true
-							allesp.weptext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y))
-							allesp.weptext[playernum].Color = RGB(mp.options["ESP"][teem]["Held Weapon"][5][1][1], mp.options["ESP"][teem]["Held Weapon"][5][1][2], mp.options["ESP"][teem]["Held Weapon"][5][1][3])
-							allesp.weptext[playernum].Transparency = mp.options["ESP"][teem]["Held Weapon"][5][1][4]/255
-						end
-						if mp.options["ESP"][teem]["Distance"][1] then
-							allesp.disttext[playernum].Text = tostring(math.ceil(bottom.z / 5)).."m" --TODO alan i told you to make this not worldtoscreen based.
-							allesp.disttext[playernum].Visible = true
-							allesp.disttext[playernum].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y - 2) + spoty)
-							allesp.disttext[playernum].Color = RGB(mp.options["ESP"][teem]["Distance"][5][1][1], mp.options["ESP"][teem]["Distance"][5][1][2], mp.options["ESP"][teem]["Distance"][5][1][3])
-							allesp.disttext[playernum].Transparency = mp.options["ESP"][teem]["Distance"][5][1][4]/255
-						end
-						if mp.options["ESP"][teem]["Skeleton"][1] then
-							local torso = Camera:WorldToViewportPoint(Vector3.new(v1.Character.Torso.Position.x, v1.Character.Torso.Position.y, v1.Character.Torso.Position.z))
-							for k2, v2 in ipairs(skelparts) do
-	
-								local posie = Camera:WorldToViewportPoint(Vector3.new(v1.Character:FindFirstChild(v2).Position.x, v1.Character:FindFirstChild(v2).Position.y, v1.Character:FindFirstChild(v2).Position.z))
-								allesp.skel[k2][playernum].From = Vector2.new(posie.x, posie.y)
-								allesp.skel[k2][playernum].To = Vector2.new(torso.x, torso.y)
-								allesp.skel[k2][playernum].Visible = true
-								allesp.skel[k2][playernum].Color = RGB(mp.options["ESP"][teem]["Skeleton"][5][1][1], mp.options["ESP"][teem]["Skeleton"][5][1][2], mp.options["ESP"][teem]["Skeleton"][5][1][3])
-								allesp.skel[k2][playernum].Transparency = mp.options["ESP"][teem]["Skeleton"][5][1][4]/255
-	
-							end
-						end
-					end
-	
-				end
-	
-			end
-			--------------------------------------------------end of player esp!!!! now 4 da oder vizualz
-			--poop
-			--------------------------------------------------viewmodle shit hahahhaha
-			local vm = Camera:GetChildren()
-			if mp.options["Visuals"]["Local Visuals"]["Hand Chams"][1] then ---------------------------------------------view model shit
-				for k, v in pairs(vm) do
-					if v.Name == "Left Arm" or v.Name == "Right Arm" then
-						for k1, v1 in pairs(v:GetChildren()) do
-							v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][3])
-							v1.Transparency = 1 + (mp.options["Visuals"]["Local Visuals"]["Hand Chams"][5][1][4]/-255)
-							v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Hand Material"][1]]
-	
-							if mp.options["Visuals"]["Local Visuals"]["Custom Hand Reflectivity"][1] then
-								v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Hand Reflectivity"][1]/100
-							end
-							if v1.ClassName == "MeshPart" then
-								v1.TextureID = ""
-							end
-						end
-					end
-				end
-			end
-			if mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][1] then ---------------------------------------------view model shit
-				for k, v in pairs(vm) do
-	
-					if v.Name == "Left Arm" or v.Name == "Right Arm" then
-						for k1, v1 in pairs(v:GetChildren()) do
-	
-							if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
-								v1.Name = "Sleeve"
-								v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][3])
-								v1.Transparency = 1 + (mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][4]/-255)
-								v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Sleeve Material"][1]]
-								if mp.options["Visuals"]["Local Visuals"]["Custom Sleeve Reflectivity"][1] then
-									v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Sleeve Reflectivity"][1]/100
-								end
-								v1:ClearAllChildren()
-							end
-						
-						end
-					end
-				
-				end
-			end
-			if mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][1] then
-				for k, v in pairs(vm) do
-					if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
-						for k1, v1 in pairs(v:GetChildren()) do
-	
-							v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][3])
-	
-							if v1.Transparency ~= 1 then
-								v1.Transparency = 0.99999 + (mp.options["Visuals"]["Local Visuals"]["Weapon Chams"][5][1][4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
-							end
-							if mp.options["Visuals"]["Local Visuals"]["Remove Weapon Skin"][1] then
-								for i2, v2 in pairs(v1:GetChildren()) do
-									if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
-										v2:Destroy()
-									end
-								end
-							end
-							v1.Material = mats[mp.options["Visuals"]["Local Visuals"]["Weapon Material"][1]]
-	
-							if mp.options["Visuals"]["Local Visuals"]["Custom Weapon Reflectivity"][1] then
-								v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Weapon Reflectivity"][1]/100
-							end
-						end
-					end
-				end
-			end
-			------------------------------------------------------ragdoll chasms
-			if mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
-				for k, v in ipairs(workspace.Ignore.DeadBody:GetChildren()) do
-	
-					for k1, v1 in pairs(v:GetChildren()) do
-	
-						if v1.Material ~= mats[mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")] then
-							if v1.Name == "Torso" and v1:FindFirstChild("Pant") then
-								v1.Pant:Destroy()
-							end
-							v1.Color = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
-							v1.Transparency = 1+(mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color")[4]/-255)
-							v1.Material = mats[mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")]
-							if v1:FindFirstChild("Mesh") then
-								v1.Mesh:Destroy()
-							end
-						end
-	
-					end
-	
-				end
-			end
-	
-			-- do --watermark shittiez
-			-- 	local wme = mp:getval("Settings", "Menu Settings", "Watermark")
-			-- 	for k, v in pairs(allesp.watermark.rect) do
-			-- 		v.Visible = wme
-			-- 	end
-			-- 	allesp.watermark.text[1].Visible = wme
-			-- end
-		end
-	end
 	
 	local function renderChams()
 		for k, Player in pairs(Players:GetPlayers()) do
@@ -3838,6 +3637,7 @@ elseif mp.game == "pf" then
 	end
 	
 	local keybindtoggles = { -- ANCHOR keybind toggles
+		crash = false,
 		fly = false,
 		thirdperson = false,
 	}
@@ -3914,6 +3714,24 @@ elseif mp.game == "pf" then
 	
 	
 		end
+
+		function camera:GetAngles()
+
+
+			local pitch, yaw = Camera.CFrame:ToOrientation()
+			return {["pitch"] = pitch, ["yaw"] = yaw}
+	
+	
+		end
+		
+		function camera:GetAnglesTo(Pos)
+	
+	
+			local pitch, yaw = CFrame.new(Camera.CFrame.Position, Pos):ToOrientation()
+			return {["pitch"] = pitch, ["yaw"] = yaw}
+	
+	
+		end
 	
 		function camera:GetTrajectory(pos, origin)
 	
@@ -3927,6 +3745,8 @@ elseif mp.game == "pf" then
 	
 	end
 	
+	local legitbot = {}
+	local misc = {}
 	local ragebot = {}
 	do--ANCHOR ragebot definitions
 		local tpIgnore = {workspace.Players, workspace.Ignore, workspace.CurrentCamera}
@@ -3942,6 +3762,7 @@ elseif mp.game == "pf" then
 				
 				return pos + nadeSize
 			end
+			return pos
 	
 	
 		end
@@ -3977,11 +3798,11 @@ elseif mp.game == "pf" then
 		end
 	
 		function ragebot:KnifeBotMain()
+			if keybindtoggles.crash then return end
 			if not client.deploy.isdeployed() then return end
 			if not LOCAL_PLAYER.Character or not LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart") then return end
 
-			local key = mp:getval("Rage", "Extra", "Knife Bot", "keybind")
-			if mp:getval("Rage", "Extra", "Knife Bot") and (key == nil or INPUT_SERVICE:IsKeyDown(key)) then
+			if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 				local knifetype = mp:getval("Rage", "Extra", "Knife Bot Type")
 				if knifetype == 2 then
 					ragebot:KnifeAura()
@@ -3998,23 +3819,52 @@ elseif mp.game == "pf" then
 			
 			for i, target in pairs(targets) do
 				if not target.insight then continue end
-				
+				LOCAL_PLAYER.Character.HumanoidRootPart.Anchored = false
 				LOCAL_PLAYER.Character.HumanoidRootPart.Velocity = target.direction.Unit * 200
 
 				return ragebot:KnifeAura(targets)
 			end
 		end
 
-		function ragebot:TPAura()
-			local targets = ragebot:GetKnifeTargets()
-			
-			for i, target in pairs(targets) do
-				if not target.insight then continue end
-				
-				LOCAL_PLAYER.Character:SetPrimaryPartCFrame(CFrame.new(target.tppos + Vector3.new(0,2,0)))
+		local tp_unlock = true
 
-				return ragebot:KnifeAura(targets)
+		function ragebot:TPAura()
+			if misc:GetLifetime() > 100 then
+				CreateThread(function()
+					tp_unlock = false
+					local rp = LOCAL_PLAYER.Character.HumanoidRootPart
+					local targets = ragebot:GetKnifeTargets()
+
+					for k, target in pairs(targets) do
+						if target.insight then
+							rp.CFrame = CFrame.new(target.tppos)
+							tp_unlock = true
+							return
+						end
+					end
+					
+					if tp_unlock then return end
+
+					local path = PATHFINDING:CreatePath({AgentRadius = 4})
+
+					for k, target in pairs(targets) do
+						path:ComputeAsync(rp.Position, target.part.Position)
+
+						if path.Status ~= Enum.PathStatus.Success then continue end
+						
+						local path_points = path:GetWaypoints()
+
+						for i, point in pairs(path_points) do
+							if tp_unlock then return end
+							rp.CFrame = CFrame.new(point.Position + Vector3.new(0,2,0))
+							game.RunService.RenderStepped:Wait()
+						end
+						break
+					end
+					tp_unlock = true
+				end)
 			end
+			return ragebot:KnifeAura(targets)
 		end
 
 		function ragebot:KnifeAura(t)
@@ -4075,11 +3925,22 @@ elseif mp.game == "pf" then
 	end
 	do--ANCHOR misc hooks
 		--anti afk
+		
 		local VirtualUser = game:GetService("VirtualUser")
 		LOCAL_PLAYER.Idled:Connect(function()
 			VirtualUser:CaptureController()
-			VirtualUser:ClickButton2(Vector2new)
+			VirtualUser:ClickButton2(Vector2.new())
 		end)
+		local oldmag = client.cam.setmagnification
+		client.cam.setmagnification = function(self, v)
+			if mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and INPUT_SERVICE:IsMouseButtonPressed(1) then return end
+			return oldmag(self, v)
+		end
+		local oldmenufov = client.cam.changemenufov
+		client.cam.changemenufov = function(...)
+			if mp.open then return end
+			oldmenufov(...)
+		end
 	
 		local shake = client.cam.shake
 		client.cam.shake = function(self, magnitude)
@@ -4098,15 +3959,321 @@ elseif mp.game == "pf" then
 	
 	end
 	
+	do -- ANCHOR misc definitionz
+		local rootpart
+		local humanoid
+		local lifetime = 0
+		function misc:SetLifetime(t)
+			lifetime = t
+		end
+		function misc:GetLifetime()
+			return lifetime
+		end
+
+		function misc:SpotPlayers() 
+			if not mp:getval("Misc", "Extra", "Auto Spot") then return end 
+			local players = {}
+			for k, player in pairs(game.Players:GetPlayers()) do
+				if player == game.Players.LocalPlayer then continue end
+				table.insert(players, player)
+			end
+			return send("spotplayers", players)
+		end
+		
+		function misc:ApplyGunMods() 
+			
+			local mods_enabled = mp:getval("Misc", "Weapon Modifications", "Enabled")
+			local firerate_scale = mp:getval("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
+			local recoil_scale = mp:getval("Misc", "Weapon Modifications", "Recoil Scale") / 100
+			local instant_reload = mp:getval("Misc", "Weapon Modifications", "Instant Reload")
+			local instant_equip = mp:getval("Misc", "Weapon Modifications", "Instant Equip")
+			local fully_auto = mp:getval("Misc", "Weapon Modifications", "Fully Automatic")
+			
+			for i, gun_module in pairs(CUR_GUNS:GetChildren()) do
+				local gun = require(gun_module)
+				local old_gun = require(OLD_GUNS[gun_module.Name])
+				for k, v in pairs(old_gun) do
+					gun[k] = v
+				end
+				
+				if mods_enabled then
+					do --firerate
+						if gun.variablefirerate then 
+							for k, v in pairs(gun.firerate) do
+								v *= firerate_scale
+							end
+						elseif gun.firerate then
+							gun.firerate *= firerate_scale
+						end
+					end
+					if fully_auto and gun.firemodes then
+						gun.firemodes = {true, 3, 1}
+					end
+					if gun.camkickmin then	--recoil
+						gun.camkickmin *= recoil_scale
+						gun.camkickmax *= recoil_scale
+						gun.aimcamkickmin *= recoil_scale
+						gun.aimcamkickmax *= recoil_scale
+						gun.aimtranskickmin *= recoil_scale
+						gun.aimtranskickmax *= recoil_scale
+						gun.transkickmin *= recoil_scale
+						gun.transkickmax *= recoil_scale
+						gun.rotkickmin *= recoil_scale
+						gun.rotkickmax *= recoil_scale
+						gun.aimrotkickmin *= recoil_scale
+						gun.aimrotkickmax *= recoil_scale
+						gun.hipfirespreadrecover *= recoil_scale
+						gun.hipfirespread *= recoil_scale
+						gun.hipfirestability *= recoil_scale
+					end
+					if instant_equip then
+						gun.equipspeed = 99999
+					end
+					if instant_reload then
+						if gun.animations  and type(gun.animations) == "table" then
+							for name, anim in pairs(gun.animations) do
+								if name:match("stab") then continue end
+								if type(anim) == "table" and anim ~= gun.animations.inspect then
+									anim.timescale = 0
+									anim.resettime = 0
+									anim.stdtimescale = 0
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		do
+			local spring = debug.getupvalue(client.char.setsprint, 10)
+			local mt = getrawmetatable(spring)
+			local old_index = mt.__index
+			setreadonly(mt, false)
+			mt.__index = newcclosure(function(t, k)
+				local result = old_index(t, k)
+				if k == "p" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then 
+					if client.logic.currentgun.type ~= "KNIFE" then
+						debug.setupvalue(client.logic.currentgun.step, 28, function() return CFrame.new() end)
+					end
+					return 0 
+				end
+				return result
+			end)
+		end
+		ButtonPressed.Event:Connect(function(tab, gb, name)
+			if tab == "Misc" and name == "Invisibility" then
+				local oldsend = client.net.send
+
+				client.net.send = function(self, event, ...)
+					if event == "repupdate" then return end
+					oldsend(self, event, ...)
+				end
+
+				local char = game.Players.LocalPlayer.Character
+				local getChild = char.FindFirstChild
+
+				local op = getChild(char, "HumanoidRootPart").CFrame
+				getChild(char, "HumanoidRootPart").CFrame = CFrame.new(9e9, math.huge, 9e9)
+				--yes
+				wait(1)
+				do 
+					local p = Instance.new("Model", workspace)
+					local char = game.Players.LocalPlayer.Character
+					for k, v in pairs(char:GetChildren()) do
+						if v.ClassName == 'Part' then
+							copy = v:Clone()
+							v.Parent = p
+							copy.Parent = char
+						end
+					end
+				end
+				wait(0)
+				getChild(char, "HumanoidRootPart").CFrame = op
+				-- come bak
+				getChild(char, "HumanoidRootPart").Velocity = Vector3.new()
+				client.net.send = oldsend
+			end
+		end)
+
+		function misc:RoundFreeze()
+			if mp:getval("Misc", "Movement", "Ignore Round Freeze") then
+				client.roundsystem.lock = false
+			end
+		end
+	
+		function misc:FlyHack()
+	
+	
+			if mp:getval("Misc", "Movement", "Fly Hack") and keybindtoggles.flyhack then
+				local speed = mp:getval("Misc", "Movement", "Fly Hack Speed")
+				
+				local travel = CACHED_VEC3
+				local looking = Camera.CFrame.lookVector --getting camera looking vector
+				local rightVector = Camera.CFrame.RightVector
+				
+	
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
+					travel += looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
+					travel -= looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
+					travel += rightVector
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
+					travel -= rightVector
+				end
+				
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+					travel += Vector3.new(0,1,0)
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+					travel -= Vector3.new(0,1,0)
+				end
+				
+				if travel.Unit.X == travel.Unit.X then
+					rootpart.Anchored = false
+					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
+				else
+					rootpart.Velocity = Vector3.new(0, 0, 0)
+					rootpart.Anchored = true
+				end
+	
+			elseif not keybindtoggles.flyhack then
+	
+				rootpart.Anchored = false
+	
+			end
+	
+		
+		end
+	
+		function misc:SpeedHack()
+	
+	
+			local type = mp:getval("Misc", "Movement", "Speed Hack")
+			if type ~= 1 then
+				local speed = mp:getval("Misc", "Movement", "Speed Hack Speed")
+	
+				local travel = CACHED_VEC3
+				local looking = Camera.CFrame.LookVector
+				local rightVector = Camera.CFrame.RightVector
+	
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
+					travel += looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
+					travel -= looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
+					travel += rightVector
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
+					travel -= rightVector
+				end
+	
+				travel = Vector2.new(travel.X, travel.Z).Unit
+	
+				if travel.X == travel.X then
+					if type == 3 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+						return
+					elseif type == 4 and not humanoid.Jump then
+						return
+					end
+					rootpart.Velocity = Vector3.new(travel.X * speed, rootpart.Velocity.Y, travel.Y * speed)
+				end
+			end
+		
+		
+		end
+		
+		function misc:AutoJump()
+	
+	
+			if mp:getval("Misc", "Movement", "Auto Jump") and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+				humanoid.Jump = true
+			end
+	
+	
+		end
+	
+		function misc:GravityShift()
+	
+	
+			if mp:getval("Misc", "Movement", "Gravity Shift") then
+				local scaling = mp:getval("Misc", "Movement", "Gravity Shift Percentage")
+				local mappedGrav = math.map(scaling, -100, 100, 0, 196.2)
+				workspace.Gravity = 196.2 + mappedGrav
+			else
+				workspace.Gravity = 196.2
+			end
+	
+	
+		end
+
+		function misc:CollectTags()
+			if not mp:getval("Misc", "Extra", "Collect Dog Tags") then return end
+			local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
+			if rootpart then
+				local dogTag = workspace.Ignore.GunDrop:FindFirstChild("DogTag")
+				if dogTag then
+					client.net:send("capturedogtag", dogTag)
+					local oldsend = client.net.send
+					client.net.send = function(self, e, ...)
+						if e == "repupdate" then return end
+						oldsend(self, e, ...)
+					end
+					do
+						local oldpos = rootpart.CFrame
+						
+						rootpart.CFrame = dogTag.Tag.CFrame
+						oldsend(oldsend, "capturedogtag", dogTag)
+						wait()
+						rootpart.CFrame = oldpos
+					end
+					client.net.send = oldsend
+				end
+			end
+		end
+	
+		function misc:MainLoop()
+			if keybindtoggles.crash then return end
+			lifetime += 1
+	
+			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
+			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
+			if rootpart and humanoid then
+				misc:SpotPlayers()
+				if not CHAT_BOX.Active then
+					misc:FlyHack()
+					misc:SpeedHack()
+					misc:AutoJump()
+					misc:GravityShift()
+					misc:RoundFreeze()
+				elseif keybindtoggles.flyhack then
+					rootpart.Anchored = true
+				end
+			end
+			misc:CollectTags()
+	
+	
+		end
+	end
+
 	do--ANCHOR send hook
 		client.net.send = function(self, ...)
 			local args = {...}
+			if args[1] == "spawn" then 
+				misc:ApplyGunMods() 
+				misc:SetLifetime(0)
+			end
+			if args[1] == "bullethit" and mp:getval("Misc", "Extra", "Suppress Only") then return end
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
 			if args[1] == "stab" then
-				local key = mp:getval("Rage", "Extra", "Knife Bot", "keybind")
-				if mp:getval("Rage", "Extra", "Knife Bot") and not key or INPUT_SERVICE:IsKeyDown(key) then
+				if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
 						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
 					end
@@ -4118,10 +4285,9 @@ elseif mp.game == "pf" then
 				local yaw = args[3].Y
 	
 				local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
-				local yawChoice = mp:getval("Rage", "Anti Aim", "Yaw")
+				local yawChoice = mp:getval("Rage",   "Anti Aim", "Yaw")
 				---"off,down,up,roll,upside down,random"
 				--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
-				--{"Off", "Backward", "Spin", "Random"} yaw
 	
 				if pitchChoice == 2 then
 					pitch = -4
@@ -4132,19 +4298,20 @@ elseif mp.game == "pf" then
 				elseif pitchChoice == 5 then
 					pitch = -math.pi
 				elseif pitchChoice == 6 then
-					pitch = tick() * 0.01
+					pitch = (tick() * 0.01) % 6.28
 				elseif pitchChoice == 7 then
-					pitch = -tick() * 0.01
+					pitch = (-tick() * 0.01) % 6.28
 				elseif pitchChoice == 8 then
-					pitch = math.random(0)
+					pitch = math.random(99999)
 				end
 	
+				--{"Off", "Backward", "Spin", "Random"} yaw
 				if yawChoice == 2 then
 					yaw += math.pi
 				elseif yawChoice == 3 then
 					yaw = (tick() * 0.01) % 12
 				elseif yawChoice == 4 then
-					yaw = math.random(0)
+					yaw = math.random(99999)
 				end
 	
 				-- yaw += jitter
@@ -4155,7 +4322,6 @@ elseif mp.game == "pf" then
 		end
 	end
 	
-	local legitbot = {}
 	do -- ANCHOR Legitbot definition defines legit functions
 	
 		function legitbot:MainLoop()
@@ -4264,8 +4430,7 @@ elseif mp.game == "pf" then
 	
 		function legitbot:TriggerBot()
 	
-	
-			if INPUT_SERVICE:IsKeyDown(mp:getval("Legit", "Trigger Bot", "Enabled", "keybind")) then
+			if IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
 				local parts = mp:getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes")
 	
 				parts["Head"] = parts[1]
@@ -4297,152 +4462,249 @@ elseif mp.game == "pf" then
 	
 	end
 	
-	local movement = {}
-	do -- ANCHOR movement definitionz
-		local rootpart
-		local humanoid
 	
-		function movement:RoundFreeze()
-			if mp:getval("Misc", "Movement", "Ignore Round Freeze") then
-				client.roundsystem.lock = false
-			end
+	--ADS Fov hook
+	
+	local function renderVisuals()
+		setconstant(client.cam.step, 11, mp:getval("Visuals", "Local Visuals", "No Camera Bob") and 0 or 0.5)
+		SCREEN_SIZE = Camera.ViewportSize
+		--------------------------------------world funnies
+		if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
+			game.Lighting:SetMinutesAfterMidnight(mp.options["Visuals"]["World Visuals"]["Custom Time"][1])
 		end
-	
-		function movement:FlyHack()
-	
-	
-			if mp:getval("Misc", "Movement", "Fly Hack") and keybindtoggles.flyhack then
-				local speed = mp:getval("Misc", "Movement", "Fly Hack Speed")
-				
-				local travel = CACHED_VEC3
-				local looking = Camera.CFrame.lookVector --getting camera looking vector
-				local upVector = Camera.CFrame.UpVector
-				local rightVector = Camera.CFrame.RightVector
-				
-	
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
-					travel += looking
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
-					travel -= looking
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-					travel += rightVector
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-					travel -= rightVector
-				end
-				
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
-					travel += upVector
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-					travel -= upVector
-				end
-				
-				if travel.Unit.X == travel.Unit.X then
-					rootpart.Anchored = false
-					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
-				else
-					rootpart.Velocity = Vector3.new(0, 0, 0)
-					rootpart.Anchored = true
-				end
-	
-			elseif not keybindtoggles.flyhack then
-	
-				rootpart.Anchored = false
-	
-			end
-	
-		
+		if mp.options["Visuals"]["World Visuals"]["Ambience"][1] then
+			game.Lighting.Ambient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
+			game.Lighting.OutdoorAmbient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
+		else
+			game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
+			game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
 		end
+		if mp.open then
+			client.char.unaimedfov = mp.options["Visuals"]["Local Visuals"]["Camera FOV"][1]
 	
-		function movement:SpeedHack()
-	
-	
-			local type = mp:getval("Misc", "Movement", "Speed Hack")
-			if type ~= 1 then
-				local speed = mp:getval("Misc", "Movement", "Speed Hack Speed")
-	
-				local travel = CACHED_VEC3
-				local looking = Camera.CFrame.LookVector
-				local rightVector = Camera.CFrame.RightVector
-	
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
-					travel += looking
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
-					travel -= looking
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-					travel += rightVector
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-					travel -= rightVector
-				end
-	
-				travel = Vector2.new(travel.X, travel.Z).Unit
-	
-				if travel.X == travel.X then
-					if type == 3 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
-						return
-					elseif type == 4 and not humanoid.Jump then
-						return
-					end
-					rootpart.Velocity = Vector3.new(travel.X * speed, rootpart.Velocity.Y, travel.Y * speed)
-				end
-			end
-		
-		
-		end
-		
-		function movement:AutoJump()
-	
-	
-			if mp:getval("Misc", "Movement", "Auto Jump") and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
-				humanoid.Jump = true
-			end
-	
-	
-		end
-	
-		function movement:GravityShift()
-	
-	
-			if mp:getval("Misc", "Movement", "Gravity Shift") then
-				local scaling = mp:getval("Misc", "Movement", "Gravity Shift Percentage")
-				local mappedGrav = math.map(scaling, -100, 100, 0, 196.2)
-				workspace.Gravity = 196.2 + mappedGrav
+			if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
+				game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
+				game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
 			else
-				workspace.Gravity = 196.2
+				game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
+				game.Lighting.MapSaturation.Saturation = -0.25
 			end
-	
-	
 		end
-	
-		function movement:MainLoop()
-	
-	
-			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
-			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
-			if rootpart and humanoid then
-				if not CHAT_BOX.Active then
-					movement:FlyHack()
-					movement:SpeedHack()
-					movement:AutoJump()
-					movement:GravityShift()
-					movement:RoundFreeze()
-				elseif keybindtoggles.flyhack then
-					rootpart.Anchored = true
+
+		for k, v in pairs(allesp) do
+			for k1, v1 in pairs(v) do
+				if type(v1) ~= "table" then continue end
+				for k2, drawing in ipairs(v1) do
+					drawing.Visible = false
 				end
 			end
+		end
+
+		for k, v in ipairs(allesp.skel) do
+			for k1, v1 in ipairs(v) do
+				v1.Visible = false
+			end
+		end
 	
-	
+		if client.deploy.isdeployed() then
+		
+			for Index, Player in ipairs(Players:GetPlayers()) do
+				CreateThread(function()
+					if not client.hud:isplayeralive(Player) then return end
+					local parts = client.replication.getbodyparts(Player)
+		
+					if not parts then return end
+		
+					Player.Character = parts.rootpart.Parent
+		
+					local torso = parts.torso.CFrame
+					local cam = Camera.CFrame
+		
+					local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
+					local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
+		
+					local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
+					local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
+		
+					local minY = math.abs(bottom.Y - top.Y)
+					local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.X - top.X) * 2, 0, minY), minY / 2))
+					local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
+		
+					local boxSize = Vector2.new(sizeX, sizeY)
+					local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(math.min(top.Y, bottom.Y)))
+		
+					local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
+					local health = math.ceil(client.hud:getplayerhealth(Player))
+					local spoty = 0
+					local boxtransparency = mp:getval("ESP", GroupBox, "Box", "color")[4] / 255
+			
+					if (topIsRendered or bottomIsRendered) then
+						if mp.options["ESP"][GroupBox]["Name"][1] then
+		
+							local name = tostring(Player.Name)
+							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+								name = string.lower(name)
+							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+								name = string.upper(name)
+							end
+							nametext = allesp.text.name[Index]
+							
+							nametext.Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+							nametext.Visible = true
+							nametext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
+							nametext.Color = RGB(mp.options["ESP"][GroupBox]["Name"][5][1][1], mp.options["ESP"][GroupBox]["Name"][5][1][2], mp.options["ESP"][GroupBox]["Name"][5][1][3])
+							nametext.Transparency = mp.options["ESP"][GroupBox]["Name"][5][1][4]/255
+		
+						end
+						if mp.options["ESP"][GroupBox]["Box"][1] then
+							
+							local color = mp:getval("ESP", GroupBox, "Box", "color", true)
+							for i = -1, 0 do
+								local box = allesp.box[i+2][Index]
+								box.Visible = true
+								box.Position = boxPosition + Vector2.new(i, i)
+								box.Size = boxSize - Vector2.new(i*2, i*2)
+								box.Transparency = boxtransparency
+								if i == 0 then box.Color = color end
+							end
+		
+						end
+						if mp.options["ESP"][GroupBox]["Health Bar"][1] then
+							local ySizeBar = -math.floor(boxSize.Y * health / 100)
+							if mp:getval("ESP", GroupBox, "Health Number") and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+								local hptext = allesp.hp.text[Index]
+								hptext.Visible = true
+								hptext.Text = tostring(health)
+		
+								local tb = hptext.TextBounds
+		
+								hptext.Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y * 0.5, -tb.Y * 0.5, boxSize.Y))
+								hptext.Color = mp:getval("ESP", GroupBox, "Health Number", "color", true)
+								hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
+							end
+		
+							allesp.hp.outer[Index].Visible = true
+							allesp.hp.outer[Index].Position = Vector2.new(math.floor(boxPosition.X) - 6, math.floor(boxPosition.y) - 1)
+							allesp.hp.outer[Index].Size = Vector2.new(4, boxSize.Y + 2)
+							allesp.hp.outer[Index].Transparency = boxtransparency
+		
+							allesp.hp.inner[Index].Visible = true
+							allesp.hp.inner[Index].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
+		
+							allesp.hp.inner[Index].Size = Vector2.new(2, ySizeBar)
+		
+							allesp.hp.inner[Index].Color = math.ColorRange(health, {
+								[1] = {start = 0, color = mp:getval("ESP", GroupBox, "Health Bar", "color1", true)},
+								[2] = {start = 100, color = mp:getval("ESP", GroupBox, "Health Bar", "color2", true)}
+							})
+		
+						elseif mp.options["ESP"][GroupBox]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+		
+							local hptext = allesp.hp.text[Index]
+		
+							hptext.Visible = true
+							hptext.Text = tostring(health)
+		
+							local tb = hptext.TextBounds
+		
+							hptext.Position = boxPosition + Vector2.new(-tb.X, 0)
+							hptext.Color = mp:getval("ESP", GroupBox, "Health Number", "color", true)
+							hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
+		
+						end
+						if mp.options["ESP"][GroupBox]["Held Weapon"][1] then
+							
+							local charWeapon = Player.Character:GetChildren()[8]
+							local wepname = charWeapon and charWeapon.Name or "KNIFE"
+		
+							if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+								wepname = string.lower(wepname)
+							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+								wepname = string.upper(wepname)
+							end
+		
+							local weptext = allesp.text.weapon[Index]
+		
+							spoty += 12
+							weptext.Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+							weptext.Visible = true
+							weptext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y)
+							weptext.Color = mp:getval("ESP", GroupBox, "Held Weapon", "color", true)
+							weptext.Transparency = mp.options["ESP"][GroupBox]["Held Weapon"][5][1][4]/255
+		
+						end
+						if mp.options["ESP"][GroupBox]["Distance"][1] then
+		
+							local disttext = allesp.text.distance[Index]
+		
+							disttext.Text = tostring(bottom.z).."s" --TODO alan i told you to make this not worldtoscreen based.
+							disttext.Visible = true
+							disttext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y + spoty)
+							disttext.Color = mp:getval("ESP", GroupBox, "Distance", "color", true)
+							disttext.Transparency = mp.options["ESP"][GroupBox]["Distance"][5][1][4]/255
+		
+						end
+						if mp.options["ESP"][GroupBox]["Skeleton"][1] then
+		
+							local torso = Camera:WorldToViewportPoint(Player.Character.Torso.Position)
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+		
+								local posie = Camera:WorldToViewportPoint(Player.Character:FindFirstChild(v2).Position)
+								line.From = Vector2.new(posie.x, posie.y)
+								line.To = Vector2.new(torso.x, torso.y)
+								line.Visible = true
+								line.Color = mp:getval("ESP", GroupBox, "Skeleton", "color", true)
+								line.Transparency = mp.options["ESP"][GroupBox]["Skeleton"][5][1][4]/255
+		
+							end
+		
+						end
+		
+					elseif GroupBox == "Enemy ESP" and mp:getval("ESP", "Enemy ESP", "Out of View") then
+		
+						local color = mp:getval("ESP", "Enemy ESP", "Out of View", "color", true)
+						for i = 1, 2 do
+							local Tri = allesp.arrows[i][Index]
+							
+							local partCFrame = Player.Character.Torso.CFrame
+		
+							Tri.Visible = true
+							
+							local anglesTo = camera:GetAnglesTo(partCFrame.Position)
+							local direction = -camera:GetAngles().yaw + anglesTo.yaw - math.pi
+							
+							direction = Vector2.new(math.sin(direction), math.cos(direction))
+		
+							local pos = (direction * SCREEN_SIZE.Y * 0.35) + (SCREEN_SIZE * 0.5)
+		
+							Tri.PointA = pos
+							Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * 15
+							Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * 15
+		
+							Tri.Color = i == 1 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+							Tri.Transparency = mp:getval("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
+						end
+		
+					end
+					
+				end)
+			end
 		end
 	end
-	
+	local oldpos = nil
 	local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 		inputBeganMenu(key)
+		if mp:getval("Misc", "Extra", "Crash Spectators")and key.KeyCode == mp:getval("Misc", "Extra", "Crash Spectators", "keybind") then
+			keybindtoggles.crash = not keybindtoggles.crash
+			if keybindtoggles.crash then
+				oldpos = LOCAL_PLAYER.Character.HumanoidRootPart.CFrame.Position
+				LOCAL_PLAYER.Character.HumanoidRootPart.CFrame = CFrame.new(oldpos.X, math.huge, oldpos.Y)
+			elseif oldpos then
+				LOCAL_PLAYER.Character.HumanoidRootPart.Velocity = Vector3.new()
+				LOCAL_PLAYER.Character.HumanoidRootPart.CFrame = CFrame.new(oldpos)
+			end
+		end
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
 			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 		end
@@ -4461,8 +4723,8 @@ elseif mp.game == "pf" then
 			legitbot:TriggerBot()
 			legitbot:MainLoop()
 		end
-		do --movement
-			movement:MainLoop()
+		do --misc
+			misc:MainLoop()
 		end
 		do--ragebot
 			ragebot:KnifeBotMain()
@@ -4905,7 +5167,7 @@ elseif mp.game == "pf" then
 					x = mp.columns.left,
 					y = 66,
 					width = mp.columns.width,
-					height = 224,
+					height = 250,
 					content = {
 						{
 							type = "toggle",
@@ -5006,6 +5268,16 @@ elseif mp.game == "pf" then
 							type = "toggle",
 							name = "Show Only Last Backtack",
 							value = false
+						},
+						{
+							type = "toggle",
+							name = "Out of View",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Arrow Color",
+								color = {255, 255, 255, 255}
+							}
 						},
 					}
 				},
@@ -5171,9 +5443,9 @@ elseif mp.game == "pf" then
 				{
 					name = "Dropped Esp",
 					x = mp.columns.left,
-					y = 296,
+					y = 322,
 					width = mp.columns.width,
-					height = 287,
+					height = 261,
 					content = {
 						{
 							type = "toggle",
@@ -5328,6 +5600,11 @@ elseif mp.game == "pf" then
 							minvalue = 60,
 							maxvalue = 120,
 							stradd = "°"
+						},
+						{
+							type = "toggle", 
+							name = "No Camera Bob",
+							value = false
 						},
 						{
 							type = "toggle",
@@ -5530,6 +5807,93 @@ elseif mp.game == "pf" then
 						},
 					},
 				},
+				{
+					name = "Extra",
+					x = mp.columns.right,
+					y = 66,
+					width = 230,
+					height = 200,
+					content = {
+						{
+							type = "button",
+							name = "Invisibility"
+						},
+						{
+							type = "toggle",
+							name = "Crash Spectators",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.Y
+							}
+						},
+						{
+							type = "toggle", 
+							name = "Collect Dog Tags",
+							value = false
+						},
+						{
+							type = "toggle",
+							name = "Auto Spot",
+							value = false
+						},
+						{
+							type = "toggle",
+							name = "Suppress Only",
+							value = false
+						},
+					}
+				},
+				{
+					name = "Weapon Modifications",
+					x = mp.columns.right,
+					y = 272,
+					width = 230,
+					height = 200,
+					content = {
+						{
+							type = "toggle",
+							name = "Enabled",
+							value = false
+						},
+						{
+							type = "slider", 
+							name = "Fire Rate Scale",
+							value = 150,
+							minvalue = 50, 
+							maxvalue = 250,
+							stradd = "%"
+						},
+						{	
+							type = "slider",
+							name = "Recoil Scale",
+							value = 10,
+							minvalue = 1, 
+							maxvalue = 100,
+							stradd = "%"
+						},
+						{
+							type = "toggle", 
+							name = "Instant Reload",
+							value = true
+						},
+						{
+							type = "toggle", 
+							name = "Instant Equip",
+							value = true
+						},
+						{
+							type = "toggle",
+							name = "Fully Automatic",
+							value = true
+						},
+						{
+							type = "toggle", 
+							name = "Run and Gun",
+							value = false
+						},
+					},
+				},
 			}
 		},
 		{--ANCHOR Settings
@@ -5577,7 +5941,7 @@ elseif mp.game == "pf" then
 						{
 							type = "toggle",
 							name = "Watermark",
-							value = false,
+							value = true,
 						},
 					}
 				},
@@ -5634,9 +5998,19 @@ elseif mp.game == "pf" then
 		local playerpictures = {}
 		local function updateplist()
 			local playerlistval = mp:getval("Settings", "Player List", "Players")
-			local playerz = Players:GetPlayers()
+			local players = {}
+			for i, team in pairs(TEAMS:GetTeams()) do
+				local sorted_players = {}
+				for i1, player in pairs(team:GetPlayers()) do
+					table.insert(sorted_players, player.Name)
+				end
+				table.sort(sorted_players)
+				for i1, player_name in pairs(sorted_players) do
+					table.insert(players, Players:FindFirstChild(player_name))
+				end
+			end
 			local templist = {}
-			for k, v in pairs(playerz) do
+			for k, v in pairs(players) do
 				local plyrname = {v.Name, RGB(255, 255, 255)}
 				local teamtext = {"None", RGB(255, 255, 255)}
 				local plyrstatus = {"None", RGB(255, 255, 255)}
@@ -5652,12 +6026,12 @@ elseif mp.game == "pf" then
 			end
 			plist[5] = templist
 			if playerlistval ~= nil then
-				for i, v in ipairs(playerz) do
+				for i, v in ipairs(players) do
 					if v.Name == playerlistval then
 						selected_plyr = v
 						break
 					end
-					if i == #playerz then
+					if i == #players then
 						selected_plyr = nil
 						mp.list.setval(plist, nil)
 					end
@@ -5684,15 +6058,11 @@ elseif mp.game == "pf" then
 				local playerhealth = "?"
 
 				
-				local humanoid = player:FindFirstChild("Humanoid")
-				if humanoid ~= nil then 
-					if humanoid.Health ~= nil then
-						playerhealth = tostring(humanoid.Health).. "/".. tostring(humanoid.MaxHealth)
-					else
-						playerhealth = "No health found"
-					end
+				local alive = client.hud:isplayeralive(player)
+				if alive then 
+					playerhealth = math.ceil(client.hud:getplayerhealth(player))
 				else
-					playerhealth = "Humanoid not found"
+					playerhealth = "Dead"
 				end
 
 				plistinfo[1].Text = "Name: ".. player.Name.."\nTeam: ".. playerteam .."\nHealth: ".. playerhealth
