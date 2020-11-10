@@ -25,6 +25,7 @@ local mp = { -- this is for menu stuffs n shi
 	connections = {},
 	list = {},
 	unloaded = false,
+	copied_clr = nil,
 	game = "uni",
 	tabnum2str = {} -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
 }
@@ -465,11 +466,14 @@ do
 		Draw:OutlinedText(text, 2, visible, pos_x + mp.x, pos_y + mp.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
 		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
+
+	function Draw:MenuSmallText(text, visible, centered, pos_x, pos_y, tablename)
+		Draw:OutlinedText(text, 1, visible, pos_x + mp.x, pos_y + mp.y, 14, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
+		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+	end
 end
 
-
-
-local function BBMenuInit(menutable)
+function mp.BBMenuInit(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
 	do
 		Draw:MenuOutlinedRect(true, 0, 0, mp.w, mp.h, {0, 0, 0, 255}, bbmenu)  -- first gradent or whatever
@@ -512,7 +516,7 @@ local function BBMenuInit(menutable)
 			Draw:MenuBigText(name, true, false, x + 6, y + 5, tab)
 		end
 
-		function Draw:Toggle(name, value, x, y, tab)
+		function Draw:Toggle(name, value, unsafe, x, y, tab)
 			Draw:MenuOutlinedRect(true, x, y, 12, 12, {30, 30, 30, 255}, tab)
 			Draw:MenuOutlinedRect(true, x + 1, y + 1, 10, 10, {0, 0, 0, 255}, tab)
 
@@ -528,6 +532,9 @@ local function BBMenuInit(menutable)
 			end
 
 			Draw:MenuBigText(name, true, false, x + 16, y - 1, tab)
+			if unsafe == true then
+				tab[#tab].Color = RGB(245, 239, 120)
+			end
 			table.insert(temptable, tab[#tab])
 			return temptable
 		end
@@ -576,6 +583,9 @@ local function BBMenuInit(menutable)
 			end
 			Draw:MenuOutlinedRect(true, x, y + 12, length, 12, {30, 30, 30, 255}, tab)
 			Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 10, {0, 0, 0, 255}, tab)
+			
+			Draw:MenuSmallText("_", true, false, x + length - 20, y - 6, tab)
+			Draw:MenuSmallText("+", true, false, x + length - 10, y - 2, tab)
 
 			if stradd == nil then
 				stradd = ""
@@ -773,10 +783,15 @@ local function BBMenuInit(menutable)
 					for k2, v2 in pairs(v1.content) do
 						if v2.type == "toggle" then
 							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][4] = Draw:Toggle(v2.name, v2.value, v1.x + 8, v1.y + y_pos, tabz[k])
+							local unsafe = false
+							if v2.unsafe then
+								unsafe = true 
+							end
+							mp.options[v.name][v1.name][v2.name][4] = Draw:Toggle(v2.name, v2.value, unsafe, v1.x + 8, v1.y + y_pos, tabz[k])
 							mp.options[v.name][v1.name][v2.name][1] = v2.value
 							mp.options[v.name][v1.name][v2.name][2] = v2.type
 							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1}
+							mp.options[v.name][v1.name][v2.name][6] = unsafe
 							if v2.extra ~= nil then
 								if v2.extra.type == "keybind" then
 									mp.options[v.name][v1.name][v2.name][5] = {}
@@ -817,6 +832,7 @@ local function BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
 							mp.options[v.name][v1.name][v2.name][5] = false
 							mp.options[v.name][v1.name][v2.name][6] = {v2.minvalue, v2.maxvalue}
+							mp.options[v.name][v1.name][v2.name][7] = {v1.x + 7 + v1.width - 38, v1.y + y_pos - 1}
 							y_pos += 30
 						elseif v2.type == "dropbox" then
 							mp.options[v.name][v1.name][v2.name] = {}
@@ -1088,6 +1104,10 @@ local function BBMenuInit(menutable)
 	colorpicker_filled_rect(false, 199, 39, 71, 36, {255, 0, 0, 255}, colorpickerthingy)
 	local newcolor = colorpickerthingy[#colorpickerthingy]
 
+	colorpicker_big_text("copy", false, true, 198 + 36, 41, colorpickerthingy)
+	colorpicker_big_text("paste", false, true, 198 + 37, 56, colorpickerthingy)
+	local newcopy = {colorpickerthingy[#colorpickerthingy - 1], colorpickerthingy[#colorpickerthingy]}
+
 	colorpicker_big_text("Old Color", false, false, 198, 77, colorpickerthingy)
 	colorpicker_outlined_rect(false, 197, 91, 75, 40, {30, 30, 30, 255}, colorpickerthingy)
 	colorpicker_outlined_rect(false, 198, 92, 73, 38, {0, 0, 0, 255}, colorpickerthingy)
@@ -1096,6 +1116,10 @@ local function BBMenuInit(menutable)
 	colorpicker_filled_rect(false, 199, 93, 71, 36, {255, 0, 0, 255}, colorpickerthingy)
 	local oldcolor = colorpickerthingy[#colorpickerthingy]
 
+	colorpicker_big_text("copy", false, true, 198 + 36, 103	, colorpickerthingy)
+	local oldcopy = {colorpickerthingy[#colorpickerthingy]}
+
+	colorpicker_filled_rect(false, 197, cp.h - 25, 75, 20, {30, 30, 30, 255}, colorpickerthingy)
 	colorpicker_big_text("[ Apply ]", false, true, 235, cp.h - 23, colorpickerthingy)
 	local applytext = colorpickerthingy[#colorpickerthingy]
 
@@ -1262,7 +1286,7 @@ local function BBMenuInit(menutable)
 
 	local dropboxopen = false
 	local dropboxthatisopen = nil
-	local colorpickeropen = false
+	mp.colorpicker_open = false
 	local colorpickerthatisopen = nil
 	local shooties = {}
 
@@ -1303,7 +1327,7 @@ local function BBMenuInit(menutable)
 				end
 				set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 				colorpickerthatisopen = nil
-				colorpickeropen = false
+				mp.colorpicker_open = false
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 			end
 			if not mp.fading then
@@ -1797,7 +1821,7 @@ local function BBMenuInit(menutable)
 										set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 										v2[5][5] = false
 										colorpickerthatisopen = nil
-										colorpickeropen = false
+										mp.colorpicker_open = false
 									end
 								end
 							elseif v2[5][2] == "double colorpicker" then
@@ -1807,7 +1831,7 @@ local function BBMenuInit(menutable)
 											set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 											v3[5] = false
 											colorpickerthatisopen = nil
-											colorpickeropen = false
+											mp.colorpicker_open = false
 										end
 									end
 								end
@@ -1824,7 +1848,7 @@ local function BBMenuInit(menutable)
 				mp:set_menu_pos(mp.x, mp.y)
 			end
 		end
-		if colorpickeropen then
+		if mp.colorpicker_open then
 			if mp:mouse_in_colorpicker(197, cp.h - 25, 75, 20) then
 				local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 				colorpickerthatisopen[4][1].Color = tempclr
@@ -1836,7 +1860,7 @@ local function BBMenuInit(menutable)
 				else
 					colorpickerthatisopen[1] = {math.floor(tempclr.R * 255), math.floor(tempclr.G * 255), math.floor(tempclr.B * 255)}
 				end
-				colorpickeropen = false
+				mp.colorpicker_open = false
 				colorpickerthatisopen = nil
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 			end
@@ -1847,6 +1871,39 @@ local function BBMenuInit(menutable)
 			elseif mp:mouse_in_colorpicker(10, 189, 160, 14) and cp.alpha then
 				cp.dragging_b = true
 			end
+
+			--[[
+				mp.options[v.name][v1.name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
+				mp.options[v.name][v1.name][v2.name][5][1] = v2.extra.color
+				mp.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
+				mp.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 38, y_pos + v1.y - 1}
+				mp.options[v.name][v1.name][v2.name][5][5] = false
+				mp.options[v.name][v1.name][v2.name][5][6] = v2.extra.name
+			]]
+			if mp:mouse_in_colorpicker(197, 37, 75, 20) then
+				mp.copied_clr = newcolor.Color
+			elseif mp:mouse_in_colorpicker(197, 57, 75, 20) then
+				if mp.copied_clr ~= nil then
+					local cpa = false
+					local clrtable = {mp.copied_clr.R * 255, mp.copied_clr.G * 255, mp.copied_clr.B * 255}
+					if colorpickerthatisopen[1][4] ~= nil then
+						cpa = true
+						table.insert(clrtable, colorpickerthatisopen[1][4])
+					end
+					
+					set_colorpicker(true, clrtable, colorpickerthatisopen, cpa, colorpickerthatisopen[6], cp.x, cp.y)
+					local oldclr = colorpickerthatisopen[4][1].Color
+					if colorpickerthatisopen[1][4] ~= nil then
+						set_oldcolor(oldclr.R * 255, oldclr.G * 255, oldclr.B * 255, colorpickerthatisopen[1][4])
+					else
+						set_oldcolor(oldclr.R * 255, oldclr.G * 255, oldclr.B * 255)
+					end
+				end
+			end
+
+			if mp:mouse_in_colorpicker(197, 91, 75, 40) then
+				mp.copied_clr = oldcolor.Color
+			end
 		else
 			for k, v in pairs(mp.options) do
 				if mp.tabnum2str[mp.activetab] == k then
@@ -1854,7 +1911,16 @@ local function BBMenuInit(menutable)
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "toggle" and not dropboxopen then
 								if mp:mouse_in_menu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
-									if v2[1] then
+									if v2[6] then
+										if mp:getval("Settings", "Extra", "Allow Unsafe Features") and v2[1] == false then
+											v2[1] = true
+										else
+											v2[1] = false
+										end
+									else
+										v2[1] = not v2[1]
+									end
+									if not v2[1] then
 										for i = 0, 3 do
 											v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
 										end
@@ -1863,7 +1929,6 @@ local function BBMenuInit(menutable)
 											v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
 										end
 									end
-									v2[1] = not v2[1]
 								end
 								if v2[5] ~= nil then
 									if v2[5][2] == "keybind" then
@@ -1874,7 +1939,7 @@ local function BBMenuInit(menutable)
 									elseif v2[5][2] == "single colorpicker" then
 										if mp:mouse_in_menu(v2[5][3][1], v2[5][3][2], 28, 14) then
 											v2[5][5] = true
-											colorpickeropen = true
+											mp.colorpicker_open = true
 											colorpickerthatisopen = v2[5]
 											if v2[5][1][4] ~= nil then
 												set_colorpicker(true, v2[5][1], v2[5], true, v2[5][6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
@@ -1886,7 +1951,7 @@ local function BBMenuInit(menutable)
 										for k3, v3 in pairs(v2[5][1]) do
 											if mp:mouse_in_menu(v3[3][1], v3[3][2], 28, 14) then
 												v3[5] = true
-												colorpickeropen = true
+												mp.colorpicker_open = true
 												colorpickerthatisopen = v3
 												if v3[1][4] ~= nil then
 													set_colorpicker(true, v3[1], v3, true, v3[6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
@@ -1898,7 +1963,24 @@ local function BBMenuInit(menutable)
 									end
 								end
 							elseif v2[2] == "slider" and not dropboxopen then
-								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 28) then
+								if mp:mouse_in_menu(v2[7][1], v2[7][2], 22, 13) then
+									if mp:mouse_in_menu(v2[7][1], v2[7][2], 11, 13) then
+										v2[1] -= 1
+									elseif mp:mouse_in_menu(v2[7][1] + 11, v2[7][2], 11, 13) then
+										v2[1] += 1
+									end
+
+									if v2[1] < v2[6][1] then
+										v2[1] = v2[6][1]
+									elseif v2[1] > v2[6][2] then
+										v2[1] = v2[6][2]
+									end
+									v2[4][5].Text = tostring(v2[1]).. v2[4][6]
+									for i = 1, 4 do
+										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
+									end
+
+								elseif mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 28) then
 									v2[5] = true
 								end
 							elseif v2[2] == "dropbox" then
@@ -2005,6 +2087,22 @@ local function BBMenuInit(menutable)
 											end
 										end
 									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		for k, v in pairs(mp.options) do
+			for k1, v1 in pairs(v) do
+				for k2, v2 in pairs(v1) do
+					if v2[2] == "toggle" then
+						if v2[6] then
+							if not mp:getval("Settings", "Extra", "Allow Unsafe Features") then
+								v2[1] = false
+								for i = 0, 3 do
+									v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
 								end
 							end
 						end
@@ -2270,7 +2368,7 @@ local function BBMenuInit(menutable)
 			elseif not mp.mousedown then
 				dontdrag = false
 			end
-			if colorpickeropen then
+			if mp.colorpicker_open then
 				if cp.dragging_m then
 					set_dragbar_m(math.clamp(LOCAL_MOUSE.X, cp.x + 12, cp.x + 167) - 2, math.clamp(LOCAL_MOUSE.Y + 36, cp.y + 25, cp.y + 180) - 2)
 
@@ -2288,6 +2386,16 @@ local function BBMenuInit(menutable)
 					set_dragbar_b(math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ), cp.y + 188)
 					newcolor.Transparency = (math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158
 					cp.hsv.a = math.floor(((math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158) * 255)
+				else
+					local setvisnew = mp:mouse_in_colorpicker(197, 37, 75, 40)
+					for i, v in ipairs(newcopy) do
+						v.Visible = setvisnew
+					end
+
+					local setvisold = mp:mouse_in_colorpicker(197, 91, 75, 40)
+					for i, v in ipairs(oldcopy) do
+						v.Visible = setvisold
+					end
 				end
 			end
 		else
@@ -2409,7 +2517,7 @@ if mp.game == "uni" then
 	Draw:Circle(false, 20, 20, 10, 3, 20, {10, 10, 10, 215}, mp.fovcircle)
 	Draw:Circle(false, 20, 20, 10, 1, 20, {255, 255, 255, 255}, mp.fovcircle)
 
-	BBMenuInit({
+	mp.BBMenuInit({
 		{
 			name = "Aimbot",
 			content = {
@@ -2766,6 +2874,12 @@ if mp.game == "uni" then
 					content = {
 						{
 							type = "toggle",
+							name = "Enable Tick Manipulation",
+							value = false,
+							unsafe = true,
+						},
+						{
+							type = "toggle",
 							name = "Shift Tick Base",
 							value = false,
 							extra = {
@@ -2778,7 +2892,7 @@ if mp.game == "uni" then
 							name = "Shifted Tick Base Add",
 							value = 20,
 							minvalue = 1,
-							maxvalue = 5000,
+							maxvalue = 1000,
 							stradd = "ms"
 						}
 					}
@@ -2848,6 +2962,11 @@ if mp.game == "uni" then
 						{
 							type = "button",
 							name = "Unload Cheat"
+						},
+						{
+							type = "toggle",
+							name = "Allow Unsafe Features",
+							value = false,
 						}
 					}
 				},
@@ -3014,17 +3133,8 @@ if mp.game == "uni" then
 		end
 	end
 
+	mp.tickbase_manip_added = false
 	mp.tickbaseadd = 0
-	shared.tick_ref = hookfunction(tick, function()
-		if mp == nil then
-			return shared.tick_ref() 
-		elseif mp:getval("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(mp:getval("Misc", "Exploits", "Shift Tick Base", "keybind")) then
-			mp.tickbaseadd += mp:getval("Misc", "Exploits", "Shifted Tick Base Add") * 0.001
-			return shared.tick_ref() + mp.tickbaseadd
-		else
-			return shared.tick_ref() 
-		end
-	end)
 
 	local function SpeedHack()
 		local speed = mp:getval("Misc", "Movement", "Speed")
@@ -3123,6 +3233,19 @@ if mp.game == "uni" then
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			if mp.open then
+				if mp.tickbase_manip_added == false and mp:getval("Misc", "Exploits", "Enable Tick Manipulation") then
+					shared.tick_ref = hookfunc(tick, function()
+						if mp == nil then
+							return shared.tick_ref() 
+						elseif mp:getval("Misc", "Exploits", "Enable Tick Manipulation") and mp:getval("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(mp:getval("Misc", "Exploits", "Shift Tick Base", "keybind")) then
+							mp.tickbaseadd += mp:getval("Misc", "Exploits", "Shifted Tick Base Add") * 0.001
+							return shared.tick_ref() + mp.tickbaseadd
+						else
+							return shared.tick_ref() 
+						end
+					end)
+					mp.tickbase_manip_added = true
+				end
 				if mp.tabnum2str[mp.activetab] == "Settings" then
 					game.RunService.Stepped:wait()
 					updateplist()
@@ -3148,7 +3271,7 @@ if mp.game == "uni" then
 					mp.fovcircle[2].Transparency = transparency/255
 				else
 					mp.fovcircle[1].Visible = false
-					mp.fovcircle[2].Visible = true
+					mp.fovcircle[2].Visible = false
 				end
 				if mp:getval("Visuals", "Misc Visuals", "Custom Crosshair") then
 					local size = mp:getval("Visuals", "Misc Visuals", "Crosshair Size")
@@ -4742,16 +4865,13 @@ elseif mp.game == "pf" then
 	local heartbeat = game.RunService.Heartbeat:Connect(function()
 		ragebot:StanceLoop()
 	end)
-	BBMenuInit({
+	mp.BBMenuInit({
 		{--ANCHOR Legit
 			name = "Legit",
 			content = {
 				{
 					name = "Aim Assist",
-					x = 17,
-					y = 66,
-					width = mp.columns.width,
-					height = 332,
+					autopos = "left",
 					content = {
 						{
 							type = "toggle",
@@ -4830,10 +4950,7 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Position Adjustment",
-					x = mp.columns.left,
-					y = 404,
-					width = mp.columns.width,
-					height = 76,
+					autopos = "left",
 					content = {
 						{
 							type = "toggle",
@@ -4852,10 +4969,8 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Bullet Redirection",
-					x = mp.columns.left,
-					y = 486,
-					width = mp.columns.width,
-					height = 97,
+					autopos = "left",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -4874,10 +4989,7 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Trigger Bot",
-					x = mp.columns.right,
-					y = 66,
-					width = mp.columns.width,
-					height = 254,
+					autopos = "right",
 					content = {
 						{
 							type = "toggle",
@@ -4934,10 +5046,8 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Recoil Control",
-					x = mp.columns.right,
-					y = 326,
-					width = mp.columns.width,
-					height = 257,
+					autopos = "right",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -4982,10 +5092,7 @@ elseif mp.game == "pf" then
 			content = {
 				{
 					name = "Aimbot",
-					x = mp.columns.left,
-					y = 66,
-					width = mp.columns.width,
-					height = 272,
+					autopos = "left",
 					content = {
 						{
 							type = "toggle",
@@ -5051,10 +5158,7 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Hack vs. Hack",
-					x = mp.columns.right,
-					y = 66,
-					width = mp.columns.width,
-					height = 156,
+					autopos = "right",
 					content = {
 						{
 							type = "toggle",
@@ -5093,10 +5197,8 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Extra",
-					x = mp.columns.left,
-					y = 344,
-					width = mp.columns.width,
-					height = 200,
+					autopos = "left",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5116,10 +5218,8 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Anti Aim",
-					x = mp.columns.right,
-					y = 228,
-					width = mp.columns.width,
-					height = 250,
+					autopos = "right",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5171,10 +5271,7 @@ elseif mp.game == "pf" then
 			content = {
 				{
 					name = "Enemy ESP",
-					x = mp.columns.left,
-					y = 66,
-					width = mp.columns.width,
-					height = 250,
+					autopos = "left",
 					content = {
 						{
 							type = "toggle",
@@ -5290,10 +5387,7 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Team ESP",
-					x = mp.columns.right,
-					y = 66,
-					width = mp.columns.width,
-					height = 188,
+					autopos = "right",
 					content = {
 						{
 							type = "toggle",
@@ -5384,10 +5478,8 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "ESP Settings",
-					x = mp.columns.right,
-					y = 260,
-					width = mp.columns.width,
-					height = 323,
+					autopos = "right",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5411,8 +5503,8 @@ elseif mp.game == "pf" then
 						{
 							type = "slider",
 							name = "Max Text Length",
-							value = 0,
-							minvalue = 0,
+							value = 6,
+							minvalue = 6,
 							maxvalue = 32
 						},
 						{
@@ -5449,10 +5541,8 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Dropped Esp",
-					x = mp.columns.left,
-					y = 322,
-					width = mp.columns.width,
-					height = 261,
+					autopos = "left",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5503,10 +5593,8 @@ elseif mp.game == "pf" then
 			content = {
 				{
 					name = "Local Visuals",
-					x = mp.columns.left,
-					y = 66,
-					width = mp.columns.width,
-					height = 517,
+					autopos = "left",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5649,10 +5737,7 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "World Visuals",
-					x = mp.columns.right,
-					y = 66,
-					width = mp.columns.width,
-					height = 175,
+					autopos = "right",
 					content = {
 						{
 							type = "toggle",
@@ -5698,10 +5783,8 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Misc Visuals",
-					x = mp.columns.right,
-					y = 371,
-					width = mp.columns.width,
-					height = 212,
+					autopos = "right",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5748,10 +5831,8 @@ elseif mp.game == "pf" then
 			content = {
 				{
 					name = "Movement",
-					x = mp.columns.left,
-					y = 66,
-					width = mp.columns.width,
-					height = 517,
+					autopos = "left",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5816,10 +5897,7 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Extra",
-					x = mp.columns.right,
-					y = 66,
-					width = 230,
-					height = 200,
+					autopos = "right",
 					content = {
 						{
 							type = "button",
@@ -5853,10 +5931,8 @@ elseif mp.game == "pf" then
 				},
 				{
 					name = "Weapon Modifications",
-					x = mp.columns.right,
-					y = 272,
-					width = 230,
-					height = 200,
+					autopos = "right",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5948,7 +6024,7 @@ elseif mp.game == "pf" then
 						{
 							type = "toggle",
 							name = "Watermark",
-							value = true,
+							value = false,
 						},
 					}
 				},
@@ -5966,6 +6042,11 @@ elseif mp.game == "pf" then
 						{
 							type = "button",
 							name = "Unload Cheat"
+						},
+						{
+							type = "toggle",
+							name = "Allow Unsafe Features",
+							value = false,
 						}
 					}
 				},
@@ -6051,6 +6132,7 @@ elseif mp.game == "pf" then
 			for i, v in ipairs(Players:GetPlayers()) do
 				if not table.contains(playerpictures, v) then
 					local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+
 					playerpictures[v] = game:HttpGet(content)
 				end
 			end
