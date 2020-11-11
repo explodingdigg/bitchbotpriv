@@ -3911,7 +3911,15 @@ elseif mp.game == "pf" then
 
 					local ray_distance = (target_pos - ray_pos).Magnitude
 
-					table.insert(results, {player = ply, part = parts.head, tppos = ray_pos, direction = target_direction, dist = target_dist, insight = ray_distance < 15 and part1 == part2})
+					table.insert(results, 
+						{player = ply,
+						part = parts.head,
+						tppos = ray_pos,
+						direction = target_direction,
+						dist = target_dist,
+						insight = ray_distance < 15 and part1 == part2
+						}
+					)
 				end
 	
 			end
@@ -3952,41 +3960,35 @@ elseif mp.game == "pf" then
 		local tp_unlock = true
 
 		function ragebot:TPAura()
-			if misc:GetLifetime() > 100 then
-				CreateThread(function()
-					tp_unlock = false
-					local rp = LOCAL_PLAYER.Character.HumanoidRootPart
-					local targets = ragebot:GetKnifeTargets()
+			local rp = LOCAL_PLAYER.Character.HumanoidRootPart
+			local targets = ragebot:GetKnifeTargets()
 
-					for k, target in pairs(targets) do
-						if target.insight then
-							rp.CFrame = CFrame.new(target.tppos)
-							tp_unlock = true
-							return
-						end
-					end
-					
-					if tp_unlock then return end
-
-					local path = PATHFINDING:CreatePath({AgentRadius = 4})
-
-					for k, target in pairs(targets) do
-						path:ComputeAsync(rp.Position, target.part.Position)
-
-						if path.Status ~= Enum.PathStatus.Success then continue end
-						
-						local path_points = path:GetWaypoints()
-
-						for i, point in pairs(path_points) do
-							if tp_unlock then return end
-							rp.CFrame = CFrame.new(point.Position + Vector3.new(0,2,0))
-							game.RunService.RenderStepped:Wait()
-						end
-						break
-					end
-					tp_unlock = true
-				end)
+			for k, target in pairs(targets) do
+				local dist = target.direction.Magnitude > 40 and 40 or target.direction.Magnitude
+				if target.insight then
+					rp.CFrame += target.direction.Unit * dist
+					break
+				end
 			end
+			
+			-- if tp_unlock then return end
+
+			-- local path = PATHFINDING:CreatePath({AgentRadius = 4})
+
+			-- for k, target in pairs(targets) do
+			-- 	path:ComputeAsync(rp.Position, target.part.Position)
+
+			-- 	if path.Status ~= Enum.PathStatus.Success then continue end
+				
+			-- 	local path_points = path:GetWaypoints()
+
+			-- 	for i, point in pairs(path_points) do
+			-- 		if tp_unlock then return end
+			-- 		rp.CFrame = CFrame.new(point.Position + Vector3.new(0,2,0))
+			-- 		game.RunService.RenderStepped:Wait()
+			-- 	end
+			-- 	break
+			-- end
 			return ragebot:KnifeAura(targets)
 		end
 
@@ -3994,20 +3996,25 @@ elseif mp.game == "pf" then
 	
 			local targets = t or ragebot:GetKnifeTargets()
 			for i, target in ipairs(targets) do
-				if target.player then
+				if target.player and target.dist < 30 then
 					ragebot:KnifeTarget(target)
 				end
 			end
 	
 		end
 	
-		
+		local part_stabcount = {}
 	
 		function ragebot:KnifeTarget(target, stab)
 			local cfc = client.cam.cframe
 			send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
-			if stab then send(client.net, "stab") end
-			send(client.net, "knifehit", target.player, tick(), target.part)
+			if not part_stabcount[target.part] then part_stabcount[target.part] = 0 end
+			if part_stabcount[target.part] < 5 then  
+				if stab then send(client.net, "stab") end
+				send(client.net, "knifehit", target.player, tick(), target.part)
+				part_stabcount[target.part] += 1
+			end
+			
 		end
 	
 	
@@ -4056,7 +4063,7 @@ elseif mp.game == "pf" then
 		end)
 		local oldmag = client.cam.setmagnification
 		client.cam.setmagnification = function(self, v)
-			if mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and INPUT_SERVICE:IsMouseButtonPressed(1) then return end
+			if mp:getval("Visuals", "Remove Effects", "Disable ADS FOV") and INPUT_SERVICE:IsMouseButtonPressed(1) then return end
 			return oldmag(self, v)
 		end
 		local oldmenufov = client.cam.changemenufov
@@ -4073,10 +4080,16 @@ elseif mp.game == "pf" then
 			end
 			return shake(client.cam, magnitude)
 		end
+
+		local sway = client.cam.setsway
+		client.cam.setsway = function(self, v)
+			if mp:getval("Visuals", "Remove Effects", "No Scope Sway") then v = 0 end
+			return sway(self, v)
+		end
 	
 		local suppress = client.cam.suppress
 		client.cam.suppress = function(...)
-			if mp:getval("Visuals", "Local Visuals", "No Visual Suppression") then return end
+			if mp:getval("Visuals", "Remove Effects", "No Visual Suppression") then return end
 			return suppress(...)
 		end
 	
@@ -4596,7 +4609,7 @@ elseif mp.game == "pf" then
 	--ADS Fov hook
 	
 	local function renderVisuals()
-		setconstant(client.cam.step, 11, mp:getval("Visuals", "Local Visuals", "No Camera Bob") and 0 or 0.5)
+		setconstant(client.cam.step, 11, mp:getval("Visuals", "Remove Effects", "No Camera Bob") and 0 or 0.5)
 		SCREEN_SIZE = Camera.ViewportSize
 		--------------------------------------world funnies
 		if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
@@ -5697,26 +5710,6 @@ elseif mp.game == "pf" then
 							stradd = "°"
 						},
 						{
-							type = "toggle", 
-							name = "No Camera Bob",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "Disable ADS FOV",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "No Scope Border",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "No Visual Suppression",
-							value = false,
-						},
-						{
 							type = "toggle",
 							name = "Third Person",
 							value = false,
@@ -5784,7 +5777,6 @@ elseif mp.game == "pf" then
 				{
 					name = "Misc Visuals",
 					autopos = "right",
-					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5823,7 +5815,39 @@ elseif mp.game == "pf" then
 							},
 						},
 					}
-				}
+				},
+				{
+					name = "Remove Effects",
+					autopos = "right",
+					autofill = true,
+					content = {
+						{
+							type = "toggle", 
+							name = "No Camera Bob",
+							value = false
+						},
+						{
+							type = "toggle",
+							name = "No Scope Sway",
+							value = false,
+						},
+						{
+							type = "toggle",
+							name = "Disable ADS FOV",
+							value = false,
+						},
+						{
+							type = "toggle",
+							name = "No Scope Border",
+							value = false,
+						},
+						{
+							type = "toggle",
+							name = "No Visual Suppression",
+							value = false,
+						},
+					}
+				},
 			}
 		},
 		{--ANCHOR Misc

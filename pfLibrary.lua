@@ -30,7 +30,7 @@ for k, v in pairs(getgc(true)) do
 				elseif rawget(v1, "loadknife") then
 					client.char = v1
 				elseif rawget(v1, "basecframe") then
-			 		client.cam = v1
+					client.cam = v1
 				elseif rawget(v1, "votestep") then
 					client.hud = v1
 				elseif rawget(v1, "getbodyparts") then
@@ -41,107 +41,49 @@ for k, v in pairs(getgc(true)) do
 			end
 		end
 	elseif type(v) == "table" then
-	    if rawget(v, "deploy") then
-		    client.menu = v
-	    elseif rawget(v, "new") and rawget(v, "step") then
-	        client.particle = v
+		if rawget(v, "deploy") then
+			client.menu = v
+		elseif rawget(v, "new") and rawget(v, "step") then
+			client.particle = v
 		end
 	end
 end
+do 
+	local sway = client.cam.setsway
+	client.cam.setsway = function(self, v)
+		return sway(self, 0)
+	end
+	local swayspeed = client.cam.setswayspeed
+	client.cam.setswayspeed = function(self, v)
+		return swayspeed(self, 0)
+	end
 
-
-local Input = game:GetService("UserInputService")
-local MainPlayer = game.Players.LocalPlayer
-local MainPlayerMouse = MainPlayer:GetMouse()
-
-setreadonly(math, false)
-math.map = function(X, A, B, C, D)
-	return (X-A)/(B-A) * (D-C) + C
 end
-setreadonly(math, true)
-
-local camera = {}
-do
-	camera.GetGun = function()
-		for k, v in pairs(workspace.Camera:GetChildren()) do
-			if v.Name ~= "Right Arm" and v.Name ~= "Left Arm" then
-				return v
-			end
+print()
+local function print_tables(t, key, i)
+	i = i or 0
+	local indent = string.rep("   ", i)
+	print(indent, key, t)
+	for k, v in pairs(t) do
+		if type(v) == "table" then
+			print_tables(v, k, i + 1)
+		else
+			print(indent, k, v)
 		end
 	end
 end
-
-
-local aimbot = {}
-do
-	function aimbot:AimAtTarget(targetPart)
-		if not targetPart then return end
-		local smoothing = 5
-
-		local Pos, visCheck = workspace.Camera:WorldToScreenPoint(targetPart.Position)
-
-		local aimbotMovement = Vector2.new(Pos.X - MainPlayerMouse.X, Pos.Y - MainPlayerMouse.Y)
-
-		mousemoverel(aimbotMovement.X/smoothing, aimbotMovement.Y/smoothing)
-	end
-
-	function aimbot:GetFOV(Part, fov)
-		local directional = CFrame.new(workspace.Camera.CFrame.Position, Part.Position)
-	
-		local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(workspace.Camera.CFrame:ToOrientation())
-		
-		return math.deg(ang.Magnitude)
-	end
-
-	function aimbot:IsVisible(Part)
-		local partsBetweenTarget = workspace.Camera:GetPartsObscuringTarget({Part}, {workspace.Camera, workspace.Players[MainPlayer.Team.Name], workspace.Ignore, Part.Parent})
-		return #partsBetweenTarget > 0
-	end
-
-	function aimbot:GetTargetLegit(fov, partPreference, hitscan, players)
-		local closest, closestPart = fov
-		partPreference = partPreference or "head"
-		hitscan = hitscan or false
-		players = players or game.Players:GetPlayers()
-
-		for i, Player in pairs(players) do
-
-			if Player.Team ~= MainPlayer.Team then
-				local Parts = client.repl.getbodyparts(Player)
-
-				local Part
-
-				if Parts then
-					Part = Parts[partPreference]
-					if hitscan then
-						for i1, Part in pairs(Parts) do
-
-							if Part.ClassName == "Part" then
-								if aimbot:GetFOV(Part, closest) < closest and aimbot:IsVisible(Part) then
-									closest = aimbot:GetFOV(Part, closest)
-									closestPart = Part
-								end
-							end
-
-						end
-					elseif Part and aimbot:GetFOV(Part, closest) < closest then
-						if aimbot:IsVisible(Part) then
-							closest = aimbot:GetFOV(Part, closest)
-							closestPart = Part
-						end
-					end
-				end
-			end
+local xw = true
+local fr = false
+if fr then
+	local spring = debug.getupvalue(client.char.setsprint, 9)
+	local mt = getrawmetatable(spring)
+	local old_index = mt.__index
+	setreadonly(mt, false)
+	mt.__index = newcclosure(function(t, k)
+		local result = old_index(t, k)
+		if k == "p" then 
+			return 0 
 		end
-		return closestPart, closest
-	end
+		return result
+	end)
 end
-
-game.RunService.RenderStepped:Connect(function()
-	if Input:IsKeyDown(Enum.KeyCode.Eight) then
-		local targetPart = aimbot:GetTargetLegit(50, "head", true)
-		if targetPart then
-			aimbot:AimAtTarget(targetPart)
-		end
-	end
-end)
