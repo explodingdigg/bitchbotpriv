@@ -120,9 +120,12 @@ local INPUT_SERVICE = game:GetService("UserInputService")
 local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
 local CACHED_VEC3 = Vector3.new()
 local Camera = workspace.CurrentCamera
-local SCREEN_SIZE = Vector2.new()
+local SCREEN_SIZE = Camera.ViewportSize
 local ButtonPressed = Instance.new("BindableEvent")
 local PATHFINDING = game:GetService("PathfindingService")
+
+mp.x = math.floor((SCREEN_SIZE.X/2) - (mp.w/2))
+mp.y = math.floor((SCREEN_SIZE.Y/2) - (mp.h/2))
 
 local function IsKeybindDown(tab, group, name, on_nil)
 	local key = mp:getval(tab, group, name, "keybind")
@@ -154,16 +157,6 @@ do -- math stuffz
 
 	math.map = function(X, A, B, C, D)
 		return (X-A)/(B-A) * (D-C) + C
-	end
-
-	math.clamp = function(a, lowerNum, higher)
-		if a > higher then
-			return higher
-		elseif a < lowerNum then
-			return lowerNum
-		else
-			return a
-		end
 	end
 
 	math.Lerp = function(delta, from, to)
@@ -472,6 +465,9 @@ do
 		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 end
+
+local loadingthing = {}
+Draw:OutlinedText("Now Loading...", 2, true, math.floor(SCREEN_SIZE.X/2), math.floor(SCREEN_SIZE.Y/2), 13, true, {255, 255, 255, 255}, {0, 0, 0}, loadingthing)
 
 function mp.BBMenuInit(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
@@ -2219,6 +2215,7 @@ function mp.BBMenuInit(menutable)
 	mp:setmenuvisibility(false)
 	mp.open = false
 	local function renderSteppedMenu()
+		SCREEN_SIZE = Camera.ViewportSize
 		---------------------------------------------------------------------i pasted the old menu working ingame shit from the old source nate pls fix ty
 		-----------------------------------------------this is the really shitty alive check that we've been using since day one
 		-- removed it :DDD
@@ -2453,6 +2450,7 @@ function mp.BBMenuInit(menutable)
 		allrender = nil
 		mp = nil
 		Draw = nil
+		self.unloaded = true
 	end 
 end
 
@@ -3256,6 +3254,7 @@ if mp.game == "uni" then
 					end
 				end
 				game.RunService.Stepped:wait()
+				if mp == nil then return end
 				local crosshairvis = mp:getval("Visuals", "Misc Visuals", "Custom Crosshair")
 				for k, v in pairs(mp.crosshair) do
 					v[1].Visible = crosshairvis
@@ -3298,10 +3297,6 @@ if mp.game == "uni" then
 
 	
 	mp.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
-		local screen = {
-			w = LOCAL_MOUSE.ViewSizeX,
-			h = LOCAL_MOUSE.ViewSizeY
-		}
 		local mousepos = {
 			x = LOCAL_MOUSE.x,
 			y = LOCAL_MOUSE.y
@@ -3321,11 +3316,11 @@ if mp.game == "uni" then
 		if mp:getval("Visuals", "Misc Visuals", "Custom Crosshair") then
 			local size = mp:getval("Visuals", "Misc Visuals", "Crosshair Size")
 			if mp:getval("Visuals", "Misc Visuals", "Crosshair Position") == 1 then
-				mp.crosshair.inner[1].Position = Vector2.new(screen.w/2 - size, screen.h/2 + 36)
-				mp.crosshair.inner[2].Position = Vector2.new(screen.w/2, screen.h/2 + 36 - size)
+				mp.crosshair.inner[1].Position = Vector2.new(SCREEN_SIZE.X/2 - size, SCREEN_SIZE.Y/2)
+				mp.crosshair.inner[2].Position = Vector2.new(SCREEN_SIZE.X/2, SCREEN_SIZE.Y/2 - size)
 
-				mp.crosshair.outline[1].Position = Vector2.new(screen.w/2 - size - 1, screen.h/2 + 35)
-				mp.crosshair.outline[2].Position = Vector2.new(screen.w/2 - 1, screen.h/2 + 35 - size)
+				mp.crosshair.outline[1].Position = Vector2.new(SCREEN_SIZE.X/2 - size - 1, SCREEN_SIZE.Y/2 + 35)
+				mp.crosshair.outline[2].Position = Vector2.new(SCREEN_SIZE.X/2 - 1, SCREEN_SIZE.Y/2 + 35 - size)
 			else
 				mp.crosshair.inner[1].Position = Vector2.new(mousepos.x - size, mousepos.y + 36)
 				mp.crosshair.inner[2].Position = Vector2.new(mousepos.x, mousepos.y + 36 - size)
@@ -3341,8 +3336,8 @@ if mp.game == "uni" then
 		
 		if mp:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV") and mp:getval("Aimbot", "Aimbot", "Enabled") then
 			if mp:getval("Aimbot", "Aimbot", "FOV Base") == 1 then
-				mp.fovcircle[1].Position = Vector2.new(screen.w/2, screen.h/2 + 36)
-				mp.fovcircle[2].Position = Vector2.new(screen.w/2, screen.h/2 + 36)
+				mp.fovcircle[1].Position = Vector2.new(SCREEN_SIZE.X/2, SCREEN_SIZE.Y/2)
+				mp.fovcircle[2].Position = Vector2.new(SCREEN_SIZE.X/2, SCREEN_SIZE.Y/2)
 			else
 				mp.fovcircle[1].Position = Vector2.new(mousepos.x, mousepos.y + 36)
 				mp.fovcircle[2].Position = Vector2.new(mousepos.x, mousepos.y + 36)
@@ -3350,11 +3345,11 @@ if mp.game == "uni" then
 
 			local aimfov = mp:getval("Aimbot", "Aimbot", "Aimbot FOV")
 			if mp:getval("Aimbot", "Aimbot", "FOV Calculation") == 2 then
-				mp.fovcircle[1].Radius = screen.w/2 * aimfov / Camera.FieldOfView
-				mp.fovcircle[2].Radius = screen.w/2 * aimfov / Camera.FieldOfView
+				mp.fovcircle[1].Radius = SCREEN_SIZE.X/2 * aimfov / Camera.FieldOfView
+				mp.fovcircle[2].Radius = SCREEN_SIZE.X/2 * aimfov / Camera.FieldOfView
 			elseif mp.open then
-				mp.fovcircle[1].Radius = screen.w/2 * aimfov / 70
-				mp.fovcircle[2].Radius = screen.w/2 * aimfov / 70
+				mp.fovcircle[1].Radius = SCREEN_SIZE.X/2 * aimfov / 70
+				mp.fovcircle[2].Radius = SCREEN_SIZE.X/2 * aimfov / 70
 			end
 		end
 
@@ -3911,15 +3906,7 @@ elseif mp.game == "pf" then
 
 					local ray_distance = (target_pos - ray_pos).Magnitude
 
-					table.insert(results, 
-						{player = ply,
-						part = parts.head,
-						tppos = ray_pos,
-						direction = target_direction,
-						dist = target_dist,
-						insight = ray_distance < 15 and part1 == part2
-						}
-					)
+					table.insert(results, {player = ply, part = parts.head, tppos = ray_pos, direction = target_direction, dist = target_dist, insight = ray_distance < 15 and part1 == part2})
 				end
 	
 			end
@@ -3960,35 +3947,41 @@ elseif mp.game == "pf" then
 		local tp_unlock = true
 
 		function ragebot:TPAura()
-			local rp = LOCAL_PLAYER.Character.HumanoidRootPart
-			local targets = ragebot:GetKnifeTargets()
+			if misc:GetLifetime() > 100 then
+				CreateThread(function()
+					tp_unlock = false
+					local rp = LOCAL_PLAYER.Character.HumanoidRootPart
+					local targets = ragebot:GetKnifeTargets()
 
-			for k, target in pairs(targets) do
-				local dist = target.direction.Magnitude > 40 and 40 or target.direction.Magnitude
-				if target.insight then
-					rp.CFrame += target.direction.Unit * dist
-					break
-				end
+					for k, target in pairs(targets) do
+						if target.insight then
+							rp.CFrame = CFrame.new(target.tppos)
+							tp_unlock = true
+							return
+						end
+					end
+					
+					if tp_unlock then return end
+
+					local path = PATHFINDING:CreatePath({AgentRadius = 4})
+
+					for k, target in pairs(targets) do
+						path:ComputeAsync(rp.Position, target.part.Position)
+
+						if path.Status ~= Enum.PathStatus.Success then continue end
+						
+						local path_points = path:GetWaypoints()
+
+						for i, point in pairs(path_points) do
+							if tp_unlock then return end
+							rp.CFrame = CFrame.new(point.Position + Vector3.new(0,2,0))
+							game.RunService.RenderStepped:Wait()
+						end
+						break
+					end
+					tp_unlock = true
+				end)
 			end
-			
-			-- if tp_unlock then return end
-
-			-- local path = PATHFINDING:CreatePath({AgentRadius = 4})
-
-			-- for k, target in pairs(targets) do
-			-- 	path:ComputeAsync(rp.Position, target.part.Position)
-
-			-- 	if path.Status ~= Enum.PathStatus.Success then continue end
-				
-			-- 	local path_points = path:GetWaypoints()
-
-			-- 	for i, point in pairs(path_points) do
-			-- 		if tp_unlock then return end
-			-- 		rp.CFrame = CFrame.new(point.Position + Vector3.new(0,2,0))
-			-- 		game.RunService.RenderStepped:Wait()
-			-- 	end
-			-- 	break
-			-- end
 			return ragebot:KnifeAura(targets)
 		end
 
@@ -3996,25 +3989,20 @@ elseif mp.game == "pf" then
 	
 			local targets = t or ragebot:GetKnifeTargets()
 			for i, target in ipairs(targets) do
-				if target.player and target.dist < 30 then
+				if target.player then
 					ragebot:KnifeTarget(target)
 				end
 			end
 	
 		end
 	
-		local part_stabcount = {}
+		
 	
 		function ragebot:KnifeTarget(target, stab)
 			local cfc = client.cam.cframe
 			send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
-			if not part_stabcount[target.part] then part_stabcount[target.part] = 0 end
-			if part_stabcount[target.part] < 5 then  
-				if stab then send(client.net, "stab") end
-				send(client.net, "knifehit", target.player, tick(), target.part)
-				part_stabcount[target.part] += 1
-			end
-			
+			if stab then send(client.net, "stab") end
+			send(client.net, "knifehit", target.player, tick(), target.part)
 		end
 	
 	
@@ -4063,7 +4051,7 @@ elseif mp.game == "pf" then
 		end)
 		local oldmag = client.cam.setmagnification
 		client.cam.setmagnification = function(self, v)
-			if mp:getval("Visuals", "Remove Effects", "Disable ADS FOV") and INPUT_SERVICE:IsMouseButtonPressed(1) then return end
+			if mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and INPUT_SERVICE:IsMouseButtonPressed(1) then return end
 			return oldmag(self, v)
 		end
 		local oldmenufov = client.cam.changemenufov
@@ -4080,16 +4068,10 @@ elseif mp.game == "pf" then
 			end
 			return shake(client.cam, magnitude)
 		end
-
-		local sway = client.cam.setsway
-		client.cam.setsway = function(self, v)
-			if mp:getval("Visuals", "Remove Effects", "No Scope Sway") then v = 0 end
-			return sway(self, v)
-		end
 	
 		local suppress = client.cam.suppress
 		client.cam.suppress = function(...)
-			if mp:getval("Visuals", "Remove Effects", "No Visual Suppression") then return end
+			if mp:getval("Visuals", "Local Visuals", "No Visual Suppression") then return end
 			return suppress(...)
 		end
 	
@@ -4165,23 +4147,16 @@ elseif mp.game == "pf" then
 					if instant_equip then
 						gun.equipspeed = 99999
 					end
-					if instant_reload and gun.animations then
-						for name, animations in pairs(gun.animations) do
-							if name:match("stab") or name == "inspect" then continue end
-							gun.animations[name] = {
-								stdtimescale = 0,
-								timescale = 0,
-								resettime = 0,
-								{
-									{
-										part = "Trigger",
-										c1 = CFrame.new(),
-										t = 1,
-										eq = "accelerate"
-									},
-									delay = 0
-								}
-							}
+					if instant_reload then
+						if gun.animations  and type(gun.animations) == "table" then
+							for name, anim in pairs(gun.animations) do
+								if name:match("stab") then continue end
+								if type(anim) == "table" and anim ~= gun.animations.inspect then
+									anim.timescale = 0
+									anim.resettime = 0
+									anim.stdtimescale = 0
+								end
+							end
 						end
 					end
 				end
@@ -4609,8 +4584,7 @@ elseif mp.game == "pf" then
 	--ADS Fov hook
 	
 	local function renderVisuals()
-		setconstant(client.cam.step, 11, mp:getval("Visuals", "Remove Effects", "No Camera Bob") and 0 or 0.5)
-		SCREEN_SIZE = Camera.ViewportSize
+		setconstant(client.cam.step, 11, mp:getval("Visuals", "Local Visuals", "No Camera Bob") and 0 or 0.5)
 		--------------------------------------world funnies
 		if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
 			game.Lighting:SetMinutesAfterMidnight(mp.options["Visuals"]["World Visuals"]["Custom Time"][1])
@@ -5710,6 +5684,26 @@ elseif mp.game == "pf" then
 							stradd = "°"
 						},
 						{
+							type = "toggle", 
+							name = "No Camera Bob",
+							value = false
+						},
+						{
+							type = "toggle",
+							name = "Disable ADS FOV",
+							value = false,
+						},
+						{
+							type = "toggle",
+							name = "No Scope Border",
+							value = false,
+						},
+						{
+							type = "toggle",
+							name = "No Visual Suppression",
+							value = false,
+						},
+						{
 							type = "toggle",
 							name = "Third Person",
 							value = false,
@@ -5777,6 +5771,7 @@ elseif mp.game == "pf" then
 				{
 					name = "Misc Visuals",
 					autopos = "right",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -5815,39 +5810,7 @@ elseif mp.game == "pf" then
 							},
 						},
 					}
-				},
-				{
-					name = "Remove Effects",
-					autopos = "right",
-					autofill = true,
-					content = {
-						{
-							type = "toggle", 
-							name = "No Camera Bob",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "No Scope Sway",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "Disable ADS FOV",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "No Scope Border",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "No Visual Suppression",
-							value = false,
-						},
-					}
-				},
+				}
 			}
 		},
 		{--ANCHOR Misc
@@ -6233,6 +6196,8 @@ elseif mp.game == "pf" then
 		end)
 	end
 end
+
+loadingthing[1].Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
 
 mp.fading = true
 mp.fadestart = tick()
