@@ -3311,10 +3311,8 @@ if mp.game == "uni" then
 							continue
 						end
 					end
-					if v.Team ~= nil then
-						if checks[2] and v.Team == LOCAL_PLAYER.Team then
-							continue
-						end
+					if checks[2] and v.Team and v.Team == LOCAL_PLAYER.Team then
+						continue
 					end
 					if checks[3] and LOCAL_PLAYER:DistanceFromCharacter(v.Character.HumanoidRootPart.Position)/5 > mp:getval("Aimbot", "Aimbot", "Max Distance") then
 						continue
@@ -3338,9 +3336,13 @@ if mp.game == "uni" then
 					local pos, onscreen = workspace.CurrentCamera:WorldToScreenPoint(head.Position)
 					
 					if onscreen then
-						mousemoveabs(pos.x, pos.y) --TODO NATE FIX THIS AIMBOT MAKE IT HEAT AND MAKE IT SORT BY FOV
+						if INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
+							mousemoveabs(pos.x, pos.y) --TODO NATE FIX THIS AIMBOT MAKE IT HEAT AND MAKE IT SORT BY FOV
+						else
+							Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
+						end
+						return
 					end
-
 				end
 			end
 		end
