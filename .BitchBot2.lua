@@ -400,7 +400,11 @@ do
 		temptable.Outline = true
 		temptable.OutlineColor = RGB(clr2[1], clr2[2], clr2[3])
 		temptable.Font = font
-		table.insert(tablename, temptable)
+		if tablename then
+			table.insert(tablename, temptable)
+		else
+			return temptable
+		end
 		if not table.contains(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
@@ -706,8 +710,7 @@ do
 
 end
 
-local loadingthing = {}
-Draw:OutlinedText("Now Loading...", 2, true, math.floor(SCREEN_SIZE.X/2), math.floor(SCREEN_SIZE.Y/2), 13, true, {255, 255, 255, 255}, {0, 0, 0}, loadingthing)
+local loadingthing = Draw:OutlinedText("Now Loading...", 2, true, math.floor(SCREEN_SIZE.X/2), math.floor(SCREEN_SIZE.Y/2), 13, true, {255, 255, 255, 255}, {0, 0, 0})
 
 function mp.BBMenuInit(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
@@ -4344,6 +4347,39 @@ elseif mp.game == "pf" then
 				getChild(char, "HumanoidRootPart").Velocity = Vector3.new()
 				client.net.send = oldsend
 			end
+			if name == "Crash Server" then
+				while wait() do
+					for i = 1, 20 do
+						local tid = 846964998
+						
+						client.net:send("changecamo", "Recon", "Secondary", "GLOCK 17", "Slot1", {
+							BrickProperties = {
+								Color = {
+									r = math.random(0, 255),
+									g = math.random(0, 255),
+									b = math.random(0, 255),
+								},
+								BrickColor = "Black",
+								Reflectance = math.random(0, 100),
+							},
+							TextureProperties = {
+								Color = {
+									r = math.random(0, 255),
+									g = math.random(0, 255),
+									b = math.random(0, 255),
+								},
+								OffsetStudsU = math.random(0, 4),
+								OffsetStudsV = math.random(0, 4),
+								StudsPerTileU = math.random(0, 4),
+								StudsPerTileV = math.random(0, 4),
+								TextureId = tid
+							},
+							Name = "",
+							TextureId = tid
+						})
+					end
+				end
+			end
 		end)
 
 		function misc:RoundFreeze()
@@ -4812,7 +4848,7 @@ elseif mp.game == "pf" then
 								box.Position = boxPosition + Vector2.new(i, i)
 								box.Size = boxSize - Vector2.new(i*2, i*2)
 								box.Transparency = boxtransparency
-								if i == 0 then box.Color = color end
+								box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 							end
 		
 						end
@@ -4942,16 +4978,6 @@ elseif mp.game == "pf" then
 	local oldpos = nil
 	local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 		inputBeganMenu(key)
-		if mp:getval("Misc", "Extra", "Crash Spectators")and key.KeyCode == mp:getval("Misc", "Extra", "Crash Spectators", "keybind") then
-			keybindtoggles.crash = not keybindtoggles.crash
-			if keybindtoggles.crash then
-				oldpos = LOCAL_PLAYER.Character.HumanoidRootPart.CFrame.Position
-				LOCAL_PLAYER.Character.HumanoidRootPart.CFrame = CFrame.new(oldpos.X, math.huge, oldpos.Y)
-			elseif oldpos then
-				LOCAL_PLAYER.Character.HumanoidRootPart.Velocity = Vector3.new()
-				LOCAL_PLAYER.Character.HumanoidRootPart.CFrame = CFrame.new(oldpos)
-			end
-		end
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
 			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 		end
@@ -6021,13 +6047,8 @@ elseif mp.game == "pf" then
 							name = "Invisibility"
 						},
 						{
-							type = "toggle",
-							name = "Crash Spectators",
-							value = false,
-							extra = {
-								type = "keybind",
-								key = Enum.KeyCode.Y
-							}
+							type = "button",
+							name = "Crash Server"
 						},
 						{
 							type = "toggle", 
@@ -6285,7 +6306,7 @@ elseif mp.game == "pf" then
 		mp.list.removeall(mp.options["Settings"]["Player List"]["Players"])
 		updateplist()
 		cacheAvatars()
-		setplistinfo(nil)
+		setplistinfo()
 
 		mp.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -6327,7 +6348,8 @@ elseif mp.game == "pf" then
 	end
 end
 
-loadingthing[1].Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
-
-mp.fading = true
-mp.fadestart = tick()
+loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
+if not mp.open then
+	mp.fading = true
+	mp.fadestart = tick()
+end
