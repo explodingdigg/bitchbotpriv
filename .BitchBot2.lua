@@ -2533,7 +2533,7 @@ local function GetPTlayerHumanoid(player)
 end
 
 
-if mp.game == "uni" then
+if mp.game == "uni" then --SECTION UNIVERSAL
 	local allesp = {
 		headdotoutline = {},
 		headdot = {},
@@ -3142,7 +3142,7 @@ if mp.game == "uni" then
 				local humanoid = player.Character:FindFirstChild("Humanoid")
 				if humanoid ~= nil then 
 					if humanoid.Health ~= nil then
-					 	playerhealth = tostring(humanoid.Health).. "/".. tostring(humanoid.MaxHealth)
+						playerhealth = tostring(humanoid.Health).. "/".. tostring(humanoid.MaxHealth)
 					else
 						playerhealth = "No health found"
 					end
@@ -3325,18 +3325,21 @@ if mp.game == "uni" then
 
 				end
 			end
+			--ANCHOR this is the aimbot fov shit i haven't finished
+			-- table.sort(orginizedplyrs, function(a, b)
+			-- 	local aPos, aVis = workspace.CurrentCamera:WorldToViewportPoint(a.Character.Head.Position)
+			-- 	local bPos, bVis = workspace.CurrentCamera:WorldToViewportPoint(b.Character.Head.Position)
+			-- 	if aVis and not bVis then return true end
+			-- 	return 
+			-- end)
 			
-			table.sort(orginizedplyrs, function(a, b)
-				return LOCAL_PLAYER:DistanceFromCharacter(a.Character.HumanoidRootPart.Position) > LOCAL_PLAYER:DistanceFromCharacter(b.Character.HumanoidRootPart.Position)
-			end)
-			
-			for i, v in ipairs(orginizedplyrs) do
+			for i, v in ipairs(orginizedplyrs) 
 				local humanoid = v.Character:FindFirstChild("Humanoid")
 				local rootpart = v.Character.HumanoidRootPart.Position
 				local head = v.Character:FindFirstChild("Head")
 
 				if head then
-					local pos, onscreen = workspace.CurrentCamera:WorldToScreenPoint(head.Position)
+					local pos, onscreen = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
 					
 					if onscreen then
 						if INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
@@ -3458,6 +3461,8 @@ if mp.game == "uni" then
 				mp.crosshair.outline[1].Position = Vector2.new(SCREEN_SIZE.X/2 - size - 1, SCREEN_SIZE.Y/2 - 1)
 				mp.crosshair.outline[2].Position = Vector2.new(SCREEN_SIZE.X/2 - 1, SCREEN_SIZE.Y/2 - 1 - size)
 			else
+
+				-- INPUT_SERVICE.MouseIconEnabled = false
 				mp.crosshair.inner[1].Position = Vector2.new(mousepos.x - size, mousepos.y + 36)
 				mp.crosshair.inner[2].Position = Vector2.new(mousepos.x, mousepos.y + 36 - size)
 
@@ -3536,28 +3541,38 @@ if mp.game == "uni" then
 			for i, v in ipairs(orginizedplyrs) do
 				local humanoid = v.Character:FindFirstChild("Humanoid")
 				local rootpart = v.Character.HumanoidRootPart.Position
-				local top, top_isrendered = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(rootpart.x, rootpart.y + 2.5, rootpart.z))
-				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(rootpart.x, rootpart.y - 2.9, rootpart.z))
-				local box_width = (bottom.y - top.y) / 2
+
+				local cam = Camera.CFrame
+				local torso = v.Character.PrimaryPart.CFrame
+				local head = v.Character.Head.CFrame
+				-- local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
+				-- local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
+				local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1.3) + cam.UpVector)
+				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 3) - cam.UpVector)
+				
+				local minY = math.abs(bottom.Y - top.Y)
+				local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.X - top.X) * 2, 0, minY), minY / 2))
+				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
+
 
 				local boxtrans = mp:getval("Visuals", "ESP Settings", "Box Outline Transparency")/255
 				if top_isrendered or bottom_isrendered then
-					local boxtop = {x = math.floor(bottom.x - box_width / 2), y = math.floor(top.y + 36)}
-					local boxsize = {w = math.floor(box_width), h =  math.floor(bottom.y - top.y)}
+					local boxtop = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(math.min(top.Y, bottom.Y)))
+					local boxsize = {w = sizeX, h =  sizeY}
 
 					if mp:getval("Visuals", "Player ESP", "Head Dot") then
 						local head = v.Character:FindFirstChild("Head")
 						if head then
 							local headpos = head.Position
-							local headdotpos = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(headpos.x, headpos.y, headpos.z))
-							local headdotpos_b = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(headpos.x, headpos.y - 0.3, headpos.z))
+							local headdotpos = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y, headpos.z))
+							local headdotpos_b = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y - 0.3, headpos.z))
 							local difference = headdotpos_b.y - headdotpos.y
 							allesp.headdot[i].Visible = true
-							allesp.headdot[i].Position = Vector2.new(headdotpos.x, headdotpos.y + 36 - difference)
+							allesp.headdot[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
 							allesp.headdot[i].Radius = difference * 2
 
 							allesp.headdotoutline[i].Visible = true
-							allesp.headdotoutline[i].Position = Vector2.new(headdotpos.x, headdotpos.y + 36 - difference)
+							allesp.headdotoutline[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
 							allesp.headdotoutline[i].Radius = difference * 2
 						end
 					end
@@ -3674,7 +3689,8 @@ if mp.game == "uni" then
 		updateplist()
 	end)	
 
-elseif mp.game == "pf" then
+elseif mp.game == "pf" then --!SECTION
+	--SECTION PF BEGIN
 	local allesp = {
 		skel = {
 			[1] = {},
@@ -6346,7 +6362,7 @@ elseif mp.game == "pf" then
 			updateplist()
 		end)
 	end
-end
+end --!SECTION PF END
 
 loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
 if not mp.open then
