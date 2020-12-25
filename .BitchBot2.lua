@@ -2615,12 +2615,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							stradd = "m"
 						},
 						{
-							type = "dropbox",
-							name = "FOV Base",
-							value = 1,
-							values = {"Center Of Screen", "Mouse"}
-						},
-						{
 							type = "slider",
 							name = "Aimbot FOV",
 							value = 0,
@@ -3325,15 +3319,16 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 				end
 			end
-			--ANCHOR this is the aimbot fov shit i haven't finished
-			-- table.sort(orginizedplyrs, function(a, b)
-			-- 	local aPos, aVis = workspace.CurrentCamera:WorldToViewportPoint(a.Character.Head.Position)
-			-- 	local bPos, bVis = workspace.CurrentCamera:WorldToViewportPoint(b.Character.Head.Position)
-			-- 	if aVis and not bVis then return true end
-			-- 	return 
-			-- end)
+			local mousePos = Vector3.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36, 0)
+
+			table.sort(orginizedplyrs, function(a, b)
+				local aPos, aVis = workspace.CurrentCamera:WorldToViewportPoint(a.Character.Head.Position)
+				local bPos, bVis = workspace.CurrentCamera:WorldToViewportPoint(b.Character.Head.Position)
+				if aVis and not bVis then return true end
+				return (aPos-mousePos).Magnitude < (bPos-mousePos).Magnitude
+			end)
 			
-			for i, v in ipairs(orginizedplyrs) 
+			for i, v in ipairs(orginizedplyrs) do
 				local humanoid = v.Character:FindFirstChild("Humanoid")
 				local rootpart = v.Character.HumanoidRootPart.Position
 				local head = v.Character:FindFirstChild("Head")
@@ -3476,13 +3471,8 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		end
 		
 		if mp:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV") and mp:getval("Aimbot", "Aimbot", "Enabled") then
-			if mp:getval("Aimbot", "Aimbot", "FOV Base") == 1 then
-				mp.fovcircle[1].Position = Vector2.new(SCREEN_SIZE.X/2, SCREEN_SIZE.Y/2)
-				mp.fovcircle[2].Position = Vector2.new(SCREEN_SIZE.X/2, SCREEN_SIZE.Y/2)
-			else
-				mp.fovcircle[1].Position = Vector2.new(mousepos.x, mousepos.y + 36)
-				mp.fovcircle[2].Position = Vector2.new(mousepos.x, mousepos.y + 36)
-			end
+			mp.fovcircle[1].Position = Vector2.new(mousepos.x, mousepos.y + 36)
+			mp.fovcircle[2].Position = Vector2.new(mousepos.x, mousepos.y + 36)
 
 			local aimfov = mp:getval("Aimbot", "Aimbot", "Aimbot FOV")
 			if mp:getval("Aimbot", "Aimbot", "FOV Calculation") == 2 then
