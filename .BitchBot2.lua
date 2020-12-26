@@ -1376,6 +1376,7 @@ function mp.BBMenuInit(menutable)
 				colorpickerthatisopen = nil
 				mp.colorpicker_open = false
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
+				
 			end
 			if not mp.fading then
 				mp.fading = true
@@ -2276,6 +2277,7 @@ function mp.BBMenuInit(menutable)
 			if mp.open then
 				local timesincefade = tick() - mp.fadestart
 				local fade_amount = 255 - math.floor((timesincefade * 10) * 255)
+				set_plusminus(0, 20, 20)
 				mp:set_menu_transparency(fade_amount)
 				if fade_amount <= 0 then
 					mp.open = false
@@ -2665,7 +2667,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						{
 							type = "toggle",
 							name = "Name",
-							value = true,
+							value = false,
 							extra = {
 								type = "single colorpicker",
 								name = "Name ESP",
@@ -2685,7 +2687,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						{
 							type = "toggle",
 							name = "Box",
-							value = true,
+							value = false,
 							extra = {
 								type = "single colorpicker",
 								name = "Box ESP",
@@ -3614,7 +3616,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						end
 					end
 					if mp:getval("Visuals", "Player ESP", "Name") then
-						local name_pos = Vector2.new(math.floor(boxtop.x + boxsize.w*0.5), math.floor(boxtop.y - 22))
+						local name_pos = Vector2.new(math.floor(boxtop.x + boxsize.w*0.5), math.floor(boxtop.y - 15))
 						allesp.name[i].Text = v.Name
 						allesp.name[i].Position = name_pos
 						allesp.name[i].Visible = true
