@@ -2665,7 +2665,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						{
 							type = "toggle",
 							name = "Name",
-							value = false,
+							value = true,
 							extra = {
 								type = "single colorpicker",
 								name = "Name ESP",
@@ -2685,7 +2685,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						{
 							type = "toggle",
 							name = "Box",
-							value = false,
+							value = true,
 							extra = {
 								type = "single colorpicker",
 								name = "Box ESP",
@@ -3614,15 +3614,16 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						end
 					end
 					if mp:getval("Visuals", "Player ESP", "Name") then
+						local name_pos = Vector2.new(math.floor(boxtop.x + boxsize.w*0.5), math.floor(boxtop.y - 22))
 						allesp.name[i].Text = v.Name
-						allesp.name[i].Position = Vector2.new(math.floor(bottom.x), math.floor(top.y + 22))
+						allesp.name[i].Position = name_pos
 						allesp.name[i].Visible = true
 
 						if mp:getval("Visuals", "ESP Settings", "Text Box Outlines") then
 							local size = allesp.name[i].TextBounds
 							allesp.nameoutline[i].Visible = true
-							allesp.nameoutline[i].Position = Vector2.new(math.floor(bottom.x) - size.x/2 - 3, math.floor(top.y + 21))
 							allesp.nameoutline[i].Size = Vector2.new(size.x + 6, size.y + 2)
+							allesp.nameoutline[i].Position = name_pos - Vector2.new(size.x/2 + 2,0)
 						end
 					end
 					local y_spot = 0
@@ -3639,24 +3640,26 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 								allesp.team[i].Color = v.TeamColor.Color
 							end
 						end
-						allesp.team[i].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y + 36))
+						local team_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h)
+						allesp.team[i].Position = team_pos
 						allesp.team[i].Visible = true
 						y_spot += 14
 						if mp:getval("Visuals", "ESP Settings", "Text Box Outlines") then
 							local size = allesp.team[i].TextBounds
 							allesp.teamoutline[i].Visible = true
-							allesp.teamoutline[i].Position = Vector2.new(math.floor(bottom.x) - size.x/2 - 3, math.floor(bottom.y + 35))
+							allesp.teamoutline[i].Position = Vector2.new(team_pos.x - size.x / 2 - 2, team_pos.y)
 							allesp.teamoutline[i].Size = Vector2.new(size.x + 6, size.y + 2)
 						end
 					end
 					if mp:getval("Visuals", "Player ESP", "Distance") then
+						local dist_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
 						allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(rootpart) / 5)).. "m"
-						allesp.distance[i].Position = Vector2.new(math.floor(bottom.x), math.floor(bottom.y + 36) + y_spot)
+						allesp.distance[i].Position = dist_pos
 						allesp.distance[i].Visible = true
 						if mp:getval("Visuals", "ESP Settings", "Text Box Outlines") then
 							local size = allesp.distance[i].TextBounds
 							allesp.distoutline[i].Visible = true
-							allesp.distoutline[i].Position = Vector2.new(math.floor(bottom.x) - size.x/2 - 3, math.floor(bottom.y + 36) + y_spot)
+							allesp.distoutline[i].Position = Vector2.new(dist_pos.x - size.x/2 - 2, dist_pos.y)
 							allesp.distoutline[i].Size = Vector2.new(size.x + 6, size.y)
 						end
 					end
@@ -3736,7 +3739,7 @@ elseif mp.game == "pf" then --!SECTION
 						client.net = v1
 					elseif rawget(v1, "gammo") then
 						client.logic = v1
-					elseif rawget(v1, "loadknife") then
+					elseif rawget(v1, "setbasewalkspeed") then
 						client.char = v1
 					elseif rawget(v1, "basecframe") then
 						client.cam = v1
@@ -3976,12 +3979,8 @@ elseif mp.game == "pf" then --!SECTION
 		end
 
 		function camera:GetAngles()
-
-
 			local pitch, yaw = Camera.CFrame:ToOrientation()
 			return {["pitch"] = pitch, ["yaw"] = yaw}
-	
-	
 		end
 		
 		function camera:GetAnglesTo(Pos)
@@ -4009,24 +4008,94 @@ elseif mp.game == "pf" then --!SECTION
 	local misc = {}
 	local ragebot = {}
 	do--ANCHOR ragebot definitions
+		do
+			local dot = Vector3.new().Dot
+			local ignore
+			local lifetime
+			local velocity
+			local acceleration
+			local position
+			local penetrationDepth
+			local FindPartOnRayWithIgnoreList = workspace.FindPartOnRayWithIgnoreList
+			local FindPartOnRayWithWhitelist = workspace.FindPartOnRayWithWhitelist
+		
+			local function BulletStep(deltaTime, curTick, targetParts)
+				if lifetime and lifetime < curTick then
+					return 1
+				end
+				local direction = deltaTime * velocity + deltaTime * deltaTime / 2 * acceleration
+				local hitPartInstance, hitPartPos = FindPartOnRayWithIgnoreList(workspace, Ray.new(position, direction), ignore, false, true)
+				if hitPartInstance then
+					if targetParts[hitPartInstance] then return 0 end
+		
+					local partSize = hitPartInstance.Size.magnitude * direction.unit
+					local hasPenetration = not hitPartInstance.CanCollide or hitPartInstance.Transparency == 1
+					if hitPartInstance.Name == "killbullet" then
+						return 2
+					end
+					if not hasPenetration then
+						local _, otherSideOfPart = FindPartOnRayWithWhitelist(workspace, Ray.new(hitPartPos + partSize, -partSize), {hitPartInstance}, false)
+						local penetrationAmount = dot(direction.unit, otherSideOfPart - hitPartPos)
+						if penetrationAmount < penetrationDepth then
+							penetrationDepth = penetrationDepth - penetrationAmount
+						else
+							return 3
+						end
+					end
+					position = hitPartPos + 0.01 * direction.unit
+					velocity = velocity + dot(direction, hitPartPos - position) / dot(direction, direction) * deltaTime * acceleration
+					ignore[#ignore + 1] = hitPartInstance
+				else
+					position = position + direction
+					velocity = velocity + deltaTime * acceleration
+				end
+			end
+		
+			local step = 1 / 200
+			local maxSteps = 1000
+		
+			local function GetPartTable(ply)
+				local tbl = {}
+				for k, v in pairs(gamereplication.getbodyparts(ply)) do
+					tbl[v] = true
+				end
+				return tbl
+			end
+		
+			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, crazyMode)
+				local targetParts
+				if crazyMode then  
+					sphereHitbox.Position = targetPos
+					diameter = mp.getval("")
+					sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
+					targetParts = {[sphereHitbox] = sphereHitbox}
+				else
+					targetParts = GetPartTable(target)
+				end
+				local origin = gamecam.cframe.p
+		
+				ignore = {workspace.Terrain, workspace.Ignore, workspace.CurrentCamera, workspace.Players[ply.Team.Name]}
+				lifetime = 1.5
+				velocity = (targetDir - origin).Unit * gamelogic.currentgun.data.bulletspeed
+				acceleration = vec3Gravity
+				position = origin
+				penetrationDepth = gamelogic.currentgun.data.penetrationdepth
+		
+				for i = 1, maxSteps do
+					local ret = BulletStep(step, i * step, targetParts)
+					if ret == 0 then
+						return true
+					elseif ret ~= nil then
+						return false
+					end
+				end
+			end
+		end
 		local tpIgnore = {workspace.Players, workspace.Ignore, workspace.CurrentCamera}
 		local nadeSize = Vector3.new(0, 50, 0)
 		local tpSelfDecreaseOffset = Vector3.new(0, 2, 0)
 	
-		function ragebot:AntiNade(pos)
-	
-	
-			if mp:getval("Rage", "Anti Aim", "Anti Grenade Teleport") and mp:getval("Rage", "Anti Aim", "Enabled") then
-				local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(char, nadeSize), tpIgnore, true, true)
-				if hit then return pos end
-				
-				return pos + nadeSize
-			end
-			return pos
-	
-	
-		end
-	
+
 		function ragebot:GetKnifeTargets()
 
 			local results = {}
@@ -4126,7 +4195,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			return ragebot:KnifeAura(targets)
 		end
-
+		
 		function ragebot:KnifeAura(t)
 	
 			local targets = t or ragebot:GetKnifeTargets()
@@ -4137,7 +4206,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 	
 		end
-	
+		
 		
 	
 		function ragebot:KnifeTarget(target, stab)
@@ -4177,7 +4246,9 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end
-	
+			function ragebot:GetTarget()
+				for k, v in pairs({}) do end
+			end
 	
 		end
 	
