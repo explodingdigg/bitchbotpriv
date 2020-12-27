@@ -1,3 +1,190 @@
+do
+	local notes = {}
+	local function DrawingObject(t, col)
+
+		local d = Drawing.new(t)
+	
+		d.Visible = true
+		d.Transparency = 1
+		d.Color = col
+	
+		return d
+	
+	end
+	
+	local function map(X, A, B, C, D)
+		return (X-A)/(B-A) * (D-C) + C
+	end
+	
+	local function Rectangle(sizex, sizey, fill, col)
+	
+		local s = DrawingObject("Square", col)
+	
+		s.Filled = fill
+		s.Thickness = 1
+		s.Position = Vector2.new()
+		s.Size = Vector2.new(sizex, sizey)
+	
+		return s
+	
+	end
+	
+	local function Text(text)
+	
+		local s = DrawingObject("Text", Color3.new(1,1,1))
+	
+		s.Text = text
+		s.Size = 13
+		s.Center = false
+		s.Outline = true
+		s.Position = Vector2.new()
+		s.Font = 2
+	
+		return s
+	
+	end
+	
+	
+	function CreateNotification(t)
+	
+		local gap = 25
+		local width = 18
+	
+		local alpha = 255
+		local time = 0
+		local estep = 0
+		local eestep = 0.02
+		
+		local insety = 0
+	
+	
+		local Note = {
+	
+			enabled = true,
+	
+			targetPos = Vector2.new(40, 33),
+	
+			size = Vector2.new(200, width),
+	
+	
+			drawings = {
+				outline = Rectangle(202, width + 2, false, Color3.new(0,0,0)),
+				fade = Rectangle(202, width + 2, false, Color3.new(0,0,0)),
+			},
+	
+			Remove = function(self, d)
+				if d.Position.x < d.Size.x then
+					for k, drawing in pairs(self.drawings) do
+						drawing:Remove()
+						drawing = false
+					end
+					self.enabled = false
+				end
+			end,
+	
+			Update = function(self, num, listLength)
+				local pos = self.targetPos
+	
+				local indexOffset = (listLength-num)*gap
+				if insety < indexOffset then 
+					insety -= (insety - indexOffset)*0.2
+				else
+					insety = indexOffset 
+				end
+				local size = self.size
+	
+				local tpos = Vector2.new(pos.x - size.x / time - map(alpha, 0, 255, size.x, 0), pos.y + insety)
+				self.pos = tpos
+	
+				local locRect = {
+					x = math.ceil(tpos.x),
+					y = math.ceil(tpos.y),
+					w = math.floor(size.x - map(255 - alpha, 0, 255, 0, 70)),
+					h = size.y,
+				}
+				--pos.set(-size.x / fc - map(alpha, 0, 255, size.x, 0), pos.y)
+	
+				local fade = math.min(time*12, alpha)
+				fade = fade > 255 and 255 or fade < 0 and 0 or fade
+	
+				if self.enabled then
+					for i, drawing in pairs(self.drawings) do
+						drawing.Transparency = fade/255
+	
+	
+						if type(i) == "number" then
+							drawing.Position = Vector2.new(locRect.x + 1, locRect.y + i)
+							drawing.Size = Vector2.new(locRect.w - 2, 1)
+						elseif i == "text" then
+							drawing.Position = tpos + Vector2.new(6,2)
+						elseif i == "outline" then
+							drawing.Position = Vector2.new(locRect.x, locRect.y)
+							drawing.Size = Vector2.new(locRect.w, locRect.h)
+						elseif i == "fade" then
+							drawing.Position = Vector2.new(locRect.x-1, locRect.y-1)
+							local t = (200-fade)/255/3
+							drawing.Transparency = t < 0.4 and 0.4 or t
+						elseif i == "line" then
+							drawing.Position = Vector2.new(locRect.x+1, locRect.y+1)
+						end
+	
+					end
+	
+					time += estep
+					estep += eestep
+	
+					
+				end
+			end,
+	
+			Fade = function(self, num, len)
+				if self.pos.x > self.targetPos.x - 0.2 * len or self.fading then
+					if not self.fading then
+						estep = 0
+					end
+					self.fading = true
+					alpha -= estep / 4 * len
+					eestep += 0.01
+				end
+				if alpha <= 0 then
+					self:Remove(self.drawings[1])
+				end
+			end
+		}
+	
+		for i = 1, Note.size.y - 2 do
+			local c = 0.28-i/80
+			Note.drawings[i] = Rectangle(200, 1, true, Color3.new(c,c,c))
+		end
+		local color = (mp and mp.getval) and mp:getval("Settings", "Menu Settings", "Menu Accent") or Color3.fromRGB(255, 255, 255)
+		Note.drawings.text = Text(t)
+		Note.drawings.line = Rectangle(1, Note.size.y - 2, true, color) 
+		
+		notes[#notes+1] = Note
+	
+	end
+	
+	
+	renderStepped = game.RunService.RenderStepped:Connect(function()
+		local smallest = math.huge
+		for k, v in pairs(notes) do
+			if v.enabled then
+				smallest = k < smallest and k or smallest 
+			else 
+				table.remove(notes, k)
+			end
+		end
+		local length = #notes
+		for k, note in pairs(notes) do
+			note:Update(k, length)
+			if k <= math.ceil(length/10) or note.fading then
+				note:Fade(k, length)
+			end
+		end
+	end)
+	--ANCHOR how to create notification
+	--CreateNotification("Loading...")
+end
 local mp = { -- this is for menu stuffs n shi
 	w = 500,
 	h = 600,
@@ -55,13 +242,15 @@ MultiThreadList({
 })
 
 -- MULTITHREAD DAT LOADING SO FAST!!!!
+local loaded = {}
 do 
 	local function Loopy_Image_Checky()
 		for i = 1, 5 do
 			local v = BBOT_IMAGES[i]
 			if v == nil then 
-				
 				return true 
+			elseif not loaded[i] then
+				loaded[i] = true
 			end
 		end
 		return false
@@ -123,6 +312,7 @@ local Camera = workspace.CurrentCamera
 local SCREEN_SIZE = Camera.ViewportSize
 local ButtonPressed = Instance.new("BindableEvent")
 local PATHFINDING = game:GetService("PathfindingService")
+local GRAVITY = Vector3.new(0,-192.6, 0)
 
 mp.x = math.floor((SCREEN_SIZE.X/2) - (mp.w/2))
 mp.y = math.floor((SCREEN_SIZE.Y/2) - (mp.h/2))
@@ -710,7 +900,7 @@ do
 
 end
 
-local loadingthing = Draw:OutlinedText("Now Loading...", 2, true, math.floor(SCREEN_SIZE.X/2), math.floor(SCREEN_SIZE.Y/2), 13, true, {255, 255, 255, 255}, {0, 0, 0})
+local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.X/4), math.floor(SCREEN_SIZE.Y/4), 13, true, {255, 50, 200, 255}, {0, 0, 0})
 
 function mp.BBMenuInit(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
@@ -1338,7 +1528,7 @@ function mp.BBMenuInit(menutable)
 	local shooties = {}
 
 	function inputBeganMenu(key)
-		if key.KeyCode == Enum.KeyCode.Delete then
+		if key.KeyCode == Enum.KeyCode.Delete and not loadingthing.Visible then
 			cp.dragging_m = false
 			cp.dragging_r = false
 			cp.dragging_b = false
@@ -1832,7 +2022,7 @@ function mp.BBMenuInit(menutable)
 			end
 		end
 	end
-
+	
 	local function mousebutton1downfunc()
 		dropboxopen = false
 		for k, v in pairs(mp.options) do
@@ -2158,7 +2348,7 @@ function mp.BBMenuInit(menutable)
 				end
 			end
 		end
-		if mp.tabnum2str[mp.activetab] == "Settings" then
+		if mp.open then
 			if mp.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
 				local clr = mp.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
 				mp.mc = {clr[1], clr[2], clr[3]}
@@ -2511,6 +2701,11 @@ function mp.BBMenuInit(menutable)
 		Draw:OutlinedRect(false, wm.pos.X, wm.pos.Y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
 		Draw:OutlinedText(wm.textString, 2, false, wm.pos.X + 5, wm.pos.Y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
 	end
+	--ANCHOR watermak
+	for k, v in pairs(mp.watermark.rect) do
+		v.Visible = true
+	end
+	mp.watermark.text[1].Visible = true
 	function mp:unload()
 		self.unloaded = true
 		for k, v in pairs(self.connections) do
@@ -3327,6 +3522,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				local aPos, aVis = workspace.CurrentCamera:WorldToViewportPoint(a.Character.Head.Position)
 				local bPos, bVis = workspace.CurrentCamera:WorldToViewportPoint(b.Character.Head.Position)
 				if aVis and not bVis then return true end
+				if bVis and not aVis then return false end
 				return (aPos-mousePos).Magnitude < (bPos-mousePos).Magnitude
 			end)
 			
@@ -3581,7 +3777,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						allesp.box[i].Size = Vector2.new(boxsize.w, boxsize.h)
 						allesp.box[i].Visible = true
 					end
-					--print(playerL)
 					if humanoid then
 						local health = math.ceil(humanoid.Health)
 						local maxhealth = humanoid.MaxHealth
@@ -3760,11 +3955,12 @@ elseif mp.game == "pf" then --!SECTION
 		if type(v) == "table" then
 			if rawget(v, "deploy") then
 				client.deploy = v
-			elseif rawget(v, "new") and rawget(v, "step") then
+			elseif rawget(v, "new") and rawget(v, "reset") then
 				client.particle = v
 			end
 		end
 	end	
+	
 	local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
 	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
 
@@ -3973,8 +4169,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 			origin = origin or Camera.CFrame.Position
 	
-			local hit, position = workspace:FindPartOnRayWithIgnoreList(Ray.new(origin, Part.Position - origin), {Camera, workspace.Ignore, workspace.Players})
-			--print(position, Part.Position)
+			local hit, position = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, Part.Position - origin), client.roundsystem.raycastwhitelist)
 			return position == Part.Position
 	
 	
@@ -3999,7 +4194,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 			origin = origin or Camera.CFrame.Position
 	
-			return origin + client.trajectory(origin, CACHED_VEC3, GRAVITY, pos, CACHED_VEC3, CACHED_VEC3, client.logic.currentgun.data.bulletspeed)
+			return origin + client.trajectory(origin, GRAVITY, pos, client.logic.currentgun.data.bulletspeed)
 	
 	
 		end
@@ -4160,41 +4355,41 @@ elseif mp.game == "pf" then --!SECTION
 		local tp_unlock = true
 
 		function ragebot:TPAura()
-			if misc:GetLifetime() > 100 then
-				CreateThread(function()
-					tp_unlock = false
-					local rp = LOCAL_PLAYER.Character.HumanoidRootPart
-					local targets = ragebot:GetKnifeTargets()
+		
+			CreateThread(function()
+				tp_unlock = false
+				local rp = LOCAL_PLAYER.Character.HumanoidRootPart
+				local targets = ragebot:GetKnifeTargets()
 
-					for k, target in pairs(targets) do
-						if target.insight then
-							rp.CFrame = CFrame.new(target.tppos)
-							tp_unlock = true
-							return
-						end
+				for k, target in pairs(targets) do
+					if target.insight then
+						rp.CFrame = CFrame.new(target.tppos)
+						tp_unlock = true
+						return
 					end
+				end
+				
+				if tp_unlock then return end
+
+				local path = PATHFINDING:CreatePath({AgentRadius = 4})
+
+				for k, target in pairs(targets) do
+					path:ComputeAsync(rp.Position, target.part.Position)
+
+					if path.Status ~= Enum.PathStatus.Success then continue end
 					
-					if tp_unlock then return end
+					local path_points = path:GetWaypoints()
 
-					local path = PATHFINDING:CreatePath({AgentRadius = 4})
-
-					for k, target in pairs(targets) do
-						path:ComputeAsync(rp.Position, target.part.Position)
-
-						if path.Status ~= Enum.PathStatus.Success then continue end
-						
-						local path_points = path:GetWaypoints()
-
-						for i, point in pairs(path_points) do
-							if tp_unlock then return end
-							rp.CFrame = CFrame.new(point.Position + Vector3.new(0,2,0))
-							game.RunService.RenderStepped:Wait()
-						end
-						break
+					for i, point in pairs(path_points) do
+						if tp_unlock then return end
+						rp.CFrame = CFrame.new(point.Position + Vector3.new(0,2,0))
+						game.RunService.RenderStepped:Wait()
 					end
-					tp_unlock = true
-				end)
-			end
+					break
+				end
+				tp_unlock = true
+			end)
+			
 			return ragebot:KnifeAura(targets)
 		end
 		
@@ -4293,15 +4488,17 @@ elseif mp.game == "pf" then --!SECTION
 	end
 	
 	do -- ANCHOR misc definitionz
+		function misc:GetParts(parts)
+			parts["Head"] = parts[1]
+			parts["Torso"] = parts[2]
+			parts["Right Arm"] = parts[3]
+			parts["Left Arm"] = parts[3]
+			parts["Right Leg"] = parts[4]
+			parts["Left Leg"] = parts[4]
+			return parts
+		end
 		local rootpart
 		local humanoid
-		local lifetime = 0
-		function misc:SetLifetime(t)
-			lifetime = t
-		end
-		function misc:GetLifetime()
-			return lifetime
-		end
 
 		function misc:SpotPlayers() 
 			if not mp:getval("Misc", "Extra", "Auto Spot") then return end 
@@ -4605,7 +4802,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 		function misc:MainLoop()
 			if keybindtoggles.crash then return end
-			lifetime += 1
+
 	
 			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
 			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
@@ -4632,12 +4829,16 @@ elseif mp.game == "pf" then --!SECTION
 			local args = {...}
 			if args[1] == "spawn" then 
 				misc:ApplyGunMods() 
-				misc:SetLifetime(0)
 			end
 			if args[1] == "bullethit" and mp:getval("Misc", "Extra", "Suppress Only") then return end
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
+			if args[1] == "newbullets" and legitbot.silentVector then
+				for k, bullet in pairs(args[2].bullets) do
+					bullet[1] = legitbot.silentVector.unit
+				end
+			end
 			if args[1] == "stab" then
 				if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
@@ -4687,28 +4888,50 @@ elseif mp.game == "pf" then --!SECTION
 			return send(self, unpack(args))
 		end
 	end
-	
+--Legitbot definition defines legit functions
+--Legitbot definition defines legit functions
+--Legitbot definition defines legit functions
+--Legitbot definition defines legit functions
+--Legitbot definition defines legit functions
+--Legitbot definition defines legit functions
+
 	do -- ANCHOR Legitbot definition defines legit functions
-	
+		legitbot.silentAiming = false
+		legitbot.silentVector = nil
 		function legitbot:MainLoop()
 	
 	
-			if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and mp:getval("Legit", "Aim Assist", "Enabled") and client.logic.currentgun then
-				local keybind = mp:getval("Legit", "Aim Assist", "Aimbot Key") - 1
-				local smoothing = (mp:getval("Legit", "Aim Assist", "Smoothing Factor") + 2) * 0.2 / GAME_SETTINGS.MouseSensitivity
-				local fov = mp:getval("Legit", "Aim Assist", "Aimbot FOV")
-				local sFov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
-	
-				local hitboxPriority = mp:getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
-				local hitscan = not mp:getval("Legit", "Aim Assist", "Force Priority Hitbox")
-	
-				if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
-					local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan) -- we will use the players parameter once player list is added.
-					if targetPart and closest < fov then
-						legitbot:AimAtTarget(targetPart, smoothing)
+			if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun then
+				if mp:getval("Legit", "Aim Assist", "Enabled") then
+					local keybind = mp:getval("Legit", "Aim Assist", "Aimbot Key") - 1
+					local smoothing = (mp:getval("Legit", "Aim Assist", "Smoothing Factor") + 2) * 0.2 / GAME_SETTINGS.MouseSensitivity
+					local fov = mp:getval("Legit", "Aim Assist", "Aimbot FOV")
+					local sFov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
+		
+					local hitboxPriority = mp:getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
+					local hitscan = mp:getval("Legit", "Aim Assist", "Force Priority Hitbox") and {} or {head = true, torso = true, rleg = true, lleg = true, rarm = true, larm = true}
+		
+					if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
+						local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+						local smoothing = mp:getval("Legit", "Aim Assist", "Smoothing Factor")
+						if targetPart then
+							if closest < fov then
+								legitbot:AimAtTarget(targetPart, smoothing)
+							end
+						end
 					end
-					if targetPart and closest < sFov then
+				end
+				if mp:getval("Legit", "Bullet Redirection", "Silent Aim") then
+					local fov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
+					local hnum = mp:getval("Legit", "Bullet Redirection", "Hitscan Priority")
+					local hitboxPriority = hnum == 1 and "head" or hnum == 2 and "torso" or hnum == 3 and false
+					local hitscan = misc:GetParts(mp:getval("Legit", "Bullet Redirection", "Hitboxes"))
+		
+					local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+					if targetPart and closest < fov then
 						legitbot:SilentAimAtTarget(targetPart)
+					else
+						legitbot.silentVector = nil
 					end
 				end
 			end
@@ -4728,32 +4951,48 @@ elseif mp.game == "pf" then --!SECTION
 			else
 				Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
 			end
-			if mp:getval("Legit", "Aim Assist", "Enable Randomization") then
-				local randMag = mp:getval("Legit", "Aim Assist", "Randomization") * 5
-				Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1,time()) * randMag, 0)
+			local randMag = mp:getval("Legit", "Aim Assist", "Randomization") * 5
+			Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
+			local gunpos = Camera:WorldToScreenPoint(Camera:FindFirstChild("Flame", true).Position)
+			
+			local rcs = Vector2.new(gunpos.x - LOCAL_MOUSE.x, gunpos.y - LOCAL_MOUSE.y)
+			if INPUT_SERVICE:IsMouseButtonPressed(1) and mp:getval("Legit", "Recoil Control", "Weapon RCS") then
+				local xo = mp:getval("Legit", "Recoil Control", "Recoil Control X")
+				local yo = mp:getval("Legit", "Recoil Control", "Recoil Control Y")
+				Pos += Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) 
 			end
-	
 			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
-	
+			
 			mousemoverel(aimbotMovement.X / smoothing, aimbotMovement.Y / smoothing)
 	
-	
 		end
 	
+		
 		function legitbot:SilentAimAtTarget(targetPart)
-	
-			if not targetPart then return end
-	
+			if not targetPart or not targetPart.Position then 
+				return
+			end
+			
+			if math.random(0, 100) > mp:getval("Legit", "Bullet Redirection", "Hit Chance") then return end
+
+			local origin = Camera:FindFirstChild("Flame", true).Position
+		
+			local target = targetPart.Position
+			local dir = camera:GetTrajectory(target, origin) - origin
+
+			local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") * -1 + 100
+			local offset = Vector3.new(math.random(-inac, inac), math.random(-inac, inac), math.random(-inac, inac))
+
+			dir += offset
+			legitbot.silentVector = dir.Unit
 		end
-	
-	
 	
 		function legitbot:GetTargetLegit(partPreference, hitscan, players)
 	
 	
-			local closest, closestPart = math.huge
-			partPreference = partPreference or "head"
-			hitscan = hitscan or false
+			local closest, closestPart, player = math.huge
+			partPreference = partPreference or 'what'
+			hitscan = hitscan or {}
 			players = players or game.Players:GetPlayers()
 	
 			for i, Player in pairs(players) do
@@ -4761,32 +5000,32 @@ elseif mp.game == "pf" then --!SECTION
 				if Player.Team ~= LOCAL_PLAYER.Team then
 					local Parts = client.replication.getbodyparts(Player)
 					if Parts then
-						if hitscan then
-							for i1, Bone in pairs(Parts) do
-	
-								if Bone.ClassName == "Part" then
-									if camera:GetFOV(Bone) < closest then
-										if camera:IsVisible(Bone) then
-											closest = camera:GetFOV(Bone)
-											closestPart = Bone
-										end
+						for k, Bone in pairs(Parts) do
+							if Bone.ClassName == "Part" and hitscan[k] then
+								if camera:GetFOV(Bone) < closest then
+									if camera:IsVisible(Bone) then
+										closest = camera:GetFOV(Bone)
+										closestPart = Bone
+										player = Player
 									end
 								end
-	
 							end
 						end
-						local PriorityBone = Parts[partPreference]
-						if PriorityBone and camera:GetFOV(PriorityBone) < closest then
-							if camera:IsVisible(PriorityBone) then
+
+						if partPreference then
+							local PriorityBone = Parts[partPreference]
+							if PriorityBone and camera:GetFOV(PriorityBone) and camera:IsVisible(PriorityBone) then
+								
 								closest = camera:GetFOV(PriorityBone)
 								closestPart = PriorityBone
+								player = Player
 							end
 						end
 					end
 				end
 	
 			end
-			return closestPart, closest
+			return closestPart, closest, player
 	
 	
 		end
@@ -4794,14 +5033,7 @@ elseif mp.game == "pf" then --!SECTION
 		function legitbot:TriggerBot()
 	
 			if IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
-				local parts = mp:getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes")
-	
-				parts["Head"] = parts[1]
-				parts["Torso"] = parts[2]
-				parts["Right Arm"] = parts[3]
-				parts["Left Arm"] = parts[3]
-				parts["Right Leg"] = parts[4]
-				parts["Left Leg"] = parts[4]
+				local parts = misc:GetParts(mp:getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
 	
 				local gun = camera:GetGun()
 				if not gun then return end
@@ -4824,6 +5056,15 @@ elseif mp.game == "pf" then --!SECTION
 	
 	
 	end
+
+	local newpart = client.particle.new
+	client.particle.new = function(P)
+		if legitbot.silentVector and not P.thirdperson then
+			local mag = P.velocity.Magnitude
+			P.velocity = legitbot.silentVector * mag
+		end
+		newpart(P)
+	end
 	
 	
 	--ADS Fov hook
@@ -4841,6 +5082,9 @@ elseif mp.game == "pf" then --!SECTION
 			game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
 			game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
 		end
+
+		
+
 		if mp.open then
 			client.char.unaimedfov = mp.options["Visuals"]["Local Visuals"]["Camera FOV"][1]
 	
@@ -4899,7 +5143,9 @@ elseif mp.game == "pf" then --!SECTION
 					local health = math.ceil(client.hud:getplayerhealth(Player))
 					local spoty = 0
 					local boxtransparency = mp:getval("ESP", GroupBox, "Box", "color")[4] / 255
-			
+					
+					local distance = math.floor((parts.rootpart.Position - LOCAL_PLAYER.Character.PrimaryPart.Position).Magnitude/5)
+
 					if (topIsRendered or bottomIsRendered) then
 						if mp.options["ESP"][GroupBox]["Name"][1] then
 		
@@ -4999,7 +5245,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 							local disttext = allesp.text.distance[Index]
 		
-							disttext.Text = tostring(bottom.z).."s" --TODO alan i told you to make this not worldtoscreen based.
+							disttext.Text = tostring(distance).."m" --TODO alan i told you to make this not worldtoscreen based.
 							disttext.Visible = true
 							disttext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y + spoty)
 							disttext.Color = mp:getval("ESP", GroupBox, "Distance", "color", true)
@@ -5051,6 +5297,31 @@ elseif mp.game == "pf" then --!SECTION
 					end
 					
 				end)
+			end
+		end
+		do -- no scope pasted from v1 lol
+			local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
+			local frame = gui.MainGui:FindFirstChild("ScopeFrame")
+			if mp:getval("Visuals", "Local Visuals", "No Scope Border") and frame then
+				if frame:FindFirstChild("SightRear") then
+					for k,v in pairs(frame.SightRear:GetChildren()) do
+						if v.ClassName == "Frame" then
+							v.Visible = false
+						end
+					end
+					frame.SightFront.Visible = false
+					frame.SightRear.ImageTransparency = 1
+				end
+			elseif frame then
+				if frame:FindFirstChild("SightRear") then
+					for k,v in pairs(frame.SightRear:GetChildren()) do
+						if v.ClassName == "Frame" then
+							v.Visible = true
+						end
+					end
+					frame.SightFront.Visible = true
+					frame.SightRear.ImageTransparency = 0
+				end
 			end
 		end
 	end
@@ -5117,21 +5388,11 @@ elseif mp.game == "pf" then --!SECTION
 							stradd = "%"
 						},
 						{
-							type = "toggle",
-							name = "Enable Randomization",
-							value = false
-						},
-						{
 							type = "slider",
 							name = "Randomization",
 							value = 5,
 							minvalue = 0,
 							maxvalue = 20
-						},
-						{
-							type = "toggle",
-							name = "Enable Deadzone",
-							value = false
 						},
 						{
 							type = "slider",
@@ -5163,14 +5424,14 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Adjust for Bullet Drop",
 							value = false
 						},
-						{
+						--[[{
 							type = "toggle",
 							name = "Aim at Backtrack",
 							value = false
-						},
+						},]]
 					}
 				},
-				{
+				--[[{
 					name = "Position Adjustment",
 					autopos = "left",
 					content = {
@@ -5188,7 +5449,7 @@ elseif mp.game == "pf" then --!SECTION
 							stradd = "ms"
 						},
 					},
-				},
+				},]]
 				{
 					name = "Bullet Redirection",
 					autopos = "left",
@@ -5206,7 +5467,34 @@ elseif mp.game == "pf" then --!SECTION
 							minvalue = 0,
 							maxvalue = 180,
 							stradd = "°"
-						}
+						},
+						{
+							type = "slider",
+							name = "Hit Chance",
+							value = 30,
+							minvalue = 0,
+							maxvalue = 100,
+							stradd = "%"
+						},
+						{
+							type = "slider",
+							name = "Accuracy",
+							value = 60,
+							minvalue = 0,
+							maxvalue = 100,
+							stradd = "%"
+						},
+						{
+							type = "dropbox",
+							name = "Hitscan Priority",
+							value = 1,
+							values = {"Head", "Body", "Closest"}
+						},
+						{
+							type = "combobox",
+							name = "Hitboxes",
+							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
+						},
 					}
 				},
 				{
@@ -6241,7 +6529,7 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Watermark",
-							value = false,
+							value = true,
 						},
 					}
 				},
@@ -6297,7 +6585,7 @@ elseif mp.game == "pf" then --!SECTION
 			}
 		},
 	})
-	do --TODO alan put this shit into a function so you don't have to copy paste it thanks
+	do  --TODO alan put this shit into a function so you don't have to copy paste it thanks
 		local plistinfo = mp.options["Settings"]["Player List"]["Player Info"][1]
 		local plist = mp.options["Settings"]["Player List"]["Players"]
 		local playerpictures = {}
@@ -6347,11 +6635,13 @@ elseif mp.game == "pf" then --!SECTION
 
 		local function cacheAvatars()
 			for i, v in ipairs(Players:GetPlayers()) do
-				if not table.contains(playerpictures, v) then
-					local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+				CreateThread(function()
+					if not table.contains(playerpictures, v) then
+						local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
 
-					playerpictures[v] = game:HttpGet(content)
-				end
+						playerpictures[v] = game:HttpGet(content)
+					end
+				end)
 			end
 		end
 
