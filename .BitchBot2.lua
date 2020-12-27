@@ -58,7 +58,7 @@ do
 		local insety = 0
 	
 	
-		local Note = {
+		local Note = { 
 	
 			enabled = true,
 	
