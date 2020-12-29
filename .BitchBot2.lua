@@ -900,7 +900,7 @@ do
 
 end
 
-local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.X/4), math.floor(SCREEN_SIZE.Y/4), 13, true, {255, 50, 200, 255}, {0, 0, 0})
+local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.X/16), math.floor(SCREEN_SIZE.Y/16), 13, true, {255, 50, 200, 255}, {0, 0, 0})
 
 function mp.BBMenuInit(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
@@ -3214,7 +3214,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						{
 							type = "toggle",
 							name = "Watermark",
-							value = false,
+							value = true,
 						},
 					}
 				},
@@ -3314,8 +3314,10 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	local function cacheAvatars()
 		for i, v in ipairs(Players:GetPlayers()) do
 			if not table.contains(playerpictures, v) then
-				local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-				playerpictures[v] = game:HttpGet(content)
+				CreateThread(function()
+					local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+					playerpictures[v] = game:HttpGet(content)
+				end)
 			end
 		end
 	end
@@ -3490,7 +3492,10 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 	local function Aimbot()
 		if mp:getval("Aimbot", "Aimbot", "Enabled") and INPUT_SERVICE:IsKeyDown(mp:getval("Aimbot", "Aimbot", "Enabled", "keybind")) then
-			local orginizedplyrs = {}
+			local organizedPlayers = {}
+			local fovType = mp:getval("Aimbot", "Aimbot", "FOV Calculation")
+			local fov = mp:getval("Aimbot", "Aimbot", "Aimbot FOV")
+			local mousePos = Vector3.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36, 0)
 			for i, v in ipairs(Players:GetPlayers()) do
 				if v == LOCAL_PLAYER then
 					continue 
@@ -3505,6 +3510,10 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							continue
 						end
 					end
+					local pos = Camera:WorldToViewportPoint(v.Character.Head.Position)
+					if fovType == 1 and(pos - mousePos).Magnitude > fov and fov ~= 0 then
+						continue
+					end
 					if checks[2] and v.Team and v.Team == LOCAL_PLAYER.Team then
 						continue
 					end
@@ -3512,13 +3521,13 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						continue
 					end
 
-					table.insert(orginizedplyrs, v)
+					table.insert(organizedPlayers, v)
 
 				end
 			end
-			local mousePos = Vector3.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36, 0)
 
-			table.sort(orginizedplyrs, function(a, b)
+
+			table.sort(organizedPlayers, function(a, b)
 				local aPos, aVis = workspace.CurrentCamera:WorldToViewportPoint(a.Character.Head.Position)
 				local bPos, bVis = workspace.CurrentCamera:WorldToViewportPoint(b.Character.Head.Position)
 				if aVis and not bVis then return true end
@@ -3526,7 +3535,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				return (aPos-mousePos).Magnitude < (bPos-mousePos).Magnitude
 			end)
 			
-			for i, v in ipairs(orginizedplyrs) do
+			for i, v in ipairs(organizedPlayers) do
 				local humanoid = v.Character:FindFirstChild("Humanoid")
 				local rootpart = v.Character.HumanoidRootPart.Position
 				local head = v.Character:FindFirstChild("Head")
@@ -3674,11 +3683,11 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 			local aimfov = mp:getval("Aimbot", "Aimbot", "Aimbot FOV")
 			if mp:getval("Aimbot", "Aimbot", "FOV Calculation") == 2 then
-				mp.fovcircle[1].Radius = SCREEN_SIZE.X/2 * aimfov / Camera.FieldOfView
-				mp.fovcircle[2].Radius = SCREEN_SIZE.X/2 * aimfov / Camera.FieldOfView
+				mp.fovcircle[1].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.Y
+				mp.fovcircle[2].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.Y
 			elseif mp.open then
-				mp.fovcircle[1].Radius = SCREEN_SIZE.X/2 * aimfov / 70
-				mp.fovcircle[2].Radius = SCREEN_SIZE.X/2 * aimfov / 70
+				mp.fovcircle[1].Radius = aimfov
+				mp.fovcircle[2].Radius = aimfov
 			end
 		end
 
@@ -3691,7 +3700,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				end
 			end
 
-			local orginizedplyrs = {}
+			local organizedPlayers = {}
 			for i, v in ipairs(Players:GetPlayers()) do
 				if v == LOCAL_PLAYER then
 					continue 
@@ -3715,18 +3724,18 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						continue
 					end
 
-					table.insert(orginizedplyrs, v)
+					table.insert(organizedPlayers, v)
 
 				end
 			end
 
 			if mp:getval("Visuals", "ESP Settings", "ESP Sorting") == 2 then
-				table.sort(orginizedplyrs, function(a, b)
+				table.sort(organizedPlayers, function(a, b)
 					return LOCAL_PLAYER:DistanceFromCharacter(a.Character.HumanoidRootPart.Position) > LOCAL_PLAYER:DistanceFromCharacter(b.Character.HumanoidRootPart.Position)
 				end)
 			end
 
-			for i, v in ipairs(orginizedplyrs) do
+			for i, v in ipairs(organizedPlayers) do
 				local humanoid = v.Character:FindFirstChild("Humanoid")
 				local rootpart = v.Character.HumanoidRootPart.Position
 
@@ -3880,6 +3889,17 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	end)	
 
 elseif mp.game == "pf" then --!SECTION
+	local sphereHitbox = Instance.new("Part", workspace)
+	local diameter
+	do
+		diameter = 11 -- up to 12 works
+		sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
+		sphereHitbox.Position = Vector3.new()
+		sphereHitbox.Shape = Enum.PartType.Ball
+		sphereHitbox.Transparency = 1
+		sphereHitbox.Anchored = true
+		sphereHitbox.CanCollide = false
+	end
 	--SECTION PF BEGIN
 	local allesp = {
 		skel = {
@@ -4169,7 +4189,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 			origin = origin or Camera.CFrame.Position
 	
-			local hit, position = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, Part.Position - origin), client.roundsystem.raycastwhitelist)
+			local hit, position = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, Part.Position - origin), {unpack(client.roundsystem.raycastwhitelist), LOCAL_PLAYER, Camera})
 			return position == Part.Position
 	
 	
@@ -4253,7 +4273,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 			local function GetPartTable(ply)
 				local tbl = {}
-				for k, v in pairs(gamereplication.getbodyparts(ply)) do
+				for k, v in pairs(client.replication.getbodyparts(ply)) do
 					tbl[v] = true
 				end
 				return tbl
@@ -4269,14 +4289,14 @@ elseif mp.game == "pf" then --!SECTION
 				else
 					targetParts = GetPartTable(target)
 				end
-				local origin = gamecam.cframe.p
+				local origin = client.cam.cframe.p
 		
 				ignore = {workspace.Terrain, workspace.Ignore, workspace.CurrentCamera, workspace.Players[ply.Team.Name]}
 				lifetime = 1.5
-				velocity = (targetDir - origin).Unit * gamelogic.currentgun.data.bulletspeed
-				acceleration = vec3Gravity
+				velocity = (targetDir - origin).Unit * client.logic.currentgun.data.bulletspeed
+				acceleration = GRAVITY
 				position = origin
-				penetrationDepth = gamelogic.currentgun.data.penetrationdepth
+				penetrationDepth = client.logic.currentgun.data.penetrationdepth
 		
 				for i = 1, maxSteps do
 					local ret = BulletStep(step, i * step, targetParts)
@@ -4289,8 +4309,6 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 		local tpIgnore = {workspace.Players, workspace.Ignore, workspace.CurrentCamera}
-		local nadeSize = Vector3.new(0, 50, 0)
-		local tpSelfDecreaseOffset = Vector3.new(0, 2, 0)
 	
 
 		function ragebot:GetKnifeTargets()
@@ -4334,8 +4352,6 @@ elseif mp.game == "pf" then --!SECTION
 					ragebot:KnifeAura()
 				elseif knifetype == 3 then
 					ragebot:FlightAura()
-				elseif knifetype == 4 then 
-					ragebot:TPAura()
 				end
 			end
 		end
@@ -4352,46 +4368,6 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
-		local tp_unlock = true
-
-		function ragebot:TPAura()
-		
-			CreateThread(function()
-				tp_unlock = false
-				local rp = LOCAL_PLAYER.Character.HumanoidRootPart
-				local targets = ragebot:GetKnifeTargets()
-
-				for k, target in pairs(targets) do
-					if target.insight then
-						rp.CFrame = CFrame.new(target.tppos)
-						tp_unlock = true
-						return
-					end
-				end
-				
-				if tp_unlock then return end
-
-				local path = PATHFINDING:CreatePath({AgentRadius = 4})
-
-				for k, target in pairs(targets) do
-					path:ComputeAsync(rp.Position, target.part.Position)
-
-					if path.Status ~= Enum.PathStatus.Success then continue end
-					
-					local path_points = path:GetWaypoints()
-
-					for i, point in pairs(path_points) do
-						if tp_unlock then return end
-						rp.CFrame = CFrame.new(point.Position + Vector3.new(0,2,0))
-						game.RunService.RenderStepped:Wait()
-					end
-					break
-				end
-				tp_unlock = true
-			end)
-			
-			return ragebot:KnifeAura(targets)
-		end
 		
 		function ragebot:KnifeAura(t)
 	
@@ -4988,6 +4964,29 @@ elseif mp.game == "pf" then --!SECTION
 			legitbot.silentVector = dir.Unit
 		end
 	
+		local function isValidTarget(Bone, Player)
+			if mp:getval("Legit", "Aim Assist", "Auto Wallbang") then
+				local dir = camera:GetTrajectory(Bone.Position, client.cam.cframe.p) - client.cam.cframe.p
+				if ragebot:CanPenetrate(LOCAL_PLAYER, Player, dir, Bone.Position)  then
+					return Bone
+				end
+			elseif camera:IsVisible(Bone, Bone.Parent) then
+				return Bone
+			end
+			return false
+		end
+			--[[
+				if mp:getval("Legit", "Aim Assist", "Auto Wallbang") then
+					local dir = camera:GetTrajectory(Bone.Position, client.cam.cframe.p) - client.cam.cframe.p
+					if ragebot:CanPenetrate(LOCAL_PLAYER, Player, dir, Bone.Position)  then
+						closest
+					end
+				elseif camera:IsVisible(Bone) then
+					closest = camera:GetFOV(Bone)
+					closestPart = Bone
+					player = Player
+				end
+			]]
 		function legitbot:GetTargetLegit(partPreference, hitscan, players)
 	
 	
@@ -5003,11 +5002,11 @@ elseif mp.game == "pf" then --!SECTION
 					if Parts then
 						for k, Bone in pairs(Parts) do
 							if Bone.ClassName == "Part" and hitscan[k] then
-								if camera:GetFOV(Bone) < closest then
-									if camera:IsVisible(Bone) then
-										closest = camera:GetFOV(Bone)
-										closestPart = Bone
-										player = Player
+								local fovToBone = camera:GetFOV(Bone)
+								if fovToBone < closest then
+									local validPart = isValidTarget(Bone, Player)
+									if validPart then
+										print('hi')
 									end
 								end
 							end
@@ -5417,6 +5416,11 @@ elseif mp.game == "pf" then --!SECTION
 							values = {"Head", "Body"}
 						},
 						{
+							type = "toggle", 
+							name = "Auto Wallbang",
+							value = false
+						},
+						{
 							type = "toggle",
 							name = "Force Priority Hitbox",
 							value = false
@@ -5724,7 +5728,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Knife Bot Type",
 							value = 2,
-							values = {"Assist", "Multi Aura", "Flight Aura", "Teleport Aura"}
+							values = {"Assist", "Multi Aura", "Flight Aura"}
 						},
 					},
 				},
@@ -5767,11 +5771,6 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Lower Arms",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "Anti Grenade Teleport",
 							value = false,
 						},
 					}
