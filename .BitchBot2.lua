@@ -4184,13 +4184,13 @@ elseif mp.game == "pf" then --!SECTION
 	
 		end
 	
-		function camera:IsVisible(Part, origin)
+		function camera:IsVisible(Part, Parent, origin)
 	
 	
 			origin = origin or Camera.CFrame.Position
 	
 			local hit, position = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, Part.Position - origin), {unpack(client.roundsystem.raycastwhitelist), LOCAL_PLAYER, Camera})
-			return position == Part.Position
+			return (position == Part.Position or hit:IsDescendantOf(Parent))
 	
 	
 		end
