@@ -4190,7 +4190,8 @@ elseif mp.game == "pf" then --!SECTION
 			origin = origin or Camera.CFrame.Position
 	
 			local hit, position = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, Part.Position - origin), {unpack(client.roundsystem.raycastwhitelist), LOCAL_PLAYER, Camera})
-			return (position == Part.Position or hit:IsDescendantOf(Parent))
+			
+			return (position == Part.Position or (Parent and hit and Parent:IsAncestorOf(hit)))
 	
 	
 		end
