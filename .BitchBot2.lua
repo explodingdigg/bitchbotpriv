@@ -4233,7 +4233,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 		end
 	
-		function camera:IsVisible(Part, origin)
+		function camera:IsVisible(Part, Parent, origin)
 	
 	
 			origin = origin or Camera.CFrame.Position
@@ -4364,8 +4364,24 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		end
-		local tpIgnore = {workspace.Players, workspace.Ignore, workspace.CurrentCamera}
-	
+
+		function ragebot:SilentAimAtTarget(part, target, origin)
+			local origin = origin or client.cam.cframe.p
+			if not part then 
+				ragebot.silentVector = nil
+				ragebot.target = nil
+				ragebot.firepos = nil
+				client.logic.currentgun:shoot(false)
+				return
+			end
+			local target_pos = part.Position
+			local dir = camera:GetTrajectory(part.Position, origin) - origin
+			ragebot.silentVector = dir.unit
+			ragebot.target = target
+			ragebot.targetpart = part
+			ragebot.firepos = origin
+			client.logic.currentgun:shoot(true)
+		end
 
 		function ragebot:GetTarget(hitboxPriority, hitscan, players)
 			local hitscan = hitscan or {}
@@ -4408,7 +4424,7 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 
-			return closest, cpart, theplayer
+			return cpart, theplayer, closest
 		end
 
 		function ragebot:GetKnifeTargets()
@@ -4479,8 +4495,6 @@ elseif mp.game == "pf" then --!SECTION
 			end
 	
 		end
-		
-		
 	
 		function ragebot:KnifeTarget(target, stab)
 			local cfc = client.cam.cframe
@@ -4562,7 +4576,10 @@ elseif mp.game == "pf" then --!SECTION
 				local prioritizedpart = mp:getval("Rage", "Aimbot", "Hitscan Priority")
 	
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
-					local targetPart, closest = ragebot:GetTarget(prioritizedpart, hitscanpreference)
+					local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference)
+					ragebot:SilentAimAtTarget(targetPart, targetPlayer)
+				else
+					self.target = nil
 				end
 			end
 		end
@@ -4717,7 +4734,7 @@ elseif mp.game == "pf" then --!SECTION
 						for k,v in next, parts do
 							if v:IsA("Part") then
 								local formattedval = (mp:getval("Legit", "Aim Assist", "Enlarge Enemy Hitboxes") / 95) + 1
-								v.Size *= v.Name == "Head" and Vector3.new(formattedval, v.Size.y * formattedval / 100, formattedval) or formattedval -- hitbox expander
+								v.Size *= v.Name == "Head" and Vector3.new(formattedval, v.Size.y * (1 + formattedval / 100), formattedval) or formattedval -- hitbox expander
 							end
 						end
 					end
@@ -5090,12 +5107,29 @@ elseif mp.game == "pf" then --!SECTION
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
-			if args[1] == "newbullets" and legitbot.silentVector then
-				for k, bullet in pairs(args[2].bullets) do
-					local oldDir = bullet[1]
-					local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
-					local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
-					bullet[1] = legitbot.silentVector.unit
+			if args[1] == "newbullets" then
+				if legitbot.silentVector then
+					for k, bullet in pairs(args[2].bullets) do
+						local oldDir = bullet[1]
+						local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
+						local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
+						bullet[1] = newDir
+					end
+				end
+				if ragebot.silentVector then
+					for k, bullet in pairs(args[2].bullets) do
+						bullet[1] = ragebot.silentVector.unit
+					end
+					args[2].firepos = ragebot.firepos
+					send(self, unpack(args))
+					for k, bullet in pairs(args[2].bullets) do
+						send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
+					end
+					
+					-- for k, bullet in pairs(info.bullets) do
+					-- 	send(gamenet, "bullethit", rageTarget, rageHitPos, rageHitbox, bullet[2])
+					-- end
+					return
 				end
 			end
 			if args[1] == "stab" then
@@ -5401,6 +5435,13 @@ elseif mp.game == "pf" then --!SECTION
 			local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
 			legitbot.silentVector = newDir
 			P.velocity = legitbot.silentVector * mag
+		end
+		if ragebot.silentVector and not P.thirdperson then
+			local oldpos = P.position
+			P.position = ragebot.firepos
+			
+			local mag = P.velocity.Magnitude
+			P.velocity = ragebot.silentVector * mag
 		end
 		newpart(P)
 		-- THIS IS SILENT AIM. :partying_face:🥳🥳🥳🥳🥳🥳
