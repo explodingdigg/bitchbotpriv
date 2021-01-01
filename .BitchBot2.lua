@@ -283,7 +283,7 @@ end
 
 -- im back
 
-game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge)
+game:GetService("NetworkClient"):SetOutgoingKBPSLimit(0)
 
 setfpscap(300) -- nigga roblox
 
@@ -2696,7 +2696,7 @@ function mp.BBMenuInit(menutable)
 		Draw:FilledRect(false, wm.pos.X, wm.pos.Y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
 		Draw:FilledRect(false, wm.pos.X, wm.pos.Y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
 		for i = 0, 14 do
-		  Draw:FilledRect(false, wm.pos.X, wm.pos.Y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
+			Draw:FilledRect(false, wm.pos.X, wm.pos.Y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
 		end
 		Draw:OutlinedRect(false, wm.pos.X, wm.pos.Y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
 		Draw:OutlinedText(wm.textString, 2, false, wm.pos.X + 5, wm.pos.Y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
@@ -2721,13 +2721,13 @@ function mp.BBMenuInit(menutable)
 end
 
 local function GetPTlayerHumanoid(player)
-    local character = player.Character
+   local character = player.Character
 
-    if character then
-        return character:FindFirstChildOfClass("Humanoid")
-    else
-    	return nil
-    end
+   if character then
+      return character:FindFirstChildOfClass("Humanoid")
+   else
+		return nil
+   end
 end
 
 
@@ -3904,6 +3904,13 @@ elseif mp.game == "pf" then --!SECTION
 		sphereHitbox.Anchored = true
 		sphereHitbox.CanCollide = false
 	end
+
+	local keybindtoggles = { -- ANCHOR keybind toggles
+	crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
+	fly = false,
+	thirdperson = false,
+}
+
 	--SECTION PF BEGIN
 	local allesp = {
 		skel = {
@@ -3945,14 +3952,30 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	end
 	
+	local bodysize = { -- for ragdolls
+		["Head"] = Vector3.new(2, 1, 1),
+		["Torso"] = Vector3.new(2, 2, 1),
+		["HumanoidRootPart"] = Vector3.new(0.2, 0.2, 0.2),
+		["Left Arm"] = Vector3.new(1, 2, 1),
+		["Right Arm"] = Vector3.new(1, 2, 1),
+		["Left Leg"] = Vector3.new(1, 2, 1),
+		["Right Leg"] = Vector3.new(1, 2, 1)
+	}
+
 	local client = {}
-	
+
+	client.loadedguns = {}
+
 	for k, v in pairs(getgc(true)) do
 		if type(v) == "function" then
 			if getinfo(v).name == "bulletcheck" then
 				client.bulletcheck = v
 			elseif getinfo(v).name == "trajectory" then
 				client.trajectory = v
+			elseif getinfo(v).name == "call" then
+				client.call = v
+			elseif getinfo(v).name == "loadplayer" then
+				client.loadplayer = v
 			end
 			for k1, v1 in pairs(debug.getupvalues(v)) do
 				if type(v1) == "table" then
@@ -3979,11 +4002,39 @@ elseif mp.game == "pf" then --!SECTION
 		if type(v) == "table" then
 			if rawget(v, "deploy") then
 				client.deploy = v
-			elseif rawget(v, "new") and rawget(v, "reset") then
+				local olddeploy = v.deploy
+				v.deploy = function(...)
+					if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
+						CreateThread(function()
+							repeat wait() until client.char.spawned
+							client.loadedguns = getupvalue(client.char.unloadguns, 2)
+							client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[client.logic.currentgun.name]), game:service("ReplicatedStorage").ExternalModels[client.logic.currentgun.name]:Clone())
+						end)
+					end
+					return olddeploy(...)
+				end
+			elseif rawget(v, "new") and rawget(v, "step") and rawget(v, "reset") then
 				client.particle = v
 			end
 		end
 	end	
+
+	client.fakeplayer = Instance.new("Player", Players) -- thank A_003 for this (third person body)🔥 
+	client.fakeplayer.Name = " "
+	client.fakeplayer.Team = LOCAL_PLAYER.Team
+
+	debug.setupvalue(client.loadplayer, 1, client.fakeplayer)
+	client.fakeupdater = client.loadplayer(LOCAL_PLAYER)
+	debug.setupvalue(client.loadplayer, 1, LOCAL_PLAYER)
+
+	client.fakeplayer.Parent = nil
+	do 
+		local updatervalues = getupvalues(client.fakeupdater.step)
+
+		updatervalues[11].s = 7
+		updatervalues[15].s = 100
+		client.fake_upvs = updatervalues
+	end
 	
 	local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
 	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
@@ -4042,7 +4093,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 	local function renderChams()
 		for k, Player in pairs(Players:GetPlayers()) do
-	
+			if Player == LOCAL_PLAYER then continue end -- doing this for now, i'll have to change the way the third person model will end up working
 			local Body = client.replication.getbodyparts(Player)
 			if Body then
 				local enabled
@@ -4069,7 +4120,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 				Player.Character = Body.rootpart.Parent
 				for k1, Part in pairs(Player.Character:GetChildren()) do
-	
+					
 					if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
 						if not Part:FindFirstChild("c88") then
 	
@@ -4121,11 +4172,6 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	end
 	
-	local keybindtoggles = { -- ANCHOR keybind toggles
-		crash = false,
-		fly = false,
-		thirdperson = false,
-	}
 	local send = client.net.send
 	
 	
@@ -4140,7 +4186,7 @@ elseif mp.game == "pf" then --!SECTION
 		setreadonly(mt, false)
 	
 		mt.__newindex = newcclosure(function(self, id, val)
-			if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson and self == workspace.Camera and id == "CFrame" then
+			if client.char.spawned and mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson and self == workspace.Camera and id == "CFrame" then
 				local dist = mp:getval("Visuals", "Local Visuals", "Third Person Distance") / 10
 				local params = RaycastParams.new()
 				params.FilterType = Enum.RaycastFilterType.Blacklist
@@ -4180,7 +4226,6 @@ elseif mp.game == "pf" then --!SECTION
 	
 		function camera:GetFOV(Part)
 	
-	
 			local directional = CFrame.new(workspace.Camera.CFrame.Position, Part.Position)
 			local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(workspace.Camera.CFrame:ToOrientation())
 			return math.deg(ang.Magnitude)
@@ -4193,12 +4238,18 @@ elseif mp.game == "pf" then --!SECTION
 	
 			origin = origin or Camera.CFrame.Position
 	
-			local hit, position = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, Part.Position - origin), {unpack(client.roundsystem.raycastwhitelist), LOCAL_PLAYER, Camera})
-			return position == Part.Position
+			local hit, position = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, Part.Position - origin), client.roundsystem.raycastwhitelist)
+			
+			return (position == Part.Position or (Parent and hit and Parent:IsAncestorOf(hit)))
 	
 	
 		end
 
+		function camera:LookAt(pos)
+			local angles = camera:GetAnglesTo(pos)
+			client.cam.angles = angles
+		end
+		
 		function camera:GetAngles()
 			local pitch, yaw = Camera.CFrame:ToOrientation()
 			return {["pitch"] = pitch, ["yaw"] = yaw}
@@ -4229,6 +4280,7 @@ elseif mp.game == "pf" then --!SECTION
 	local misc = {}
 	local ragebot = {}
 	do--ANCHOR ragebot definitions
+		ragebot.sprint = true
 		do
 			local dot = Vector3.new().Dot
 			local ignore
@@ -4283,7 +4335,7 @@ elseif mp.game == "pf" then --!SECTION
 				return tbl
 			end
 		
-			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, crazyMode)
+			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, crazyMode)
 				local targetParts
 				if crazyMode then  
 					sphereHitbox.Position = targetPos
@@ -4293,7 +4345,7 @@ elseif mp.game == "pf" then --!SECTION
 				else
 					targetParts = GetPartTable(target)
 				end
-				local origin = client.cam.cframe.p
+				local origin = customOrigin or client.cam.cframe.p
 		
 				ignore = {workspace.Terrain, workspace.Ignore, workspace.CurrentCamera, workspace.Players[ply.Team.Name]}
 				lifetime = 1.5
@@ -4314,6 +4366,50 @@ elseif mp.game == "pf" then --!SECTION
 		end
 		local tpIgnore = {workspace.Players, workspace.Ignore, workspace.CurrentCamera}
 	
+
+		function ragebot:GetTarget(hitboxPriority, hitscan, players)
+			local hitscan = hitscan or {}
+			local partPreference = hitboxPriority or "you know who i am? well you about to find out, your barbecue boy"
+			local closest, cpart, theplayer = math.huge
+
+			local players = players or Players:GetPlayers()
+
+			for i, player in next, players do
+				if player.Team ~= LOCAL_PLAYER.Team then
+					local curbodyparts = client.replication.getbodyparts(player)
+					if curbodyparts then
+						for k, bone in next, curbodyparts do
+							if bone.ClassName == "Part" and hitscan[k] then
+								if camera:IsVisible(bone, bone.Parent) then 
+									local fovToBone = camera:GetFOV(bone)
+									if fovToBone < closest then
+										closest = fovToBone
+										cpart = bone
+										theplayer = player
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+
+			if theplayer and cpart then
+				local curbodyparts = client.replication.getbodyparts(theplayer)
+				if partPreference then
+					local prioritybone = curbodyparts[partPreference]
+					if prioritybone then
+						local bonedist = camera:GetFOV(prioritybone)
+						if bonedist and bonedist < closest and camera:IsVisible(prioritybone) then
+							closest = camera:GetFOV(prioritybone)
+							cpart = prioritybone
+						end
+					end
+				end
+			end
+
+			return closest, cpart, theplayer
+		end
 
 		function ragebot:GetKnifeTargets()
 
@@ -4393,11 +4489,87 @@ elseif mp.game == "pf" then --!SECTION
 			send(client.net, "knifehit", target.player, tick(), target.part)
 		end
 	
+		function ragebot:FakeBody()
+			if client.char.spawned then
+				local oldsend = client.net.send
+
+				client.net.send = function(self, event, ...)
+					if event == "repupdate" then return end
+					oldsend(self, event, ...)
+				end
+
+				local op = client.char.rootpart.CFrame
+				client.char.rootpart.Velocity = Vector3.new(0, 300, 0)
+				client.char.rootpart.Position += Vector3.new(0, 30, 0)
+				wait(0.2)
+				local clone = client.char.rootpart:Clone()
+				clone.Parent = workspace
+				wait()
+				clone.CFrame = op
+				clone.Velocity = Vector3.new()
+
+				client.net.send = oldsend
+			end
+		end
+
+		function ragebot:ResolveCubicOffsetToTarget(startpos, extent)
+			assert(startpos, "mang u need a oriegen to do cube ic scan u feel me?")
+			local resolvedPosition = nil
+			local curscanpos = startpos
+			local studs = extent or 8
+			do -- This looks sort of dumb
+				local targetpos = self.target.CFrame.p
+
+				for x = 1, studs do
+
+					curscanpos += Vector3.new(x, 0, 0)
+					local directionVector = targetpos - curscanpos
+					resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, self.target, directionVector, targetpos, curscanpos) and curscanpos or nil
+					if resolvedPosition then return resolvedPosition end
+
+					for y = -1, studs, -1 do
+
+						curscanpos += Vector3.new(0, y, 0)
+						local directionVector = targetpos - curscanpos
+						resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, self.target, directionVector, targetpos, curscanpos) and curscanpos or nil
+						if resolvedPosition then return resolvedPosition end
+
+						for z = 1, studs, -1 do
+
+							curscanpos += Vector3.new(0, 0, z)
+							local directionVector = targetpos - curscanpos
+							resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, self.target, directionVector, targetpos, curscanpos) and curscanpos or nil
+							if resolvedPosition then return resolvedPosition end
+
+						end
+					end
+				end
+			end
+		end
+
+		function ragebot:CubicHitscan(studs, origin) -- Scans in a cubic square area of size (studs) and resolves a position to hit target at
+			if not self.target then return "target is null" end
+			local studs = tonumber(studs) or 8
+			local origin = client.cam.basecframe.p + Vector3.new(-studs, studs, -studs) -- Position the scan at the top left of the cube
+			local resolvedPosition = self:ResolveCubicOffsetToTarget(curscanpos, size)
+
+			return resolvedPosition
+		end
+
+		function ragebot:MainLoop() -- lfg
+			if client.char.spawned and mp:getval("Rage", "Aimbot", "Enabled") then
+				local hitscanpreference = misc:GetParts(mp:getval("Rage", "Aimbot", "Hitscan Points"))
+				local prioritizedpart = mp:getval("Rage", "Aimbot", "Hitscan Priority")
 	
-		local lastTick
-		function ragebot:StanceLoop()
-	
-	
+				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
+					local targetPart, closest = ragebot:GetTarget(prioritizedpart, hitscanpreference)
+				end
+			end
+		end
+
+		ragebot.stance = 'prone'
+		ragebot.sprint = false
+		function ragebot:Stance()
 			if LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid") then
 				if mp:getval("Rage", "Anti Aim", "Hide in Floor") and mp:getval("Rage", "Anti Aim", "Enabled") then
 					LOCAL_PLAYER.Character.Humanoid.HipHeight = -1.9
@@ -4405,28 +4577,22 @@ elseif mp.game == "pf" then --!SECTION
 					LOCAL_PLAYER.Character.Humanoid.HipHeight = 0
 				end
 			end
-			local curTick = math.floor(tick())
-			if curTick % 1 == 0 and curTick ~= lastTick then
+			if mp:getval("Rage", "Anti Aim", "Enabled") then
 				lastTick = curTick
-				if mp:getval("Rage", "Anti Aim", "Enabled") then
-					local stanceId = mp:getval("Rage", "Anti Aim", "Force Stance")
-					if stanceId ~= 1 then
-						local newStance = --ternary sex
-							stanceId == 2 and "stand"
-							or stanceId == 3 and "crouch"
-							or stanceId == 4 and "prone"
-	
-						send(client.net, "stance", newStance)
-					end
-					if mp:getval("Rage", "Anti Aim", "Lower Arms") then
-						send("sprint", true)
-					end
+				local stanceId = mp:getval("Rage", "Anti Aim", "Force Stance")
+				if stanceId ~= 1 then
+					newStance = --ternary sex
+						stanceId == 2 and "stand"
+						or stanceId == 3 and "crouch"
+						or stanceId == 4 and "prone"
+					ragebot.stance = newStance
+					send(client.net, "stance", newStance)
+				end
+				if mp:getval("Rage", "Anti Aim", "Lower Arms") then
+					ragebot.sprint = true
+					send("sprint", true)
 				end
 			end
-			function ragebot:GetTarget()
-				for k, v in pairs({}) do end
-			end
-	
 		end
 	
 	
@@ -4441,7 +4607,7 @@ elseif mp.game == "pf" then --!SECTION
 		end)
 		local oldmag = client.cam.setmagnification
 		client.cam.setmagnification = function(self, v)
-			if mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and INPUT_SERVICE:IsMouseButtonPressed(1) then return end
+			if mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and client.char.spawned then return end
 			return oldmag(self, v)
 		end
 		local oldmenufov = client.cam.changemenufov
@@ -4465,16 +4631,126 @@ elseif mp.game == "pf" then --!SECTION
 			return suppress(...)
 		end
 	
+		-- client event hooks! for grenade paths... and other shit (idk where to put this)
+		local clienteventfuncs = getupvalue(client.call, 1)
+		
+		for hash, func in next, clienteventfuncs do
+			local curconstants = getconstants(func)
+			local found = table.find(curconstants, "Frag")
+			local found1 = table.find(curconstants, "removecharacterhash")
+			local found2 = getinfo(func).name == "swapgun"
+			local found3 = table.find(curconstants, "updatecharacter")
+            if found then
+				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
+					if mp:getval("ESP", "Dropped Esp", "Display Nade Paths") then
+						local frames = gdata.frames
+						local start = gdata.time
+
+						local container = Instance.new("Model", workspace)
+						local lastframe = frames[#frames]
+						container.Name = "nadeframes"
+						
+						local color = thrower.Team == LOCAL_PLAYER.Team and Color3.fromRGB(unpack(mp:getval("ESP", "Dropped Esp", "Display Nade Paths", "color2"))) or Color3.fromRGB(unpack(mp:getval("ESP", "Dropped Esp", "Display Nade Paths", "color1")))
+
+						for k,v in next, frames do 
+							local curframe = Instance.new("Part", workspace)
+							curframe.Anchored = true
+							curframe.CanCollide = false
+							curframe.Material = Enum.Material.Neon
+							curframe.Shape = "Ball"
+							curframe.Size = Vector3.new(1, 1, 1)
+							curframe.Position = v.p0
+							local sphere = Instance.new("SphereHandleAdornment")
+							
+							sphere.Radius = 0.7
+							sphere.AlwaysOnTop = true
+							sphere.Color3 = color
+							sphere.Transparency = 0.3
+							sphere.Parent = curframe
+							sphere.Adornee = curframe
+							sphere.Visible = true
+							sphere.ZIndex = 4
+							curframe.Parent = container
+							if k == #frames then
+								local blowframe = Instance.new("Part", workspace)
+								blowframe.Anchored = true
+								blowframe.CanCollide = false
+								blowframe.Material = Enum.Material.Neon
+								blowframe.Shape = "Ball"
+								blowframe.Size = Vector3.new(2, 2, 2)
+								blowframe.Position = lastframe.p0
+								
+								local sphere1 = Instance.new("SphereHandleAdornment")
+								sphere1.Radius = 0.7 * 2
+								sphere1.AlwaysOnTop = true
+								sphere1.Color3 = Color3.fromRGB(252, 249, 58)
+								sphere1.Transparency = 0.1
+								sphere1.Parent = blowframe
+								sphere1.Adornee = blowframe
+								sphere1.Visible = true
+								sphere1.ZIndex = 5
+								blowframe.Parent = container
+							end
+						end
+						local timeblowupat = math.abs((tick() + gdata.blowuptime) - tick())
+						delay(timeblowupat, function()
+							container:Destroy()
+						end)
+					end
+                  return func(thrower, gtype, gdata, displaytrail)
+               end
+			end
+			if found1 then
+				clienteventfuncs[hash] = function(charhash, bodyparts)
+					local modparts = bodyparts
+					for k,v in next, modparts:GetChildren() do
+						if not v:IsA("Model") then
+							v.Size = bodysize[v.Name] -- reset the ragdolls to their defaulted size defined at bodysize, in case of hitbox expansion
+						end
+					end
+					return func(charhash, modparts)
+				end
+			end
+			if found3 then
+				clienteventfuncs[hash] = function(player, parts)
+					if player.Team ~= LOCAL_PLAYER.Team then
+						for k,v in next, parts do
+							if v:IsA("Part") then
+								local formattedval = (mp:getval("Legit", "Aim Assist", "Enlarge Enemy Hitboxes") / 95) + 1
+								v.Size *= v.Name == "Head" and Vector3.new(formattedval, v.Size.y * formattedval / 100, formattedval) or formattedval -- hitbox expander
+							end
+						end
+					end
+					return func(player, parts)
+				end
+			end
+			if found2 then
+				clienteventfuncs[hash] = function(gun, mag, spare, attachdata, camodata, gunn, ggequip)
+					func(gun, mag, spare, attachdata, camodata, gunn, ggequip)
+					client.loadedguns = getupvalue(client.char.unloadguns, 2)
+					if client.fakecharacter then
+						client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+					end
+				end
+			end
+		end
+			setupvalue(client.call, 1, clienteventfuncs)
 	end
 	
 	do -- ANCHOR misc definitionz
 		function misc:GetParts(parts)
-			parts["Head"] = parts[1]
-			parts["Torso"] = parts[2]
+			parts["Head"] =      parts[1]
+			parts["Torso"] =     parts[2]
 			parts["Right Arm"] = parts[3]
-			parts["Left Arm"] = parts[3]
+			parts["Left Arm"] =  parts[3]
 			parts["Right Leg"] = parts[4]
-			parts["Left Leg"] = parts[4]
+			parts["Left Leg"] =  parts[4]
+			parts["rleg"] =      parts[4]
+			parts["lleg"] =      parts[4]
+			parts["rarm"] =      parts[3]
+			parts["larm"] =      parts[3]     
+			parts["head"] =      parts[1]
+			parts["torso"] =     parts[2]
 			return parts
 		end
 		local rootpart
@@ -4555,17 +4831,14 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 		do
-			local spring = debug.getupvalue(client.char.setsprint, 10)
+			local spring = debug.getupvalue(client.char.step, 21)
 			local mt = getrawmetatable(spring)
 			local old_index = mt.__index
 			setreadonly(mt, false)
 			mt.__index = newcclosure(function(t, k)
 				local result = old_index(t, k)
-				if k == "p" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then 
-					if client.logic.currentgun.type ~= "KNIFE" then
-						debug.setupvalue(client.logic.currentgun.step, 28, function() return CFrame.new() end)
-					end
-					return 0 
+				if k == "v" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then 
+					return Vector3.new()
 				end
 				return result
 			end)
@@ -4573,7 +4846,7 @@ elseif mp.game == "pf" then --!SECTION
 		ButtonPressed.Event:Connect(function(tab, gb, name)
 			if tab == "Misc" and name == "Invisibility" then
 				local oldsend = client.net.send
-
+				
 				client.net.send = function(self, event, ...)
 					if event == "repupdate" then return end
 					oldsend(self, event, ...)
@@ -4584,9 +4857,10 @@ elseif mp.game == "pf" then --!SECTION
 				local getChild = char.FindFirstChild
 
 				local op = getChild(char, "HumanoidRootPart").CFrame
+				getChild(char, "HumanoidRootPart").Velocity = Vector3.new(0, 300, 0) -- this right here
 				getChild(char, "HumanoidRootPart").CFrame = CFrame.new(9e9, math.huge, 9e9)
 				--yes
-				wait(1)
+				wait(0.2) -- (json)had to change this to 0.2 because apparently the interval for the first wait can't be more than this wtf
 				do 
 					local p = Instance.new("Model", workspace)
 					local char = game.Players.LocalPlayer.Character
@@ -4594,6 +4868,7 @@ elseif mp.game == "pf" then --!SECTION
 						if v.ClassName == 'Part' then
 							copy = v:Clone()
 							v.Parent = p
+							v.Velocity = Vector3.new(math.huge, math.huge, math.huge) -- not sure if this is needed.
 							copy.Parent = char
 						end
 					end
@@ -4606,8 +4881,8 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if name == "Crash Server" then
 				while wait() do
-					for i = 1, 20 do
-						local tid = 846964998
+					for i = 1, 50 do
+						local tid = 846964998 ^ math.random(-100, 100)
 						
 						client.net:send("changecamo", "Recon", "Secondary", "GLOCK 17", "Slot1", {
 							BrickProperties = {
@@ -4809,7 +5084,7 @@ elseif mp.game == "pf" then --!SECTION
 		client.net.send = function(self, ...)
 			local args = {...}
 			if args[1] == "spawn" then 
-				misc:ApplyGunMods() 
+				misc:ApplyGunMods()
 			end
 			if args[1] == "bullethit" and mp:getval("Misc", "Extra", "Suppress Only") then return end
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
@@ -4817,6 +5092,9 @@ elseif mp.game == "pf" then --!SECTION
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
 			if args[1] == "newbullets" and legitbot.silentVector then
 				for k, bullet in pairs(args[2].bullets) do
+					local oldDir = bullet[1]
+					local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
+					local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
 					bullet[1] = legitbot.silentVector.unit
 				end
 			end
@@ -4827,11 +5105,16 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end
+			if args[1] == "equip" then
+				if client.fakecharacter and args[2] ~= 3 then --TODO json find a way to make 3p melee equip thing fucjk
+					local gun = client.loadedguns[args[2]].name
+					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+				end
+			end
 			if args[1] == "repupdate" and mp:getval("Rage", "Anti Aim", "Enabled") then
-				args[2] = ragebot:AntiNade(args[2])
+				--args[2] = ragebot:AntiNade(args[2])
 				local pitch = args[3].X
 				local yaw = args[3].Y
-	
 				local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
 				local yawChoice = mp:getval("Rage",   "Anti Aim", "Yaw")
 				---"off,down,up,roll,upside down,random"
@@ -4860,11 +5143,14 @@ elseif mp.game == "pf" then --!SECTION
 					yaw = (tick() * 0.01) % 12
 				elseif yawChoice == 4 then
 					yaw = math.random(99999)
+				elseif yawChoice == 5 then
+					yaw = 16478887
 				end
 	
 				-- yaw += jitter
-	
-				args[3] = Vector3.new(pitch, yaw, 0)
+				local new_angles = Vector3.new(pitch, yaw, 0)
+				args[3] = new_angles
+				ragebot.angles = new_angles
 			end
 			return send(self, unpack(args))
 		end
@@ -4879,6 +5165,19 @@ elseif mp.game == "pf" then --!SECTION
 	do -- ANCHOR Legitbot definition defines legit functions
 		legitbot.silentAiming = false
 		legitbot.silentVector = nil
+
+		local function Move_Mouse(delta)
+			delta = delta / 100 --lol
+			local coef = client.cam.sensitivitymult * math.atan(math.tan(client.cam.basefov * (math.pi / 180) / 2) / 2.72 ^ client.cam.magspring.p) / (32 * math.pi)
+			local x = client.cam.angles.x - coef * delta.y
+			x = x > client.cam.maxangle and client.cam.maxangle or x < client.cam.minangle and client.cam.minangle or x
+			local y = client.cam.angles.y - coef * delta.x
+			local newangles = Vector3.new(x, y, 0)
+			client.cam.delta = (newangles - client.cam.angles) / 0.016666666666666666
+			client.cam.angles = newangles
+		end
+
+
 		function legitbot:MainLoop()
 	
 	
@@ -4888,15 +5187,16 @@ elseif mp.game == "pf" then --!SECTION
 					local smoothing = (mp:getval("Legit", "Aim Assist", "Smoothing Factor") + 2) * 0.2 / GAME_SETTINGS.MouseSensitivity
 					local fov = mp:getval("Legit", "Aim Assist", "Aimbot FOV")
 					local sFov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
+					local dzFov = mp:getval("Legit", "Aim Assist", "Deadzone FOV")/10
 		
 					local hitboxPriority = mp:getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
-					local hitscan = mp:getval("Legit", "Aim Assist", "Force Priority Hitbox") and {} or {head = true, torso = true, rleg = true, lleg = true, rarm = true, larm = true}
+					local hitscan = mp:getval("Legit", "Aim Assist", "Force Priority Hitbox") and {hitboxPriority} or {head = true, torso = true, rleg = true, lleg = true, rarm = true, larm = true}
 		
 					if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
 						local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 						local smoothing = mp:getval("Legit", "Aim Assist", "Smoothing Factor")
 						if targetPart then
-							if closest < fov then
+							if closest < fov and closest > dzFov then
 								legitbot:AimAtTarget(targetPart, smoothing)
 							end
 						end
@@ -4910,7 +5210,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 					local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 					if targetPart and closest < fov then
-						legitbot:SilentAimAtTarget(targetPart)
+						legitbot.silentVector = legitbot:SilentAimAtTarget(targetPart)
 					else
 						legitbot.silentVector = nil
 					end
@@ -4928,44 +5228,49 @@ elseif mp.game == "pf" then --!SECTION
 			local Pos, visCheck
 	
 			if mp:getval("Legit", "Aim Assist", "Adjust for Bullet Drop") then
-				pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
+				Pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
 			else
 				Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
 			end
 			local randMag = mp:getval("Legit", "Aim Assist", "Randomization") * 5
-			Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
+			--Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
+			--TODO nate fix
 			local gunpos = Camera:WorldToScreenPoint(Camera:FindFirstChild("Flame", true).Position)
 			
 			local rcs = Vector2.new(gunpos.x - LOCAL_MOUSE.x, gunpos.y - LOCAL_MOUSE.y)
-			if INPUT_SERVICE:IsMouseButtonPressed(1) and mp:getval("Legit", "Recoil Control", "Weapon RCS") then
+			if client.logic.currentgun 
+			and client.logic.currentgun.type ~= "KNIFE"
+			and INPUT_SERVICE:IsMouseButtonPressed(1)
+			and client.logic.currentgun:isaiming() and mp:getval("Legit", "Recoil Control", "Weapon RCS") then
 				local xo = mp:getval("Legit", "Recoil Control", "Recoil Control X")
 				local yo = mp:getval("Legit", "Recoil Control", "Recoil Control Y")
-				Pos += Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) 
+				local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
+				Pos += rcsdelta
 			end
 			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
+
+			Move_Mouse(aimbotMovement)
 			
-			mousemoverel(aimbotMovement.X / smoothing, aimbotMovement.Y / smoothing)
 	
 		end
 	
 		
 		function legitbot:SilentAimAtTarget(targetPart)
-			if not targetPart or not targetPart.Position then 
+			if not targetPart or not targetPart.Position or client.logic.currentgun == nil then
+				if client.logic.currentgun.type == "KNIFE" then return end
 				return
 			end
 			
 			if math.random(0, 100) > mp:getval("Legit", "Bullet Redirection", "Hit Chance") then return end
 
-			local origin = Camera:FindFirstChild("Flame", true).Position
+			if not client.logic.currentgun.barrel then return end
+			local origin = client.logic.currentgun.barrel.Position
 		
 			local target = targetPart.Position
 			local dir = camera:GetTrajectory(target, origin) - origin
 
-			local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") * -1 + 100
-			local offset = Vector3.new(math.random(-inac, inac), math.random(-inac, inac), math.random(-inac, inac))
-
-			dir += offset
-			legitbot.silentVector = dir.Unit
+			
+			return dir.Unit
 		end
 	
 		local function isValidTarget(Bone, Player)
@@ -4992,43 +5297,69 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			]]
 		function legitbot:GetTargetLegit(partPreference, hitscan, players)
-	
-	
+			
 			local closest, closestPart, player = math.huge
 			partPreference = partPreference or 'what'
 			hitscan = hitscan or {}
 			players = players or game.Players:GetPlayers()
-	
+
+			if legitbot.target then
+				local Parts = client.replication.getbodyparts(legitbot.target)
+				if Parts then
+					new_closest = closest
+					for k, Bone in pairs(Parts) do
+						if Bone.ClassName == "Part" and hitscan[k] then
+							local fovToBone = camera:GetFOV(Bone)
+							if fovToBone < closest then
+								local validPart = isValidTarget(Bone, Player)
+								if validPart then
+									closest = fovToBone
+									closestPart = Bone
+									player = legitbot.target
+									return closestPart, closest, player
+								end
+							end
+						end
+					end
+				end
+			end
+
 			for i, Player in pairs(players) do
-	
 				if Player.Team ~= LOCAL_PLAYER.Team then
 					local Parts = client.replication.getbodyparts(Player)
 					if Parts then
+						new_closest = closest
 						for k, Bone in pairs(Parts) do
 							if Bone.ClassName == "Part" and hitscan[k] then
 								local fovToBone = camera:GetFOV(Bone)
 								if fovToBone < closest then
 									local validPart = isValidTarget(Bone, Player)
 									if validPart then
-										print('hi')
+										closest = fovToBone
+										closestPart = Bone
+										player = Player
 									end
 								end
 							end
 						end
+					end
+				end
+			end
 
-						if partPreference then
-							local PriorityBone = Parts[partPreference]
-							if PriorityBone and camera:GetFOV(PriorityBone) and camera:IsVisible(PriorityBone) then
-								
-								closest = camera:GetFOV(PriorityBone)
-								closestPart = PriorityBone
-								player = Player
-							end
+			if player and closestPart then
+				local Parts = client.replication.getbodyparts(player)
+				if partPreference then
+					local PriorityBone = Parts[partPreference]
+					if PriorityBone then 
+						local fov_to_bone = camera:GetFOV(PriorityBone)
+						if  fov_to_bone and fov_to_bone < closest and camera:IsVisible(PriorityBone)  then
+							closest = camera:GetFOV(PriorityBone)
+							closestPart = PriorityBone
 						end
 					end
 				end
-	
 			end
+
 			return closestPart, closest, player
 	
 	
@@ -5065,6 +5396,10 @@ elseif mp.game == "pf" then --!SECTION
 	client.particle.new = function(P)
 		if legitbot.silentVector and not P.thirdperson then
 			local mag = P.velocity.Magnitude
+			local oldDir = P.velocity.Unit
+			local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
+			local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
+			legitbot.silentVector = newDir
 			P.velocity = legitbot.silentVector * mag
 		end
 		newpart(P)
@@ -5339,6 +5674,9 @@ elseif mp.game == "pf" then --!SECTION
 		if mp:getval("Misc", "Movement", "Fly Hack") and key.KeyCode == mp:getval("Misc", "Movement", "Fly Hack", "keybind") then
 			keybindtoggles.flyhack = not keybindtoggles.flyhack
 		end
+		if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") then
+			ragebot:FakeBody()
+		end
 	end)
 	
 	local renderstepped = game.RunService.RenderStepped:Connect(function()
@@ -5356,12 +5694,110 @@ elseif mp.game == "pf" then --!SECTION
 		end
 		do--ragebot
 			ragebot:KnifeBotMain()
+			ragebot:MainLoop()
 		end
 	end)
 	
 	
 	local heartbeat = game.RunService.Heartbeat:Connect(function()
-		ragebot:StanceLoop()
+		
+		if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
+			if client.char.spawned then
+				if not client.fakecharacter then
+					client.fakecharacter = true
+					client.loadedguns = getupvalue(client.char.unloadguns, 2)
+					local localchar = LOCAL_PLAYER.Character:Clone()
+	
+					for k,v in next, localchar:GetChildren() do
+						if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
+							v.Transparency = 0
+						end
+					end
+	
+					localchar.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+
+					localchar.Parent = workspace["Ignore"]
+	
+					client.fakerootpart = localchar.HumanoidRootPart
+
+					local torso = localchar.Torso
+					client.fakeupdater.updatecharacter({
+						head = localchar.Head,
+						torso = torso,
+						neck = torso.Neck,
+						rsh = torso["Right Shoulder"],
+						lsh = torso["Left Shoulder"],
+						lhip = torso["Left Hip"],
+						rhip = torso["Right Hip"],
+						rarm = localchar["Right Arm"],
+						larm = localchar["Left Arm"],
+						rleg = localchar["Right Leg"],
+						lleg = localchar["Left Leg"],
+						rootpart = localchar.HumanoidRootPart,
+						rootjoint = localchar.HumanoidRootPart.RootJoint,
+						char = localchar
+					})
+
+					client.fakeupdater.setstance(client.char.movementmode)
+
+					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[client.logic.currentgun.name]), game:service("ReplicatedStorage").ExternalModels[client.logic.currentgun.name]:Clone())
+					client.fake3pchar = localchar
+				else
+					local fakeupdater = client.fakeupdater
+					fakeupdater.step(3, true)
+					fakeupdater.setlookangles(client.cam.angles) -- TODO make this face silent aim vector at some point lol
+					
+					fakeupdater.setstance(client.char.movementmode)
+					fakeupdater.setsprint(client.char:sprinting())
+					if mp:getval("Rage", "Anti Aim", "Enabled") then
+						fakeupdater.setlookangles(ragebot.angles)
+						fakeupdater.setstance(ragebot.stance)
+						fakeupdater.setsprint(ragebot.sprint)
+					end
+					if client.logic.currentgun then
+						if client.logic.currentgun.type ~= "KNIFE" then
+							local bool = client.logic.currentgun:isaiming()
+							fakeupdater.setaim(bool)
+							for k,v in next, client.fake3pchar:GetChildren() do -- this is probably going to cause a 1 fps drop or some shit lmao
+								if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
+									v.Transparency = bool and 0.6 or 0
+								end
+								if v:IsA("Model") then
+									for k,v in next, v:GetChildren() do
+										v.Transparency = bool and 0.6 or 0
+									end
+								end
+							end
+						end
+					end
+
+					-- 3 am already wtf 🌃
+
+					if client.char.rootpart then
+						client.fakerootpart.CFrame = client.char.rootpart.CFrame
+						local translatedcf = client.char.rootpart.CFrame * CFrame.new(-1.5, 0, 0)
+						client.fake_upvs[4].p = translatedcf.p
+						client.fake_upvs[4].t = translatedcf.p
+						client.fake_upvs[4].v = Vector3.new()
+					end
+				end
+			end
+		else
+			if client.fakecharacter then
+				client.fakecharacter = false
+				--client.replication.removecharacterhash(client.fakeplayer)
+				for k,v in next, client.fake3pchar:GetChildren() do
+					if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
+						v.Transparency = 1
+					end
+					if v:IsA("Model") then
+						for k,v in next, v:GetChildren() do
+							v.Transparency = 1
+						end
+					end
+				end
+			end
+		end
 	end)
 	mp.BBMenuInit({
 		{--ANCHOR Legit
@@ -5402,10 +5838,10 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "slider",
 							name = "Deadzone FOV",
-							value = 5,
+							value = 1,
 							minvalue = 0,
-							maxvalue = 30,
-							stradd = "°"
+							maxvalue = 50,
+							stradd = "/10°"
 						},
 						{
 							type = "dropbox",
@@ -5434,6 +5870,14 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Adjust for Bullet Drop",
 							value = false
 						},
+						{
+							type = "slider",
+							name = "Enlarge Enemy Hitboxes",
+							value = 0,
+							minvalue = 0,
+							maxvalue = 100,
+							stradd = "%"
+						}
 						--[[{
 							type = "toggle",
 							name = "Aim at Backtrack",
@@ -5460,53 +5904,7 @@ elseif mp.game == "pf" then --!SECTION
 						},
 					},
 				},]]
-				{
-					name = "Bullet Redirection",
-					autopos = "left",
-					autofill = true,
-					content = {
-						{
-							type = "toggle",
-							name = "Silent Aim",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Silent Aim FOV",
-							value = 5,
-							minvalue = 0,
-							maxvalue = 180,
-							stradd = "°"
-						},
-						{
-							type = "slider",
-							name = "Hit Chance",
-							value = 30,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
-						},
-						{
-							type = "slider",
-							name = "Accuracy",
-							value = 60,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
-						},
-						{
-							type = "dropbox",
-							name = "Hitscan Priority",
-							value = 1,
-							values = {"Head", "Body", "Closest"}
-						},
-						{
-							type = "combobox",
-							name = "Hitboxes",
-							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
-						},
-					}
-				},
+				
 				{
 					name = "Trigger Bot",
 					autopos = "right",
@@ -5565,8 +5963,55 @@ elseif mp.game == "pf" then --!SECTION
 					}
 				},
 				{
-					name = "Recoil Control",
+					name = "Bullet Redirection",
 					autopos = "right",
+					autofill = true,
+					content = {
+						{
+							type = "toggle",
+							name = "Silent Aim",
+							value = false
+						},
+						{
+							type = "slider",
+							name = "Silent Aim FOV",
+							value = 5,
+							minvalue = 0,
+							maxvalue = 180,
+							stradd = "°"
+						},
+						{
+							type = "slider",
+							name = "Hit Chance",
+							value = 30,
+							minvalue = 0,
+							maxvalue = 100,
+							stradd = "%"
+						},
+						{
+							type = "slider",
+							name = "Accuracy",
+							value = 60,
+							minvalue = 0,
+							maxvalue = 100,
+							stradd = "%"
+						},
+						{
+							type = "dropbox",
+							name = "Hitscan Priority",
+							value = 1,
+							values = {"Head", "Body", "Closest"}
+						},
+						{
+							type = "combobox",
+							name = "Hitboxes",
+							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
+						},
+					}
+				},
+				{
+					name = "Recoil Control",
+					autopos = "left",
 					autofill = true,
 					content = {
 						{
@@ -5630,18 +6075,10 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "slider",
 							name = "Aimbot FOV",
-							value = 90,
+							value = 180,
 							minvalue = 0,
 							maxvalue = 180,
 							stradd = "°"
-						},
-						{
-							type = "slider",
-							name = "Min Damage",
-							value = 50,
-							minvalue = 1,
-							maxvalue = 100,
-							stradd = "hp"
 						},
 						{
 							type = "toggle",
@@ -5759,7 +6196,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Yaw",
 							value = 2,
-							values = {"Forward", "Backward", "Spin", "Random"}
+							values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin"}
 						},
 						{
 							type = "dropbox",
@@ -5777,6 +6214,15 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Lower Arms",
 							value = false,
 						},
+						{
+							type = "toggle",
+							name = "Fake Body",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = nil
+							}
+						}
 					}
 				},
 			}
@@ -6097,6 +6543,16 @@ elseif mp.game == "pf" then --!SECTION
 								type = "single colorpicker",
 								name = "Nade Fuse Time",
 								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Display Nade Paths",
+							value = false,
+							extra = {
+								type = "double colorpicker",
+								name = {"Enemy Grenade", "Team Grenade"},
+								color = {{255, 58, 58}, {100, 255, 58}}
 							}
 						}
 					}
@@ -6705,6 +7161,36 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		end)
+
+		if mp.game == "pf" then -- idk if i even need to do this
+			mp.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild) -- this didn't end up working well with localragdoll hook
+				if mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
+					local children = newchild:GetChildren()
+					for i = 1, #children do
+						local curvalue = children[i]
+						if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" then
+							local r, g, b, alpha = unpack(mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color"))
+							local matname = mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")
+							matname = mats[matname]
+							curvalue.Material = Enum.Material[matname]
+							local thecolor = Color3.fromRGB(r, g, b)
+							curvalue.Color = thecolor
+							local vertexcolor = Vector3.new(r / 255, g / 255, b / 255)
+							local mesh = curvalue:FindFirstChild("Mesh")
+							if mesh then
+								mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
+							end
+							if matname ~= "ForceField" then 
+								local pant = curvalue:FindFirstChild("Pant")
+								if mesh then mesh:Destroy() end
+								if pant then pant:Destroy() end
+							end
+							--curvalue.Transparency = alpha 
+						end
+					end
+				end
+			end)
+		end
 
 		mp.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 			updateplist()
