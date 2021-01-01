@@ -2711,6 +2711,7 @@ function mp.BBMenuInit(menutable)
 		for k, v in pairs(self.connections) do
 			v:Disconnect()
 		end
+		CreateNotification = nil
 		Draw:UnRender()
 		allrender = nil
 		mp = nil
@@ -3412,30 +3413,33 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		local speed = mp:getval("Misc", "Movement", "Speed")
 		if mp:getval("Misc", "Movement", "Speed Hack") and LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid then
 			if mp:getval("Misc", "Movement", "Speed Hack Method") == 1 then
-
 				local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
+				
+				if rootpart ~= nil then
 
-				local travel = Vector3.new()
-				local looking = Workspace.CurrentCamera.CFrame.lookVector
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
-					travel += Vector3.new(looking.X,0,looking.Z)
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
-					travel -= Vector3.new(looking.X,0,looking.Z)
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-					travel += Vector3.new(-looking.Z, 0, looking.X)
-				end
-				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-					travel += Vector3.new(looking.Z, 0, -looking.X)
-				end
+					local travel = Vector3.new()
+					local looking = Workspace.CurrentCamera.CFrame.lookVector
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
+						travel += Vector3.new(looking.X,0,looking.Z)
+					end
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
+						travel -= Vector3.new(looking.X,0,looking.Z)
+					end
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
+						travel += Vector3.new(-looking.Z, 0, looking.X)
+					end
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
+						travel += Vector3.new(looking.Z, 0, -looking.X)
+					end
 
-				travel = travel.Unit
+					travel = travel.Unit
 
-				local newDir = Vector3.new(travel.X * speed, rootpart.Velocity.Y, travel.Z * speed)
+					
+					local newDir = Vector3.new(travel.X * speed, rootpart.Velocity.Y, travel.Z * speed)
 
-				if travel.Unit.X == travel.Unit.X then
-					rootpart.Velocity = newDir
+					if travel.Unit.X == travel.Unit.X then
+						rootpart.Velocity = newDir
+					end
 				end
 			else
 				LOCAL_PLAYER.Character.Humanoid.WalkSpeed = speed
@@ -3641,8 +3645,8 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 			x = LOCAL_MOUSE.x,
 			y = LOCAL_MOUSE.y
 		}
-		FlyHack()
 		SpeedHack()
+		FlyHack()
 		Aimbot()
 
 		if mp.open then
@@ -4184,14 +4188,13 @@ elseif mp.game == "pf" then --!SECTION
 	
 		end
 	
-		function camera:IsVisible(Part, Parent, origin)
+		function camera:IsVisible(Part, origin)
 	
 	
 			origin = origin or Camera.CFrame.Position
 	
 			local hit, position = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, Part.Position - origin), {unpack(client.roundsystem.raycastwhitelist), LOCAL_PLAYER, Camera})
-			
-			return (position == Part.Position or (Parent and hit and Parent:IsAncestorOf(hit)))
+			return position == Part.Position
 	
 	
 		end
@@ -6724,3 +6727,5 @@ if not mp.open then
 	mp.fading = true
 	mp.fadestart = tick()
 end
+
+CreateNotification("Loaded")
