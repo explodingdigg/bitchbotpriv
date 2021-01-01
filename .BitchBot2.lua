@@ -4420,9 +4420,6 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end
-			function ragebot:GetTarget()
-				for k, v in pairs({}) do end
-			end
 	
 		end
 	
