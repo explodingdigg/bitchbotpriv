@@ -1,3 +1,4 @@
+local mp
 do
 	local notes = {}
 	local function DrawingObject(t, col)
@@ -45,7 +46,7 @@ do
 	end
 	
 	
-	function CreateNotification(t)
+	function CreateNotification(t, customcolor) -- TODO i want some kind of prioritized message to the notification list, like a warning or something. warnings have icons too maybe? idk??
 	
 		local gap = 25
 		local width = 18
@@ -130,7 +131,7 @@ do
 	
 					end
 	
-					time += estep
+					time += estep -- TODO need to do the duration
 					estep += eestep
 	
 					
@@ -156,10 +157,14 @@ do
 			local c = 0.28-i/80
 			Note.drawings[i] = Rectangle(200, 1, true, Color3.new(c,c,c))
 		end
-		local color = (mp and mp.getval) and mp:getval("Settings", "Menu Settings", "Menu Accent") or Color3.fromRGB(255, 255, 255)
-		Note.drawings.text = Text(t)
-		Note.drawings.line = Rectangle(1, Note.size.y - 2, true, color) 
+		local color = (mp and mp.getval) and customcolor or mp:getval("Settings", "Menu Settings", "Menu Accent") and Color3.fromRGB(unpack(mp:getval("Settings", "Menu Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
 		
+		Note.drawings.text = Text(t)
+		if Note.drawings.text.TextBounds.X + 7 > Note.size.X then -- expand the note size to fit if it's less than the default size
+			Note.size = Vector2.new(Note.drawings.text.TextBounds.X + 7, Note.size.y)
+		end
+		Note.drawings.line = Rectangle(1, Note.size.y - 2, true, color) 
+	
 		notes[#notes+1] = Note
 	
 	end
@@ -185,7 +190,7 @@ do
 	--ANCHOR how to create notification
 	--CreateNotification("Loading...")
 end
-local mp = { -- this is for menu stuffs n shi
+mp = { -- this is for menu stuffs n shi
 	w = 500,
 	h = 600,
 	x = 200,
