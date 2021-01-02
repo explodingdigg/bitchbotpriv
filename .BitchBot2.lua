@@ -4346,6 +4346,8 @@ elseif mp.game == "pf" then --!SECTION
 				if extendPen then  
 					sphereHitbox.Position = targetPos
 					diameter = mp:getval("Rage", "Hack vs. Hack", "Extra Penetration")
+					local distanceTarget = (targetPos - client.cam.cframe.p).Magnitude * 2 - 5
+					diameter = math.min(distanceTarget, diameter)
 					sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
 					targetParts = {[sphereHitbox] = sphereHitbox}
 				else
