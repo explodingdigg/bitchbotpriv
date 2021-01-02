@@ -5367,7 +5367,15 @@ elseif mp.game == "pf" then --!SECTION
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
 			if args[1] == "newbullets" then
-				if legitbot.silentVector then
+				if mp:getval("Legit", "Aim Assist", "Enabled") and legitbot.silentVector then
+				--[[if mp:getval("Legit", "Aim Assist", "Enabled") and legitbot.silentVector and not P.thirdperson then
+						local mag = P.velocity.Magnitude
+						local oldDir = P.velocity.Unit
+						local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
+						local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
+						legitbot.silentVector = newDir
+						P.velocity = legitbot.silentVector * mag
+					end]]
 					for k, bullet in pairs(args[2].bullets) do
 						local oldDir = bullet[1]
 						local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
@@ -5693,7 +5701,6 @@ elseif mp.game == "pf" then --!SECTION
 			local oldDir = P.velocity.Unit
 			local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
 			local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
-			legitbot.silentVector = newDir
 			P.velocity = legitbot.silentVector * mag
 		end
 		if mp:getval("Rage", "Aimbot", "Enabled") and ragebot.silentVector and not P.thirdperson then
