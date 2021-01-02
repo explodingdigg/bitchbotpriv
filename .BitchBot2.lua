@@ -4038,6 +4038,20 @@ elseif mp.game == "pf" then --!SECTION
 							client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[client.logic.currentgun.name]), game:service("ReplicatedStorage").ExternalModels[client.logic.currentgun.name]:Clone())
 						end)
 					end
+					CreateThread(function() -- kinda yuck but oh well
+						repeat wait() until client.char.spawned
+						client.loadedguns = getupvalue(client.char.unloadguns, 2)
+						for id, gun in next, client.loadedguns do -- No gun bob or sway hook, may not work with knives for this
+							for k,v in next, getupvalues(gun.step) do
+								warn(k,v)
+								if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
+									setupvalue(client.loadedguns[id].step, k, function(...)
+										return mp:getval("Visuals", "Local Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+									end)
+								end
+							end
+						end
+					end)
 					return olddeploy(...)
 				end
 			elseif rawget(v, "new") and rawget(v, "step") and rawget(v, "reset") then
@@ -4212,17 +4226,23 @@ elseif mp.game == "pf" then --!SECTION
 	
 		setreadonly(mt, false)
 	
+
 		mt.__newindex = newcclosure(function(self, id, val)
-			if client.char.spawned and mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson and self == workspace.Camera and id == "CFrame" then
-				local dist = mp:getval("Visuals", "Local Visuals", "Third Person Distance") / 10
-				local params = RaycastParams.new()
-				params.FilterType = Enum.RaycastFilterType.Blacklist
-				params.FilterDescendantsInstances = {Camera, workspace.Ignore, workspace.Players}
-	
-				local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
-				local mag = hit and (hit.Position - val.p).Magnitude or nil
-	
-				val *= CFrame.new(0, 0, mag and mag or dist)
+			if client.char.spawned and mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
+				if self == workspace.Camera then -- this happened due to me being very dumb and forgetting that alan added arm chams and it was setting the visibility, fuck
+					if id == "CFrame" then
+						local dist = mp:getval("Visuals", "Local Visuals", "Third Person Distance") / 10
+						local params = RaycastParams.new()
+						params.FilterType = Enum.RaycastFilterType.Blacklist
+						params.FilterDescendantsInstances = {Camera, workspace.Ignore, workspace.Players}
+			
+						local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
+						if hit and not hit.Instance.CanCollide then return oldNewIndex(self, id, val) end
+						local mag = hit and (hit.Position - val.p).Magnitude or nil
+			
+						val *= CFrame.new(0, 0, mag and mag or dist)
+					end
+				end
 			end
 			return oldNewIndex(self, id, val)
 		end)
@@ -4249,6 +4269,21 @@ elseif mp.game == "pf" then --!SECTION
 			end
 	
 	
+		end
+
+		function camera:SetArmsVisible(flag)
+			local larm, rarm = Camera:FindFirstChild("Left Arm"), Camera:FindFirstChild("Right Arm")
+			assert(larm, "arms are missing")
+			for k,v in next, larm:GetChildren() do
+				if v:IsA("Part") then
+					v.Transparency = flag and 0 or 1
+				end
+			end
+			for k,v in next, rarm:GetChildren() do
+				if v:IsA("Part") then
+					v.Transparency = flag and 0 or 1
+				end
+			end
 		end
 	
 		function camera:GetFOV(Part)
@@ -4441,7 +4476,7 @@ elseif mp.game == "pf" then --!SECTION
 			local barrel = client.logic.currentgun.barrel.CFrame.p
 
 			for i, player in next, players do
-				if player.Team ~= LOCAL_PLAYER.Team then
+				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts then
 						for k, bone in next, curbodyparts do
@@ -4597,7 +4632,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 		function ragebot:KnifeTarget(target, stab)
 			local cfc = client.cam.cframe
-			send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
+			--send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
 			if stab then send(client.net, "stab") end
 			send(client.net, "knifehit", target.player, tick(), target.part)
 		end
@@ -4834,6 +4869,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found1 = table.find(curconstants, "removecharacterhash")
 			local found2 = getinfo(func).name == "swapgun"
 			local found3 = table.find(curconstants, "updatecharacter")
+			local found4 = getinfo(func).name == "swapknife"
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped Esp", "Display Nade Paths") then
@@ -4918,10 +4954,30 @@ elseif mp.game == "pf" then --!SECTION
 					return func(player, parts)
 				end
 			end
+			if found4 then
+				clienteventfuncs[hash] = function(knife, camodata)
+					local loadedknife = func(knife, camodata)
+					for k,v in next, getupvalues(loadedknife.step) do
+						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
+							setupvalue(loadedknife.step, k, function(...)
+								return mp:getval("Visuals", "Local Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+							end)
+						end
+					end
+					return loadedknife
+				end
+			end
 			if found2 then
 				clienteventfuncs[hash] = function(gun, mag, spare, attachdata, camodata, gunn, ggequip)
 					func(gun, mag, spare, attachdata, camodata, gunn, ggequip)
 					client.loadedguns = getupvalue(client.char.unloadguns, 2)
+					for k,v in next, getupvalues(client.loadedguns[gunn].step) do
+						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
+							setupvalue(client.loadedguns[gunn].step, k, function(...)
+								return mp:getval("Visuals", "Local Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+							end)
+						end
+					end
 					if client.fakecharacter then
 						client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 					end
@@ -5536,7 +5592,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 
 			for i, Player in pairs(players) do
-				if Player.Team ~= LOCAL_PLAYER.Team then
+				if Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
 					local Parts = client.replication.getbodyparts(Player)
 					if Parts then
 						new_closest = closest
@@ -5605,7 +5661,7 @@ elseif mp.game == "pf" then --!SECTION
 
 	local newpart = client.particle.new
 	client.particle.new = function(P)
-		if legitbot.silentVector and not P.thirdperson then
+		if mp:getval("Legit", "Aim Assist", "Enabled") and legitbot.silentVector and not P.thirdperson then
 			local mag = P.velocity.Magnitude
 			local oldDir = P.velocity.Unit
 			local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
@@ -5613,7 +5669,7 @@ elseif mp.game == "pf" then --!SECTION
 			legitbot.silentVector = newDir
 			P.velocity = legitbot.silentVector * mag
 		end
-		if ragebot.silentVector and not P.thirdperson then
+		if mp:getval("Rage", "Aimbot", "Enabled") and ragebot.silentVector and not P.thirdperson then
 			local oldpos = P.position
 			P.position = ragebot.firepos
 			
@@ -5861,16 +5917,31 @@ elseif mp.game == "pf" then --!SECTION
 			CreateThread(function() -- hand chams and such
 				local vm = workspace.Camera:GetChildren()
 				if mp:getval("Visuals", "Local Visuals", "Arm Chams") then
-					
+
+					local material = mp:getval("Visuals", "Local Visuals", "Arm Material")
+
 					for k, v in pairs(vm) do
 						if v.Name == "Left Arm" or v.Name == "Right Arm" then
 							for k1, v1 in pairs(v:GetChildren()) do
 								v1.Color = mp:getval("Visuals", "Local Visuals", "Arm Chams", "color2", true)
-								v1.Transparency = 1 + (mp:getval("Visuals", "Local Visuals", "Arm Chams", "color2")[4]/-255)
-								v1.Material = mats[mp:getval("Visuals", "Local Visuals", "Arm Material")]
+								if not client.fakecharacter then
+									v1.Transparency = 1 + (mp:getval("Visuals", "Local Visuals", "Arm Chams", "color2")[4]/-255)
+								else
+									v1.Transparency = 1
+								end
+								v1.Material = mats[material]
 								if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
 									v1.Color = mp:getval("Visuals", "Local Visuals", "Arm Chams", "color1", true)
-									v1.Transparency = 1 + (mp:getval("Visuals", "Local Visuals", "Arm Chams", "color1")[4]/-255)
+									if not client.fakecharacter then
+										v1.Transparency = 1 + (mp:getval("Visuals", "Local Visuals", "Arm Chams", "color1")[4]/-255)
+									else
+										v1.Transparency = 1
+									end
+									if v1.TextureID and tostring(material) ~= "ForceField" then
+										v1.TextureID = ""
+									else
+										v1.TextureID = "rbxassetid://2163189692"
+									end
 									v1:ClearAllChildren()
 								end
 							end
@@ -6023,7 +6094,7 @@ elseif mp.game == "pf" then --!SECTION
 							v.Transparency = 0
 						end
 					end
-	
+
 					localchar.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 
 					localchar.Parent = workspace["Ignore"]
@@ -6050,7 +6121,8 @@ elseif mp.game == "pf" then --!SECTION
 
 					client.fakeupdater.setstance(client.char.movementmode)
 
-					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[client.logic.currentgun.name]), game:service("ReplicatedStorage").ExternalModels[client.logic.currentgun.name]:Clone())
+					local guntoequip = client.logic.currentgun.type == "KNIFE" and client.loadedguns[1].name or client.logic.currentgun.name -- POOP
+					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[guntoequip]), game:service("ReplicatedStorage").ExternalModels[guntoequip]:Clone())
 					client.fake3pchar = localchar
 				else
 					local fakeupdater = client.fakeupdater
@@ -6085,9 +6157,9 @@ elseif mp.game == "pf" then --!SECTION
 
 					if client.char.rootpart then
 						client.fakerootpart.CFrame = client.char.rootpart.CFrame
-						local translatedcf = client.char.rootpart.CFrame * CFrame.new(-1.5, 0, 0)
-						client.fake_upvs[4].p = translatedcf.p
-						client.fake_upvs[4].t = translatedcf.p
+						local rootpartpos = client.char.rootpart.Position
+						client.fake_upvs[4].p = rootpartpos
+						client.fake_upvs[4].t = rootpartpos
 						client.fake_upvs[4].v = Vector3.new()
 					end
 				end
@@ -6965,6 +7037,11 @@ elseif mp.game == "pf" then --!SECTION
 							name = "No Visual Suppression",
 							value = false,
 						},
+						{
+							type = "toggle",
+							name = "No Gun Bob or Sway",
+							value = false
+						}
 					}
 				},
 				{
