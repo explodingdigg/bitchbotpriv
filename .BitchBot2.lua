@@ -4015,6 +4015,8 @@ elseif mp.game == "pf" then --!SECTION
 				client.call = v
 			elseif getinfo(v).name == "loadplayer" then
 				client.loadplayer = v
+			elseif getinfo(v).name == "rankcalculator" then
+				client.rankcalculator = v
 			end
 			for k1, v1 in pairs(debug.getupvalues(v)) do
 				if type(v1) == "table" then
@@ -4038,6 +4040,7 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		end
+
 		if type(v) == "table" then
 			if rawget(v, "deploy") then
 				client.deploy = v
@@ -4068,9 +4071,13 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			elseif rawget(v, "new") and rawget(v, "step") and rawget(v, "reset") then
 				client.particle = v
+			elseif rawget(v, "unlocks") then
+				client.dirtyplayerdata = v
 			end
 		end
 	end	
+
+	client.localrank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
 
 	client.fakeplayer = Instance.new("Player", Players) -- thank A_003 for this (third person body)🔥 
 	client.fakeplayer.Name = " "
@@ -4885,6 +4892,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found2 = getinfo(func).name == "swapgun"
 			local found3 = table.find(curconstants, "updatecharacter")
 			local found4 = getinfo(func).name == "swapknife"
+			local found5 = table.find(curconstants, "Votekick ")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped Esp", "Display Nade Paths") then
@@ -4980,6 +4988,21 @@ elseif mp.game == "pf" then --!SECTION
 						end
 					end
 					return loadedknife
+				end
+			end
+			if found5 then
+				clienteventfuncs[hash] = function(name, countdown, endtick, reqs)
+					local allowautovote = mp:getval("Misc", "Extra", "Auto Vote")
+					local friends = mp:getval("Misc", "Extra", "Vote Friends")
+					local priority = mp:getval("Misc", "Extra", "Vote Priority")
+					local default = mp:getval("Misc", "Extra", "Default Vote")
+					if allowautovote then
+						if name == LOCAL_PLAYER.Name then
+							client.hud:vote("no")
+						else
+							client.hud:vote("yes")
+						end
+					end
 				end
 			end
 			if found2 then
@@ -7274,6 +7297,29 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Suppress Only",
 							value = false
 						},
+						{
+							type = "toggle",
+							name = "Auto Vote",
+							value = false
+						},
+						{
+							type = "dropbox",
+							name = "Vote Friends",
+							value = 1,
+							values = {"Off", "Yes", "No"}
+						},
+						{
+							type = "dropbox",
+							name = "Vote Priority",
+							value = 1,
+							values = {"Off", "Yes", "No"}
+						},
+						{
+							type = "dropbox",
+							name = "Default Vote",
+							value = 1,
+							values = {"Off", "Yes", "No"}
+						}
 					}
 				},
 				{
