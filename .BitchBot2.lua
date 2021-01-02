@@ -4406,6 +4406,8 @@ elseif mp.game == "pf" then --!SECTION
 
 			local players = players or Players:GetPlayers()
 
+			local autowall = mp:getval("Rage", "Aimbot", "Auto Wall")
+
 			for i, player in next, players do
 				if player.Team ~= LOCAL_PLAYER.Team then
 					local curbodyparts = client.replication.getbodyparts(player)
@@ -4415,6 +4417,13 @@ elseif mp.game == "pf" then --!SECTION
 								if camera:IsVisible(bone, bone.Parent) then 
 									local fovToBone = camera:GetFOV(bone)
 									if fovToBone < closest then
+										closest = fovToBone
+										cpart = bone
+										theplayer = player
+									end
+								elseif autowall then
+									local directionVector = bone.CFrame.p - client.cam.basecframe.p
+									if self:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position) then
 										closest = fovToBone
 										cpart = bone
 										theplayer = player
@@ -4432,9 +4441,14 @@ elseif mp.game == "pf" then --!SECTION
 					local prioritybone = curbodyparts[partPreference]
 					if prioritybone then
 						local bonedist = camera:GetFOV(prioritybone)
-						if bonedist and bonedist < closest and camera:IsVisible(prioritybone) then
-							closest = camera:GetFOV(prioritybone)
-							cpart = prioritybone
+						if bonedist and bonedist < closest then
+							if camera:IsVisible(prioritybone) then
+								closest = camera:GetFOV(prioritybone)
+								cpart = prioritybone
+							elseif autowall and self:CanPenetrate(LOCAL_PLAYER, theplayer, directionVector, prioritybone.Position) then
+								closest = camera:GetFOV(prioritybone)
+								cpart = prioritybone
+							end
 						end
 					end
 				end
@@ -4542,33 +4556,33 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
-		function ragebot:ResolveCubicOffsetToTarget(startpos, extent)
+		function ragebot:ResolveCubicOffsetToTarget(startpos, extent, person, bodypart)
 			assert(startpos, "mang u need a oriegen to do cube ic scan u feel me?")
 			local resolvedPosition = nil
 			local curscanpos = startpos
 			local studs = extent or 8
 			do -- This looks sort of dumb
-				local targetpos = self.target.CFrame.p
-
+				local targetpos = person.CFrame.p
+				local bodypart = client.replication.getbodyparts(person)[bodypart]
 				for x = 1, studs do
 
 					curscanpos += Vector3.new(x, 0, 0)
 					local directionVector = targetpos - curscanpos
-					resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, self.target, directionVector, targetpos, curscanpos) and curscanpos or nil
+					resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, person, directionVector, targetpos, curscanpos) and curscanpos or nil
 					if resolvedPosition then return resolvedPosition end
 
 					for y = -1, studs, -1 do
 
 						curscanpos += Vector3.new(0, y, 0)
 						local directionVector = targetpos - curscanpos
-						resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, self.target, directionVector, targetpos, curscanpos) and curscanpos or nil
+						resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, person, directionVector, targetpos, curscanpos) and curscanpos or nil
 						if resolvedPosition then return resolvedPosition end
 
 						for z = 1, studs, -1 do
 
 							curscanpos += Vector3.new(0, 0, z)
 							local directionVector = targetpos - curscanpos
-							resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, self.target, directionVector, targetpos, curscanpos) and curscanpos or nil
+							resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, person, directionVector, targetpos, curscanpos) and curscanpos or nil
 							if resolvedPosition then return resolvedPosition end
 
 						end
@@ -4577,8 +4591,8 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
-		function ragebot:CubicHitscan(studs, origin) -- Scans in a cubic square area of size (studs) and resolves a position to hit target at
-			if not self.target then return "target is null" end
+		function ragebot:CubicHitscan(studs, origin, person) -- Scans in a cubic square area of size (studs) and resolves a position to hit target at
+			if not person then return "target is null" end
 			local studs = tonumber(studs) or 8
 			local origin = client.cam.basecframe.p + Vector3.new(-studs, studs, -studs) -- Position the scan at the top left of the cube
 			local resolvedPosition = self:ResolveCubicOffsetToTarget(curscanpos, size)
@@ -5733,6 +5747,7 @@ elseif mp.game == "pf" then --!SECTION
 		end
 		if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") then
 			ragebot:FakeBody()
+			CreateNotification("Fake body executed, don't toggle this more than once to prevent character issues!")
 		end
 	end)
 	
