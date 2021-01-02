@@ -4246,8 +4246,10 @@ elseif mp.game == "pf" then --!SECTION
 		end
 
 		function camera:LookAt(pos)
-			local angles = camera:GetAnglesTo(pos)
+			local angles = camera:GetAnglesTo(pos, true)
+			local delta = client.cam.angles - angles
 			client.cam.angles = angles
+			client.cam.delta = delta
 		end
 		
 		function camera:GetAngles()
@@ -4255,12 +4257,15 @@ elseif mp.game == "pf" then --!SECTION
 			return {["pitch"] = pitch, ["yaw"] = yaw}
 		end
 		
-		function camera:GetAnglesTo(Pos)
+		function camera:GetAnglesTo(Pos, useVector)
 	
 	
 			local pitch, yaw = CFrame.new(Camera.CFrame.Position, Pos):ToOrientation()
-			return {["pitch"] = pitch, ["yaw"] = yaw}
-	
+			if useVector then 
+				return Vector3.new(pitch, yaw, 0)
+			else
+				return {["pitch"] = pitch, ["yaw"] = yaw}
+			end
 	
 		end
 	
@@ -4366,7 +4371,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
-		function ragebot:SilentAimAtTarget(part, target, origin)
+		function ragebot:AimAtTarget(part, target, origin)
 			local origin = origin or client.cam.cframe.p
 			if not part then 
 				ragebot.silentVector = nil
@@ -4378,8 +4383,12 @@ elseif mp.game == "pf" then --!SECTION
 				ragebot.shooting = false
 				return
 			end
+			
 			local target_pos = part.Position
 			local dir = camera:GetTrajectory(part.Position, origin) - origin
+			if not mp:getval("Rage", "Aimbot", "Silent Aim") then
+				camera:LookAt(dir + origin)
+			end
 			ragebot.silentVector = dir.unit
 			ragebot.target = target
 			ragebot.targetpart = part
@@ -4584,7 +4593,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference)
-					ragebot:SilentAimAtTarget(targetPart, targetPlayer)
+					ragebot:AimAtTarget(targetPart, targetPlayer)
 				else
 					self.target = nil
 				end
