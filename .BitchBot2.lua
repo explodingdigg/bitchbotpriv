@@ -4335,7 +4335,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 			local function GetPartTable(ply)
 				local tbl = {}
-				for k, v in pairs(client.replication.getbodyparts(ply)) do
+				for k, v in pairs(ply) do
 					tbl[v] = true
 				end
 				return tbl
@@ -4349,7 +4349,7 @@ elseif mp.game == "pf" then --!SECTION
 					sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
 					targetParts = {[sphereHitbox] = sphereHitbox}
 				else
-					targetParts = GetPartTable(target)
+					targetParts = GetPartTable(client.replication.getbodyparts(target))
 				end
 				local origin = customOrigin or client.cam.cframe.p
 		
@@ -4422,11 +4422,14 @@ elseif mp.game == "pf" then --!SECTION
 										theplayer = player
 									end
 								elseif autowall then
-									local directionVector = bone.CFrame.p - client.cam.basecframe.p
+									local directionVector = camera:GetTrajectory(bone.Position, client.cam.cframe.p)
 									if self:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position) then
-										closest = fovToBone
-										cpart = bone
-										theplayer = player
+										local fovToBone = camera:GetFOV(bone)
+										if fovToBone < closest then
+											closest = fovToBone
+											cpart = bone
+											theplayer = player
+										end
 									end
 								end
 							end
@@ -4751,7 +4754,7 @@ elseif mp.game == "pf" then --!SECTION
 				clienteventfuncs[hash] = function(charhash, bodyparts)
 					local modparts = bodyparts
 					for k,v in next, modparts:GetChildren() do
-						if not v:IsA("Model") then
+						if not v:IsA("Model") and not v:IsA("Humanoid") then
 							v.Size = bodysize[v.Name] -- reset the ragdolls to their defaulted size defined at bodysize, in case of hitbox expansion
 						end
 					end
