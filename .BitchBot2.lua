@@ -3343,14 +3343,16 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	end
 
 	local function cacheAvatars()
-		for i, v in ipairs(Players:GetPlayers()) do
+		--TODO alan make this only for the player that is selected or whatever the fuck you wnat to do fuck you bitch
+		-- (fuck alan) fuck alna (you wouldn't understand why i have this aggression towards him, i just do)
+		--[[for i, v in ipairs(Players:GetPlayers()) do
 			if not table.contains(playerpictures, v) then
 				CreateThread(function()
 					local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
 					playerpictures[v] = game:HttpGet(content)
 				end)
 			end
-		end
+		end]]
 	end
 
 	local function setplistinfo(player, textonly)
@@ -4890,7 +4892,7 @@ elseif mp.game == "pf" then --!SECTION
 						local lastframe = frames[#frames]
 						container.Name = "nadeframes"
 						
-						local color = thrower.Team == LOCAL_PLAYER.Team and Color3.fromRGB(unpack(mp:getval("ESP", "Dropped Esp", "Display Nade Paths", "color2"))) or Color3.fromRGB(unpack(mp:getval("ESP", "Dropped Esp", "Display Nade Paths", "color1")))
+						local color = thrower.Team == LOCAL_PLAYER.Team and RGB(unpack(mp:getval("ESP", "Dropped Esp", "Display Nade Paths", "color2"))) or RGB(unpack(mp:getval("ESP", "Dropped Esp", "Display Nade Paths", "color1")))
 
 						for k,v in next, frames do 
 							local curframe = Instance.new("Part", workspace)
@@ -4923,7 +4925,7 @@ elseif mp.game == "pf" then --!SECTION
 								local sphere1 = Instance.new("SphereHandleAdornment")
 								sphere1.Radius = 0.7 * 2
 								sphere1.AlwaysOnTop = true
-								sphere1.Color3 = Color3.fromRGB(252, 249, 58)
+								sphere1.Color3 = RGB(252, 249, 58)
 								sphere1.Transparency = 0.1
 								sphere1.Parent = blowframe
 								sphere1.Adornee = blowframe
@@ -7461,19 +7463,17 @@ elseif mp.game == "pf" then --!SECTION
 			mp:set_menu_pos(mp.x, mp.y)
 		end
 
-		local function cacheAvatars()   
-			--TODO alan make this only for the player that is selected or whatever the fuck you wnat to do fuck you bitch
-			-- for i, v in ipairs(Players:GetPlayers()) do
+		local function cacheAvatars()
+			for i, v in ipairs(Players:GetPlayers()) do
+				CreateThread(function()
+					if not table.contains(playerpictures, v) then
+						local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
 
-			-- 	CreateThread(function()
-			-- 		if not table.contains(playerpictures, v) then
-			-- 			local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-
-			-- 			playerpictures[v] = game:HttpGet(content)
-			-- 		end 
-			-- 	end)  
-			-- end  
-		end   
+						playerpictures[v] = game:HttpGet(content)
+					end
+				end)
+			end
+		end
 
 		local function setplistinfo(player, textonly)
 			if player ~= nil then	
@@ -7542,7 +7542,7 @@ elseif mp.game == "pf" then --!SECTION
 							local matname = mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")
 							matname = mats[matname]
 							curvalue.Material = Enum.Material[matname]
-							local thecolor = Color3.fromRGB(r, g, b)
+							local thecolor = RGB(r, g, b)
 							curvalue.Color = thecolor
 							local vertexcolor = Vector3.new(r / 255, g / 255, b / 255)
 							local mesh = curvalue:FindFirstChild("Mesh")
@@ -7578,9 +7578,12 @@ elseif mp.game == "pf" then --!SECTION
 end --!SECTION PF END
 
 DisplayLoadtimeFromStart()
+CreateNotification("Press DELETE to open and close the menu!")
 
 loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
 if not mp.open then
 	mp.fading = true
 	mp.fadestart = tick()
 end
+
+mp.BBMenuInit = nil -- let me freeeeee
