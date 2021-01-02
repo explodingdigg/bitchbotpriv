@@ -1,6 +1,9 @@
 assert(not getgenv().bbotv2, "BitchBot is already loaded into the game! Unload the cheat through the menu first if you need to reinject!")
 local mp
 local loadstart = tick()
+function map(X, A, B, C, D)
+	return (X-A)/(B-A) * (D-C) + C
+end
 do
 	local notes = {}
 	local function DrawingObject(t, col)
@@ -13,10 +16,6 @@ do
 	
 		return d
 	
-	end
-	
-	local function map(X, A, B, C, D)
-		return (X-A)/(B-A) * (D-C) + C
 	end
 	
 	local function Rectangle(sizex, sizey, fill, col)
@@ -5561,7 +5560,7 @@ elseif mp.game == "pf" then --!SECTION
 			local dir = camera:GetTrajectory(target, origin) - origin
 			dir = dir.Unit
 
-			local offsetMult = map((mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
+			local offsetMult = math.map((mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
 			local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
 			dir += offset * offsetMult
 			
