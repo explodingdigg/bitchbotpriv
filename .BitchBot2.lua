@@ -4331,7 +4331,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		
 			local step = 1 / 200
-			local maxSteps = 1000
+			local maxSteps = 1200
 		
 			local function GetPartTable(ply)
 				local tbl = {}
@@ -4341,11 +4341,11 @@ elseif mp.game == "pf" then --!SECTION
 				return tbl
 			end
 		
-			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, crazyMode)
+			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin)
 				local targetParts
-				if crazyMode then  
+				if mp:getval("Rage", "Hack vs. Hack", "Extend Penetration") then  
 					sphereHitbox.Position = targetPos
-					diameter = mp.getval("")
+					diameter = mp:getval("Rage", "Hack vs. Hack", "Extra Penetration")
 					sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
 					targetParts = {[sphereHitbox] = sphereHitbox}
 				else
@@ -6194,15 +6194,15 @@ elseif mp.game == "pf" then --!SECTION
 					content = {
 						{
 							type = "toggle",
-							name = "Multipoint Resolver",
+							name = "Extend Penetration",
 							value = false
 						},
 						{
 							type = "slider",
-							name = "Multipoint Size",
+							name = "Extra Penetration",
 							value = 2,
 							minvalue = 1,
-							maxvalue = 10
+							maxvalue = 50
 						},
 						{
 							type = "toggle",
