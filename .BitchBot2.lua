@@ -4046,7 +4046,7 @@ elseif mp.game == "pf" then --!SECTION
 								warn(k,v)
 								if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 									setupvalue(client.loadedguns[id].step, k, function(...)
-										return mp:getval("Visuals", "Local Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+										return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 									end)
 								end
 							end
@@ -4836,7 +4836,7 @@ elseif mp.game == "pf" then --!SECTION
 		end)
 		local oldmag = client.cam.setmagnification
 		client.cam.setmagnification = function(self, v)
-			if mp:getval("Visuals", "Local Visuals", "Disable ADS FOV") and client.char.spawned then return end
+			if mp:getval("Visuals", "Camera Visuals", "Disable ADS FOV") and client.char.spawned then return end
 			return oldmag(self, v)
 		end
 		local oldmenufov = client.cam.changemenufov
@@ -4856,7 +4856,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 		local suppress = client.cam.suppress
 		client.cam.suppress = function(...)
-			if mp:getval("Visuals", "Local Visuals", "No Visual Suppression") then return end
+			if mp:getval("Visuals", "Camera Visuals", "No Visual Suppression") then return end
 			return suppress(...)
 		end
 	
@@ -4960,7 +4960,7 @@ elseif mp.game == "pf" then --!SECTION
 					for k,v in next, getupvalues(loadedknife.step) do
 						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 							setupvalue(loadedknife.step, k, function(...)
-								return mp:getval("Visuals", "Local Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+								return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 							end)
 						end
 					end
@@ -4974,7 +4974,7 @@ elseif mp.game == "pf" then --!SECTION
 					for k,v in next, getupvalues(client.loadedguns[gunn].step) do -- TODO json fix this tomorrow
 						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 							setupvalue(client.loadedguns[gunn].step, k, function(...)
-								return mp:getval("Visuals", "Local Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+								return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 							end)
 						end
 					end
@@ -5684,7 +5684,7 @@ elseif mp.game == "pf" then --!SECTION
 	--ADS Fov hook
 	
 	local function renderVisuals()
-		setconstant(client.cam.step, 11, mp:getval("Visuals", "Local Visuals", "No Camera Bob") and 0 or 0.5)
+		setconstant(client.cam.step, 11, mp:getval("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
 		--------------------------------------world funnies
 		if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
 			game.Lighting:SetMinutesAfterMidnight(mp.options["Visuals"]["World Visuals"]["Custom Time"][1])
@@ -5700,7 +5700,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 
 		if mp.open then
-			client.char.unaimedfov = mp.options["Visuals"]["Local Visuals"]["Camera FOV"][1]
+			client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 	
 			if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
 				game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
@@ -6022,7 +6022,7 @@ elseif mp.game == "pf" then --!SECTION
 		do -- no scope pasted from v1 lol
 			local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
 			local frame = gui.MainGui:FindFirstChild("ScopeFrame")
-			if mp:getval("Visuals", "Local Visuals", "No Scope Border") and frame then
+			if mp:getval("Visuals", "Camera Visuals", "No Scope Border") and frame then
 				if frame:FindFirstChild("SightRear") then
 					for k,v in pairs(frame.SightRear:GetChildren()) do
 						if v.ClassName == "Frame" then
@@ -7009,6 +7009,13 @@ elseif mp.game == "pf" then --!SECTION
 							value = 1,
 							values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
 						},
+						
+					}
+				},
+				{
+					name = "Camera Visuals", 
+					autopos = "right",
+					content = {
 						{
 							type = "slider",
 							name = "Camera FOV",
@@ -7134,6 +7141,7 @@ elseif mp.game == "pf" then --!SECTION
 					}
 				}
 			}
+			
 		},
 		{--ANCHOR Misc
 			name = "Misc",
