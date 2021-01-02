@@ -7461,7 +7461,7 @@ elseif mp.game == "pf" then --!SECTION
 			mp:set_menu_pos(mp.x, mp.y)
 		end
 
-		local function cacheAvatars()
+		local function cacheAvatars()   
 			--TODO alan make this only for the player that is selected or whatever the fuck you wnat to do fuck you bitch
 			-- for i, v in ipairs(Players:GetPlayers()) do
 
@@ -7470,10 +7470,10 @@ elseif mp.game == "pf" then --!SECTION
 			-- 			local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
 
 			-- 			playerpictures[v] = game:HttpGet(content)
-			-- 		end
-			-- 	end)
-			-- end
-		end
+			-- 		end 
+			-- 	end)  
+			-- end  
+		end   
 
 		local function setplistinfo(player, textonly)
 			if player ~= nil then	
