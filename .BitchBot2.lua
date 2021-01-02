@@ -4281,6 +4281,7 @@ elseif mp.game == "pf" then --!SECTION
 	local ragebot = {}
 	do--ANCHOR ragebot definitions
 		ragebot.sprint = true
+		ragebot.shooting = false
 		do
 			local dot = Vector3.new().Dot
 			local ignore
@@ -4371,7 +4372,10 @@ elseif mp.game == "pf" then --!SECTION
 				ragebot.silentVector = nil
 				ragebot.target = nil
 				ragebot.firepos = nil
-				client.logic.currentgun:shoot(false)
+				if ragebot.shooting and mp:getval("Rage", "Aimbot", "Auto Shoot") then
+					client.logic.currentgun:shoot(false)
+				end
+				ragebot.shooting = false
 				return
 			end
 			local target_pos = part.Position
@@ -4380,7 +4384,10 @@ elseif mp.game == "pf" then --!SECTION
 			ragebot.target = target
 			ragebot.targetpart = part
 			ragebot.firepos = origin
-			client.logic.currentgun:shoot(true)
+			ragebot.shooting = true
+			if mp:getval("Rage", "Aimbot", "Auto Shoot") then
+				client.logic.currentgun:shoot(true)
+			end
 		end
 
 		function ragebot:GetTarget(hitboxPriority, hitscan, players)
