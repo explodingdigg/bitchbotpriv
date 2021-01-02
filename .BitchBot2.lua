@@ -3900,7 +3900,7 @@ elseif mp.game == "pf" then --!SECTION
 		sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
 		sphereHitbox.Position = Vector3.new()
 		sphereHitbox.Shape = Enum.PartType.Ball
-		sphereHitbox.Transparency = 0.7
+		sphereHitbox.Transparency = 1
 		sphereHitbox.Anchored = true
 		sphereHitbox.CanCollide = false
 	end
@@ -4428,13 +4428,11 @@ elseif mp.game == "pf" then --!SECTION
 									end
 								elseif autowall then
 									local directionVector = camera:GetTrajectory(bone.Position, client.cam.cframe.p)
-									if self:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position) then
+									if self:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, client.cam.cframe.p, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
 										local fovToBone = camera:GetFOV(bone)
-										if fovToBone < closest then
-											closest = fovToBone
-											cpart = bone
-											theplayer = player
-										end
+										closest = fovToBone
+										cpart = bone
+										theplayer = player
 									elseif aw_resolve and bone.Name ~= partPreference then
 										if resolvertype == 1 then -- cubic hitscan
 											local resolvedPosition = self:CubicHitscan(4, barrel, player, k)
