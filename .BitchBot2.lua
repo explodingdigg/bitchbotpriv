@@ -1,4 +1,5 @@
 local mp
+local loadstart = tick()
 do
 	local notes = {}
 	local function DrawingObject(t, col)
@@ -190,6 +191,11 @@ do
 	--ANCHOR how to create notification
 	--CreateNotification("Loading...")
 end
+
+local function DisplayLoadtimeFromStart()
+	CreateNotification(string.format("Done loading. (%d ms)", math.floor((tick() - loadstart) * 1000)))
+end
+
 mp = { -- this is for menu stuffs n shi
 	w = 500,
 	h = 600,
@@ -265,6 +271,9 @@ do
 	end
 
 end
+
+loadstart = tick()
+
 if game.PlaceId == 292439477 or game.PlaceId == 299659045 then
 	mp.game = "pf"
 	do
@@ -5022,7 +5031,7 @@ elseif mp.game == "pf" then --!SECTION
 			local mods_enabled = mp:getval("Misc", "Weapon Modifications", "Enabled")
 			local firerate_scale = mp:getval("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
 			local recoil_scale = mp:getval("Misc", "Weapon Modifications", "Recoil Scale") / 100
-			local instant_reload = mp:getval("Misc", "Weapon Modifications", "Instant Reload")
+			local empty_animations = mp:getval("Misc", "Weapon Modifications", "Remove Animations")
 			local instant_equip = mp:getval("Misc", "Weapon Modifications", "Instant Equip")
 			local fully_auto = mp:getval("Misc", "Weapon Modifications", "Fully Automatic")
 			
@@ -5066,14 +5075,25 @@ elseif mp.game == "pf" then --!SECTION
 					if instant_equip then
 						gun.equipspeed = 99999
 					end
-					if instant_reload then
+					if empty_animations then
 						if gun.animations  and type(gun.animations) == "table" then
 							for name, anim in pairs(gun.animations) do
 								if name:match("stab") then continue end
 								if type(anim) == "table" and anim ~= gun.animations.inspect then
-									anim.timescale = 0
-									anim.resettime = 0
-									anim.stdtimescale = 0
+									gun.animations[name] = {
+										stdtimescale = 0,
+										timescale = 0,
+										resettime = 0,
+										{
+											{
+												part = "Trigger",
+												c1 = CFrame.new(),
+												t = 1,
+												eq = "linear"
+											},
+											delay = 0
+										}
+									}
 								end
 							end
 						end
@@ -7270,7 +7290,7 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle", 
-							name = "Instant Reload",
+							name = "Remove Animations",
 							value = true
 						},
 						{
@@ -7442,15 +7462,17 @@ elseif mp.game == "pf" then --!SECTION
 		end
 
 		local function cacheAvatars()
-			for i, v in ipairs(Players:GetPlayers()) do
-				CreateThread(function()
-					if not table.contains(playerpictures, v) then
-						local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+			--TODO alan make this only for the player that is selected or whatever the fuck you wnat to do fuck you bitch
+			-- for i, v in ipairs(Players:GetPlayers()) do
 
-						playerpictures[v] = game:HttpGet(content)
-					end
-				end)
-			end
+			-- 	CreateThread(function()
+			-- 		if not table.contains(playerpictures, v) then
+			-- 			local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+
+			-- 			playerpictures[v] = game:HttpGet(content)
+			-- 		end
+			-- 	end)
+			-- end
 		end
 
 		local function setplistinfo(player, textonly)
@@ -7555,10 +7577,10 @@ elseif mp.game == "pf" then --!SECTION
 	end
 end --!SECTION PF END
 
+DisplayLoadtimeFromStart()
+
 loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
 if not mp.open then
 	mp.fading = true
 	mp.fadestart = tick()
 end
-
-CreateNotification("Loaded")
