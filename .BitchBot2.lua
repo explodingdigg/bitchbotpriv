@@ -4800,6 +4800,8 @@ elseif mp.game == "pf" then --!SECTION
 				local hitscanpreference = misc:GetParts(mp:getval("Rage", "Aimbot", "Hitscan Points"))
 				local prioritizedpart = mp:getval("Rage", "Aimbot", "Hitscan Priority")
 	
+				ragebot:Stance()
+
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference)
 					ragebot:AimAtTarget(targetPart, targetPlayer)
@@ -5407,7 +5409,8 @@ elseif mp.game == "pf" then --!SECTION
 				local pitch = args[3].X
 				local yaw = args[3].Y
 				local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
-				local yawChoice = mp:getval("Rage",   "Anti Aim", "Yaw")
+				local yawChoice = mp:getval("Rage", "Anti Aim", "Yaw")
+				local spinRate = mp:getval("Rage", "Anti Aim", "Spin Rate")
 				---"off,down,up,roll,upside down,random"
 				--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
 	
@@ -5420,9 +5423,9 @@ elseif mp.game == "pf" then --!SECTION
 				elseif pitchChoice == 5 then
 					pitch = -math.pi
 				elseif pitchChoice == 6 then
-					pitch = (tick() * 0.01) % 6.28
+					pitch = (tick() * spinRate) % 6.28
 				elseif pitchChoice == 7 then
-					pitch = (-tick() * 0.01) % 6.28
+					pitch = (-tick() * spinRate) % 6.28
 				elseif pitchChoice == 8 then
 					pitch = math.random(99999)
 				end
@@ -5431,7 +5434,7 @@ elseif mp.game == "pf" then --!SECTION
 				if yawChoice == 2 then
 					yaw += math.pi
 				elseif yawChoice == 3 then
-					yaw = (tick() * 0.01) % 12
+					yaw = (tick() * spinRate) % 12
 				elseif yawChoice == 4 then
 					yaw = math.random(99999)
 				elseif yawChoice == 5 then
@@ -6151,14 +6154,14 @@ elseif mp.game == "pf" then --!SECTION
 				else
 					local fakeupdater = client.fakeupdater
 					fakeupdater.step(3, true)
-					fakeupdater.setlookangles(client.cam.angles) -- TODO make this face silent aim vector at some point lol
-					
-					fakeupdater.setstance(client.char.movementmode)
-					fakeupdater.setsprint(client.char:sprinting())
 					if mp:getval("Rage", "Anti Aim", "Enabled") then
 						fakeupdater.setlookangles(ragebot.angles)
 						fakeupdater.setstance(ragebot.stance)
 						fakeupdater.setsprint(ragebot.sprint)
+					else
+						fakeupdater.setlookangles(client.cam.angles) -- TODO make this face silent aim vector at some point lol
+						fakeupdater.setstance(client.char.movementmode)
+						fakeupdater.setsprint(client.char:sprinting())
 					end
 					if client.logic.currentgun then
 						if client.logic.currentgun.type ~= "KNIFE" then
@@ -6609,6 +6612,14 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Yaw",
 							value = 2,
 							values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin"}
+						},
+						{
+							type = "slider",
+							name = "Spin Rate",
+							value = 10,
+							minvalue = 1,
+							maxvalue = 100,
+							stradd = " ° per second"
 						},
 						{
 							type = "dropbox",
