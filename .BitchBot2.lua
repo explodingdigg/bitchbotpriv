@@ -3900,7 +3900,7 @@ elseif mp.game == "pf" then --!SECTION
 		sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
 		sphereHitbox.Position = Vector3.new()
 		sphereHitbox.Shape = Enum.PartType.Ball
-		sphereHitbox.Transparency = 1
+		sphereHitbox.Transparency = 0.7
 		sphereHitbox.Anchored = true
 		sphereHitbox.CanCollide = false
 	end
@@ -4341,9 +4341,9 @@ elseif mp.game == "pf" then --!SECTION
 				return tbl
 			end
 		
-			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin)
+			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, extendPen)
 				local targetParts
-				if mp:getval("Rage", "Hack vs. Hack", "Extend Penetration") then  
+				if extendPen then  
 					sphereHitbox.Position = targetPos
 					diameter = mp:getval("Rage", "Hack vs. Hack", "Extra Penetration")
 					sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
@@ -4423,7 +4423,7 @@ elseif mp.game == "pf" then --!SECTION
 									end
 								elseif autowall then
 									local directionVector = camera:GetTrajectory(bone.Position, client.cam.cframe.p)
-									if self:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position) then
+									if self:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, client.cam.cframe.p, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
 										local fovToBone = camera:GetFOV(bone)
 										if fovToBone < closest then
 											closest = fovToBone
