@@ -5367,7 +5367,7 @@ elseif mp.game == "pf" then --!SECTION
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
 			if args[1] == "newbullets" then
-				if mp:getval("Legit", "Aim Assist", "Enabled") and legitbot.silentVector then
+				if legitbot.silentVector then
 				--[[if mp:getval("Legit", "Aim Assist", "Enabled") and legitbot.silentVector and not P.thirdperson then
 						local mag = P.velocity.Magnitude
 						local oldDir = P.velocity.Unit
@@ -5696,12 +5696,12 @@ elseif mp.game == "pf" then --!SECTION
 
 	local newpart = client.particle.new
 	client.particle.new = function(P)
-		if mp:getval("Legit", "Aim Assist", "Enabled") and legitbot.silentVector and not P.thirdperson then
+		if legitbot.silentVector and not P.thirdperson then
 			local mag = P.velocity.Magnitude
 			local oldDir = P.velocity.Unit
 			local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
 			local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
-			P.velocity = legitbot.silentVector * mag
+			P.velocity = newDir * mag
 		end
 		if mp:getval("Rage", "Aimbot", "Enabled") and ragebot.silentVector and not P.thirdperson then
 			local oldpos = P.position
