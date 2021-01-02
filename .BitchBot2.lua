@@ -5002,6 +5002,7 @@ elseif mp.game == "pf" then --!SECTION
 							client.hud:vote("yes")
 						end
 					end
+					return func(name, countdown, endtick, reqs)
 				end
 			end
 			if found2 then
