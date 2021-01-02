@@ -285,7 +285,7 @@ end
 
 game:GetService("NetworkClient"):SetOutgoingKBPSLimit(0)
 
-setfpscap(300) -- nigga roblox
+--setfpscap(300) -- nigga roblox
 
 if not isfolder("bitchbot") then
 	makefolder("bitchbot")
@@ -1797,10 +1797,13 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					if tt[4] == "true" then
-						mp.options[tt[1]][tt[2]][tt[3]][1] = true
-					else
-						mp.options[tt[1]][tt[2]][tt[3]][1] = false
+					
+					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+						if tt[4] == "true" then
+							mp.options[tt[1]][tt[2]][tt[3]][1] = true
+						else
+							mp.options[tt[1]][tt[2]][tt[3]][1] = false
+						end
 					end
 				end
 
@@ -1820,7 +1823,9 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					mp.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
+					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+						mp.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
+					end
 				end
 
 				local start = nil
@@ -1839,7 +1844,9 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					mp.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
+					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+						mp.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
+					end
 				end
 
 				local start = nil
@@ -1858,16 +1865,19 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					local subs = string.split(tt[4], ",")
+					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+						
+						local subs = string.split(tt[4], ",")
 
-					for i, v in ipairs(subs) do
-						local opt = string.gsub(v, " ", "")
-						if opt == "true" then
-							mp.options[tt[1]][tt[2]][tt[3]][1][i][2] = true
-						else
-							mp.options[tt[1]][tt[2]][tt[3]][1][i][2] = false
+						for i, v in ipairs(subs) do
+							local opt = string.gsub(v, " ", "")
+							if opt == "true" then
+								mp.options[tt[1]][tt[2]][tt[3]][1][i][2] = true
+							else
+								mp.options[tt[1]][tt[2]][tt[3]][1][i][2] = false
+							end
+							if i == #subs - 1 then break end
 						end
-						if i == #subs - 1 then break end
 					end
 				end
 
@@ -1887,10 +1897,12 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					if tt[4] == "nil" then
-						mp.options[tt[1]][tt[2]][tt[3]][5][1] = nil
-					else
-						mp.options[tt[1]][tt[2]][tt[3]][5][1] = keyz[tonumber(tt[4])]
+					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+						if tt[4] == "nil" then
+							mp.options[tt[1]][tt[2]][tt[3]][5][1] = nil
+						else
+							mp.options[tt[1]][tt[2]][tt[3]][5][1] = keyz[tonumber(tt[4])]
+						end
 					end
 				end
 
@@ -1910,15 +1922,17 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					local subs = string.split(tt[4], ",")
+					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+						local subs = string.split(tt[4], ",")
 
-					for i, v in ipairs(subs) do
-						if mp.options[tt[1]][tt[2]][tt[3]][5][1][i] == nil then
-							break
+						for i, v in ipairs(subs) do
+							if mp.options[tt[1]][tt[2]][tt[3]][5][1][i] == nil then
+								break
+							end
+							local opt = string.gsub(v, " ", "")
+							mp.options[tt[1]][tt[2]][tt[3]][5][1][i] = tonumber(opt)
+							if i == #subs - 1 then break end
 						end
-						local opt = string.gsub(v, " ", "")
-						mp.options[tt[1]][tt[2]][tt[3]][5][1][i] = tonumber(opt)
-						if i == #subs - 1 then break end
 					end
 				end
 
@@ -1938,19 +1952,21 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					local subs = {string.split(tt[4], ","), string.split(tt[5], ",")}
+					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
 
-					for i, v in ipairs(subs) do
-						for i1, v1 in ipairs(v) do
-							if mp.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] == nil then
-								break
+						local subs = {string.split(tt[4], ","), string.split(tt[5], ",")}
+
+						for i, v in ipairs(subs) do
+							for i1, v1 in ipairs(v) do
+								if mp.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] == nil then
+									break
+								end
+								local opt = string.gsub(v1, " ", "")
+								mp.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] = tonumber(opt)
+								if i1 == #v - 1 then break end	
 							end
-							local opt = string.gsub(v1, " ", "")
-							mp.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] = tonumber(opt)
-							if i1 == #v - 1 then break end
 						end
 					end
-
 				end
 
 				for k, v in pairs(mp.options) do
@@ -3921,8 +3937,16 @@ elseif mp.game == "pf" then --!SECTION
 			[5] = {},
 		},
 		box = {[1] = {}, [2] = {}},
-		hp = {outer = {}, inner = {}, text = {}},
-		text = {name = {}, weapon = {}, distance = {}},
+		hp = {
+			outer = {},
+			inner = {}, 
+			text = {}
+		},
+		text = {
+			name = {}, 
+			weapon = {}, 
+			distance = {}
+		},
 		arrows = {
 			[1] = {},
 			[2] = {},
@@ -3940,13 +3964,11 @@ elseif mp.game == "pf" then --!SECTION
 		for i_, v in pairs(allesp.box) do
 			Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, v)
 		end
-		for i_, v in pairs(allesp.hp) do
-			if i_ ~= "text" then
-				Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 215}, v)
-			else
-				Draw:OutlinedText("", 1, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, v)
-			end
-		end
+
+		Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 210}, allesp.hp.outer)
+		Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 255}, allesp.hp.inner)
+		Draw:OutlinedText("", 1, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.hp.text)
+
 		for i_, v in pairs(allesp.text) do
 			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, v)
 		end
@@ -4768,7 +4790,7 @@ elseif mp.game == "pf" then --!SECTION
 		--anti afk
 		
 		local VirtualUser = game:GetService("VirtualUser")
-		LOCAL_PLAYER.Idled:Connect(function()
+		mp.connections.local_player_id_connect = LOCAL_PLAYER.Idled:Connect(function()
 			VirtualUser:CaptureController()
 			VirtualUser:ClickButton2(Vector2.new())
 		end)
@@ -5010,7 +5032,7 @@ elseif mp.game == "pf" then --!SECTION
 				return result
 			end)
 		end
-		ButtonPressed.Event:Connect(function(tab, gb, name)
+		mp.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, gb, name)
 			if tab == "Misc" and name == "Invisibility" then
 				local oldsend = client.net.send
 				
@@ -5705,6 +5727,7 @@ elseif mp.game == "pf" then --!SECTION
 								box.Size = boxSize - Vector2.new(i*2, i*2)
 								box.Transparency = boxtransparency
 								box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+								
 							end
 		
 						end
@@ -5725,7 +5748,6 @@ elseif mp.game == "pf" then --!SECTION
 							allesp.hp.outer[Index].Visible = true
 							allesp.hp.outer[Index].Position = Vector2.new(math.floor(boxPosition.X) - 6, math.floor(boxPosition.y) - 1)
 							allesp.hp.outer[Index].Size = Vector2.new(4, boxSize.Y + 2)
-							allesp.hp.outer[Index].Transparency = boxtransparency
 		
 							allesp.hp.inner[Index].Visible = true
 							allesp.hp.inner[Index].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
@@ -5828,7 +5850,98 @@ elseif mp.game == "pf" then --!SECTION
 					end
 					
 				end)
+
 			end
+
+			CreateThread(function() -- hand chams and such
+				local vm = workspace.Camera:GetChildren()
+				if mp:getval("Visuals", "Local Visuals", "Arm Chams") then
+					
+					for k, v in pairs(vm) do
+						if v.Name == "Left Arm" or v.Name == "Right Arm" then
+							for k1, v1 in pairs(v:GetChildren()) do
+								v1.Color = mp:getval("Visuals", "Local Visuals", "Arm Chams", "color2", true)
+								v1.Transparency = 1 + (mp:getval("Visuals", "Local Visuals", "Arm Chams", "color2")[4]/-255)
+								v1.Material = mats[mp:getval("Visuals", "Local Visuals", "Arm Material")]
+								if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
+									v1.Color = mp:getval("Visuals", "Local Visuals", "Arm Chams", "color1", true)
+									v1.Transparency = 1 + (mp:getval("Visuals", "Local Visuals", "Arm Chams", "color1")[4]/-255)
+									v1:ClearAllChildren()
+								end
+							end
+						end
+					end
+
+					for k, v in pairs(vm) do
+						if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
+							for k1, v1 in pairs(v:GetChildren()) do
+		
+								v1.Color = mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color1", true)
+		
+								if v1.Transparency ~= 1 then
+									v1.Transparency = 0.99999 + (mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+								end
+
+								if mp:getval("Visuals", "Local Visuals", "Remove Weapon Skin") then
+									for i2, v2 in pairs(v1:GetChildren()) do
+										if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
+											v2:Destroy()
+										end
+									end
+								end
+
+								v1.Material = mats[mp:getval("Visuals", "Local Visuals", "Weapon Material")]
+
+								if v1.Name == "LaserLight" then
+									local transparency = 1+(mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
+									v1.Color = mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
+									v1.Transparency = (transparency / 2) + 0.5
+									v1.Material = "ForceField"
+
+								elseif v1.Name == "SightMark" then
+									if v1:FindFirstChild("SurfaceGui") then
+										local color = mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
+										local transparency = 1+(mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
+										v1.SurfaceGui.Border.Scope.ImageColor3 = color
+										v1.SurfaceGui.Border.Scope.ImageTransparency = transparency 
+										if v1.SurfaceGui:FindFirstChild("Margins") then
+											v1.SurfaceGui.Margins.BackgroundColor3 = color
+											v1.SurfaceGui.Margins.ImageColor3 = color
+											v1.SurfaceGui.Margins.ImageTransparency = (transparency/5) + 0.7
+										elseif v1.SurfaceGui:FindFirstChild("Border") then
+											v1.SurfaceGui.Border.BackgroundColor3 = color
+											v1.SurfaceGui.Border.ImageColor3 = color
+											v1.SurfaceGui.Border.ImageTransparency = 1
+										end
+									end
+								end
+							end
+						end
+					end
+					
+
+					--[[for k, v in pairs(vm) do
+						if v.Name == "Left Arm" or v.Name == "Right Arm" then
+							for k1, v1 in pairs(v:GetChildren()) do
+		
+								if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
+									v1.Name = "Sleeve"
+									v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][3])
+									v1.Transparency = 1 + (mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][4]/-255)
+									
+									if mp.options["Visuals"]["Local Visuals"]["Custom Sleeve Reflectivity"][1] then
+										v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Sleeve Reflectivity"][1]/100
+									end
+									v1:ClearAllChildren()
+								end
+							end
+						end
+					end--]]
+
+				end
+
+			end)
+
 		end
 		do -- no scope pasted from v1 lol
 			local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
@@ -5857,7 +5970,7 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	end
 	local oldpos = nil
-	local keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
+	mp.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 		inputBeganMenu(key)
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
 			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
@@ -5871,7 +5984,7 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	end)
 	
-	local renderstepped = game.RunService.RenderStepped:Connect(function()
+	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		MouseUnlockAndShootHook()
 		do --rendering
 			renderVisuals()
@@ -5891,7 +6004,7 @@ elseif mp.game == "pf" then --!SECTION
 	end)
 	
 	
-	local heartbeat = game.RunService.Heartbeat:Connect(function()
+	mp.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
 		
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
 			if client.char.spawned then
@@ -6519,21 +6632,6 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Backtrack Chams",
-							value = false,
-							extra = {
-								type = "double colorpicker",
-								name = {"Late Backtrack Ticks", "Early Backtrack Ticks"},
-								color = {{255, 0, 0, 255}, {255, 255, 255, 255}}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Show Only Last Backtack",
-							value = false
-						},
-						{
-							type = "toggle",
 							name = "Out of View",
 							value = true,
 							extra = {
@@ -6767,70 +6865,28 @@ elseif mp.game == "pf" then --!SECTION
 					content = {
 						{
 							type = "toggle",
-							name = "Sleeve Chams",
+							name = "Arm Chams",
 							value = false,
 							extra = {
-								type = "single colorpicker",
-								name = "Sleeve Chams",
-								color = {255, 255, 255, 255}
+								type = "double colorpicker",
+								name = {"Sleeve Color", "Hand Color"},
+								color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
 							}
 						},
 						{
 							type = "dropbox",
-							name = "Sleeve Material",
+							name = "Arm Material",
 							value = 1,
 							values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
-						},
-						{
-							type = "toggle",
-							name = "Custom Sleeve Reflectivity",
-							value = false,
-						},
-						{
-							type = "slider",
-							name = "Sleeve Reflectivity",
-							value = 0,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%",
-						},
-						{
-							type = "toggle",
-							name = "Hand Chams",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Hand Chams",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "dropbox",
-							name = "Hand Material",
-							value = 1,
-							values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
-						},
-						{
-							type = "toggle",
-							name = "Custom Hand Reflectivity",
-							value = false,
-						},
-						{
-							type = "slider",
-							name = "Hand Reflectivity",
-							value = 0,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%",
 						},
 						{
 							type = "toggle",
 							name = "Weapon Chams",
 							value = false,
 							extra = {
-								type = "single colorpicker",
-								name = "Weapon Chams",
-								color = {255, 255, 255, 255}
+								type = "double colorpicker",
+								name = {"Weapon Color", "Hand Color"},
+								color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
 							}
 						},
 						{
@@ -6841,21 +6897,40 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Custom Weapon Reflectivity",
+							name = "Remove Weapon Skin",
 							value = false,
-						},
-						{
-							type = "slider",
-							name = "Weapon Reflectivity",
-							value = 0,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%",
 						},
 						{
 							type = "toggle",
-							name = "Remove Weapon Skin",
+							name = "Third Person",
 							value = false,
+							extra = {
+								type = "keybind",
+								key = nil
+							}
+						},
+						{
+							type = "slider",
+							name = "Third Person Distance",
+							value = 60,
+							minvalue = 1,
+							maxvalue = 150,
+						},
+						{
+							type = "toggle",
+							name = "Local Player Chams",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Local Player Chams",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "dropbox",
+							name = "Local Player Material",
+							value = 1,
+							values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
 						},
 						{
 							type = "slider",
@@ -6885,23 +6960,6 @@ elseif mp.game == "pf" then --!SECTION
 							name = "No Visual Suppression",
 							value = false,
 						},
-						{
-							type = "toggle",
-							name = "Third Person",
-							value = false,
-							extra = {
-								type = "keybind",
-								key = nil
-							}
-						},
-						{
-							type = "slider",
-							name = "Third Person Distance",
-							value = 60,
-							minvalue = 1,
-							maxvalue = 150,
-						}
-
 					}
 				},
 				{
