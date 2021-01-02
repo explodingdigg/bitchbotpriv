@@ -7280,7 +7280,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Fire Rate Scale",
 							value = 150,
 							minvalue = 50, 
-							maxvalue = 250,
+							maxvalue = 500,
 							stradd = "%"
 						},
 						{	
