@@ -4487,12 +4487,13 @@ elseif mp.game == "pf" then --!SECTION
 										closest = fovToBone
 										cpart = bone
 										theplayer = player
+									else
+										continue
 									end
 								elseif autowall then
 									local directionVector = camera:GetTrajectory(bone.Position, client.cam.cframe.p)
 									if self:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, client.cam.cframe.p, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
 										local fovToBone = camera:GetFOV(bone)
-										closest = fovToBone
 										cpart = bone
 										theplayer = player
 									elseif aw_resolve and bone.Name ~= partPreference then
@@ -4500,7 +4501,6 @@ elseif mp.game == "pf" then --!SECTION
 											local resolvedPosition = self:CubicHitscan(4, barrel, player, k)
 											if resolvedPosition then
 												self.firepos = resolvedPosition
-												closest = fovToBone
 												cpart = bone
 												theplayer = player
 											end
@@ -4508,7 +4508,6 @@ elseif mp.game == "pf" then --!SECTION
 											local resolvedPosition = self:HitscanOnAxes(barrel, player, bone)
 											if resolvedPosition then
 												self.firepos = resolvedPosition
-												closest = fovToBone
 												cpart = bone
 												theplayer = player
 											end
@@ -4540,18 +4539,20 @@ elseif mp.game == "pf" then --!SECTION
 										local resolvedPosition = self:CubicHitscan(8, client.cam.basecframe.p, theplayer)
 										if resolvedPosition then
 											self.firepos = resolvedPosition
-											closest = fovToBone
 											cpart = bone
 										end
 									elseif resolvertype == 2 then
 										local resolvedPosition = self:HitscanOnAxes(barrel, player, prioritybone)
 										if resolvedPosition then
 											self.firepos = resolvedPosition
-											closest = fovToBone
 											cpart = bone
 										end
 									end
 								end
+							else
+								closest = math.huge
+								theplayer = nil
+								cpart = nil
 							end
 						end
 					end
