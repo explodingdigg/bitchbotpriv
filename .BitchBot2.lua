@@ -5368,19 +5368,8 @@ elseif mp.game == "pf" then --!SECTION
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
 			if args[1] == "newbullets" then
 				if legitbot.silentVector then
-				--[[if mp:getval("Legit", "Aim Assist", "Enabled") and legitbot.silentVector and not P.thirdperson then
-						local mag = P.velocity.Magnitude
-						local oldDir = P.velocity.Unit
-						local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
-						local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
-						legitbot.silentVector = newDir
-						P.velocity = legitbot.silentVector * mag
-					end]]
 					for k, bullet in pairs(args[2].bullets) do
-						local oldDir = bullet[1]
-						local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
-						local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
-						bullet[1] = newDir
+						bullet[1] = legitbot.silentVector
 					end
 				end
 				if ragebot.silentVector then
@@ -5570,7 +5559,11 @@ elseif mp.game == "pf" then --!SECTION
 		
 			local target = targetPart.Position
 			local dir = camera:GetTrajectory(target, origin) - origin
+			dir = dir.Unit
 
+			local offsetMult = map((mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
+			local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
+			dir += offset * offsetMult
 			
 			return dir.Unit
 		end
@@ -5696,12 +5689,9 @@ elseif mp.game == "pf" then --!SECTION
 
 	local newpart = client.particle.new
 	client.particle.new = function(P)
-		if legitbot.silentVector and not P.thirdperson then
+		if mp:getval("Legit", "Bullet Redirection", "Silent Aim") and legitbot.silentVector and not P.thirdperson then
 			local mag = P.velocity.Magnitude
-			local oldDir = P.velocity.Unit
-			local inac = mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100
-			local newDir = (oldDir - (oldDir * inac)) + (legitbot.silentVector * inac) 
-			P.velocity = newDir * mag
+			P.velocity = legitbot.silentVector * mag
 		end
 		if mp:getval("Rage", "Aimbot", "Enabled") and ragebot.silentVector and not P.thirdperson then
 			local oldpos = P.position
