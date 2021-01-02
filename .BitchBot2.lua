@@ -1,3 +1,4 @@
+assert(not getgenv().bbotv2, "BitchBot is already loaded into the game! Unload the cheat through the menu first if you need to reinject!")
 local mp
 local loadstart = tick()
 do
@@ -7587,3 +7588,4 @@ if not mp.open then
 end
 
 mp.BBMenuInit = nil -- let me freeeeee
+getgenv().bbotv2 = "bitch"
