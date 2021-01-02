@@ -4971,7 +4971,7 @@ elseif mp.game == "pf" then --!SECTION
 				clienteventfuncs[hash] = function(gun, mag, spare, attachdata, camodata, gunn, ggequip)
 					func(gun, mag, spare, attachdata, camodata, gunn, ggequip)
 					client.loadedguns = getupvalue(client.char.unloadguns, 2)
-					for k,v in next, getupvalues(client.loadedguns[gunn].step) do
+					for k,v in next, getupvalues(client.loadedguns[gunn].step) do -- TODO json fix this tomorrow
 						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 							setupvalue(client.loadedguns[gunn].step, k, function(...)
 								return mp:getval("Visuals", "Local Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
