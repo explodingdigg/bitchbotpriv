@@ -6321,7 +6321,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Extra Penetration",
 							value = 2,
 							minvalue = 1,
-							maxvalue = 50
+							maxvalue = 400
 						},
 						{
 							type = "toggle",
