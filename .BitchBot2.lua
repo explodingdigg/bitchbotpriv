@@ -1694,7 +1694,7 @@ function mp.BBMenuInit(menutable)
 		elseif bp == mp.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
 		elseif bp == mp.options["Settings"]["Configuration"]["Save Config"] then
-			local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, and Zarzel\n\n"
+			local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
 
 			for k, v in next, simpcfgnamez do
 				figgy = figgy.. v.. "s {\n"
