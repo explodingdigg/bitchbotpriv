@@ -4496,7 +4496,7 @@ elseif mp.game == "pf" then --!SECTION
 			for i, player in next, players do
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
-					if curbodyparts then
+					if curbodyparts and client.hud:isplayeralive(player) then
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and hitscan[k] then
 								if camera:IsVisible(bone, bone.Parent) then 
