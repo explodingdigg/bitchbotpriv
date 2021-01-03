@@ -5561,7 +5561,7 @@ elseif mp.game == "pf" then --!SECTION
 				local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
 				Pos += rcsdelta
 			end
-			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
+			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, (Pos.Y - 36) - LOCAL_MOUSE.Y)
 
 			Move_Mouse(aimbotMovement)
 			
