@@ -5364,8 +5364,8 @@ elseif mp.game == "pf" then --!SECTION
 			if rootpart and humanoid then
 				misc:SpotPlayers()
 				if not CHAT_BOX.Active then
-					misc:FlyHack()
 					misc:SpeedHack()
+					misc:FlyHack()
 					misc:AutoJump()
 					misc:GravityShift()
 					misc:RoundFreeze()
