@@ -5943,13 +5943,17 @@ elseif mp.game == "pf" then --!SECTION
 							local anglesTo = camera:GetAnglesTo(partCFrame.Position)
 							local direction = -camera:GetAngles().yaw + anglesTo.yaw - math.pi
 							
+							local distance = (partCFrame.Position - client.cam.cframe.p).Magnitude
+							local arrow_size = mp:getval("ESP", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
+							arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
+							
 							direction = Vector2.new(math.sin(direction), math.cos(direction))
 		
-							local pos = (direction * SCREEN_SIZE.Y * 0.35) + (SCREEN_SIZE * 0.5)
+							local pos = (direction * SCREEN_SIZE.Y * mp:getval("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
 		
 							Tri.PointA = pos
-							Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * 15
-							Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * 15
+							Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
+							Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
 		
 							Tri.Color = i == 1 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 							Tri.Transparency = mp:getval("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
@@ -6771,6 +6775,19 @@ elseif mp.game == "pf" then --!SECTION
 								name = "Arrow Color",
 								color = {255, 255, 255, 255}
 							}
+						},
+						{
+							type = "slider", 
+							name = "Arrow Distance",
+							value = 50,
+							minvalue = 10,
+							maxvalue = 100,
+							stradd = "%",
+						},
+						{
+							type = "toggle", 
+							name = "Dynamic Arrow Size",
+							value = true
 						},
 					}
 				},
