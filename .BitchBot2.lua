@@ -1694,7 +1694,7 @@ function mp.BBMenuInit(menutable)
 		elseif bp == mp.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
 		elseif bp == mp.options["Settings"]["Configuration"]["Save Config"] then
-			local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
+			local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Jayson\n\n" -- screw zarzel XD
 
 			for k, v in next, simpcfgnamez do
 				figgy = figgy.. v.. "s {\n"
@@ -4499,7 +4499,7 @@ elseif mp.game == "pf" then --!SECTION
 					if curbodyparts then
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and hitscan[k] then
-								if camera:IsVisible(bone, bone.Parent) then 
+								--if camera:IsVisible(bone, bone.Parent) then 
 									local fovToBone = camera:GetFOV(bone)
 									if fovToBone < closest then
 										closest = fovToBone
@@ -4508,30 +4508,7 @@ elseif mp.game == "pf" then --!SECTION
 									else
 										continue
 									end
-								elseif autowall then
-									local directionVector = camera:GetTrajectory(bone.Position, client.cam.cframe.p)
-									if self:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, client.cam.cframe.p, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
-										local fovToBone = camera:GetFOV(bone)
-										cpart = bone
-										theplayer = player
-									elseif aw_resolve and bone.Name ~= partPreference then
-										if resolvertype == 1 then -- cubic hitscan
-											local resolvedPosition = self:CubicHitscan(4, barrel, player, k)
-											if resolvedPosition then
-												self.firepos = resolvedPosition
-												cpart = bone
-												theplayer = player
-											end
-										elseif resolvertype == 2 then -- axes
-											local resolvedPosition = self:HitscanOnAxes(barrel, player, bone)
-											if resolvedPosition then
-												self.firepos = resolvedPosition
-												cpart = bone
-												theplayer = player
-											end
-										end
-									end
-								end
+								--end
 							end
 						end
 					end
@@ -4991,6 +4968,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if found5 then
 				clienteventfuncs[hash] = function(name, countdown, endtick, reqs)
+					func(name, countdown, endtick, reqs) -- it wasnt voting i think i need to do this first for it to actually be able to vote
 					local allowautovote = mp:getval("Misc", "Extra", "Auto Vote")
 					local friends = mp:getval("Misc", "Extra", "Vote Friends")
 					local priority = mp:getval("Misc", "Extra", "Vote Priority")
@@ -5002,7 +4980,6 @@ elseif mp.game == "pf" then --!SECTION
 							client.hud:vote("yes")
 						end
 					end
-					return func(name, countdown, endtick, reqs)
 				end
 			end
 			if found2 then
