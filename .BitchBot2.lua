@@ -4057,11 +4057,11 @@ elseif mp.game == "pf" then --!SECTION
 						client.loadedguns = getupvalue(client.char.unloadguns, 2)
 						for id, gun in next, client.loadedguns do -- No gun bob or sway hook, may not work with knives for this
 							for k,v in next, getupvalues(gun.step) do
-								warn(k,v)
 								if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 									setupvalue(client.loadedguns[id].step, k, function(...)
 										return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 									end)
+									break
 								end
 							end
 						end
@@ -4421,7 +4421,7 @@ elseif mp.game == "pf" then --!SECTION
 				return tbl
 			end
 		
-			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, extendPen)
+			--[[function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, extendPen)
 				local targetParts
 				if extendPen then  
 					sphereHitbox.Position = targetPos
@@ -4450,6 +4450,55 @@ elseif mp.game == "pf" then --!SECTION
 						return false
 					end
 				end
+			end
+		end]]
+
+			function ragebot:wallcheck(origin, targetPos, penetration, extendPen, target)
+				local dot = Vector3.new().Dot
+				local ignorelist = {workspace["Players"], workspace["Ignore"], Camera}
+				local dir = (targetPos - origin)
+				local hit, rayenter, norm = workspace:FindPartOnRayWithIgnoreList(Ray.new(origin, dir), ignorelist)
+			
+				--[[if extendPen then -- TODO json fix
+					sphereHitbox.Position = targetPos
+					diameter = mp:getval("Rage", "Hack vs. Hack", "Extra Penetration")
+					local distanceTarget = (targetPos - client.cam.cframe.p).Magnitude * 2 - 5
+					diameter = math.min(distanceTarget, diameter)
+					sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
+					targetParts = {[sphereHitbox] = sphereHitbox}
+				else
+					targetParts = GetPartTable(client.replication.getbodyparts(target))
+				end]]
+
+				if hit then
+					local normalized = dir.Unit
+					local maxextent = hit.Size.Magnitude * normalized
+					local _, exit, exitnorm = workspace:FindPartOnRayWithIgnoreList(Ray.new(rayenter + maxextent, -maxextent), {hit})
+					local diff = exit - rayenter
+					local dist = dot(normalized, diff)
+					local passed = not hit.CanCollide or hit.Transparency == 1
+					local exited = false
+			
+					local newtargetpos = rayenter + 0.01 * normalized
+			
+					if not passed then
+						if dist < penetration then
+							penetration = penetration - dist
+						else
+							return false
+						end
+					end
+					-- ply, target, targetDir, targetPos, customOrigin, extendPen
+					return self:wallcheck(newtargetpos, targetPos, penetration, extendPen, target)
+				else
+					return true
+				end
+			end
+
+			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, extendPen) -- forgive me for now, i'm testing if this is going to be any faster and more relaible
+				local originUsed = customOrigin == nil and client.cam.basecframe.p or customOrigin
+				local depth = client.logic.currentgun.data.penetrationdepth
+				return self:wallcheck(originUsed, targetPos, depth, extendPen, target) -- origin, targetPos, penetration, extendPen, target
 			end
 		end
 
@@ -4490,6 +4539,7 @@ elseif mp.game == "pf" then --!SECTION
 
 			local autowall = mp:getval("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
+			local extension = mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
 			local barrel = client.logic.currentgun.barrel.CFrame.p
 
@@ -4518,37 +4568,36 @@ elseif mp.game == "pf" then --!SECTION
 			if theplayer and cpart then
 				local curbodyparts = client.replication.getbodyparts(theplayer)
 				if partPreference then
-					local prioritybone = curbodyparts[partPreference]
+					local prioritybone = curbodyparts.head -- this for now because its fucking EEVERYTHING UP STUPID RAGE BOT
 					if prioritybone then
-						local bonedist = camera:GetFOV(prioritybone)
-						if bonedist and bonedist < closest then
-							if camera:IsVisible(prioritybone) then
+						local directionVector = cpart.Position - barrel
+						--local bonedist = camera:GetFOV(prioritybone) FUCK THIS
+						if camera:IsVisible(prioritybone) then
+							closest = camera:GetFOV(prioritybone)
+							cpart = prioritybone
+						elseif autowall then -- ply, target, targetDir, targetPos, customOrigin, extendPen
+							if self:CanPenetrate(LOCAL_PLAYER, theplayer, directionVector, prioritybone.Position, barrel, extension) then
 								closest = camera:GetFOV(prioritybone)
 								cpart = prioritybone
-							elseif autowall then
-								if self:CanPenetrate(LOCAL_PLAYER, theplayer, directionVector, prioritybone.Position, partPreference) then
-									closest = camera:GetFOV(prioritybone)
-									cpart = prioritybone
-								elseif aw_resolve then
-									if resolvertype == 1 then
-										local resolvedPosition = self:CubicHitscan(8, client.cam.basecframe.p, theplayer)
-										if resolvedPosition then
-											self.firepos = resolvedPosition
-											cpart = bone
-										end
-									elseif resolvertype == 2 then
-										local resolvedPosition = self:HitscanOnAxes(barrel, player, prioritybone)
-										if resolvedPosition then
-											self.firepos = resolvedPosition
-											cpart = bone
-										end
+							elseif aw_resolve then
+								if resolvertype == 1 then -- studs, origin, person, selectedpart
+									local resolvedPosition = self:CubicHitscan(8, barrel, theplayer, prioritybone)
+									if resolvedPosition then
+										self.firepos = resolvedPosition
+										cpart = bone
+									end
+								elseif resolvertype == 2 then
+									local resolvedPosition = self:HitscanOnAxes(barrel, theplayer, prioritybone)
+									if resolvedPosition then
+										self.firepos = resolvedPosition
+										cpart = bone
 									end
 								end
-							else
-								closest = math.huge
-								theplayer = nil
-								cpart = nil
 							end
+						else
+							closest = math.huge
+							theplayer = nil
+							cpart = nil
 						end
 					end
 				end
@@ -4697,7 +4746,6 @@ elseif mp.game == "pf" then --!SECTION
 			local curscanpos = startpos
 			local studs = extent or 8
 			do -- This looks sort of dumb
-				local bodypart = client.replication.getbodyparts(person)[bodypart]
 				local targetpos = bodypart.CFrame.p
 				for x = 1, studs do
 
@@ -5377,6 +5425,7 @@ elseif mp.game == "pf" then --!SECTION
 						bullet[1] = ragebot.silentVector.unit
 					end
 					args[2].firepos = ragebot.firepos
+					args[2].camerapos = ragebot.firepos
 					send(self, unpack(args))
 					for k, bullet in pairs(args[2].bullets) do
 						send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
