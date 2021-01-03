@@ -2746,6 +2746,7 @@ function mp.BBMenuInit(menutable)
 		allrender = nil
 		mp = nil
 		Draw = nil
+		getgenv().bbotv2 = nil
 		self.unloaded = true
 	end 
 end
@@ -6112,6 +6113,13 @@ elseif mp.game == "pf" then --!SECTION
 	end)
 	
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
+		if mp:getval("Settings", "Extra", "Performance Mode") then 
+			do --rendering
+				renderVisuals()
+				renderChams()
+			end
+			return 
+		end
 		MouseUnlockAndShootHook()
 		do --rendering
 			renderVisuals()
@@ -6127,6 +6135,25 @@ elseif mp.game == "pf" then --!SECTION
 		do--ragebot
 			ragebot:KnifeBotMain()
 			ragebot:MainLoop()
+		end
+	end)
+
+	CreateThread(function()
+		while wait() do
+			if mp:getval("Settings", "Extra", "Performance Mode") then
+				MouseUnlockAndShootHook()
+				do--legitbot
+					legitbot:TriggerBot()
+					legitbot:MainLoop()
+				end
+				do --misc
+					misc:MainLoop()
+				end
+				do--ragebot
+					ragebot:KnifeBotMain()
+					ragebot:MainLoop()
+				end
+			end
 		end
 	end)
 	
@@ -7454,6 +7481,11 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Allow Unsafe Features",
 							value = false,
+						},
+						{
+							type = "toggle",
+							name = "Performance Mode",
+							value = true
 						}
 					}
 				},
