@@ -4991,6 +4991,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if found5 then
 				clienteventfuncs[hash] = function(name, countdown, endtick, reqs)
+					func(name, countdown, endtick, reqs)
 					local allowautovote = mp:getval("Misc", "Extra", "Auto Vote")
 					local friends = mp:getval("Misc", "Extra", "Vote Friends")
 					local priority = mp:getval("Misc", "Extra", "Vote Priority")
@@ -5002,7 +5003,6 @@ elseif mp.game == "pf" then --!SECTION
 							client.hud:vote("yes")
 						end
 					end
-					return func(name, countdown, endtick, reqs)
 				end
 			end
 			if found2 then
