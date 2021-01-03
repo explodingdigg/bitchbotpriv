@@ -4083,6 +4083,23 @@ elseif mp.game == "pf" then --!SECTION
 	client.fakeplayer.Name = " "
 	client.fakeplayer.Team = LOCAL_PLAYER.Team
 
+	local killsaymessages = {
+		"%s i killed you",
+		"%s GIVE UP stop trying to live",
+		"%s you died to me LOL",
+		"%s LOL",
+		"%s you're pretty bad if i'm being honest here",
+		"%s rekt",
+		"you died %s",
+		".",
+		"%s STOP TRYING TO KILL ANYONE OR LIVE BECAUSE YOU WON'T EVER BE CAPABLE OF IT",
+		"%s LOLOLOLOLLOL",
+		"%s please stop trying",
+		"%s GIVE UP",
+		"stop complaining when you die %s because it wont get you anywhere in life legit you're on roblox",
+		"%s you genuinely have the reaction time of an autist"
+	}
+
 	debug.setupvalue(client.loadplayer, 1, client.fakeplayer)
 	client.fakeupdater = client.loadplayer(LOCAL_PLAYER)
 	debug.setupvalue(client.loadplayer, 1, LOCAL_PLAYER)
@@ -4841,7 +4858,11 @@ elseif mp.game == "pf" then --!SECTION
 				end
 				if mp:getval("Rage", "Anti Aim", "Lower Arms") then
 					ragebot.sprint = true
-					send("sprint", true)
+					send(nil, "sprint", true)
+				end
+				if mp:getval("Rage", "Anti Aim", "Tilt Neck") then
+					ragebot.tilt = true
+					send(nil, "aim", true)
 				end
 			end
 		end
@@ -4893,6 +4914,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found3 = table.find(curconstants, "updatecharacter")
 			local found4 = getinfo(func).name == "swapknife"
 			local found5 = table.find(curconstants, "Votekick ")
+			local found6 = table.find(curconstants, " studs")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped Esp", "Display Nade Paths") then
@@ -5004,6 +5026,18 @@ elseif mp.game == "pf" then --!SECTION
 							client.hud:vote("yes")
 						end
 					end
+				end
+			end
+			if found6 then
+				clienteventfuncs[hash] = function(killer, victim, dist, weapon, head)
+					--local message = mp:getval("Misc", "Extra", "Kill Say Message")
+					if mp:getval("Misc", "Extra", "Kill Say") then
+						if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER then
+							local chosenmsg = killsaymessages[math.random(1, #killsaymessages)]
+							send(nil, "chatted", string.format(chosenmsg, victim.Name:lower()))
+						end
+					end
+					return func(killer, victim, dist, weapon, head)
 				end
 			end
 			if found2 then
@@ -6690,6 +6724,11 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
+							name = "Tilt Neck",
+							value = false
+						},
+						{
+							type = "toggle",
 							name = "Fake Body",
 							value = false,
 							extra = {
@@ -7360,6 +7399,11 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Default Vote",
 							value = 1,
 							values = {"Off", "Yes", "No"}
+						},
+						{
+							type = "toggle",
+							name = "Kill Say",
+							value = false
 						}
 					}
 				},
