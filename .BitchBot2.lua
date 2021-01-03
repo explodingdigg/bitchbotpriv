@@ -7536,15 +7536,16 @@ elseif mp.game == "pf" then --!SECTION
 		end
 
 		local function cacheAvatars()
-			for i, v in ipairs(Players:GetPlayers()) do
-				CreateThread(function()
-					if not table.contains(playerpictures, v) then
-						local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+			-- for i, v in ipairs(Players:GetPlayers()) do
+			-- 	CreateThread(function()
+			-- 		if not table.contains(playerpictures, v) then
+			-- 			local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
 
-						playerpictures[v] = game:HttpGet(content)
-					end
-				end)
-			end
+			-- 			playerpictures[v] = game:HttpGet(content)
+			-- 		end
+			-- 	end)
+			-- end
+			--why did this un comment
 		end
 
 		local function setplistinfo(player, textonly)
