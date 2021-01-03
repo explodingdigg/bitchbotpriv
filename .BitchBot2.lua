@@ -4992,7 +4992,6 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if found5 then
 				clienteventfuncs[hash] = function(name, countdown, endtick, reqs)
-					func(name, countdown, endtick, reqs)
 					local allowautovote = mp:getval("Misc", "Extra", "Auto Vote")
 					local friends = mp:getval("Misc", "Extra", "Vote Friends")
 					local priority = mp:getval("Misc", "Extra", "Vote Priority")
@@ -5004,6 +5003,7 @@ elseif mp.game == "pf" then --!SECTION
 							client.hud:vote("yes")
 						end
 					end
+					return func(name, countdown, endtick, reqs)
 				end
 			end
 			if found2 then
@@ -5365,8 +5365,8 @@ elseif mp.game == "pf" then --!SECTION
 			if rootpart and humanoid then
 				misc:SpotPlayers()
 				if not CHAT_BOX.Active then
-					misc:FlyHack()
 					misc:SpeedHack()
+					misc:FlyHack()
 					misc:AutoJump()
 					misc:GravityShift()
 					misc:RoundFreeze()
@@ -5562,7 +5562,7 @@ elseif mp.game == "pf" then --!SECTION
 				local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
 				Pos += rcsdelta
 			end
-			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, Pos.Y - LOCAL_MOUSE.Y)
+			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, (Pos.Y - 36) - LOCAL_MOUSE.Y)
 
 			Move_Mouse(aimbotMovement)
 			
@@ -5749,7 +5749,7 @@ elseif mp.game == "pf" then --!SECTION
 
 		if mp.open then
 			client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
-	
+			client.cam.basefov = client.char.unaimedfov
 			if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
 				game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
 				game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
