@@ -1,5 +1,3 @@
-
-
 local mp
 
 local loadstart = tick()
@@ -6204,6 +6202,8 @@ elseif mp.game == "pf" then --!SECTION
 		if not client.char.spawned and keybindtoggles.fakebody then
 			keybindtoggles.fakebody = false
 			CreateNotification("Disabled fake body due to despawn")
+			client.fakebodyroot:Destroy()
+			client.fakebodyroot = nil
 		end
 		do --rendering
 			renderVisuals()
@@ -6468,7 +6468,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Force Priority Hitbox",
 							value = false
-						},
+						}
 					}
 				},
 				{
