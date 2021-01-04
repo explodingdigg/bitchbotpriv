@@ -4270,6 +4270,7 @@ elseif mp.game == "pf" then --!SECTION
 								local adorn = i == 0 and Part.c88 or Part.c99
 								adorn.Color3 = i == 0 and col or xqz
 								adorn.Visible = enabled
+								box.Transparency = i == 0 and vTransparency or ivTransparency
 	
 							end
 						end
