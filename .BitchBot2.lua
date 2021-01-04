@@ -1,10 +1,13 @@
 
 
 local mp
+
 local loadstart = tick()
+
 function map(X, A, B, C, D)
 	return (X-A)/(B-A) * (D-C) + C
 end
+
 do
 	local notes = {}
 	local function DrawingObject(t, col)
@@ -226,7 +229,9 @@ mp = { -- this is for menu stuffs n shi
 	unloaded = false,
 	copied_clr = nil,
 	game = "uni",
-	tabnum2str = {} -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
+	tabnum2str = {}, -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
+	friends = {},
+	priority = {}
 }
 
 
@@ -300,7 +305,7 @@ end
 
 game:GetService("NetworkClient"):SetOutgoingKBPSLimit(0)
 
---setfpscap(300) -- nigga roblox
+setfpscap(300) -- nigga roblox
 
 if not isfolder("bitchbot") then
 	makefolder("bitchbot")
@@ -2774,7 +2779,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	local allesp = {
 		headdotoutline = {},
 		headdot = {},
-		nameoutline = {},
 		name = {},
 		outerbox = {},
 		box = {},
@@ -2782,19 +2786,13 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		healthouter = {},
 		healthinner = {},
 		hptext = {},
-		distoutline = {},
 		distance = {},
-		teamoutline = {},
 		team = {},
 	}
 
 	for i = 1, Players.MaxPlayers do
 		Draw:Circle(false, 20, 20, 10, 3,10,  {10, 10, 10, 215}, allesp.headdotoutline)
 		Draw:Circle(false, 20, 20, 10, 1, 10, {255, 255, 255, 255}, allesp.headdot)
-
-		Draw:FilledRect(false, 20, 20, 4, 20, {10, 10, 10, 215}, allesp.nameoutline)
-		Draw:FilledRect(false, 20, 20, 4, 20, {10, 10, 10, 215}, allesp.distoutline)
-		Draw:FilledRect(false, 20, 20, 4, 20, {10, 10, 10, 215}, allesp.teamoutline)
 
 		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.outerbox)
 		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.innerbox)
@@ -3042,34 +3040,12 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						},
 						{
 							type = "toggle",
-							name = "Text Box Outlines",
-							value = false,
-						},
-						{
-							type = "slider",
-							name = "Box Outline Transparency",
-							value = 220,
-							minvalue = 10,
-							maxvalue = 255
-						},
-						{
-							type = "toggle",
 							name = "Highlight Aimbot Target",
 							value = false,
 							extra = {
 								type = "single colorpicker",
 								name = "Aimbot Target",
-								color = {240, 41, 41, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Highlight Priority",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Priority",
-								color = {242, 255, 0, 255}
+								color = {255, 0, 0, 255}
 							}
 						},
 						{
@@ -3078,10 +3054,20 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							value = false,
 							extra = {
 								type = "single colorpicker",
-								name = "Friends",
-								color = {4, 133, 189, 255}
+								name = "Friended Players",
+								color = {0, 255, 0, 255}
 							}
-						}
+						},
+						{
+							type = "toggle",
+							name = "Highlight Priority",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Priority Players",
+								color = {255, 210, 0, 255}
+							}
+						},
 					}
 				},
 				{
@@ -3334,6 +3320,18 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 
+		local sorted_players = {}
+		for i, player in pairs(Players:GetPlayers()) do
+			if player.Team == nil then
+				table.insert(sorted_players, player.Name)
+			end
+		end
+		table.sort(sorted_players)
+		for i, player_name in pairs(sorted_players) do
+			table.insert(playerz, Players:FindFirstChild(player_name))
+		end
+		sorted_players = nil
+
 		local templist = {}
 		for k, v in pairs(playerz) do
 			local plyrname = {v.Name, RGB(255, 255, 255)}
@@ -3346,7 +3344,14 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 			if v == LOCAL_PLAYER then
 				plyrstatus[1] = "Local Player"
 				plyrstatus[2] = RGB(66, 135, 245)
+			elseif table.contains(mp.friends, v.Name) then
+				plyrstatus[1] = "Friend"
+				plyrstatus[2] = RGB(0, 255, 0)
+			elseif table.contains(mp.priority, v.Name) then
+				plyrstatus[1] = "Priority"
+				plyrstatus[2] = RGB(255, 210, 0)
 			end
+
 			table.insert(templist, {plyrname, teamtext, plyrstatus})
 		end
 		plist[5] = templist
@@ -3437,15 +3442,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 			allesp.distance[i].Color = mp:getval("Visuals", "Player ESP", "Distance", "color", true)
 			allesp.distance[i].Transparency = mp:getval("Visuals", "Player ESP", "Distance", "color")[4]/255
-		end
-	end
-
-	function mp:SetOutlineBoxTrans(value)
-		if mp.unloaded == true then return end
-		for i = 1, Players.MaxPlayers do
-			allesp.nameoutline[i].Transparency = value
-			allesp.distoutline[i].Transparency = value
-			allesp.teamoutline[i].Transparency = value
 		end
 	end
 
@@ -3634,7 +3630,47 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				end
 
 				if mp.tabnum2str[mp.activetab] == "Settings" and mp.open then
-					game.RunService.Stepped:wait()
+					game.RunService.Stepped:wait()			
+
+					updateplist()
+
+					if selected_plyr ~= nil then
+						--print(LOCAL_MOUSE.x - mp.x, LOCAL_MOUSE.y - mp.y)
+						if mp:mouse_in_menu(28, 68, 448, 238) then
+							if table.contains(mp.friends, selected_plyr.Name) then
+								mp.options["Settings"]["Player List"]["Player Status"][1] = 2
+								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
+							elseif table.contains(mp.priority, selected_plyr.Name) then
+								mp.options["Settings"]["Player List"]["Player Status"][1] = 3
+								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
+							else
+								mp.options["Settings"]["Player List"]["Player Status"][1] = 1
+								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+							end
+						end
+
+						if mp:getval("Settings", "Player List", "Player Status") == 1 then
+							for k, table_ in pairs({mp.friends, mp.priority}) do
+								for index, plyrname in pairs(table_) do
+									if selected_plyr.Name == plyrname then
+										table.remove(table_, index)
+									end
+								end
+							end
+						elseif mp:getval("Settings", "Player List", "Player Status") == 2 then
+							if not table.contains(mp.friends, selected_plyr.Name) then
+								table.insert(mp.friends, selected_plyr.Name)
+							end
+						elseif mp:getval("Settings", "Player List", "Player Status") == 3 then
+							if not table.contains(mp.priority, selected_plyr.Name) then
+								table.insert(mp.priority, selected_plyr.Name)
+							end
+						end
+					else
+						mp.options["Settings"]["Player List"]["Player Status"][1] = 1
+						mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+					end
+
 					updateplist()
 
 					if plist[1] ~= nil then
@@ -3645,6 +3681,8 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					else
 						setplistinfo(nil)
 					end
+
+					
 				end
 
 				game.RunService.Stepped:wait()
@@ -3680,7 +3718,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					mp.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
 				end
 				mp:SetVisualsColor()
-				mp:SetOutlineBoxTrans(mp:getval("Visuals", "ESP Settings", "Box Outline Transparency")/255)
 			end
 		end
 	end)
@@ -3697,7 +3734,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		Aimbot()
 
 		if mp.open then
-			mp:SetOutlineBoxTrans(mp:getval("Visuals", "ESP Settings", "Box Outline Transparency")/255)
 			if mp.tabnum2str[mp.activetab] == "Settings" then
 				if plist[1] ~= nil then
 					setplistinfo(selected_plyr, true)
@@ -3801,8 +3837,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.X - top.X) * 2, 0, minY), minY / 2))
 				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 
-
-				local boxtrans = mp:getval("Visuals", "ESP Settings", "Box Outline Transparency")/255
 				if top_isrendered or bottom_isrendered then
 					local boxtop = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(math.min(top.Y, bottom.Y)))
 					local boxsize = {w = sizeX, h =  sizeY}
@@ -3875,12 +3909,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						allesp.name[i].Position = name_pos
 						allesp.name[i].Visible = true
 
-						if mp:getval("Visuals", "ESP Settings", "Text Box Outlines") then
-							local size = allesp.name[i].TextBounds
-							allesp.nameoutline[i].Visible = true
-							allesp.nameoutline[i].Size = Vector2.new(size.x + 6, size.y + 2)
-							allesp.nameoutline[i].Position = name_pos - Vector2.new(size.x/2 + 2,0)
-						end
 					end
 					local y_spot = 0
 					if mp:getval("Visuals", "Player ESP", "Team") then
@@ -3900,24 +3928,12 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						allesp.team[i].Position = team_pos
 						allesp.team[i].Visible = true
 						y_spot += 14
-						if mp:getval("Visuals", "ESP Settings", "Text Box Outlines") then
-							local size = allesp.team[i].TextBounds
-							allesp.teamoutline[i].Visible = true
-							allesp.teamoutline[i].Position = Vector2.new(team_pos.x - size.x / 2 - 2, team_pos.y)
-							allesp.teamoutline[i].Size = Vector2.new(size.x + 6, size.y + 2)
-						end
 					end
 					if mp:getval("Visuals", "Player ESP", "Distance") then
 						local dist_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
 						allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(rootpart) / 5)).. "m"
 						allesp.distance[i].Position = dist_pos
 						allesp.distance[i].Visible = true
-						if mp:getval("Visuals", "ESP Settings", "Text Box Outlines") then
-							local size = allesp.distance[i].TextBounds
-							allesp.distoutline[i].Visible = true
-							allesp.distoutline[i].Position = Vector2.new(dist_pos.x - size.x/2 - 2, dist_pos.y)
-							allesp.distoutline[i].Size = Vector2.new(size.x + 6, size.y)
-						end
 					end
 				end
 			end
@@ -3966,7 +3982,7 @@ elseif mp.game == "pf" then --!SECTION
 			[4] = {},
 			[5] = {},
 		},
-		box = {[1] = {}, [2] = {}},
+		box = {[1] = {}, [2] = {}, [3] = {}},
 		hp = {
 			outer = {},
 			inner = {}, 
@@ -4254,7 +4270,7 @@ elseif mp.game == "pf" then --!SECTION
 								local adorn = i == 0 and Part.c88 or Part.c99
 								adorn.Color3 = i == 0 and col or xqz
 								adorn.Visible = enabled
-								adorn.Transparency = i == 0 and vTransparency or ivTransparency
+	
 							end
 						end
 					end
@@ -5886,7 +5902,7 @@ elseif mp.game == "pf" then --!SECTION
 						if mp.options["ESP"][GroupBox]["Box"][1] then
 							
 							local color = mp:getval("ESP", GroupBox, "Box", "color", true)
-							for i = -1, 0 do
+							for i = -1, 1 do
 								local box = allesp.box[i+2][Index]
 								box.Visible = true
 								box.Position = boxPosition + Vector2.new(i, i)
@@ -5998,16 +6014,15 @@ elseif mp.game == "pf" then --!SECTION
 		
 							Tri.Visible = true
 							
-							local relativePos = Camera.CFrame:PointToObjectSpace(partCFrame.Position)
-							local direction = math.deg(math.atan2(-relativePos.Y, relativePos.X)) * math.pi / 180
+							local anglesTo = camera:GetAnglesTo(partCFrame.Position)
+							local direction = -camera:GetAngles().yaw + anglesTo.yaw - math.pi
 							
-							local distance = relativePos.Magnitude
-
+							local distance = (partCFrame.Position - client.cam.cframe.p).Magnitude
 							local arrow_size = mp:getval("ESP", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
 							arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
 							
-							direction = Vector2.new(math.cos(direction), math.sin(direction))
-							
+							direction = Vector2.new(math.sin(direction), math.cos(direction))
+		
 							local pos = (direction * SCREEN_SIZE.Y * mp:getval("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
 		
 							Tri.PointA = pos
@@ -6057,7 +6072,8 @@ elseif mp.game == "pf" then --!SECTION
 							end
 						end
 					end
-
+				end 
+				if mp:getval("Visuals", "Local Visuals", "Weapon Chams") then
 					for k, v in pairs(vm) do
 						if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
 							for k1, v1 in pairs(v:GetChildren()) do
@@ -6159,7 +6175,7 @@ elseif mp.game == "pf" then --!SECTION
 						if mesh then mesh:Destroy() end
 						if pant then pant:Destroy() end
 					end
-					curvalue.Transparency = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color")[4]
+					--curvalue.Transparency = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color")[4]
 				end
 			end
 		end
@@ -6400,33 +6416,8 @@ elseif mp.game == "pf" then --!SECTION
 							maxvalue = 100,
 							stradd = "%"
 						}
-						--[[{
-							type = "toggle",
-							name = "Aim at Backtrack",
-							value = false
-						},]]
 					}
 				},
-				--[[{
-					name = "Position Adjustment",
-					autopos = "left",
-					content = {
-						{
-							type = "toggle",
-							name = "Enable Backtrack",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Backtrack Time",
-							value = 1000,
-							minvalue = 0,
-							maxvalue = 5000,
-							stradd = "ms"
-						},
-					},
-				},]]
-				
 				{
 					name = "Trigger Bot",
 					autopos = "right",
@@ -6444,11 +6435,6 @@ elseif mp.game == "pf" then --!SECTION
 							type = "combobox",
 							name = "Trigger Bot Hitboxes",
 							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
-						},
-						{
-							type = "toggle",
-							name = "Trigger on Backtrack",
-							value = false
 						},
 						{
 							type = "toggle",
@@ -6987,11 +6973,6 @@ elseif mp.game == "pf" then --!SECTION
 					autofill = true,
 					content = {
 						{
-							type = "toggle",
-							name = "Box Text Outline",
-							value = false,
-						},
-						{
 							type = "slider",
 							name = "Max HP Visibility Cap",
 							value = 90,
@@ -7014,7 +6995,7 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Show Aimbotted Target",
+							name = "Highlight Aimbot Target",
 							value = false,
 							extra = {
 								type = "single colorpicker",
@@ -7024,7 +7005,7 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Show Friended Players",
+							name = "Highlight Friends",
 							value = false,
 							extra = {
 								type = "single colorpicker",
@@ -7034,7 +7015,7 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Show Priority Players",
+							name = "Highlight Priority",
 							value = false,
 							extra = {
 								type = "single colorpicker",
@@ -7042,6 +7023,7 @@ elseif mp.game == "pf" then --!SECTION
 								color = {255, 210, 0, 255}
 							}
 						},
+						
 					}
 				},
 				{
@@ -7133,7 +7115,7 @@ elseif mp.game == "pf" then --!SECTION
 							value = false,
 							extra = {
 								type = "double colorpicker",
-								name = {"Weapon Color", "Hand Color"},
+								name = {"Weapon Color", "Lazer Color"},
 								color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
 							}
 						},
@@ -7628,7 +7610,14 @@ elseif mp.game == "pf" then --!SECTION
 				if v == LOCAL_PLAYER then
 					plyrstatus[1] = "Local Player"
 					plyrstatus[2] = RGB(66, 135, 245)
+				elseif table.contains(mp.friends, v.Name) then
+					plyrstatus[1] = "Friend"
+					plyrstatus[2] = RGB(0, 255, 0)
+				elseif table.contains(mp.priority, v.Name) then
+					plyrstatus[1] = "Priority"
+					plyrstatus[2] = RGB(255, 210, 0)
 				end
+
 				table.insert(templist, {plyrname, teamtext, plyrstatus})
 			end
 			plist[5] = templist
@@ -7686,6 +7675,46 @@ elseif mp.game == "pf" then --!SECTION
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				if mp.tabnum2str[mp.activetab] == "Settings" and mp.open then
 					game.RunService.Stepped:wait()
+
+					updateplist()
+
+					if selected_plyr ~= nil then
+						--print(LOCAL_MOUSE.x - mp.x, LOCAL_MOUSE.y - mp.y)
+						if mp:mouse_in_menu(28, 68, 448, 238) then
+							if table.contains(mp.friends, selected_plyr.Name) then
+								mp.options["Settings"]["Player List"]["Player Status"][1] = 2
+								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
+							elseif table.contains(mp.priority, selected_plyr.Name) then
+								mp.options["Settings"]["Player List"]["Player Status"][1] = 3
+								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
+							else
+								mp.options["Settings"]["Player List"]["Player Status"][1] = 1
+								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+							end
+						end
+
+						if mp:getval("Settings", "Player List", "Player Status") == 1 then
+							for k, table_ in pairs({mp.friends, mp.priority}) do
+								for index, plyrname in pairs(table_) do
+									if selected_plyr.Name == plyrname then
+										table.remove(table_, index)
+									end
+								end
+							end
+						elseif mp:getval("Settings", "Player List", "Player Status") == 2 then
+							if not table.contains(mp.friends, selected_plyr.Name) then
+								table.insert(mp.friends, selected_plyr.Name)
+							end
+						elseif mp:getval("Settings", "Player List", "Player Status") == 3 then
+							if not table.contains(mp.priority, selected_plyr.Name) then
+								table.insert(mp.priority, selected_plyr.Name)
+							end
+						end
+					else
+						mp.options["Settings"]["Player List"]["Player Status"][1] = 1
+						mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+					end
+
 					updateplist()
 
 					if plist[1] ~= nil then
@@ -7696,6 +7725,7 @@ elseif mp.game == "pf" then --!SECTION
 					else
 						setplistinfo(nil)
 					end
+
 				end
 			end
 		end)
