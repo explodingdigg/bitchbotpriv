@@ -1,4 +1,5 @@
-assert(not getgenv().bbotv2, "BitchBot is already loaded into the game! Unload the cheat through the menu first if you need to reinject!")
+
+
 local mp
 local loadstart = tick()
 function map(X, A, B, C, D)
@@ -3303,15 +3304,25 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		},
 	})
 
-
 	local selected_plyr = nil
 	local plistinfo = mp.options["Settings"]["Player List"]["Player Info"][1]
 	local plist = mp.options["Settings"]["Player List"]["Players"]
-	local playerpictures = {}
 	local function updateplist()
 		if mp == nil then return end 
 		local playerlistval = mp:getval("Settings", "Player List", "Players")
-		local playerz = Players:GetPlayers()
+		local playerz = {}
+
+		for i, team in pairs(TEAMS:GetTeams()) do
+			local sorted_players = {}
+			for i1, player in pairs(team:GetPlayers()) do
+				table.insert(sorted_players, player.Name)
+			end
+			table.sort(sorted_players)
+			for i1, player_name in pairs(sorted_players) do
+				table.insert(playerz, Players:FindFirstChild(player_name))
+			end
+		end
+
 		local templist = {}
 		for k, v in pairs(playerz) do
 			local plyrname = {v.Name, RGB(255, 255, 255)}
@@ -3343,19 +3354,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		mp:set_menu_pos(mp.x, mp.y)
 	end
 
-	local function cacheAvatars()
-		--TODO alan make this only for the player that is selected or whatever the fuck you wnat to do fuck you bitch
-		-- (fuck alan) fuck alna (you wouldn't understand why i have this aggression towards him, i just do)
-		--[[for i, v in ipairs(Players:GetPlayers()) do
-			if not table.contains(playerpictures, v) then
-				CreateThread(function()
-					local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-					playerpictures[v] = game:HttpGet(content)
-				end)
-			end
-		end]]
-	end
-
 	local function setplistinfo(player, textonly)
 		if mp == nil then return end
 		if player ~= nil then	
@@ -3381,7 +3379,8 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 			plistinfo[1].Text = "Name: ".. player.Name.."\nTeam: ".. playerteam .."\nHealth: ".. playerhealth
 
 			if textonly == nil then
-				plistinfo[2].Data = playerpictures[player]
+				plistinfo[2].Data = BBOT_IMAGES[5]
+				plistinfo[2].Data = game:HttpGet(Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100))
 			end
 		else
 			plistinfo[2].Data = BBOT_IMAGES[5]	
@@ -3393,8 +3392,8 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 	mp.list.removeall(mp.options["Settings"]["Player List"]["Players"])
 	updateplist()
-	cacheAvatars()
 	setplistinfo(nil)
+
 
 	local cachedValues = {
 		FieldOfView = Camera.FieldOfView,
@@ -3593,6 +3592,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		end
 	end
 
+	local oldslectedplyr = nil
 	mp.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 		if input.KeyCode == mp:getval("Misc", "Exploits", "Shift Tick Base", "keybind") then
 			mp.tickbaseadd = 0
@@ -3621,15 +3621,21 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					end)
 					mp.tickbase_manip_added = true
 				end
-				if mp.tabnum2str[mp.activetab] == "Settings" then
+
+				if mp.tabnum2str[mp.activetab] == "Settings" and mp.open then
 					game.RunService.Stepped:wait()
 					updateplist()
+
 					if plist[1] ~= nil then
-						setplistinfo(selected_plyr)
+						if oldslectedplyr ~= selected_plyr then
+							setplistinfo(selected_plyr)
+							oldslectedplyr = selected_plyr
+						end
 					else
 						setplistinfo(nil)
 					end
 				end
+
 				game.RunService.Stepped:wait()
 				if mp == nil then return end
 				local crosshairvis = mp:getval("Visuals", "Misc Visuals", "Custom Crosshair")
@@ -3674,10 +3680,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 	
 	mp.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
-		local mousepos = {
-			x = LOCAL_MOUSE.x,
-			y = LOCAL_MOUSE.y
-		}
+
 		SpeedHack()
 		FlyHack()
 		Aimbot()
@@ -3700,13 +3703,12 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				mp.crosshair.outline[1].Position = Vector2.new(SCREEN_SIZE.X/2 - size - 1, SCREEN_SIZE.Y/2 - 1)
 				mp.crosshair.outline[2].Position = Vector2.new(SCREEN_SIZE.X/2 - 1, SCREEN_SIZE.Y/2 - 1 - size)
 			else
-
 				-- INPUT_SERVICE.MouseIconEnabled = false
-				mp.crosshair.inner[1].Position = Vector2.new(mousepos.x - size, mousepos.y + 36)
-				mp.crosshair.inner[2].Position = Vector2.new(mousepos.x, mousepos.y + 36 - size)
+				mp.crosshair.inner[1].Position = Vector2.new(LOCAL_MOUSE.x - size, LOCAL_MOUSE.y + 36)
+				mp.crosshair.inner[2].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36 - size)
 
-				mp.crosshair.outline[1].Position = Vector2.new(mousepos.x - size - 1, mousepos.y + 35)
-				mp.crosshair.outline[2].Position = Vector2.new(mousepos.x - 1, mousepos.y + 35 - size)
+				mp.crosshair.outline[1].Position = Vector2.new(LOCAL_MOUSE.x - size - 1, LOCAL_MOUSE.y + 35)
+				mp.crosshair.outline[2].Position = Vector2.new(LOCAL_MOUSE.x - 1, LOCAL_MOUSE.y + 35 - size)
 			end
 		end
 
@@ -3715,8 +3717,8 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		end
 		
 		if mp:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV") and mp:getval("Aimbot", "Aimbot", "Enabled") then
-			mp.fovcircle[1].Position = Vector2.new(mousepos.x, mousepos.y + 36)
-			mp.fovcircle[2].Position = Vector2.new(mousepos.x, mousepos.y + 36)
+			mp.fovcircle[1].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
+			mp.fovcircle[2].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
 
 			local aimfov = mp:getval("Aimbot", "Aimbot", "Aimbot FOV")
 			if mp:getval("Aimbot", "Aimbot", "FOV Calculation") == 2 then
@@ -3913,7 +3915,6 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 	mp.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 		updateplist()
-		cacheAvatars()
 		if plist[1] ~= nil then
 			setplistinfo(selected_plyr)
 		else
@@ -3939,10 +3940,10 @@ elseif mp.game == "pf" then --!SECTION
 	end
 
 	local keybindtoggles = { -- ANCHOR keybind toggles
-	crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
-	fly = false,
-	thirdperson = false,
-}
+		crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
+		fly = false,
+		thirdperson = false,
+	}
 
 	--SECTION PF BEGIN
 	local allesp = {
@@ -5213,6 +5214,7 @@ elseif mp.game == "pf" then --!SECTION
 				getChild(char, "HumanoidRootPart").Velocity = Vector3.new()
 				client.net.send = oldsend
 			end
+
 			if name == "Crash Server" then
 				while wait() do
 					for i = 1, 50 do
@@ -6080,30 +6082,8 @@ elseif mp.game == "pf" then --!SECTION
 							end
 						end
 					end
-					
-
-					--[[for k, v in pairs(vm) do
-						if v.Name == "Left Arm" or v.Name == "Right Arm" then
-							for k1, v1 in pairs(v:GetChildren()) do
-		
-								if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
-									v1.Name = "Sleeve"
-									v1.Color = RGB(mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][1], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][2], mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][3])
-									v1.Transparency = 1 + (mp.options["Visuals"]["Local Visuals"]["Sleeve Chams"][5][1][4]/-255)
-									
-									if mp.options["Visuals"]["Local Visuals"]["Custom Sleeve Reflectivity"][1] then
-										v1.Reflectance = mp.options["Visuals"]["Local Visuals"]["Sleeve Reflectivity"][1]/100
-									end
-									v1:ClearAllChildren()
-								end
-							end
-						end
-					end--]]
-
 				end
-
 			end)
-
 		end
 		do -- no scope pasted from v1 lol
 			local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
@@ -6131,6 +6111,38 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 	end
+
+	--if mp.game == "pf" then -- idk if i even need to do this -- @json u dont lol commented it out so u know
+	mp.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild) -- this didn't end up working well with localragdoll hook
+		if mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
+			local children = newchild:GetChildren()
+			for i = 1, #children do
+				local curvalue = children[i]
+				if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" then
+
+					local matname = mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")
+
+					matname = mats[matname]
+
+					curvalue.Material = Enum.Material[matname]
+
+					curvalue.Color = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
+					local vertexcolor = Vector3.new(r / 255, g / 255, b / 255)
+					local mesh = curvalue:FindFirstChild("Mesh")
+					if mesh then
+						mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
+					end
+					if matname ~= "ForceField" then 
+						local pant = curvalue:FindFirstChild("Pant")
+						if mesh then mesh:Destroy() end
+						if pant then pant:Destroy() end
+					end
+					curvalue.Transparency = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color")[4]
+				end
+			end
+		end
+	end)
+
 	local oldpos = nil
 	mp.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 		inputBeganMenu(key)
@@ -7566,7 +7578,6 @@ elseif mp.game == "pf" then --!SECTION
 	do  --TODO alan put this shit into a function so you don't have to copy paste it thanks
 		local plistinfo = mp.options["Settings"]["Player List"]["Player Info"][1]
 		local plist = mp.options["Settings"]["Player List"]["Players"]
-		local playerpictures = {}
 		local function updateplist()
 			local playerlistval = mp:getval("Settings", "Player List", "Players")
 			local players = {}
@@ -7611,19 +7622,6 @@ elseif mp.game == "pf" then --!SECTION
 			mp:set_menu_pos(mp.x, mp.y)
 		end
 
-		local function cacheAvatars()
-			-- for i, v in ipairs(Players:GetPlayers()) do
-			-- 	CreateThread(function()
-			-- 		if not table.contains(playerpictures, v) then
-			-- 			local content = Players:GetUserThumbnailAsync(v.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-
-			-- 			playerpictures[v] = game:HttpGet(content)
-			-- 		end
-			-- 	end)
-			-- end
-			--why did this un comment
-		end
-
 		local function setplistinfo(player, textonly)
 			if player ~= nil then	
 				local playerteam = "None"
@@ -7643,7 +7641,8 @@ elseif mp.game == "pf" then --!SECTION
 				plistinfo[1].Text = "Name: ".. player.Name.."\nTeam: ".. playerteam .."\nHealth: ".. playerhealth
 
 				if textonly == nil then
-					plistinfo[2].Data = playerpictures[player]
+					plistinfo[2].Data = BBOT_IMAGES[5]
+					plistinfo[2].Data = game:HttpGet(Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100))
 				end
 			else
 				plistinfo[2].Data = BBOT_IMAGES[5]	
@@ -7651,18 +7650,24 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
+
+
 		mp.list.removeall(mp.options["Settings"]["Player List"]["Players"])
 		updateplist()
-		cacheAvatars()
 		setplistinfo()
 
+		local oldslectedplyr = nil
 		mp.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				if mp.tabnum2str[mp.activetab] == "Settings" and mp.open then
 					game.RunService.Stepped:wait()
 					updateplist()
+
 					if plist[1] ~= nil then
-						setplistinfo(selected_plyr)
+						if oldslectedplyr ~= selected_plyr then
+							setplistinfo(selected_plyr)
+							oldslectedplyr = selected_plyr
+						end
 					else
 						setplistinfo(nil)
 					end
@@ -7680,39 +7685,8 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end)
 
-		if mp.game == "pf" then -- idk if i even need to do this
-			mp.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild) -- this didn't end up working well with localragdoll hook
-				if mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
-					local children = newchild:GetChildren()
-					for i = 1, #children do
-						local curvalue = children[i]
-						if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" then
-							local r, g, b, alpha = unpack(mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color"))
-							local matname = mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")
-							matname = mats[matname]
-							curvalue.Material = Enum.Material[matname]
-							local thecolor = RGB(r, g, b)
-							curvalue.Color = thecolor
-							local vertexcolor = Vector3.new(r / 255, g / 255, b / 255)
-							local mesh = curvalue:FindFirstChild("Mesh")
-							if mesh then
-								mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
-							end
-							if matname ~= "ForceField" then 
-								local pant = curvalue:FindFirstChild("Pant")
-								if mesh then mesh:Destroy() end
-								if pant then pant:Destroy() end
-							end
-							--curvalue.Transparency = alpha 
-						end
-					end
-				end
-			end)
-		end
-
 		mp.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 			updateplist()
-			cacheAvatars()
 			if plist[1] ~= nil then
 				setplistinfo(selected_plyr)
 			else
@@ -7736,4 +7710,3 @@ if not mp.open then
 end
 
 mp.BBMenuInit = nil -- let me freeeeee
-getgenv().bbotv2 = "bitch"
