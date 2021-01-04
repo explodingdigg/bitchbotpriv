@@ -4236,11 +4236,10 @@ elseif mp.game == "pf" then --!SECTION
 							end
 						else
 							for i = 0, 1 do
-	
 								local adorn = i == 0 and Part.c88 or Part.c99
 								adorn.Color3 = i == 0 and col or xqz
 								adorn.Visible = enabled
-	
+								adorn.Transparency = i == 0 and vTransparency or ivTransparency
 							end
 						end
 					end
@@ -6159,13 +6158,13 @@ elseif mp.game == "pf" then --!SECTION
 	end)
 	
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
-		if mp:getval("Settings", "Extra", "Performance Mode") then 
-			do --rendering
-				renderVisuals()
-				renderChams()
-			end
-			return 
-		end
+		-- if mp:getval("Settings", "Extra", "Performance Mode") then 
+		-- 	do --rendering
+		-- 		renderVisuals()
+		-- 		renderChams()
+		-- 	end
+		-- 	return 
+		-- end
 		MouseUnlockAndShootHook()
 		do --rendering
 			renderVisuals()
@@ -7701,7 +7700,7 @@ elseif mp.game == "pf" then --!SECTION
 end --!SECTION PF END
 
 DisplayLoadtimeFromStart()
-CreateNotification("Press DELETE to open and close the menu!")
+CreateNotification("Press DELETE to use the menu")
 
 loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
 if not mp.open then
