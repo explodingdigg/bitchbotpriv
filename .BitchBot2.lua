@@ -1046,13 +1046,19 @@ function mp.BBMenuInit(menutable)
 							y_pos += 30
 						elseif v2.type == "dropbox" then
 							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
 							mp.options[v.name][v1.name][v2.name][1] = v2.value
 							mp.options[v.name][v1.name][v2.name][2] = v2.type
-							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
 							mp.options[v.name][v1.name][v2.name][5] = false
 							mp.options[v.name][v1.name][v2.name][6] = v2.values
-							y_pos += 40
+
+							if v2.x == nil then 
+								mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+								mp.options[v.name][v1.name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+								y_pos += 40
+							else
+								mp.options[v.name][v1.name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
+								mp.options[v.name][v1.name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v2.x + 8, v2.y, v2.w, tabz[k])
+							end
 						elseif v2.type == "combobox" then
 							mp.options[v.name][v1.name][v2.name] = {}
 							mp.options[v.name][v1.name][v2.name][4] = Draw:Combobox(v2.name, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
@@ -1702,7 +1708,8 @@ function mp.BBMenuInit(menutable)
 				for k1, v1 in pairs(mp.options) do
 					for k2, v2 in pairs(v1) do
 						for k3, v3 in pairs(v2) do
-							if v3[2] == tostring(v) and k3 ~= "Configs" then
+
+							if v3[2] == tostring(v) and k3 ~= "Configs" and k3 ~= "Player Status" then
 								figgy = figgy..k1.. "|".. k2.."|".. k3.."|"..tostring(v3[1]).. "\n"
 							end
 						end
@@ -3074,12 +3081,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 								name = "Friends",
 								color = {4, 133, 189, 255}
 							}
-						},
-						{
-							type = "combobox",
-							name = "Highlight Parts",
-							values = {{"Name", false}, {"Other Text", false}, {"Box", true}, {"Head Dot", false} }, 
-						},
+						}
 					}
 				},
 				{
@@ -3224,7 +3226,16 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							name = "Player Info",
 							text = "No Player Selected",
 							size = 72
-						}
+						},
+						{
+							type = "dropbox",
+							name = "Player Status",
+							x = 307,
+							y = 314,
+							w = 160,
+							value = 1,
+							values = {"None", "Friend", "Priority"}
+						},
 					}
 				},
 				{
@@ -4236,10 +4247,11 @@ elseif mp.game == "pf" then --!SECTION
 							end
 						else
 							for i = 0, 1 do
+	
 								local adorn = i == 0 and Part.c88 or Part.c99
 								adorn.Color3 = i == 0 and col or xqz
 								adorn.Visible = enabled
-								adorn.Transparency = i == 0 and vTransparency or ivTransparency
+	
 							end
 						end
 					end
@@ -6158,13 +6170,13 @@ elseif mp.game == "pf" then --!SECTION
 	end)
 	
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
-		-- if mp:getval("Settings", "Extra", "Performance Mode") then 
-		-- 	do --rendering
-		-- 		renderVisuals()
-		-- 		renderChams()
-		-- 	end
-		-- 	return 
-		-- end
+		if mp:getval("Settings", "Extra", "Performance Mode") then 
+			do --rendering
+				renderVisuals()
+				renderChams()
+			end
+			return 
+		end
 		MouseUnlockAndShootHook()
 		do --rendering
 			renderVisuals()
@@ -7490,7 +7502,16 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Player Info",
 							text = "No Player Selected",
 							size = 72
-						}
+						},
+						{
+							type = "dropbox",
+							name = "Player Status",
+							x = 307,
+							y = 314,
+							w = 160,
+							value = 1,
+							values = {"None", "Friend", "Priority"}
+						},
 					}
 				},
 				{
@@ -7700,7 +7721,7 @@ elseif mp.game == "pf" then --!SECTION
 end --!SECTION PF END
 
 DisplayLoadtimeFromStart()
-CreateNotification("Press DELETE to use the menu")
+CreateNotification("Press DELETE to open and close the menu!")
 
 loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
 if not mp.open then
