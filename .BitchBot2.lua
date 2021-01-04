@@ -3954,6 +3954,7 @@ elseif mp.game == "pf" then --!SECTION
 		crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
 		flyhack = false,
 		thirdperson = false,
+		fakebody = false -- maybe lol
 	}
 
 	--SECTION PF BEGIN
@@ -4690,6 +4691,11 @@ elseif mp.game == "pf" then --!SECTION
 	
 		function ragebot:FakeBody()
 			if client.char.spawned then
+				if client.fakebodyroot then
+					client.fakebodyroot:Destroy()
+					client.fakebodyroot = nil
+					return
+				end
 				local oldsend = client.net.send
 
 				client.net.send = function(self, event, ...)
@@ -4708,6 +4714,7 @@ elseif mp.game == "pf" then --!SECTION
 				clone.Velocity = Vector3.new()
 
 				client.net.send = oldsend
+				client.fakebodyroot = clone
 			end
 		end
 
@@ -5410,6 +5417,7 @@ elseif mp.game == "pf" then --!SECTION
 
 	
 			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
+			rootpart = client.fakebodyroot or rootpart
 			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
 			if rootpart and humanoid then
 				misc:SpotPlayers()
@@ -6167,12 +6175,18 @@ elseif mp.game == "pf" then --!SECTION
 		end
 		if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
 			ragebot:FakeBody()
-			CreateNotification("Fake body executed, don't toggle this more than once to prevent character issues!")
+			local msg = keybindtoggles.fakebody and "Removed fake body" or "Phantom force unlook gun and aimbot 2021 hack (actually real, although you wouldn't understand)"
+			CreateNotification(msg)
+			keybindtoggles.fakebody = not keybindtoggles.fakebody
 		end
 	end)
 	
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		MouseUnlockAndShootHook()
+		if not client.char.spawned and keybindtoggles.fakebody then
+			keybindtoggles.fakebody = false
+			CreateNotification("Disabled fake body due to despawn")
+		end
 		do --rendering
 			renderVisuals()
 			renderChams()
