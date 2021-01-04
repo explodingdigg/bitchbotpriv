@@ -3952,7 +3952,7 @@ elseif mp.game == "pf" then --!SECTION
 
 	local keybindtoggles = { -- ANCHOR keybind toggles
 		crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
-		fly = false,
+		flyhack = false,
 		thirdperson = false,
 	}
 
@@ -4085,6 +4085,8 @@ elseif mp.game == "pf" then --!SECTION
 				client.particle = v
 			elseif rawget(v, "unlocks") then
 				client.dirtyplayerdata = v
+			elseif rawget(v, "toanglesyx") then
+				client.vectorutil = v
 			end
 		end
 	end	
@@ -4294,9 +4296,9 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			return oldNewIndex(self, id, val)
 		end)
-		mt.__index = newcclosure(function(table, key)
+		--[[mt.__index = newcclosure(function(table, key) -- (json) fuck this shit for now, it's probably causing a lot of crashing and we aren't even using it yet (?)
 			return oldIndex(table, key)
-		end)
+		end)]]
 	
 		setreadonly(mt, true)
 	
@@ -5317,7 +5319,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 		function misc:SpeedHack()
 	
-	
+			if keybindtoggles.flyhack then return end
 			local type = mp:getval("Misc", "Movement", "Speed Hack")
 			if type ~= 1 then
 				local speed = mp:getval("Misc", "Movement", "Speed Hack Speed")
@@ -6138,7 +6140,7 @@ elseif mp.game == "pf" then --!SECTION
 					curvalue.Material = Enum.Material[matname]
 
 					curvalue.Color = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
-					local vertexcolor = Vector3.new(r / 255, g / 255, b / 255)
+					local vertexcolor = Vector3.new(curvalue.Color.R / 255, curvalue.Color.G / 255, curvalue.Color.B / 255)
 					local mesh = curvalue:FindFirstChild("Mesh")
 					if mesh then
 						mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
@@ -6163,20 +6165,13 @@ elseif mp.game == "pf" then --!SECTION
 		if mp:getval("Misc", "Movement", "Fly Hack") and key.KeyCode == mp:getval("Misc", "Movement", "Fly Hack", "keybind") then
 			keybindtoggles.flyhack = not keybindtoggles.flyhack
 		end
-		if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") then
+		if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
 			ragebot:FakeBody()
 			CreateNotification("Fake body executed, don't toggle this more than once to prevent character issues!")
 		end
 	end)
 	
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
-		if mp:getval("Settings", "Extra", "Performance Mode") then 
-			do --rendering
-				renderVisuals()
-				renderChams()
-			end
-			return 
-		end
 		MouseUnlockAndShootHook()
 		do --rendering
 			renderVisuals()
@@ -6189,23 +6184,17 @@ elseif mp.game == "pf" then --!SECTION
 		do --misc
 			misc:MainLoop()
 		end
-		do--ragebot
-			ragebot:KnifeBotMain()
-			ragebot:MainLoop()
+		if not mp:getval("Rage", "Extra", "Performance Mode") then 
+			do--ragebot
+				ragebot:KnifeBotMain()
+				ragebot:MainLoop()
+			end
 		end
 	end)
 
-	CreateThread(function()
+	CreateThread(function() -- ragebot performance
 		while wait() do
-			if mp:getval("Settings", "Extra", "Performance Mode") then
-				MouseUnlockAndShootHook()
-				do--legitbot
-					legitbot:TriggerBot()
-					legitbot:MainLoop()
-				end
-				do --misc
-					misc:MainLoop()
-				end
+			if mp:getval("Rage", "Extra", "Performance Mode") then
 				do--ragebot
 					ragebot:KnifeBotMain()
 					ragebot:MainLoop()
@@ -6267,7 +6256,8 @@ elseif mp.game == "pf" then --!SECTION
 						fakeupdater.setstance(ragebot.stance)
 						fakeupdater.setsprint(ragebot.sprint)
 					else
-						fakeupdater.setlookangles(client.cam.angles) -- TODO make this face silent aim vector at some point lol
+						local silentangles = ragebot.silentVector and Vector3.new(CFrame.new(Vector3.new(), ragebot.silentVector):ToOrientation()) or nil
+						fakeupdater.setlookangles(silentangles or client.cam.angles) -- TODO make this face silent aim vector at some point lol
 						fakeupdater.setstance(client.char.movementmode)
 						fakeupdater.setsprint(client.char:sprinting())
 					end
@@ -6693,6 +6683,11 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Knife Bot Type",
 							value = 2,
 							values = {"Assist", "Multi Aura", "Flight Aura"}
+						},
+						{
+							type = "toggle",
+							name = "Performance Mode",
+							value = true
 						},
 					},
 				},
@@ -7558,11 +7553,6 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Allow Unsafe Features",
 							value = false,
 						},
-						{
-							type = "toggle",
-							name = "Performance Mode",
-							value = true
-						}
 					}
 				},
 				{
