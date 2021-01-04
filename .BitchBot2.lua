@@ -3480,14 +3480,14 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						rootpart.Velocity = newDir
 					end
 				end
-			else
+			elseif LOCAL_PLAYER.Character.Humanoid then
 				LOCAL_PLAYER.Character.Humanoid.WalkSpeed = speed
 			end
 		end
 	end
 
 	local function FlyHack()
-		if mp:getval("Misc", "Movement", "Fly Hack") then
+		if mp:getval("Misc", "Movement", "Fly Hack") and LOCAL_PLAYER:FindFirstChild("Character") then
 
 			local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
 			if rootpart == nil then return end
