@@ -3968,7 +3968,8 @@ elseif mp.game == "pf" then --!SECTION
 		crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
 		flyhack = false,
 		thirdperson = false,
-		fakebody = false -- maybe lol
+		fakebody = false, -- maybe lol
+		invis = false
 	}
 
 	--SECTION PF BEGIN
@@ -4194,7 +4195,40 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	end
 
+	local invisibility = function()
+		if client.invismodel then
+			client.invismodel:Destroy()
+			client.invismodel = nil
+			return
+		end
+		local oldsend = client.net.send
+				
+		client.net.send = function(self, event, ...)
+			if event == "repupdate" then return end
+			oldsend(self, event, ...)
+		end
 
+		local char = game.Players.LocalPlayer.Character
+		if not char then return end
+		local getChild = char.FindFirstChild
+
+		local root = getChild(char, "HumanoidRootPart")
+
+		local op = root.CFrame
+		root.Velocity = Vector3.new(0, 300, 0) -- this right here
+		root.CFrame = CFrame.new(9e9, math.huge, 9e9)
+		--yes
+		wait(0.2) -- (json)had to change this to 0.2 because apparently the interval for the first wait can't be more than this wtf
+		do 
+			local clone = root:Clone()
+			client.invismodel = clone
+		end
+		wait(0)
+		root.CFrame = op
+		-- come bak
+		root.Velocity = Vector3.new()
+		client.net.send = oldsend
+	end
 	
 	
 	local function renderChams()
@@ -4540,6 +4574,7 @@ elseif mp.game == "pf" then --!SECTION
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
 			local barrel = client.logic.currentgun.barrel.CFrame.p
+			
 
 			for i, player in next, players do
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
@@ -4547,12 +4582,13 @@ elseif mp.game == "pf" then --!SECTION
 					if curbodyparts and client.hud:isplayeralive(player) then
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and hitscan[k] then
-								if camera:IsVisible(bone, bone.Parent) then 
+								if camera:IsVisible(bone, bone.Parent) then
 									local fovToBone = camera:GetFOV(bone)
 									if fovToBone < closest then
 										closest = fovToBone
 										cpart = bone
 										theplayer = player
+										if mp.priority[player.Name] then break end
 									else
 										continue
 									end
@@ -4562,6 +4598,7 @@ elseif mp.game == "pf" then --!SECTION
 										local fovToBone = camera:GetFOV(bone)
 										cpart = bone
 										theplayer = player
+										if mp.priority[player.Name] then break end
 									elseif aw_resolve and bone.Name ~= partPreference then
 										if resolvertype == 1 then -- cubic hitscan
 											local resolvedPosition = self:CubicHitscan(4, barrel, player, k)
@@ -4569,6 +4606,7 @@ elseif mp.game == "pf" then --!SECTION
 												self.firepos = resolvedPosition
 												cpart = bone
 												theplayer = player
+												if mp.priority[player.Name] then break end
 											end
 										elseif resolvertype == 2 then -- axes
 											local resolvedPosition = self:HitscanOnAxes(barrel, player, bone)
@@ -4576,6 +4614,7 @@ elseif mp.game == "pf" then --!SECTION
 												self.firepos = resolvedPosition
 												cpart = bone
 												theplayer = player
+												if mp.priority[player.Name] then break end
 											end
 										end
 									end
@@ -4863,7 +4902,21 @@ elseif mp.game == "pf" then --!SECTION
 				ragebot:Stance()
 
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
-					local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference)
+					
+					local playerlist = Players:GetPlayers()
+					for k,v in next, playerlist do
+						if table.contains(mp.friends, v.Name) then
+							table.remove(playerlist, k)
+						end
+					end
+
+					table.sort(playerlist, function(p1, p2)
+						return table.contains(mp.priority, p1.Name) ~= table.contains(mp.priority, p2.Name)
+						and table.contains(mp.priority, p1.Name) == true 
+						and table.contains(mp.priority, p2.Name) == false
+					end)
+
+					local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 					ragebot:AimAtTarget(targetPart, targetPlayer)
 				else
 					self.target = nil
@@ -5059,7 +5112,18 @@ elseif mp.game == "pf" then --!SECTION
 						if name == LOCAL_PLAYER.Name then
 							client.hud:vote("no")
 						else
-							client.hud:vote("yes")
+							if table.find(mp.friends, name) and friends ~= 0 then
+								local choice = friends == 1 and "yes" or "no"
+								client.hud:vote(choice)
+							end
+							if table.find(mp.priority, name) and priority ~= 0 then
+								local choice = priority == 1 and "yes" or "no"
+								client.hud:vote(choice)
+							end
+							if default ~= 0 then
+								local choice = default == 1 and "yes" or "no"
+								client.hud:vote(choice)
+							end
 						end
 					end
 				end
@@ -5214,42 +5278,6 @@ elseif mp.game == "pf" then --!SECTION
 			end)
 		end
 		mp.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, gb, name)
-			if tab == "Misc" and name == "Invisibility" then
-				local oldsend = client.net.send
-				
-				client.net.send = function(self, event, ...)
-					if event == "repupdate" then return end
-					oldsend(self, event, ...)
-				end
-
-				local char = game.Players.LocalPlayer.Character
-				if not char then return end
-				local getChild = char.FindFirstChild
-
-				local op = getChild(char, "HumanoidRootPart").CFrame
-				getChild(char, "HumanoidRootPart").Velocity = Vector3.new(0, 300, 0) -- this right here
-				getChild(char, "HumanoidRootPart").CFrame = CFrame.new(9e9, math.huge, 9e9)
-				--yes
-				wait(0.2) -- (json)had to change this to 0.2 because apparently the interval for the first wait can't be more than this wtf
-				do 
-					local p = Instance.new("Model", workspace)
-					local char = game.Players.LocalPlayer.Character
-					for k, v in pairs(char:GetChildren()) do
-						if v.ClassName == 'Part' then
-							copy = v:Clone()
-							v.Parent = p
-							v.Velocity = Vector3.new(math.huge, math.huge, math.huge) -- not sure if this is needed.
-							copy.Parent = char
-						end
-					end
-				end
-				wait(0)
-				getChild(char, "HumanoidRootPart").CFrame = op
-				-- come bak
-				getChild(char, "HumanoidRootPart").Velocity = Vector3.new()
-				client.net.send = oldsend
-			end
-
 			if name == "Crash Server" then
 				while wait() do
 					for i = 1, 50 do
@@ -5459,6 +5487,9 @@ elseif mp.game == "pf" then --!SECTION
 				misc:ApplyGunMods()
 			end
 			if args[1] == "bullethit" and mp:getval("Misc", "Extra", "Suppress Only") then return end
+			if args[1] == "bullethit" then
+				if table.contains(mp.friends, args[2].Name) then return end
+			end
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
@@ -6164,7 +6195,7 @@ elseif mp.game == "pf" then --!SECTION
 					curvalue.Material = Enum.Material[matname]
 
 					curvalue.Color = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
-					local vertexcolor = Vector3.new(curvalue.Color.R / 255, curvalue.Color.G / 255, curvalue.Color.B / 255)
+					local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
 					local mesh = curvalue:FindFirstChild("Mesh")
 					if mesh then
 						mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
@@ -6191,19 +6222,33 @@ elseif mp.game == "pf" then --!SECTION
 		end
 		if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
 			ragebot:FakeBody()
-			local msg = keybindtoggles.fakebody and "Removed fake body" or "Phantom force unlook gun and aimbot 2021 hack (actually real, although you wouldn't understand)"
+			local msg = keybindtoggles.fakebody and "Removed fake body" or "Fake body enabled"
 			CreateNotification(msg)
 			keybindtoggles.fakebody = not keybindtoggles.fakebody
+		end
+		if mp:getval("Misc", "Extra", "Invisibility") and key.KeyCode == mp:getval("Misc", "Extra", "Invisibility", "keybind") and client.char.spawned then
+			invisibility()
+			local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
+			CreateNotification(msg)
+			keybindtoggles.invis = not keybindtoggles.invis
 		end
 	end)
 	
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		MouseUnlockAndShootHook()
-		if not client.char.spawned and keybindtoggles.fakebody then
-			keybindtoggles.fakebody = false
-			CreateNotification("Disabled fake body due to despawn")
-			client.fakebodyroot:Destroy()
-			client.fakebodyroot = nil
+		if not client.char.spawned then
+			if keybindtoggles.fakebody then
+				keybindtoggles.fakebody = false
+				CreateNotification("Removed fake body due to despawn")
+				client.fakebodyroot:Destroy()
+				client.fakebodyroot = nil
+			end
+			if keybindtoggles.invis then
+				keybindtoggles.invis = false
+				CreateNotification("Turned off invisibility due to despawn")
+				client.invismodel:Destroy()
+				client.invismodel = nil
+			end
 		end
 		do --rendering
 			renderVisuals()
@@ -7371,8 +7416,11 @@ elseif mp.game == "pf" then --!SECTION
 					autopos = "right",
 					content = {
 						{
-							type = "button",
-							name = "Invisibility"
+							type = "toggle",
+							name = "Invisibility",
+							extra = {
+								type = "keybind"
+							}
 						},
 						{
 							type = "button",
@@ -7445,7 +7493,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "slider",
 							name = "Recoil Scale",
 							value = 10,
-							minvalue = 1, 
+							minvalue = 0, 
 							maxvalue = 100,
 							stradd = "%"
 						},
