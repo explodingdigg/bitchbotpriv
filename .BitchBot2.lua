@@ -5651,10 +5651,11 @@ elseif mp.game == "pf" then --!SECTION
 				Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
 			end
 			local randMag = mp:getval("Legit", "Aim Assist", "Randomization") * 5
-			--Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
+			Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
 			--TODO nate fix
-			local gunpos = Camera:WorldToScreenPoint(Camera:FindFirstChild("Flame", true).Position)
-			
+
+			local gunpos = Camera:WorldToScreenPoint(client.logic.currentgun.aimsightdata[1].sightpart.Position)
+
 			local rcs = Vector2.new(gunpos.x - LOCAL_MOUSE.x, gunpos.y - LOCAL_MOUSE.y)
 			if client.logic.currentgun 
 			and client.logic.currentgun.type ~= "KNIFE"
