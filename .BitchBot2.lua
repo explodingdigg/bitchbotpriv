@@ -4386,13 +4386,16 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 	
-		function camera:GetFOV(Part)
-	
-			local directional = CFrame.new(workspace.Camera.CFrame.Position, Part.Position)
-			local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(workspace.Camera.CFrame:ToOrientation())
-			return math.deg(ang.Magnitude)
-	
-	
+		function camera:GetFOV(Part, originPart)
+			if originPart then 
+				local directional = CFrame.new(originPart.Position, Part.Position)
+				local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
+				return math.deg(ang.Magnitude)
+			end
+				local directional = CFrame.new(workspace.Camera.CFrame.Position, Part.Position)
+				local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(workspace.Camera.CFrame:ToOrientation())
+				return math.deg(ang.Magnitude)
+			
 		end
 	
 		function camera:IsVisible(Part, Parent, origin)
@@ -5656,7 +5659,7 @@ elseif mp.game == "pf" then --!SECTION
 
 			local gunpos = Camera:WorldToScreenPoint(client.logic.currentgun.aimsightdata[1].sightpart.Position)
 
-			local rcs = Vector2.new(gunpos.x - LOCAL_MOUSE.x, gunpos.y - LOCAL_MOUSE.y)
+			local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos.x, LOCAL_MOUSE.y - gunpos.y)
 			if client.logic.currentgun 
 			and client.logic.currentgun.type ~= "KNIFE"
 			and INPUT_SERVICE:IsMouseButtonPressed(1)
@@ -5732,7 +5735,7 @@ elseif mp.game == "pf" then --!SECTION
 					new_closest = closest
 					for k, Bone in pairs(Parts) do
 						if Bone.ClassName == "Part" and hitscan[k] then
-							local fovToBone = camera:GetFOV(Bone)
+							local fovToBone = camera:GetFOV(Bone, client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart)
 							if fovToBone < closest then
 								local validPart = isValidTarget(Bone, Player)
 								if validPart then
