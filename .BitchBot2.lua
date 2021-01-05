@@ -5530,7 +5530,7 @@ elseif mp.game == "pf" then --!SECTION
 
 					if keybindtoggles.fakelag and mp:getval("Rage", "Extra", "Release Packets on Shoot") then
 						keybindtoggles.fakelag = not keybindtoggles.fakelag
-						set_thread_identity(1) -- might lag...... idk probably not
+						syn.set_thread_identity(1) -- might lag...... idk probably not
 						game:service("NetworkClient"):SetOutgoingKBPSLimit(0)
 					end
 
