@@ -1,5 +1,3 @@
-
-
 local mp
 
 local loadstart = tick()
@@ -3480,14 +3478,14 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						rootpart.Velocity = newDir
 					end
 				end
-			else
+			elseif LOCAL_PLAYER.Character.Humanoid then
 				LOCAL_PLAYER.Character.Humanoid.WalkSpeed = speed
 			end
 		end
 	end
 
 	local function FlyHack()
-		if mp:getval("Misc", "Movement", "Fly Hack") then
+		if mp:getval("Misc", "Movement", "Fly Hack") and LOCAL_PLAYER:FindFirstChild("Character") then
 
 			local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
 			if rootpart == nil then return end
@@ -3970,7 +3968,8 @@ elseif mp.game == "pf" then --!SECTION
 		crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
 		flyhack = false,
 		thirdperson = false,
-		fakebody = false -- maybe lol
+		fakebody = false, -- maybe lol
+		invis = false
 	}
 
 	--SECTION PF BEGIN
@@ -4196,7 +4195,40 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	end
 
+	local invisibility = function()
+		if client.invismodel then
+			client.invismodel:Destroy()
+			client.invismodel = nil
+			return
+		end
+		local oldsend = client.net.send
+				
+		client.net.send = function(self, event, ...)
+			if event == "repupdate" then return end
+			oldsend(self, event, ...)
+		end
 
+		local char = game.Players.LocalPlayer.Character
+		if not char then return end
+		local getChild = char.FindFirstChild
+
+		local root = getChild(char, "HumanoidRootPart")
+
+		local op = root.CFrame
+		root.Velocity = Vector3.new(0, 300, 0) -- this right here
+		root.CFrame = CFrame.new(9e9, math.huge, 9e9)
+		--yes
+		wait(0.2) -- (json)had to change this to 0.2 because apparently the interval for the first wait can't be more than this wtf
+		do 
+			local clone = root:Clone()
+			client.invismodel = clone
+		end
+		wait(0)
+		root.CFrame = op
+		-- come bak
+		root.Velocity = Vector3.new()
+		client.net.send = oldsend
+	end
 	
 	
 	local function renderChams()
@@ -4270,6 +4302,7 @@ elseif mp.game == "pf" then --!SECTION
 								local adorn = i == 0 and Part.c88 or Part.c99
 								adorn.Color3 = i == 0 and col or xqz
 								adorn.Visible = enabled
+								adorn.Transparency = i == 0 and vTransparency or ivTransparency
 	
 							end
 						end
@@ -4541,6 +4574,7 @@ elseif mp.game == "pf" then --!SECTION
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
 			local barrel = client.logic.currentgun.barrel.CFrame.p
+			
 
 			for i, player in next, players do
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
@@ -4548,12 +4582,13 @@ elseif mp.game == "pf" then --!SECTION
 					if curbodyparts and client.hud:isplayeralive(player) then
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and hitscan[k] then
-								if camera:IsVisible(bone, bone.Parent) then 
+								if camera:IsVisible(bone, bone.Parent) then
 									local fovToBone = camera:GetFOV(bone)
 									if fovToBone < closest then
 										closest = fovToBone
 										cpart = bone
 										theplayer = player
+										if mp.priority[player.Name] then break end
 									else
 										continue
 									end
@@ -4563,6 +4598,7 @@ elseif mp.game == "pf" then --!SECTION
 										local fovToBone = camera:GetFOV(bone)
 										cpart = bone
 										theplayer = player
+										if mp.priority[player.Name] then break end
 									elseif aw_resolve and bone.Name ~= partPreference then
 										if resolvertype == 1 then -- cubic hitscan
 											local resolvedPosition = self:CubicHitscan(4, barrel, player, k)
@@ -4570,6 +4606,7 @@ elseif mp.game == "pf" then --!SECTION
 												self.firepos = resolvedPosition
 												cpart = bone
 												theplayer = player
+												if mp.priority[player.Name] then break end
 											end
 										elseif resolvertype == 2 then -- axes
 											local resolvedPosition = self:HitscanOnAxes(barrel, player, bone)
@@ -4577,6 +4614,7 @@ elseif mp.game == "pf" then --!SECTION
 												self.firepos = resolvedPosition
 												cpart = bone
 												theplayer = player
+												if mp.priority[player.Name] then break end
 											end
 										end
 									end
@@ -4864,7 +4902,21 @@ elseif mp.game == "pf" then --!SECTION
 				ragebot:Stance()
 
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
-					local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference)
+					
+					local playerlist = Players:GetPlayers()
+					for k,v in next, playerlist do
+						if table.contains(mp.friends, v.Name) then
+							table.remove(playerlist, k)
+						end
+					end
+
+					table.sort(playerlist, function(p1, p2)
+						return table.contains(mp.priority, p1.Name) ~= table.contains(mp.priority, p2.Name)
+						and table.contains(mp.priority, p1.Name) == true 
+						and table.contains(mp.priority, p2.Name) == false
+					end)
+
+					local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 					ragebot:AimAtTarget(targetPart, targetPlayer)
 				else
 					self.target = nil
@@ -5060,7 +5112,18 @@ elseif mp.game == "pf" then --!SECTION
 						if name == LOCAL_PLAYER.Name then
 							client.hud:vote("no")
 						else
-							client.hud:vote("yes")
+							if table.find(mp.friends, name) and friends ~= 0 then
+								local choice = friends == 1 and "yes" or "no"
+								client.hud:vote(choice)
+							end
+							if table.find(mp.priority, name) and priority ~= 0 then
+								local choice = priority == 1 and "yes" or "no"
+								client.hud:vote(choice)
+							end
+							if default ~= 0 then
+								local choice = default == 1 and "yes" or "no"
+								client.hud:vote(choice)
+							end
 						end
 					end
 				end
@@ -5215,42 +5278,6 @@ elseif mp.game == "pf" then --!SECTION
 			end)
 		end
 		mp.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, gb, name)
-			if tab == "Misc" and name == "Invisibility" then
-				local oldsend = client.net.send
-				
-				client.net.send = function(self, event, ...)
-					if event == "repupdate" then return end
-					oldsend(self, event, ...)
-				end
-
-				local char = game.Players.LocalPlayer.Character
-				if not char then return end
-				local getChild = char.FindFirstChild
-
-				local op = getChild(char, "HumanoidRootPart").CFrame
-				getChild(char, "HumanoidRootPart").Velocity = Vector3.new(0, 300, 0) -- this right here
-				getChild(char, "HumanoidRootPart").CFrame = CFrame.new(9e9, math.huge, 9e9)
-				--yes
-				wait(0.2) -- (json)had to change this to 0.2 because apparently the interval for the first wait can't be more than this wtf
-				do 
-					local p = Instance.new("Model", workspace)
-					local char = game.Players.LocalPlayer.Character
-					for k, v in pairs(char:GetChildren()) do
-						if v.ClassName == 'Part' then
-							copy = v:Clone()
-							v.Parent = p
-							v.Velocity = Vector3.new(math.huge, math.huge, math.huge) -- not sure if this is needed.
-							copy.Parent = char
-						end
-					end
-				end
-				wait(0)
-				getChild(char, "HumanoidRootPart").CFrame = op
-				-- come bak
-				getChild(char, "HumanoidRootPart").Velocity = Vector3.new()
-				client.net.send = oldsend
-			end
-
 			if name == "Crash Server" then
 				while wait() do
 					for i = 1, 50 do
@@ -5460,6 +5487,9 @@ elseif mp.game == "pf" then --!SECTION
 				misc:ApplyGunMods()
 			end
 			if args[1] == "bullethit" and mp:getval("Misc", "Extra", "Suppress Only") then return end
+			if args[1] == "bullethit" then
+				if table.contains(mp.friends, args[2].Name) then return end
+			end
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
@@ -5635,7 +5665,7 @@ elseif mp.game == "pf" then --!SECTION
 				local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
 				Pos += rcsdelta
 			end
-			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, (Pos.Y - 36) - LOCAL_MOUSE.Y)
+			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, (Pos.Y) - LOCAL_MOUSE.Y)
 
 			Move_Mouse(aimbotMovement)
 			
@@ -5852,19 +5882,8 @@ elseif mp.game == "pf" then --!SECTION
 		----------
 	
 		if client.deploy.isdeployed() then
-			
-			local players = Players:GetPlayers()
-			-- table.sort(players, function(p1, p2)
-			-- 	return table.contains(mp.priority, p2.Name) ~= table.contains(mp.priority, p1.Name) and table.contains(mp.priority, p2.Name) == true and table.contains(mp.priority, p1.Name) == false
-			-- end)	
-
-			local priority_color = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
-			local priority_trans = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color")[4]/255
-
-			local friend_color = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
-			local friend_trans = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color")[4]/255
-
-			for Index, Player in ipairs(players) do
+		
+			for Index, Player in ipairs(Players:GetPlayers()) do
 				CreateThread(function()
 					if not client.hud:isplayeralive(Player) then return end
 					local parts = client.replication.getbodyparts(Player)
@@ -5905,27 +5924,28 @@ elseif mp.game == "pf" then --!SECTION
 							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
 								name = string.upper(name)
 							end
+							nametext = allesp.text.name[Index]
 							
-							allesp.text.name[Index].Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
-							allesp.text.name[Index].Visible = true
-							allesp.text.name[Index].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
-
+							nametext.Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+							nametext.Visible = true
+							nametext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
+							nametext.Color = RGB(mp.options["ESP"][GroupBox]["Name"][5][1][1], mp.options["ESP"][GroupBox]["Name"][5][1][2], mp.options["ESP"][GroupBox]["Name"][5][1][3])
+							nametext.Transparency = mp.options["ESP"][GroupBox]["Name"][5][1][4]/255
+		
 						end
 						if mp.options["ESP"][GroupBox]["Box"][1] then
+							
+							local color = mp:getval("ESP", GroupBox, "Box", "color", true)
 							for i = -1, 1 do
 								local box = allesp.box[i+2][Index]
 								box.Visible = true
 								box.Position = boxPosition + Vector2.new(i, i)
 								box.Size = boxSize - Vector2.new(i*2, i*2)
 								box.Transparency = boxtransparency
-								
-								if i ~= 0 then
-									box.Color = RGB(20, 20, 20)
-								end
-								--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+								box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 								
 							end
-							
+		
 						end
 						if mp.options["ESP"][GroupBox]["Health Bar"][1] then
 							local ySizeBar = -math.floor(boxSize.Y * health / 100)
@@ -5986,6 +6006,8 @@ elseif mp.game == "pf" then --!SECTION
 							weptext.Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
 							weptext.Visible = true
 							weptext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y)
+							weptext.Color = mp:getval("ESP", GroupBox, "Held Weapon", "color", true)
+							weptext.Transparency = mp.options["ESP"][GroupBox]["Held Weapon"][5][1][4]/255
 		
 						end
 						if mp.options["ESP"][GroupBox]["Distance"][1] then
@@ -5995,6 +6017,8 @@ elseif mp.game == "pf" then --!SECTION
 							disttext.Text = tostring(distance).."m" --TODO alan i told you to make this not worldtoscreen based.
 							disttext.Visible = true
 							disttext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y + spoty)
+							disttext.Color = mp:getval("ESP", GroupBox, "Distance", "color", true)
+							disttext.Transparency = mp.options["ESP"][GroupBox]["Distance"][5][1][4]/255
 		
 						end
 						if mp.options["ESP"][GroupBox]["Skeleton"][1] then
@@ -6007,66 +6031,11 @@ elseif mp.game == "pf" then --!SECTION
 								line.From = Vector2.new(posie.x, posie.y)
 								line.To = Vector2.new(torso.x, torso.y)
 								line.Visible = true
-
-							end
-						end
-						--da colourz !!! :D 🔥🔥🔥🔥
-
-						if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.contains(mp.priority, Player.Name) then
-							
-							allesp.text.name[Index].Color = priority_color
-							allesp.text.name[Index].Transparency = priority_trans
-
-							allesp.box[2][Index].Color = priority_color
-
-							allesp.text.weapon[Index].Color = priority_color
-							allesp.text.weapon[Index].Transparency = priority_trans
-
-							allesp.text.distance[Index].Color = priority_color
-							allesp.text.distance[Index].Transparency = priority_trans
-
-							for k2, v2 in ipairs(skelparts) do
-								local line = allesp.skel[k2][Index]
-								line.Color = priority_color
-								line.Transparency = priority_trans
-							end
-						
-						elseif mp:getval("ESP", "ESP Settings", "Highlight Friends") and table.contains(mp.friends, Player.Name) then
-
-							allesp.text.name[Index].Color = friend_color
-							allesp.text.name[Index].Transparency = friend_trans
-
-							allesp.box[2][Index].Color = friend_color
-
-							allesp.text.weapon[Index].Color = friend_color
-							allesp.text.weapon[Index].Transparency = friend_trans
-
-							allesp.text.distance[Index].Color = friend_color
-							allesp.text.distance[Index].Transparency = friend_trans
-
-							for k2, v2 in ipairs(skelparts) do
-								local line = allesp.skel[k2][Index]
-								line.Color = friend_color
-								line.Transparency = friend_trans
-							end
-
-						else
-							allesp.text.name[Index].Color = mp:getval("ESP", GroupBox, "Name", "color", true) -- RGB(mp.options["ESP"][GroupBox]["Name"][5][1][1], mp.options["ESP"][GroupBox]["Name"][5][1][2], mp.options["ESP"][GroupBox]["Name"][5][1][3])
-							allesp.text.name[Index].Transparency = mp:getval("ESP", GroupBox, "Name", "color")[4]/255
-
-							allesp.box[2][Index].Color = mp:getval("ESP", GroupBox, "Box", "color", true)
-
-							allesp.text.weapon[Index].Color = mp:getval("ESP", GroupBox, "Held Weapon", "color", true)
-							allesp.text.weapon[Index].Transparency = mp:getval("ESP", GroupBox, "Held Weapon", "color")[4]/255
-
-							allesp.text.distance[Index].Color = mp:getval("ESP", GroupBox, "Distance", "color", true)
-							allesp.text.distance[Index].Transparency = mp:getval("ESP", GroupBox, "Distance", "color")[4]/255
-
-							for k2, v2 in ipairs(skelparts) do
-								local line = allesp.skel[k2][Index]
 								line.Color = mp:getval("ESP", GroupBox, "Skeleton", "color", true)
-								line.Transparency = mp:getval("ESP", GroupBox, "Skeleton", "color")[4]/255
+								line.Transparency = mp.options["ESP"][GroupBox]["Skeleton"][5][1][4]/255
+		
 							end
+		
 						end
 		
 					elseif GroupBox == "Enemy ESP" and mp:getval("ESP", "Enemy ESP", "Out of View") then
@@ -6230,7 +6199,7 @@ elseif mp.game == "pf" then --!SECTION
 					curvalue.Material = Enum.Material[matname]
 
 					curvalue.Color = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
-					local vertexcolor = Vector3.new(curvalue.Color.R / 255, curvalue.Color.G / 255, curvalue.Color.B / 255)
+					local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
 					local mesh = curvalue:FindFirstChild("Mesh")
 					if mesh then
 						mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
@@ -6257,17 +6226,33 @@ elseif mp.game == "pf" then --!SECTION
 		end
 		if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
 			ragebot:FakeBody()
-			local msg = keybindtoggles.fakebody and "Removed fake body" or "Phantom force unlook gun and aimbot 2021 hack (actually real, although you wouldn't understand)"
+			local msg = keybindtoggles.fakebody and "Removed fake body" or "Fake body enabled"
 			CreateNotification(msg)
 			keybindtoggles.fakebody = not keybindtoggles.fakebody
+		end
+		if mp:getval("Misc", "Extra", "Invisibility") and key.KeyCode == mp:getval("Misc", "Extra", "Invisibility", "keybind") and client.char.spawned then
+			invisibility()
+			local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
+			CreateNotification(msg)
+			keybindtoggles.invis = not keybindtoggles.invis
 		end
 	end)
 	
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		MouseUnlockAndShootHook()
-		if not client.char.spawned and keybindtoggles.fakebody then
-			keybindtoggles.fakebody = false
-			CreateNotification("Disabled fake body due to despawn")
+		if not client.char.spawned then
+			if keybindtoggles.fakebody then
+				keybindtoggles.fakebody = false
+				CreateNotification("Removed fake body due to despawn")
+				client.fakebodyroot:Destroy()
+				client.fakebodyroot = nil
+			end
+			if keybindtoggles.invis then
+				keybindtoggles.invis = false
+				CreateNotification("Turned off invisibility due to despawn")
+				client.invismodel:Destroy()
+				client.invismodel = nil
+			end
 		end
 		do --rendering
 			renderVisuals()
@@ -7435,8 +7420,11 @@ elseif mp.game == "pf" then --!SECTION
 					autopos = "right",
 					content = {
 						{
-							type = "button",
-							name = "Invisibility"
+							type = "toggle",
+							name = "Invisibility",
+							extra = {
+								type = "keybind"
+							}
 						},
 						{
 							type = "button",
@@ -7509,7 +7497,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "slider",
 							name = "Recoil Scale",
 							value = 10,
-							minvalue = 1, 
+							minvalue = 0, 
 							maxvalue = 100,
 							stradd = "%"
 						},
