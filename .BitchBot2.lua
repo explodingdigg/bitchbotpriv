@@ -3969,7 +3969,8 @@ elseif mp.game == "pf" then --!SECTION
 		flyhack = false,
 		thirdperson = false,
 		fakebody = false, -- maybe lol
-		invis = false
+		invis = false,
+		fakelag = false
 	}
 
 	--SECTION PF BEGIN
@@ -5313,6 +5314,28 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end)
 
+		mp.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Keyboard then
+				if mp:getval("Rage", "Extra", "Fake Lag")
+				and mp:getval("Rage", "Extra", "Manual Choke") 
+				and input.KeyCode == mp:getval("Rage", "Extra", "Manual Choke", "keybind") then
+					keybindtoggles.fakelag = not keybindtoggles.fakelag
+					game:service("NetworkClient"):SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
+				end
+			end
+		end)
+
+		mp.connections.inputended_pf = INPUT_SERVICE.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Keyboard then
+				if mp:getval("Rage", "Extra", "Fake Lag")
+				and mp:getval("Rage", "Extra", "Manual Choke") 
+				and input.KeyCode == mp:getval("Rage", "Extra", "Manual Choke", "keybind") and keybindtoggles.fakelag then
+					keybindtoggles.fakelag = not keybindtoggles.fakelag
+					game:service("NetworkClient"):SetOutgoingKBPSLimit(0)
+				end
+			end
+		end)
+
 		function misc:RoundFreeze()
 			if mp:getval("Misc", "Movement", "Ignore Round Freeze") then
 				client.roundsystem.lock = false
@@ -5504,6 +5527,13 @@ elseif mp.game == "pf" then --!SECTION
 						bullet[1] = ragebot.silentVector.unit
 					end
 					args[2].firepos = ragebot.firepos
+
+					if keybindtoggles.fakelag and mp:getval("Rage", "Extra", "Release Packets on Shoot") then
+						keybindtoggles.fakelag = not keybindtoggles.fakelag
+						set_thread_identity(1) -- might lag...... idk probably not
+						game:service("NetworkClient"):SetOutgoingKBPSLimit(0)
+					end
+
 					send(self, unpack(args))
 					for k, bullet in pairs(args[2].bullets) do
 						send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
@@ -6331,43 +6361,63 @@ elseif mp.game == "pf" then --!SECTION
 					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[guntoequip]), game:service("ReplicatedStorage").ExternalModels[guntoequip]:Clone())
 					client.fake3pchar = localchar
 				else
-					local fakeupdater = client.fakeupdater
-					fakeupdater.step(3, true)
-					if mp:getval("Rage", "Anti Aim", "Enabled") then
-						fakeupdater.setlookangles(ragebot.angles)
-						fakeupdater.setstance(ragebot.stance)
-						fakeupdater.setsprint(ragebot.sprint)
-					else
-						local silentangles = ragebot.silentVector and Vector3.new(CFrame.new(Vector3.new(), ragebot.silentVector):ToOrientation()) or nil
-						fakeupdater.setlookangles(silentangles or client.cam.angles) -- TODO make this face silent aim vector at some point lol
-						fakeupdater.setstance(client.char.movementmode)
-						fakeupdater.setsprint(client.char:sprinting())
-					end
-					if client.logic.currentgun then
-						if client.logic.currentgun.type ~= "KNIFE" then
-							local bool = client.logic.currentgun:isaiming()
-							fakeupdater.setaim(bool)
-							for k,v in next, client.fake3pchar:GetChildren() do -- this is probably going to cause a 1 fps drop or some shit lmao
-								if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-									v.Transparency = bool and 0.6 or 0
+					if not keybindtoggles.fakelag then
+						local fakeupdater = client.fakeupdater
+						fakeupdater.step(3, true)
+
+						local lchams = mp:getval("Visuals", "Local Visuals", "Local Player Chams")
+						if lchams then
+							local lchamscolor = mp:getval("Visuals", "Local Visuals", "Local Player Chams", "color", true)
+
+							local lchamsmat = mats[mp:getval("Visuals", "Local Visuals", "Local Player Material")]
+	
+							local curchildren = client.fake3pchar:GetChildren()
+	
+							for i = 1, #curchildren do
+								local curvalue = curchildren[i]
+								if curvalue:IsA("BasePart") and curvalue.Name ~= "HumanoidRootPart" then
+									curvalue.Material = Enum.Material[lchamsmat]
+									curvalue.Color = lchamscolor
 								end
-								if v:IsA("Model") then
-									for k,v in next, v:GetChildren() do
+							end
+						end
+
+						if mp:getval("Rage", "Anti Aim", "Enabled") then
+							fakeupdater.setlookangles(ragebot.angles)
+							fakeupdater.setstance(ragebot.stance)
+							fakeupdater.setsprint(ragebot.sprint)
+						else
+							local silentangles = ragebot.silentVector and Vector3.new(CFrame.new(Vector3.new(), ragebot.silentVector):ToOrientation()) or nil
+							fakeupdater.setlookangles(silentangles or client.cam.angles) -- TODO make this face silent aim vector at some point lol
+							fakeupdater.setstance(client.char.movementmode)
+							fakeupdater.setsprint(client.char:sprinting())
+						end
+						if client.logic.currentgun then
+							if client.logic.currentgun.type ~= "KNIFE" then
+								local bool = client.logic.currentgun:isaiming()
+								fakeupdater.setaim(bool)
+								for k,v in next, client.fake3pchar:GetChildren() do -- this is probably going to cause a 1 fps drop or some shit lmao
+									if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
 										v.Transparency = bool and 0.6 or 0
+									end
+									if v:IsA("Model") then
+										for k,v in next, v:GetChildren() do
+											v.Transparency = bool and 0.6 or 0
+										end
 									end
 								end
 							end
 						end
-					end
 
-					-- 3 am already wtf 🌃
+						-- 3 am already wtf 🌃
 
-					if client.char.rootpart then
-						client.fakerootpart.CFrame = client.char.rootpart.CFrame
-						local rootpartpos = client.char.rootpart.Position
-						client.fake_upvs[4].p = rootpartpos
-						client.fake_upvs[4].t = rootpartpos
-						client.fake_upvs[4].v = Vector3.new()
+						if client.char.rootpart then
+							client.fakerootpart.CFrame = client.char.rootpart.CFrame
+							local rootpartpos = client.char.rootpart.Position
+							client.fake_upvs[4].p = rootpartpos
+							client.fake_upvs[4].t = rootpartpos
+							client.fake_upvs[4].v = Vector3.new()
+						end
 					end
 				end
 			end
@@ -6741,6 +6791,31 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Performance Mode",
 							value = true
 						},
+						{
+							type = "toggle",
+							name = "Fake Lag",
+							value = false
+						},
+						{
+							type = "slider",
+							name = "Fake Lag Amount",
+							value = 1,
+							minvalue = 1,
+							maxvalue = 20,
+							stradd = " kbps"
+						},
+						{
+							type = "toggle",
+							name = "Manual Choke",
+							extra = {
+								type = "keybind"
+							}
+						},
+						{
+							type = "toggle",
+							name = "Release Packets on Shoot",
+							value = false
+						}
 					},
 				},
 				{
