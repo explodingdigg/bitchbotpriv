@@ -4216,7 +4216,7 @@ elseif mp.game == "pf" then --!SECTION
 
 		local op = root.CFrame
 		root.Velocity = Vector3.new(0, 300, 0) -- this right here
-		root.CFrame = CFrame.new(9e9, math.huge, 9e9)
+		root.CFrame += CFrame.new(0, math.huge, 0)
 		--yes
 		wait(0.2) -- (json)had to change this to 0.2 because apparently the interval for the first wait can't be more than this wtf
 		do 
@@ -6230,7 +6230,7 @@ elseif mp.game == "pf" then --!SECTION
 			CreateNotification(msg)
 			keybindtoggles.fakebody = not keybindtoggles.fakebody
 		end
-		if mp:getval("Misc", "Extra", "Invisibility") and key.KeyCode == mp:getval("Misc", "Extra", "Invisibility", "keybind") and client.char.spawned then
+		if mp:getval("Misc", "Exploits", "Invisibility") and key.KeyCode == mp:getval("Misc", "Exploits", "Invisibility", "keybind") and client.char.spawned then
 			invisibility()
 			local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
 			CreateNotification(msg)
@@ -7352,7 +7352,6 @@ elseif mp.game == "pf" then --!SECTION
 				{
 					name = "Movement",
 					autopos = "left",
-					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -7420,17 +7419,6 @@ elseif mp.game == "pf" then --!SECTION
 					autopos = "right",
 					content = {
 						{
-							type = "toggle",
-							name = "Invisibility",
-							extra = {
-								type = "keybind"
-							}
-						},
-						{
-							type = "button",
-							name = "Crash Server"
-						},
-						{
 							type = "toggle", 
 							name = "Collect Dog Tags",
 							value = false
@@ -7472,6 +7460,24 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Kill Say",
 							value = false
+						}
+					}
+				},
+				{
+					name = "Exploits",
+					autopos = "left",
+					autofill = true,
+					content = {
+						{
+							type = "toggle",
+							name = "Invisibility",
+							extra = {
+								type = "keybind"
+							}
+						},
+						{
+							type = "button",
+							name = "Crash Server"
 						}
 					}
 				},
