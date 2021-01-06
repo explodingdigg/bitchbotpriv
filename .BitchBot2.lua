@@ -5622,6 +5622,7 @@ elseif mp.game == "pf" then --!SECTION
 --Legitbot definition defines legit functions
 
 	do -- ANCHOR Legitbot definition defines legit functions
+		legitbot.triggerbotShooting = false
 		legitbot.silentAiming = false
 		legitbot.silentVector = nil
 
@@ -5844,8 +5845,10 @@ elseif mp.game == "pf" then --!SECTION
 					if hit and parts[hit.Name] then
 						if not camera:IsVisible(hit) then return end
 						client.logic.currentgun:shoot(true)
-					else
+						legitbot.triggerbotShooting = true
+					elseif legitbot.triggerbotShooting then
 						client.logic.currentgun:shoot(false)
+						legitbot.triggerbotShooting = false
 					end
 				end
 			end
