@@ -195,7 +195,7 @@ do
 end
 
 local function DisplayLoadtimeFromStart()
-	CreateNotification(string.format("Done loading. (%d ms)", math.floor((tick() - loadstart) * 1000)))
+	CreateNotification(string.format("Done loading the ".. mp.game.. " cheat. (%d ms)", math.floor((tick() - loadstart) * 1000)))
 end
 
 mp = { -- this is for menu stuffs n shi
@@ -6103,6 +6103,10 @@ elseif mp.game == "pf" then --!SECTION
 					local parts = client.replication.getbodyparts(Player)
 		
 					if not parts then return end
+
+					local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
+
+					if not mp:getval("ESP", GroupBox, "Enabled") then return end
 		
 					Player.Character = parts.rootpart.Parent
 		
@@ -6802,11 +6806,6 @@ elseif mp.game == "pf" then --!SECTION
 							value = 1,
 							values = {"Head", "Body"}
 						},
-						{
-							type = "toggle",
-							name = "Force Priority Hitbox",
-							value = false
-						},
 					}
 				},
 				{
@@ -6952,11 +6951,6 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Hitscan Priority",
 							value = 1,
 							values = {"Head", "Body"}
-						},
-						{
-							type = "toggle",
-							name = "Force Priority Hitbox",
-							value = false
 						},
 					},
 				},
@@ -7131,6 +7125,11 @@ elseif mp.game == "pf" then --!SECTION
 					autopos = "left",
 					content = {
 						{
+							type = "toggle", 
+							name = "Enabled",
+							value = true
+						},
+						{
 							type = "toggle",
 							name = "Name",
 							value = true,
@@ -7139,11 +7138,6 @@ elseif mp.game == "pf" then --!SECTION
 								name = "Enemy Name",
 								color = {255, 255, 255, 255}
 							}
-						},
-						{
-							type = "toggle",
-							name = "Level",
-							value = false,
 						},
 						{
 							type = "toggle",
@@ -7245,6 +7239,11 @@ elseif mp.game == "pf" then --!SECTION
 					autopos = "right",
 					content = {
 						{
+							type = "toggle", 
+							name = "Enabled",
+							value = true
+						},
+						{
 							type = "toggle",
 							name = "Name",
 							value = false,
@@ -7253,11 +7252,6 @@ elseif mp.game == "pf" then --!SECTION
 								name = "Team Name",
 								color = {255, 255, 255, 255}
 							}
-						},
-						{
-							type = "toggle",
-							name = "Level",
-							value = false,
 						},
 						{
 							type = "toggle",
