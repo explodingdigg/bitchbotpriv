@@ -4257,6 +4257,36 @@ elseif mp.game == "pf" then --!SECTION
 			"I win more hvh than you do 🏆",
 			"I am more victorious than you are🏆",
 			"Due to my agility, I am better than you at basketball, and all of your favorite sports or any sport for that matter (I will probably break your ankles in basketball by pure accident) "
+		},
+		[8] = {
+			"WE THE BEST CHEATS 🔥🔥🔥🔥 ",
+			"Phantom Force Hack Unlook Gun And Aimbot ",
+			"banlands 🔨 🗻 down 🏚️  ⏬ STOP CRASHING BANLANDS!! 🤣",
+			"antares hack client isn't real ",
+			"squidhook.xyz 🦑 ",
+			"squidhook > all ",
+			"spongehook 🤣🤣🤣💕",
+			"retardheadass ",
+			"🏀🏀 did i break your ankles brother ",
+			"he has access to HACK SERVER AND CHANGE WEIGHTS!!!!! STOOOOOOP 😡😒😒😡😡😡😡😡",
+			"\"cmon dude don't use that\" you asked for it LOL ",
+			"ima just quit mid hvh 🚶‍♀️ ",
+			"BABY 👶👶👶👶🤱🤱🤱🤱🤱",
+			"BOO HOO 😢😢😭😭😭 STOP CRYING D∪MBASS",
+			"BOO HOO 😢😢😭😭😭 STOP CRYING ",
+			"🤏",
+			"🤏 <-- just to elaborate that i have no care for this situation or you at all, kid (not that you would understand anyways, you're too stupid to understand what i'm saying to begin with)",
+			"y",
+			"b",
+			"before bbot 😭 📢				after bbot 😁😁😜					don't be like the person who doesn't have bbot",
+			"							MADE YOU LOOK ",
+			"							LOOK BRO LOOK LOOK AT ME ",
+			"	A	",
+			"			B		B		O		T	",
+			"																																																																																																																								I HAVE AJAX YALL BETTER WATCH OUT OR YOU'LL DIE, WATCH WHO YOU'RE SHOOTING",
+			"																																																																																																																								WATCH YOUR STEP KID",
+			"BROOOO HE HAS																										GOD MODE BRO HE HAS GOD MODE 🚶‍♀️🚶‍♀️🚶‍♀️😜😂😂🤦‍♂️🤦‍♂️😭😭😭👶",
+			"\"guys what hub has auto shooting\" 																										"
 		}
 	}
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
@@ -4989,40 +5019,40 @@ elseif mp.game == "pf" then --!SECTION
 			local direction
 			position -= Vector3.new(8, 0, 0) -- left
 			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
+			--ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, extendPen)
+			if ragebot:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then -- this shit is probably never going to work the way it is
 				return position
 			end
 
 			position += Vector3.new(8*2, 0, 0) -- right
 			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
+			if ragebot:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
 				return position
 			end
 
 			position = origin + Vector3.new(0, 8, 0) -- up
 			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
+			if ragebot:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
 				return position
 			end
 
 			position -= Vector3.new(0, 8*2, 0) -- down
 			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
+			if ragebot:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
 				return position
 			end
 
 			position = origin + Vector3.new(0, 0, 8) -- forward
 			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
+			if ragebot:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
 				return position
 			end
 
 			position -= Vector3.new(0, 0, 8*2) -- backward
 			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
+			if ragebot:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
 				return position
 			end
-			return nil
 		end
 
 		function ragebot:MainLoop() -- lfg
@@ -7746,7 +7776,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Chat Spam",
 							value = 1,
-							values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Ion Cannon", "Nexus"}
+							values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Ion Cannon", "Nexus", "\"funny\""}
 						},
 						{
 							type = "toggle",
