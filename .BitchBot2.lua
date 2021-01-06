@@ -4165,6 +4165,116 @@ elseif mp.game == "pf" then --!SECTION
 	}
 	
 	local mats = {"SmoothPlastic", "ForceField", "Neon", "Foil", "Glass"}
+	local chatspams = {
+		["lastchoice"] = 0,
+		[1] = nil,
+		[2] = {
+			"㭁ITCH BOT ON TOP ",
+			"BBOT ON TOP 🔥🔥🔥🔥",
+			"b个tchbot on top i think ",
+			"bbot > all ",
+			"㭁ITCH BOT > ALL🧠 ",
+			"WHAT SCRIPT IS THAT???? BBOT! ",
+			"b㐃tch bot ",
+		},
+		[3] = {
+			"but doctor prognosis: OWNED ",
+			"but doctor results: 🔥",
+			"looks like you need to talk to your doctor ",
+			"speak to your doctor about this one ",
+			"but analysis: PWNED ",
+			"but diagnosis: OWND ",
+		},
+		[4] = {
+			"音频少年公民记忆欲求无尽 heywe 僵尸强迫身体哑集中排水",
+			"持有毁灭性的神经重景气游行脸红青铜色类别创意案",
+			"诶比西迪伊艾弗吉艾尺艾杰开艾勒艾马艾娜哦屁吉吾",
+			"完成与草屋两个苏巴完成与草屋两个苏巴完成与草屋",
+			"庆崇你好我讨厌你愚蠢的母愚蠢的母庆崇", 
+		},
+		[5] = {
+			"🔥🔥🔥🔥🔥🔥🔥🔥",
+			"😅😅😅😅😅😅😅😅",
+			"😂😂😂😂😂😂😂😂",
+			"😹😹😹😹😹😹😹😹",
+			"😛😛😛😛😛😛😛😛",
+			"🤩🤩🤩🤩🤩🤩🤩🤩",
+			"🌈🌈🌈🌈🌈🌈🌈🌈",
+			"😎😎😎😎😎😎😎😎",
+			"🤠🤠🤠🤠🤠🤠🤠🤠",
+			"😔😔😔😔😔😔😔😔",
+		},
+		[6] = {
+			"gEt OuT oF tHe GrOuNd 🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡 ",
+			"brb taking a nap 💤💤💤 ",
+			"gonna go take a walk 🚶‍♂️🚶‍♀️🚶‍♂️🚶‍♀️ ",
+			"low orbit ion cannon booting up ",
+			"how does it feel to not have bbot 🤣🤣🤣😂😂😹😹😹 ",
+			"im a firing my laza! 🙀🙀🙀 ",
+			"😂😂😂😂😂GAMING CHAIR😂😂😂😂😂",
+		},
+		[7] = {
+			"NEXUS ",
+			"NEXUS ON TOP ",
+			"ｎｅｘｕｓ ｄｏｅｓｎ＇ｔ ｃａｒｅ 🤏",
+			"ｈｔｔｐｓ_ｇｅｔｕｇｔ_ｃｏｍ 🔥",
+			"retardheadass",
+			"can't hear you over these kill sounds ",
+			"i'm just built different yo 🧱🧱🧱 ",
+			"📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈",
+			"OFF📈THE📈CHART📈",
+			"KICK HIM 🦵🦵🦵",
+			"THE AMOUNT THAT I CARE --> 🤏 ",
+			"🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏",
+			"SORRY I HURT YOUR ROBLOX EGO BUT LOOK -> 🤏 I DON'T CARE ",
+			"table.find(charts, \"any other script other than nexus and bbot\") -> nil 💵💵💵",
+			"LOL WHAT ARE YOU SHOOTING AT BRO ",
+			"🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥",
+			"BRO UR SHOOTING AT LIKE NOTHING LOL UR A CLOWN",
+			"🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡",
+			"ARE U USING EHUB? 🤡🤡🤡🤡🤡",
+			"'EHUB IS THE BEST' 🤡 PASTED LINES OF CODE WITH UNREFERENCED AND UNINITIALIZED VARIABLES AND PEOPLE HAVE NO IDEA WHY IT'S NOT WORKING",
+			"LOL",
+			"GIVE UP ",
+			"GIVE UP BECAUSE YOU'RE NOT GOING TO BE ABLE TO KILL ME OR WIN LOL",
+			"Can't hear you over these bands ",
+			"I’m better than you in every way 🏆",
+			"I’m smarter than you (I can verify this because I took an online IQ test and got 150) 🧠",
+			"my personality shines and it’s generally better than your personality. Yours has flaws",
+			"I’m more ambitious than you 🏆💰📣",
+			"I’m more funny than you (long shot) ",
+			"I’m less turbulent and more assertive and calm than you (proof) 🎰",
+			"I’m stronger than you 💪 🦵 ",
+			"my attention span is greater and better than yours (proven from you not reading entire list) ",
+			"I am more creative and expressive than you will ever be 🎨 🖌️",
+			"I’m a faster at typing than you 💬 ",
+			"In 30 minutes, I will have lifted more weights than you can solve algebraic equations 📓 ",
+			"By the time you have completed reading this very factual and groundbreaking evidence that I am truly more superior, thoughtful, and presentable than you are, I will have prospered (that means make negotiable currency or the American Dollar) more than your entire family hierarchy will have ever made in its time span 💰",
+			"I am more seggsually stable and better looking than you are 👨",
+			"I get along with women easier than you do 👩‍🚀",
+			"I am very good at debating 🗣️🧑‍⚖️ ",
+			"I hit more head than you do 🏆",
+			"I win more hvh than you do 🏆",
+			"I am more victorious than you are🏆",
+			"Due to my agility, I am better than you at basketball, and all of your favorite sports or any sport for that matter (I will probably break your ankles in basketball by pure accident) "
+		}
+	}
+	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
+		__call = function(self, type)
+			if type ~= 1 then
+				local chatspamtype = self[type]
+				local rand = math.random(1, #chatspamtype)
+				if self.lastchoice == rand then
+					repeat
+						rand = math.random(1, #chatspamtype)
+					until rand ~= self.lastchoice
+				end
+				local curchoice = chatspamtype[rand]
+				self.lastchoice = rand
+				return curchoice
+			end
+		end
+	})
 	
 	local skelparts = {"Head", "Right Arm", "Right Leg", "Left Leg", "Left Arm"}
 	
@@ -4316,8 +4426,25 @@ elseif mp.game == "pf" then --!SECTION
 	
 	local send = client.net.send
 	
-	
-	
+	coroutine.wrap(function()
+		repeat wait() until mp.fading -- this is fucking bad
+		while true do
+			local s = mp:getval("Misc", "Extra", "Chat Spam Delay")
+			local tik = math.floor(tick())
+			if math.floor(tick()) % s == 0 and chatspams.t ~= tik then
+				chatspams.t = tik
+				local cs = mp:getval("Misc", "Extra", "Chat Spam")
+				if cs ~= 1 then
+					local curchoice = chatspams(cs)
+					curchoice = mp:getval("Misc", "Extra", "Chat Spam Repeat") and string.rep(curchoice, 100) or curchoice
+					send(nil, "chatted", curchoice)
+				end
+			end
+			game.RunService.RenderStepped:Wait()
+		end
+		return
+	end)()
+
 	do --ANCHOR metatable hookz
 	
 		local mt = getrawmetatable(game)
@@ -6310,6 +6437,9 @@ elseif mp.game == "pf" then --!SECTION
 					if mesh then
 						mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
 					end
+
+					if curvalue:IsA("Pants") then curvalue:Destroy() end
+
 					if matname ~= "ForceField" then 
 						local pant = curvalue:FindFirstChild("Pant")
 						if mesh then mesh:Destroy() end
@@ -7611,6 +7741,25 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Kill Say",
 							value = false
+						},
+						{
+							type = "dropbox",
+							name = "Chat Spam",
+							value = 1,
+							values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Ion Cannon", "Nexus"}
+						},
+						{
+							type = "toggle",
+							name = "Chat Spam Repeat",
+							value = false
+						},
+						{
+							type = "slider",
+							name = "Chat Spam Delay",
+							minvalue = 1,
+							maxvalue = 10,
+							value = 5,
+							stradd = " seconds"
 						}
 					}
 				},
