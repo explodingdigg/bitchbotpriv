@@ -4664,6 +4664,35 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end
+
+			function ragebot:wallcheck(campos, pos, penetration)
+				local dir = (pos - campos) -- skidded once afuckinggain because i am dumb and don't know how to do anything related to like actual concepts and shit
+				local hit, enter, norm = workspace:FindPartOnRayWithIgnoreList(Ray.new(campos, dir), {workspace["Players"], workspace["Ignore"], workspace.CurrentCamera})
+			
+				if hit then
+					local unit = dir.Unit
+					local maxextent = hit.Size.Magnitude * unit
+					local _, exit, exitnorm = workspace:FindPartOnRayWithWhitelist(Ray.new(enter + maxextent, -maxextent), {hit})
+					local diff = exit - enter
+					local dist = dot(unit, diff)
+					local pass = not hit.CanCollide or hit.Transparency == 1
+					local exited = false
+			
+					local newpos = enter + 0.01 * unit
+			
+					if not pass then
+						if dist < penetration then
+							penetration = penetration - dist
+						else
+							return false
+						end
+					end
+			
+					return self:wallcheck(newpos, pos, penetration)
+				else
+					return true
+				end
+			end
 		end
 
 		function ragebot:AimAtTarget(part, target, origin)
@@ -4680,14 +4709,14 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			
 			local target_pos = part.Position
-			local dir = camera:GetTrajectory(part.Position, origin) - origin
+			local dir = camera:GetTrajectory(part.Position, self.firepos)
 			if not mp:getval("Rage", "Aimbot", "Silent Aim") then
 				camera:LookAt(dir + origin)
 			end
 			ragebot.silentVector = dir.unit
 			ragebot.target = target
 			ragebot.targetpart = part
-			ragebot.firepos = origin
+			--ragebot.firepos = origin
 			ragebot.shooting = true
 			if mp:getval("Rage", "Aimbot", "Auto Shoot") then
 				client.logic.currentgun:shoot(true)
@@ -4705,7 +4734,7 @@ elseif mp.game == "pf" then --!SECTION
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
 			local barrel = client.logic.currentgun.barrel.CFrame.p
-			
+			local firepos -- i am actually SO FUCKING MAD I FUCKING HATE THIS FUCKING BULLSHIT DUMPING PIECE OF SHIT
 
 			for i, player in next, players do
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
@@ -4719,32 +4748,39 @@ elseif mp.game == "pf" then --!SECTION
 										closest = fovToBone
 										cpart = bone
 										theplayer = player
+										firepos = client.cam.cframe.p
 										if mp.priority[player.Name] then break end
 									else
 										continue
 									end
 								elseif autowall then
-									local directionVector = camera:GetTrajectory(bone.Position, client.cam.cframe.p)
-									if self:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, client.cam.cframe.p, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
+									if self:wallcheck(client.cam.cframe.p, bone.Position, client.logic.currentgun.data.penetrationdepth) then
 										local fovToBone = camera:GetFOV(bone)
 										cpart = bone
 										theplayer = player
+										firepos = client.cam.cframe.p
 										if mp.priority[player.Name] then break end
 									elseif aw_resolve and bone.Name ~= partPreference then
 										if resolvertype == 1 then -- cubic hitscan
 											local resolvedPosition = self:CubicHitscan(4, barrel, player, k)
+											rconsolewarn("attempting cubic")
 											if resolvedPosition then
+												rconsolewarn(string.format("resolved cubic position %s", tostring(resolvedPosition)))
 												self.firepos = resolvedPosition
 												cpart = bone
 												theplayer = player
+												firepos = resolvedPosition
 												if mp.priority[player.Name] then break end
 											end
 										elseif resolvertype == 2 then -- axes
 											local resolvedPosition = self:HitscanOnAxes(barrel, player, bone)
+											rconsolewarn("attempting axis shifting")
 											if resolvedPosition then
+												rconsolewarn(string.format("resolved position through axis shifting %s", tostring(resolvedPosition)))
 												self.firepos = resolvedPosition
 												cpart = bone
 												theplayer = player
+												firepos = resolvedPosition
 												if mp.priority[player.Name] then break end
 											end
 										end
@@ -4766,22 +4802,28 @@ elseif mp.game == "pf" then --!SECTION
 							if camera:IsVisible(prioritybone) then
 								closest = camera:GetFOV(prioritybone)
 								cpart = prioritybone
+								firepos = client.cam.cframe.p
 							elseif autowall then
-								if self:CanPenetrate(LOCAL_PLAYER, theplayer, directionVector, prioritybone.Position, partPreference) then
+								if self:wallcheck(client.cam.cframe.p, bone.Position, client.logic.currentgun.data.penetrationdepth) then
 									closest = camera:GetFOV(prioritybone)
 									cpart = prioritybone
+									firepos = client.cam.cframe.p
 								elseif aw_resolve then
 									if resolvertype == 1 then
 										local resolvedPosition = self:CubicHitscan(8, client.cam.basecframe.p, theplayer)
 										if resolvedPosition then
+											rconsolewarn("finalizing cubic")
 											self.firepos = resolvedPosition
 											cpart = bone
+											firepos = resolvedPosition
 										end
 									elseif resolvertype == 2 then
-										local resolvedPosition = self:HitscanOnAxes(barrel, player, prioritybone)
+										local resolvedPosition = self:HitscanOnAxes(client.cam.basecframe.p, player, prioritybone)
 										if resolvedPosition then
+											rconsolewarn("finalizing axis shifter")
 											self.firepos = resolvedPosition
 											cpart = bone
+											firepos = resolvedPosition
 										end
 									end
 								end
@@ -4795,7 +4837,7 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 
-			return cpart, theplayer, closest
+			return cpart, theplayer, closest, firepos
 		end
 
 		function ragebot:GetKnifeTargets()
@@ -4909,62 +4951,26 @@ elseif mp.game == "pf" then --!SECTION
 			local curscanpos = startpos
 			local studs = extent or 8
 			do -- This looks sort of dumb
-				local targetpos = person.CFrame.p
-				local bodypart = client.replication.getbodyparts(person)[bodypart]
-				for x = 1, studs do
-
-					curscanpos += Vector3.new(x, 0, 0)
-					local directionVector = targetpos - curscanpos
-					resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, person, directionVector, targetpos, curscanpos) and curscanpos or nil
-					if resolvedPosition then return resolvedPosition end
-
-					for y = -1, studs, -1 do
-
-						curscanpos += Vector3.new(0, y, 0)
-						local directionVector = targetpos - curscanpos
-						resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, person, directionVector, targetpos, curscanpos) and curscanpos or nil
-						if resolvedPosition then return resolvedPosition end
-
-						for z = 1, studs, -1 do
-
-							curscanpos += Vector3.new(0, 0, z)
-							local directionVector = targetpos - curscanpos
-							resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, person, directionVector, targetpos, curscanpos) and curscanpos or nil
-							if resolvedPosition then return resolvedPosition end
-
-						end
-					end
-				end
-			end
-		end
-
-		function ragebot:ResolveCubicOffsetToTarget(startpos, extent, person, bodypart)
-			assert(startpos, "mang u need a oriegen to do cube ic scan u feel me?")
-			local resolvedPosition = nil
-			local curscanpos = startpos
-			local studs = extent or 8
-			do -- This looks sort of dumb
-				local bodypart = client.replication.getbodyparts(person)[bodypart]
 				local targetpos = bodypart.CFrame.p
 				for x = 1, studs do
 
 					curscanpos += Vector3.new(x, 0, 0)
 					local directionVector = targetpos - curscanpos
-					resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, person, directionVector, targetpos, curscanpos) and curscanpos or nil
+					resolvedPosition = self:wallcheck(curscanpos, bodypart.Position, client.logic.currentgun.data.penetrationdepth) and curscanpos or nil
 					if resolvedPosition then return resolvedPosition end
 
 					for y = -1, studs, -1 do
 
 						curscanpos += Vector3.new(0, y, 0)
 						local directionVector = targetpos - curscanpos
-						resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, person, directionVector, targetpos, curscanpos) and curscanpos or nil
+						resolvedPosition = self:wallcheck(curscanpos, bodypart.Position, client.logic.currentgun.data.penetrationdepth) and curscanpos or nil
 						if resolvedPosition then return resolvedPosition end
 
 						for z = 1, studs, -1 do
 
 							curscanpos += Vector3.new(0, 0, z)
 							local directionVector = targetpos - curscanpos
-							resolvedPosition = self:CanPenetrate(LOCAL_PLAYER, person, directionVector, targetpos, curscanpos) and curscanpos or nil
+							resolvedPosition = self:wallcheck(curscanpos, bodypart.Position, client.logic.currentgun.data.penetrationdepth) and curscanpos or nil
 							if resolvedPosition then return resolvedPosition end
 
 						end
@@ -4986,41 +4992,46 @@ elseif mp.game == "pf" then --!SECTION
 			assert(bodypart, "hello")
 			assert(person, "something went wrong in your nasa rocket launch")
 			local position = origin
-			local direction
-			position -= Vector3.new(8, 0, 0) -- left
-			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
-				return position
+			for i = 1, 10 do
+				position -= Vector3.new(i, 0, 0) -- left
+				if self:wallcheck(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+					return position
+				end
 			end
-
-			position += Vector3.new(8*2, 0, 0) -- right
-			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
-				return position
+			position = origin
+			for i = 1, 10 do
+				position += Vector3.new(i, 0, 0) -- right
+				if self:wallcheck(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+					return position
+				end
 			end
-
-			position = origin + Vector3.new(0, 8, 0) -- up
-			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
-				return position
+			position = origin
+			for i = 1, 10 do
+				position += Vector3.new(0, i, 0) -- up
+				if self:wallcheck(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+					return position
+				end
 			end
-
-			position -= Vector3.new(0, 8*2, 0) -- down
-			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
-				return position
+			position = origin
+			for i = 1, 10 do
+				position -= Vector3.new(0, i, 0) -- down
+				if self:wallcheck(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+					return position
+				end
 			end
-
-			position = origin + Vector3.new(0, 0, 8) -- forward
-			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
-				return position
+			position = origin
+			for i = 1, 10 do
+				position += Vector3.new(0, 0, i) -- forward
+				if self:wallcheck(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+					return position
+				end
 			end
-
-			position -= Vector3.new(0, 0, 8*2) -- backward
-			direction = bodypart.Position - position
-			if self:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position) then
-				return position
+			position = origin
+			for i = 1, 10 do
+				position -= Vector3.new(0, 0, i) -- backward
+				if self:wallcheck(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+					return position
+				end
 			end
 			return nil
 		end
@@ -5048,8 +5059,8 @@ elseif mp.game == "pf" then --!SECTION
 					end)
 
 					CreateThread(function()
-						local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
-						ragebot:AimAtTarget(targetPart, targetPlayer)
+						local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+						ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
 					end)
 				else
 					self.target = nil
@@ -5655,11 +5666,18 @@ elseif mp.game == "pf" then --!SECTION
 						bullet[1] = legitbot.silentVector
 					end
 				end
-				if ragebot.silentVector then
-					for k, bullet in pairs(args[2].bullets) do
-						bullet[1] = ragebot.silentVector.unit
-					end
+				if ragebot.firepos then
 					args[2].firepos = ragebot.firepos
+					for k, bullet in pairs(args[2].bullets) do
+						bullet[1] = client.trajectory(ragebot.firepos, GRAVITY, ragebot.targetpart.Position, client.logic.currentgun.data.bulletspeed)
+					end
+
+					local testpart = Instance.new("Part", workspace)
+					testpart.Anchored = true
+					testpart.CanCollide = false
+					testpart.Material = Enum.Material.Neon
+					testpart.Size = Vector3.new(2, 2, 12)
+					testpart.Position = ragebot.firepos
 
 					if keybindtoggles.fakelag and mp:getval("Rage", "Extra", "Release Packets on Shoot") then
 						keybindtoggles.fakelag = not keybindtoggles.fakelag
