@@ -4286,7 +4286,8 @@ elseif mp.game == "pf" then --!SECTION
 			"																																																																																																																								I HAVE AJAX YALL BETTER WATCH OUT OR YOU'LL DIE, WATCH WHO YOU'RE SHOOTING",
 			"																																																																																																																								WATCH YOUR STEP KID",
 			"BROOOO HE HAS																										GOD MODE BRO HE HAS GOD MODE 🚶‍♀️🚶‍♀️🚶‍♀️😜😂😂🤦‍♂️🤦‍♂️😭😭😭👶",
-			"\"guys what hub has auto shooting\" 																										"
+			"\"guys what hub has auto shooting\" 																										",
+			"god i wish i had bbot..... 🙏🙏🥺🥺🥺													plzzzzz brooooo 🛐 GIVE IT🛐🛐"
 		}
 	}
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
