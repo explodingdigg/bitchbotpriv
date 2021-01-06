@@ -4920,8 +4920,10 @@ elseif mp.game == "pf" then --!SECTION
 						and table.contains(mp.priority, p2.Name) == false
 					end)
 
-					local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
-					ragebot:AimAtTarget(targetPart, targetPlayer)
+					CreateThread(function()
+						local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+						ragebot:AimAtTarget(targetPart, targetPlayer)
+					end)
 				else
 					self.target = nil
 				end
@@ -5506,6 +5508,7 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	end
 
+	local stutterFrames = 0
 	do--ANCHOR send hook
 		client.net.send = function(self, ...)
 			local args = {...}
@@ -5563,6 +5566,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if args[1] == "repupdate" and mp:getval("Rage", "Anti Aim", "Enabled") then
 				--args[2] = ragebot:AntiNade(args[2])
+				stutterFrames += 1
 				local pitch = args[3].X
 				local yaw = args[3].Y
 				local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
@@ -5585,6 +5589,8 @@ elseif mp.game == "pf" then --!SECTION
 					pitch = (-tick() * spinRate) % 6.28
 				elseif pitchChoice == 8 then
 					pitch = math.random(99999)
+				elseif pitchChoice == 9 then
+					pitch = math.sin((tick() % 6.28) * spinRate)
 				end
 	
 				--{"Off", "Backward", "Spin", "Random"} yaw
@@ -5596,6 +5602,8 @@ elseif mp.game == "pf" then --!SECTION
 					yaw = math.random(99999)
 				elseif yawChoice == 5 then
 					yaw = 16478887
+				elseif yawChoice == 6 then
+					yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
 				end
 	
 				-- yaw += jitter
@@ -5916,8 +5924,19 @@ elseif mp.game == "pf" then --!SECTION
 		----------
 	
 		if client.deploy.isdeployed() then
-		
-			for Index, Player in ipairs(Players:GetPlayers()) do
+			
+			local players = Players:GetPlayers()
+			-- table.sort(players, function(p1, p2)
+			-- 	return table.contains(mp.priority, p2.Name) ~= table.contains(mp.priority, p1.Name) and table.contains(mp.priority, p2.Name) == true and table.contains(mp.priority, p1.Name) == false
+			-- end)	
+
+			local priority_color = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
+			local priority_trans = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color")[4]/255
+
+			local friend_color = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
+			local friend_trans = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color")[4]/255
+
+			for Index, Player in ipairs(players) do
 				CreateThread(function()
 					if not client.hud:isplayeralive(Player) then return end
 					local parts = client.replication.getbodyparts(Player)
@@ -5958,28 +5977,27 @@ elseif mp.game == "pf" then --!SECTION
 							elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
 								name = string.upper(name)
 							end
-							nametext = allesp.text.name[Index]
 							
-							nametext.Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
-							nametext.Visible = true
-							nametext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
-							nametext.Color = RGB(mp.options["ESP"][GroupBox]["Name"][5][1][1], mp.options["ESP"][GroupBox]["Name"][5][1][2], mp.options["ESP"][GroupBox]["Name"][5][1][3])
-							nametext.Transparency = mp.options["ESP"][GroupBox]["Name"][5][1][4]/255
-		
+							allesp.text.name[Index].Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+							allesp.text.name[Index].Visible = true
+							allesp.text.name[Index].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
+
 						end
 						if mp.options["ESP"][GroupBox]["Box"][1] then
-							
-							local color = mp:getval("ESP", GroupBox, "Box", "color", true)
 							for i = -1, 1 do
 								local box = allesp.box[i+2][Index]
 								box.Visible = true
 								box.Position = boxPosition + Vector2.new(i, i)
 								box.Size = boxSize - Vector2.new(i*2, i*2)
 								box.Transparency = boxtransparency
-								box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+								
+								if i ~= 0 then
+									box.Color = RGB(20, 20, 20)
+								end
+								--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 								
 							end
-		
+							
 						end
 						if mp.options["ESP"][GroupBox]["Health Bar"][1] then
 							local ySizeBar = -math.floor(boxSize.Y * health / 100)
@@ -6040,8 +6058,6 @@ elseif mp.game == "pf" then --!SECTION
 							weptext.Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
 							weptext.Visible = true
 							weptext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y)
-							weptext.Color = mp:getval("ESP", GroupBox, "Held Weapon", "color", true)
-							weptext.Transparency = mp.options["ESP"][GroupBox]["Held Weapon"][5][1][4]/255
 		
 						end
 						if mp.options["ESP"][GroupBox]["Distance"][1] then
@@ -6051,8 +6067,6 @@ elseif mp.game == "pf" then --!SECTION
 							disttext.Text = tostring(distance).."m" --TODO alan i told you to make this not worldtoscreen based.
 							disttext.Visible = true
 							disttext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y + spoty)
-							disttext.Color = mp:getval("ESP", GroupBox, "Distance", "color", true)
-							disttext.Transparency = mp.options["ESP"][GroupBox]["Distance"][5][1][4]/255
 		
 						end
 						if mp.options["ESP"][GroupBox]["Skeleton"][1] then
@@ -6065,11 +6079,66 @@ elseif mp.game == "pf" then --!SECTION
 								line.From = Vector2.new(posie.x, posie.y)
 								line.To = Vector2.new(torso.x, torso.y)
 								line.Visible = true
-								line.Color = mp:getval("ESP", GroupBox, "Skeleton", "color", true)
-								line.Transparency = mp.options["ESP"][GroupBox]["Skeleton"][5][1][4]/255
-		
+
 							end
-		
+						end
+						--da colourz !!! :D 🔥🔥🔥🔥
+
+						if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.contains(mp.priority, Player.Name) then
+							
+							allesp.text.name[Index].Color = priority_color
+							allesp.text.name[Index].Transparency = priority_trans
+
+							allesp.box[2][Index].Color = priority_color
+
+							allesp.text.weapon[Index].Color = priority_color
+							allesp.text.weapon[Index].Transparency = priority_trans
+
+							allesp.text.distance[Index].Color = priority_color
+							allesp.text.distance[Index].Transparency = priority_trans
+
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+								line.Color = priority_color
+								line.Transparency = priority_trans
+							end
+						
+						elseif mp:getval("ESP", "ESP Settings", "Highlight Friends") and table.contains(mp.friends, Player.Name) then
+
+							allesp.text.name[Index].Color = friend_color
+							allesp.text.name[Index].Transparency = friend_trans
+
+							allesp.box[2][Index].Color = friend_color
+
+							allesp.text.weapon[Index].Color = friend_color
+							allesp.text.weapon[Index].Transparency = friend_trans
+
+							allesp.text.distance[Index].Color = friend_color
+							allesp.text.distance[Index].Transparency = friend_trans
+
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+								line.Color = friend_color
+								line.Transparency = friend_trans
+							end
+
+						else
+							allesp.text.name[Index].Color = mp:getval("ESP", GroupBox, "Name", "color", true) -- RGB(mp.options["ESP"][GroupBox]["Name"][5][1][1], mp.options["ESP"][GroupBox]["Name"][5][1][2], mp.options["ESP"][GroupBox]["Name"][5][1][3])
+							allesp.text.name[Index].Transparency = mp:getval("ESP", GroupBox, "Name", "color")[4]/255
+
+							allesp.box[2][Index].Color = mp:getval("ESP", GroupBox, "Box", "color", true)
+
+							allesp.text.weapon[Index].Color = mp:getval("ESP", GroupBox, "Held Weapon", "color", true)
+							allesp.text.weapon[Index].Transparency = mp:getval("ESP", GroupBox, "Held Weapon", "color")[4]/255
+
+							allesp.text.distance[Index].Color = mp:getval("ESP", GroupBox, "Distance", "color", true)
+							allesp.text.distance[Index].Transparency = mp:getval("ESP", GroupBox, "Distance", "color")[4]/255
+
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+								line.Color = mp:getval("ESP", GroupBox, "Skeleton", "color", true)
+								line.Transparency = mp:getval("ESP", GroupBox, "Skeleton", "color")[4]/255
+							end
 						end
 		
 					elseif GroupBox == "Enemy ESP" and mp:getval("ESP", "Enemy ESP", "Out of View") then
@@ -6838,19 +6907,19 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Pitch",
 							value = 4,
-							values = {"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"}
+							values = {"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob"}
 						},
 						{
 							type = "dropbox",
 							name = "Yaw",
 							value = 2,
-							values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin"}
+							values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"}
 						},
 						{
 							type = "slider",
 							name = "Spin Rate",
 							value = 10,
-							minvalue = 1,
+							minvalue = -100,
 							maxvalue = 100,
 							stradd = " ° per second"
 						},
