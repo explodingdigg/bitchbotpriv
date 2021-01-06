@@ -4465,7 +4465,7 @@ elseif mp.game == "pf" then --!SECTION
 						params.FilterDescendantsInstances = {Camera, workspace.Ignore, workspace.Players}
 			
 						local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
-						if hit and not hit.Instance.CanCollide then return oldNewIndex(self, id, val) end
+						if hit and not hit.Instance.CanCollide then return oldNewIndex(self, id, val * CFrame.new(0, 0, dist)) end
 						local mag = hit and (hit.Position - val.p).Magnitude or nil
 			
 						val *= CFrame.new(0, 0, mag and mag or dist)
