@@ -6281,14 +6281,14 @@ elseif mp.game == "pf" then --!SECTION
 		
 							Tri.Visible = true
 							
-							local anglesTo = camera:GetAnglesTo(partCFrame.Position)
-							local direction = -camera:GetAngles().yaw + anglesTo.yaw - math.pi
+							local relativePos = Camera.CFrame:PointToObjectSpace(partCFrame.Position)
+							local direction = math.deg(math.atan2(-relativePos.Y, relativePos.X)) * math.pi / 180
 							
-							local distance = (partCFrame.Position - client.cam.cframe.p).Magnitude
+							local distance = relativePos.Magnitude
 							local arrow_size = mp:getval("ESP", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
 							arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
 							
-							direction = Vector2.new(math.sin(direction), math.cos(direction))
+							direction = Vector2.new(math.cos(direction), math.sin(direction))
 		
 							local pos = (direction * SCREEN_SIZE.Y * mp:getval("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
 		
