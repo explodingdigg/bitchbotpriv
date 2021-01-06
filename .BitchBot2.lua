@@ -4834,6 +4834,7 @@ elseif mp.game == "pf" then --!SECTION
 			local results = {}
 	
 			for i, ply in ipairs(Players:GetPlayers()) do
+				if table.contains(mp.friends, ply.Name) then continue end
 	
 				if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
 					local parts = client.replication.getbodyparts(ply)
@@ -4842,7 +4843,6 @@ elseif mp.game == "pf" then --!SECTION
 					local target_pos = parts.rootpart.Position
 					local target_direction = target_pos - client.cam.cframe.p
 					local target_dist = (target_pos - client.cam.cframe.p).Magnitude
-
 					local ignore = {LOCAL_PLAYER, Camera, workspace.Ignore, workspace.Players}
 
 					local part1, ray_pos = workspace:FindPartOnRayWithIgnoreList(Ray.new(client.cam.cframe.p, target_direction), ignore)
@@ -6115,13 +6115,15 @@ elseif mp.game == "pf" then --!SECTION
 					local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 					local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 		
-					local minY = math.abs(bottom.Y - top.Y)
-					local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.X - top.X) * 2, 0, minY), minY / 2))
-					local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
+					-- local minY = math.abs(bottom.Y - top.Y)
+					-- local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.X - top.X) * 2, 0, minY), minY / 2))
+					-- local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 		
-					local boxSize = Vector2.new(sizeX, sizeY)
-					local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(math.min(top.Y, bottom.Y)))
-		
+					-- local boxSize = Vector2.new(sizeX, sizeY)
+					local _height = math.abs(bottom.y - top.y)
+					local boxSize = Vector2.new(_height/1.5, _height)
+					local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.Y, bottom.Y)))
+
 					local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 					local health = math.ceil(client.hud:getplayerhealth(Player))
 					local spoty = 0
