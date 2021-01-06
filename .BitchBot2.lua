@@ -6120,10 +6120,11 @@ elseif mp.game == "pf" then --!SECTION
 					-- local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 		
 					-- local boxSize = Vector2.new(sizeX, sizeY)
-					local _height = math.abs(bottom.y - top.y)
-					local boxSize = Vector2.new(_height/1.5, _height)
+					local _width = math.floor(math.abs(top.x - bottom.x))
+					local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width/2))
+					local boxSize = Vector2.new(math.max(_height/1.5, _width), _height)
 					local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.Y, bottom.Y)))
-
+         
 					local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 					local health = math.ceil(client.hud:getplayerhealth(Player))
 					local spoty = 0
