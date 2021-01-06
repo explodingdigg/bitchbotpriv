@@ -4000,6 +4000,11 @@ elseif mp.game == "pf" then --!SECTION
 		watermark = {},
 	}
 
+	local wepesp = {
+		name = {},
+		ammo = {}
+	}
+
 	for i = 1, 35 do
 		for i_ = 1, 2 do
 			Draw:Triangle(false, i_ == 1, nil, nil, nil, {255}, allesp.arrows[i_])
@@ -4018,6 +4023,11 @@ elseif mp.game == "pf" then --!SECTION
 		for i_, v in pairs(allesp.text) do
 			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, v)
 		end
+	end
+
+	for i = 1, 50 do
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.name)
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.ammo)
 	end
 	
 	local bodysize = { -- for ragdolls
@@ -6080,6 +6090,12 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
+		for k, v in ipairs(wepesp) do
+			for k1, v1 in ipairs(v) do
+				v1.Visible = false
+			end 
+		end
+
 
 
 		----------
@@ -6128,7 +6144,7 @@ elseif mp.game == "pf" then --!SECTION
 					local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width/2))
 					local boxSize = Vector2.new(math.max(_height/1.5, _width), _height)
 					local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.Y, bottom.Y)))
-         
+
 					local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 					local health = math.ceil(client.hud:getplayerhealth(Player))
 					local spoty = 0
@@ -6344,6 +6360,51 @@ elseif mp.game == "pf" then --!SECTION
 
 			end
 
+			--ANCHOR weapon esp
+			if mp:getval("ESP", "Dropped ESP", "Weapon Name") or mp:getval("ESP", "Dropped ESP", "Weapon Ammo") then
+
+				local gunnum = 0
+				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
+					CreateThread(function()
+						if tostring(v) == "Dropped" then
+		
+							local gunpos, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(v.Slot1.Position.x, v.Slot1.Position.y, v.Slot1.Position.z))
+							local hasgun = false
+							for k1, v1 in pairs(v:GetChildren()) do 
+								if tostring(v1) == "Gun" then
+									hasgun = true
+									break
+								end
+							end 
+
+							if gun_on_screen and gunpos.z <= 80 and gunnum <= 50 and hasgun then
+								gunnum = gunnum + 1
+								local gunclearness = 1
+								if gunpos.z >= 50 then
+									local closedist = gunpos.z - 50
+									gunclearness = 1 - (1 * closedist/30)
+								end
+								
+								if mp:getval("ESP", "Dropped ESP", "Weapon Name") then				
+									wepesp.name[gunnum].Text = v.Gun.Value
+									wepesp.name[gunnum].Color = mp:getval("ESP", "Dropped ESP", "Weapon Name", "color", true)
+									wepesp.name[gunnum].Transparency = mp:getval("ESP", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255 
+									wepesp.name[gunnum].Visible = true
+									wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos.x), math.floor(gunpos.y + 25))
+								end
+								if mp:getval("ESP", "Dropped ESP", "Weapon Name") then
+									wepesp.ammo[gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
+									wepesp.ammo[gunnum].Color = mp:getval("ESP", "Dropped ESP", "Weapon Ammo", "color", true)
+									wepesp.ammo[gunnum].Transparency = mp:getval("ESP", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
+									wepesp.ammo[gunnum].Visible = true
+									wepesp.ammo[gunnum].Position = Vector2.new(math.floor(gunpos.x), math.floor(gunpos.y + 36))
+								end
+							end
+						end
+					end)
+				end
+			end
+
 			CreateThread(function() -- hand chams and such
 				local vm = workspace.Camera:GetChildren()
 				if mp:getval("Visuals", "Local Visuals", "Arm Chams") then
@@ -6427,6 +6488,9 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end)
+
+
+
 		end
 		do -- no scope pasted from v1 lol
 			local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
@@ -7386,7 +7450,7 @@ elseif mp.game == "pf" then --!SECTION
 					}
 				},
 				{
-					name = "Dropped Esp",
+					name = "Dropped ESP",
 					autopos = "left",
 					autofill = true,
 					content = {
