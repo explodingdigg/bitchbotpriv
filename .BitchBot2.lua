@@ -6453,13 +6453,6 @@ elseif mp.game == "pf" then --!SECTION
 						nadeesp.distance[nadenum].Visible = true
 						nadeesp.distance[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
 
-						--[[
-							v1.damage0 = 250;
-							v1.damage1 = 15;
-							v1.range0 = 8;
-							v1.range1 = 30;
-						]]
-
 						local d0 = 250 -- max damage
 						local d1 = 15 -- min damage
 						local r0 = 8 -- maximum range before the damage starts dropping off due to distance
@@ -6467,10 +6460,7 @@ elseif mp.game == "pf" then --!SECTION
 
 						local damage = nade_dist < r0 and d0 or nade_dist < r1 and (d1-d0) / (r1-r0) * (nade_dist-r0) + d0 or 0
 
-						--nadeesp.distance[nadenum].Text = tostring(math.floor(nade_dist/5)).. "m"
-
 						local wall
-
 						if damage > 0 then
 							wall = workspace:FindPartOnRayWithWhitelist(Ray.new(headpos, (nade.blowupat - headpos)), client.roundsystem.raycastwhitelist)
 							if wall then damage = 0 end
@@ -6478,6 +6468,16 @@ elseif mp.game == "pf" then --!SECTION
 
 						local str = damage == 0 and "Safe" or damage >= client.char.health and "LETHAL" or string.format("-%d hp", damage)
 						nadeesp.distance[nadenum].Text = str
+
+						nadeesp.outer_c[nadenum].Color = math.ColorRange(damage, {
+							[1] = {start = 15, color = RGB(20, 20, 20)},
+							[2] = {start = client.char.health, color = RGB(150, 20, 20)}
+						})
+
+						nadeesp.inner_c[nadenum].Color = math.ColorRange(damage, {
+							[1] = {start = 15, color = RGB(50, 50, 50)},
+							[2] = {start = client.char.health, color = RGB(220, 20, 20)}
+						})
 
 						nadeesp.bar_outer[nadenum].Visible = true
 						nadeesp.bar_outer[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 16, math.floor(nadepos.y + 50))
@@ -7267,7 +7267,7 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "dropbox",
 							name = "Force Stance",
-							value = 1,
+							value = 4,
 							values = {"Off", "Stand", "Crouch", "Prone"}
 						},
 						{
