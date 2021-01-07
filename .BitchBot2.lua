@@ -6063,7 +6063,6 @@ elseif mp.game == "pf" then --!SECTION
 		
 
 		client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
-		client.cam.basefov = client.char.unaimedfov
 		if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
 			game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
 			game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
