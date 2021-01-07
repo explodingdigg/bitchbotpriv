@@ -4749,6 +4749,7 @@ elseif mp.game == "pf" then --!SECTION
 			
 
 			for i, player in next, players do
+				if table.contains(mp.friends, player.Name) then continue end
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
@@ -5076,20 +5077,16 @@ elseif mp.game == "pf" then --!SECTION
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					
 					local playerlist = Players:GetPlayers()
-					for k,v in next, playerlist do
-						if table.contains(mp.friends, v.Name) then
-							table.remove(playerlist, k)
-						end
-					end
-
-					table.sort(playerlist, function(p1, p2)
-						return table.contains(mp.priority, p1.Name) ~= table.contains(mp.priority, p2.Name)
-						and table.contains(mp.priority, p1.Name) == true 
-						and table.contains(mp.priority, p2.Name) == false
-					end)
 
 					CreateThread(function()
-						local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+						local priority_list = {}
+						for k, PlayerName in pairs(mp.priority) do
+							table.insert(priority_list, game.Players[PlayerName])
+						end
+						local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
+						if not targetPart then 
+							local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+						end
 						ragebot:AimAtTarget(targetPart, targetPlayer)
 					end)
 				else
@@ -5958,6 +5955,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 
 			for i, Player in pairs(players) do
+				if table.contains(mp.friends, Player.Name) then continue end
 				if Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
 					local Parts = client.replication.getbodyparts(Player)
 					if Parts then
@@ -6063,16 +6061,14 @@ elseif mp.game == "pf" then --!SECTION
 
 		
 
-		if mp.open then
-			client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
-			client.cam.basefov = client.char.unaimedfov
-			if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
-				game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
-				game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
-			else
-				game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
-				game.Lighting.MapSaturation.Saturation = -0.25
-			end
+		client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
+		client.cam.basefov = client.char.unaimedfov
+		if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
+			game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
+			game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
+		else
+			game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
+			game.Lighting.MapSaturation.Saturation = -0.25
 		end
 
 		for k, v in pairs(allesp) do
