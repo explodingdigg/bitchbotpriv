@@ -6433,7 +6433,8 @@ elseif mp.game == "pf" then --!SECTION
 				local color2 = RGB(mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[1] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[2] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[3] - 20)
 				for index, nade in pairs(mp.activenades) do
 					local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
-					local nade_dist = math.floor((nade.blowupat - LOCAL_PLAYER.Character.PrimaryPart.Position).Magnitude)
+					local headpos = LOCAL_PLAYER.Character.Head.Position
+					local nade_dist = (nade.blowupat - headpos).Magnitude
 					local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
 					
 					if nade_on_screen and nade_dist <= 80 then
@@ -6451,7 +6452,32 @@ elseif mp.game == "pf" then --!SECTION
 
 						nadeesp.distance[nadenum].Visible = true
 						nadeesp.distance[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
-						nadeesp.distance[nadenum].Text = tostring(math.floor(nade_dist/5)).. "m"
+
+						--[[
+							v1.damage0 = 250;
+							v1.damage1 = 15;
+							v1.range0 = 8;
+							v1.range1 = 30;
+						]]
+
+						local d0 = 250 -- max damage
+						local d1 = 15 -- min damage
+						local r0 = 8 -- maximum range before the damage starts dropping off due to distance
+						local r1 = 30 -- minimum range i think idk
+
+						local damage = nade_dist < r0 and d0 or nade_dist < r1 and (d1-d0) / (r1-r0) * (nade_dist-r0) + d0 or 0
+
+						--nadeesp.distance[nadenum].Text = tostring(math.floor(nade_dist/5)).. "m"
+
+						local wall
+
+						if damage > 0 then
+							wall = workspace:FindPartOnRayWithWhitelist(Ray.new(headpos, (nade.blowupat - headpos)), client.roundsystem.raycastwhitelist)
+							if wall then damage = 0 end
+						end
+
+						local str = damage == 0 and "Safe" or damage >= client.char.health and "LETHAL" or string.format("-%d hp", damage)
+						nadeesp.distance[nadenum].Text = str
 
 						nadeesp.bar_outer[nadenum].Visible = true
 						nadeesp.bar_outer[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 16, math.floor(nadepos.y + 50))
