@@ -3973,6 +3973,8 @@ elseif mp.game == "pf" then --!SECTION
 		fakelag = false
 	}
 
+	mp.activenades = {}
+
 	--SECTION PF BEGIN
 	local allesp = {
 		skel = {
@@ -4097,7 +4099,6 @@ elseif mp.game == "pf" then --!SECTION
 						client.loadedguns = getupvalue(client.char.unloadguns, 2)
 						for id, gun in next, client.loadedguns do -- No gun bob or sway hook, may not work with knives for this
 							for k,v in next, getupvalues(gun.step) do
-								warn(k,v)
 								if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 									setupvalue(client.loadedguns[id].step, k, function(...)
 										return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
@@ -5187,6 +5188,21 @@ elseif mp.game == "pf" then --!SECTION
 						
 						local color = thrower.Team == LOCAL_PLAYER.Team and RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color2"))) or RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color1")))
 
+						local curtick = tick()
+						local dst = gdata.time - curtick
+						local realtime = curtick + dst * (gdata.time + gdata.blowuptime - curtick) / (gdata.blowuptime + dst)
+						local err = realtime - curtick
+
+						local grenadeid = #mp.activenades + 1
+
+						table.insert(mp.activenades, grenadeid, {
+							thrower = thrower.Name,
+							team = thrower.Team,
+							blowupat = lastframe.p0,
+							blowuptick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err)), -- might need to be tested more
+							start = curtick
+						})
+
 						for k,v in next, frames do 
 							local curframe = Instance.new("Part", workspace)
 							curframe.Anchored = true
@@ -5227,9 +5243,10 @@ elseif mp.game == "pf" then --!SECTION
 								blowframe.Parent = container
 							end
 						end
-						local timeblowupat = math.abs((tick() + gdata.blowuptime) - tick())
+						local timeblowupat = math.abs((tick() + gdata.blowuptime) - tick()) - math.abs(err)
 						delay(timeblowupat, function()
 							container:Destroy()
+							table.remove(mp.activenades, grenadeid)
 						end)
 					end
                   return func(thrower, gtype, gdata, displaytrail)
