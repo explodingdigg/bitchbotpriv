@@ -5180,7 +5180,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found6 = table.find(curconstants, " studs")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
-					if mp:getval("ESP", "Dropped Esp", "Display Nade Paths") then
+					if mp:getval("ESP", "Dropped ESP", "Display Nade Paths") then
 						local frames = gdata.frames
 						local start = gdata.time
 
@@ -5188,7 +5188,7 @@ elseif mp.game == "pf" then --!SECTION
 						local lastframe = frames[#frames]
 						container.Name = "nadeframes"
 						
-						local color = thrower.Team == LOCAL_PLAYER.Team and RGB(unpack(mp:getval("ESP", "Dropped Esp", "Display Nade Paths", "color2"))) or RGB(unpack(mp:getval("ESP", "Dropped Esp", "Display Nade Paths", "color1")))
+						local color = thrower.Team == LOCAL_PLAYER.Team and RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color2"))) or RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color1")))
 
 						for k,v in next, frames do 
 							local curframe = Instance.new("Part", workspace)
@@ -6090,13 +6090,11 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
-		for k, v in ipairs(wepesp) do
-			for k1, v1 in ipairs(v) do
+		for k, v in pairs(wepesp) do
+			for k1, v1 in pairs(v) do
 				v1.Visible = false
 			end 
 		end
-
-
 
 		----------
 	
@@ -6392,7 +6390,7 @@ elseif mp.game == "pf" then --!SECTION
 									wepesp.name[gunnum].Visible = true
 									wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos.x), math.floor(gunpos.y + 25))
 								end
-								if mp:getval("ESP", "Dropped ESP", "Weapon Name") then
+								if mp:getval("ESP", "Dropped ESP", "Weapon Ammo") then
 									wepesp.ammo[gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
 									wepesp.ammo[gunnum].Color = mp:getval("ESP", "Dropped ESP", "Weapon Ammo", "color", true)
 									wepesp.ammo[gunnum].Transparency = mp:getval("ESP", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
