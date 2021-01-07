@@ -937,7 +937,7 @@ function mp.BBMenuInit(menutable)
 		end
 		Draw:MenuFilledRect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35, 255}, bbmenu)
 
-		Draw:MenuBigText("E-Hub Premium $20", true, false, 6, 6, bbmenu)
+		Draw:MenuBigText("Bitch Bot", true, false, 6, 6, bbmenu)
 
 		Draw:MenuOutlinedRect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
 		Draw:MenuOutlinedRect(true, 9, 23, mp.w - 18, mp.h - 32, {20, 20, 20, 255}, bbmenu)
@@ -2727,7 +2727,7 @@ function mp.BBMenuInit(menutable)
 	end)
 	do
 		local wm = mp.watermark
-		wm.textString = "BitchBot | Developer | " .. os.date("%b. %d, %Y")
+		wm.textString = "Bitch Bot | Developer | " .. os.date("%b. %d, %Y")
 		wm.pos = Vector2.new(40, 10)
 		wm.text = {}
 		wm.width = (#wm.textString) * 7 + 10
