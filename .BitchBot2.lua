@@ -253,7 +253,8 @@ MultiThreadList({
 	function() BBOT_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png") end,
 	function() BBOT_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png") end,
 	function() BBOT_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end,
-	function() BBOT_IMAGES[5] = game:HttpGet("https://i.imgur.com/OZUR3EY.png") end
+	function() BBOT_IMAGES[5] = game:HttpGet("https://i.imgur.com/OZUR3EY.png") end,
+	function() BBOT_IMAGES[6] = game:HttpGet("https://i.imgur.com/3HGuyVa.png") end
 })
 
 -- MULTITHREAD DAT LOADING SO FAST!!!!
@@ -645,6 +646,23 @@ do
 		temptable.Thickness = thickness
 		temptable.NumSides = sides
 		temptable.Transparency = clr[4]
+		temptable.Filled = false
+		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		table.insert(tablename, temptable)
+		if not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+	end
+
+	function Draw:FilledCircle(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
+		local temptable = Drawing.new("Circle")
+		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Visible = visible
+		temptable.Radius = size
+		temptable.Thickness = thickness
+		temptable.NumSides = sides
+		temptable.Transparency = clr[4]
+		temptable.Filled = true
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		table.insert(tablename, temptable)
 		if not table.find(allrender, tablename) then
@@ -1380,7 +1398,7 @@ function mp.BBMenuInit(menutable)
 	colorpicker_big_text("copy", false, true, 198 + 36, 103	, colorpickerthingy)
 	local oldcopy = {colorpickerthingy[#colorpickerthingy]}
 
-	colorpicker_filled_rect(false, 197, cp.h - 25, 75, 20, {30, 30, 30, 255}, colorpickerthingy)
+	--colorpicker_filled_rect(false, 197, cp.h - 25, 75, 20, {30, 30, 30, 255}, colorpickerthingy)
 	colorpicker_big_text("[ Apply ]", false, true, 235, cp.h - 23, colorpickerthingy)
 	local applytext = colorpickerthingy[#colorpickerthingy]
 
@@ -4007,6 +4025,36 @@ elseif mp.game == "pf" then --!SECTION
 		ammo = {}
 	}
 
+	local nadeesp = {
+		outer_c = {},
+		inner_c = {},
+		distance = {},
+		text = {},
+		bar_outer = {},
+		bar_inner = {},
+		bar_moving_1 = {},
+		bar_moving_2 = {}
+	}
+
+	for i = 1, 50 do
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.name)
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.ammo)
+	end
+
+	for i = 1, 20 do
+		Draw:FilledCircle(false, 60, 60, 32, 1, 20, {20, 20, 20, 215}, nadeesp.outer_c)
+		Draw:Circle(false, 60, 60, 30, 1, 20, {50, 50, 50, 255}, nadeesp.inner_c)
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, nadeesp.distance)
+		Draw:Image(false, BBOT_IMAGES[6], 20, 20, 23, 30, 1, nadeesp.text)
+		--Draw:OutlinedText("NADE", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, nadeesp.text)
+
+		Draw:OutlinedRect(false, 20, 20, 32, 6, {50, 50, 50, 255}, nadeesp.bar_outer)
+		Draw:FilledRect(false, 20, 20, 30, 4, {30, 30, 30, 255}, nadeesp.bar_inner)
+
+		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nadeesp.bar_moving_1)
+		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nadeesp.bar_moving_2)
+	end
+
 	for i = 1, 35 do
 		for i_ = 1, 2 do
 			Draw:Triangle(false, i_ == 1, nil, nil, nil, {255}, allesp.arrows[i_])
@@ -4025,11 +4073,6 @@ elseif mp.game == "pf" then --!SECTION
 		for i_, v in pairs(allesp.text) do
 			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, v)
 		end
-	end
-
-	for i = 1, 50 do
-		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.name)
-		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.ammo)
 	end
 	
 	local bodysize = { -- for ragdolls
@@ -5176,6 +5219,7 @@ elseif mp.game == "pf" then --!SECTION
 		-- client event hooks! for grenade paths... and other shit (idk where to put this)
 		local clienteventfuncs = getupvalue(client.call, 1)
 		
+		
 		for hash, func in next, clienteventfuncs do
 			local curconstants = getconstants(func)
 			local found = table.find(curconstants, "Frag")
@@ -5187,76 +5231,31 @@ elseif mp.game == "pf" then --!SECTION
 			local found6 = table.find(curconstants, " studs")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
-					if mp:getval("ESP", "Dropped ESP", "Display Nade Paths") then
+					if mp:getval("ESP", "Dropped ESP", "Nade Warning") then
 						local frames = gdata.frames
 						local start = gdata.time
 
-						local container = Instance.new("Model", workspace)
 						local lastframe = frames[#frames]
-						container.Name = "nadeframes"
 						
-						local color = thrower.Team == LOCAL_PLAYER.Team and RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color2"))) or RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color1")))
+						
+						--local color = thrower.Team == LOCAL_PLAYER.Team and RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color2"))) or RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color1")))
 
 						local curtick = tick()
 						local dst = gdata.time - curtick
 						local realtime = curtick + dst * (gdata.time + gdata.blowuptime - curtick) / (gdata.blowuptime + dst)
 						local err = realtime - curtick
 
-						local grenadeid = #mp.activenades + 1
+						--local grenadeid = #mp.activenades + 1
 
-						table.insert(mp.activenades, grenadeid, {
-							thrower = thrower.Name,
-							team = thrower.Team,
-							blowupat = lastframe.p0,
-							blowuptick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err)), -- might need to be tested more
-							start = curtick
-						})
 
-						for k,v in next, frames do 
-							local curframe = Instance.new("Part", workspace)
-							curframe.Anchored = true
-							curframe.CanCollide = false
-							curframe.Material = Enum.Material.Neon
-							curframe.Shape = "Ball"
-							curframe.Size = Vector3.new(1, 1, 1)
-							curframe.Position = v.p0
-							local sphere = Instance.new("SphereHandleAdornment")
-							
-							sphere.Radius = 0.7
-							sphere.AlwaysOnTop = true
-							sphere.Color3 = color
-							sphere.Transparency = 0.3
-							sphere.Parent = curframe
-							sphere.Adornee = curframe
-							sphere.Visible = true
-							sphere.ZIndex = 4
-							curframe.Parent = container
-							if k == #frames then
-								local blowframe = Instance.new("Part", workspace)
-								blowframe.Anchored = true
-								blowframe.CanCollide = false
-								blowframe.Material = Enum.Material.Neon
-								blowframe.Shape = "Ball"
-								blowframe.Size = Vector3.new(2, 2, 2)
-								blowframe.Position = lastframe.p0
-								
-								local sphere1 = Instance.new("SphereHandleAdornment")
-								sphere1.Radius = 0.7 * 2
-								sphere1.AlwaysOnTop = true
-								sphere1.Color3 = RGB(252, 249, 58)
-								sphere1.Transparency = 0.1
-								sphere1.Parent = blowframe
-								sphere1.Adornee = blowframe
-								sphere1.Visible = true
-								sphere1.ZIndex = 5
-								blowframe.Parent = container
-							end
+						if thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
+							table.insert(mp.activenades, {
+								thrower = thrower.Name,
+								blowupat = lastframe.p0,
+								blowuptick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err)), -- might need to be tested more
+								start = curtick
+							})
 						end
-						local timeblowupat = math.abs((tick() + gdata.blowuptime) - tick()) - math.abs(err)
-						delay(timeblowupat, function()
-							container:Destroy()
-							table.remove(mp.activenades, grenadeid)
-						end)
 					end
                   return func(thrower, gtype, gdata, displaytrail)
                end
@@ -6063,6 +6062,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 
 		client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
+		client.cam.basefov = client.char.unaimedfov
 		if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
 			game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
 			game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
@@ -6087,6 +6087,12 @@ elseif mp.game == "pf" then --!SECTION
 		end
 
 		for k, v in pairs(wepesp) do
+			for k1, v1 in pairs(v) do
+				v1.Visible = false
+			end 
+		end
+
+		for k, v in pairs(nadeesp) do
 			for k1, v1 in pairs(v) do
 				v1.Visible = false
 			end 
@@ -6245,7 +6251,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 							local disttext = allesp.text.distance[Index]
 		
-							disttext.Text = tostring(distance).."m" --TODO alan i told you to make this not worldtoscreen based.
+							disttext.Text = tostring(distance).."m"
 							disttext.Visible = true
 							disttext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y + spoty)
 		
@@ -6419,6 +6425,67 @@ elseif mp.game == "pf" then --!SECTION
 						end
 					end)
 				end
+			end
+
+			if mp:getval("ESP", "Dropped ESP", "Nade Warning") then
+				local nadenum = 0
+				local color1 = mp:getval("ESP", "Dropped ESP", "Nade Warning", "color", true)
+				local color2 = RGB(mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[1] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[2] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[3] - 20)
+				for index, nade in pairs(mp.activenades) do
+					local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
+					local nade_dist = math.floor((nade.blowupat - LOCAL_PLAYER.Character.PrimaryPart.Position).Magnitude)
+					local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
+					
+					if nade_on_screen and nade_dist <= 80 then
+
+						nadenum += 1
+						--
+						nadeesp.outer_c[nadenum].Visible = true
+						nadeesp.outer_c[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
+
+						nadeesp.inner_c[nadenum].Visible = true
+						nadeesp.inner_c[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
+
+						nadeesp.text[nadenum].Visible = true
+						nadeesp.text[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 10, math.floor(nadepos.y + 10))
+
+						nadeesp.distance[nadenum].Visible = true
+						nadeesp.distance[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
+						nadeesp.distance[nadenum].Text = tostring(math.floor(nade_dist/5)).. "m"
+
+						nadeesp.bar_outer[nadenum].Visible = true
+						nadeesp.bar_outer[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 16, math.floor(nadepos.y + 50))
+
+						nadeesp.bar_inner[nadenum].Visible = true
+						nadeesp.bar_inner[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
+
+						--print(nade.blowuptick - nade.start)
+
+						nadeesp.bar_moving_1[nadenum].Visible = true
+						nadeesp.bar_moving_1[nadenum].Size = Vector2.new(30 * (1 - nade_percent), 2)
+						nadeesp.bar_moving_1[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
+						nadeesp.bar_moving_1[nadenum].Color = color1
+
+						nadeesp.bar_moving_2[nadenum].Visible = true
+						nadeesp.bar_moving_2[nadenum].Size = Vector2.new(30 * (1 - nade_percent), 2)
+						nadeesp.bar_moving_2[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 53))
+						nadeesp.bar_moving_2[nadenum].Color = color2
+
+
+						local tranz = 1
+						if nade_dist >= 50 then
+							local closedist = nade_dist - 50
+							tranz = 1 - (1 * closedist/30)
+						end
+
+						for k, v in pairs(nadeesp) do
+							v[nadenum].Transparency = tranz
+						end
+
+					end
+				
+				end
+
 			end
 
 			CreateThread(function() -- hand chams and such
@@ -6640,7 +6707,14 @@ elseif mp.game == "pf" then --!SECTION
 	
 	
 	mp.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
-		
+		for index, nade in pairs(mp.activenades) do
+			local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
+			if nade_percent >= 1 then
+				if mp.activenades[index] == nade then
+					table.remove(mp.activenades, index)
+				end
+			end
+		end
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
 			if client.char.spawned then
 				if not client.fakecharacter then
@@ -7492,34 +7566,14 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Nade Range",
+							name = "Nade Warning",
 							value = false,
 							extra = {
 								type = "single colorpicker",
-								name = "Nade Range",
-								color = {255, 255, 255, 255}
+								name = "Slider Color",
+								color = {68, 92, 227},
 							}
 						},
-						{
-							type = "toggle",
-							name = "Nade Fuse Time",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Nade Fuse Time",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Display Nade Paths",
-							value = false,
-							extra = {
-								type = "double colorpicker",
-								name = {"Enemy Grenade", "Team Grenade"},
-								color = {{255, 58, 58}, {100, 255, 58}}
-							}
-						}
 					}
 				},
 			}
@@ -7807,11 +7861,6 @@ elseif mp.game == "pf" then --!SECTION
 					name = "Extra",
 					autopos = "right",
 					content = {
-						{
-							type = "toggle", 
-							name = "Anti Votekick",
-							value = false
-						},
 						{
 							type = "toggle",
 							name = "Auto Spot",
