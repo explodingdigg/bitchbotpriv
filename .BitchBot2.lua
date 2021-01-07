@@ -348,7 +348,7 @@ end
 do -- table shitz
 	setreadonly(table, false)
 
-	table.contains = function(table, element)
+	table.find = function(table, element)
 		for _, value in pairs(table) do
 			if value == element then
 				return true
@@ -532,7 +532,7 @@ do
 		temptable.Thickness = 0
 		temptable.Transparency = clr[4] / 255
 		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
+		if not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -547,7 +547,7 @@ do
 		temptable.Thickness = 0
 		temptable.Transparency = clr[4] / 255
 		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
+		if not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -561,7 +561,7 @@ do
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		temptable.Transparency = clr[4] / 255
 		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
+		if not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -574,7 +574,7 @@ do
 		temptable.Transparency = transparency
 		temptable.Data = imagedata
 		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
+		if not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -591,7 +591,7 @@ do
 		temptable.Outline = false
 		temptable.Font = font
 		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
+		if not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -613,7 +613,7 @@ do
 		else
 			return temptable
 		end
-		if not table.contains(allrender, tablename) then
+		if not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -632,7 +632,7 @@ do
 		end
 		temptable.Filled = filled
 		table.insert(tablename, temptable)
-		if tablename and not table.contains(allrender, tablename) then
+		if tablename and not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -647,7 +647,7 @@ do
 		temptable.Transparency = clr[4]
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
+		if not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
 	end
@@ -3342,10 +3342,10 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 			if v == LOCAL_PLAYER then
 				plyrstatus[1] = "Local Player"
 				plyrstatus[2] = RGB(66, 135, 245)
-			elseif table.contains(mp.friends, v.Name) then
+			elseif table.find(mp.friends, v.Name) then
 				plyrstatus[1] = "Friend"
 				plyrstatus[2] = RGB(0, 255, 0)
-			elseif table.contains(mp.priority, v.Name) then
+			elseif table.find(mp.priority, v.Name) then
 				plyrstatus[1] = "Priority"
 				plyrstatus[2] = RGB(255, 210, 0)
 			end
@@ -3635,10 +3635,10 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					if selected_plyr ~= nil then
 						--print(LOCAL_MOUSE.x - mp.x, LOCAL_MOUSE.y - mp.y)
 						if mp:mouse_in_menu(28, 68, 448, 238) then
-							if table.contains(mp.friends, selected_plyr.Name) then
+							if table.find(mp.friends, selected_plyr.Name) then
 								mp.options["Settings"]["Player List"]["Player Status"][1] = 2
 								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
-							elseif table.contains(mp.priority, selected_plyr.Name) then
+							elseif table.find(mp.priority, selected_plyr.Name) then
 								mp.options["Settings"]["Player List"]["Player Status"][1] = 3
 								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
 							else
@@ -3656,11 +3656,11 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 								end
 							end
 						elseif mp:getval("Settings", "Player List", "Player Status") == 2 then
-							if not table.contains(mp.friends, selected_plyr.Name) then
+							if not table.find(mp.friends, selected_plyr.Name) then
 								table.insert(mp.friends, selected_plyr.Name)
 							end
 						elseif mp:getval("Settings", "Player List", "Player Status") == 3 then
-							if not table.contains(mp.priority, selected_plyr.Name) then
+							if not table.find(mp.priority, selected_plyr.Name) then
 								table.insert(mp.priority, selected_plyr.Name)
 							end
 						end
@@ -4450,12 +4450,17 @@ elseif mp.game == "pf" then --!SECTION
 							end
 						else
 							for i = 0, 1 do
-	
 								local adorn = i == 0 and Part.c88 or Part.c99
+								if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(mp.priority, Player.Name) then
+									col = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
+									xqz = bColor:Mult(col, 0.6)
+								elseif mp:getval("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(mp.friends, Player.Name) then
+									col = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
+									xqz = bColor:Mult(col, 0.6)
+								end
 								adorn.Color3 = i == 0 and col or xqz
 								adorn.Visible = enabled
 								adorn.Transparency = i == 0 and vTransparency or ivTransparency
-	
 							end
 						end
 					end
@@ -4749,7 +4754,7 @@ elseif mp.game == "pf" then --!SECTION
 			
 
 			for i, player in next, players do
-				if table.contains(mp.friends, player.Name) then continue end
+				if table.find(mp.friends, player.Name) then continue end
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
@@ -4845,7 +4850,7 @@ elseif mp.game == "pf" then --!SECTION
 			local results = {}
 	
 			for i, ply in ipairs(Players:GetPlayers()) do
-				if table.contains(mp.friends, ply.Name) then continue end
+				if table.find(mp.friends, ply.Name) then continue end
 	
 				if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
 					local parts = client.replication.getbodyparts(ply)
@@ -5682,7 +5687,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if args[1] == "bullethit" and mp:getval("Misc", "Extra", "Suppress Only") then return end
 			if args[1] == "bullethit" then
-				if table.contains(mp.friends, args[2].Name) then return end
+				if table.find(mp.friends, args[2].Name) then return end
 			end
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
@@ -5955,7 +5960,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 
 			for i, Player in pairs(players) do
-				if table.contains(mp.friends, Player.Name) then continue end
+				if table.find(mp.friends, Player.Name) then continue end
 				if Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
 					local Parts = client.replication.getbodyparts(Player)
 					if Parts then
@@ -6098,7 +6103,7 @@ elseif mp.game == "pf" then --!SECTION
 			
 			local players = Players:GetPlayers()
 			-- table.sort(players, function(p1, p2)
-			-- 	return table.contains(mp.priority, p2.Name) ~= table.contains(mp.priority, p1.Name) and table.contains(mp.priority, p2.Name) == true and table.contains(mp.priority, p1.Name) == false
+			-- 	return table.find(mp.priority, p2.Name) ~= table.find(mp.priority, p1.Name) and table.find(mp.priority, p2.Name) == true and table.find(mp.priority, p1.Name) == false
 			-- end)	
 
 			local priority_color = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
@@ -6262,7 +6267,7 @@ elseif mp.game == "pf" then --!SECTION
 						end
 						--da colourz !!! :D 🔥🔥🔥🔥
 
-						if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.contains(mp.priority, Player.Name) then
+						if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(mp.priority, Player.Name) then
 							
 							allesp.text.name[Index].Color = priority_color
 							allesp.text.name[Index].Transparency = priority_trans
@@ -6281,7 +6286,7 @@ elseif mp.game == "pf" then --!SECTION
 								line.Transparency = priority_trans
 							end
 						
-						elseif mp:getval("ESP", "ESP Settings", "Highlight Friends") and table.contains(mp.friends, Player.Name) then
+						elseif mp:getval("ESP", "ESP Settings", "Highlight Friends") and table.find(mp.friends, Player.Name) then
 
 							allesp.text.name[Index].Color = friend_color
 							allesp.text.name[Index].Transparency = friend_trans
@@ -8055,10 +8060,10 @@ elseif mp.game == "pf" then --!SECTION
 				if v == LOCAL_PLAYER then
 					plyrstatus[1] = "Local Player"
 					plyrstatus[2] = RGB(66, 135, 245)
-				elseif table.contains(mp.friends, v.Name) then
+				elseif table.find(mp.friends, v.Name) then
 					plyrstatus[1] = "Friend"
 					plyrstatus[2] = RGB(0, 255, 0)
-				elseif table.contains(mp.priority, v.Name) then
+				elseif table.find(mp.priority, v.Name) then
 					plyrstatus[1] = "Priority"
 					plyrstatus[2] = RGB(255, 210, 0)
 				end
@@ -8126,10 +8131,10 @@ elseif mp.game == "pf" then --!SECTION
 					if selected_plyr ~= nil then
 						--print(LOCAL_MOUSE.x - mp.x, LOCAL_MOUSE.y - mp.y)
 						if mp:mouse_in_menu(28, 68, 448, 238) then
-							if table.contains(mp.friends, selected_plyr.Name) then
+							if table.find(mp.friends, selected_plyr.Name) then
 								mp.options["Settings"]["Player List"]["Player Status"][1] = 2
 								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
-							elseif table.contains(mp.priority, selected_plyr.Name) then
+							elseif table.find(mp.priority, selected_plyr.Name) then
 								mp.options["Settings"]["Player List"]["Player Status"][1] = 3
 								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
 							else
@@ -8147,11 +8152,11 @@ elseif mp.game == "pf" then --!SECTION
 								end
 							end
 						elseif mp:getval("Settings", "Player List", "Player Status") == 2 then
-							if not table.contains(mp.friends, selected_plyr.Name) then
+							if not table.find(mp.friends, selected_plyr.Name) then
 								table.insert(mp.friends, selected_plyr.Name)
 							end
 						elseif mp:getval("Settings", "Player List", "Player Status") == 3 then
-							if not table.contains(mp.priority, selected_plyr.Name) then
+							if not table.find(mp.priority, selected_plyr.Name) then
 								table.insert(mp.priority, selected_plyr.Name)
 							end
 						end
