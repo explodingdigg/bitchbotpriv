@@ -1,5 +1,5 @@
 local mp
-
+-- yo yo yo
 local loadstart = tick()
 
 function map(X, A, B, C, D)
