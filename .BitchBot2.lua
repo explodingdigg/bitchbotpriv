@@ -937,7 +937,7 @@ function mp.BBMenuInit(menutable)
 		end
 		Draw:MenuFilledRect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35, 255}, bbmenu)
 
-		Draw:MenuBigText("BitchBot", true, false, 6, 6, bbmenu)
+		Draw:MenuBigText("E-Hub Premium $20", true, false, 6, 6, bbmenu)
 
 		Draw:MenuOutlinedRect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
 		Draw:MenuOutlinedRect(true, 9, 23, mp.w - 18, mp.h - 32, {20, 20, 20, 255}, bbmenu)
@@ -3049,17 +3049,17 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						{
 							type = "toggle",
 							name = "Highlight Friends",
-							value = false,
+							value = true,
 							extra = {
 								type = "single colorpicker",
 								name = "Friended Players",
-								color = {0, 255, 0, 255}
+								color = {0, 255, 255, 255}
 							}
 						},
 						{
 							type = "toggle",
 							name = "Highlight Priority",
-							value = false,
+							value = true,
 							extra = {
 								type = "single colorpicker",
 								name = "Priority Players",
@@ -4041,6 +4041,11 @@ elseif mp.game == "pf" then --!SECTION
 	}
 
 	local client = {}
+	local legitbot = {}
+	local misc = {}
+	local ragebot = {}
+	local camera = {}
+
 
 	client.loadedguns = {}
 
@@ -4457,6 +4462,9 @@ elseif mp.game == "pf" then --!SECTION
 								elseif mp:getval("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(mp.friends, Player.Name) then
 									col = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
 									xqz = bColor:Mult(col, 0.6)
+								elseif mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
+									col = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+									xqz = bColor:Mult(col, 0.6)
 								end
 								adorn.Color3 = i == 0 and col or xqz
 								adorn.Visible = enabled
@@ -4528,7 +4536,6 @@ elseif mp.game == "pf" then --!SECTION
 	
 	end
 	
-	local camera = {}
 	do--ANCHOR camera function definitions.
 	
 		function camera:GetGun()
@@ -4620,9 +4627,6 @@ elseif mp.game == "pf" then --!SECTION
 	
 	end
 	
-	local legitbot = {}
-	local misc = {}
-	local ragebot = {}
 	do--ANCHOR ragebot definitions
 		ragebot.sprint = true
 		ragebot.shooting = false
@@ -5088,9 +5092,9 @@ elseif mp.game == "pf" then --!SECTION
 						for k, PlayerName in pairs(mp.priority) do
 							table.insert(priority_list, game.Players[PlayerName])
 						end
-						local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
+						local targetPart, targetPlayer, fov = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
 						if not targetPart then 
-							local targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+							targetPart, targetPlayer, fov  = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 						end
 						ragebot:AimAtTarget(targetPart, targetPlayer)
 					end)
@@ -5627,31 +5631,6 @@ elseif mp.game == "pf" then --!SECTION
 	
 	
 		end
-
-		function misc:CollectTags()
-			if not mp:getval("Misc", "Extra", "Collect Dog Tags") then return end
-			local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
-			if rootpart then
-				local dogTag = workspace.Ignore.GunDrop:FindFirstChild("DogTag")
-				if dogTag then
-					client.net:send("capturedogtag", dogTag)
-					local oldsend = client.net.send
-					client.net.send = function(self, e, ...)
-						if e == "repupdate" then return end
-						oldsend(self, e, ...)
-					end
-					do
-						local oldpos = rootpart.CFrame
-						
-						rootpart.CFrame = dogTag.Tag.CFrame
-						oldsend(oldsend, "capturedogtag", dogTag)
-						wait()
-						rootpart.CFrame = oldpos
-					end
-					client.net.send = oldsend
-				end
-			end
-		end
 	
 		function misc:MainLoop()
 			if keybindtoggles.crash then return end
@@ -5672,7 +5651,6 @@ elseif mp.game == "pf" then --!SECTION
 					rootpart.Anchored = true
 				end
 			end
-			misc:CollectTags()
 	
 	
 		end
@@ -5823,7 +5801,8 @@ elseif mp.game == "pf" then --!SECTION
 					local hitscan = mp:getval("Legit", "Aim Assist", "Force Priority Hitbox") and {hitboxPriority} or {head = true, torso = true, rleg = true, lleg = true, rarm = true, larm = true}
 		
 					if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
-						local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+						legitbot.target = player
 						local smoothing = mp:getval("Legit", "Aim Assist", "Smoothing Factor")
 						if targetPart then
 							if closest < fov and closest > dzFov then
@@ -5838,7 +5817,7 @@ elseif mp.game == "pf" then --!SECTION
 					local hitboxPriority = hnum == 1 and "head" or hnum == 2 and "torso" or hnum == 3 and false
 					local hitscan = misc:GetParts(mp:getval("Legit", "Bullet Redirection", "Hitboxes"))
 		
-					local targetPart, closest = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+					local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 					if targetPart and closest < fov then
 						legitbot.silentVector = legitbot:SilentAimAtTarget(targetPart)
 					else
@@ -6111,6 +6090,9 @@ elseif mp.game == "pf" then --!SECTION
 
 			local friend_color = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
 			local friend_trans = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color")[4]/255
+			
+			local target_color = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+			local target_trans = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
 
 			for Index, Player in ipairs(players) do
 				CreateThread(function()
@@ -6304,8 +6286,27 @@ elseif mp.game == "pf" then --!SECTION
 								line.Color = friend_color
 								line.Transparency = friend_trans
 							end
+						elseif mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target)  then
 
+							allesp.text.name[Index].Color = target_color
+							allesp.text.name[Index].Transparency = target_trans
+
+							allesp.box[2][Index].Color = target_color
+
+							allesp.text.weapon[Index].Color = target_color
+							allesp.text.weapon[Index].Transparency = target_trans
+
+							allesp.text.distance[Index].Color = target_color
+							allesp.text.distance[Index].Transparency = target_trans
+
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+								line.Color = target_color
+								line.Transparency = target_trans
+							end
 						else
+
+							
 							allesp.text.name[Index].Color = mp:getval("ESP", GroupBox, "Name", "color", true) -- RGB(mp.options["ESP"][GroupBox]["Name"][5][1][1], mp.options["ESP"][GroupBox]["Name"][5][1][2], mp.options["ESP"][GroupBox]["Name"][5][1][3])
 							allesp.text.name[Index].Transparency = mp:getval("ESP", GroupBox, "Name", "color")[4]/255
 
@@ -7428,17 +7429,17 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Highlight Friends",
-							value = false,
+							value = true,
 							extra = {
 								type = "single colorpicker",
 								name = "Friended Players",
-								color = {0, 255, 0, 255}
+								color = {0, 255, 255, 255}
 							}
 						},
 						{
 							type = "toggle",
 							name = "Highlight Priority",
-							value = false,
+							value = true,
 							extra = {
 								type = "single colorpicker",
 								name = "Priority Players",
@@ -7792,7 +7793,7 @@ elseif mp.game == "pf" then --!SECTION
 					content = {
 						{
 							type = "toggle", 
-							name = "Collect Dog Tags",
+							name = "Anti Votekick",
 							value = false
 						},
 						{
