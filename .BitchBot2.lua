@@ -7267,7 +7267,7 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "dropbox",
 							name = "Force Stance",
-							value = 4,
+							value = 1,
 							values = {"Off", "Stand", "Crouch", "Prone"}
 						},
 						{
