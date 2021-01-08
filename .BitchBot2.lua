@@ -174,6 +174,7 @@ do
 	
 	
 	renderStepped = game.RunService.RenderStepped:Connect(function()
+		Camera = workspace.CurrentCamera
 		local smallest = math.huge
 		for k, v in pairs(notes) do
 			if v.enabled then
@@ -4599,7 +4600,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 		function camera:GetFOV(Part, originPart)
 			originPart = originPart or workspace.Camera
-			local directional = CFrame.new(originPart.Position, Part.Position)
+			local directional = CFrame.new(originPart.CFrame.Position, Part.Position)
 			local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
 			return math.deg(ang.Magnitude)
 		end
@@ -6135,7 +6136,7 @@ elseif mp.game == "pf" then --!SECTION
 
 		----------
 	
-		if client.cam.type ~= "menu" or client.cam.isspectating() then
+		if client.cam.type ~= "menu" then
 			
 			local players = Players:GetPlayers()
 			-- table.sort(players, function(p1, p2)
@@ -6468,7 +6469,7 @@ elseif mp.game == "pf" then --!SECTION
 				local color2 = RGB(mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[1] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[2] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[3] - 20)
 				for index, nade in pairs(mp.activenades) do
 					local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
-					local headpos = LOCAL_PLAYER.Character.Head.Position
+					local headpos = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Head.Position or Vector3.new()
 					local nade_dist = (nade.blowupat - headpos).Magnitude
 					local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
 					
