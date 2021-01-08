@@ -5231,7 +5231,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found6 = table.find(curconstants, " studs")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
-					if mp:getval("ESP", "Dropped ESP", "Nade Warning") then
+					if mp:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
 						local frames = gdata.frames
 						local start = gdata.time
 
