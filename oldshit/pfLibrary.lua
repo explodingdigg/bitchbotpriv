@@ -36,7 +36,7 @@ for k, v in pairs(getgc(true)) do
 		end
 	end
 end
-print(client.cam.isspectating())
+table.foreach(client.cam, print)
 -- local oldsend = client.net.send
 
 -- client.net.send = function(self, name, ...)
