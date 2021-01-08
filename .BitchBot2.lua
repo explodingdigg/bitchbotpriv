@@ -163,8 +163,8 @@ do
 		local color = (mp and mp.getval) and customcolor or mp:getval("Settings", "Menu Settings", "Menu Accent") and Color3.fromRGB(unpack(mp:getval("Settings", "Menu Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
 		
 		Note.drawings.text = Text(t)
-		if Note.drawings.text.TextBounds.X + 7 > Note.size.X then -- expand the note size to fit if it's less than the default size
-			Note.size = Vector2.new(Note.drawings.text.TextBounds.X + 7, Note.size.y)
+		if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
+			Note.size = Vector2.new(Note.drawings.text.TextBounds.x + 7, Note.size.y)
 		end
 		Note.drawings.line = Rectangle(1, Note.size.y - 2, true, color) 
 	
@@ -333,8 +333,8 @@ local ButtonPressed = Instance.new("BindableEvent")
 local PATHFINDING = game:GetService("PathfindingService")
 local GRAVITY = Vector3.new(0,-192.6, 0)
 
-mp.x = math.floor((SCREEN_SIZE.X/2) - (mp.w/2))
-mp.y = math.floor((SCREEN_SIZE.Y/2) - (mp.h/2))
+mp.x = math.floor((SCREEN_SIZE.x/2) - (mp.w/2))
+mp.y = math.floor((SCREEN_SIZE.y/2) - (mp.h/2))
 
 local function IsKeybindDown(tab, group, name, on_nil)
 	local key = mp:getval(tab, group, name, "keybind")
@@ -406,8 +406,8 @@ do -- vector functions
 		--y2 = sin β x1 + cos β y1
 		local sin = math.sin(Rads)
 		local cos = math.cos(Rads)
-		local x = (cos * vec.X) - (sin * vec.Y)
-		local y = (sin * vec.X) + (cos * vec.Y)
+		local x = (cos * vec.x) - (sin * vec.y)
+		local y = (sin * vec.x) + (cos * vec.y)
 	
 		return Vector2.new(x, y).Unit * Vec.Magnitude
 	end
@@ -936,7 +936,7 @@ do
 
 end
 
-local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.X/16), math.floor(SCREEN_SIZE.Y/16), 13, true, {255, 50, 200, 255}, {0, 0, 0})
+local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.x/16), math.floor(SCREEN_SIZE.y/16), 13, true, {255, 50, 200, 255}, {0, 0, 0})
 
 function mp.BBMenuInit(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
@@ -1657,7 +1657,7 @@ function mp.BBMenuInit(menutable)
 	end
 
 	function mp:mouse_in_menu(x, y, width, height)
-		if LOCAL_MOUSE.X > mp.x + x and LOCAL_MOUSE.X < mp.x + x + width and LOCAL_MOUSE.y > mp.y - 36 + y and LOCAL_MOUSE.Y < mp.y - 36 + y + height then
+		if LOCAL_MOUSE.x > mp.x + x and LOCAL_MOUSE.x < mp.x + x + width and LOCAL_MOUSE.y > mp.y - 36 + y and LOCAL_MOUSE.y < mp.y - 36 + y + height then
 			return true
 		else
 			return false
@@ -1665,7 +1665,7 @@ function mp.BBMenuInit(menutable)
 	end
 
 	function mp:mouse_in_colorpicker(x, y, width, height)
-		if LOCAL_MOUSE.X > cp.x + x and LOCAL_MOUSE.X < cp.x + x + width and LOCAL_MOUSE.y > cp.y - 36 + y and LOCAL_MOUSE.Y < cp.y - 36 + y + height then
+		if LOCAL_MOUSE.x > cp.x + x and LOCAL_MOUSE.x < cp.x + x + width and LOCAL_MOUSE.y > cp.y - 36 + y and LOCAL_MOUSE.y < cp.y - 36 + y + height then
 			return true
 		else
 			return false
@@ -2561,7 +2561,7 @@ function mp.BBMenuInit(menutable)
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "slider" then
 								if v2[5] then
-									v2[1] = math.floor((v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.X - mp.x - v2[3][1])/v2[3][3])) + v2[6][1]
+									v2[1] = math.floor((v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - mp.x - v2[3][1])/v2[3][3])) + v2[6][1]
 									if v2[1] < v2[6][1] then
 										v2[1] = v2[6][1]
 									elseif v2[1] > v2[6][2] then
@@ -2664,17 +2664,17 @@ function mp.BBMenuInit(menutable)
 				end
 			end
 
-			if ((LOCAL_MOUSE.X > mp.x and LOCAL_MOUSE.X < mp.x + mp.w and LOCAL_MOUSE.y > mp.y - 32 and LOCAL_MOUSE.Y < mp.y - 11) or dragging) and not dontdrag then
+			if ((LOCAL_MOUSE.x > mp.x and LOCAL_MOUSE.x < mp.x + mp.w and LOCAL_MOUSE.y > mp.y - 32 and LOCAL_MOUSE.y < mp.y - 11) or dragging) and not dontdrag then
 				if mp.mousedown then
 					if dragging == false then
-						clickspot_x = LOCAL_MOUSE.X
-						clickspot_y = LOCAL_MOUSE.Y - 36
+						clickspot_x = LOCAL_MOUSE.x
+						clickspot_y = LOCAL_MOUSE.y - 36
 						original_menu_X = mp.x
 						original_menu_y = mp.y
 						dragging = true
 					end
-					mp.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.X
-					mp.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.Y - 36
+					mp.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.x
+					mp.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.y - 36
 					mp:set_menu_pos(mp.x, mp.y)
 				else
 					dragging = false
@@ -2686,17 +2686,17 @@ function mp.BBMenuInit(menutable)
 			end
 			if mp.colorpicker_open then
 				if cp.dragging_m then
-					set_dragbar_m(math.clamp(LOCAL_MOUSE.X, cp.x + 12, cp.x + 167) - 2, math.clamp(LOCAL_MOUSE.Y + 36, cp.y + 25, cp.y + 180) - 2)
+					set_dragbar_m(math.clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - 2, math.clamp(LOCAL_MOUSE.y + 36, cp.y + 25, cp.y + 180) - 2)
 
 					cp.hsv.s = (math.clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - cp.x - 12)/155
-					cp.hsv.v = 1 - ((math.clamp(LOCAL_MOUSE.Y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
+					cp.hsv.v = 1 - ((math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
 					newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 				elseif cp.dragging_r then
-					set_dragbar_r(cp.x + 175, math.clamp(LOCAL_MOUSE.Y + 36, cp.y + 23, cp.y + 178))
+					set_dragbar_r(cp.x + 175, math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178))
 
-					maincolor.Color = Color3.fromHSV(1 - ((math.clamp(LOCAL_MOUSE.Y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155), 1, 1)
+					maincolor.Color = Color3.fromHSV(1 - ((math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155), 1, 1)
 
-					cp.hsv.h = 1 - ((math.clamp(LOCAL_MOUSE.Y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
+					cp.hsv.h = 1 - ((math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
 					newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 				elseif cp.dragging_b then
 					set_dragbar_b(math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ), cp.y + 188)
@@ -2751,14 +2751,14 @@ function mp.BBMenuInit(menutable)
 		wm.width = (#wm.textString) * 7 + 10
 		wm.rect = {}
 	
-		Draw:FilledRect(false, wm.pos.X, wm.pos.Y + 1, wm.width, 2, {mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[2] - 40, 255}, wm.rect)
-		Draw:FilledRect(false, wm.pos.X, wm.pos.Y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
-		Draw:FilledRect(false, wm.pos.X, wm.pos.Y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
+		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 1, wm.width, 2, {mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[2] - 40, 255}, wm.rect)
+		Draw:FilledRect(false, wm.pos.x, wm.pos.y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
+		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
 		for i = 0, 14 do
-			Draw:FilledRect(false, wm.pos.X, wm.pos.Y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
+			Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
 		end
-		Draw:OutlinedRect(false, wm.pos.X, wm.pos.Y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
-		Draw:OutlinedText(wm.textString, 2, false, wm.pos.X + 5, wm.pos.Y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
+		Draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
+		Draw:OutlinedText(wm.textString, 2, false, wm.pos.x + 5, wm.pos.y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
 	end
 	--ANCHOR watermak
 	for k, v in pairs(mp.watermark.rect) do
@@ -3475,24 +3475,24 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					local travel = Vector3.new()
 					local looking = Workspace.CurrentCamera.CFrame.lookVector
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
-						travel += Vector3.new(looking.X,0,looking.Z)
+						travel += Vector3.new(looking.x,0,looking.Z)
 					end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
-						travel -= Vector3.new(looking.X,0,looking.Z)
+						travel -= Vector3.new(looking.x,0,looking.Z)
 					end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-						travel += Vector3.new(-looking.Z, 0, looking.X)
+						travel += Vector3.new(-looking.Z, 0, looking.x)
 					end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-						travel += Vector3.new(looking.Z, 0, -looking.X)
+						travel += Vector3.new(looking.Z, 0, -looking.x)
 					end
 
 					travel = travel.Unit
 
 					
-					local newDir = Vector3.new(travel.X * speed, rootpart.Velocity.Y, travel.Z * speed)
+					local newDir = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.Z * speed)
 
-					if travel.Unit.X == travel.Unit.X then
+					if travel.Unit.x == travel.Unit.x then
 						rootpart.Velocity = newDir
 					end
 				end
@@ -3525,14 +3525,14 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				do
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W)         then travel += looking                               end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S)         then travel -= looking                               end
-					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D)         then travel += Vector3.new(-looking.Z, 0, looking.X) end
-					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A)         then travel += Vector3.new(looking.Z, 0, -looking.X) end
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D)         then travel += Vector3.new(-looking.Z, 0, looking.x) end
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A)         then travel += Vector3.new(looking.Z, 0, -looking.x) end
 
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space)     then travel += Vector3.new(0, 1, 0)                  end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then travel -= Vector3.new(0, 1, 0)                  end
 				end
 
-				if travel.Unit.X == travel.Unit.X then
+				if travel.Unit.x == travel.Unit.x then
 					rootpart.Anchored = false
 					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
 				else
@@ -3760,11 +3760,11 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		if mp:getval("Visuals", "Misc Visuals", "Custom Crosshair") then
 			local size = mp:getval("Visuals", "Misc Visuals", "Crosshair Size")
 			if mp:getval("Visuals", "Misc Visuals", "Crosshair Position") == 1 then
-				mp.crosshair.inner[1].Position = Vector2.new(SCREEN_SIZE.X/2 - size, SCREEN_SIZE.Y/2)
-				mp.crosshair.inner[2].Position = Vector2.new(SCREEN_SIZE.X/2, SCREEN_SIZE.Y/2 - size)
+				mp.crosshair.inner[1].Position = Vector2.new(SCREEN_SIZE.x/2 - size, SCREEN_SIZE.y/2)
+				mp.crosshair.inner[2].Position = Vector2.new(SCREEN_SIZE.x/2, SCREEN_SIZE.y/2 - size)
 
-				mp.crosshair.outline[1].Position = Vector2.new(SCREEN_SIZE.X/2 - size - 1, SCREEN_SIZE.Y/2 - 1)
-				mp.crosshair.outline[2].Position = Vector2.new(SCREEN_SIZE.X/2 - 1, SCREEN_SIZE.Y/2 - 1 - size)
+				mp.crosshair.outline[1].Position = Vector2.new(SCREEN_SIZE.x/2 - size - 1, SCREEN_SIZE.y/2 - 1)
+				mp.crosshair.outline[2].Position = Vector2.new(SCREEN_SIZE.x/2 - 1, SCREEN_SIZE.y/2 - 1 - size)
 			else
 				-- INPUT_SERVICE.MouseIconEnabled = false
 				mp.crosshair.inner[1].Position = Vector2.new(LOCAL_MOUSE.x - size, LOCAL_MOUSE.y + 36)
@@ -3785,8 +3785,8 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 			local aimfov = mp:getval("Aimbot", "Aimbot", "Aimbot FOV")
 			if mp:getval("Aimbot", "Aimbot", "FOV Calculation") == 2 then
-				mp.fovcircle[1].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.Y
-				mp.fovcircle[2].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.Y
+				mp.fovcircle[1].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.y
+				mp.fovcircle[2].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.y
 			elseif mp.open then
 				mp.fovcircle[1].Radius = aimfov
 				mp.fovcircle[2].Radius = aimfov
@@ -3849,12 +3849,12 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1.3) + cam.UpVector)
 				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 3) - cam.UpVector)
 				
-				local minY = math.abs(bottom.Y - top.Y)
-				local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.X - top.X) * 2, 0, minY), minY / 2))
+				local minY = math.abs(bottom.y - top.y)
+				local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
 				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 
 				if top_isrendered or bottom_isrendered then
-					local boxtop = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - sizeX * 0.5), math.floor(math.min(top.Y, bottom.Y)))
+					local boxtop = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - sizeX * 0.5), math.floor(math.min(top.y, bottom.y)))
 					local boxsize = {w = sizeX, h =  sizeY}
 
 					if mp:getval("Visuals", "Player ESP", "Head Dot") then
@@ -4477,8 +4477,8 @@ elseif mp.game == "pf" then --!SECTION
 									end
 								else
 									box = Instance.new("CylinderHandleAdornment", Part)
-									box.Height = Part.Size.Y + 0.3
-									box.Radius = Part.Size.X * 0.5 + 0.2
+									box.Height = Part.Size.y + 0.3
+									box.Radius = Part.Size.x * 0.5 + 0.2
 									if i == 0 then
 										box.Height -= 0.2
 										box.Radius -= 0.2
@@ -4644,7 +4644,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 		function camera:GetAngles()
 			local pitch, yaw = Camera.CFrame:ToOrientation()
-			return {["pitch"] = pitch, ["yaw"] = yaw}
+			return {["pitch"] = pitch, ["yaw"] = yaw, ["x"] = pitch, ["y"] = yaw}
 		end
 		
 		function camera:GetAnglesTo(Pos, useVector)
@@ -4661,11 +4661,11 @@ elseif mp.game == "pf" then --!SECTION
 	
 		function camera:GetTrajectory(pos, origin)
 	
-	
-			origin = origin or Camera.CFrame.Position
-	
-			return origin + client.trajectory(origin, GRAVITY, pos, client.logic.currentgun.data.bulletspeed)
-	
+			if client.logic.currentgun and client.logic.currentgun.data then
+				origin = origin or Camera.CFrame.Position
+		
+				return origin + client.trajectory(origin, GRAVITY, pos, client.logic.currentgun.data.bulletspeed)
+			end
 	
 		end
 	
@@ -4737,8 +4737,9 @@ elseif mp.game == "pf" then --!SECTION
 					diameter = math.min(distanceTarget, diameter)
 					sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
 					targetParts = {[sphereHitbox] = sphereHitbox}
-				else
-					targetParts = GetPartTable(client.replication.getbodyparts(target))
+				elseif client.hud:isplayeralive(target) then
+					local oldparts = client.replication.getbodyparts(target)
+					targetParts = GetPartTable(oldparts)
 				end
 				local origin = customOrigin or client.cam.cframe.p
 		
@@ -5612,7 +5613,7 @@ elseif mp.game == "pf" then --!SECTION
 					travel -= Vector3.new(0,1,0)
 				end
 				
-				if travel.Unit.X == travel.Unit.X then
+				if travel.Unit.x == travel.Unit.x then
 					rootpart.Anchored = false
 					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
 				else
@@ -5653,15 +5654,15 @@ elseif mp.game == "pf" then --!SECTION
 					travel -= rightVector
 				end
 	
-				travel = Vector2.new(travel.X, travel.Z).Unit
+				travel = Vector2.new(travel.x, travel.Z).Unit
 	
-				if travel.X == travel.X then
+				if travel.x == travel.x then
 					if type == 3 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
 						return
 					elseif type == 4 and not humanoid.Jump then
 						return
 					end
-					rootpart.Velocity = Vector3.new(travel.X * speed, rootpart.Velocity.Y, travel.Y * speed)
+					rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
 				end
 			end
 		
@@ -5775,8 +5776,8 @@ elseif mp.game == "pf" then --!SECTION
 			if args[1] == "repupdate" and mp:getval("Rage", "Anti Aim", "Enabled") then
 				--args[2] = ragebot:AntiNade(args[2])
 				stutterFrames += 1
-				local pitch = args[3].X
-				local yaw = args[3].Y
+				local pitch = args[3].x
+				local yaw = args[3].y
 				local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
 				local yawChoice = mp:getval("Rage", "Anti Aim", "Yaw")
 				local spinRate = mp:getval("Rage", "Anti Aim", "Spin Rate")
@@ -5859,7 +5860,7 @@ elseif mp.game == "pf" then --!SECTION
 					local dzFov = mp:getval("Legit", "Aim Assist", "Deadzone FOV")/10
 		
 					local hitboxPriority = mp:getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
-					local hitscan = mp:getval("Legit", "Aim Assist", "Force Priority Hitbox") and {hitboxPriority} or {head = true, torso = true, rleg = true, lleg = true, rarm = true, larm = true}
+					local hitscan = misc:GetParts(mp:getval("Legit", "Aim Assist", "Hitboxes"))
 		
 					if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
 						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
@@ -5918,7 +5919,7 @@ elseif mp.game == "pf" then --!SECTION
 				local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
 				Pos += rcsdelta
 			end
-			local aimbotMovement = Vector2.new(Pos.X - LOCAL_MOUSE.X, (Pos.Y) - LOCAL_MOUSE.Y)
+			local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y)
 
 			Move_Mouse(aimbotMovement)
 			
@@ -5949,15 +5950,9 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	
 		local function isValidTarget(Bone, Player)
-			if mp:getval("Legit", "Aim Assist", "Auto Wallbang") then
-				local dir = camera:GetTrajectory(Bone.Position, client.cam.cframe.p) - client.cam.cframe.p
-				if ragebot:CanPenetrate(LOCAL_PLAYER, Player, dir, Bone.Position)  then
-					return Bone
-				end
-			elseif camera:IsVisible(Bone, Bone.Parent) then
+			if camera:IsVisible(Bone, Bone.Parent) then
 				return Bone
 			end
-			return false
 		end
 			--[[
 				if mp:getval("Legit", "Aim Assist", "Auto Wallbang") then
@@ -6183,15 +6178,15 @@ elseif mp.game == "pf" then --!SECTION
 					local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 					local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 		
-					-- local minY = math.abs(bottom.Y - top.Y)
-					-- local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.X - top.X) * 2, 0, minY), minY / 2))
+					-- local minY = math.abs(bottom.y - top.y)
+					-- local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
 					-- local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 		
 					-- local boxSize = Vector2.new(sizeX, sizeY)
 					local _width = math.floor(math.abs(top.x - bottom.x))
 					local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width/2))
 					local boxSize = Vector2.new(math.max(_height/1.5, _width), _height)
-					local boxPosition = Vector2.new(math.floor(top.X * 0.5 + bottom.X * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.Y, bottom.Y)))
+					local boxPosition = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.y, bottom.y)))
 
 					local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 					local health = math.ceil(client.hud:getplayerhealth(Player))
@@ -6212,7 +6207,7 @@ elseif mp.game == "pf" then --!SECTION
 							
 							allesp.text.name[Index].Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
 							allesp.text.name[Index].Visible = true
-							allesp.text.name[Index].Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y - 15)
+							allesp.text.name[Index].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
 
 						end
 						if mp.options["ESP"][GroupBox]["Box"][1] then
@@ -6232,7 +6227,7 @@ elseif mp.game == "pf" then --!SECTION
 							
 						end
 						if mp.options["ESP"][GroupBox]["Health Bar"][1] then
-							local ySizeBar = -math.floor(boxSize.Y * health / 100)
+							local ySizeBar = -math.floor(boxSize.y * health / 100)
 							if mp:getval("ESP", GroupBox, "Health Number") and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
 								local hptext = allesp.hp.text[Index]
 								hptext.Visible = true
@@ -6240,17 +6235,17 @@ elseif mp.game == "pf" then --!SECTION
 		
 								local tb = hptext.TextBounds
 		
-								hptext.Position = boxPosition + Vector2.new(-tb.X, math.clamp(ySizeBar + boxSize.Y - tb.Y * 0.5, -tb.Y * 0.5, boxSize.Y))
+								hptext.Position = boxPosition + Vector2.new(-tb.x, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y * 0.5, boxSize.y))
 								hptext.Color = mp:getval("ESP", GroupBox, "Health Number", "color", true)
 								hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
 							end
 		
 							allesp.hp.outer[Index].Visible = true
-							allesp.hp.outer[Index].Position = Vector2.new(math.floor(boxPosition.X) - 6, math.floor(boxPosition.y) - 1)
-							allesp.hp.outer[Index].Size = Vector2.new(4, boxSize.Y + 2)
+							allesp.hp.outer[Index].Position = Vector2.new(math.floor(boxPosition.x) - 6, math.floor(boxPosition.y) - 1)
+							allesp.hp.outer[Index].Size = Vector2.new(4, boxSize.y + 2)
 		
 							allesp.hp.inner[Index].Visible = true
-							allesp.hp.inner[Index].Position = Vector2.new(math.floor(boxPosition.X) - 5, math.floor(boxPosition.y + boxSize.Y))
+							allesp.hp.inner[Index].Position = Vector2.new(math.floor(boxPosition.x) - 5, math.floor(boxPosition.y + boxSize.y))
 		
 							allesp.hp.inner[Index].Size = Vector2.new(2, ySizeBar)
 		
@@ -6268,7 +6263,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 							local tb = hptext.TextBounds
 		
-							hptext.Position = boxPosition + Vector2.new(-tb.X, 0)
+							hptext.Position = boxPosition + Vector2.new(-tb.x, 0)
 							hptext.Color = mp:getval("ESP", GroupBox, "Health Number", "color", true)
 							hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
 		
@@ -6289,7 +6284,7 @@ elseif mp.game == "pf" then --!SECTION
 							spoty += 12
 							weptext.Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
 							weptext.Visible = true
-							weptext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y)
+							weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
 		
 						end
 						if mp.options["ESP"][GroupBox]["Distance"][1] then
@@ -6298,7 +6293,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 							disttext.Text = tostring(distance).."m"
 							disttext.Visible = true
-							disttext.Position = Vector2.new(boxPosition.X + boxSize.X * 0.5, boxPosition.Y + boxSize.Y + spoty)
+							disttext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y + spoty)
 		
 						end
 						if mp.options["ESP"][GroupBox]["Skeleton"][1] then
@@ -6403,7 +6398,7 @@ elseif mp.game == "pf" then --!SECTION
 							Tri.Visible = true
 							
 							local relativePos = Camera.CFrame:PointToObjectSpace(partCFrame.Position)
-							local direction = math.deg(math.atan2(-relativePos.Y, relativePos.X)) * math.pi / 180
+							local direction = math.deg(math.atan2(-relativePos.y, relativePos.x)) * math.pi / 180
 							
 							local distance = relativePos.Magnitude
 							local arrow_size = mp:getval("ESP", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
@@ -6411,7 +6406,7 @@ elseif mp.game == "pf" then --!SECTION
 							
 							direction = Vector2.new(math.cos(direction), math.sin(direction))
 		
-							local pos = (direction * SCREEN_SIZE.Y * mp:getval("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
+							local pos = (direction * SCREEN_SIZE.y * mp:getval("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
 		
 							Tri.PointA = pos
 							Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
@@ -6963,13 +6958,13 @@ elseif mp.game == "pf" then --!SECTION
 							values = {"Head", "Body"}
 						},
 						{
-							type = "toggle", 
-							name = "Auto Wallbang",
-							value = false
+							type = "combobox",
+							name = "Hitboxes",
+							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
 						},
 						{
-							type = "toggle",
-							name = "Force Priority Hitbox",
+							type = "toggle", 
+							name = "Auto Wallbang",
 							value = false
 						},
 						{
@@ -7005,6 +7000,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Trigger Bot Hitboxes",
 							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
 						},
+						--[[
 						{
 							type = "toggle",
 							name = "Magnet Triggerbot",
@@ -7031,7 +7027,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Magnet Priority",
 							value = 1,
 							values = {"Head", "Body"}
-						},
+						},]]
 					}
 				},
 				{
