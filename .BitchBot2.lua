@@ -5507,49 +5507,6 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end
-			if name == "Rapid Kill" then
-				local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
-				local i = 1
-				for k,v in next, team:GetPlayers() do
-					if i >= 4 then break end
-					if client.hud:isplayeralive(v) then
-						i += 1
-						local args = {
-							"FRAG",
-							{
-								frames = {
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(),
-										p0 = workspace.CurrentCamera.CFrame.p,
-										rotv = Vector3.new()
-									},
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(),
-										p0 = client.replication.getbodyparts(v).head.Position,
-										rotv = Vector3.new()
-									}
-								},
-								time = tick(),
-								curi = 1,
-								blowuptime = 0
-							}
-						}
-	
-						client.net.send(client.net, "newgrenade", unpack(args))
-						client.hud:updateammo("GRENADE")
-					end
-				end
-			end
 		end)
 
 		mp.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
@@ -5559,6 +5516,50 @@ elseif mp.game == "pf" then --!SECTION
 				and input.KeyCode == mp:getval("Rage", "Extra", "Manual Choke", "keybind") then
 					keybindtoggles.fakelag = not keybindtoggles.fakelag
 					game:service("NetworkClient"):SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
+				end
+				if mp:getval("Misc", "Exploits", "Rapid Kill")
+				and input.KeyCode == mp:getval("Misc", "Exploits", "Rapid Kill", "keybind") then -- fugg
+					local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
+					local i = 1
+					for k,v in next, team:GetPlayers() do
+						if i >= 4 then break end
+						if client.hud:isplayeralive(v) then
+							i += 1
+							local args = {
+								"FRAG",
+								{
+									frames = {
+										{
+											v0 = Vector3.new(),
+											glassbreaks = {},
+											t0 = 0,
+											offset = Vector3.new(),
+											rot0 = CFrame.new(),
+											a = Vector3.new(),
+											p0 = workspace.CurrentCamera.CFrame.p,
+											rotv = Vector3.new()
+										},
+										{
+											v0 = Vector3.new(),
+											glassbreaks = {},
+											t0 = 0,
+											offset = Vector3.new(),
+											rot0 = CFrame.new(),
+											a = Vector3.new(),
+											p0 = client.replication.getbodyparts(v).head.Position,
+											rotv = Vector3.new()
+										}
+									},
+									time = tick(),
+									curi = 1,
+									blowuptime = 0
+								}
+							}
+		
+							client.net.send(client.net, "newgrenade", unpack(args))
+							client.hud:updateammo("GRENADE")
+						end
+					end
 				end
 			end
 		end)
@@ -5827,6 +5828,7 @@ elseif mp.game == "pf" then --!SECTION
 --Legitbot definition defines legit functions
 --Legitbot definition defines legit functions
 --Legitbot definition defines legit functions
+-- Not Rage Functons Dumbass
 
 	do -- ANCHOR Legitbot definition defines legit functions
 		legitbot.triggerbotShooting = false
@@ -8006,8 +8008,12 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Crash Server"
 						},
 						{
-							type = "button",
-							name = "Rapid Kill"
+							type = "toggle",
+							name = "Rapid Kill",
+							value = false,
+							extra = {
+								type = "keybind"
+							}
 						}
 					}
 				},
