@@ -5507,6 +5507,49 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end
+			if name == "Rapid Kill" then
+				local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
+				local i = 1
+				for k,v in next, team:GetPlayers() do
+					if i >= 4 then break end
+					if client.hud:isplayeralive(v) then
+						i += 1
+						local args = {
+							"FRAG",
+							{
+								frames = {
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(),
+										p0 = workspace.CurrentCamera.CFrame.p,
+										rotv = Vector3.new()
+									},
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(),
+										p0 = client.replication.getbodyparts(v).head.Position,
+										rotv = Vector3.new()
+									}
+								},
+								time = tick(),
+								curi = 1,
+								blowuptime = 0
+							}
+						}
+	
+						client.net.send(client.net, "newgrenade", unpack(args))
+						client.hud:updateammo("GRENADE")
+					end
+				end
+			end
 		end)
 
 		mp.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
@@ -7961,6 +8004,10 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "button",
 							name = "Crash Server"
+						},
+						{
+							type = "button",
+							name = "Rapid Kill"
 						}
 					}
 				},
