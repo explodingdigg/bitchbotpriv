@@ -4581,20 +4581,6 @@ elseif mp.game == "pf" then --!SECTION
 	end
 	
 	do--ANCHOR camera function definitions.
-	
-		function camera:GetGun()
-	
-	
-			for k, v in pairs(Camera:GetChildren()) do
-	
-				if v.Name ~= "Right Arm" and v.Name ~= "Left Arm" then
-					return v
-				end
-	
-			end
-	
-	
-		end
 
 		function camera:SetArmsVisible(flag)
 			local larm, rarm = Camera:FindFirstChild("Left Arm"), Camera:FindFirstChild("Right Arm")
@@ -4612,15 +4598,10 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	
 		function camera:GetFOV(Part, originPart)
-			if originPart then 
-				local directional = CFrame.new(originPart.Position, Part.Position)
-				local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
-				return math.deg(ang.Magnitude)
-			end
-				local directional = CFrame.new(workspace.Camera.CFrame.Position, Part.Position)
-				local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(workspace.Camera.CFrame:ToOrientation())
-				return math.deg(ang.Magnitude)
-			
+			originPart = originPart or workspace.Camera
+			local directional = CFrame.new(originPart.Position, Part.Position)
+			local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
+			return math.deg(ang.Magnitude)
 		end
 	
 		function camera:IsVisible(Part, Parent, origin)
@@ -5829,6 +5810,7 @@ elseif mp.game == "pf" then --!SECTION
 
 
 		function legitbot:MainLoop()
+			legitbot.target = nil
 	
 	
 			if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun then
@@ -6083,7 +6065,6 @@ elseif mp.game == "pf" then --!SECTION
 		
 
 		client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
-		client.cam.basefov = client.char.unaimedfov
 		if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
 			game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
 			game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
@@ -6121,7 +6102,7 @@ elseif mp.game == "pf" then --!SECTION
 
 		----------
 	
-		if client.deploy.isdeployed() then
+		if client.cam.type ~= "menu" or client.cam.isspectating() then
 			
 			local players = Players:GetPlayers()
 			-- table.sort(players, function(p1, p2)
@@ -6944,11 +6925,6 @@ elseif mp.game == "pf" then --!SECTION
 							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
 						},
 						{
-							type = "toggle", 
-							name = "Auto Wallbang",
-							value = false
-						},
-						{
 							type = "toggle",
 							name = "Adjust for Bullet Drop",
 							value = false
@@ -7169,7 +7145,7 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "slider",
 							name = "Extra Penetration",
-							value = 2,
+							value = 50,
 							minvalue = 1,
 							maxvalue = 400
 						},

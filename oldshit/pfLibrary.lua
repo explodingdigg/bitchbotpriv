@@ -36,35 +36,70 @@ for k, v in pairs(getgc(true)) do
 		end
 	end
 end
+print(client.cam.isspectating())
+-- local oldsend = client.net.send
 
-local function Create_Beam(origin_att, ending_att)
-	local beam = Instance.new("Beam")
-	beam.Texture = "https://www.roblox.com/library/446111273/electro-beam?Category=Decals&SortType=Relevance&SortAggregation=AllTime&SearchKeyword=beam&CreatorId=0&Page=2&Position=35&SearchId=0bd13a93-205e-4b8e-8cb9-b61cc43807a4"
-	beam.TextureMode = Enum.TextureMode.Wrap
-	beam.TextureSpeed = 4
-	beam.LightEmission = 1
-	beam.LightInfluence = 0
-	beam.FaceCamera = true
-	beam.Enabled = true
-	beam.Parent = workspace
-	return beam
-end
+-- client.net.send = function(self, name, ...)
+-- 	local args = {...}
+-- 	if name == "modcmd" then
+-- 		local command = args[1]
 
-local oldsend = client.net.send
-client.net.send = function(self, name, ...)
-	local args = {...}
-	if name == "newbullets" then
-		local origin = args[1].firepos
-		local attach_origin = Instance.new("Attachment", workspace.Terrain)
-		attach_origin.Position = origin
-		for k, bullet in pairs(args[1].bullets) do
-			local ending = origin + bullet[1] * 1000
-			local attach_ending = Instance.new("Attachment", workspace.Terrain)
-			attach_ending.Position = ending
-			local beam = Create_Beam(attach_origin, attach_ending)
-			print(beam)
-			beam.Parent = workspace
-		end
-	end	
-	return oldsend(self, name, ...)
-end
+-- 		local start, ending = command:find('/fpsmax ')
+-- 		if ending then
+-- 			local numbah = command:sub(ending + 1)
+-- 			setfpscap(numbah)
+-- 			print(numbah)
+-- 		end
+-- 	end
+-- end
+
+-- local input = game:GetService"UserInputService"
+-- _G.fart = true
+-- local d = 0.3
+-- while wait() and _G.fart do
+-- 	if input:IsKeyDown(Enum.KeyCode.E) then
+-- 		wait(d)
+-- 		client.net:send("modcmd", "/switch:p")
+-- 		wait(d)
+-- 		client.net:send("modcmd", "/switch:g")
+-- 	end
+-- end
+
+-- local g = true
+-- input.InputBegan:Connect(function(key)
+-- 	if key.KeyCode == Enum.KeyCode.P then
+-- 		if g then
+-- 			client.net:send("modcmd", "/switch:p")
+-- 			g = false
+-- 		else
+-- 			client.net:send("modcmd", "/switch:g")
+-- 			g = true
+-- 		end
+-- 	end
+-- end)
+-- for k, player in pairs(game.Players:children()) do
+-- 	local parts = client.replication.getbodyparts(player)
+-- 	if parts then
+-- 		print(parts.rootpart.Parent:GetBoundingBox())
+-- 		break
+-- 	end	
+-- end
+-- local gun = debug.getupvalues(client.logic.currentgun.toggleattachment)[2][client.logic.currentgun.gunnumber]
+-- gun.firerate = 5000
+
+-- local stances = {}
+
+-- game.RunService.RenderStepped:Connect(function()
+-- 	local amountChanged = 0
+-- 	for k, Player in pairs(game.Players:children()) do
+-- 		if not client.hud:isplayeralive(Player) then continue end
+-- 		local updater = client.replication.getupdater(Player)
+-- 		if updater.hooked then return end
+-- 		local oldStance = updater.setstance
+-- 		updater.setstance = function(...)
+-- 			amountChanged += 1
+-- 			return(updater.setstance(...))
+-- 		end
+-- 	end
+-- 	print(amountChanged)
+-- end)
