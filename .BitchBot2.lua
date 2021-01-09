@@ -4584,7 +4584,13 @@ elseif mp.game == "pf" then --!SECTION
 	end
 	
 	do--ANCHOR camera function definitions.
-
+		function camera:GetGun()
+			for k, v in pairs(Camera:GetChildren()) do
+				if v.Name ~= "Right Arm" and v.Name ~= "Left Arm" then
+					return v
+				end
+			end
+		end
 		function camera:SetArmsVisible(flag)
 			local larm, rarm = Camera:FindFirstChild("Left Arm"), Camera:FindFirstChild("Right Arm")
 			assert(larm, "arms are missing")
