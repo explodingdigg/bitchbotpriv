@@ -4347,7 +4347,9 @@ elseif mp.game == "pf" then --!SECTION
 			"																																																																																																																								WATCH YOUR STEP KID",
 			"BROOOO HE HAS																										GOD MODE BRO HE HAS GOD MODE 🚶‍♀️🚶‍♀️🚶‍♀️😜😂😂🤦‍♂️🤦‍♂️😭😭😭👶",
 			"\"guys what hub has auto shooting\" 																										",
-			"god i wish i had bbot..... 🙏🙏🥺🥺🥺													plzzzzz brooooo 🛐 GIVE IT🛐🛐"
+			"god i wish i had bbot..... 🙏🙏🥺🥺🥺													plzzzzz brooooo 🛐 GIVE IT🛐🛐",
+			"buh bot 												",
+			"votekick him!!!!!!! 😠 vk VK VK VK VOTEKICK HIM!!!!!!!!! 😠 😢 VOTE KICK !!!!! PRESS Y WHY DIDNT U PRESS Y LOL!!!!!! 😭 " -- shufy made this
 		}
 	}
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
@@ -5701,9 +5703,14 @@ elseif mp.game == "pf" then --!SECTION
 				if ragebot.silentVector then
 					-- duck tape fix or whatever the fuck its called for this its stupid
 					args[2].firepos = ragebot.firepos 
+					local cachedtime
 					for k, bullet in pairs(args[2].bullets) do
-						bullet[1] = client.trajectory(ragebot.firepos, GRAVITY, ragebot.targetpart.Position, client.logic.currentgun.data.bulletspeed)
+						local angle, time = client.trajectory(ragebot.firepos, GRAVITY, ragebot.targetpart.Position, client.logic.currentgun.data.bulletspeed)
+						bullet[1] = angle
+						cachedtime = time
 					end
+
+					args[3] -= cachedtime
 
 					if keybindtoggles.fakelag and mp:getval("Rage", "Extra", "Release Packets on Shoot") then
 						keybindtoggles.fakelag = not keybindtoggles.fakelag
