@@ -6727,10 +6727,10 @@ elseif mp.game == "pf" then --!SECTION
 		end
 		do --misc
 			misc:MainLoop()
+			ragebot:KnifeBotMain()
 		end
 		if not mp:getval("Rage", "Extra", "Performance Mode") then 
 			do--ragebot
-				ragebot:KnifeBotMain()
 				ragebot:MainLoop()
 			end
 		end
@@ -6740,7 +6740,6 @@ elseif mp.game == "pf" then --!SECTION
 		while wait(0.2) do
 			if mp:getval("Rage", "Extra", "Performance Mode") then
 				do--ragebot
-					ragebot:KnifeBotMain()
 					ragebot:MainLoop()
 				end
 			end
