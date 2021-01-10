@@ -328,13 +328,8 @@ local function GetConfigs()
 			configs[k] = v
 		end
 	end
-	if #result < 6 then
-		for i = 1, 6 do
-			if not isfile("bitchbot/".. mp.game .."/config"..tostring(i)..".bb") then
-				writefile("bitchbot/".. mp.game .."/config"..tostring(i)..".bb", "")
-				configs[i] = "bitchbot/".. mp.game .."/config"..tostring(i)..".bb"
-			end
-		end
+	if #result <= 0 then
+		writefile("bitchbot/".. mp.game .."/Default", "")
 	end
 	return result
 end
