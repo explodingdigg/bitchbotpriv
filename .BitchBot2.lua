@@ -5191,8 +5191,8 @@ elseif mp.game == "pf" then --!SECTION
 	
 		local shake = client.cam.shake
 		client.cam.shake = function(self, magnitude)
-			if mp:getval("Legit", "Recoil Control", "Reduce Camera Recoil") then
-				local scale = mp:getval("Legit", "Recoil Control", "Camera Recoil Amount") * 0.01
+			if mp:getval("Visuals", "Camera Visuals", "Reduce Camera Recoil") then
+				local scale = 1 - mp:getval("Visuals", "Camera Visuals", "Camera Recoil Reduction") * 0.01
 				magnitude *= scale
 			end
 			return shake(client.cam, magnitude)
@@ -5923,10 +5923,11 @@ elseif mp.game == "pf" then --!SECTION
 		
 		function legitbot:SilentAimAtTarget(targetPart)
 			if not targetPart or not targetPart.Position or client.logic.currentgun == nil then
-				if client.logic.currentgun.type == "KNIFE" then return end
 				return
 			end
 			
+			if client.logic.currentgun.type == "KNIFE" or client.logic.currentgun.type == "SHOTGUN" then return end
+
 			if math.random(0, 100) > mp:getval("Legit", "Bullet Redirection", "Hit Chance") then return end
 
 			if not client.logic.currentgun.barrel then return end
@@ -7047,7 +7048,7 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "slider",
 							name = "Accuracy",
-							value = 60,
+							value = 90,
 							minvalue = 0,
 							maxvalue = 100,
 							stradd = "%"
@@ -7070,19 +7071,6 @@ elseif mp.game == "pf" then --!SECTION
 					autopos = "left",
 					autofill = true,
 					content = {
-						{
-							type = "toggle",
-							name = "Reduce Camera Recoil",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Camera Recoil Amount",
-							value = 10,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
-						},
 						{
 							type = "toggle",
 							name = "Weapon RCS",
@@ -7176,9 +7164,9 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "slider",
 							name = "Extra Penetration",
-							value = 50,
+							value = 11,
 							minvalue = 1,
-							maxvalue = 400
+							maxvalue = 20
 						},
 						{
 							type = "toggle",
@@ -7188,7 +7176,7 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "dropbox",
 							name = "Resolver Type",
-							value = 1,
+							value = 2,
 							values = {"Cubic", "Axes", "Random"}
 						},
 						{
@@ -7749,7 +7737,20 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "No Gun Bob or Sway",
 							value = false
-						}
+						},
+						{
+							type = "toggle",
+							name = "Reduce Camera Recoil",
+							value = false
+						},
+						{
+							type = "slider",
+							name = "Camera Recoil Reduction",
+							value = 10,
+							minvalue = 0,
+							maxvalue = 100,
+							stradd = "%"
+						},
 					}
 				},
 				{
