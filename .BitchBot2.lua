@@ -315,19 +315,26 @@ if not isfolder("bitchbot/pf") then
 	makefolder("bitchbot/".. mp.game)
 end
 
-for i = 1, 6 do
-	if not isfile("bitchbot/".. mp.game .."/config"..tostring(i)..".bb") then
-		writefile("bitchbot/".. mp.game .."/config"..tostring(i)..".bb", "")
-	end
-end
+local configs = {}
 
 local function GetConfigs()
 	local result = {}
 	local directory = "bitchbot\\" .. mp.game
 	for k, v in pairs(listfiles(directory)) do
 		local clipped = v:sub(#directory + 2)
-		print(clipped)
-		result[#result+1] = clipped
+		if clipped:sub(#clipped - 2) == ".bb" then
+			clipped = clipped:sub(0, #clipped - 3)
+			result[k] = clipped
+			configs[k] = v
+		end
+	end
+	if #result < 6 then
+		for i = 1, 6 do
+			if not isfile("bitchbot/".. mp.game .."/config"..tostring(i)..".bb") then
+				writefile("bitchbot/".. mp.game .."/config"..tostring(i)..".bb", "")
+				configs[i] = "bitchbot/".. mp.game .."/config"..tostring(i)..".bb"
+			end
+		end
 	end
 	return result
 end
@@ -1829,7 +1836,7 @@ function mp.BBMenuInit(menutable)
 			writefile("bitchbot/".. mp.game .."/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb", figgy)
 		elseif bp == mp.options["Settings"]["Configuration"]["Load Config"] then
 
-			local loadedcfg = readfile("bitchbot/".. mp.game .."/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb")
+			local loadedcfg = readfile(configs[mp.options["Settings"]["Configuration"]["Configs"][1]])
 			local lines = {}
 			for s in loadedcfg:gmatch("[^\r\n]+") do
 				table.insert(lines, s)
@@ -3309,7 +3316,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							type = "dropbox",
 							name = "Configs",
 							value = 1,
-							values = GetConfigs()
+							values = GetConfigs() --TODO make this dynamic
 						},
 						{
 							type = "button",
@@ -8135,7 +8142,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Configs",
 							value = 1,
-							values = GetConfigs()
+							values = GetConfigs() --TODO make this dynamic
 						},
 						{
 							type = "button",
