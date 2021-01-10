@@ -321,6 +321,17 @@ for i = 1, 6 do
 	end
 end
 
+local function GetConfigs()
+	local result = {}
+	local directory = "bitchbot\\" .. mp.game
+	for k, v in pairs(listfiles(directory)) do
+		local clipped = v:sub(#directory + 2)
+		print(clipped)
+		result[#result+1] = clipped
+	end
+	return result
+end
+
 local Players = game:GetService("Players")
 local LOCAL_PLAYER = Players.LocalPlayer
 local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
@@ -3298,7 +3309,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							type = "dropbox",
 							name = "Configs",
 							value = 1,
-							values = {"Config 1", "Config 2", "Config 3", "Config 4", "Config 5", "Config 6"}
+							values = GetConfigs()
 						},
 						{
 							type = "button",
@@ -8124,7 +8135,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Configs",
 							value = 1,
-							values = {"Config 1", "Config 2", "Config 3", "Config 4", "Config 5", "Config 6"}
+							values = GetConfigs()
 						},
 						{
 							type = "button",
