@@ -1833,7 +1833,7 @@ function mp.BBMenuInit(menutable)
 				end
 			end
 			figgy = figgy.."}\n"
-			writefile("bitchbot/".. mp.game .."/config".. tostring(mp.options["Settings"]["Configuration"]["Configs"][1]).. ".bb", figgy)
+			writefile(configs[mp.options["Settings"]["Configuration"]["Configs"][1]], figgy)
 		elseif bp == mp.options["Settings"]["Configuration"]["Load Config"] then
 
 			local loadedcfg = readfile(configs[mp.options["Settings"]["Configuration"]["Configs"][1]])
@@ -6179,7 +6179,7 @@ elseif mp.game == "pf" then --!SECTION
 					-- local boxSize = Vector2.new(sizeX, sizeY)
 					local _width = math.floor(math.abs(top.x - bottom.x))
 					local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width/2))
-					local boxSize = Vector2.new(math.max(_height/1.5, _width), _height)
+					local boxSize = Vector2.new(math.floor(math.max(_height/1.5, _width)), _height)
 					local boxPosition = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.y, bottom.y)))
 
 					local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
