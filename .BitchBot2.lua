@@ -5342,9 +5342,9 @@ elseif mp.game == "pf" then --!SECTION
 							sound.Volume = 2
 							sound.Parent = workspace
 							sound:Destroy()
-							return func(killer, victim, dist, weapon, head)
 						end
 					end
+					return func(killer, victim, dist, weapon, head)
 				end
 			end
 			if found7 then
