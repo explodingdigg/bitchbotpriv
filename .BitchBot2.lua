@@ -5546,8 +5546,12 @@ elseif mp.game == "pf" then --!SECTION
 						if i >= 4 then break end
 						if client.hud:isplayeralive(v) then
 							i += 1
+							local grenadechoice = i == 1 and "FRAG" or i == 2 and "FRAG HALLOWEEN" or "FRAG HOLIDAY" -- LOL!!!!!!!
+							local curbodyparts = client.replication.getbodyparts(v)
+							local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10 
+												and curbodyparts.rootpart.Position or curbodyparts.head.Position
 							local args = {
-								"FRAG",
+								grenadechoice,
 								{
 									frames = {
 										{
@@ -5567,7 +5571,7 @@ elseif mp.game == "pf" then --!SECTION
 											offset = Vector3.new(),
 											rot0 = CFrame.new(),
 											a = Vector3.new(),
-											p0 = client.replication.getbodyparts(v).head.Position,
+											p0 = chosenpos + Vector3.new(0, 3, 0),
 											rotv = Vector3.new()
 										}
 									},
@@ -6798,7 +6802,7 @@ elseif mp.game == "pf" then --!SECTION
 	end)
 
 	CreateThread(function() -- ragebot performance
-		while wait(0.2) do
+		while wait() do
 			if mp:getval("Rage", "Extra", "Performance Mode") then
 				do--ragebot
 					ragebot:MainLoop()
