@@ -5984,7 +5984,7 @@ elseif mp.game == "pf" then --!SECTION
 				local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
 				Pos += rcsdelta
 			end
-			local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / (1/smoothing)
+			local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
 
 			Move_Mouse(aimbotMovement)
 			
@@ -7277,7 +7277,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Stance Choice",
 							value = 1,
-							values = {"Standing", "Crouching", "Prone"}
+							values = {"Stand", "Crouch", "Prone"}
 						}
 					}
 				},
