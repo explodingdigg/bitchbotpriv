@@ -4827,22 +4827,29 @@ elseif mp.game == "pf" then --!SECTION
 			local hitscan = hitscan or {}
 			local partPreference = hitboxPriority or "you know who i am? well you about to find out, your barbecue boy"
 			local closest, cpart, theplayer = math.huge
-
+		
 			local players = players or Players:GetPlayers()
-
+		
 			local autowall = mp:getval("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
 			local barrel = client.logic.currentgun.barrel.CFrame.p
 			local firepos
-
+		
 			for i, player in next, players do
+				local usedhitscan = hitscan -- should probably do this a different way
 				if table.find(mp.friends, player.Name) then continue end
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
+						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10 then -- fake body resolver
+							usedhitscan = {
+								rootpart = true -- because all other parts cannot be hit, only rootpart can be
+							}
+							-- this definitely needs a lot more work because i believe sometimes it just aims at the wrong area... don't know why
+						end
 						for k, bone in next, curbodyparts do
-							if bone.ClassName == "Part" and hitscan[k] then
+							if bone.ClassName == "Part" and usedhitscan[k] then
 								if camera:IsVisible(bone, bone.Parent) then
 									local fovToBone = camera:GetFOV(bone)
 									if fovToBone < closest then
@@ -4889,7 +4896,7 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end
-
+		
 			return cpart, theplayer, closest, firepos
 		end
 
