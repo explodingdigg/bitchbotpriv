@@ -4846,7 +4846,7 @@ elseif mp.game == "pf" then --!SECTION
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
-						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10 then -- fake body resolver
+						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 6 then -- fake body resolver
 							usedhitscan = {
 								rootpart = true -- because all other parts cannot be hit, only rootpart can be
 							}
@@ -5125,7 +5125,7 @@ elseif mp.game == "pf" then --!SECTION
 					
 					local playerlist = Players:GetPlayers()
 
-					CreateThread(function()
+					--[[CreateThread(function()
 						local priority_list = {}
 						for k, PlayerName in pairs(mp.priority) do
 							table.insert(priority_list, game.Players[PlayerName])
@@ -5135,7 +5135,16 @@ elseif mp.game == "pf" then --!SECTION
 							targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 						end
 						ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
-					end)
+					end)]]
+					local priority_list = {}
+					for k, PlayerName in pairs(mp.priority) do
+						table.insert(priority_list, game.Players[PlayerName])
+					end
+					local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
+					if not targetPart then 
+						targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+					end
+					ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
 				else
 					self.target = nil
 				end
@@ -5224,6 +5233,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found5 = table.find(curconstants, "Votekick ")
 			local found6 = table.find(curconstants, " studs")
 			local found7 = table.find(curconstants, "setstance")
+			local found8 = table.find(curconstants, "setfixedcam")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
@@ -5362,6 +5372,57 @@ elseif mp.game == "pf" then --!SECTION
 					choice = choice == 1 and "stand" or choice == 2 and "crouch" or "prone"
 					local chosenstance = ting and choice or newstance
 					return func(player, chosenstance)
+				end
+			end
+			if found8 then
+				clienteventfuncs[hash] = function(...)
+					local args = {...}
+
+					if mp:getval("Misc", "Extra", "Auto Dead Drop") then
+
+						local fragargs = {
+							"FRAG",
+							{
+								frames = {
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(0, -80, 0),
+										p0 = client.char.head.Position,
+										rotv = Vector3.new()
+									}
+								},
+								time = tick(),
+								curi = 1,
+								blowuptime = 0.2
+							}
+						}
+
+						if mp:getval("Misc", "Exploits", "Grenade Teleport") then
+							fragargs.blowuptime = 0
+							
+							local killerbodyparts = client.replication.getbodyparts(args[1])
+
+							fragargs[2].frames[1].a = Vector3.new()
+							fragargs[2].frames[2] = {
+								v0 = Vector3.new(),
+								glassbreaks = {},
+								t0 = 0,
+								offset = Vector3.new(),
+								rot0 = CFrame.new(),
+								a = Vector3.new(),
+								p0 = killerbodyparts.rootpart.Position + Vector3.new(0, 3, 0),
+								rotv = Vector3.new()
+							}
+						end
+
+						client.net.send(nil, "newgrenade", unpack(fragargs))
+					end
+
+					return func(...)
 				end
 			end
 			if found2 then
@@ -5763,7 +5824,6 @@ elseif mp.game == "pf" then --!SECTION
 			rootpart = client.fakebodyroot or rootpart
 			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
 			if rootpart and humanoid then
-				misc:SpotPlayers()
 				if not CHAT_BOX.Active then
 					misc:SpeedHack()
 					misc:FlyHack()
@@ -8025,11 +8085,6 @@ elseif mp.game == "pf" then --!SECTION
 					content = {
 						{
 							type = "toggle",
-							name = "Auto Spot",
-							value = false
-						},
-						{
-							type = "toggle",
 							name = "Suppress Only",
 							value = false
 						},
@@ -8079,6 +8134,11 @@ elseif mp.game == "pf" then --!SECTION
 							maxvalue = 10,
 							value = 5,
 							stradd = " seconds"
+						},
+						{
+							type = "toggle",
+							name = "Auto Dead Drop",
+							value = false
 						}
 					}
 				},
@@ -8105,6 +8165,11 @@ elseif mp.game == "pf" then --!SECTION
 							extra = {
 								type = "keybind"
 							}
+						},
+						{
+							type = "toggle",
+							name = "Grenade Teleport",
+							value = false
 						}
 					}
 				},
