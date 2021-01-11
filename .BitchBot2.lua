@@ -965,7 +965,7 @@ function mp.BBMenuInit(menutable)
 		end
 		Draw:MenuFilledRect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35, 255}, bbmenu)
 
-		Draw:MenuBigText("NatHook", true, false, 6, 6, bbmenu)
+		Draw:MenuBigText("we the best cheats", true, false, 6, 6, bbmenu)
 
 		Draw:MenuOutlinedRect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
 		Draw:MenuOutlinedRect(true, 9, 23, mp.w - 18, mp.h - 32, {20, 20, 20, 255}, bbmenu)
@@ -4188,8 +4188,8 @@ elseif mp.game == "pf" then --!SECTION
 	do 
 		local updatervalues = getupvalues(client.fakeupdater.step)
 
-		updatervalues[11].s = 7
-		updatervalues[15].s = 100
+		--[[updatervalues[11].s = 7
+		updatervalues[15].s = 100]]
 		client.fake_upvs = updatervalues
 	end
 	
@@ -4338,7 +4338,11 @@ elseif mp.game == "pf" then --!SECTION
 			"\"guys what hub has auto shooting\" 																										",
 			"god i wish i had bbot..... 🙏🙏🥺🥺🥺													plzzzzz brooooo 🛐 GIVE IT🛐🛐",
 			"buh bot 												",
-			"votekick him!!!!!!! 😠 vk VK VK VK VOTEKICK HIM!!!!!!!!! 😠 😢 VOTE KICK !!!!! PRESS Y WHY DIDNT U PRESS Y LOL!!!!!! 😭 " -- shufy made this
+			"votekick him!!!!!!! 😠 vk VK VK VK VOTEKICK HIM!!!!!!!!! 😠 😢 VOTE KICK !!!!! PRESS Y WHY DIDNT U PRESS Y LOL!!!!!! 😭 ", -- shufy made this
+			"Bbot omg omggg omggg its BBot its BBOt OMGGG!!!  🙏🙏🥺🥺😌😒😡",
+			"HOw do you get ACCESS to this BBOT ",
+			"I NEED ACCESS 🔑🔓 TO BBOT 🤖📃📃📃 👈 THIS THING CALLED BBOT SCRIPT, I NEED IT ",
+			"\"this god mode guy is annoying\", Pr0blematicc says as he loses roblox hvh "	
 		}
 	}
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
@@ -5861,12 +5865,22 @@ elseif mp.game == "pf" then --!SECTION
 						cachedtime = time
 					end
 
-					args[3] -= cachedtime
+					if not client.instancetype.IsBanland() then
+						args[3] -= cachedtime
+					end
 
 					if keybindtoggles.fakelag and mp:getval("Rage", "Extra", "Release Packets on Shoot") then
 						keybindtoggles.fakelag = not keybindtoggles.fakelag
 						syn.set_thread_identity(1) -- might lag...... idk probably not
 						game:service("NetworkClient"):SetOutgoingKBPSLimit(0)
+					end
+
+					if mp:getval("Rage", "Anti Aim", "Onshot") then
+						local angles = Vector3.new(CFrame.new(Vector3.new(), ragebot.silentVector):ToOrientation()) * 180
+						if client.fakecharacter then
+							client.fakeupdater.setlookangles(angles)
+						end
+						send(self, "repupdate", client.char.head.Position, angles)
 					end
 
 					send(self, unpack(args))
@@ -7429,6 +7443,11 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Yaw",
 							value = 2,
 							values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"}
+						},
+						{
+							type = "toggle",
+							name = "Onshot",
+							value = false
 						},
 						{
 							type = "slider",
