@@ -5811,7 +5811,7 @@ elseif mp.game == "pf" then --!SECTION
 				local spinRate = mp:getval("Rage", "Anti Aim", "Spin Rate")
 				---"off,down,up,roll,upside down,random"
 				--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
-	
+
 				if pitchChoice == 2 then
 					pitch = -4
 				elseif pitchChoice == 3 then
