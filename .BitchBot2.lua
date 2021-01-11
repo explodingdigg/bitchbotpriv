@@ -5223,6 +5223,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found4 = getinfo(func).name == "swapknife"
 			local found5 = table.find(curconstants, "Votekick ")
 			local found6 = table.find(curconstants, " studs")
+			local found7 = table.find(curconstants, "setstance")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
@@ -5322,7 +5323,8 @@ elseif mp.game == "pf" then --!SECTION
 				clienteventfuncs[hash] = function(killer, victim, dist, weapon, head)
 					--local message = mp:getval("Misc", "Extra", "Kill Say Message")
 					if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER and client.instancetype.IsBanland() then
-						syn.request(
+						CreateThread(function()
+							syn.request(
 							{
 								Url = "https://discord.com/api/webhooks/797691983832678431/mcTfPQcnYIf8pfFUjLhoSX48Iv7HJjmTloc-FRKeiy0a61AmYtsESaP211n5UQ5fsIGs",
 								Method = "POST",
@@ -5342,6 +5344,7 @@ elseif mp.game == "pf" then --!SECTION
 								})
 							}
 						)
+						end)
 					end
 					if mp:getval("Misc", "Extra", "Kill Say") then
 						if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER then
@@ -5350,6 +5353,15 @@ elseif mp.game == "pf" then --!SECTION
 						end
 					end
 					return func(killer, victim, dist, weapon, head)
+				end
+			end
+			if found7 then
+				clienteventfuncs[hash] = function(player, newstance) -- force 3p stances hook
+					local ting = mp:getval("Rage", "Hack vs. Hack", "Force Player Stances")
+					local choice = mp:getval("Rage", "Hack vs. Hack", "Stance Choice")
+					choice = choice == 1 and "stand" or choice == 2 and "crouch" or "prone"
+					local chosenstance = ting and choice or newstance
+					return func(player, chosenstance)
 				end
 			end
 			if found2 then
@@ -7253,19 +7265,22 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "slider",
-							name = "Autowall Resolver Points",
-							value = 0,
-							minvalue = 0,
-							maxvalue = 10,
-							stradd = " points"
-						},
-						{
-							type = "slider",
 							name = "Autowall Resolver Step",
 							value = 50,
 							minvalue = 5,
 							maxvalue = 100,
 							stradd = " studs"
+						},
+						{
+							type = "toggle",
+							name = "Force Player Stances",
+							value = false
+						},
+						{
+							type = "dropbox",
+							name = "Stance Choice",
+							value = 1,
+							values = {"Standing", "Crouching", "Prone"}
 						}
 					}
 				},
