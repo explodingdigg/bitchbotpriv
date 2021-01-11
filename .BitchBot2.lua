@@ -1,7 +1,10 @@
 local mp
 -- yo yo yo
 local loadstart = tick()
-
+local MenuName = "Bitch Bot"
+if isfile("bitchbot/menuname.txt") then
+	MenuName = readfile("bitchbot/menuname.txt")
+end
 function map(X, A, B, C, D)
 	return (X-A)/(B-A) * (D-C) + C
 end
@@ -1016,8 +1019,8 @@ function mp.BBMenuInit(menutable)
 			bbmenu[6 + i].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 20, color = RGB(35, 35, 35)}})
 		end
 		Draw:MenuFilledRect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35, 255}, bbmenu)
-
-		Draw:MenuBigText("we the best cheats", true, false, 6, 6, bbmenu)
+		
+		Draw:MenuBigText(MenuName, true, false, 6, 6, bbmenu)
 
 		Draw:MenuOutlinedRect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
 		Draw:MenuOutlinedRect(true, 9, 23, mp.w - 18, mp.h - 32, {20, 20, 20, 255}, bbmenu)
@@ -8685,7 +8688,7 @@ end --!SECTION PF END
 
 do
 	local wm = mp.watermark
-	wm.textString = "NatHook | Developer | " .. os.date("%b. %d, %Y")
+	wm.textString = MenuName .. " | Developer | " .. os.date("%b. %d, %Y")
 	wm.pos = Vector2.new(40, 10)
 	wm.text = {}
 	wm.width = (#wm.textString) * 7 + 10
