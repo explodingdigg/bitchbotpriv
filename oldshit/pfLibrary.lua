@@ -36,8 +36,20 @@ for k, v in pairs(getgc(true)) do
 		end
 	end
 end
-table.foreach(client.cam, print)
+local sent = false
+local oldsend = client.net.send
+client.net.send=function(self,e,...)
+	local args = {...}
+	if not sent and e == "newbullets" then
+		table.foreach(args[1].bullets[1], print)
+	end
+	oldsend(self,e,...)
+end
+
+-- table.foreach(client.cam, print)
+
 -- local oldsend = client.net.send
+
 
 -- client.net.send = function(self, name, ...)
 -- 	local args = {...}

@@ -965,7 +965,7 @@ function mp.BBMenuInit(menutable)
 		end
 		Draw:MenuFilledRect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35, 255}, bbmenu)
 
-		Draw:MenuBigText("Bitch Bot", true, false, 6, 6, bbmenu)
+		Draw:MenuBigText("NatHook", true, false, 6, 6, bbmenu)
 
 		Draw:MenuOutlinedRect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
 		Draw:MenuOutlinedRect(true, 9, 23, mp.w - 18, mp.h - 32, {20, 20, 20, 255}, bbmenu)
@@ -2753,28 +2753,6 @@ function mp.BBMenuInit(menutable)
 	mp.connections.renderstepped = game.RunService.RenderStepped:Connect(function()
 		renderSteppedMenu()
 	end)
-	do
-		local wm = mp.watermark
-		wm.textString = "Bitch Bot | Developer | " .. os.date("%b. %d, %Y")
-		wm.pos = Vector2.new(40, 10)
-		wm.text = {}
-		wm.width = (#wm.textString) * 7 + 10
-		wm.rect = {}
-	
-		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 1, wm.width, 2, {mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[2] - 40, 255}, wm.rect)
-		Draw:FilledRect(false, wm.pos.x, wm.pos.y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
-		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
-		for i = 0, 14 do
-			Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
-		end
-		Draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
-		Draw:OutlinedText(wm.textString, 2, false, wm.pos.x + 5, wm.pos.y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
-	end
-	--ANCHOR watermak
-	for k, v in pairs(mp.watermark.rect) do
-		v.Visible = true
-	end
-	mp.watermark.text[1].Visible = true
 	function mp:unload()
 		self.unloaded = true
 		for k, v in pairs(self.connections) do
@@ -4833,7 +4811,7 @@ elseif mp.game == "pf" then --!SECTION
 			local autowall = mp:getval("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
-			local barrel = client.logic.currentgun.barrel.CFrame.p
+			local barrel = client.cam.cframe.p
 			local firepos
 		
 			for i, player in next, players do
@@ -5328,37 +5306,45 @@ elseif mp.game == "pf" then --!SECTION
 			if found6 then
 				clienteventfuncs[hash] = function(killer, victim, dist, weapon, head)
 					--local message = mp:getval("Misc", "Extra", "Kill Say Message")
-					if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER and client.instancetype.IsBanland() then
-						CreateThread(function()
-							syn.request(
-							{
-								Url = "https://discord.com/api/webhooks/797691983832678431/mcTfPQcnYIf8pfFUjLhoSX48Iv7HJjmTloc-FRKeiy0a61AmYtsESaP211n5UQ5fsIGs",
-								Method = "POST",
-								Headers = {
-									["Content-Type"] = "application/json"
-								},
-								Body = game:service("HttpService"):JSONEncode({
-									content = chatspams(3, false), -- fuck
-									embeds = {
-										{
-											title = "the doctor prognosis",
-											description = killer.Name .. " 1'd some kid called " .. victim.Name .. " using a " .. weapon:lower() .." or some shit, pretty pathetic if i'm being honest",
-											color = 8786419,
-											footer = {text = "bitchbot.fun"}
+					if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER then
+						if client.instancetype.IsBanland() then
+							CreateThread(function()
+								syn.request(
+								{
+									Url = "https://discord.com/api/webhooks/797691983832678431/mcTfPQcnYIf8pfFUjLhoSX48Iv7HJjmTloc-FRKeiy0a61AmYtsESaP211n5UQ5fsIGs",
+									Method = "POST",
+									Headers = {
+										["Content-Type"] = "application/json"
+									},
+									Body = game:service("HttpService"):JSONEncode({
+										content = chatspams(3, false), -- fuck
+										embeds = {
+											{
+												title = "the doctor prognosis",
+												description = killer.Name .. " 1'd some kid called " .. victim.Name .. " using a " .. weapon:lower() .." or some shit, pretty pathetic if i'm being honest",
+												color = 8786419,
+												footer = {text = "bitchbot.fun"}
+											}
 										}
-									}
-								})
-							}
-						)
-						end)
-					end
-					if mp:getval("Misc", "Extra", "Kill Say") then
-						if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER then
+									})
+								}
+							)
+							end)
+						end
+						if mp:getval("Misc", "Extra", "Kill Say") then
 							local chosenmsg = killsaymessages[math.random(1, #killsaymessages)]
 							send(nil, "chatted", string.format(chosenmsg, victim.Name:lower()))
 						end
+						if mp:getval("Misc", "Extra", "Kill Sound") then
+							local sound = Instance.new("Sound")
+							sound.PlayOnRemove = true
+							sound.SoundId = "rbxassetid://1455817260"
+							sound.Volume = 2
+							sound.Parent = workspace
+							sound:Destroy()
+							return func(killer, victim, dist, weapon, head)
+						end
 					end
-					return func(killer, victim, dist, weapon, head)
 				end
 			end
 			if found7 then
@@ -5475,6 +5461,11 @@ elseif mp.game == "pf" then --!SECTION
 
 			beam.Parent = workspace
 			return beam
+		end
+
+		local setsway = client.cam.setswayspeed
+		client.cam.setswayspeed = function(self,v)
+			setsway(self, mp:getval("Visuals", "Camera Visuals", "No Scope Sway") and 0 or v)
 		end
 
 		function misc:GetParts(parts)
@@ -7886,6 +7877,11 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
+							name = "No Scope Sway",
+							value = false
+						},
+						{
+							type = "toggle",
 							name = "Disable ADS FOV",
 							value = false,
 						},
@@ -8114,6 +8110,11 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Kill Say",
+							value = false
+						},
+						{
+							type = "toggle",
+							name = "Kill Sound",
 							value = false
 						},
 						{
@@ -8505,6 +8506,29 @@ elseif mp.game == "pf" then --!SECTION
 		end)
 	end
 end --!SECTION PF END
+
+do
+	local wm = mp.watermark
+	wm.textString = "NatHook | Developer | " .. os.date("%b. %d, %Y")
+	wm.pos = Vector2.new(40, 10)
+	wm.text = {}
+	wm.width = (#wm.textString) * 7 + 10
+	wm.rect = {}
+
+	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 1, wm.width, 2, {mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[2] - 40, 255}, wm.rect)
+	Draw:FilledRect(false, wm.pos.x, wm.pos.y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
+	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
+	for i = 0, 14 do
+		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
+	end
+	Draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
+	Draw:OutlinedText(wm.textString, 2, false, wm.pos.x + 5, wm.pos.y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
+end
+--ANCHOR watermak
+for k, v in pairs(mp.watermark.rect) do
+	v.Visible = true
+end
+mp.watermark.text[1].Visible = true
 
 DisplayLoadtimeFromStart()
 CreateNotification("Press DELETE to open and close the menu!")
