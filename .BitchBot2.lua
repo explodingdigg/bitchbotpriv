@@ -311,7 +311,7 @@ if not isfolder("bitchbot") then
 	makefolder("bitchbot")
 end
 
-if not isfolder("bitchbot/pf") then
+if not isfolder("bitchbot/".. mp.game) then
 	makefolder("bitchbot/".. mp.game)
 end
 
@@ -448,6 +448,46 @@ do -- metatable additions strings and such
 	end
 
 end
+
+local text_box_letters = {
+	"1",
+	"2",
+	"3",
+	"4",
+	"5",
+	"6",
+	"7",
+	"8",
+	"9",
+	"0",
+	
+	"A",
+	"B",
+	"C",
+	"D",
+	"E",
+	"F",
+	"G",
+	"H",
+	"I",
+	"J",
+	"K",
+	"L",
+	"M",
+	"N",
+	"O",
+	"P",
+	"Q",
+	"R",
+	"S",
+	"T",
+	"U",
+	"V",
+	"W",
+	"X",
+	"Y",
+	"Z"
+}
 
 local keynamereturn = {
 	One    = "1",
@@ -944,6 +984,18 @@ do
 		return temptable
 	end
 
+	function Draw:TextBox(name, text, x, y, length, tab)
+		for i = 0, 8 do
+			Draw:MenuFilledRect(true, x + 2, y + 2 + (i * 2), length - 4, 2, {0, 0, 0, 255}, tab)
+			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 8, color = RGB(35, 35, 35)}})
+		end
+
+		Draw:MenuOutlinedRect(true, x, y, length, 22, {30, 30, 30, 255}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, length - 2, 20, {0, 0, 0, 255}, tab)
+		Draw:MenuBigText(text, true, false, x + 6, y + 4 , tab)
+
+		return tab[#tab]
+	end
 end
 
 local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.x/16), math.floor(SCREEN_SIZE.y/16), 13, true, {255, 50, 200, 255}, {0, 0, 0})
@@ -1107,6 +1159,14 @@ function mp.BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name].name = v2.name
 							mp.options[v.name][v1.name][v2.name].groupbox = v1.name
 							mp.options[v.name][v1.name][v2.name].tab = v.name -- why is it all v, v1, v2 so ugly
+							y_pos += 28
+						elseif v2.type == "textbox" then
+							mp.options[v.name][v1.name][v2.name] = {}
+							mp.options[v.name][v1.name][v2.name][4] = Draw:TextBox(v2.name, v2.text, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+							mp.options[v.name][v1.name][v2.name][1] = v2.text
+							mp.options[v.name][v1.name][v2.name][2] = v2.type
+							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+							mp.options[v.name][v1.name][v2.name][5] = false
 							y_pos += 28
 						elseif v2.type == "list" then
 							mp.options[v.name][v1.name][v2.name] = {}
@@ -1572,18 +1632,53 @@ function mp.BBMenuInit(menutable)
 		
 	end
 
+	local function UpdateConfigs()
+		local configthing = mp.options["Settings"]["Configuration"]["Configs"]
+		
+		configthing[6] = GetConfigs()
+		if configthing[1] > #configthing[6] then
+			configthing[1] = #configthing[6]
+		end
+		configthing[4][1].Text = configthing[6][configthing[1]]
+		
+	end
 
 	local dropboxopen = false
 	local dropboxthatisopen = nil
+
 	mp.colorpicker_open = false
 	local colorpickerthatisopen = nil
+
+	local textboxopen = false
+	local textboxthatisopen = nil
+
 	local shooties = {}
 
 	function inputBeganMenu(key)
+
+		if textboxopen then
+			if key.KeyCode == Enum.KeyCode.Delete or key.KeyCode == Enum.KeyCode.Return then
+				for k, v in pairs(mp.options) do
+					for k1, v1 in pairs(v) do
+						for k2, v2 in pairs(v1) do
+							if v2[2] == "textbox" then
+								if v2[5] then
+									v2[5] = false
+									v2[4].Color = RGB(255, 255, 255)
+									textboxopen = false
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+
 		if key.KeyCode == Enum.KeyCode.Delete and not loadingthing.Visible then
 			cp.dragging_m = false
 			cp.dragging_r = false
 			cp.dragging_b = false
+			UpdateConfigs()
 			if mp.open and not mp.fading then
 				for k, v in pairs(mp.options) do
 					for k1, v1 in pairs(v) do
@@ -1647,6 +1742,19 @@ function mp.BBMenuInit(menutable)
 									end
 									v2[5][5] = false
 								end
+							end
+						elseif v2[2] == "textbox" then
+							if v2[5] then
+								if table.find(text_box_letters, keyenum2name(key.KeyCode)) and string.len(v2[1]) <= 28 then
+									if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+										v2[1] = v2[1].. string.upper(keyenum2name(key.KeyCode))
+									else
+										v2[1] = v2[1].. string.lower(keyenum2name(key.KeyCode))
+									end
+								elseif keyenum2name(key.KeyCode) == "Back" and v2[1] ~= "" then
+									v2[1] = string.sub(v2[1], 0, #(v2[1]) - 1)
+								end
+								v2[4].Text = v2[1]
 							end
 						end
 
@@ -1723,7 +1831,6 @@ function mp.BBMenuInit(menutable)
 		end
 	end
 
-
 	local simpcfgnamez = {"toggle", "slider", "dropbox"}
 	local function buttonpressed(bp)
 		ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
@@ -1732,6 +1839,7 @@ function mp.BBMenuInit(menutable)
 		elseif bp == mp.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
 		elseif bp == mp.options["Settings"]["Configuration"]["Save Config"] then
+			
 			local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
 
 			for k, v in next, simpcfgnamez do
@@ -1824,10 +1932,25 @@ function mp.BBMenuInit(menutable)
 				end
 			end
 			figgy = figgy.."}\n"
-			writefile(configs[mp.options["Settings"]["Configuration"]["Configs"][1]], figgy)
+			writefile("bitchbot/"..mp.game.. "/".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb", figgy)
+			CreateNotification("Saved \"".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
+			UpdateConfigs()
+		elseif bp == mp.options["Settings"]["Configuration"]["Delete Config"] then
+
+			delfile("bitchbot/"..mp.game.. "/".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb")
+			CreateNotification("Deleted \"".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
+			UpdateConfigs()
+
+			
 		elseif bp == mp.options["Settings"]["Configuration"]["Load Config"] then
 
-			local loadedcfg = readfile(configs[mp.options["Settings"]["Configuration"]["Configs"][1]])
+			local configname = "bitchbot/"..mp.game.. "/".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb"
+			if not isfile(configname) then 
+				CreateNotification("\"".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\" is not a valid config.")
+				return 
+			end
+			local loadedcfg = readfile(configname)
+			
 			local lines = {}
 			for s in loadedcfg:gmatch("[^\r\n]+") do
 				table.insert(lines, s)
@@ -2089,11 +2212,13 @@ function mp.BBMenuInit(menutable)
 					end
 				end
 			end
+			CreateNotification("Loaded \"".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 		end
 	end
 	
 	local function mousebutton1downfunc()
 		dropboxopen = false
+		textboxopen = false
 		for k, v in pairs(mp.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
@@ -2144,6 +2269,10 @@ function mp.BBMenuInit(menutable)
 								end
 							end
 						end
+					end
+					if v2[2] == "textbox" and v2[5] then
+						v2[4].Color = RGB(255, 255, 255)
+						v2[5] = false
 					end
 				end
 			end
@@ -2313,6 +2442,13 @@ function mp.BBMenuInit(menutable)
 											v2[5] = false
 										end
 									end
+
+									if v2 == mp.options["Settings"]["Configuration"]["Configs"] then
+										local textbox = mp.options["Settings"]["Configuration"]["ConfigName"]
+										local relconfigs = GetConfigs()
+										textbox[1] = relconfigs[mp.options["Settings"]["Configuration"]["Configs"][1]]
+										textbox[4].Text = textbox[1]
+									end
 								end
 							elseif v2[2] == "combobox" then
 								if dropboxopen then
@@ -2361,6 +2497,17 @@ function mp.BBMenuInit(menutable)
 										end
 										v2[1] = true
 									end
+								end
+							elseif v2[2] == "textbox" and not dropboxopen then
+								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 22) then
+									if not v2[5] then
+										textboxopen = true
+										textboxthatisopen = v2
+
+										v2[4].Color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])
+										v2[5] = true
+									end
+
 								end
 							elseif v2[2] == "list" then
 								--[[
@@ -3281,6 +3428,11 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					width = mp.columns.width,
 					height = 183,
 					content = {
+						{
+							type = "textbox",
+							name = "ConfigName",
+							text = "poop"
+						},
 						{
 							type = "dropbox",
 							name = "Configs",
@@ -8308,6 +8460,11 @@ elseif mp.game == "pf" then --!SECTION
 					height = 183,
 					content = {
 						{
+							type = "textbox",
+							name = "ConfigName",
+							text = "poop"
+						},
+						{
 							type = "dropbox",
 							name = "Configs",
 							value = 1,
@@ -8525,6 +8682,11 @@ for k, v in pairs(mp.watermark.rect) do
 	v.Visible = true
 end
 mp.watermark.text[1].Visible = true
+
+local textbox = mp.options["Settings"]["Configuration"]["ConfigName"]
+local relconfigs = GetConfigs()
+textbox[1] = relconfigs[mp.options["Settings"]["Configuration"]["Configs"][1]]
+textbox[4].Text = textbox[1]
 
 DisplayLoadtimeFromStart()
 CreateNotification("Press DELETE to open and close the menu!")
