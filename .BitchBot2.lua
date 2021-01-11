@@ -5103,7 +5103,7 @@ elseif mp.game == "pf" then --!SECTION
 					
 					local playerlist = Players:GetPlayers()
 
-					--[[CreateThread(function()
+					CreateThread(function()
 						local priority_list = {}
 						for k, PlayerName in pairs(mp.priority) do
 							table.insert(priority_list, game.Players[PlayerName])
@@ -5113,16 +5113,7 @@ elseif mp.game == "pf" then --!SECTION
 							targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 						end
 						ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
-					end)]]
-					local priority_list = {}
-					for k, PlayerName in pairs(mp.priority) do
-						table.insert(priority_list, game.Players[PlayerName])
-					end
-					local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
-					if not targetPart then 
-						targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
-					end
-					ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
+					end)
 				else
 					self.target = nil
 				end
