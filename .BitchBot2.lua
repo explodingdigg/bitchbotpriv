@@ -7022,7 +7022,7 @@ elseif mp.game == "pf" then --!SECTION
 
 	local oldpos = nil
 	mp.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
-		inputBeganMenu(key)
+		--inputBeganMenu(key)
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
 			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 		end
