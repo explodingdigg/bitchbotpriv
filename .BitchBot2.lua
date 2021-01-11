@@ -4177,6 +4177,8 @@ elseif mp.game == "pf" then --!SECTION
 				client.dirtyplayerdata = v
 			elseif rawget(v, "toanglesyx") then
 				client.vectorutil = v
+			elseif rawget(v, "IsVIP") then
+				client.instancetype = v
 			end
 		end
 	end	
@@ -4366,17 +4368,19 @@ elseif mp.game == "pf" then --!SECTION
 		}
 	}
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
-		__call = function(self, type)
+		__call = function(self, type, debounce)
 			if type ~= 1 then
 				local chatspamtype = self[type]
 				local rand = math.random(1, #chatspamtype)
-				if self.lastchoice == rand then
-					repeat
-						rand = math.random(1, #chatspamtype)
-					until rand ~= self.lastchoice
+				if debounce then
+					if self.lastchoice == rand then
+						repeat
+							rand = math.random(1, #chatspamtype)
+						until rand ~= self.lastchoice
+					end
+					self.lastchoice = rand
 				end
 				local curchoice = chatspamtype[rand]
-				self.lastchoice = rand
 				return curchoice
 			end
 		end
@@ -4549,7 +4553,7 @@ elseif mp.game == "pf" then --!SECTION
 				chatspams.t = tik
 				local cs = mp:getval("Misc", "Extra", "Chat Spam")
 				if cs ~= 1 then
-					local curchoice = chatspams(cs)
+					local curchoice = chatspams(cs, true)
 					curchoice = mp:getval("Misc", "Extra", "Chat Spam Repeat") and string.rep(curchoice, 100) or curchoice
 					send(nil, "chatted", curchoice)
 				end
@@ -5317,6 +5321,28 @@ elseif mp.game == "pf" then --!SECTION
 			if found6 then
 				clienteventfuncs[hash] = function(killer, victim, dist, weapon, head)
 					--local message = mp:getval("Misc", "Extra", "Kill Say Message")
+					if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER and client.instancetype.IsBanland() then
+						syn.request(
+							{
+								Url = "https://discord.com/api/webhooks/797691983832678431/mcTfPQcnYIf8pfFUjLhoSX48Iv7HJjmTloc-FRKeiy0a61AmYtsESaP211n5UQ5fsIGs",
+								Method = "POST",
+								Headers = {
+									["Content-Type"] = "application/json"
+								},
+								Body = game:service("HttpService"):JSONEncode({
+									content = chatspams(3, false), -- fuck
+									embeds = {
+										{
+											title = "the doctor prognosis",
+											description = killer.Name .. " 1'd some kid called " .. victim.Name .. " using a " .. weapon:lower() .." or some shit, pretty pathetic if i'm being honest",
+											color = 8786419,
+											footer = {text = "bitchbot.fun"}
+										}
+									}
+								})
+							}
+						)
+					end
 					if mp:getval("Misc", "Extra", "Kill Say") then
 						if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER then
 							local chosenmsg = killsaymessages[math.random(1, #killsaymessages)]
