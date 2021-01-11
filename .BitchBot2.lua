@@ -4811,7 +4811,7 @@ elseif mp.game == "pf" then --!SECTION
 			local autowall = mp:getval("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
-			local barrel = client.logic.currentgun.barrel.CFrame.p
+			local barrel = client.cam.cframe.p
 			local firepos
 		
 			for i, player in next, players do
@@ -5457,6 +5457,11 @@ elseif mp.game == "pf" then --!SECTION
 
 			beam.Parent = workspace
 			return beam
+		end
+
+		local setsway = client.cam.setswayspeed
+		client.cam.setswayspeed = function(self,v)
+			setsway(self, mp:getval("Visuals", "Camera Visuals", "No Scope Sway") and 0 or v)
 		end
 
 		function misc:GetParts(parts)
@@ -7864,6 +7869,11 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "toggle", 
 							name = "No Camera Bob",
+							value = false
+						},
+						{
+							type = "toggle",
+							name = "No Scope Sway",
 							value = false
 						},
 						{
