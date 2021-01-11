@@ -5827,18 +5827,6 @@ elseif mp.game == "pf" then --!SECTION
 					-- end
 					return
 				end
-				if mp:getval("Visuals", "Misc Visuals", "Bullet Tracers") then
-					local origin = args[2].firepos
-					local attach_origin = Instance.new("Attachment", workspace.Terrain)
-					attach_origin.Position = origin
-					for k, bullet in pairs(args[2].bullets) do
-						local ending = origin + bullet[1] * 300
-						local attach_ending = Instance.new("Attachment", workspace.Terrain)
-						attach_ending.Position = ending
-						local beam = misc:CreateBeam(attach_origin, attach_ending)
-						beam.Parent = workspace
-					end
-				end
 			elseif args[1] == "stab" then
 				if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
@@ -5914,7 +5902,6 @@ elseif mp.game == "pf" then --!SECTION
 		legitbot.silentVector = nil
 
 		local function Move_Mouse(delta)
-			delta = delta / 100 --lol
 			local coef = client.cam.sensitivitymult * math.atan(math.tan(client.cam.basefov * (math.pi / 180) / 2) / 2.72 ^ client.cam.magspring.p) / (32 * math.pi)
 			local x = client.cam.angles.x - coef * delta.y
 			x = x > client.cam.maxangle and client.cam.maxangle or x < client.cam.minangle and client.cam.minangle or x
@@ -5997,7 +5984,7 @@ elseif mp.game == "pf" then --!SECTION
 				local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
 				Pos += rcsdelta
 			end
-			local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y)
+			local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
 
 			Move_Mouse(aimbotMovement)
 			
@@ -6157,6 +6144,16 @@ elseif mp.game == "pf" then --!SECTION
 			local mag = P.velocity.Magnitude
 			P.velocity = ragebot.silentVector * mag
 			P.visualorigin = ragebot.firepos
+		end
+		if mp:getval("Visuals", "Misc Visuals", "Bullet Tracers") and not P.thirdperson then
+			local origin = P.position
+			local attach_origin = Instance.new("Attachment", workspace.Terrain)
+			attach_origin.Position = origin
+			local ending = origin + P.velocity.Unit * 300
+			local attach_ending = Instance.new("Attachment", workspace.Terrain)
+			attach_ending.Position = ending
+			local beam = misc:CreateBeam(attach_origin, attach_ending)
+			beam.Parent = workspace
 		end
 		newpart(P)
 		-- THIS IS SILENT AIM. :partying_face:🥳🥳🥳🥳🥳🥳
@@ -7280,7 +7277,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Stance Choice",
 							value = 1,
-							values = {"Standing", "Crouching", "Prone"}
+							values = {"Stand", "Crouch", "Prone"}
 						}
 					}
 				},
