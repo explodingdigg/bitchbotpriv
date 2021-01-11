@@ -5384,7 +5384,7 @@ elseif mp.game == "pf" then --!SECTION
 						}
 
 						if mp:getval("Misc", "Exploits", "Grenade Teleport") and args[1] ~= LOCAL_PLAYER then
-							fragargs.blowuptime = 0.1
+							fragargs.blowuptime = 0
 							
 							local killerbodyparts = client.replication.getbodyparts(args[1])
 
@@ -5394,13 +5394,13 @@ elseif mp.game == "pf" then --!SECTION
 
 							fragargs[2].frames[1].a = Vector3.new()
 							fragargs[2].frames[2] = {
-								v0 = killerbodyparts.rootpart.Velocity,
+								v0 = Vector3.new(),
 								glassbreaks = {},
 								t0 = 0,
 								offset = Vector3.new(),
 								rot0 = CFrame.new(),
 								a = Vector3.new(),
-								p0 = killerbodyparts.rootpart.Position + Vector3.new(0, 6, 0),
+								p0 = killerbodyparts.rootpart.Position + Vector3.new(0, 2, 0),
 								rotv = Vector3.new()
 							}
 						end
