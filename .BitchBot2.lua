@@ -5340,6 +5340,37 @@ elseif mp.game == "pf" then --!SECTION
 	end
 	
 	do -- ANCHOR misc definitionz
+		local debris = game:service("Debris")
+		local tween = game:service("TweenService")
+
+		function misc:CreateBeam(origin_att, ending_att)
+			local beam = Instance.new("Beam")
+			beam.Texture = "http://www.roblox.com/asset/?id=446111271"
+			beam.TextureMode = Enum.TextureMode.Wrap
+			beam.TextureSpeed = 8
+			beam.LightEmission = 1
+			beam.LightInfluence = 1
+			beam.TextureLength = 12
+			beam.FaceCamera = true
+			beam.Enabled = true
+			beam.Transparency = NumberSequence.new{
+				NumberSequenceKeypoint.new(0, 0), 
+				NumberSequenceKeypoint.new(1, 1)
+			}
+			beam.Color = ColorSequence.new(mp:getval("Visuals", "Misc Visuals", "Bullet Tracers", "color", true), Color3.new(0, 0, 0))
+			beam.Attachment0 = origin_att
+			beam.Attachment1 = ending_att
+			debris:AddItem(beam, 3)
+			debris:AddItem(origin_att, 3)
+			debris:AddItem(ending_att, 3)
+
+			local speedtween = TweenInfo.new(3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0)
+			tween:Create(beam, speedtween, {TextureSpeed = 4}):Play()
+
+			beam.Parent = workspace
+			return beam
+		end
+
 		function misc:GetParts(parts)
 			parts["Head"] =      parts[1]
 			parts["Torso"] =     parts[2]
@@ -5747,21 +5778,30 @@ elseif mp.game == "pf" then --!SECTION
 					-- end
 					return
 				end
-			end
-			if args[1] == "stab" then
+				if mp:getval("Visuals", "Misc Visuals", "Bullet Tracers") then
+					local origin = args[2].firepos
+					local attach_origin = Instance.new("Attachment", workspace.Terrain)
+					attach_origin.Position = origin
+					for k, bullet in pairs(args[2].bullets) do
+						local ending = origin + bullet[1] * 300
+						local attach_ending = Instance.new("Attachment", workspace.Terrain)
+						attach_ending.Position = ending
+						local beam = misc:CreateBeam(attach_origin, attach_ending)
+						beam.Parent = workspace
+					end
+				end
+			elseif args[1] == "stab" then
 				if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
 						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
 					end
 				end
-			end
-			if args[1] == "equip" then
+			elseif args[1] == "equip" then
 				if client.fakecharacter and args[2] ~= 3 then --TODO json find a way to make 3p melee equip thing fucjk
 					local gun = client.loadedguns[args[2]].name
 					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 				end
-			end
-			if args[1] == "repupdate" and mp:getval("Rage", "Anti Aim", "Enabled") then
+			elseif args[1] == "repupdate" and mp:getval("Rage", "Anti Aim", "Enabled") then
 				--args[2] = ragebot:AntiNade(args[2])
 				stutterFrames += 1
 				local pitch = args[3].x
