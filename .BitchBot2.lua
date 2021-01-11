@@ -7336,7 +7336,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Resolver Type",
 							value = 2,
-							values = {"Cubic", "Axes", "Random"}
+							values = {"Cubic", "Axis Shifting", "Random"}
 						},
 						{
 							type = "slider",
