@@ -5799,6 +5799,7 @@ elseif mp.game == "pf" then --!SECTION
 						bullet[1] = legitbot.silentVector
 					end
 				end
+
 				if ragebot.silentVector then
 					-- duck tape fix or whatever the fuck its called for this its stupid
 					args[2].firepos = ragebot.firepos 
@@ -5819,6 +5820,14 @@ elseif mp.game == "pf" then --!SECTION
 
 					send(self, unpack(args))
 					for k, bullet in pairs(args[2].bullets) do
+						local origin = args[2].firepos
+						local attach_origin = Instance.new("Attachment", workspace.Terrain)
+						attach_origin.Position = origin
+						local ending = origin + bullet[1] * 300
+						local attach_ending = Instance.new("Attachment", workspace.Terrain)
+						attach_ending.Position = ending
+						local beam = misc:CreateBeam(attach_origin, attach_ending)
+						beam.Parent = workspace
 						send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
 					end
 					
@@ -5826,6 +5835,19 @@ elseif mp.game == "pf" then --!SECTION
 					-- 	send(gamenet, "bullethit", rageTarget, rageHitPos, rageHitbox, bullet[2])
 					-- end
 					return
+				else
+					if mp:getval("Visuals", "Misc Visuals", "Bullet Tracers") then
+						for k, bullet in next, args[2].bullets do
+							local origin = args[2].firepos
+							local attach_origin = Instance.new("Attachment", workspace.Terrain)
+							attach_origin.Position = origin
+							local ending = origin + bullet[1] * 300
+							local attach_ending = Instance.new("Attachment", workspace.Terrain)
+							attach_ending.Position = ending
+							local beam = misc:CreateBeam(attach_origin, attach_ending)
+							beam.Parent = workspace
+						end
+					end
 				end
 			elseif args[1] == "stab" then
 				if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
@@ -6145,7 +6167,7 @@ elseif mp.game == "pf" then --!SECTION
 			P.velocity = ragebot.silentVector * mag
 			P.visualorigin = ragebot.firepos
 		end
-		if mp:getval("Visuals", "Misc Visuals", "Bullet Tracers") and not P.thirdperson then
+		--[[if mp:getval("Visuals", "Misc Visuals", "Bullet Tracers") and not P.thirdperson then
 			local origin = P.position
 			local attach_origin = Instance.new("Attachment", workspace.Terrain)
 			attach_origin.Position = origin
@@ -6154,7 +6176,7 @@ elseif mp.game == "pf" then --!SECTION
 			attach_ending.Position = ending
 			local beam = misc:CreateBeam(attach_origin, attach_ending)
 			beam.Parent = workspace
-		end
+		end]]
 		newpart(P)
 		-- THIS IS SILENT AIM. :partying_face:🥳🥳🥳🥳🥳🥳
 	end
