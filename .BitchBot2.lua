@@ -5303,16 +5303,16 @@ elseif mp.game == "pf" then --!SECTION
 						if name == LOCAL_PLAYER.Name then
 							client.hud:vote("no")
 						else
-							if table.find(mp.friends, name) and friends ~= 0 then
-								local choice = friends == 1 and "yes" or "no"
+							if table.find(mp.friends, name) and friends ~= 1 then
+								local choice = friends == 2 and "yes" or "no"
 								client.hud:vote(choice)
 							end
-							if table.find(mp.priority, name) and priority ~= 0 then
-								local choice = priority == 1 and "yes" or "no"
+							if table.find(mp.priority, name) and priority ~= 1 then
+								local choice = priority == 2 and "yes" or "no"
 								client.hud:vote(choice)
 							end
-							if default ~= 0 then
-								local choice = default == 1 and "yes" or "no"
+							if default ~= 1 then
+								local choice = default == 2 and "yes" or "no"
 								client.hud:vote(choice)
 							end
 						end
