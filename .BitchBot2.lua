@@ -5401,7 +5401,7 @@ elseif mp.game == "pf" then --!SECTION
 							}
 						}
 
-						if mp:getval("Misc", "Exploits", "Grenade Teleport") then
+						if mp:getval("Misc", "Exploits", "Grenade Teleport") and args[1] ~= LOCAL_PLAYER then
 							fragargs.blowuptime = 0
 							
 							local killerbodyparts = client.replication.getbodyparts(args[1])
