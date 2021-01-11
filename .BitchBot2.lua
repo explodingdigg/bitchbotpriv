@@ -378,10 +378,6 @@ end
 do -- math stuffz
 	setreadonly(math, false)
 
-	math.map = function(X, A, B, C, D)
-		return (X-A)/(B-A) * (D-C) + C
-	end
-
 	math.Lerp = function(delta, from, to)
 		if (delta > 1) then
 			return to
@@ -5807,7 +5803,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 			if mp:getval("Misc", "Movement", "Gravity Shift") then
 				local scaling = mp:getval("Misc", "Movement", "Gravity Shift Percentage")
-				local mappedGrav = math.map(scaling, -100, 100, 0, 196.2)
+				local mappedGrav = map(scaling, -100, 100, -196.2, 196.2)
 				workspace.Gravity = 196.2 + mappedGrav
 			else
 				workspace.Gravity = 196.2
@@ -6090,7 +6086,7 @@ elseif mp.game == "pf" then --!SECTION
 			local dir = camera:GetTrajectory(target, origin) - origin
 			dir = dir.Unit
 
-			local offsetMult = math.map((mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
+			local offsetMult = map((mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
 			local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
 			dir += offset * offsetMult
 			
