@@ -5545,12 +5545,9 @@ elseif mp.game == "pf" then --!SECTION
 							send(nil, "chatted", string.format(chosenmsg, victim.Name:lower()))
 						end
 						if mp:getval("Misc", "Extra", "Kill Sound") then
-							local sound = Instance.new("Sound")
-							sound.PlayOnRemove = true
-							sound.SoundId = "rbxassetid://1455817260"
-							sound.Volume = 2
-							sound.Parent = workspace
-							sound:Destroy()
+							-- 1455817260
+							client.sound.PlaySoundId("rbxassetid://1455817260", 1.0, 1.0, workspace, nil, 0, 0.05) -- this is the quake hitsound
+							--client.sound.PlaySoundId("rbxassetid://6229978482", 5.0, 1.0, workspace, nil, 0, 0.03)
 						end
 					end
 					return func(killer, victim, dist, weapon, head)
@@ -5860,7 +5857,7 @@ elseif mp.game == "pf" then --!SECTION
 											offset = Vector3.new(),
 											rot0 = CFrame.new(),
 											a = Vector3.new(),
-											p0 = workspace.CurrentCamera.CFrame.p,
+											p0 = client.char.head.Position,
 											rotv = Vector3.new()
 										},
 										{
