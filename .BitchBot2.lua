@@ -366,14 +366,14 @@ end
 do -- table shitz
 	setreadonly(table, false)
 
-	-- table.find = function(table, element)
-	-- 	for _, value in pairs(table) do
-	-- 		if value == element then
-	-- 			return true
-	-- 		end
-	-- 	end
-	-- 	return false
-	-- end
+	table.find = function(table, element)
+		for _, value in pairs(table) do
+			if value == element then
+				return true
+			end
+		end
+		return false
+	end
 
 	setreadonly(table, true)
 end
