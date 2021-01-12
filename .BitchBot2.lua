@@ -4517,6 +4517,7 @@ elseif mp.game == "pf" then --!SECTION
 		"desu", "hook", "vw HACK", "Anti Votekick", "Speed", "Fly Hack", "Big Head", "Knife Hack",
 		"No Clip", "Auto", "Rapid Fire", "Fire Rate Hack", "Fire Rate", "God Mode", "God", 
 		"Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma",
+		"And", "DDOX", "ddox", "LEAKED", "🥳🥳🥳", "RELEASE", "LEAKED DDOX INFINITE WALLBANG", "IP RESOLVER",
 		"Infinite Wall Bang", "Wall Bang", "Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱"
 	}
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
