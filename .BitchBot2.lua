@@ -4517,14 +4517,14 @@ elseif mp.game == "pf" then --!SECTION
 		"desu", "hook", "vw HACK", "Anti Votekick", "Speed", "Fly Hack", "Big Head", "Knife Hack",
 		"No Clip", "Auto", "Rapid Fire", "Fire Rate Hack", "Fire Rate", "God Mode", "God", 
 		"Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma",
-		"Infinite Wall Bang", "Wall Bang", "Trickshot", "Sniper", "Wall Hack"
+		"Infinite Wall Bang", "Wall Bang", "Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱"
 	}
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 		__call = function(self, type, debounce)
 			if type ~= 1 then
 				if type == 9 then
 					local message = ""
-					for i = 1, math.random(50) do
+					for i = 5, math.random(50) do
 						message = message .. " " .. spam_words[math.random(#spam_words)]
 					end
 					return message
@@ -4552,7 +4552,7 @@ elseif mp.game == "pf" then --!SECTION
 			local shootgun = client.logic.currentgun.shoot
 			if not shooties[client.logic.currentgun.shoot] then
 				client.logic.currentgun.shoot = function(...)
-					if mp.open then return end
+					if mp.open and not ragebot.target then return end
 					shootgun(...)
 				end
 			end
@@ -4962,11 +4962,11 @@ elseif mp.game == "pf" then --!SECTION
 			local origin = origin or client.cam.cframe.p
 			if not part then 
 				ragebot.silentVector = nil
-				ragebot.target = nil
 				ragebot.firepos = nil
 				if ragebot.shooting and mp:getval("Rage", "Aimbot", "Auto Shoot") then
 					client.logic.currentgun:shoot(false)
 				end
+				ragebot.target = nil
 				ragebot.shooting = false
 				return
 			end
