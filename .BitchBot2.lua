@@ -332,7 +332,7 @@ local function GetConfigs()
 		end
 	end
 	if #result <= 0 then
-		writefile("bitchbot/".. mp.game .."/Default", "")
+		writefile("bitchbot/".. mp.game .."/Default.bb", "")
 	end
 	return result
 end
