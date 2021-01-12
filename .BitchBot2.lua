@@ -1757,7 +1757,7 @@ function mp.BBMenuInit(menutable)
 								elseif keyenum2name(key.KeyCode) == "Back" and v2[1] ~= "" then
 									v2[1] = string.sub(v2[1], 0, #(v2[1]) - 1)
 								end
-								v2[4].Text = v2[1]
+								v2[4].Text = v2[1] .. "·"
 							end
 						end
 
@@ -2276,6 +2276,7 @@ function mp.BBMenuInit(menutable)
 					if v2[2] == "textbox" and v2[5] then
 						v2[4].Color = RGB(255, 255, 255)
 						v2[5] = false
+						v2[4].Text = v2[1]
 					end
 				end
 			end
@@ -7066,10 +7067,12 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 	end)
-
+	local chat_game = LOCAL_PLAYER.PlayerGui.ChatGame
+	local chat_box = chat_game:FindFirstChild("TextBox")
 	local oldpos = nil
 	mp.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
-		--inputBeganMenu(key)
+		--inputBeganMenu(key)/
+		if chat_box.Active then return end
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
 			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 		end
