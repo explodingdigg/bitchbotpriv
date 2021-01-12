@@ -4984,6 +4984,33 @@ elseif mp.game == "pf" then --!SECTION
 			ragebot.firepos = origin
 			ragebot.shooting = true
 			if mp:getval("Rage", "Aimbot", "Auto Shoot") then
+				--[[if client.tpupsteps then
+					local oldsend = client.net.send
+
+					client.net.send = function(self, event, ...)
+						if event == "repupdate" then return end
+						oldsend(self, event, ...)
+					end
+
+					for i = 1, #client.tpupsteps do
+						oldsend(nil, "repupdate", client.tpupsteps[i], client.cam.angles)
+						game.RunService.RenderStepped:Wait()
+						game.RunService.RenderStepped:Wait()
+					end
+
+					client.logic.currentgun:shoot(true)
+
+					for i = (#client.tpupsteps - 1), 1, -1 do
+						-- come down
+						oldsend(nil, "repupdate", client.tpupsteps[i], client.cam.angles)
+						game.RunService.RenderStepped:Wait()
+						game.RunService.RenderStepped:Wait()
+					end
+					
+					client.net.send = oldsend
+					client.tpupsteps = nil
+					return
+				end]]
 				client.logic.currentgun:shoot(true)
 			end
 		end
@@ -5062,7 +5089,7 @@ elseif mp.game == "pf" then --!SECTION
 												firepos = resolvedPosition
 												if mp.priority[player.Name] then break end
 											end
-										else -- random 
+										elseif resolvertype == 4 then -- random 
 											local resolvedPosition = ragebot:HitscanRandom(barrel, player, bone)
 											if resolvedPosition then
 												ragebot.firepos = resolvedPosition
@@ -5070,6 +5097,28 @@ elseif mp.game == "pf" then --!SECTION
 												theplayer = player
 												firepos = resolvedPosition
 												if mp.priority[player.Name] then break end
+											end
+										else -- teleport
+											--[[local resolvedPosition, steps = ragebot:TP_UpHitscan(barrel, bone.Position, 10)
+											if resolvedPosition then
+												rconsolewarn(tostring(resolvedPosition) .. " | " .. tostring(#steps))
+												ragebot.firepos = resolvedPosition
+												cpart = bone
+												theplayer = player
+												firepos = resolvedPosition
+												client.tpupsteps = steps
+												if mp.priority[player.Name] then break end	
+											end]]
+											local up = client.char.head.Position + Vector3.new(0, 18, 0)
+											if ragebot:CanPenetrateRaycast(up, bone.Position, client.logic.currentgun.data.penetrationdepth) then
+												ragebot.firepos = up
+												ragebot.needsTP = true
+												cpart = bone
+												theplayer = player
+												firepos = up
+												if mp.priority[player.Name] then break end
+											else
+												ragebot.needsTP = false	
 											end
 										end
 									end
@@ -5308,6 +5357,31 @@ elseif mp.game == "pf" then --!SECTION
 			return nil
 		end
 
+		function ragebot:TP_UpHitscan(from, to, max_steps)
+			warn("ok  ! ! ! ! ! ! ! !")
+			local newpos = from
+			warn("okay")
+			local steps = {}
+			warn("the table shit")
+			for step = 18, (math.ceil(18 * max_steps)), 18 do
+				warn("alright first step number", step)
+				newpos += Vector3.new(0, step, 0)
+				warn(step, newpos)
+				local penetrated = ragebot:CanPenetrateRaycast(newpos, to, client.logic.currentgun.data.penetrationdepth)
+				table.insert(steps, #steps + 1, newpos)
+				if penetrated then
+					return newpos, steps
+				end
+				--[[local oldsend = client.net.send
+
+				client.net.send = function(self, event, ...)
+					if event == "repupdate" then return end
+					oldsend(self, event, ...)
+				end]]
+			end
+			return nil
+		end
+
 		function ragebot:MainLoop() -- lfg
 			if client.char.spawned and mp:getval("Rage", "Aimbot", "Enabled") then
 				local hitscanpreference = misc:GetParts(mp:getval("Rage", "Aimbot", "Hitscan Points"))
@@ -5319,7 +5393,7 @@ elseif mp.game == "pf" then --!SECTION
 					
 					local playerlist = Players:GetPlayers()
 
-					CreateThread(function()
+					--[[CreateThread(function()
 						local priority_list = {}
 						for k, PlayerName in pairs(mp.priority) do
 							table.insert(priority_list, game.Players[PlayerName])
@@ -5329,7 +5403,16 @@ elseif mp.game == "pf" then --!SECTION
 							targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 						end
 						ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
-					end)
+					end)]]
+					local priority_list = {}
+					for k, PlayerName in pairs(mp.priority) do
+						table.insert(priority_list, game.Players[PlayerName])
+					end
+					local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
+					if not targetPart then 
+						targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+					end
+					ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
 				else
 					self.target = nil
 				end
@@ -6060,8 +6143,16 @@ elseif mp.game == "pf" then --!SECTION
 
 				if ragebot.silentVector then
 					-- duck tape fix or whatever the fuck its called for this its stupid
-					args[2].firepos = ragebot.firepos 
+					args[2].firepos = ragebot.firepos
+					args[2].camerapos = ragebot.firepos -- might fix some problems idk lol
 					local cachedtime
+
+					if mp:getval("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
+						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
+						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
+						ragebot.needsTP = false
+					end
+
 					for k, bullet in pairs(args[2].bullets) do
 						local angle, time = client.trajectory(ragebot.firepos, GRAVITY, ragebot.targetpart.Position, client.logic.currentgun.data.bulletspeed)
 						bullet[1] = angle
@@ -6083,7 +6174,7 @@ elseif mp.game == "pf" then --!SECTION
 						if client.fakecharacter then
 							client.fakeupdater.setlookangles(angles)
 						end
-						send(self, "repupdate", client.char.head.Position, angles)
+						--send(self, "repupdate", client.char.head.Position, angles)
 					end
 
 					send(self, unpack(args))
@@ -7550,7 +7641,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Resolver Type",
 							value = 2,
-							values = {"Cubic", "Axis Shifting","Axis Shifting Fast", "Random"}
+							values = {"Cubic", "Axis Shifting", "Axis Shifting Fast", "Random", "Teleport"}
 						},
 						{
 							type = "slider",
