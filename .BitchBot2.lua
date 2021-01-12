@@ -5546,8 +5546,8 @@ elseif mp.game == "pf" then --!SECTION
 						end
 						if mp:getval("Misc", "Extra", "Kill Sound") then
 							-- 1455817260
-							client.sound.PlaySoundId("rbxassetid://1455817260", 1.0, 1.0, workspace, nil, 0, 0.05) -- this is the quake hitsound
-							--client.sound.PlaySoundId("rbxassetid://6229978482", 5.0, 1.0, workspace, nil, 0, 0.03)
+							--client.sound.PlaySoundId("rbxassetid://1455817260", 1.0, 1.0, workspace, nil, 0, 0.05) -- this is the quake hitsound
+							client.sound.PlaySoundId("rbxassetid://6229978482", 5.0, 1.0, workspace, nil, 0, 0.03)
 						end
 					end
 					return func(killer, victim, dist, weapon, head)
@@ -5842,12 +5842,11 @@ elseif mp.game == "pf" then --!SECTION
 						if i >= 4 then break end
 						if client.hud:isplayeralive(v) then
 							i += 1
-							local grenadechoice = i == 1 and "FRAG" or i == 2 and "FRAG HALLOWEEN" or "FRAG HOLIDAY" -- LOL!!!!!!!
 							local curbodyparts = client.replication.getbodyparts(v)
 							local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10 
 												and curbodyparts.rootpart.Position or curbodyparts.head.Position
 							local args = {
-								grenadechoice,
+								"FRAG",
 								{
 									frames = {
 										{
