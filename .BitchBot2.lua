@@ -3808,15 +3808,15 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							end
 						end
 
-						if mp:getval("Settings", "Player List", "Player Status") == 1 then
-							for k, table_ in pairs({mp.friends, mp.priority}) do
-								for index, plyrname in pairs(table_) do
-									if selected_plyr.Name == plyrname then
-										table.remove(table_, index)
-									end
+						
+						for k, table_ in pairs({mp.friends, mp.priority}) do
+							for index, plyrname in pairs(table_) do
+								if selected_plyr.Name == plyrname then
+									table.remove(table_, index)
 								end
 							end
-						elseif mp:getval("Settings", "Player List", "Player Status") == 2 then
+						end
+						if mp:getval("Settings", "Player List", "Player Status") == 2 then
 							if not table.find(mp.friends, selected_plyr.Name) then
 								table.insert(mp.friends, selected_plyr.Name)
 							end
@@ -8671,15 +8671,14 @@ elseif mp.game == "pf" then --!SECTION
 							end
 						end
 
-						if mp:getval("Settings", "Player List", "Player Status") == 1 then
-							for k, table_ in pairs({mp.friends, mp.priority}) do
-								for index, plyrname in pairs(table_) do
-									if selected_plyr.Name == plyrname then
-										table.remove(table_, index)
-									end
+						for k, table_ in pairs({mp.friends, mp.priority}) do
+							for index, plyrname in pairs(table_) do
+								if selected_plyr.Name == plyrname then
+									table.remove(table_, index)
 								end
 							end
-						elseif mp:getval("Settings", "Player List", "Player Status") == 2 then
+						end
+						if mp:getval("Settings", "Player List", "Player Status") == 2 then
 							if not table.find(mp.friends, selected_plyr.Name) then
 								table.insert(mp.friends, selected_plyr.Name)
 							end
