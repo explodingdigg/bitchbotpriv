@@ -4500,9 +4500,35 @@ elseif mp.game == "pf" then --!SECTION
 			"\"this god mode guy is annoying\", Pr0blematicc says as he loses roblox hvh "	
 		}
 	}
+	--local 
+	local spam_words = {
+		"Hack", "Unlock", "Cheat", "Roblox", "Mod Menu", "Mod", "Menu", "God Mode", "Kill All",
+		"Silent", "Silent Aim", "X Ray", "Aim", "Bypass", "Glitch", "Wallhack", "ESP", "Infinite",
+		"Infinite Credits", "XP", "XP Hack", "Infinite Credits", "Unlook All", "Server Backdoor",
+		"Serverside", "2021", "Working", "(WORKING)", "瞄准无声目标绕过", "Gamesense", "Onetap",
+		"PF Exploit", "Phantom Force", "Cracked", "TP Hack", "PF MOD MENU", "DOWNLOAD", "Paste Bin",
+		"download", "Download", "Teleport", "100% legit", "100%", "pro", "Professional",
+		"No Virus All Clean", "No Survey", "No Ads", "Free", "Not Paid", "Real", "REAL 2020",
+		"2020", "Real 2017", "BBot", "Cracked", "BBOT CRACKED by vw", "2014", "desuhook crack",
+		"Aimware", "Hacks", "Cheats", "Exploits", "(FREE)", "🕶😎", "😎", "😂", "😛", "paste bin",
+		"bbot script", "hard code", "正免费下载和使", "SERVER BACKDOOR", "Secret", "SECRET", "Unleaked", 
+		"Not Leaked", "Method", "Minecraft Steve", "Steve", "Minecraft", "Sponge Hook", "Squid Hook", "Script",
+		"Squid Hack", "Sponge Hack", "(OP)", "Verified", "All Clean", "Program", "Hook", 
+		"desu", "hook", "vw HACK", "Anti Votekick", "Speed", "Fly Hack", "Big Head", "Knife Hack",
+		"No Clip", "Auto", "Rapid Fire", "Fire Rate Hack", "Fire Rate", "God Mode", "God", 
+		"Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma",
+		"Infinite Wall Bang", "Wall Bang", "Trickshot", "Sniper", "Wall Hack"
+	}
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 		__call = function(self, type, debounce)
 			if type ~= 1 then
+				if type == 9 then
+					local message = ""
+					for i = 1, math.random(50) do
+						message = message .. " " .. spam_words[math.random(#spam_words)]
+					end
+					return message
+				end
 				local chatspamtype = self[type]
 				local rand = math.random(1, #chatspamtype)
 				if debounce then
@@ -5017,7 +5043,25 @@ elseif mp.game == "pf" then --!SECTION
 												if mp.priority[player.Name] then break end
 											end
 										elseif resolvertype == 2 then -- axes
-											local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone)
+											local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 8, 1)
+											if resolvedPosition then
+												ragebot.firepos = resolvedPosition
+												cpart = bone
+												theplayer = player
+												firepos = resolvedPosition
+												if mp.priority[player.Name] then break end
+											end
+										elseif resolvertype == 3 then -- axes fast
+											local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 8)
+											if resolvedPosition then
+												ragebot.firepos = resolvedPosition
+												cpart = bone
+												theplayer = player
+												firepos = resolvedPosition
+												if mp.priority[player.Name] then break end
+											end
+										else -- random 
+											local resolvedPosition = ragebot:HitscanRandom(barrel, player, bone)
 											if resolvedPosition then
 												ragebot.firepos = resolvedPosition
 												cpart = bone
@@ -5183,8 +5227,23 @@ elseif mp.game == "pf" then --!SECTION
 
 			return resolvedPosition
 		end
+		local hitpoints = {}
+		function ragebot:HitscanRandom(origin, person, bodypart)
+			local offset
+			if #hitpoints < 50 or math.random() < 0.2 then
+				offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit * 8
+			else
+				offset = hitpoints[math.random(#points)]
+			end
+			local position = origin + offset
+			if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+				table.insert(hitpoints, offset)
+				print(#hitpoints)
+				return position
+			end
+		end
 
-		function ragebot:HitscanOnAxes(origin, person, bodypart)
+		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step)
 			assert(bodypart, "hello")
 			assert(person, "something went wrong in your nasa rocket launch")
 			local position = origin
@@ -5192,8 +5251,8 @@ elseif mp.game == "pf" then --!SECTION
 			--ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, extendPen)
 			
 			--ragebot:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position)
-			for i = 1, 8 do
-				position = position + Vector3.new(0, 1, 0)
+			for i = 1, max_step do
+				position = position + Vector3.new(0, step, 0)
 				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
@@ -5201,8 +5260,8 @@ elseif mp.game == "pf" then --!SECTION
 
 			position = origin
 
-			for i = 1, 8 do
-				position = position - Vector3.new(0, 1, 0)
+			for i = 1, max_step do
+				position = position - Vector3.new(0, step, 0)
 				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
@@ -5210,8 +5269,8 @@ elseif mp.game == "pf" then --!SECTION
 
 			position = origin
 
-			for i = 1, 8 do
-				position = position + Vector3.new(0, 0, 1)
+			for i = 1, max_step do
+				position = position + Vector3.new(0, 0, step)
 				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
@@ -5219,8 +5278,8 @@ elseif mp.game == "pf" then --!SECTION
 
 			position = origin
 
-			for i = 1, 8 do
-				position = position - Vector3.new(0, 0, 1)
+			for i = 1, max_step do
+				position = position - Vector3.new(0, 0, step)
 				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
@@ -5228,8 +5287,8 @@ elseif mp.game == "pf" then --!SECTION
 			
 			position = origin
 
-			for i = 1, 8 do
-				position = position + Vector3.new(1, 0, 0)
+			for i = 1, max_step do
+				position = position + Vector3.new(step, 0, 0)
 				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
@@ -5237,8 +5296,8 @@ elseif mp.game == "pf" then --!SECTION
 
 			position = origin
 
-			for i = 1, 8 do
-				position = position - Vector3.new(1, 0, 0)
+			for i = 1, max_step do
+				position = position - Vector3.new(step, 0, 0)
 				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
@@ -7491,7 +7550,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Resolver Type",
 							value = 2,
-							values = {"Cubic", "Axis Shifting", "Random"}
+							values = {"Cubic", "Axis Shifting","Axis Shifting Fast", "Random"}
 						},
 						{
 							type = "slider",
@@ -8286,7 +8345,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Chat Spam",
 							value = 1,
-							values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Ion Cannon", "Nexus", "\"funny\""}
+							values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Ion Cannon", "Nexus", "\"funny\"", "Youtube Title"}
 						},
 						{
 							type = "toggle",
