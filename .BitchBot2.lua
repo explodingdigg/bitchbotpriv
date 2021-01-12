@@ -366,14 +366,14 @@ end
 do -- table shitz
 	setreadonly(table, false)
 
-	table.find = function(table, element)
-		for _, value in pairs(table) do
-			if value == element then
-				return true
-			end
-		end
-		return false
-	end
+	-- table.find = function(table, element)
+	-- 	for _, value in pairs(table) do
+	-- 		if value == element then
+	-- 			return true
+	-- 		end
+	-- 	end
+	-- 	return false
+	-- end
 
 	setreadonly(table, true)
 end
@@ -1324,9 +1324,9 @@ function mp.BBMenuInit(menutable)
 		dropboxthingy[2].Position = Vector2.new(x + 1, y + 1)
 		dropboxthingy[3].Position = Vector2.new(x + 2, y + 22)
 
-		dropboxthingy[1].Size = Vector2.new(length, 22 * (#values + 1) - 1)
-		dropboxthingy[2].Size = Vector2.new(length - 2, (22 * (#values + 1)) - 3)
-		dropboxthingy[3].Size = Vector2.new(length - 4, (22 * #values) - 3)
+		dropboxthingy[1].Size = Vector2.new(length, 21 * (#values + 1) + 3)
+		dropboxthingy[2].Size = Vector2.new(length - 2, (21 * (#values + 1)) + 1)
+		dropboxthingy[3].Size = Vector2.new(length - 4, (21 * #values) + 1 - 1)
 
 		if visible then
 			for i = 1, #values do
@@ -2438,7 +2438,7 @@ function mp.BBMenuInit(menutable)
 									end
 								elseif mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5] then
 									for i = 1, #v2[6] do
-										if mp:mouse_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 22), v2[3][3], 23) then
+										if mp:mouse_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 21), v2[3][3], 21) then
 											v2[4][1].Text = v2[6][i]
 											v2[1] = i
 											set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
@@ -3039,7 +3039,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							minvalue = 0,
 							maxvalue = 100,
 							stradd = "%"
-						}
+						},
 					}
 				},
 			}
