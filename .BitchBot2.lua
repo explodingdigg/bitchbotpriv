@@ -4132,7 +4132,8 @@ elseif mp.game == "pf" then --!SECTION
 		thirdperson = false,
 		fakebody = false, -- maybe lol
 		invis = false,
-		fakelag = false
+		fakelag = false,
+		crimwalk = false
 	}
 
 	mp.activenades = {}
@@ -5025,7 +5026,7 @@ elseif mp.game == "pf" then --!SECTION
 			local autowall = mp:getval("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
-			local barrel = client.cam.cframe.p
+			local barrel = keybindtoggles.crimwalk and client.lastrepupdate or client.cam.cframe.p
 			local firepos
 		
 			for i, player in next, players do
@@ -5129,6 +5130,11 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		
+			if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and mp:getval("Misc", "Exploits", "Disable Crimwalk on Shot") then
+				client.net.send = client.net.backupsend
+				keybindtoggles.crimwalk = false
+			end
+
 			return cpart, theplayer, closest, firepos
 		end
 
@@ -5919,6 +5925,13 @@ elseif mp.game == "pf" then --!SECTION
 					keybindtoggles.fakelag = not keybindtoggles.fakelag
 					game:service("NetworkClient"):SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
 				end
+
+				if mp:getval("Misc", "Exploits", "Crimwalk") and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
+					keybindtoggles.crimwalk = true
+					client.net.backupsend = client.net.send
+					client.net.send = function(...) end
+				end
+
 				if mp:getval("Misc", "Exploits", "Rapid Kill")
 				and input.KeyCode == mp:getval("Misc", "Exploits", "Rapid Kill", "keybind") then -- fugg
 					local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
@@ -5977,6 +5990,12 @@ elseif mp.game == "pf" then --!SECTION
 					keybindtoggles.fakelag = not keybindtoggles.fakelag
 					game:service("NetworkClient"):SetOutgoingKBPSLimit(0)
 				end
+
+				if keybindtoggles.crimwalk and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") then
+					keybindtoggles.crimwalk = false
+					client.net.send = client.net.backupsend
+				end
+
 			end
 		end)
 
@@ -6144,7 +6163,6 @@ elseif mp.game == "pf" then --!SECTION
 				if ragebot.silentVector then
 					-- duck tape fix or whatever the fuck its called for this its stupid
 					args[2].firepos = ragebot.firepos
-					args[2].camerapos = ragebot.firepos -- might fix some problems idk lol
 					local cachedtime
 
 					if mp:getval("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
@@ -6219,52 +6237,55 @@ elseif mp.game == "pf" then --!SECTION
 					local gun = client.loadedguns[args[2]].name
 					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 				end
-			elseif args[1] == "repupdate" and mp:getval("Rage", "Anti Aim", "Enabled") then
-				--args[2] = ragebot:AntiNade(args[2])
-				stutterFrames += 1
-				local pitch = args[3].x
-				local yaw = args[3].y
-				local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
-				local yawChoice = mp:getval("Rage", "Anti Aim", "Yaw")
-				local spinRate = mp:getval("Rage", "Anti Aim", "Spin Rate")
-				---"off,down,up,roll,upside down,random"
-				--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
+			elseif args[1] == "repupdate" then
+				client.lastrepupdate = args[2]
+				if mp:getval("Rage", "Anti Aim", "Enabled") then
+					--args[2] = ragebot:AntiNade(args[2])
+					stutterFrames += 1
+					local pitch = args[3].x
+					local yaw = args[3].y
+					local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
+					local yawChoice = mp:getval("Rage", "Anti Aim", "Yaw")
+					local spinRate = mp:getval("Rage", "Anti Aim", "Spin Rate")
+					---"off,down,up,roll,upside down,random"
+					--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
 
-				if pitchChoice == 2 then
-					pitch = -4
-				elseif pitchChoice == 3 then
-					pitch = 0
-				elseif pitchChoice == 4 then
-					pitch = 4.7
-				elseif pitchChoice == 5 then
-					pitch = -math.pi
-				elseif pitchChoice == 6 then
-					pitch = (tick() * spinRate) % 6.28
-				elseif pitchChoice == 7 then
-					pitch = (-tick() * spinRate) % 6.28
-				elseif pitchChoice == 8 then
-					pitch = math.random(99999)
-				elseif pitchChoice == 9 then
-					pitch = math.sin((tick() % 6.28) * spinRate)
+					if pitchChoice == 2 then
+						pitch = -4
+					elseif pitchChoice == 3 then
+						pitch = 0
+					elseif pitchChoice == 4 then
+						pitch = 4.7
+					elseif pitchChoice == 5 then
+						pitch = -math.pi
+					elseif pitchChoice == 6 then
+						pitch = (tick() * spinRate) % 6.28
+					elseif pitchChoice == 7 then
+						pitch = (-tick() * spinRate) % 6.28
+					elseif pitchChoice == 8 then
+						pitch = math.random(99999)
+					elseif pitchChoice == 9 then
+						pitch = math.sin((tick() % 6.28) * spinRate)
+					end
+		
+					--{"Off", "Backward", "Spin", "Random"} yaw
+					if yawChoice == 2 then
+						yaw += math.pi
+					elseif yawChoice == 3 then
+						yaw = (tick() * spinRate) % 12
+					elseif yawChoice == 4 then
+						yaw = math.random(99999)
+					elseif yawChoice == 5 then
+						yaw = 16478887
+					elseif yawChoice == 6 then
+						yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+					end
+		
+					-- yaw += jitter
+					local new_angles = Vector3.new(pitch, yaw, 0)
+					args[3] = new_angles
+					ragebot.angles = new_angles
 				end
-	
-				--{"Off", "Backward", "Spin", "Random"} yaw
-				if yawChoice == 2 then
-					yaw += math.pi
-				elseif yawChoice == 3 then
-					yaw = (tick() * spinRate) % 12
-				elseif yawChoice == 4 then
-					yaw = math.random(99999)
-				elseif yawChoice == 5 then
-					yaw = 16478887
-				elseif yawChoice == 6 then
-					yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
-				end
-	
-				-- yaw += jitter
-				local new_angles = Vector3.new(pitch, yaw, 0)
-				args[3] = new_angles
-				ragebot.angles = new_angles
 			end
 			return send(self, unpack(args))
 		end
@@ -8485,6 +8506,19 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Grenade Teleport",
+							value = false
+						},
+						{
+							type = "toggle",
+							name = "Crimwalk",
+							value = false,
+							extra = {
+								type = "keybind"
+							}
+						},
+						{
+							type = "toggle",
+							name = "Disable Crimwalk on Shot",
 							value = false
 						}
 					}
