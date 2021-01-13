@@ -5029,6 +5029,8 @@ elseif mp.game == "pf" then --!SECTION
 			local barrel = keybindtoggles.crimwalk and client.lastrepupdate or client.cam.cframe.p
 			local firepos
 		
+			warn(barrel)
+
 			for i, player in next, players do
 				local usedhitscan = hitscan -- should probably do this a different way
 				if table.find(mp.friends, player.Name) then continue end
@@ -5043,24 +5045,24 @@ elseif mp.game == "pf" then --!SECTION
 						end
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and usedhitscan[k] then
-								if camera:IsVisible(bone, bone.Parent) then
+								if camera:IsVisible(bone, bone.Parent, barrel) then
 									local fovToBone = camera:GetFOV(bone)
 									if fovToBone < closest then
 										closest = fovToBone
 										cpart = bone
 										theplayer = player
-										firepos = client.cam.cframe.p
+										firepos = barrel
 										if mp.priority[player.Name] then break end
 									else
 										continue
 									end
 								elseif autowall then
-									local directionVector = camera:GetTrajectory(bone.Position, client.cam.cframe.p)
-									if ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, client.cam.cframe.p, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
+									local directionVector = camera:GetTrajectory(bone.Position, barrel)
+									if ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
 										local fovToBone = camera:GetFOV(bone)
 										cpart = bone
 										theplayer = player
-										firepos = client.cam.cframe.p
+										firepos = barrel
 										if mp.priority[player.Name] then break end
 									elseif aw_resolve then
 										if resolvertype == 1 then -- cubic hitscan
@@ -5131,7 +5133,6 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		
 			if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and mp:getval("Misc", "Exploits", "Disable Crimwalk on Shot") then
-				client.net.send = client.net.backupsend
 				keybindtoggles.crimwalk = false
 			end
 
@@ -5399,26 +5400,17 @@ elseif mp.game == "pf" then --!SECTION
 					
 					local playerlist = Players:GetPlayers()
 
-					--[[CreateThread(function()
+					CreateThread(function()
 						local priority_list = {}
 						for k, PlayerName in pairs(mp.priority) do
-							table.insert(priority_list, game.Players[PlayerName])
+							pcall(table.insert, priority_list, game.Players[PlayerName]) -- because players legit leave and cause the ragebot to stop working
 						end
 						local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
 						if not targetPart then 
 							targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 						end
 						ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
-					end)]]
-					local priority_list = {}
-					for k, PlayerName in pairs(mp.priority) do
-						table.insert(priority_list, game.Players[PlayerName])
-					end
-					local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
-					if not targetPart then 
-						targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
-					end
-					ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
+					end)
 				else
 					self.target = nil
 				end
@@ -5928,8 +5920,6 @@ elseif mp.game == "pf" then --!SECTION
 
 				if mp:getval("Misc", "Exploits", "Crimwalk") and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
 					keybindtoggles.crimwalk = true
-					client.net.backupsend = client.net.send
-					client.net.send = function(...) end
 				end
 
 				if mp:getval("Misc", "Exploits", "Rapid Kill")
@@ -5993,7 +5983,6 @@ elseif mp.game == "pf" then --!SECTION
 
 				if keybindtoggles.crimwalk and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") then
 					keybindtoggles.crimwalk = false
-					client.net.send = client.net.backupsend
 				end
 
 			end
@@ -6238,6 +6227,7 @@ elseif mp.game == "pf" then --!SECTION
 					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 				end
 			elseif args[1] == "repupdate" then
+				if keybindtoggles.crimwalk then return end
 				client.lastrepupdate = args[2]
 				if mp:getval("Rage", "Anti Aim", "Enabled") then
 					--args[2] = ragebot:AntiNade(args[2])
