@@ -5112,7 +5112,7 @@ elseif mp.game == "pf" then --!SECTION
 												client.tpupsteps = steps
 												if mp.priority[player.Name] then break end	
 											end]]
-											local up = client.char.head.Position + Vector3.new(0, 18, 0)
+											local up = barrel + Vector3.new(0, 18, 0)
 											if ragebot:CanPenetrateRaycast(up, bone.Position, client.logic.currentgun.data.penetrationdepth) then
 												ragebot.firepos = up
 												ragebot.needsTP = true
@@ -5403,7 +5403,9 @@ elseif mp.game == "pf" then --!SECTION
 					CreateThread(function()
 						local priority_list = {}
 						for k, PlayerName in pairs(mp.priority) do
-							pcall(table.insert, priority_list, game.Players[PlayerName]) -- because players legit leave and cause the ragebot to stop working
+							if Players:FindFirstChild(PlayerName) then
+								table.insert(priority_list, game.Players[PlayerName]) 
+							end
 						end
 						local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
 						if not targetPart then 
