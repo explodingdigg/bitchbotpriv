@@ -5720,9 +5720,14 @@ elseif mp.game == "pf" then --!SECTION
 								rotv = Vector3.new()
 							}
 						end
-						for i = 1, mp:getval("Misc", "Exploits", "Grenade Teleport") and 3 or 1 do
-							client.net.send(nil, "newgrenade", unpack(fragargs))
-						end
+						CreateThread(function()
+							local bp = client.replication.getbodyparts(args[1])
+							for i = 1, mp:getval("Misc", "Exploits", "Grenade Teleport") and 3 or 1 do
+								client.net.send(nil, "newgrenade", unpack(fragargs))	
+								if not bp.rootpart then break end
+								fragargs[2].frames[2].p0 += bp.rootpart.Velocity * 0.5 -- some shitty prediction just to make it hit fast targets more or something idk
+							end
+						end)
 					end
 
 					return func(...)
@@ -6972,12 +6977,12 @@ elseif mp.game == "pf" then --!SECTION
 				local gunnum = 0
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
 					CreateThread(function()
-						if tostring(v) == "Dropped" then
+						if v.Name == "Dropped" then
 							local gunpos = v.Slot1.Position
 							local gun_dist = (gunpos - client.cam.cframe.p).Magnitude 
-							local gunpos2d, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(gunpos)
-							
+							if gun_dist > 80 then return end
 							local hasgun = false
+							local gunpos2d, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(gunpos)
 							for k1, v1 in pairs(v:GetChildren()) do 
 								if tostring(v1) == "Gun" then
 									hasgun = true
@@ -6985,7 +6990,7 @@ elseif mp.game == "pf" then --!SECTION
 								end
 							end 
 
-							if gun_on_screen and gun_dist <= 80 and gunnum <= 50 and hasgun then
+							if gun_on_screen and gunnum <= 50 and hasgun then
 								gunnum = gunnum + 1
 								local gunclearness = 1
 								if gun_dist >= 50 then
