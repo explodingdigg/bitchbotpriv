@@ -5720,8 +5720,9 @@ elseif mp.game == "pf" then --!SECTION
 								rotv = Vector3.new()
 							}
 						end
-
-						client.net.send(nil, "newgrenade", unpack(fragargs))
+						for i = 1, mp:getval("Misc", "Exploits", "Grenade Teleport") and 3 or 1 do
+							client.net.send(nil, "newgrenade", unpack(fragargs))
+						end
 					end
 
 					return func(...)
@@ -6393,9 +6394,9 @@ elseif mp.game == "pf" then --!SECTION
 			Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
 			--TODO nate fix
 
-			local gunpos = Camera:WorldToScreenPoint(client.logic.currentgun.aimsightdata[1].sightpart.Position)
+			local gunpos2d = Camera:WorldToScreenPoint(client.logic.currentgun.aimsightdata[1].sightpart.Position)
 
-			local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos.x, LOCAL_MOUSE.y - gunpos.y)
+			local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
 			if client.logic.currentgun 
 			and client.logic.currentgun.type ~= "KNIFE"
 			and INPUT_SERVICE:IsMouseButtonPressed(1)
@@ -6972,8 +6973,10 @@ elseif mp.game == "pf" then --!SECTION
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
 					CreateThread(function()
 						if tostring(v) == "Dropped" then
-		
-							local gunpos, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(v.Slot1.Position.x, v.Slot1.Position.y, v.Slot1.Position.z))
+							local gunpos = v.Slot1.Position
+							local gun_dist = (gunpos - client.cam.cframe.p).Magnitude 
+							local gunpos2d, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(gunpos)
+							
 							local hasgun = false
 							for k1, v1 in pairs(v:GetChildren()) do 
 								if tostring(v1) == "Gun" then
@@ -6982,11 +6985,11 @@ elseif mp.game == "pf" then --!SECTION
 								end
 							end 
 
-							if gun_on_screen and gunpos.z <= 80 and gunnum <= 50 and hasgun then
+							if gun_on_screen and gun_dist <= 80 and gunnum <= 50 and hasgun then
 								gunnum = gunnum + 1
 								local gunclearness = 1
-								if gunpos.z >= 50 then
-									local closedist = gunpos.z - 50
+								if gun_dist >= 50 then
+									local closedist = gun_dist - 50
 									gunclearness = 1 - (1 * closedist/30)
 								end
 								
@@ -6995,14 +6998,14 @@ elseif mp.game == "pf" then --!SECTION
 									wepesp.name[gunnum].Color = mp:getval("ESP", "Dropped ESP", "Weapon Name", "color", true)
 									wepesp.name[gunnum].Transparency = mp:getval("ESP", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255 
 									wepesp.name[gunnum].Visible = true
-									wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos.x), math.floor(gunpos.y + 25))
+									wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
 								end
 								if mp:getval("ESP", "Dropped ESP", "Weapon Ammo") then
 									wepesp.ammo[gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
 									wepesp.ammo[gunnum].Color = mp:getval("ESP", "Dropped ESP", "Weapon Ammo", "color", true)
 									wepesp.ammo[gunnum].Transparency = mp:getval("ESP", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
 									wepesp.ammo[gunnum].Visible = true
-									wepesp.ammo[gunnum].Position = Vector2.new(math.floor(gunpos.x), math.floor(gunpos.y + 36))
+									wepesp.ammo[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
 								end
 							end
 						end
