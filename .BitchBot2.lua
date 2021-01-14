@@ -5042,8 +5042,6 @@ elseif mp.game == "pf" then --!SECTION
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
 			local barrel = keybindtoggles.crimwalk and client.lastrepupdate or client.cam.cframe.p
 			local firepos
-		
-			warn(barrel)
 
 			for i, player in next, players do
 				local usedhitscan = hitscan -- should probably do this a different way
@@ -5758,21 +5756,20 @@ elseif mp.game == "pf" then --!SECTION
 			if found2 then
 				clienteventfuncs[hash] = function(gun, mag, spare, attachdata, camodata, gunn, ggequip)
 					func(gun, mag, spare, attachdata, camodata, gunn, ggequip)
-					client.loadedguns = getupvalue(client.char.unloadguns, 2)
-					--[[for k,v in next, getupvalues(client.loadedguns[gunn].step) do -- TODO json fix this tomorrow
+					for k,v in next, getupvalues(client.loadedguns[ggequip].step) do -- might have fixed it.
 						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
-							setupvalue(client.loadedguns[gunn].step, k, function(...)
+							setupvalue(client.loadedguns[ggequip].step, k, function(...)
 								return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 							end)
 						end
-					end]]
+					end
 					if client.fakecharacter then
 						client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 					end
 				end
 			end
 		end
-			setupvalue(client.call, 1, clienteventfuncs)
+		setupvalue(client.call, 1, clienteventfuncs)
 	end
 	
 	do -- ANCHOR misc definitionz
