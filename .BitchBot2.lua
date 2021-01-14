@@ -4565,7 +4565,7 @@ elseif mp.game == "pf" then --!SECTION
 			local shootgun = client.logic.currentgun.shoot
 			if not shooties[client.logic.currentgun.shoot] then
 				client.logic.currentgun.shoot = function(...)
-					if mp.open and not ragebot.target then return end
+					if mp.open and mp:getval("Rage", "Aimbot", "Auto Shoot") and not ragebot.target then return end
 					shootgun(...)
 				end
 			end
