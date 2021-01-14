@@ -7198,7 +7198,12 @@ elseif mp.game == "pf" then --!SECTION
 									end
 								end
 
-								v1.Material = mats[mp:getval("Visuals", "Local Visuals", "Weapon Material")]
+								local mat = mats[mp:getval("Visuals", "Local Visuals", "Weapon Material")]
+								v1.Material = mat
+
+								if v1.ClassName == "MeshPart" then
+									v1.TextureID = mat == "ForceField" and "rbxassetid://5843010904" or ""
+								end
 
 								if v1.Name == "LaserLight" then
 									local transparency = 1+(mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
