@@ -4133,7 +4133,8 @@ elseif mp.game == "pf" then --!SECTION
 		fakebody = false, -- maybe lol
 		invis = false,
 		fakelag = false,
-		crimwalk = false
+		crimwalk = false,
+		freeze = false
 	}
 
 	mp.activenades = {}
@@ -5026,6 +5027,9 @@ elseif mp.game == "pf" then --!SECTION
 		end
 
 		function ragebot:GetTarget(hitboxPriority, hitscan, players)
+			if keybindtoggles.freeze then
+				return nil 
+			end
 			debug.profilebegin("BB Ragebot GetTarget")
 			local hitscan = hitscan or {}
 			local partPreference = hitboxPriority or "you know who i am? well you about to find out, your barbecue boy"
@@ -5527,6 +5531,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found6 = table.find(curconstants, " studs")
 			local found7 = table.find(curconstants, "setstance")
 			local found8 = table.find(curconstants, "setfixedcam")
+			local found9 = table.find(curconstants, "kickweapon ")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
@@ -5731,6 +5736,23 @@ elseif mp.game == "pf" then --!SECTION
 					end
 
 					return func(...)
+				end
+			end
+			if found9 then
+				clienteventfuncs[hash] = function(bulletdata)
+					local vec = Vector3.new()
+					for k, bullet in next, bulletdata.bullets do
+						-- anti freeze players exploit
+						if typeof(bullet[1]) ~= "Vector3" then
+							bulletdata.bullets[k][1] = vec
+						end
+					end
+
+					if typeof(bulletdata.firepos) ~= "Vector3" then
+						bulletdata.firepos = vec
+					end
+
+					return func(bulletdata)
 				end
 			end
 			if found2 then
@@ -5955,6 +5977,10 @@ elseif mp.game == "pf" then --!SECTION
 					keybindtoggles.crimwalk = true
 				end
 
+				if mp:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == mp:getval("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze then
+					keybindtoggles.freeze = true
+				end
+
 				if mp:getval("Misc", "Exploits", "Rapid Kill")
 				and input.KeyCode == mp:getval("Misc", "Exploits", "Rapid Kill", "keybind") then -- fugg
 					local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
@@ -6012,6 +6038,10 @@ elseif mp.game == "pf" then --!SECTION
 				and input.KeyCode == mp:getval("Rage", "Extra", "Manual Choke", "keybind") and keybindtoggles.fakelag then
 					keybindtoggles.fakelag = not keybindtoggles.fakelag
 					game:service("NetworkClient"):SetOutgoingKBPSLimit(0)
+				end
+
+				if mp:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == mp:getval("Misc", "Exploits", "Freeze Players", "keybind") and keybindtoggles.freeze then
+					keybindtoggles.freeze = false
 				end
 
 				if keybindtoggles.crimwalk and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") then
@@ -6180,6 +6210,13 @@ elseif mp.game == "pf" then --!SECTION
 					for k, bullet in pairs(args[2].bullets) do
 						bullet[1] = legitbot.silentVector
 					end
+				end
+
+				if keybindtoggles.freeze then
+					for k, bullet in pairs(args[2].bullets) do
+						bullet[1] = Vector2.new()
+					end
+					return send(self, unpack(args))
 				end
 
 				if ragebot.silentVector then
@@ -8508,7 +8545,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Ignore Round Freeze",
 							value = false,
-						},
+						}
 					},
 				},
 				{
@@ -8620,6 +8657,14 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Disable Crimwalk on Shot",
 							value = false
+						},
+						{
+							type = "toggle",
+							name = "Freeze Players",
+							value = false,
+							extra = {
+								type = "keybind"
+							}
 						}
 					}
 				},
