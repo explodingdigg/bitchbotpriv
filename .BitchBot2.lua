@@ -5679,7 +5679,7 @@ elseif mp.game == "pf" then --!SECTION
 				clienteventfuncs[hash] = function(...)
 					local args = {...}
 
-					if mp:getval("Misc", "Extra", "Auto Dead Drop") then
+					if mp:getval("Misc", "Extra", "Auto Martyrdom") then
 
 						local fragargs = {
 							"FRAG",
@@ -8613,7 +8613,7 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Auto Dead Drop",
+							name = "Auto Martyrdom",
 							value = false
 						}
 					}
