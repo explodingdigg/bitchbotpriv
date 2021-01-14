@@ -4519,8 +4519,17 @@ elseif mp.game == "pf" then --!SECTION
 		"desu", "hook", "vw HACK", "Anti Votekick", "Speed", "Fly Hack", "Big Head", "Knife Hack",
 		"No Clip", "Auto", "Rapid Fire", "Fire Rate Hack", "Fire Rate", "God Mode", "God", 
 		"Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma",
-		"And", "DDOX", "ddox", "LEAKED", "🥳🥳🥳", "RELEASE", "LEAKED DDOX INFINITE WALLBANG", "IP RESOLVER",
-		"Infinite Wall Bang", "Wall Bang", "Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱"
+		"And", "LEAKED", "🥳🥳🥳", "RELEASE", "IP RESOLVER","Infinite Wall Bang", "Wall Bang", 
+		"Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱","Free Download EHUB", 
+		"Taps", "Owns", "Owns All", "Trolling", "Troll", "Grief", "Kill",
+		"Nate", "Alan", "JSON", "Classy", "BBOT Developers", "Logic", "And", "and", "Glitch", "Server Hack",
+		"Babies", "Children", "TAP", "Meme", "MEME", "Laugh", "LOL!", "Lol!", "ROFLSAUCE", "Rofl", ";v", 
+		";p", ":D", "=D", "xD", "XD", "=>", "₽", "$", "8=>", "😹😹😹", "🎮🎮🎮", "🎱", "⭐", "✝",
+		"Gato Hack", "Blaze Hack", "Fuego Hack", "Nat Hook", "Ransomware", "Malware", 
+		"SKID", "Pasted vw", "Encrypted", "Brute Force", "Cheat Code", "Hack Code", 
+		"No Ban", "Bot", "Editing", "Modification", "injection", "Bypass Anti Cheat", 
+		"Cheat Exploit", "Hitbox Expansion", "Cheating AI", "Auto Wall Shoot", "Konami Code",
+		"Debug", "Debug Menu", "🗿", "£", "¥", "₽", "₭", "€", "₿"
 	}
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 		__call = function(self, type, debounce)
@@ -6656,14 +6665,14 @@ elseif mp.game == "pf" then --!SECTION
 
 			for Index, Player in ipairs(players) do
 				
-				if not client.hud:isplayeralive(Player) then return end
+				if not client.hud:isplayeralive(Player) then continue end
 				local parts = client.replication.getbodyparts(Player)
 	
-				if not parts then return end
+				if not parts then continue end
 
 				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 
-				if not mp:getval("ESP", GroupBox, "Enabled") then return end
+				if not mp:getval("ESP", GroupBox, "Enabled") then continue end
 	
 				Player.Character = parts.rootpart.Parent
 	
