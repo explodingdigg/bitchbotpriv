@@ -5961,7 +5961,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if name == "Infinite Invisibility" then
 				CreateThread(function()
-					for i = 1, 20 do
+					for i = 1, 30 do
 						local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
 						send(nil, "repupdate", workspace.CurrentCamera.CFrame.p, Vector3.new(num, num, num))
 						wait()
