@@ -5959,15 +5959,6 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end
-			if name == "Infinite Invisibility" then
-				CreateThread(function()
-					for i = 1, 30 do
-						local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
-						send(nil, "repupdate", workspace.CurrentCamera.CFrame.p, Vector3.new(num, num, num))
-						wait()
-					end
-				end)
-			end
 		end)
 
 		mp.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
@@ -8659,10 +8650,6 @@ elseif mp.game == "pf" then --!SECTION
 							extra = {
 								type = "keybind"
 							}
-						},
-						{
-							type = "button",
-							name = "Infinite Invisibility"
 						},
 						{
 							type = "button",
