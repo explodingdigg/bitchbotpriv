@@ -5980,7 +5980,7 @@ elseif mp.game == "pf" then --!SECTION
 				end
 
 				if mp:getval("Misc", "Exploits", "Super Invisibility") and input.KeyCode == mp:getval("Misc", "Exploits", "Super Invisibility", "keybind") then
-					CreateNotification("test")
+					CreateNotification("Super Invisibility hack")
 					for i = 1, 30 do
 						local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
 						send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
