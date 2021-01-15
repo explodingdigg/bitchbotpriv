@@ -5963,6 +5963,7 @@ elseif mp.game == "pf" then --!SECTION
 		end)
 
 		mp.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
+			if CHAT_BOX.Active then return end
 			if input.UserInputType == Enum.UserInputType.Keyboard then
 				if mp:getval("Rage", "Extra", "Fake Lag")
 				and mp:getval("Rage", "Extra", "Manual Choke") 
