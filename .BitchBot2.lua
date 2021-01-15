@@ -4500,7 +4500,8 @@ elseif mp.game == "pf" then --!SECTION
 			"Bbot omg omggg omggg its BBot its BBOt OMGGG!!!  🙏🙏🥺🥺😌😒😡",
 			"HOw do you get ACCESS to this BBOT ",
 			"I NEED ACCESS 🔑🔓 TO BBOT 🤖📃📃📃 👈 THIS THING CALLED BBOT SCRIPT, I NEED IT ",
-			"\"this god mode guy is annoying\", Pr0blematicc says as he loses roblox hvh "	
+			"\"this god mode guy is annoying\", Pr0blematicc says as he loses roblox hvh ",
+			"you can call me crimson chin 🦹‍♂️🦹‍♂️ cause i turned your screen red 🟥🟥🟥🟥 									"
 		}
 	}
 	--local 
@@ -5976,6 +5977,16 @@ elseif mp.game == "pf" then --!SECTION
 
 				if mp:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == mp:getval("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze then
 					keybindtoggles.freeze = true
+				end
+
+				if mp:getval("Misc", "Exploits", "Super Invisibility") and input.KeyCode == mp:getval("Misc", "Exploits", "Super Invisibility", "keybind") then
+					CreateNotification("test")
+					for i = 1, 30 do
+						local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
+						send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
+						---- what this does is fucking overflow the lookangles spring (since it does spring:accelerate(num) i think instead of just doing spring.t = num) and stuff and it causes the entire model on the client to just disappear
+						---- (basically the equivelant of doing rootpart.Orientation = Vector3.new(math.huge, math.huge, math.huge) LOL
+					end
 				end
 
 				if mp:getval("Misc", "Exploits", "Rapid Kill")
@@ -8647,6 +8658,14 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Invisibility",
+							extra = {
+								type = "keybind"
+							}
+						},
+						{
+							type = "toggle",
+							name = "Super Invisibility",
+							value = false,
 							extra = {
 								type = "keybind"
 							}
