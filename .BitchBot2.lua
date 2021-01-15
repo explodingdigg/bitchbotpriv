@@ -8662,7 +8662,7 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "button",
-							name = "Infinite Invisiblity"
+							name = "Infinite Invisibility"
 						},
 						{
 							type = "button",
