@@ -3139,9 +3139,9 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							name = "Custom Crosshair",
 							value = false,
 							extra = {
-								type = "single colorpicker",
-								name = "Crosshair Color",
-								color = {255, 255, 255, 255}
+								type = "double colorpicker",
+								name = {"Outline", "Inline"},
+								color = {{20, 20, 20}, {127, 72, 163}}
 							}
 						},
 						{
@@ -4350,7 +4350,7 @@ elseif mp.game == "pf" then --!SECTION
 		updatervalues[15].s = 100]]
 		client.fake_upvs = updatervalues
 	end
-	
+	local PLAYER_GUI = LOCAL_PLAYER.PlayerGui
 	local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
 	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
 
@@ -6627,11 +6627,22 @@ elseif mp.game == "pf" then --!SECTION
 	
 	
 	--ADS Fov hook
-	
+	local crosshairColors
 	local function renderVisuals()
 		debug.profilebegin("renderVisuals Char")
 		setconstant(client.cam.step, 11, mp:getval("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
 		client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
+		for i, frame in pairs(PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()) do
+			if not crosshairColors then crosshairColors = {
+				inline = frame.BackgroundColor3,
+				outline = frame.BorderColor3
+			} end -- MEOW -core 2021
+			local inline = mp:getval("Visuals", "Misc Visuals", "Crosshair Color", "color1", true)
+			local outline = mp:getval("Visuals", "Misc Visuals", "Crosshair Color", "color2", true)
+			local enabled = mp:getval("Visuals", "Misc Visuals", "Crosshair Color")
+			frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
+			frame.BorderColor3 = enabled and outline or crosshairColors.outline
+		end
 		debug.profileend("renderVisuals Char")
 		--------------------------------------world funnies
 		debug.profilebegin("renderVisuals World")
@@ -8450,6 +8461,16 @@ elseif mp.game == "pf" then --!SECTION
 								name = "Blood",
 								color = {255, 255, 255, 255}
 							},
+						},
+						{
+							type = "toggle",
+							name = "Crosshair Color",
+							value = false,
+							extra = {
+								type = "double colorpicker",
+								name = {"Inline", "Outline"},
+								color = {{127, 72, 163}, {25, 25, 25}}
+							}
 						},
 						{
 							type = "toggle",
