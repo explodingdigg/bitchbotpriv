@@ -5930,7 +5930,7 @@ elseif mp.game == "pf" then --!SECTION
 			local old_index = spring.__index
 			local swingspring = debug.getupvalue(client.char.step, 21)
 			local sprintspring = debug.getupvalue(client.char.setsprint, 10)
-			spring.__index = newcclosure(function(t, k)
+			spring.__index = newcclosure(function(t, k) -- "t" is the spring being indexed, so like you basically do if t == springofchoice then to return a different value for one specific kind of spring
 				local result = old_index(t, k)
 				if t == swingspring then
 					if k == "v" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then 
