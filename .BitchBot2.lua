@@ -347,6 +347,7 @@ local CACHED_VEC3 = Vector3.new()
 local Camera = workspace.CurrentCamera
 local SCREEN_SIZE = Camera.ViewportSize
 local ButtonPressed = Instance.new("BindableEvent")
+local TogglePressed = Instance.new("BindableEvent")
 local PATHFINDING = game:GetService("PathfindingService")
 local GRAVITY = Vector3.new(0,-192.6, 0)
 
@@ -2369,6 +2370,7 @@ function mp.BBMenuInit(menutable)
 											v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
 										end
 									end
+									TogglePressed:Fire(k1, k2, v2)
 								end
 								if v2[5] ~= nil then
 									if v2[5][2] == "keybind" then
@@ -4311,9 +4313,16 @@ elseif mp.game == "pf" then --!SECTION
 				client.vectorutil = v
 			elseif rawget(v, "IsVIP") then
 				client.instancetype = v
+			elseif rawget(v, "player") and rawget(v, "reset") then
+				client.animation = v
+				client.animation.oldplayer = client.animation.player
 			end
 		end
 	end	
+
+	local function animhook(...)
+		return function(...) end
+	end
 
 	client.localrank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
 
@@ -5888,7 +5897,8 @@ elseif mp.game == "pf" then --!SECTION
 						gun.equipspeed = 99999
 					end
 					if empty_animations then
-						if gun.animations  and type(gun.animations) == "table" then
+						client.animation.player = animhook
+						--[[if gun.animations and type(gun.animations) == "table" then
 							for name, anim in pairs(gun.animations) do
 								if name:match("stab") then continue end
 								if type(anim) == "table" and anim ~= gun.animations.inspect then
@@ -5908,7 +5918,9 @@ elseif mp.game == "pf" then --!SECTION
 									}
 								end
 							end
-						end
+						end]]
+					else
+						client.animation.player = client.animation.oldplayer
 					end
 				end
 			end
@@ -5959,6 +5971,18 @@ elseif mp.game == "pf" then --!SECTION
 						})
 					end
 				end
+			end
+		end)
+
+		mp.connections.toggle_pressed_pf = TogglePressed.Event:Connect(function(tab, name, gb)
+			if name == "Enabled" and tab == "Weapon Modifications" then
+				client.animation.player = (gb[1] and mp:getval("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldplayer
+			end
+			if name == "Remove Animations" then
+				client.animation.player = (gb[1] and mp:getval("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
+			end
+			if name == "No Camera Bob" then
+				setconstant(client.cam.step, 11, gb[1] and 0 or 0.5)
 			end
 		end)
 
@@ -6642,7 +6666,6 @@ elseif mp.game == "pf" then --!SECTION
 	local crosshairColors
 	local function renderVisuals()
 		debug.profilebegin("renderVisuals Char")
-		setconstant(client.cam.step, 11, mp:getval("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
 		client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 		for i, frame in pairs(PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()) do
 			if not crosshairColors then crosshairColors = {
@@ -6655,6 +6678,7 @@ elseif mp.game == "pf" then --!SECTION
 			frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
 			frame.BorderColor3 = enabled and outline or crosshairColors.outline
 		end
+
 		debug.profileend("renderVisuals Char")
 		--------------------------------------world funnies
 		debug.profilebegin("renderVisuals World")
