@@ -5499,10 +5499,10 @@ elseif mp.game == "pf" then --!SECTION
 			VirtualUser:ClickButton2(Vector2.new())
 		end)
 		local oldmag = client.cam.setmagnification
-		client.cam.setmagnification = function(self, v)
+		--[[client.cam.setmagnification = function(self, v)
 			if mp:getval("Visuals", "Camera Visuals", "Disable ADS FOV") and client.char.spawned then return end
 			return oldmag(self, v)
-		end
+		end]]
 		local oldmenufov = client.cam.changemenufov
 		client.cam.changemenufov = function(...)
 			if mp.open then return end
@@ -5925,15 +5925,32 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		end
-		do
-			local spring = debug.getupvalue(client.char.step, 21)
-			local mt = getrawmetatable(spring)
-			local old_index = mt.__index
-			setreadonly(mt, false)
-			mt.__index = newcclosure(function(t, k)
+		do -- spring hook
+			local spring = require(game.ReplicatedFirst.SharedModules.Utilities.Math.spring)
+			local old_index = spring.__index
+			local swingspring = debug.getupvalue(client.char.step, 21)
+			local sprintspring = debug.getupvalue(client.char.setsprint, 10)
+			spring.__index = newcclosure(function(t, k)
 				local result = old_index(t, k)
-				if k == "v" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then 
-					return Vector3.new()
+				if t == swingspring then
+					if k == "v" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then 
+						return Vector3.new()
+					end
+				end
+				if t == sprintspring then
+					if k == "p" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then
+						return 0
+					end
+				end
+				if t == client.cam.magspring then
+					if k == "p" and mp:getval("Visuals", "Camera Visuals", "Disable ADS FOV") then
+						return 0
+					end
+				end
+				if t == client.char.slidespring then
+					if k == "p" and mp:getval("Visuals", "Camera Visuals", "Show Sliding") then -- idk why i added this, i think it looks cool kinda lol
+						return 0
+					end
 				end
 				return result
 			end)
@@ -8306,7 +8323,7 @@ elseif mp.game == "pf" then --!SECTION
 				{
 					name = "Local Visuals",
 					autopos = "left",
-					autofill = true,
+					autofill = false,
 					content = {
 						{
 							type = "toggle",
@@ -8435,11 +8452,17 @@ elseif mp.game == "pf" then --!SECTION
 							maxvalue = 100,
 							stradd = "%"
 						},
+						{
+							type = "toggle",
+							name = "Show Sliding",
+							value = false
+						}
 					}
 				},
 				{
 					name = "World Visuals",
-					autopos = "right",
+					autopos = "left",
+					autofill = true,
 					content = {
 						{
 							type = "toggle",
@@ -8481,6 +8504,27 @@ elseif mp.game == "pf" then --!SECTION
 							maxvalue = 100,
 							stradd = "%",
 						},
+						--[[{
+							type = "toggle",
+							name = "Custom Bloom",
+							value = false
+						},
+						{
+							type = "slider",
+							name = "Bloom Size",
+							value = 0,
+							minvalue = 0,
+							maxvalue = 100,
+							stradd = "%",
+						},
+						{
+							type = "slider",
+							name = "Bloom Intensity",
+							value = 0,
+							minvalue = 0,
+							maxvalue = 100,
+							stradd = "%",
+						},]]
 					}
 				},
 				{
