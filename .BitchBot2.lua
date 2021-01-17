@@ -5755,7 +5755,7 @@ elseif mp.game == "pf" then --!SECTION
 					local vec = Vector3.new()
 					for k, bullet in next, bulletdata.bullets do
 						-- anti freeze players exploit
-						if typeof(bullet[1]) ~= "Vector3" then
+						if typeof(bullet) ~= "Vector3" then
 							bulletdata.bullets[k][1] = vec
 						end
 					end
