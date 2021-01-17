@@ -5530,7 +5530,6 @@ elseif mp.game == "pf" then --!SECTION
 		-- client event hooks! for grenade paths... and other shit (idk where to put this)
 		local clienteventfuncs = getupvalue(client.call, 1)
 		
-		
 		for hash, func in next, clienteventfuncs do
 			local curconstants = getconstants(func)
 			local found = table.find(curconstants, "Frag")
