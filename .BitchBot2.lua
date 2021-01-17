@@ -5490,6 +5490,9 @@ elseif mp.game == "pf" then --!SECTION
 	
 	
 	end
+
+	local _3pweps = {}
+
 	do--ANCHOR misc hooks
 		--anti afk
 		
@@ -5539,7 +5542,9 @@ elseif mp.game == "pf" then --!SECTION
 			local found6 = table.find(curconstants, " studs")
 			local found7 = table.find(curconstants, "setstance")
 			local found8 = table.find(curconstants, "setfixedcam")
-			local found9 = table.find(curconstants, "kickweapon ")
+			local found9 = table.find(curconstants, "kickweapon")
+			local found10 = table.find(curconstants, "equip")
+			local found11 = table.find(curconstants, "equipknife")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
@@ -5569,7 +5574,7 @@ elseif mp.game == "pf" then --!SECTION
 						end
 					end
                   return func(thrower, gtype, gdata, displaytrail)
-               end
+			   end
 			end
 			if found1 then
 				clienteventfuncs[hash] = function(charhash, bodyparts)
@@ -5746,7 +5751,7 @@ elseif mp.game == "pf" then --!SECTION
 					return func(...)
 				end
 			end
-			if found9 then
+			if found9 then -- no wonder why this wasnt working lmao
 				clienteventfuncs[hash] = function(bulletdata)
 					local vec = Vector3.new()
 					for k, bullet in next, bulletdata.bullets do
@@ -5762,6 +5767,18 @@ elseif mp.game == "pf" then --!SECTION
 
 					return func(bulletdata)
 				end
+			end
+			if found10 then
+				clienteventfuncs[hash] = function(player, weapon, camodata, attachments)
+                    _3pweps[player] = weapon
+                    return func(player, weapon, camodata, attachments)
+                end
+			end
+			if found11 then
+				clienteventfuncs[hash] = function(player, weapon, camodata)
+                    _3pweps[player] = weapon
+                    return func(player, weapon, camodata)
+                end
 			end
 			if found2 then
 				clienteventfuncs[hash] = function(gun, mag, spare, attachdata, camodata, gunn, ggequip)
@@ -6906,8 +6923,8 @@ elseif mp.game == "pf" then --!SECTION
 
 						debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
 
-						local charWeapon = Player.Character:GetChildren()[8]
-						local wepname = charWeapon and charWeapon.Name or "KNIFE"
+						local charWeapon = _3pweps[Player]
+						local wepname = charWeapon and charWeapon or "???"
 	
 						if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
 							wepname = string.lower(wepname)
