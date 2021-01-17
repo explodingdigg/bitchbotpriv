@@ -4320,8 +4320,8 @@ elseif mp.game == "pf" then --!SECTION
 				local oldtask = rawget(v, "task")
 				rawset(v, "task", function(...) 
 					oldtask(...)
-					local formattedVec = (ragebot.silentVector and mp:getval("Rage", "Aimbot", "Rotate Viewmodel")) and ragebot.silentVector * 1000 or nil
-					client.cam.shakecframe = formattedVec and CFrame.new(client.cam.shakecframe.p, Vector3.new(formattedVec.X, formattedVec.Y, formattedVec.Z)) or client.cam.cframe
+					local newCF = (ragebot.silentVector and mp:getval("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE") and CFrame.lookAt(ragebot.firepos + (ragebot.firepos - client.cam.basecframe.p), ragebot.targetpart.Position) or nil
+					client.cam.shakecframe = newCF and newCF or client.cam.cframe
 					return
 				end)
 			end
