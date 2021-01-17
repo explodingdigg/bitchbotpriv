@@ -4316,6 +4316,14 @@ elseif mp.game == "pf" then --!SECTION
 			elseif rawget(v, "player") and rawget(v, "reset") then
 				client.animation = v
 				client.animation.oldplayer = client.animation.player
+			elseif rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
+				local oldtask = rawget(v, "task")
+				rawset(v, "task", function(...) 
+					oldtask(...)
+					local formattedVec = (ragebot.silentVector and mp:getval("Rage", "Aimbot", "Rotate Viewmodel")) and ragebot.silentVector * 1000 or nil
+					client.cam.shakecframe = formattedVec and CFrame.new(client.cam.shakecframe.p, Vector3.new(formattedVec.X, formattedVec.Y, formattedVec.Z)) or client.cam.cframe
+					return
+				end)
 			end
 		end
 	end	
@@ -7819,6 +7827,11 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Silent Aim",
 							value = false,
+						},
+						{
+							type = "toggle",
+							name = "Rotate Viewmodel",
+							value = false
 						},
 						{
 							type = "slider",
