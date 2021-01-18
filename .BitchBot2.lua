@@ -5573,7 +5573,6 @@ elseif mp.game == "pf" then --!SECTION
 
 						if thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
 							local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
-							warn(btick < curtick)
 							if btick < curtick then
 								table.insert(mp.activenades, {
 									thrower = thrower.Name,
