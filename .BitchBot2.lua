@@ -6400,6 +6400,8 @@ elseif mp.game == "pf" then --!SECTION
 						pitch = math.random(99999)
 					elseif pitchChoice == 9 then
 						pitch = math.sin((tick() % 6.28) * spinRate)
+					elseif pitchChoice == 10 then
+						pitch = 2 ^ 127 + 1
 					end
 		
 					--{"Off", "Backward", "Spin", "Random"} yaw
@@ -7985,7 +7987,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Pitch",
 							value = 4,
-							values = {"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob"}
+							values = {"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch"}
 						},
 						{
 							type = "dropbox",
