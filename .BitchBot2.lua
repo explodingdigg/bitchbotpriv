@@ -5572,12 +5572,15 @@ elseif mp.game == "pf" then --!SECTION
 
 
 						if thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
-							table.insert(mp.activenades, {
-								thrower = thrower.Name,
-								blowupat = lastframe.p0,
-								blowuptick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err)), -- might need to be tested more
-								start = curtick
-							})
+							local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
+							if btick < start then
+								table.insert(mp.activenades, {
+									thrower = thrower.Name,
+									blowupat = lastframe.p0,
+									blowuptick = btick, -- might need to be tested more
+									start = curtick
+								})
+							end
 						end
 					end
                   return func(thrower, gtype, gdata, displaytrail)
