@@ -4550,6 +4550,7 @@ elseif mp.game == "pf" then --!SECTION
 		"Cheat Exploit", "Hitbox Expansion", "Cheating AI", "Auto Wall Shoot", "Konami Code",
 		"Debug", "Debug Menu", "🗿", "£", "¥", "₽", "₭", "€", "₿"
 	}
+
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 		__call = function(self, type, debounce)
 			if type ~= 1 then
@@ -4573,9 +4574,10 @@ elseif mp.game == "pf" then --!SECTION
 				local curchoice = chatspamtype[rand]
 				return curchoice
 			end
-		end
+		end,
+		__metatable = "neck yourself weird kid the fuck you trying to do"
 	})
-	
+
 	local skelparts = {"Head", "Right Arm", "Right Leg", "Left Leg", "Left Arm"}
 	
 	local function MouseUnlockAndShootHook()
@@ -7071,7 +7073,7 @@ elseif mp.game == "pf" then --!SECTION
 					for i = 1, 2 do
 						local Tri = allesp.arrows[i][Index]
 						
-						local partCFrame = Player.Character.Torso.CFrame
+						local partCFrame = Player.Character.HumanoidRootPart.CFrame -- these HAVE to move now theres no way
 	
 						Tri.Visible = true
 						
