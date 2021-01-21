@@ -16,18 +16,18 @@ for k, v in pairs(getgc(true)) do
 		for k1, v1 in pairs(debug.getupvalues(v)) do
 			if type(v1) == "table" then
 				if rawget(v1, "send") then
-					client.net = v1
+					client.network = v1
 				elseif rawget(v1, "gammo") then
 					client.logic = v1
-				elseif rawget(v1, "setbasewalkspeed") then
+				elseif rawget(v1, "unaimedfov") then
 					client.char = v1
 				elseif rawget(v1, "basecframe") then
 					client.cam = v1
 				elseif rawget(v1, "votestep") then
 					client.hud = v1
-				elseif rawget(v1, "getbodyparts") then
+				elseif rawget(v1, "getplayerhit") then
 					client.replication = v1
-				elseif rawget(v1, "play") then
+				elseif rawget(v1, "play") then 
 					client.sound = v1
 				elseif rawget(v1, "checkkillzone") then
 					client.roundsystem = v1
@@ -35,83 +35,112 @@ for k, v in pairs(getgc(true)) do
 			end
 		end
 	end
-end
-local sent = false
-local oldsend = client.net.send
-client.net.send=function(self,e,...)
-	local args = {...}
-	if not sent and e == "newbullets" then
-		table.foreach(args[1].bullets[1], print)
+	if type(v) == "table" then
+		if rawget(v, "deploy") then
+			client.ui = v
+		end
 	end
-	oldsend(self,e,...)
 end
 
--- table.foreach(client.cam, print)
+client.network:send("stripclothing")
 
--- local oldsend = client.net.send
+--[[local funcs = getupvalue(client.call, 1)
 
+local playertospawnon = nil
 
--- client.net.send = function(self, name, ...)
--- 	local args = {...}
--- 	if name == "modcmd" then
--- 		local command = args[1]
+local oldsend = client.network.send
 
--- 		local start, ending = command:find('/fpsmax ')
--- 		if ending then
--- 			local numbah = command:sub(ending + 1)
--- 			setfpscap(numbah)
--- 			print(numbah)
--- 		end
--- 	end
--- end
+client.network.send = function(t, event, ...)
+	local args = {...}
 
--- local input = game:GetService"UserInputService"
--- _G.fart = true
--- local d = 0.3
--- while wait() and _G.fart do
--- 	if input:IsKeyDown(Enum.KeyCode.E) then
--- 		wait(d)
--- 		client.net:send("modcmd", "/switch:p")
--- 		wait(d)
--- 		client.net:send("modcmd", "/switch:g")
--- 	end
--- end
+	if event == "spawn" then
+		args[1] = playertospawnon
+	end
 
--- local g = true
--- input.InputBegan:Connect(function(key)
--- 	if key.KeyCode == Enum.KeyCode.P then
--- 		if g then
--- 			client.net:send("modcmd", "/switch:p")
--- 			g = false
--- 		else
--- 			client.net:send("modcmd", "/switch:g")
--- 			g = true
--- 		end
--- 	end
--- end)
--- for k, player in pairs(game.Players:children()) do
--- 	local parts = client.replication.getbodyparts(player)
--- 	if parts then
--- 		print(parts.rootpart.Parent:GetBoundingBox())
--- 		break
--- 	end	
--- end
--- local gun = debug.getupvalues(client.logic.currentgun.toggleattachment)[2][client.logic.currentgun.gunnumber]
--- gun.firerate = 5000
+	return oldsend(t, event, unpack(args))
+end
 
--- local stances = {}
+local lplayer = game.Players.LocalPlayer
 
--- game.RunService.RenderStepped:Connect(function()
--- 	local amountChanged = 0
--- 	for k, Player in pairs(game.Players:children()) do
--- 		if not client.hud:isplayeralive(Player) then continue end
--- 		local updater = client.replication.getupdater(Player)
--- 		if updater.hooked then return end
--- 		local oldStance = updater.setstance
--- 		updater.setstance = function(...)
--- 			amountChanged += 1
--- 			return(updater.setstance(...))
--- 		end
--- 	end
--- 	print(amountChanged)
--- end)
+local runservice = game:service("RunService")
+local rs = runservice.RenderStepped
+local stepwait = rs.Wait
+
+local spawnallowed = true
+
+client.char.ondied:connect(function()
+	spawnallowed = true
+end)
+
+for hash, func in next, funcs do
+	local c = getconstants(func)
+	local bodyparts = table.find(c, "updatecharacter")
+	local killed = table.find(c, "setfixedcam")
+	local lookangles = table.find(c, "setlookangles")
+	local stance = table.find(c, "setstance")
+	local aim = table.find(c, "setaim")
+	local sprint = table.find(c, "setsprint")
+
+	if bodyparts then
+		funcs[hash] = function(player, bodyparts)
+			if not client.char.spawned and player.Team == lplayer.Team and spawnallowed then
+				playertospawnon = player
+				client.ui:deploy(player)
+				local r = bodyparts.rootpart
+				coroutine.wrap(function()
+					repeat wait() until client.char.spawned
+					local rootpart = client.char.rootpart
+					while client.char.spawned do
+						rootpart.Position = r.Position
+						stepwait(rs)
+					end
+					return
+				end)()
+			end
+			return func(player, bodyparts)
+		end
+	end
+
+	if killed then
+		funcs[hash] = function(...)
+			spawnallowed = false
+			return func(...)
+		end
+	end
+
+	if lookangles then
+		funcs[hash] = function(player, newangles)
+			if client.char.spawned and playertospawnon and player == playertospawnon then
+				client.cam.angles = newangles
+			end
+			return func(player, newangles)
+		end
+	end
+
+	if stance then
+		funcs[hash] = function(player, newstance)
+			if client.char.spawned and playertospawnon and player == playertospawnon then
+				client.char:setmovementmode(newstance)
+			end
+			return func(player, newstance)
+		end
+	end
+
+	if aim then
+		funcs[hash] = function(player, newaim)
+			if client.char.spawned and playertospawnon and player == playertospawnon then
+				client.logic.currentgun:setaim(newaim)
+			end
+			return func(player, newaim)
+		end
+	end
+
+	if sprint then
+		funcs[hash] = function(player, newsprint)
+			if client.char.spawned and playertospawnon and player == playertospawnon then
+				client.char:setsprint(newsprint)
+			end
+			return func(player, newsprint)
+		end
+	end
+end]]
