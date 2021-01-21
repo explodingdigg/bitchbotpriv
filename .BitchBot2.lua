@@ -7828,12 +7828,14 @@ elseif mp.game == "pf" then --!SECTION
 							value = false,
 							extra = {
 								type = "keybind",
-							}
+							},
+							unsafe = true
 						},
 						{
 							type = "toggle",
 							name = "Silent Aim",
 							value = false,
+							unsafe = true
 						},
 						{
 							type = "toggle",
@@ -7895,7 +7897,8 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Autowall Resolver",
-							value = false
+							value = false,
+							unsafe = true
 						},
 						{
 							type = "dropbox",
@@ -7935,7 +7938,8 @@ elseif mp.game == "pf" then --!SECTION
 							value = false,
 							extra = {
 								type = "keybind",
-							}
+							},
+							unsafe = true
 						},
 						{
 							type = "dropbox",
@@ -8041,7 +8045,8 @@ elseif mp.game == "pf" then --!SECTION
 							extra = {
 								type = "keybind",
 								key = nil
-							}
+							},
+							unsafe = true
 						}
 					}
 				},
@@ -8684,6 +8689,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Ignore Round Freeze",
 							value = false,
+							unsafe = true
 						}
 					},
 				},
@@ -8811,7 +8817,8 @@ elseif mp.game == "pf" then --!SECTION
 							value = false,
 							extra = {
 								type = "keybind"
-							}
+							},
+							unsafe = true
 						}
 					}
 				},
