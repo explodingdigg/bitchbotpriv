@@ -4518,7 +4518,9 @@ elseif mp.game == "pf" then --!SECTION
 			"HOw do you get ACCESS to this BBOT ",
 			"I NEED ACCESS 🔑🔓 TO BBOT 🤖📃📃📃 👈 THIS THING CALLED BBOT SCRIPT, I NEED IT ",
 			"\"this god mode guy is annoying\", Pr0blematicc says as he loses roblox hvh ",
-			"you can call me crimson chin 🦹‍♂️🦹‍♂️ cause i turned your screen red 🟥🟥🟥🟥 									"
+			"you can call me crimson chin 🦹‍♂️🦹‍♂️ cause i turned your screen red 🟥🟥🟥🟥 									",
+			"clipped that 🤡 ",
+			"Clipped and Uploaded. 🤡"
 		}
 	}
 	--local 
@@ -4644,7 +4646,7 @@ elseif mp.game == "pf" then --!SECTION
 	end
 	
 	
-	local function renderChams()
+	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps
 		for k, Player in pairs(Players:GetPlayers()) do
 			if Player == LOCAL_PLAYER then continue end -- doing this for now, i'll have to change the way the third person model will end up working
 			local Body = client.replication.getbodyparts(Player)
@@ -6750,7 +6752,7 @@ elseif mp.game == "pf" then --!SECTION
 		debug.profileend("renderVisuals World")
 
 		debug.profilebegin("renderVisuals Player ESP Reset")
-
+		-- TODO this reset may need to be improved to a large extent, it's taking up some time but idk if the frame times are becoming worse because of this
 		for k, v in pairs(allesp) do
 			for k1, v1 in pairs(v) do
 				if type(v1) ~= "table" then continue end
