@@ -4524,33 +4524,38 @@ elseif mp.game == "pf" then --!SECTION
 		}
 	}
 	--local 
+	-- "音频少年公民记忆欲求无尽 heywe 僵尸强迫身体哑集中排水",
+	-- "持有毁灭性的神经重景气游行脸红青铜色类别创意案",
+	-- "诶比西迪伊艾弗吉艾尺艾杰开艾勒艾马艾娜哦屁吉吾",
+	-- "完成与草屋两个苏巴完成与草屋两个苏巴完成与草屋",
+	-- "庆崇你好我讨厌你愚蠢的母愚蠢的母庆崇",
 	local spam_words = {
 		"Hack", "Unlock", "Cheat", "Roblox", "Mod Menu", "Mod", "Menu", "God Mode", "Kill All",
 		"Silent", "Silent Aim", "X Ray", "Aim", "Bypass", "Glitch", "Wallhack", "ESP", "Infinite",
 		"Infinite Credits", "XP", "XP Hack", "Infinite Credits", "Unlook All", "Server Backdoor",
 		"Serverside", "2021", "Working", "(WORKING)", "瞄准无声目标绕过", "Gamesense", "Onetap",
 		"PF Exploit", "Phantom Force", "Cracked", "TP Hack", "PF MOD MENU", "DOWNLOAD", "Paste Bin",
-		"download", "Download", "Teleport", "100% legit", "100%", "pro", "Professional",
+		"download", "Download", "Teleport", "100% legit", "100%", "pro", "Professional", "灭性的神经",
 		"No Virus All Clean", "No Survey", "No Ads", "Free", "Not Paid", "Real", "REAL 2020",
 		"2020", "Real 2017", "BBot", "Cracked", "BBOT CRACKED by vw", "2014", "desuhook crack",
 		"Aimware", "Hacks", "Cheats", "Exploits", "(FREE)", "🕶😎", "😎", "😂", "😛", "paste bin",
 		"bbot script", "hard code", "正免费下载和使", "SERVER BACKDOOR", "Secret", "SECRET", "Unleaked", 
 		"Not Leaked", "Method", "Minecraft Steve", "Steve", "Minecraft", "Sponge Hook", "Squid Hook", "Script",
-		"Squid Hack", "Sponge Hack", "(OP)", "Verified", "All Clean", "Program", "Hook", 
+		"Squid Hack", "Sponge Hack", "(OP)", "Verified", "All Clean", "Program", "Hook", "有毁灭", 
 		"desu", "hook", "vw HACK", "Anti Votekick", "Speed", "Fly Hack", "Big Head", "Knife Hack",
 		"No Clip", "Auto", "Rapid Fire", "Fire Rate Hack", "Fire Rate", "God Mode", "God", 
 		"Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma",
 		"And", "LEAKED", "🥳🥳🥳", "RELEASE", "IP RESOLVER","Infinite Wall Bang", "Wall Bang", 
 		"Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱","Free Download EHUB", 
-		"Taps", "Owns", "Owns All", "Trolling", "Troll", "Grief", "Kill",
+		"Taps", "Owns", "Owns All", "Trolling", "Troll", "Grief", "Kill", "弗吉艾尺艾杰开",
 		"Nate", "Alan", "JSON", "Classy", "BBOT Developers", "Logic", "And", "and", "Glitch", "Server Hack",
-		"Babies", "Children", "TAP", "Meme", "MEME", "Laugh", "LOL!", "Lol!", "ROFLSAUCE", "Rofl", ";v", 
+		"Babies", "Children", "TAP", "Meme", "MEME", "Laugh", "LOL!", "Lol!", "ROFLSAUCE", "Rofl", 
 		";p", ":D", "=D", "xD", "XD", "=>", "₽", "$", "8=>", "😹😹😹", "🎮🎮🎮", "🎱", "⭐", "✝",
-		"Gato Hack", "Blaze Hack", "Fuego Hack", "Nat Hook", "Ransomware", "Malware", 
-		"SKID", "Pasted vw", "Encrypted", "Brute Force", "Cheat Code", "Hack Code", 
-		"No Ban", "Bot", "Editing", "Modification", "injection", "Bypass Anti Cheat", 
+		"Gato Hack", "Blaze Hack", "Fuego Hack", "Nat Hook", "Ransomware", "Malware",
+		"SKID", "Pasted vw", "Encrypted", "Brute Force", "Cheat Code", "Hack Code", ";v",
+		"No Ban", "Bot", "Editing", "Modification", "injection", "Bypass Anti Cheat", "铜色类别创意", 
 		"Cheat Exploit", "Hitbox Expansion", "Cheating AI", "Auto Wall Shoot", "Konami Code",
-		"Debug", "Debug Menu", "🗿", "£", "¥", "₽", "₭", "€", "₿"
+		"Debug", "Debug Menu", "🗿", "£", "¥", "₽", "₭", "€", "₿", "Meow", "MEOW", "meow"
 	}
 
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
@@ -7447,7 +7452,6 @@ elseif mp.game == "pf" then --!SECTION
 		debug.profilebegin("BB Rendering")
 		do --rendering
 			renderVisuals()
-			renderChams()
 		end
 		debug.profileend("BB Rendering")
 		debug.profilebegin("BB Legitbot")
@@ -7476,6 +7480,7 @@ elseif mp.game == "pf" then --!SECTION
 
 	CreateThread(function() -- ragebot performance
 		while wait() do
+			renderChams()
 			if mp:getval("Rage", "Extra", "Performance Mode") then
 				do--ragebot
 					ragebot:MainLoop()
