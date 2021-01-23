@@ -8651,7 +8651,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Fly Hack Speed",
 							value = 70,
 							minvalue = 1,
-							maxvalue = 10000,
+							maxvalue = 200,
 							stradd = " stud/s"
 						},
 						{
