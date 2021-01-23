@@ -42,9 +42,9 @@ for k, v in pairs(getgc(true)) do
 	end
 end
 
-client.network:send("stripclothing")
+--client.network:send("stripclothing")
 
---[[local funcs = getupvalue(client.call, 1)
+local funcs = getupvalue(client.call, 1)
 
 local playertospawnon = nil
 
@@ -143,4 +143,4 @@ for hash, func in next, funcs do
 			return func(player, newsprint)
 		end
 	end
-end]]
+end

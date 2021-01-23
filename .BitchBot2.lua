@@ -5350,7 +5350,6 @@ elseif mp.game == "pf" then --!SECTION
 			local position = origin + offset
 			if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
 				table.insert(hitpoints, offset)
-				print(#hitpoints)
 				return position
 			end
 		end
@@ -5418,7 +5417,7 @@ elseif mp.game == "pf" then --!SECTION
 			return nil
 		end
 
-		function ragebot:TP_UpHitscan(from, to, max_steps)
+		--[[function ragebot:TP_UpHitscan(from, to, max_steps)
 			warn("ok  ! ! ! ! ! ! ! !")
 			local newpos = from
 			warn("okay")
@@ -5433,15 +5432,15 @@ elseif mp.game == "pf" then --!SECTION
 				if penetrated then
 					return newpos, steps
 				end
-				--[[local oldsend = client.net.send
+				local oldsend = client.net.send
 
 				client.net.send = function(self, event, ...)
 					if event == "repupdate" then return end
 					oldsend(self, event, ...)
-				end]]
+				end
 			end
 			return nil
-		end
+		end]]
 
 		function ragebot:MainLoop() -- lfg
 			if client.char.spawned and mp:getval("Rage", "Aimbot", "Enabled") then
@@ -8652,7 +8651,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Fly Hack Speed",
 							value = 70,
 							minvalue = 1,
-							maxvalue = 200,
+							maxvalue = 10000,
 							stradd = " stud/s"
 						},
 						{
