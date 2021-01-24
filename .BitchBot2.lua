@@ -4415,6 +4415,14 @@ elseif mp.game == "pf" then --!SECTION
 			"诶比西迪伊艾弗吉艾尺艾杰开艾勒艾马艾娜哦屁吉吾",
 			"完成与草屋两个苏巴完成与草屋两个苏巴完成与草屋",
 			"庆崇你好我讨厌你愚蠢的母愚蠢的母庆崇", 
+			"坐下，一直保持着安静的状态。 谁把他拥有的东西给了他，所以他不那么爱欠债务，却拒绝参加锻炼，这让他爱得更少了",
+			", yīzhí bǎochízhe ānjìng de zhuàngtài. Shéi bǎ tā yǒngyǒu de dōngxī gěile tā, suǒyǐ tā bù nàme ài qiàn zhàiwù, què jùjué cānjiā duànliàn, z",
+			"他，所以他不那r给了他东西给了他爱欠s，却拒绝参加锻炼，这让他爱得更UGT少了",
+			"bbot 有的东西给了他，所以他不那rblx trader captain么有的东西给了他爱欠绝参加锻squidward炼，务，却拒绝参加锻炼，这让他爱得更UGT少了",
+			"wocky slush他爱欠债了他他squilliam拥有的东西给爱欠绝参加锻squidward炼",
+			"坐下，一直保持着安静的状态bbot 谁把他拥有的东西给了他，所以他不那rblx trader captain么有的东西给了他爱欠债了他他squilliam拥有的东西给爱欠绝参加锻squidward炼，务，却拒绝参加锻炼，这让他爱得更UGT少了",
+			"免费手榴弹bbot hack绕过作弊工作Phantom Force roblox aimbot瞄准无声目标绕过2020工作真正免费下载和使用",
+			""
 		},
 		[5] = {
 			"🔥🔥🔥🔥🔥🔥🔥🔥",
@@ -4520,7 +4528,9 @@ elseif mp.game == "pf" then --!SECTION
 			"\"this god mode guy is annoying\", Pr0blematicc says as he loses roblox hvh ",
 			"you can call me crimson chin 🦹‍♂️🦹‍♂️ cause i turned your screen red 🟥🟥🟥🟥 									",
 			"clipped that 🤡 ",
-			"Clipped and Uploaded. 🤡"
+			"Clipped and Uploaded. 🤡",
+			"nodus client slime castle crashers minecraft dupeing hack wizardhax xronize grief ... Tlcharger minecraft crack Oggi spiegheremo come creare un ip grabber!",
+			"Off synonyme syls midge, smiled at mashup 2 mixed in key free download procom, ... Okay, love order and chaos online gameplayer hack amber forcen ahdistus"
 		}
 	}
 	--local 
