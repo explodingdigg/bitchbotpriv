@@ -4846,8 +4846,16 @@ elseif mp.game == "pf" then --!SECTION
 	
 			local hit, position = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, Part.Position - origin), client.roundsystem.raycastwhitelist)
 			
-			return (position == Part.Position or (Parent and hit and Parent:IsAncestorOf(hit)))
-	
+			if hit then
+				if hit.CanCollide and hit.Transparency == 0 then
+					return false
+				else
+					return self:IsVisible(Part, Parent, position + (Part.Position - origin).Unit * 0.01)
+				end
+			else
+				return (position == Part.Position or (Parent and hit and Parent:IsAncestorOf(hit)))
+			end
+			
 	
 		end
 
