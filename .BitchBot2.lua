@@ -4440,6 +4440,10 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
+		local gunstore = game.ReplicatedStorage.GunModules
+		gunstore:Destroy()
+		game.ReplicatedStorage:FindFirstChild(client.acchash).Name = "GunModules"
+
 		for k,v in next, client do
 			client[k] = nil
 		end
@@ -4500,6 +4504,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 	local OLD_GUNS = game:GetService("ReplicatedStorage").GunModules:Clone()
 	OLD_GUNS.Name = tostring(math.random(1e5, 9e5))
+	client.acchash = OLD_GUNS.Name
 	OLD_GUNS.Parent = game:GetService("ReplicatedStorage")
 	
 	local CUR_GUNS = game:GetService("ReplicatedStorage").GunModules
