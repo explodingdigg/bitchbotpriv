@@ -1839,6 +1839,8 @@ function mp.BBMenuInit(menutable)
 	local function buttonpressed(bp)
 		ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
 		if bp == mp.options["Settings"]["Extra"]["Unload Cheat"] then
+			mp.fading = true
+			wait(0.3)
 			mp:unload()
 		elseif bp == mp.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
@@ -2924,7 +2926,6 @@ function mp.BBMenuInit(menutable)
 
 		for k,v in next, mt do
 			if oldmt[k] then
-				rconsolewarn("yes " .. k)
 				mt[k] = oldmt[k]
 			end
 		end
@@ -4438,6 +4439,11 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		end
+
+		for k,v in next, client do
+			client[k] = nil
+		end
+		client = nil
 	end
 
 	local charcontainer = game.ReplicatedStorage.Character.Bodies
