@@ -4336,6 +4336,13 @@ elseif mp.game == "pf" then --!SECTION
 	local ghostchar = game.ReplicatedStorage.Character.Bodies.Ghost
 	local phantomchar = game.ReplicatedStorage.Character.Bodies.Phantom
 
+	local repupdates = {}
+
+	for _, player in next, Players:GetPlayers() do
+		if player == LOCAL_PLAYER then continue end
+		repupdates[player] = {}
+	end
+
 	client.localrank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
 
 	client.fakeplayer = Instance.new("Player", Players) -- thank A_003 for this (third person body)🔥 
@@ -5590,6 +5597,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found9 = table.find(curconstants, "kickweapon")
 			local found10 = table.find(curconstants, "equip")
 			local found11 = table.find(curconstants, "equipknife")
+			local found12 = table.find(curconstants, "setlookangles")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
@@ -5716,6 +5724,7 @@ elseif mp.game == "pf" then --!SECTION
 							)
 							end)
 						end
+						
 						if mp:getval("Misc", "Extra", "Kill Say") then
 							local chosenmsg = killsaymessages[math.random(1, #killsaymessages)]
 							send(nil, "chatted", string.format(chosenmsg, victim.Name:lower()))
@@ -5726,6 +5735,14 @@ elseif mp.game == "pf" then --!SECTION
 							client.sound.PlaySoundId("rbxassetid://6229978482", 5.0, 1.0, workspace, nil, 0, 0.03)
 						end
 					end
+
+					if victim ~= LOCAL_PLAYER then
+						if not repupdates[victim] then
+							printconsole("Unable to find position data for " .. victim.Name)
+						end
+						repupdates[victim] = {}
+					end
+
 					return func(killer, victim, dist, weapon, head)
 				end
 			end
@@ -5827,6 +5844,29 @@ elseif mp.game == "pf" then --!SECTION
                     _3pweps[player] = weapon
                     return func(player, weapon, camodata)
                 end
+			end
+			if found12 then
+				clienteventfuncs[hash] = function(player, newangles)
+					local bodyparts = client.replication.getbodyparts(player)
+					if bodyparts then
+						if not repupdates[player] then
+							printconsole("Position data was nil for " .. player.Name .. "??")
+							repupdates[player] = {}
+						end
+						local data = repupdates[player]
+						local pos = bodyparts.rootpart.Position
+						table.insert(data, 1, {
+							["position"] = pos,
+							["tick"] = tick()
+						})
+						table.remove(data, 19)
+					end
+					if newangles.Magnitude >= 2 ^ 1000 then
+						return
+					end
+
+					return func(player, newangles)
+				end
 			end
 			if found2 then
 				clienteventfuncs[hash] = function(gun, mag, spare, attachdata, camodata, gunn, ggequip)
@@ -7521,6 +7561,61 @@ elseif mp.game == "pf" then --!SECTION
 	CreateThread(function() -- ragebot performance
 		while wait() do
 			renderChams()
+
+			for player, data in next, repupdates do
+				if not Players[player.Name] then
+					repupdates[player] = nil
+					continue
+				end
+				if not client.hud:isplayeralive(player) and #data > 0 then
+					repupdates[player] = {}
+					continue
+				end
+				if #data == 0 then continue end
+				local curtick = tick()
+
+				local latestSample = data[#data]
+				local time = math.abs(latestSample.tick - curtick)
+				if time >= 2 then
+					-- the player is lagging or using crimwalk
+					if player.Team ~= LOCAL_PLAYER.Team and mp:getval("Misc", "Exploits", "Grenade Teleport") then
+						--local bodyparts = client.replication.getbodyparts(player)
+						local args = {
+							"FRAG",
+							{
+								frames = {
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(),
+										p0 = client.char.head.Position,
+										rotv = Vector3.new()
+									},
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(),
+										p0 = latestSample.position + Vector3.new(0, 3, 0),
+										rotv = Vector3.new()
+									}
+								},
+								time = tick(),
+								curi = 1,
+								blowuptime = 0
+							}
+						}
+	
+						client.net.send(client.net, "newgrenade", unpack(args))
+					end
+				end
+			end
+
 			if mp:getval("Rage", "Extra", "Performance Mode") then
 				do--ragebot
 					ragebot:MainLoop()
