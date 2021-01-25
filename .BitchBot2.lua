@@ -4853,9 +4853,10 @@ elseif mp.game == "pf" then --!SECTION
 					return self:IsVisible(Part, Parent, position + (Part.Position - origin).Unit * 0.01)
 				end
 			else
-				return (position == Part.Position or (Parent and hit and Parent:IsAncestorOf(hit)))
+				return true
 			end
-			
+
+			-- return (position == Part.Position or (Parent and hit and Parent:IsAncestorOf(hit)))
 	
 		end
 
