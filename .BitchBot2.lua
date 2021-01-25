@@ -233,10 +233,21 @@ mp = { -- this is for menu stuffs n shi
 	game = "uni",
 	tabnum2str = {}, -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
 	friends = {},
-	priority = {}
+	priority = {},
+	modkeys = {
+		alt = {
+			direction = nil
+		},
+		shift = {
+			direction = nil
+		}
+	}
 }
 
-
+function mp:modkeydown(key, direction)
+	local keydata = self.modkeys[key]
+	return keydata.direction and keydata.direction == direction or false
+end
 
 function CreateThread(func) 
    local thread = coroutine.create(func)
@@ -2893,6 +2904,18 @@ function mp.BBMenuInit(menutable)
 				mousebutton1downfunc()
 			end
 		end
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			if input.KeyCode.Name:match("Shift") then
+				local kcn = input.KeyCode.Name
+				local direction = kcn:split("Shift")[1]
+				mp.modkeys.shift.direction = direction:lower()
+			end
+			if input.KeyCode.Name:match("Alt") then
+				local kcn = input.KeyCode.Name
+				local direction = kcn:split("Alt")[1]
+				mp.modkeys.alt.direction = direction:lower()
+			end
+		end
 		inputBeganMenu(input)
 	end)
 
@@ -2901,6 +2924,14 @@ function mp.BBMenuInit(menutable)
 			mp.mousedown = false
 			if mp.open and not mp.fading then
 				mousebutton1upfunc()
+			end
+		end
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			if input.KeyCode.Name:match("Shift") then
+				mp.modkeys.shift.direction = nil
+			end
+			if input.KeyCode.Name:match("Alt") then
+				mp.modkeys.alt.direction = nil
 			end
 		end
 	end)
@@ -4442,7 +4473,7 @@ elseif mp.game == "pf" then --!SECTION
 
 		local gunstore = game.ReplicatedStorage.GunModules
 		gunstore:Destroy()
-		game.ReplicatedStorage:FindFirstChild(client.acchash).Name = "GunModules"
+		game.ReplicatedStorage:FindFirstChild(client.acchash).Name = "GunModules" -- HACK DETECTED.
 
 		for k,v in next, client do
 			client[k] = nil
@@ -7629,12 +7660,14 @@ elseif mp.game == "pf" then --!SECTION
 			keybindtoggles.invis = not keybindtoggles.invis
 		end
 		if mp:getval("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == mp:getval("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.spawned then
-			local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
+			local sign = not mp:modkeydown("alt", "left")
+			local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
 
 			local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
 
 			if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-				client.char.rootpart.Position -= Vector3.new(0, 18, 0)
+				client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
+				CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
 			else
 				CreateNotification("Unable to floor clip!")
 			end
