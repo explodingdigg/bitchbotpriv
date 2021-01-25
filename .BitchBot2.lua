@@ -4332,6 +4332,10 @@ elseif mp.game == "pf" then --!SECTION
 		return function(...) end
 	end
 
+	local charcontainer = game.ReplicatedStorage.Character.Bodies
+	local ghostchar = game.ReplicatedStorage.Character.Bodies.Ghost
+	local phantomchar = game.ReplicatedStorage.Character.Bodies.Phantom
+
 	client.localrank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
 
 	client.fakeplayer = Instance.new("Player", Players) -- thank A_003 for this (third person body)🔥 
@@ -4692,8 +4696,15 @@ elseif mp.game == "pf" then --!SECTION
 				for k1, Part in pairs(Player.Character:GetChildren()) do
 					debug.profilebegin("renderChams " .. Player.Name)
 					if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
+						
+						local helmet = Part:FindFirstChild("HELMET")
+						if helmet then
+							helmet.Slot1.Transparency = enabled and 1 or 0
+							helmet.Slot2.Transparency = enabled and 1 or 0
+						end
+
 						if not Part:FindFirstChild("c88") then
-	
+
 							for i = 0, 1 do
 	
 								local box
