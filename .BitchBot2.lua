@@ -7316,7 +7316,7 @@ elseif mp.game == "pf" then --!SECTION
 							for k1, v1 in pairs(v:GetChildren()) do
 		
 								v1.Color = mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color1", true)
-		
+
 								if v1.Transparency ~= 1 then
 									v1.Transparency = 0.99999 + (mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
 								end
@@ -7558,6 +7558,7 @@ elseif mp.game == "pf" then --!SECTION
 					localchar.Parent = workspace["Ignore"]
 	
 					client.fakerootpart = localchar.HumanoidRootPart
+					localchar.HumanoidRootPart.Anchored = true
 
 					local torso = localchar.Torso
 					client.fakeupdater.updatecharacter({

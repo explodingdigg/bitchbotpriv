@@ -42,6 +42,32 @@ for k, v in pairs(getgc(true)) do
 	end
 end
 
+--[[wait(1)
+
+local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 10000)
+
+local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+
+client.network:send("chatted", hit.Name)
+
+print((not hit.CanCollide) or hit.Name == "Window")
+
+--client.char.rootpart.Parent.Humanoid.HipHeight = 0
+client.char.rootpart.Position -= Vector3.new(0, 18, 0)]]
+
+for k,v in next, client.logic.currentgun do
+	warn(k,v)
+end
+
+--[[for i = 1, 20 do
+	client.char.rootpart.Position += Vector3.new(0, 18, 0)
+	wait()
+	client.char.rootpart.Position -= Vector3.new(0, 18, 0)
+	wait()
+	client.char.rootpart.Position -= Vector3.new(0, 28, 0)
+end]]
+
+--[[
 --client.network:send("stripclothing")
 
 local funcs = getupvalue(client.call, 1)
@@ -143,4 +169,4 @@ for hash, func in next, funcs do
 			return func(player, newsprint)
 		end
 	end
-end
+end]]
