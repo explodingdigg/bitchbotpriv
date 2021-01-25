@@ -4696,7 +4696,7 @@ elseif mp.game == "pf" then --!SECTION
 				for k1, Part in pairs(Player.Character:GetChildren()) do
 					debug.profilebegin("renderChams " .. Player.Name)
 					if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
-						
+
 						local helmet = Part:FindFirstChild("HELMET")
 						if helmet then
 							helmet.Slot1.Transparency = enabled and 1 or 0
@@ -7456,6 +7456,17 @@ elseif mp.game == "pf" then --!SECTION
 			CreateNotification(msg)
 			keybindtoggles.invis = not keybindtoggles.invis
 		end
+		if mp:getval("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == mp:getval("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.spawned then
+			local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
+
+			local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+
+			if (not hit.CanCollide) or hit.Name == "Window" then
+				client.char.rootpart.Position -= Vector3.new(0, 18, 0)
+			else
+				CreateNotification("Unable to floor clip because the floor is collidable!")
+			end
+		end
 	end)
 	
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
@@ -8855,6 +8866,14 @@ elseif mp.game == "pf" then --!SECTION
 								type = "keybind"
 							},
 							unsafe = true
+						},
+						{
+							type = "toggle",
+							name = "Vertical Floor Clip",
+							value = false,
+							extra = {
+								type = "keybind"
+							}
 						}
 					}
 				},
