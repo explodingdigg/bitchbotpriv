@@ -2911,12 +2911,36 @@ function mp.BBMenuInit(menutable)
 		for k, v in pairs(self.connections) do
 			v:Disconnect()
 		end
+
+		local mt = getrawmetatable(game)
+
+		setreadonly(mt, false)
+
+		local oldmt = mp.oldmt
+
+		if not oldmt then -- remember to store any "game" metatable hooks PLEASE PLEASE because this will ensure it replaces the meta so that it UNLOADS properly
+			rconsoleerr("fatal error: no old game meta found! (UNLOAD PROBABLY WON'T WORK AS EXPECTED)")
+		end
+
+		for k,v in next, mt do
+			if oldmt[k] then
+				rconsolewarn("yes " .. k)
+				mt[k] = oldmt[k]
+			end
+		end
+
+		setreadonly(mt, true)
+
+		if mp.game == "pf" or mp.pfunload then
+			mp:pfunload()
+		end
+
+		
 		CreateNotification = nil
 		Draw:UnRender()
 		allrender = nil
 		mp = nil
 		Draw = nil
-		getgenv().bbotv2 = nil
 		self.unloaded = true
 	end 
 end
@@ -4332,6 +4356,90 @@ elseif mp.game == "pf" then --!SECTION
 		return function(...) end
 	end
 
+	mp.pfunload = function(self)
+		local funcs = getupvalue(client.call, 1)
+
+		for hash, func in next, funcs do
+			if is_synapse_function(func) then
+				for k,v in next, getupvalues(func) do
+					if type(v) == "function" and islclosure(v) and not is_synapse_function(v) then
+						funcs[hash] = v
+					end
+				end
+			end
+		end
+
+		setupvalue(client.call, 1, funcs)
+
+		for k,v in next, getinstances() do -- hacky way of getting rid of bbot adornments and such, but oh well lol it works
+			if v.ClassName:match("Adornment") then
+				v:Destroy()
+			end
+		end
+
+		for k,v in next, getgc(true) do
+			if type(v) == "table" then
+				if rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
+					for k1, v1 in next, getupvalues(rawget(v, "task")) do
+						if type(v1) == "function" and islclosure(v1) and not is_synapse_function(v1) then
+							v.task = v1
+						end
+					end
+					break
+				end
+			end
+		end
+
+		if client.char.spawned then
+			for id, gun in next, client.loadedguns do
+				for k,v in next, gun do
+
+					if type(v) == "function" then
+						
+						local upvs = getupvalues(v)
+
+						for k1, v1 in next, upvs do
+
+							if type(v1) == "function" and is_synapse_function(v1) then
+								
+								for k2, v2 in next, getupvalues(v1) do
+
+									if type(v2) == "function" and islclosure(v2) and not is_synapse_function(v2) then
+
+										setupvalue(v, k1, v2)
+
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+
+		local spring = require(game.ReplicatedFirst.SharedModules.Utilities.Math.spring)
+		spring.__index = client.springindex
+
+		for module_name, module_data in next, client do
+			if type(module_data) == "table" then
+				for key, value in next, module_data do
+
+					if type(value) == "function" and is_synapse_function(value) then
+
+						for k,v in next, getupvalues(value) do
+
+							if type(v) == "function" and islclosure(v) and not is_synapse_function(v) then
+
+								module_data[key] = v
+
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
 	local charcontainer = game.ReplicatedStorage.Character.Bodies
 	local ghostchar = game.ReplicatedStorage.Character.Bodies.Ghost
 	local phantomchar = game.ReplicatedStorage.Character.Bodies.Phantom
@@ -4771,9 +4879,10 @@ elseif mp.game == "pf" then --!SECTION
 	
 	local send = client.net.send
 	
-	coroutine.wrap(function()
+	CreateThread(function()
 		repeat wait() until mp.fading -- this is fucking bad
 		while true do
+			if not mp then return end
 			local s = mp:getval("Misc", "Extra", "Chat Spam Delay")
 			local tik = math.floor(tick())
 			if math.floor(tick()) % s == 0 and chatspams.t ~= tik then
@@ -4788,7 +4897,7 @@ elseif mp.game == "pf" then --!SECTION
 			game.RunService.RenderStepped:Wait()
 		end
 		return
-	end)()
+	end)
 
 	do --ANCHOR metatable hookz
 	
@@ -4802,7 +4911,7 @@ elseif mp.game == "pf" then --!SECTION
 
 		mt.__newindex = newcclosure(function(self, id, val)
 			if client.char.spawned and mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
-				if self == workspace.Camera then -- this happened due to me being very dumb and forgetting that alan added arm chams and it was setting the visibility, fuck
+				if self == workspace.Camera then
 					if id == "CFrame" then
 						local dist = mp:getval("Visuals", "Local Visuals", "Third Person Distance") / 10
 						local params = RaycastParams.new()
@@ -4819,6 +4928,12 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			return oldNewIndex(self, id, val)
 		end)
+
+		mp.oldmt = {
+			__newindex = oldNewIndex,
+			__index = oldIndex
+		}
+
 		--[[mt.__index = newcclosure(function(table, key) -- (json) fuck this shit for now, it's probably causing a lot of crashing and we aren't even using it yet (?)
 			return oldIndex(table, key)
 		end)]]
@@ -5491,6 +5606,7 @@ elseif mp.game == "pf" then --!SECTION
 					local playerlist = Players:GetPlayers()
 
 					CreateThread(function()
+						if not client then return end
 						local priority_list = {}
 						for k, PlayerName in pairs(mp.priority) do
 							if Players:FindFirstChild(PlayerName) then
@@ -5772,7 +5888,7 @@ elseif mp.game == "pf" then --!SECTION
 										offset = Vector3.new(),
 										rot0 = CFrame.new(),
 										a = Vector3.new(0, -80, 0),
-										p0 = client.char.head.Position,
+										p0 = client.lastrepupdate or client.char.head.Position,
 										rotv = Vector3.new()
 									}
 								},
@@ -6035,6 +6151,9 @@ elseif mp.game == "pf" then --!SECTION
 			local old_index = spring.__index
 			local swingspring = debug.getupvalue(client.char.step, 21)
 			local sprintspring = debug.getupvalue(client.char.setsprint, 10)
+
+			client.springindex = old_index
+
 			spring.__index = newcclosure(function(t, k) -- "t" is the spring being indexed, so like you basically do if t == springofchoice then to return a different value for one specific kind of spring
 				local result = old_index(t, k)
 				if t == swingspring then
@@ -6158,7 +6277,7 @@ elseif mp.game == "pf" then --!SECTION
 											offset = Vector3.new(),
 											rot0 = CFrame.new(),
 											a = Vector3.new(),
-											p0 = client.char.head.Position,
+											p0 = client.lastrepupdate or client.char.head.Position,
 											rotv = Vector3.new()
 										},
 										{
@@ -7182,6 +7301,7 @@ elseif mp.game == "pf" then --!SECTION
 				local gunnum = 0
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
 					CreateThread(function()
+						if not client then return end
 						if v.Name == "Dropped" then
 							local gunpos = v.Slot1.Position
 							local gun_dist = (gunpos - client.cam.cframe.p).Magnitude 
@@ -7317,6 +7437,7 @@ elseif mp.game == "pf" then --!SECTION
 			debug.profilebegin("renderVisuals Local Visuals")
 
 			CreateThread(function() -- hand chams and such
+				if not client then return end
 				local vm = workspace.Camera:GetChildren()
 				if mp:getval("Visuals", "Local Visuals", "Arm Chams") then
 
@@ -7501,7 +7622,7 @@ elseif mp.game == "pf" then --!SECTION
 
 			local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
 
-			if (not hit.CanCollide) or hit.Name == "Window" then
+			if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
 				client.char.rootpart.Position -= Vector3.new(0, 18, 0)
 			else
 				CreateNotification("Unable to floor clip!")
@@ -7560,6 +7681,7 @@ elseif mp.game == "pf" then --!SECTION
 
 	CreateThread(function() -- ragebot performance
 		while wait() do
+			if not mp then error("") end
 			renderChams()
 
 			for player, data in next, repupdates do
@@ -7580,6 +7702,7 @@ elseif mp.game == "pf" then --!SECTION
 					-- the player is lagging or using crimwalk
 					if player.Team ~= LOCAL_PLAYER.Team and mp:getval("Misc", "Exploits", "Grenade Teleport") then
 						--local bodyparts = client.replication.getbodyparts(player)
+						if not client.char.head then break end
 						local args = {
 							"FRAG",
 							{
@@ -7591,7 +7714,7 @@ elseif mp.game == "pf" then --!SECTION
 										offset = Vector3.new(),
 										rot0 = CFrame.new(),
 										a = Vector3.new(),
-										p0 = client.char.head.Position,
+										p0 = client.lastrepupdate or client.char.head.Position,
 										rotv = Vector3.new()
 									},
 									{
@@ -9142,6 +9265,7 @@ elseif mp.game == "pf" then --!SECTION
 		local plistinfo = mp.options["Settings"]["Player List"]["Player Info"][1]
 		local plist = mp.options["Settings"]["Player List"]["Players"]
 		local function updateplist()
+			if not mp then return end
 			local playerlistval = mp:getval("Settings", "Player List", "Players")
 			local players = {}
 			for i, team in pairs(TEAMS:GetTeams()) do
