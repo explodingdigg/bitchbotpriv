@@ -5106,7 +5106,7 @@ elseif mp.game == "pf" then --!SECTION
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
-						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 6 then -- fake body resolver
+						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 18 then -- fake body resolver
 							usedhitscan = {
 								rootpart = true -- because all other parts cannot be hit, only rootpart can be
 							}
@@ -7464,7 +7464,7 @@ elseif mp.game == "pf" then --!SECTION
 			if (not hit.CanCollide) or hit.Name == "Window" then
 				client.char.rootpart.Position -= Vector3.new(0, 18, 0)
 			else
-				CreateNotification("Unable to floor clip because the floor is collidable!")
+				CreateNotification("Unable to floor clip!")
 			end
 		end
 	end)
