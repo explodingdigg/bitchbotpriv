@@ -4389,6 +4389,13 @@ elseif mp.game == "pf" then --!SECTION
 	end
 
 	mp.pfunload = function(self)
+		for k,v in next, Players:GetPlayers() do
+			local bodyparts = client.replication.getbodyparts(v)
+			if bodyparts then
+				bodyparts.head.HELMET.Slot1.Transparency = 0
+				bodyparts.head.HELMET.Slot2.Transparency = 0
+			end
+		end
 		local funcs = getupvalue(client.call, 1)
 
 		for hash, func in next, funcs do
@@ -4405,6 +4412,8 @@ elseif mp.game == "pf" then --!SECTION
 
 		for k,v in next, getinstances() do -- hacky way of getting rid of bbot adornments and such, but oh well lol it works
 			if v.ClassName:match("Adornment") then
+				v.Visible = false
+				warn(v)
 				v:Destroy()
 			end
 		end
@@ -4475,10 +4484,40 @@ elseif mp.game == "pf" then --!SECTION
 		gunstore:Destroy()
 		game.ReplicatedStorage:FindFirstChild(client.acchash).Name = "GunModules" -- HACK DETECTED.
 
+		local lighting = game.Lighting
+		local defaults = lighting.MapLighting
+
+		lighting.Ambient = defaults.Ambient.Value
+		lighting.OutdoorAmbient = defaults.OutdoorAmbient.Value
+		lighting.Brightness = defaults.Brightness.Value
+
+		workspace.Ignore.DeadBody:ClearAllChildren()
+
 		for k,v in next, client do
 			client[k] = nil
 		end
+		
+		for k,v in next, ragebot do
+			ragebot[k] = nil
+		end
+
+		for k,v in next, legitbot do
+			legitbot[k] = nil
+		end
+
+		for k,v in next, misc do
+			misc[k] = nil
+		end
+
+		for k,v in next, camera do
+			camera[k] = nil
+		end
+
 		client = nil
+		ragebot = nil
+		legitbot = nil
+		misc = nil
+		camera = nil
 	end
 
 	local charcontainer = game.ReplicatedStorage.Character.Bodies
@@ -6008,7 +6047,6 @@ elseif mp.game == "pf" then --!SECTION
 					local bodyparts = client.replication.getbodyparts(player)
 					if bodyparts then
 						if not repupdates[player] then
-							printconsole("Position data was nil for " .. player.Name .. "??")
 							repupdates[player] = {}
 						end
 						local data = repupdates[player]
@@ -7729,10 +7767,6 @@ elseif mp.game == "pf" then --!SECTION
 			renderChams()
 
 			for player, data in next, repupdates do
-				if not Players[player.Name] then
-					repupdates[player] = nil
-					continue
-				end
 				if not client.hud:isplayeralive(player) and #data > 0 then
 					repupdates[player] = {}
 					continue
@@ -9137,6 +9171,10 @@ elseif mp.game == "pf" then --!SECTION
 							extra = {
 								type = "keybind"
 							}
+						},
+						{
+							type = "button",
+							name = "Destroy Map"
 						}
 					}
 				},
@@ -9474,6 +9512,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 		mp.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
 			updateplist()
+			repupdates[player] = nil
 		end)
 	end
 end --!SECTION PF END
