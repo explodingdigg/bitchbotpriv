@@ -6576,7 +6576,7 @@ elseif mp.game == "pf" then --!SECTION
 				if ragebot.silentVector then
 					-- duck tape fix or whatever the fuck its called for this its stupid
 					args[2].firepos = ragebot.firepos
-					local cachedtime
+					local cachedtimedata = {}
 
 					if mp:getval("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
 						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
@@ -6587,11 +6587,7 @@ elseif mp.game == "pf" then --!SECTION
 					for k, bullet in pairs(args[2].bullets) do
 						local angle, time = client.trajectory(ragebot.firepos, GRAVITY, ragebot.targetpart.Position, client.logic.currentgun.data.bulletspeed)
 						bullet[1] = angle
-						cachedtime = time
-					end
-
-					if not client.instancetype.IsBanland() then
-						args[3] -= cachedtime
+						cachedtimedata[k] = time
 					end
 
 					if keybindtoggles.fakelag and mp:getval("Rage", "Extra", "Release Packets on Shoot") then
@@ -6618,7 +6614,13 @@ elseif mp.game == "pf" then --!SECTION
 						attach_ending.Position = ending
 						local beam = misc:CreateBeam(attach_origin, attach_ending)
 						beam.Parent = workspace
-						send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
+						if not client.instancetype.IsBanland() then
+							delay(cachedtimedata[k], function()
+								send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
+							end)
+						else
+							send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
+						end
 					end
 					
 					-- for k, bullet in pairs(info.bullets) do
