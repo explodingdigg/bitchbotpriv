@@ -5351,8 +5351,8 @@ elseif mp.game == "pf" then --!SECTION
 											end
 										elseif resolvertype == 2 then -- axes
 											debug.profilebegin("BB Ragebot Axis Shifting Resolver")
-											local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 8, 1)
-											debug.profileend("BB Ragebot Axis Shifting Resolver")
+												local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 8, 1)
+												debug.profileend("BB Ragebot Axis Shifting Resolver")
 											if resolvedPosition then
 												ragebot.firepos = resolvedPosition
 												cpart = bone
@@ -5362,7 +5362,7 @@ elseif mp.game == "pf" then --!SECTION
 											end
 										elseif resolvertype == 3 then -- axes fast
 											debug.profilebegin("BB Ragebot Axis Shifting Fast Resolver")
-											local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 8)
+											local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 9.889)
 											debug.profileend("BB Ragebot Axis Shifting Fast Resolver")
 											if resolvedPosition then
 												ragebot.firepos = resolvedPosition
@@ -6615,9 +6615,10 @@ elseif mp.game == "pf" then --!SECTION
 						local beam = misc:CreateBeam(attach_origin, attach_ending)
 						beam.Parent = workspace
 						if not client.instancetype.IsBanland() then
-							delay(cachedtimedata[k], function()
+							warn("not banlands")
+							warn(delay(cachedtimedata[k], function()
 								send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
-							end)
+							end))
 						else
 							send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
 						end
