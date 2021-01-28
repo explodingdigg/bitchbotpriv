@@ -6748,12 +6748,13 @@ elseif mp.game == "pf" then --!SECTION
 						if not client.instancetype.IsBanland() then
 							delay(cachedtimedata[k], function()
 								send(self, 'bullethit', unpack(hitinfo))
+								ragebot.intersection = nil
 							end)
 						else
 							send(self, 'bullethit', unpack(hitinfo))
+							ragebot.intersection = nil
 						end
 					end
-					ragebot.intersection = nil
 					-- for k, bullet in pairs(info.bullets) do
 					-- 	send(gamenet, "bullethit", rageTarget, rageHitPos, rageHitbox, bullet[2])
 					-- end
