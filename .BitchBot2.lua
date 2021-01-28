@@ -5301,7 +5301,7 @@ elseif mp.game == "pf" then --!SECTION
 				return nil 
 			end
 
-			ragebot.intersection = nil
+			--ragebot.intersection = nil
 
 			debug.profilebegin("BB Ragebot GetTarget")
 			local hitscan = hitscan or {}
@@ -6753,7 +6753,7 @@ elseif mp.game == "pf" then --!SECTION
 							send(self, 'bullethit', unpack(hitinfo))
 						end
 					end
-					
+					ragebot.intersection = nil
 					-- for k, bullet in pairs(info.bullets) do
 					-- 	send(gamenet, "bullethit", rageTarget, rageHitPos, rageHitbox, bullet[2])
 					-- end
