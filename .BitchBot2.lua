@@ -5167,7 +5167,7 @@ elseif mp.game == "pf" then --!SECTION
 				return tbl
 			end
 		
-			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, extendPen)
+			function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, extendPen, customHitbox)
 				local targetParts
 				if extendPen then  
 					sphereHitbox.Position = targetPos
@@ -5180,6 +5180,11 @@ elseif mp.game == "pf" then --!SECTION
 					local oldparts = client.replication.getbodyparts(target)
 					targetParts = GetPartTable(oldparts)
 				end
+
+				if customHitbox then
+					targetParts[customHitbox] = customHitbox
+				end
+
 				local origin = customOrigin or client.cam.cframe.p
 		
 				ignore = {workspace.Terrain, workspace.Ignore, workspace.CurrentCamera, workspace.Players[ply.Team.Name]}
@@ -5202,11 +5207,14 @@ elseif mp.game == "pf" then --!SECTION
 		
 		local dot = Vector3.new().Dot
 
-		function ragebot:CanPenetrateRaycast(campos, pos, penetration)
+		function ragebot:CanPenetrateRaycast(campos, pos, penetration, returnintersection, stopPart)
 			local dir = (pos - campos)
 			local hit, enter, norm = workspace:FindPartOnRayWithIgnoreList(Ray.new(campos, dir), {workspace.Terrain, workspace.Ignore, workspace.CurrentCamera, workspace.Players[LOCAL_PLAYER.Team.Name]})
 		
 			if hit then
+				if stopPart and hit == stopPart then
+					return returnintersection and true, enter or true
+				end
 				local unit = dir.Unit
 				local maxextent = hit.Size.Magnitude * unit
 				local _, exit, exitnorm = workspace:FindPartOnRayWithWhitelist(Ray.new(enter + maxextent, -maxextent), {hit})
@@ -5227,7 +5235,7 @@ elseif mp.game == "pf" then --!SECTION
 		
 				return self:CanPenetrateRaycast(newpos, pos, penetration)
 			else
-				return true
+				return returnintersection and true, enter or true
 			end
 		end
 
@@ -5286,10 +5294,15 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
+		local rageHitboxSize = Vector3.new(11, 11, 11)
+
 		function ragebot:GetTarget(hitboxPriority, hitscan, players)
 			if keybindtoggles.freeze then
 				return nil 
 			end
+
+			ragebot.intersection = nil
+
 			debug.profilebegin("BB Ragebot GetTarget")
 			local hitscan = hitscan or {}
 			local partPreference = hitboxPriority or "you know who i am? well you about to find out, your barbecue boy"
@@ -5362,7 +5375,7 @@ elseif mp.game == "pf" then --!SECTION
 											end
 										elseif resolvertype == 3 then -- axes fast
 											debug.profilebegin("BB Ragebot Axis Shifting Fast Resolver")
-											local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 9.889)
+											local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 8)
 											debug.profileend("BB Ragebot Axis Shifting Fast Resolver")
 											if resolvedPosition then
 												ragebot.firepos = resolvedPosition
@@ -5382,7 +5395,7 @@ elseif mp.game == "pf" then --!SECTION
 												firepos = resolvedPosition
 												if mp.priority[player.Name] then break end
 											end
-										else -- teleport
+										elseif resolvertype == 5 then -- teleport
 											--[[local resolvedPosition, steps = ragebot:TP_UpHitscan(barrel, bone.Position, 10)
 											if resolvedPosition then
 												rconsolewarn(tostring(resolvedPosition) .. " | " .. tostring(#steps))
@@ -5406,6 +5419,74 @@ elseif mp.game == "pf" then --!SECTION
 												if mp.priority[player.Name] then break end
 											else
 												ragebot.needsTP = false	
+											end
+										else -- "combined"
+											-- basically combines fast axis shifting with offsetting the hitbox or just sending a raycast to the hitbox for the intersection point, really broken
+											
+											local extendSize = 4.5833333333333
+
+											local boneX = bone.Position.X
+											local boneY = bone.Position.Y
+											local boneZ = bone.Position.Z
+
+											local localX = barrel.X
+											local localY = barrel.Y
+											local localZ = barrel.Z
+
+											local extendX = Vector3.new(extendSize, 0, 0)
+											local extendY = Vector3.new(0, extendSize, 0)
+											local extendZ = Vector3.new(0, 0, extendSize)
+
+											local bestDirection = 
+											boneY < localY and extendY or 
+											boneY > localY and -extendY or  
+											boneX < localX and extendX or 
+											boneX > localX and -extendX or  
+											boneZ < localZ and extendZ or 
+											boneZ > localZ and -extendZ or "wtf"
+
+											local newTargetPosition = bone.Position + bestDirection
+
+											local pVelocity = camera:GetTrajectory(newTargetPosition, barrel)
+
+											sphereHitbox.Position = bone.Position
+												
+											if sphereHitbox.Size ~= rageHitboxSize then
+												sphereHitbox.Size = rageHitboxSize
+											end
+
+											local penetrated = ragebot:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
+
+											if penetrated then
+												ragebot.firepos = barrel
+												cpart = bone
+												theplayer = player
+												ragebot.intersection = newTargetPosition
+												firepos = barrel
+												warn("penetrated normally")
+											else
+												--warn("no axes")
+												-- --local _, intersection = workspace:FindPartOnRayWithWhitelist(Ray.new(args[1].firepos, (part.Position - args[1].firepos) * 3000), {sphereHitbox})
+												sphereHitbox.Position = bone.Position
+											
+												if sphereHitbox.Size ~= rageHitboxSize then
+													sphereHitbox.Size = rageHitboxSize
+												end
+
+												local penetrated, intersectionPoint = ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
+
+												--warn(penetrated, intersectionPoint)
+
+												if penetrated and intersectionPoint then
+													warn("penetrated with standard raycast")
+													ragebot.firepos = barrel
+													cpart = bone
+													theplayer = player
+													ragebot.intersection = intersectionPoint
+													firepos = barrel
+												else
+													--warn("no standardized autowall hit")
+												end
 											end
 										end
 									end
@@ -5589,6 +5670,9 @@ elseif mp.game == "pf" then --!SECTION
 
 		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step)
 			assert(bodypart, "hello")
+
+			local dest = typeof(bodypart) ~= "Vector3" and bodypart.Position or bodypart -- fuck
+
 			assert(person, "something went wrong in your nasa rocket launch")
 			local position = origin
 			local direction
@@ -5597,7 +5681,7 @@ elseif mp.game == "pf" then --!SECTION
 			--ragebot:CanPenetrate(LOCAL_PLAYER, person, direction, bodypart.Position, position)
 			for i = 1, max_step do
 				position = position + Vector3.new(0, step, 0)
-				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+				if ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
 			end
@@ -5606,7 +5690,7 @@ elseif mp.game == "pf" then --!SECTION
 
 			for i = 1, max_step do
 				position = position - Vector3.new(0, step, 0)
-				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+				if ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
 			end
@@ -5615,7 +5699,7 @@ elseif mp.game == "pf" then --!SECTION
 
 			for i = 1, max_step do
 				position = position + Vector3.new(0, 0, step)
-				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+				if ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
 			end
@@ -5624,7 +5708,7 @@ elseif mp.game == "pf" then --!SECTION
 
 			for i = 1, max_step do
 				position = position - Vector3.new(0, 0, step)
-				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+				if ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
 			end
@@ -5633,7 +5717,7 @@ elseif mp.game == "pf" then --!SECTION
 
 			for i = 1, max_step do
 				position = position + Vector3.new(step, 0, 0)
-				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+				if ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
 			end
@@ -5642,7 +5726,7 @@ elseif mp.game == "pf" then --!SECTION
 
 			for i = 1, max_step do
 				position = position - Vector3.new(step, 0, 0)
-				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+				if ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth) then
 					return position
 				end
 			end
@@ -5686,7 +5770,7 @@ elseif mp.game == "pf" then --!SECTION
 					
 					local playerlist = Players:GetPlayers()
 
-					CreateThread(function()
+					--[[CreateThread(function()
 						if not client then return end
 						local priority_list = {}
 						for k, PlayerName in pairs(mp.priority) do
@@ -5699,7 +5783,19 @@ elseif mp.game == "pf" then --!SECTION
 							targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 						end
 						ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
-					end)
+					end)]]
+					if not client then return end
+					local priority_list = {}
+					for k, PlayerName in pairs(mp.priority) do
+						if Players:FindFirstChild(PlayerName) then
+							table.insert(priority_list, game.Players[PlayerName]) 
+						end
+					end
+					local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
+					if not targetPart then 
+						targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+					end
+					ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
 				else
 					self.target = nil
 				end
@@ -6578,6 +6674,20 @@ elseif mp.game == "pf" then --!SECTION
 					args[2].firepos = ragebot.firepos
 					local cachedtimedata = {}
 
+					local hitpoint = ragebot.intersection or ragebot.targetpart.Position
+
+					spawn(function()
+						local testpart = Instance.new("Part", workspace)
+						testpart.Position = hitpoint
+						testpart.Material = Enum.Material.Neon
+						testpart.Shape = Enum.PartType.Ball
+						testpart.Anchored = true
+						testpart.CanCollide = false
+						testpart.Size = Vector3.new(2, 2, 2)
+						wait(2)
+						testpart:Destroy()
+					end)
+
 					if mp:getval("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
 						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
 						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
@@ -6585,7 +6695,7 @@ elseif mp.game == "pf" then --!SECTION
 					end
 
 					for k, bullet in pairs(args[2].bullets) do
-						local angle, time = client.trajectory(ragebot.firepos, GRAVITY, ragebot.targetpart.Position, client.logic.currentgun.data.bulletspeed)
+						local angle, time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed)
 						bullet[1] = angle
 						cachedtimedata[k] = time
 					end
@@ -6614,13 +6724,17 @@ elseif mp.game == "pf" then --!SECTION
 						attach_ending.Position = ending
 						local beam = misc:CreateBeam(attach_origin, attach_ending)
 						beam.Parent = workspace
+
+						local hitinfo = {
+							ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
+						}
+
 						if not client.instancetype.IsBanland() then
-							warn("not banlands")
-							warn(delay(cachedtimedata[k], function()
-								send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
-							end))
+							delay(cachedtimedata[k], function()
+								send(self, 'bullethit', unpack(hitinfo))
+							end)
 						else
-							send(self, 'bullethit', ragebot.target, ragebot.targetpart.Position, ragebot.targetpart, bullet[2])
+							send(self, 'bullethit', unpack(hitinfo))
 						end
 					end
 					
@@ -8240,7 +8354,7 @@ elseif mp.game == "pf" then --!SECTION
 							value = 11,
 							minvalue = 1,
 							maxvalue = 20
-						},
+						}, -- extra pen works a lot better with bullethit. (less than 12 works)
 						{
 							type = "toggle",
 							name = "Autowall Resolver",
@@ -8251,7 +8365,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Resolver Type",
 							value = 2,
-							values = {"Cubic", "Axis Shifting", "Axis Shifting Fast", "Random", "Teleport"}
+							values = {"Cubic", "Axis Shifting", "Axis Shifting Fast", "Random", "Teleport", "Combined"}
 						},
 						{
 							type = "slider",
