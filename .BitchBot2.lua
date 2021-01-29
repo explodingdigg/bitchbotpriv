@@ -5420,7 +5420,7 @@ elseif mp.game == "pf" then --!SECTION
 											else
 												ragebot.needsTP = false	
 											end
-										else -- "combined"
+										elseif resolvertype == 6 then -- "combined"
 											-- basically combines fast axis shifting with offsetting the hitbox or just sending a raycast to the hitbox for the intersection point, really broken
 											
 											local extendSize = 4.5833333333333
@@ -5488,7 +5488,7 @@ elseif mp.game == "pf" then --!SECTION
 
 													--warn(penetrated, intersectionPoint)
 
-													if penetrated and intersectionPoint then
+													if intersectionPoint then
 														warn("penetrated with standard raycast")
 														ragebot.firepos = barrel
 														cpart = bone
@@ -5499,6 +5499,49 @@ elseif mp.game == "pf" then --!SECTION
 														--warn("no standardized autowall hit")
 													end
 												end
+											end
+										else -- underground
+											local extendSize = 4.5833333333333
+
+											local headpos = client.char.head.Position
+
+											local ray = Ray.new(headpos, Vector3.new(0, -90, 0) * 18)
+
+											local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+								
+											local newpos
+
+											if hit ~= nil then
+												local canNoclip = (not hit.CanCollide) or hit.Name == "Window"
+												newpos = canNoclip and headpos - Vector3.new(0, 18, 0) or hitpos + Vector3.new(0, 0.02, 0)
+											else
+												newpos = headpos - Vector3.new(0, 18, 0)
+											end
+
+											ragebot.repupdate = newpos
+
+											local newfirepos = newpos - Vector3.new(0, 8, 0)
+											local newTargetPosition = bone.Position - Vector3.new(0, extendSize, 0)
+
+											local pVelocity = camera:GetTrajectory(newTargetPosition, newfirepos)
+
+											sphereHitbox.Position = newTargetPosition
+												
+											if sphereHitbox.Size ~= rageHitboxSize then
+												sphereHitbox.Size = rageHitboxSize
+											end
+
+											--ragebot:CanPenetrateRaycast(campos, pos, penetration, returnintersection, stopPart)
+
+											local penetrated, intersection = ragebot:CanPenetrateRaycast(newfirepos, newTargetPosition, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
+
+											if intersection then
+												ragebot.firepos = newfirepos
+												cpart = bone
+												theplayer = player
+												ragebot.intersection = intersection
+												firepos = newfirepos
+												--warn("penetrated normally")
 											end
 										end
 									end
@@ -6708,6 +6751,12 @@ elseif mp.game == "pf" then --!SECTION
 						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
 						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
 						ragebot.needsTP = false
+					end
+
+					if mp:getval("Rage", "Hack vs. Hack", "Resolver Type") == 7 and ragebot.repupdate then
+						send(self, "repupdate", ragebot.repupdate, client.cam.angles)
+						args[2].camerapos = ragebot.repupdate
+						ragebot.repupdate = nil
 					end
 
 					for k, bullet in pairs(args[2].bullets) do
@@ -8382,7 +8431,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Resolver Type",
 							value = 2,
-							values = {"Cubic", "Axis Shifting", "Axis Shifting Fast", "Random", "Teleport", "Axis + Hitbox Shifting"}
+							values = {"Cubic", "Axis Shifting", "Axis Shifting Fast", "Random", "Teleport", "Axis + Hitbox Shifting", "Underground"}
 						},
 						{
 							type = "slider",
