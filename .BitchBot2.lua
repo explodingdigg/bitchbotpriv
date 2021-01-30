@@ -316,8 +316,8 @@ end
 -- nate i miss u D:
 
 -- im back
-
-game:GetService("NetworkClient"):SetOutgoingKBPSLimit(0)
+local NETWORK = game:service("NetworkClient")
+NETWORK:SetOutgoingKBPSLimit(0)
 
 setfpscap(300) -- nigga roblox
 
@@ -4938,13 +4938,13 @@ elseif mp.game == "pf" then --!SECTION
 								local adorn = i == 0 and Part.c88 or Part.c99
 								if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(mp.priority, Player.Name) then
 									col = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
-									xqz = bColor:Mult(col, 0.6)
+									xqz = bColor:Mult(col, 0.4)
 								elseif mp:getval("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(mp.friends, Player.Name) then
 									col = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
-									xqz = bColor:Mult(col, 0.6)
+									xqz = bColor:Mult(col, 0.4)
 								elseif mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
 									col = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
-									xqz = bColor:Mult(col, 0.6)
+									xqz = bColor:Mult(col, 0.4)
 								end
 								adorn.Color3 = i == 0 and col or xqz
 								adorn.Visible = enabled
@@ -5817,14 +5817,26 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			return nil
 		end]]
-
+		local fakelagpos, fakelagtime
 		function ragebot:MainLoop() -- lfg
-			if client.char.spawned and mp:getval("Rage", "Aimbot", "Enabled") then
-				local hitscanpreference = misc:GetParts(mp:getval("Rage", "Aimbot", "Hitscan Points"))
-				local prioritizedpart = mp:getval("Rage", "Aimbot", "Hitscan Priority")
-	
-				ragebot:Stance()
+			local hitscanpreference = misc:GetParts(mp:getval("Rage", "Aimbot", "Hitscan Points"))
+			local prioritizedpart = mp:getval("Rage", "Aimbot", "Hitscan Priority")
 
+			ragebot:Stance()
+			--ANCHOR FUCK YOU
+			if mp:getval("Rage", "Extra", "Fake Lag") and not mp:getval("Rage", "Extra", "Manual Choke") then
+				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > mp:getval("Rage", "Extra", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.spawned then
+					fakelagtime = tick()
+					fakelagpos = client.cam.cframe.p
+					NETWORK:SetOutgoingKBPSLimit(0)
+					if client.char.spawned then
+						--CreateNotification("Choking")
+					end
+				else
+					NETWORK:SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
+				end
+			end
+			if client.char.spawned and mp:getval("Rage", "Aimbot", "Enabled") then
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					
 					local playerlist = Players:GetPlayers()
@@ -6461,17 +6473,19 @@ elseif mp.game == "pf" then --!SECTION
 				setconstant(client.cam.step, 11, gb[1] and 0 or 0.5)
 			end
 		end)
-
+		local fakelagpos = Vector3.new()
+		local fakelagtime = 0
+		
 		mp.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
 			if CHAT_BOX.Active then return end
 			if input.UserInputType == Enum.UserInputType.Keyboard then
-				if mp:getval("Rage", "Extra", "Fake Lag")
-				and mp:getval("Rage", "Extra", "Manual Choke") 
-				and input.KeyCode == mp:getval("Rage", "Extra", "Manual Choke", "keybind") then
-					keybindtoggles.fakelag = not keybindtoggles.fakelag
-					game:service("NetworkClient"):SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
+				if mp:getval("Rage", "Extra", "Fake Lag") then
+					if mp:getval("Rage", "Extra", "Manual Choke") 
+					and input.KeyCode == mp:getval("Rage", "Extra", "Manual Choke", "keybind") then
+						keybindtoggles.fakelag = not keybindtoggles.fakelag
+						NETWORK:SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
+					end
 				end
-
 				if mp:getval("Misc", "Exploits", "Crimwalk") and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
 					keybindtoggles.crimwalk = true
 				end
@@ -6546,7 +6560,7 @@ elseif mp.game == "pf" then --!SECTION
 				and mp:getval("Rage", "Extra", "Manual Choke") 
 				and input.KeyCode == mp:getval("Rage", "Extra", "Manual Choke", "keybind") and keybindtoggles.fakelag then
 					keybindtoggles.fakelag = not keybindtoggles.fakelag
-					game:service("NetworkClient"):SetOutgoingKBPSLimit(0)
+					NETWORK:SetOutgoingKBPSLimit(0)
 				end
 
 				if mp:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == mp:getval("Misc", "Exploits", "Freeze Players", "keybind") and keybindtoggles.freeze then
@@ -6768,7 +6782,7 @@ elseif mp.game == "pf" then --!SECTION
 					if keybindtoggles.fakelag and mp:getval("Rage", "Extra", "Release Packets on Shoot") then
 						keybindtoggles.fakelag = not keybindtoggles.fakelag
 						syn.set_thread_identity(1) -- might lag...... idk probably not
-						game:service("NetworkClient"):SetOutgoingKBPSLimit(0)
+						NETWORK:SetOutgoingKBPSLimit(0)
 					end
 
 					if mp:getval("Rage", "Anti Aim", "Onshot") then
@@ -7001,8 +7015,14 @@ elseif mp.game == "pf" then --!SECTION
 			if not targetPart or not targetPart.Position or client.logic.currentgun == nil then
 				return
 			end
-			
-			if client.logic.currentgun.type == "KNIFE" or client.logic.currentgun.type == "SHOTGUN" then return end
+			if not client.logic.currentgun or not client.logic.currentgun.barrel then
+				return
+			end
+			if client.logic.currentgun.type == "SHOTGUN" then
+				client.logic.currentgun.barrel.CFrame = CFrame.new(client.logic.currentgun.barrel.Position, targetPart.Position)
+				return
+			end
+			if client.logic.currentgun.type == "KNIFE" then return end
 
 			if math.random(0, 100) > mp:getval("Legit", "Bullet Redirection", "Hit Chance") then return end
 
@@ -8419,7 +8439,8 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Extra Penetration",
 							value = 11,
 							minvalue = 1,
-							maxvalue = 20
+							maxvalue = 20,
+							stradd = " studs"
 						}, -- extra pen works a lot better with bullethit. (less than 12 works)
 						{
 							type = "toggle",
@@ -8489,8 +8510,16 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Fake Lag Amount",
 							value = 1,
 							minvalue = 1,
-							maxvalue = 20,
+							maxvalue = 1000,
 							stradd = " kbps"
+						},
+						{
+							type = "slider",
+							name = "Fake Lag Distance",
+							value = 1,
+							minvalue = 1,
+							maxvalue = 40,
+							stradd = " studs"
 						},
 						{
 							type = "toggle",
@@ -8809,8 +8838,8 @@ elseif mp.game == "pf" then --!SECTION
 						{
 							type = "slider",
 							name = "Max Text Length",
-							value = 6,
-							minvalue = 6,
+							value = 0,
+							minvalue = 0,
 							maxvalue = 32
 						},
 						{
