@@ -6779,8 +6779,8 @@ elseif mp.game == "pf" then --!SECTION
 						cachedtimedata[k] = time
 					end
 
-					if keybindtoggles.fakelag and mp:getval("Rage", "Extra", "Release Packets on Shoot") then
-						keybindtoggles.fakelag = not keybindtoggles.fakelag
+					if mp:getval("Rage", "Extra", "Release Packets on Shoot") then
+						keybindtoggles.fakelag = false
 						syn.set_thread_identity(1) -- might lag...... idk probably not
 						NETWORK:SetOutgoingKBPSLimit(0)
 					end
@@ -6837,6 +6837,8 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			elseif args[1] == "stab" then
+				syn.set_thread_identity(1)
+				NETWORK:SetOutgoingKBPSLimit(0)
 				if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
 						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
