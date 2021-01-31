@@ -5313,7 +5313,7 @@ elseif mp.game == "pf" then --!SECTION
 			local autowall = mp:getval("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
-			local barrel = keybindtoggles.crimwalk and client.lastrepupdate or client.cam.cframe.p
+			local barrel = --[[keybindtoggles.crimwalk and client.lastrepupdate or]] client.cam.cframe.p
 			local firepos
 
 			for i, player in next, players do
@@ -5553,9 +5553,9 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		
-			if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and mp:getval("Misc", "Exploits", "Disable Crimwalk on Shot") then
+			--[[if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and mp:getval("Misc", "Exploits", "Disable Crimwalk on Shot") then
 				keybindtoggles.crimwalk = false
-			end
+			end]]
 
 			debug.profileend("BB Ragebot GetTarget")
 
@@ -6486,9 +6486,9 @@ elseif mp.game == "pf" then --!SECTION
 						NETWORK:SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
 					end
 				end
-				if mp:getval("Misc", "Exploits", "Crimwalk") and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
+				--[[if mp:getval("Misc", "Exploits", "Crimwalk") and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
 					keybindtoggles.crimwalk = true
-				end
+				end]]
 
 				if mp:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == mp:getval("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze then
 					keybindtoggles.freeze = true
@@ -6567,9 +6567,9 @@ elseif mp.game == "pf" then --!SECTION
 					keybindtoggles.freeze = false
 				end
 
-				if keybindtoggles.crimwalk and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") then
+				--[[if keybindtoggles.crimwalk and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") then
 					keybindtoggles.crimwalk = false
-				end
+				end]]
 
 			end
 		end)
@@ -6850,7 +6850,7 @@ elseif mp.game == "pf" then --!SECTION
 					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 				end
 			elseif args[1] == "repupdate" then
-				if keybindtoggles.crimwalk then return end
+				--if keybindtoggles.crimwalk then return end
 				client.lastrepupdate = args[2]
 				if mp:getval("Rage", "Anti Aim", "Enabled") then
 					--args[2] = ragebot:AntiNade(args[2])
@@ -9356,7 +9356,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Grenade Teleport",
 							value = false
 						},
-						{
+						--[[{
 							type = "toggle",
 							name = "Crimwalk",
 							value = false,
@@ -9368,7 +9368,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Disable Crimwalk on Shot",
 							value = false
-						},
+						},]]
 						{
 							type = "toggle",
 							name = "Freeze Players",
