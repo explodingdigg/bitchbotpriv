@@ -5313,7 +5313,7 @@ elseif mp.game == "pf" then --!SECTION
 			local autowall = mp:getval("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
 			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
-			local barrel = keybindtoggles.crimwalk and client.lastrepupdate or client.cam.cframe.p
+			local barrel = --[[keybindtoggles.crimwalk and client.lastrepupdate or]] client.cam.cframe.p
 			local firepos
 
 			for i, player in next, players do
@@ -5322,12 +5322,12 @@ elseif mp.game == "pf" then --!SECTION
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
-						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 18 then -- fake body resolver
+						--[[if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 18 then -- fake body resolver
 							usedhitscan = {
 								rootpart = true -- because all other parts cannot be hit, only rootpart can be
 							}
 							-- this definitely needs a lot more work because i believe sometimes it just aims at the wrong area... don't know why
-						end
+						end]]
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and usedhitscan[k] then
 								if camera:IsVisible(bone, bone.Parent, barrel) then
@@ -5553,9 +5553,9 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		
-			if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and mp:getval("Misc", "Exploits", "Disable Crimwalk on Shot") then
+			--[[if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and mp:getval("Misc", "Exploits", "Disable Crimwalk on Shot") then
 				keybindtoggles.crimwalk = false
-			end
+			end]]
 
 			debug.profileend("BB Ragebot GetTarget")
 
@@ -6486,9 +6486,9 @@ elseif mp.game == "pf" then --!SECTION
 						NETWORK:SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
 					end
 				end
-				if mp:getval("Misc", "Exploits", "Crimwalk") and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
+				--[[if mp:getval("Misc", "Exploits", "Crimwalk") and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
 					keybindtoggles.crimwalk = true
-				end
+				end]]
 
 				if mp:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == mp:getval("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze then
 					keybindtoggles.freeze = true
@@ -6567,9 +6567,9 @@ elseif mp.game == "pf" then --!SECTION
 					keybindtoggles.freeze = false
 				end
 
-				if keybindtoggles.crimwalk and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") then
+				--[[if keybindtoggles.crimwalk and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") then
 					keybindtoggles.crimwalk = false
-				end
+				end]]
 
 			end
 		end)
@@ -6850,7 +6850,7 @@ elseif mp.game == "pf" then --!SECTION
 					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 				end
 			elseif args[1] == "repupdate" then
-				if keybindtoggles.crimwalk then return end
+				--if keybindtoggles.crimwalk then return end
 				client.lastrepupdate = args[2]
 				if mp:getval("Rage", "Anti Aim", "Enabled") then
 					--args[2] = ragebot:AntiNade(args[2])
@@ -7890,12 +7890,12 @@ elseif mp.game == "pf" then --!SECTION
 		if mp:getval("Misc", "Movement", "Fly Hack") and key.KeyCode == mp:getval("Misc", "Movement", "Fly Hack", "keybind") then
 			keybindtoggles.flyhack = not keybindtoggles.flyhack
 		end
-		if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
+		--[[if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
 			ragebot:FakeBody()
 			local msg = keybindtoggles.fakebody and "Removed fake body" or "Fake body enabled"
 			CreateNotification(msg)
 			keybindtoggles.fakebody = not keybindtoggles.fakebody
-		end
+		end]]
 		if mp:getval("Misc", "Exploits", "Invisibility") and key.KeyCode == mp:getval("Misc", "Exploits", "Invisibility", "keybind") and client.char.spawned then
 			invisibility()
 			local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
@@ -7920,7 +7920,7 @@ elseif mp.game == "pf" then --!SECTION
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		MouseUnlockAndShootHook()
 		debug.profilebegin("Main BB Loop")
-		debug.profilebegin("Fake body check")
+		--[[debug.profilebegin("Fake body check")
 		if not client.char.spawned then
 			if keybindtoggles.fakebody then
 				keybindtoggles.fakebody = false
@@ -7935,7 +7935,7 @@ elseif mp.game == "pf" then --!SECTION
 				client.invismodel = nil
 			end
 		end
-		debug.profileend("Fake body check")
+		debug.profileend("Fake body check")]]
 
 		debug.profilebegin("BB Rendering")
 		do --rendering
@@ -8596,7 +8596,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Tilt Neck",
 							value = false
 						},
-						{
+						--[[{
 							type = "toggle",
 							name = "Fake Body",
 							value = false,
@@ -8605,7 +8605,7 @@ elseif mp.game == "pf" then --!SECTION
 								key = nil
 							},
 							unsafe = true
-						}
+						}]]
 					}
 				},
 			}
@@ -9356,7 +9356,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Grenade Teleport",
 							value = false
 						},
-						{
+						--[[{
 							type = "toggle",
 							name = "Crimwalk",
 							value = false,
@@ -9368,7 +9368,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Disable Crimwalk on Shot",
 							value = false
-						},
+						},]]
 						{
 							type = "toggle",
 							name = "Freeze Players",
