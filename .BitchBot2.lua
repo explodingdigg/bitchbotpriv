@@ -4937,14 +4937,14 @@ elseif mp.game == "pf" then --!SECTION
 							for i = 0, 1 do
 								local adorn = i == 0 and Part.c88 or Part.c99
 								if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(mp.priority, Player.Name) then
-									col = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
-									xqz = bColor:Mult(col, 0.4)
+									xqz = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
+									col = bColor:Mult(xqz, 0.6)
 								elseif mp:getval("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(mp.friends, Player.Name) then
-									col = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
-									xqz = bColor:Mult(col, 0.4)
+									xqz = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
+									col = bColor:Mult(xqz, 0.6)
 								elseif mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
-									col = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
-									xqz = bColor:Mult(col, 0.4)
+									xqz = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+									col = bColor:Mult(xqz, 0.6)
 								end
 								adorn.Color3 = i == 0 and col or xqz
 								adorn.Visible = enabled
@@ -5102,8 +5102,8 @@ elseif mp.game == "pf" then --!SECTION
 	
 			if client.logic.currentgun and client.logic.currentgun.data then
 				origin = origin or Camera.CFrame.Position
-		
-				return origin + client.trajectory(origin, GRAVITY, pos, client.logic.currentgun.data.bulletspeed)
+				local traj = client.trajectory(origin, GRAVITY, pos, client.logic.currentgun.data.bulletspeed)
+				return traj and origin + traj or false
 			end
 	
 		end
@@ -5344,7 +5344,7 @@ elseif mp.game == "pf" then --!SECTION
 								elseif autowall then
 									debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
 									local directionVector = camera:GetTrajectory(bone.Position, barrel)
-									if ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
+									if directionVector and ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
 										local fovToBone = camera:GetFOV(bone)
 										cpart = bone
 										theplayer = player
