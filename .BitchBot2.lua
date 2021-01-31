@@ -5819,6 +5819,7 @@ elseif mp.game == "pf" then --!SECTION
 		end]]
 		local fakelagpos, fakelagtime
 		function ragebot:MainLoop() -- lfg
+			ragebot.silentVector = nil
 			local hitscanpreference = misc:GetParts(mp:getval("Rage", "Aimbot", "Hitscan Points"))
 			local prioritizedpart = mp:getval("Rage", "Aimbot", "Hitscan Priority")
 
@@ -5863,7 +5864,7 @@ elseif mp.game == "pf" then --!SECTION
 						end
 					end
 					local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
-					if not targetPart then 
+					if not targetPart and not mp:getval("Rage", "Aimbot", "Target Only Priority") then 
 						targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 					end
 					ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
@@ -6743,7 +6744,7 @@ elseif mp.game == "pf" then --!SECTION
 				end
 
 				if ragebot.silentVector then
-					-- duck tape fix or whatever the fuck its called for this its stupid
+					-- duct tape fix or whatever the fuck its called for this its stupid
 					args[2].firepos = ragebot.firepos
 					local cachedtimedata = {}
 
@@ -7550,6 +7551,17 @@ elseif mp.game == "pf" then --!SECTION
 				elseif GroupBox == "Enemy ESP" and mp:getval("ESP", "Enemy ESP", "Out of View") then
 					debug.profilebegin("renderVisuals Player ESP Render Out of View " .. Player.Name)
 					local color = mp:getval("ESP", "Enemy ESP", "Out of View", "color", true)
+					local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
+					if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(mp.priority, Player.Name) then
+						color = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
+						color2 = bColor:Mult(color, 0.6)
+					elseif mp:getval("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(mp.friends, Player.Name) then
+						color = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
+						color2 = bColor:Mult(color, 0.6)
+					elseif mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
+						color = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+						color2 = bColor:Mult(color, 0.6)
+					end
 					for i = 1, 2 do
 						local Tri = allesp.arrows[i][Index]
 						
@@ -7572,7 +7584,7 @@ elseif mp.game == "pf" then --!SECTION
 						Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
 						Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
 	
-						Tri.Color = i == 1 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+						Tri.Color = i == 1 and color or color2
 						Tri.Transparency = mp:getval("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
 					end
 					debug.profileend("renderVisuals Player ESP Render Out of View " .. Player.Name)
@@ -8424,6 +8436,11 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Hitscan Priority",
 							value = 1,
 							values = {"Head", "Body"}
+						},
+						{
+							type = "toggle",
+							name = "Target Only Priority",
+							value = false
 						},
 					},
 				},
