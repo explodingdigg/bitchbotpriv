@@ -5322,12 +5322,12 @@ elseif mp.game == "pf" then --!SECTION
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
-						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 18 then -- fake body resolver
+						--[[if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 18 then -- fake body resolver
 							usedhitscan = {
 								rootpart = true -- because all other parts cannot be hit, only rootpart can be
 							}
 							-- this definitely needs a lot more work because i believe sometimes it just aims at the wrong area... don't know why
-						end
+						end]]
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and usedhitscan[k] then
 								if camera:IsVisible(bone, bone.Parent, barrel) then
@@ -7890,12 +7890,12 @@ elseif mp.game == "pf" then --!SECTION
 		if mp:getval("Misc", "Movement", "Fly Hack") and key.KeyCode == mp:getval("Misc", "Movement", "Fly Hack", "keybind") then
 			keybindtoggles.flyhack = not keybindtoggles.flyhack
 		end
-		if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
+		--[[if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
 			ragebot:FakeBody()
 			local msg = keybindtoggles.fakebody and "Removed fake body" or "Fake body enabled"
 			CreateNotification(msg)
 			keybindtoggles.fakebody = not keybindtoggles.fakebody
-		end
+		end]]
 		if mp:getval("Misc", "Exploits", "Invisibility") and key.KeyCode == mp:getval("Misc", "Exploits", "Invisibility", "keybind") and client.char.spawned then
 			invisibility()
 			local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
@@ -7920,7 +7920,7 @@ elseif mp.game == "pf" then --!SECTION
 	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		MouseUnlockAndShootHook()
 		debug.profilebegin("Main BB Loop")
-		debug.profilebegin("Fake body check")
+		--[[debug.profilebegin("Fake body check")
 		if not client.char.spawned then
 			if keybindtoggles.fakebody then
 				keybindtoggles.fakebody = false
@@ -7935,7 +7935,7 @@ elseif mp.game == "pf" then --!SECTION
 				client.invismodel = nil
 			end
 		end
-		debug.profileend("Fake body check")
+		debug.profileend("Fake body check")]]
 
 		debug.profilebegin("BB Rendering")
 		do --rendering
@@ -8596,7 +8596,7 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Tilt Neck",
 							value = false
 						},
-						{
+						--[[{
 							type = "toggle",
 							name = "Fake Body",
 							value = false,
@@ -8605,7 +8605,7 @@ elseif mp.game == "pf" then --!SECTION
 								key = nil
 							},
 							unsafe = true
-						}
+						}]]
 					}
 				},
 			}
