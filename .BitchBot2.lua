@@ -5638,7 +5638,22 @@ elseif mp.game == "pf" then --!SECTION
 			--send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
 			if stab then send(client.net, "stab") end
 			local newhit = nil
-			newhit = {Name = target.part.Name, Position = Vector3.new(2 ^ 30)} -- fuckin hack
+			if mp:getval("Rage", "Extra", "Force Backstab") then -- MATH FOR THIS NEEDS TO BE MAJORLY FUCKING IMPROVED, IT SUCKS
+				local old = target.part
+				
+				local dumbpos = (client.char.head.CFrame * CFrame.new(0, 0, 10)).p
+				local vtorso = target.part.Parent.Torso
+				local vtorsolv = vtorso.CFrame.LookVector
+				local dir = (vtorso.Position - workspace.CurrentCamera.CFrame.p)
+				local fuckinhack = -vtorsolv.Unit:Dot(dir.Unit)
+				local newpos = old.Position:Lerp(dumbpos, fuckinhack)
+				if (fuckinhack <= 0.6 and fuckinhack >= -0.6) then
+					local sign = fuckinhack >= -0 and -1 or 1
+					newpos += Vector3.new(0, 0, 10) * sign
+				end
+		
+				newhit = {Name = old.Name, Position = newpos}
+			end
 			send(client.net, "knifehit", target.player, tick(), newhit or target.part)
 		end
 	
@@ -6733,6 +6748,22 @@ elseif mp.game == "pf" then --!SECTION
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
+			if args[1] == "knifehit" and mp:getval("Rage", "Extra", "Force Backstab") then
+				local old = args[4]
+				
+				local dumbpos = (client.char.head.CFrame * CFrame.new(0, 0, 10)).p
+				local vtorso = args[4].Parent.Torso
+				local vtorsolv = vtorso.CFrame.LookVector
+				local dir = (vtorso.Position - workspace.CurrentCamera.CFrame.p)
+				local fuckinhack = -vtorsolv.Unit:Dot(dir.Unit)
+				local newpos = old.Position:Lerp(dumbpos, fuckinhack)
+				if (fuckinhack <= 0.6 and fuckinhack >= -0.6) then
+					local sign = fuckinhack >= -0 and -1 or 1
+					newpos += Vector3.new(0, 0, 10) * sign
+				end
+		
+				args[4] = {Name = old.Name, Position = newpos}
+			end
 			if args[1] == "newbullets" then
 				if legitbot.silentVector then
 					for k, bullet in pairs(args[2].bullets) do
@@ -8517,6 +8548,11 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Knife Bot Type",
 							value = 2,
 							values = {"Assist", "Multi Aura", "Flight Aura"}
+						},
+						{
+							type = "toggle",
+							name = "Force Backstab",
+							value = false
 						},
 						{
 							type = "toggle",
