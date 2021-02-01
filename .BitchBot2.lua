@@ -6175,7 +6175,7 @@ elseif mp.game == "pf" then --!SECTION
 						CreateThread(function()
 							local bp = client.replication.getbodyparts(args[1])
 							for i = 1, mp:getval("Misc", "Exploits", "Grenade Teleport") and 3 or 1 do
-								client.net.send(nil, "newgrenade", unpack(fragargs))	
+								send(nil, "newgrenade", unpack(fragargs))	
 								if not bp.rootpart then break end
 								fragargs[2].frames[2].p0 += bp.rootpart.Velocity * 0.5 -- some shitty prediction just to make it hit fast targets more or something idk
 							end
@@ -6551,7 +6551,7 @@ elseif mp.game == "pf" then --!SECTION
 								}
 							}
 		
-							client.net.send(client.net, "newgrenade", unpack(args))
+							send(client.net, "newgrenade", unpack(args))
 							client.hud:updateammo("GRENADE")
 						end
 					end
@@ -6733,6 +6733,61 @@ elseif mp.game == "pf" then --!SECTION
 			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
 			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
+			if args[1] == "newgrenade" and mp:getval("Misc", "Exploits", "Grenade Teleport") then
+				local closest = math.huge
+				local part
+				for i, player in pairs(Players:GetPlayers()) do
+					if table.find(mp.friends, player.Name) then continue end
+					if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
+						local bodyparts = client.replication.getbodyparts(player)
+						if bodyparts then
+							local fovToBone = camera:GetFOV(bodyparts.head)
+							if fovToBone < closest then
+								closest = fovToBone
+								part = bodyparts.head
+							end
+						end
+					end
+				end
+
+				if (closest and part) then
+					local args = {
+						"FRAG",
+						{
+							frames = {
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(),
+									p0 = client.lastrepupdate or client.char.head.Position,
+									rotv = Vector3.new()
+								},
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(),
+									p0 = part.Position + Vector3.new(0, 3, 0),
+									rotv = Vector3.new()
+								}
+							},
+							time = tick(),
+							curi = 1,
+							blowuptime = 0
+						}
+					}
+
+					send(client.net, "newgrenade", unpack(args))
+					client.hud:updateammo("GRENADE")
+					return
+				end
+
+			end
 			if args[1] == "newbullets" then
 				if legitbot.silentVector then
 					for k, bullet in pairs(args[2].bullets) do
@@ -8033,7 +8088,7 @@ elseif mp.game == "pf" then --!SECTION
 							}
 						}
 	
-						client.net.send(client.net, "newgrenade", unpack(args))
+						send(client.net, "newgrenade", unpack(args))
 					end
 				end
 			end
