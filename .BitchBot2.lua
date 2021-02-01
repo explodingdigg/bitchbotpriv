@@ -5615,7 +5615,7 @@ elseif mp.game == "pf" then --!SECTION
 			for i, target in pairs(targets) do
 				if not target.insight then continue end
 				LOCAL_PLAYER.Character.HumanoidRootPart.Anchored = false
-				LOCAL_PLAYER.Character.HumanoidRootPart.Velocity = target.direction.Unit * 200
+				LOCAL_PLAYER.Character.HumanoidRootPart.Velocity = target.direction.Unit * 130 
 
 				return ragebot:KnifeAura(targets)
 			end
@@ -5638,7 +5638,7 @@ elseif mp.game == "pf" then --!SECTION
 			--send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
 			if stab then send(client.net, "stab") end
 			local newhit = nil
-			newhit = {Name = target.part.Name, Position = Vector3.new(2 ^ 30)} -- fuckin hack
+			newhit = {Name = target.part.Name, Position = Vector3.new(2 ^ 49)} -- fuckin hack
 			send(client.net, "knifehit", target.player, tick(), newhit or target.part)
 		end
 	
