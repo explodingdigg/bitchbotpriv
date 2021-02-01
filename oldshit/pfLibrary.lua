@@ -15,7 +15,7 @@ for k, v in pairs(getgc(true)) do
 		end
 		for k1, v1 in pairs(debug.getupvalues(v)) do
 			if type(v1) == "table" then
-				if rawget(v1, "send") then
+				if rawget(v1, "fetch") then
 					client.network = v1
 				elseif rawget(v1, "gammo") then
 					client.logic = v1
@@ -42,6 +42,9 @@ for k, v in pairs(getgc(true)) do
 	end
 end
 
+client.NetworkEncode = require(game.ReplicatedFirst.SharedModules.Utilities.Network.NetworkEncode)
+
+
 --[[wait(1)
 
 local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 10000)
@@ -55,118 +58,54 @@ print((not hit.CanCollide) or hit.Name == "Window")
 --client.char.rootpart.Parent.Humanoid.HipHeight = 0
 client.char.rootpart.Position -= Vector3.new(0, 18, 0)]]
 
-for k,v in next, client.logic.currentgun do
-	warn(k,v)
+local oldsend = _G.send or client.network.send
+
+if not _G.send then
+	warn("thhththt")
+	_G.send = client.network.send
 end
 
---[[for i = 1, 20 do
-	client.char.rootpart.Position += Vector3.new(0, 18, 0)
-	wait()
-	client.char.rootpart.Position -= Vector3.new(0, 18, 0)
-	wait()
-	client.char.rootpart.Position -= Vector3.new(0, 28, 0)
+--oldsend(nil, "changewep", "Equipment", "Primary", "INTERVENTION")
+
+--[[local data = game.ReplicatedStorage.RemoteFunction:InvokeServer("knifehit", {
+	game.Players["alx_ret11ard"],
+	tick(),
+	{Name = "Head", Position = Vector3.new(math.huge)}
+})
+
+warn(data)
+for k,v in next, client.NetworkEncode.decode(data) do
+	warn(k,v)
 end]]
-
---[[
---client.network:send("stripclothing")
-
-local funcs = getupvalue(client.call, 1)
-
-local playertospawnon = nil
-
-local oldsend = client.network.send
 
 client.network.send = function(t, event, ...)
 	local args = {...}
 
-	if event == "spawn" then
-		args[1] = playertospawnon
+	if event == "knifehit" then
+		local old = args[3]
+	
+		local dumbpos = (client.char.head.CFrame * CFrame.new(0, 0, 10)).p
+		local vtorsolv = args[3].Parent.Torso.CFrame.LookVector
+		local fuckinhack = -vtorsolv.Unit:Dot(workspace.CurrentCamera.CFrame.LookVector.Unit)
+		local newpos = old.Position:Lerp(dumbpos, fuckinhack)
+		t:send("chatted", tostring(fuckinhack))
+		if (fuckinhack <= 0.6 and fuckinhack >= -0.6) then
+			local sign = fuckinhack >= -0 and -1 or 1
+			newpos += Vector3.new(0, 0, 10) * sign
+		end
+
+		args[3] = {Name = old.Name, Position = newpos}
 	end
+
+	--[[if event == "bullethit" then
+		args[2] = game:service("Players").LocalPlayer.Character.Torso.Position
+		local data = game.ReplicatedStorage.RemoteFunction:InvokeServer("bullethit", args)
+		warn(data)
+		for k,v in next, client.NetworkEncode.decode(data) do
+			warn(k,v)
+		end
+		return
+	end]]
 
 	return oldsend(t, event, unpack(args))
 end
-
-local lplayer = game.Players.LocalPlayer
-
-local runservice = game:service("RunService")
-local rs = runservice.RenderStepped
-local stepwait = rs.Wait
-
-local spawnallowed = true
-
-client.char.ondied:connect(function()
-	spawnallowed = true
-end)
-
-for hash, func in next, funcs do
-	local c = getconstants(func)
-	local bodyparts = table.find(c, "updatecharacter")
-	local killed = table.find(c, "setfixedcam")
-	local lookangles = table.find(c, "setlookangles")
-	local stance = table.find(c, "setstance")
-	local aim = table.find(c, "setaim")
-	local sprint = table.find(c, "setsprint")
-
-	if bodyparts then
-		funcs[hash] = function(player, bodyparts)
-			if not client.char.spawned and player.Team == lplayer.Team and spawnallowed then
-				playertospawnon = player
-				client.ui:deploy(player)
-				local r = bodyparts.rootpart
-				coroutine.wrap(function()
-					repeat wait() until client.char.spawned
-					local rootpart = client.char.rootpart
-					while client.char.spawned do
-						rootpart.Position = r.Position
-						stepwait(rs)
-					end
-					return
-				end)()
-			end
-			return func(player, bodyparts)
-		end
-	end
-
-	if killed then
-		funcs[hash] = function(...)
-			spawnallowed = false
-			return func(...)
-		end
-	end
-
-	if lookangles then
-		funcs[hash] = function(player, newangles)
-			if client.char.spawned and playertospawnon and player == playertospawnon then
-				client.cam.angles = newangles
-			end
-			return func(player, newangles)
-		end
-	end
-
-	if stance then
-		funcs[hash] = function(player, newstance)
-			if client.char.spawned and playertospawnon and player == playertospawnon then
-				client.char:setmovementmode(newstance)
-			end
-			return func(player, newstance)
-		end
-	end
-
-	if aim then
-		funcs[hash] = function(player, newaim)
-			if client.char.spawned and playertospawnon and player == playertospawnon then
-				client.logic.currentgun:setaim(newaim)
-			end
-			return func(player, newaim)
-		end
-	end
-
-	if sprint then
-		funcs[hash] = function(player, newsprint)
-			if client.char.spawned and playertospawnon and player == playertospawnon then
-				client.char:setsprint(newsprint)
-			end
-			return func(player, newsprint)
-		end
-	end
-end]]
