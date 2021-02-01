@@ -5638,7 +5638,7 @@ elseif mp.game == "pf" then --!SECTION
 			--send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
 			if stab then send(client.net, "stab") end
 			local newhit = nil
-			if mp:getval("Rage", "Extra", "Force Backstab") then
+			if mp:getval("Rage", "Extra", "Force Backstab") then -- MATH FOR THIS NEEDS TO BE MAJORLY FUCKING IMPROVED, IT SUCKS
 				local old = target.part
 				
 				local dumbpos = (client.char.head.CFrame * CFrame.new(0, 0, 10)).p
