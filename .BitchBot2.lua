@@ -5880,6 +5880,7 @@ elseif mp.game == "pf" then --!SECTION
 
 		ragebot.stance = 'prone'
 		ragebot.sprint = false
+		ragebot.stancetick = tick()
 		function ragebot:Stance()
 			if LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid") then
 				if mp:getval("Rage", "Anti Aim", "Hide in Floor") and mp:getval("Rage", "Anti Aim", "Enabled") then
@@ -5889,23 +5890,25 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 			if mp:getval("Rage", "Anti Aim", "Enabled") then
-				lastTick = curTick
-				local stanceId = mp:getval("Rage", "Anti Aim", "Force Stance")
-				if stanceId ~= 1 then
-					newStance = --ternary sex
-						stanceId == 2 and "stand"
-						or stanceId == 3 and "crouch"
-						or stanceId == 4 and "prone"
-					ragebot.stance = newStance
-					send(client.net, "stance", newStance)
-				end
-				if mp:getval("Rage", "Anti Aim", "Lower Arms") then
-					ragebot.sprint = true
-					send(nil, "sprint", true)
-				end
-				if mp:getval("Rage", "Anti Aim", "Tilt Neck") then
-					ragebot.tilt = true
-					send(nil, "aim", true)
+				if (tick() - ragebot.stancetick) >= 0.5 then
+					ragebot.stancetick = tick()
+					local stanceId = mp:getval("Rage", "Anti Aim", "Force Stance")
+					if stanceId ~= 1 then
+						newStance = --ternary sex
+							stanceId == 2 and "stand"
+							or stanceId == 3 and "crouch"
+							or stanceId == 4 and "prone"
+						ragebot.stance = newStance
+						send(client.net, "stance", newStance)
+					end
+					if mp:getval("Rage", "Anti Aim", "Lower Arms") then
+						ragebot.sprint = true
+						send(nil, "sprint", true)
+					end
+					if mp:getval("Rage", "Anti Aim", "Tilt Neck") then
+						ragebot.tilt = true
+						send(nil, "aim", true)
+					end
 				end
 			end
 		end
@@ -6229,7 +6232,8 @@ elseif mp.game == "pf" then --!SECTION
 						})
 						table.remove(data, 19)
 					end
-					if newangles.Magnitude >= 2 ^ 1000 then
+
+					if newangles.Magnitude >= 2 ^ 10 then -- lowered this because that was not going to fucking work
 						return
 					end
 
@@ -6899,15 +6903,21 @@ elseif mp.game == "pf" then --!SECTION
 			elseif args[1] == "stab" then
 				syn.set_thread_identity(1)
 				NETWORK:SetOutgoingKBPSLimit(0)
+				keybindtoggles.fakelag = false
 				if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
 						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
 					end
 				end
 			elseif args[1] == "equip" then
-				if client.fakecharacter and args[2] ~= 3 then --TODO json find a way to make 3p melee equip thing fucjk
-					local gun = client.loadedguns[args[2]].name
-					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+				if client.fakecharacter then -- finally added knife showing on 3p shit after like month
+					if args[2] ~= 3 then
+						local gun = client.loadedguns[args[2]].name
+						client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+					else
+						local gun = client.loadedguns[args[2]].name
+						client.fakeupdater.equipknife(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+					end
 				end
 			elseif args[1] == "repupdate" then
 				--if keybindtoggles.crimwalk then return end
