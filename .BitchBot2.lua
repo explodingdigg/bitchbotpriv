@@ -4622,7 +4622,10 @@ elseif mp.game == "pf" then --!SECTION
 			"wocky slush他爱欠债了他他squilliam拥有的东西给爱欠绝参加锻squidward炼",
 			"坐下，一直保持着安静的状态bbot 谁把他拥有的东西给了他，所以他不那rblx trader captain么有的东西给了他爱欠债了他他squilliam拥有的东西给爱欠绝参加锻squidward炼，务，却拒绝参加锻炼，这让他爱得更UGT少了",
 			"免费手榴弹bbot hack绕过作弊工作Phantom Force roblox aimbot瞄准无声目标绕过2020工作真正免费下载和使用",
-			""
+			"zal發明了roblox汽車貿易商的船長ro blocks，並將其洩漏到整個宇宙，還修補了虛假的角神模式和虛假的身體，還發明了基於速度的AUTOWALL和無限制的自動壁紙遊戲 ",
+			"彼が誤って禁止されたためにファントムからautowallgamingを禁止解除する請願とそれはでたらめですそれはまったく意味がありませんなぜあなたは合法的なプレーヤーを禁止するのですか ",
+			"ジェイソンは私が神に誓う女性的な男の子ではありません ",
+			"傑森不是我向上帝發誓女性男孩 "
 		},
 		[5] = {
 			"🔥🔥🔥🔥🔥🔥🔥🔥",
