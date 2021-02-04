@@ -1167,14 +1167,21 @@ function mp.BBMenuInit(menutable)
 							y_pos += 40
 						elseif v2.type == "button" then
 							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
 							mp.options[v.name][v1.name][v2.name][1] = false
 							mp.options[v.name][v1.name][v2.name][2] = v2.type
-							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
 							mp.options[v.name][v1.name][v2.name].name = v2.name
 							mp.options[v.name][v1.name][v2.name].groupbox = v1.name
 							mp.options[v.name][v1.name][v2.name].tab = v.name -- why is it all v, v1, v2 so ugly
-							y_pos += 28
+							
+
+							if v2.x == nil then 
+								mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+								mp.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+								y_pos += 28
+							else
+								mp.options[v.name][v1.name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
+								mp.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v2.x + 8, v2.y, v2.w, tabz[k])
+							end
 						elseif v2.type == "textbox" then
 							mp.options[v.name][v1.name][v2.name] = {}
 							mp.options[v.name][v1.name][v2.name][4] = Draw:TextBox(v2.name, v2.text, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
@@ -9559,6 +9566,13 @@ elseif mp.game == "pf" then --!SECTION
 							value = 1,
 							values = {"None", "Friend", "Priority"}
 						},
+						{
+							type = "button",
+							name = "Vote Kick Player",
+							x = 307,
+							y = 356,
+							w = 160,
+						},
 					}
 				},
 				{
@@ -9623,7 +9637,7 @@ elseif mp.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Configs",
 							value = 1,
-							values = GetConfigs() --TODO make this dynamic
+							values = GetConfigs()
 						},
 						{
 							type = "button",
