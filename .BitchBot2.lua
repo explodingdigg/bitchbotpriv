@@ -6082,7 +6082,7 @@ elseif mp.game == "pf" then --!SECTION
 				clienteventfuncs[hash] = function(killer, victim, dist, weapon, head)
 					--local message = mp:getval("Misc", "Extra", "Kill Say Message")
 					if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER then
-						if client.instancetype.IsBanland() then
+						--[[if client.instancetype.IsBanland() then
 							CreateThread(function()
 								syn.request(
 								{
@@ -6105,12 +6105,12 @@ elseif mp.game == "pf" then --!SECTION
 								}
 							)
 							end)
-						end
+						end]]
 						
-						if mp:getval("Misc", "Extra", "Kill Say") then
+						--[[if mp:getval("Misc", "Extra", "Kill Say") then
 							local chosenmsg = killsaymessages[math.random(1, #killsaymessages)]
 							send(nil, "chatted", string.format(chosenmsg, victim.Name:lower()))
-						end
+						end]]
 						if mp:getval("Misc", "Extra", "Kill Sound") then
 							-- 1455817260
 							--client.sound.PlaySoundId("rbxassetid://1455817260", 1.0, 1.0, workspace, nil, 0, 0.05) -- this is the quake hitsound
@@ -6749,6 +6749,9 @@ elseif mp.game == "pf" then --!SECTION
 			local args = {...}
 			if args[1] == "spawn" then 
 				misc:ApplyGunMods()
+			end
+			if args[1] == "forcereset" and mp:getval("Misc", "Extra", "Anti-Killzone") then -- some stupid maps do this apparently but they also have some gay ass serverside thing so yeah the map creators and the game can go suck a large one
+				return
 			end
 			if args[1] == "bullethit" and mp:getval("Misc", "Extra", "Suppress Only") then return end
 			if args[1] == "bullethit" then
@@ -9391,11 +9394,6 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Kill Say",
-							value = false
-						},
-						{
-							type = "toggle",
 							name = "Kill Sound",
 							value = false
 						},
@@ -9422,7 +9420,12 @@ elseif mp.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Auto Martyrdom",
 							value = false
-						}
+						},
+						{
+							type = "toggle",
+							name = "Anti-Killzone",
+							value = false
+						},
 					}
 				},
 				{
