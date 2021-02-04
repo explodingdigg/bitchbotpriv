@@ -6479,6 +6479,16 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 			end
+			if name == "Votekick Player" then
+				local rank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
+				if not selected_plyr then return end
+
+				if rank >= 25 then
+					client.net:send("modcmd", string.format("/votekick:%s", selected_plyr.Name))
+				else
+					CreateNotification(string.format("Your account must be rank 25 or above to votekick! (Rank %d)", rank))
+				end
+			end
 		end)
 
 		mp.connections.toggle_pressed_pf = TogglePressed.Event:Connect(function(tab, name, gb)
@@ -9568,7 +9578,7 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "button",
-							name = "Vote Kick Player",
+							name = "Votekick Player",
 							x = 307,
 							y = 356,
 							w = 160,
