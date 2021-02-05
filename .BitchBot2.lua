@@ -9971,3 +9971,4 @@ if not mp.open then
 end
 
 mp.BBMenuInit = nil -- let me freeeeee
+-- not lettin u free asshole bitch
