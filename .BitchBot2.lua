@@ -5225,7 +5225,12 @@ elseif mp.game == "pf" then --!SECTION
 		
 			if hit then
 				if stopPart and hit == stopPart then
-					return returnintersection and true, enter or true
+					if returnintersection then
+						return true, enter
+					else
+						return true
+					end
+					--return returnintersection and true, enter or true
 				end
 				local unit = dir.Unit
 				local maxextent = hit.Size.Magnitude * unit
@@ -5233,7 +5238,7 @@ elseif mp.game == "pf" then --!SECTION
 				local diff = exit - enter
 				local dist = dot(unit, diff)
 				local pass = not hit.CanCollide or hit.Transparency == 1
-				local exited = false
+				--local exited = false
 		
 				local newpos = enter + 0.01 * unit
 		
@@ -5245,8 +5250,13 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 		
-				return self:CanPenetrateRaycast(newpos, pos, penetration)
+				return self:CanPenetrateRaycast(newpos, pos, penetration, returnintersection, stopPart)
 			else
+				if returnintersection then
+					return true, enter
+				else
+					return true
+				end
 				return returnintersection and true, enter or true
 			end
 		end
@@ -5357,7 +5367,6 @@ elseif mp.game == "pf" then --!SECTION
 									debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
 									local directionVector = camera:GetTrajectory(bone.Position, barrel)
 									if directionVector and ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
-										local fovToBone = camera:GetFOV(bone)
 										cpart = bone
 										theplayer = player
 										firepos = barrel
@@ -5750,7 +5759,11 @@ elseif mp.game == "pf" then --!SECTION
 				position = position + Vector3.new(0, step, 0)
 				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
 				if pen then
-					return returnintersection and position, intersectionpoint or position
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					else
+						return position
+					end
 				end
 			end
 
@@ -5760,7 +5773,11 @@ elseif mp.game == "pf" then --!SECTION
 				position = position - Vector3.new(0, step, 0)
 				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
 				if pen then
-					return returnintersection and position, intersectionpoint or position
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					else
+						return position
+					end
 				end
 			end
 
@@ -5770,7 +5787,11 @@ elseif mp.game == "pf" then --!SECTION
 				position = position + Vector3.new(0, 0, step)
 				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
 				if pen then
-					return returnintersection and position, intersectionpoint or position
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					else
+						return position
+					end
 				end
 			end
 
@@ -5780,7 +5801,11 @@ elseif mp.game == "pf" then --!SECTION
 				position = position - Vector3.new(0, 0, step)
 				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
 				if pen then
-					return returnintersection and position, intersectionpoint or position
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					else
+						return position
+					end
 				end
 			end
 			
@@ -5790,7 +5815,11 @@ elseif mp.game == "pf" then --!SECTION
 				position = position + Vector3.new(step, 0, 0)
 				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
 				if pen then
-					return returnintersection and position, intersectionpoint or position
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					else
+						return position
+					end
 				end
 			end
 
@@ -5800,7 +5829,11 @@ elseif mp.game == "pf" then --!SECTION
 				position = position - Vector3.new(step, 0, 0)
 				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
 				if pen then
-					return returnintersection and position, intersectionpoint or position
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					else
+						return position
+					end
 				end
 			end
 		
@@ -6872,14 +6905,6 @@ elseif mp.game == "pf" then --!SECTION
 						NETWORK:SetOutgoingKBPSLimit(0)
 					end
 
-					if mp:getval("Rage", "Anti Aim", "Onshot") then
-						local angles = Vector3.new(CFrame.new(Vector3.new(), ragebot.silentVector):ToOrientation()) * 180
-						if client.fakecharacter then
-							client.fakeupdater.setlookangles(angles)
-						end
-						--send(self, "repupdate", client.char.head.Position, angles)
-					end
-
 					send(self, unpack(args))
 					for k, bullet in pairs(args[2].bullets) do
 						local origin = args[2].firepos
@@ -6894,7 +6919,8 @@ elseif mp.game == "pf" then --!SECTION
 						local hitinfo = {
 							ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
 						}
-
+						send(self, 'bullethit', unpack(hitinfo))
+						ragebot.intersection = nil
 						if not client.instancetype.IsBanland() then
 							delay(cachedtimedata[k], function()
 								send(self, 'bullethit', unpack(hitinfo))
@@ -8670,11 +8696,6 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Yaw",
 							value = 2,
 							values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"}
-						},
-						{
-							type = "toggle",
-							name = "Onshot",
-							value = false
 						},
 						{
 							type = "slider",
