@@ -323,6 +323,13 @@ setfpscap(300) -- nigga roblox
 
 if not isfolder("bitchbot") then
 	makefolder("bitchbot")
+	if not isfile("bitchbot/relations.bb") then
+		writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
+	end
+else
+	if not isfile("bitchbot/relations.bb") then
+		writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
+	end
 end
 
 if not isfolder("bitchbot/".. mp.game) then
@@ -349,6 +356,92 @@ local function GetConfigs()
 end
 
 local Players = game:GetService("Players")
+
+local function UnpackRelations()
+    local str = isfile("bitchbot/relations.bb") and readfile("bitchbot/relations.bb") or nil
+	
+    local final = {
+        friends = {},
+        priority = {}
+    }
+
+    if str then
+        local tb = {}
+        for k,v in str:gmatch "{[%a]+:.[%d,%s+]+[}]" do
+            tb[#tb + 1] = k
+        end
+
+        for _, data in next, tb do
+            local cellname = data:match("%a+")
+            if final[cellname] then
+                for k,v in data:gmatch "%d+[^,}]" do
+					local status, ret = pcall(function() -- wrapping this in a pcall since roblox will throw an error if the player user ID does not exist
+						local playername = Players:GetNameFromUserIdAsync(tonumber(k))
+						table.insert(final[cellname], 1, playername)
+					end)
+					warn(status, ret)
+                end
+            end
+        end
+    end
+
+	mp.friends = final.friends
+	mp.priority = final.priority
+end
+
+CreateThread(UnpackRelations)
+
+local function WriteRelations()
+	local str = "bb:{{friends:"
+	warn("yeah")
+
+	for k,v in next, mp.friends do
+		local playerobj
+		local userid
+		local pass, ret = pcall(function()
+			playerobj = Players[v]
+		end)
+
+		if not pass then
+			local newpass, newret = pcall(function()
+				userid = Players:GetUserIdFromNameAsync(v)
+			end)
+		end	
+
+		if userid then
+			str = str .. tostring(userid) .. ","
+		else
+			str = str .. tostring(playerobj.UserId) .. ","
+		end
+	end
+
+	str = str .. "}{priority:"
+
+	for k,v in next, mp.priority do
+		local playerobj
+		local userid
+		local pass, ret = pcall(function()
+			playerobj = Players[v]
+		end)
+
+		if not pass then
+			local newpass, newret = pcall(function()
+				userid = Players:GetUserIdFromNameAsync(v)
+			end)
+		end	
+
+		if userid then
+			str = str .. tostring(userid) .. ","
+		else
+			str = str .. tostring(playerobj.UserId) .. ","
+		end
+	end
+
+	str = str .. "}}"
+	warn(str)
+	writefile("bitchbot/relations.bb", str)
+end
+
 local LOCAL_PLAYER = Players.LocalPlayer
 local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
 local TEAMS = game:GetService("Teams")
@@ -3885,10 +3978,12 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						if mp:getval("Settings", "Player List", "Player Status") == 2 then
 							if not table.find(mp.friends, selected_plyr.Name) then
 								table.insert(mp.friends, selected_plyr.Name)
+								WriteRelations()
 							end
 						elseif mp:getval("Settings", "Player List", "Player Status") == 3 then
 							if not table.find(mp.priority, selected_plyr.Name) then
 								table.insert(mp.priority, selected_plyr.Name)
+								WriteRelations()
 							end
 						end
 					else
@@ -5285,33 +5380,6 @@ elseif mp.game == "pf" then --!SECTION
 			ragebot.firepos = origin
 			ragebot.shooting = true
 			if mp:getval("Rage", "Aimbot", "Auto Shoot") then
-				--[[if client.tpupsteps then
-					local oldsend = client.net.send
-
-					client.net.send = function(self, event, ...)
-						if event == "repupdate" then return end
-						oldsend(self, event, ...)
-					end
-
-					for i = 1, #client.tpupsteps do
-						oldsend(nil, "repupdate", client.tpupsteps[i], client.cam.angles)
-						game.RunService.RenderStepped:Wait()
-						game.RunService.RenderStepped:Wait()
-					end
-
-					client.logic.currentgun:shoot(true)
-
-					for i = (#client.tpupsteps - 1), 1, -1 do
-						-- come down
-						oldsend(nil, "repupdate", client.tpupsteps[i], client.cam.angles)
-						game.RunService.RenderStepped:Wait()
-						game.RunService.RenderStepped:Wait()
-					end
-					
-					client.net.send = oldsend
-					client.tpupsteps = nil
-					return
-				end]]
 				client.logic.currentgun:shoot(true)
 			end
 		end
@@ -5323,7 +5391,7 @@ elseif mp.game == "pf" then --!SECTION
 				return nil 
 			end
 
-			--ragebot.intersection = nil
+			ragebot.intersection = nil
 
 			debug.profilebegin("BB Ragebot GetTarget")
 			local hitscan = hitscan or {}
@@ -6867,8 +6935,10 @@ elseif mp.game == "pf" then --!SECTION
 					args[2].firepos = ragebot.firepos
 					local cachedtimedata = {}
 
-					local hitpoint = ragebot.intersection or ragebot.targetpart.Position
-
+					local hitpoint = ragebot.intersection ~= nil and Vector3.new(ragebot.intersection.X, ragebot.intersection.Y, ragebot.intersection.Z) or ragebot.targetpart.Position -- fuckkkkkkkkk
+					-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
+					-- properly when you're using performance mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
+					
 					spawn(function()
 						local testpart = Instance.new("Part", workspace)
 						testpart.Position = hitpoint
@@ -6923,11 +6993,9 @@ elseif mp.game == "pf" then --!SECTION
 						if not client.instancetype.IsBanland() then
 							delay(cachedtimedata[k], function()
 								send(self, 'bullethit', unpack(hitinfo))
-								ragebot.intersection = nil
 							end)
 						else
 							send(self, 'bullethit', unpack(hitinfo))
-							ragebot.intersection = nil
 						end
 					end
 					-- for k, bullet in pairs(info.bullets) do
@@ -9811,10 +9879,12 @@ elseif mp.game == "pf" then --!SECTION
 						if mp:getval("Settings", "Player List", "Player Status") == 2 then
 							if not table.find(mp.friends, selected_plyr.Name) then
 								table.insert(mp.friends, selected_plyr.Name)
+								WriteRelations()
 							end
 						elseif mp:getval("Settings", "Player List", "Player Status") == 3 then
 							if not table.find(mp.priority, selected_plyr.Name) then
 								table.insert(mp.priority, selected_plyr.Name)
+								WriteRelations()
 							end
 						end
 					else
