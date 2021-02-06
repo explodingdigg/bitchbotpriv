@@ -4499,6 +4499,8 @@ elseif mp.game == "pf" then --!SECTION
 		return function(...) end
 	end
 
+	client.net:send("chatted", string.char(1))
+
 	mp.pfunload = function(self)
 		for k,v in next, Players:GetPlayers() do
 			local bodyparts = client.replication.getbodyparts(v)
@@ -6089,6 +6091,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found10 = table.find(curconstants, "equip")
 			local found11 = table.find(curconstants, "equipknife")
 			local found12 = table.find(curconstants, "setlookangles")
+			local found13 = table.find(curconstants, "Tag")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
@@ -6357,6 +6360,16 @@ elseif mp.game == "pf" then --!SECTION
 					end
 
 					return func(player, newangles)
+				end
+			end
+			if found13 then
+				clienteventfuncs[hash] = function(chatter, text, tag, tagcolor, teamchat, chattername)
+					if chatter ~= LOCAL_PLAYER and text == string.char(1) or text:match(string.char(1)) then
+						CreateNotification("Detected " .. chatter.Name .. " to be using the BitchBOt V2 of Phnatom forces,.")
+						table.insert(mp.friends, #mp.friends + 1, chatter.Name)
+					end
+
+					return func(chatter, text, tag, tagcolor, teamchat, chattername)
 				end
 			end
 			if found2 then
