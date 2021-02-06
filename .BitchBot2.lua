@@ -4501,7 +4501,7 @@ elseif mp.game == "pf" then --!SECTION
 		return function(...) end
 	end
 
-	client.net:send("chatted", string.char(1))
+	--client.net:send("chatted", string.char(1))
 
 	mp.pfunload = function(self)
 		for k,v in next, Players:GetPlayers() do
@@ -6366,12 +6366,12 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if found13 then
 				clienteventfuncs[hash] = function(chatter, text, tag, tagcolor, teamchat, chattername)
-					if chatter ~= LOCAL_PLAYER and text == string.char(1) and not _find(mp.friends, chatter.Name) then
+					--[[if chatter ~= LOCAL_PLAYER and text == string.char(1) and not _find(mp.friends, chatter.Name) then
 						CreateNotification("Detected " .. chatter.Name .. " to be using the BitchBOt V2 of Phnatom forces,.")
 						table.insert(mp.friends, 1, chatter.Name)
 						client.net:send("chatted", tostring(math.random(1, 255)))
 						client.net:send("chatted", string.char(1))
-					end
+					end]]
 
 					return func(chatter, text, tag, tagcolor, teamchat, chattername)
 				end
