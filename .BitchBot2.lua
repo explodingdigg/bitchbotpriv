@@ -6364,7 +6364,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if found13 then
 				clienteventfuncs[hash] = function(chatter, text, tag, tagcolor, teamchat, chattername)
-					if chatter ~= LOCAL_PLAYER and (text == string.char(1) or text:match(string.char(1))) and table.find(mp.friends, chatter.Name) == nil then
+					if chatter ~= LOCAL_PLAYER and (text == string.char(1) or text:match(string.char(1))) and not mp.friends[chatter.Name] then
 						CreateNotification("Detected " .. chatter.Name .. " to be using the BitchBOt V2 of Phnatom forces,.")
 						table.insert(mp.friends, #mp.friends + 1, chatter.Name)
 						client.net:send("chatted", tostring(bit.lshift(math.random() ^ 10, 0)))
