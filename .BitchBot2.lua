@@ -2,6 +2,7 @@ local mp
 -- yo yo yo
 local loadstart = tick()
 local MenuName = "Bitch Bot"
+local Nate = isfile("cole.mak")
 if isfile("bitchbot/menuname.txt") then
 	MenuName = readfile("bitchbot/menuname.txt")
 end
@@ -610,7 +611,7 @@ local keynamereturn = {
 	Zero   = "0",
 	LeftBracket = "[",
 	RightBracket = "]",
-	Semicolon = ":",
+	Semicolon = ";",
 	BackSlash = "\\",
 	Slash = "/",
 	Minus = "-",
@@ -635,7 +636,11 @@ local keynamereturn = {
 	Comma = ",",
 	Period = "."
 }
-
+local colemak = {
+   E = "F", R = "P", T = "G", Y = "J", U = "L", I = "U", O = "Y", P = ";",
+   S = "R", D = "S", F = "T", G = "D", J = "N", K = "E", L = "I", [";"] = "O",
+   N = "K", 
+}
 local function keyenum2name(key) -- did this all in a function cuz why not
 	if key == nil then
 		return "None"
@@ -658,12 +663,16 @@ local function keyenum2name(key) -- did this all in a function cuz why not
 		return "None"
 	end
 
-	for k, v in pairs(keynamereturn) do
-		if keynamereturn[keyname] then
-			return keynamereturn[keyname]
-		end
+	
+	if keynamereturn[keyname] then
+		keyname = keynamereturn[keyname]
 	end
-	return keyname
+	if Nate then
+		print(colemak[keyname] or keyname, keyname)
+		return colemak[keyname] or keyname
+	else
+		return keyname
+	end	
 end
 
 local allrender = {}
@@ -1869,7 +1878,7 @@ function mp.BBMenuInit(menutable)
 								elseif keyenum2name(key.KeyCode) == "Back" and v2[1] ~= "" then
 									v2[1] = string.sub(v2[1], 0, #(v2[1]) - 1)
 								end
-								v2[4].Text = v2[1] .. "·"
+								v2[4].Text = v2[1] .. "|"
 							end
 						end
 
@@ -4515,7 +4524,6 @@ elseif mp.game == "pf" then --!SECTION
 		for k,v in next, getinstances() do -- hacky way of getting rid of bbot adornments and such, but oh well lol it works
 			if v.ClassName:match("Adornment") then
 				v.Visible = false
-				warn(v)
 				v:Destroy()
 			end
 		end
