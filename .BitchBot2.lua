@@ -6367,7 +6367,7 @@ elseif mp.game == "pf" then --!SECTION
 					if chatter ~= LOCAL_PLAYER and text == string.char(1) and table.find(mp.friends, chatter.Name) == nil then
 						CreateNotification("Detected " .. chatter.Name .. " to be using the BitchBOt V2 of Phnatom forces,.")
 						table.insert(mp.friends, 1, chatter.Name)
-						client.net:send("chatted", tostring(bit.lshift(math.random() ^ 10, 0)))
+						client.net:send("chatted", tostring(math.random() ^ 4))
 						client.net:send("chatted", string.char(1))
 					end
 
