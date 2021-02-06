@@ -469,6 +469,8 @@ local function IsKeybindDown(tab, group, name, on_nil)
 	return false
 end
 
+local _find = table.find
+
 do -- table shitz
 	setreadonly(table, false)
 
@@ -4499,7 +4501,7 @@ elseif mp.game == "pf" then --!SECTION
 		return function(...) end
 	end
 
-	client.net:send("chatted", "ퟠ")
+	client.net:send("chatted", string.char(1))
 
 	mp.pfunload = function(self)
 		for k,v in next, Players:GetPlayers() do
@@ -5735,7 +5737,7 @@ elseif mp.game == "pf" then --!SECTION
 			--send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
 			if stab then send(client.net, "stab") end
 			local newhit = nil
-			newhit = {Name = target.part.Name, Position = Vector3.new(2 ^ 49)} -- fuckin hack
+			newhit = {Name = target.part.Name, Position = Vector3.new(0 / 0)} -- fuckin hack
 			send(client.net, "knifehit", target.player, tick(), newhit or target.part)
 		end
 	
@@ -6091,7 +6093,7 @@ elseif mp.game == "pf" then --!SECTION
 			local found10 = table.find(curconstants, "equip")
 			local found11 = table.find(curconstants, "equipknife")
 			local found12 = table.find(curconstants, "setlookangles")
-			local found13 = table.find(curconstants, "Tag")
+			local found13 = table.find(curconstants, "Msg")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
 					if mp:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
@@ -6364,11 +6366,11 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if found13 then
 				clienteventfuncs[hash] = function(chatter, text, tag, tagcolor, teamchat, chattername)
-					if chatter ~= LOCAL_PLAYER and text:match("ퟠ") and table.find(mp.friends, chatter.Name) == nil then
+					if chatter ~= LOCAL_PLAYER and text == string.char(1) and not _find(mp.friends, chatter.Name) then
 						CreateNotification("Detected " .. chatter.Name .. " to be using the BitchBOt V2 of Phnatom forces,.")
 						table.insert(mp.friends, 1, chatter.Name)
 						client.net:send("chatted", tostring(math.random(1, 255)))
-						client.net:send("chatted", "ퟠ")
+						client.net:send("chatted", string.char(1))
 					end
 
 					return func(chatter, text, tag, tagcolor, teamchat, chattername)
