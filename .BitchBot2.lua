@@ -390,7 +390,10 @@ local function UnpackRelations()
 	mp.priority = final.priority
 end
 
-CreateThread(UnpackRelations)
+CreateThread(function()
+	UnpackRelations()
+	CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players", #mp.friends, #mp.priority))
+end)
 
 local function WriteRelations()
 	local str = "bb:{{friends:"
@@ -6939,7 +6942,12 @@ elseif mp.game == "pf" then --!SECTION
 				end
 
 			end
+
 			if args[1] == "newbullets" then
+				if mp:getval("Misc", "Exploits", "Fake Equip") then
+					send(self, "equip", client.logic.currentgun.id)
+				end
+
 				if legitbot.silentVector then
 					for k, bullet in pairs(args[2].bullets) do
 						bullet[1] = legitbot.silentVector
@@ -6952,7 +6960,7 @@ elseif mp.game == "pf" then --!SECTION
 					end
 					return send(self, unpack(args))
 				end
-
+				
 				if ragebot.silentVector then
 					-- duct tape fix or whatever the fuck its called for this its stupid
 					args[2].firepos = ragebot.firepos
@@ -6999,6 +7007,7 @@ elseif mp.game == "pf" then --!SECTION
 					end
 
 					send(self, unpack(args))
+
 					for k, bullet in pairs(args[2].bullets) do
 						local origin = args[2].firepos
 						local attach_origin = Instance.new("Attachment", workspace.Terrain)
@@ -7021,6 +7030,10 @@ elseif mp.game == "pf" then --!SECTION
 							send(self, 'bullethit', unpack(hitinfo))
 						end
 					end
+					if mp:getval("Misc", "Exploits", "Fake Equip") then
+						local slot = mp:getval("Misc", "Exploits", "Fake Slot")
+						send(self, "equip", slot)
+					end
 					-- for k, bullet in pairs(info.bullets) do
 					-- 	send(gamenet, "bullethit", rageTarget, rageHitPos, rageHitbox, bullet[2])
 					-- end
@@ -7038,6 +7051,11 @@ elseif mp.game == "pf" then --!SECTION
 							beam.Parent = workspace
 						end
 					end
+				end
+
+				if mp:getval("Misc", "Exploits", "Fake Equip") then
+					local slot = mp:getval("Misc", "Exploits", "Fake Slot")
+					send(self, "equip", slot)
 				end
 			elseif args[1] == "stab" then
 				syn.set_thread_identity(1)
@@ -7057,6 +7075,11 @@ elseif mp.game == "pf" then --!SECTION
 						local gun = client.loadedguns[args[3]].name
 						client.fakeupdater.equipknife(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 					end
+				end
+
+				if mp:getval("Misc", "Exploits", "Fake Equip") then
+					local slot = mp:getval("Misc", "Exploits", "Fake Slot")
+					args[2] = slot
 				end
 			elseif args[1] == "repupdate" then
 				--if keybindtoggles.crimwalk then return end
@@ -9643,6 +9666,17 @@ elseif mp.game == "pf" then --!SECTION
 							extra = {
 								type = "keybind"
 							}
+						},
+						{
+							type = "toggle",
+							name = "Fake Equip",
+							value = false
+						},
+						{
+							type = "dropbox",
+							name = "Fake Slot",
+							values = {"Primary", "Secondary", "Melee"},
+							value = 1
 						}
 					}
 				},
@@ -10033,3 +10067,4 @@ end
 
 mp.BBMenuInit = nil -- let me freeeeee
 -- not lettin u free asshole bitch
+-- i meant the program memory, alan...............  fuckyouAlan_iHateYOU from v1
