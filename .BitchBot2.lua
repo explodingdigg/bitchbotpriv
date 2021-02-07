@@ -4697,8 +4697,6 @@ elseif mp.game == "pf" then --!SECTION
 	
 	local CUR_GUNS = game:GetService("ReplicatedStorage").GunModules
 	
-	
-
 	local selected_plyr = nil
 	
 	local players = {
