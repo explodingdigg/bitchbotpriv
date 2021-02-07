@@ -4457,13 +4457,13 @@ elseif mp.game == "pf" then --!SECTION
 				v.deploy = function(...)
 					if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
 						CreateThread(function()
-							repeat wait() until client.char.spawned
+							repeat wait() until client.char.alive
 							client.loadedguns = getupvalue(client.char.unloadguns, 2)
 							client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[client.logic.currentgun.name]), game:service("ReplicatedStorage").ExternalModels[client.logic.currentgun.name]:Clone())
 						end)
 					end
 					CreateThread(function() -- kinda yuck but oh well
-						repeat wait() until client.char.spawned
+						repeat wait() until client.char.alive
 						client.loadedguns = getupvalue(client.char.unloadguns, 2)
 						for id, gun in next, client.loadedguns do -- No gun bob or sway hook, may not work with knives for this
 							for k,v in next, getupvalues(gun.step) do
@@ -4548,7 +4548,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
-		if client.char.spawned then
+		if client.char.alive then
 			for id, gun in next, client.loadedguns do
 				for k,v in next, gun do
 
@@ -4696,8 +4696,6 @@ elseif mp.game == "pf" then --!SECTION
 	
 	local CUR_GUNS = game:GetService("ReplicatedStorage").GunModules
 	
-	
-
 	local selected_plyr = nil
 	
 	local players = {
@@ -5115,7 +5113,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 
 		mt.__newindex = newcclosure(function(self, id, val)
-			if client.char.spawned and mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
+			if client.char.alive and mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
 				if self == workspace.Camera then
 					if id == "CFrame" then
 						local dist = mp:getval("Visuals", "Local Visuals", "Third Person Distance") / 10
@@ -5747,7 +5745,7 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	
 		function ragebot:FakeBody()
-			if client.char.spawned then
+			if client.char.alive then
 				if client.fakebodyroot then
 					client.fakebodyroot:Destroy()
 					client.fakebodyroot = nil
@@ -5958,18 +5956,18 @@ elseif mp.game == "pf" then --!SECTION
 			ragebot:Stance()
 			--ANCHOR FUCK YOU
 			if mp:getval("Rage", "Extra", "Fake Lag") and not mp:getval("Rage", "Extra", "Manual Choke") then
-				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > mp:getval("Rage", "Extra", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.spawned then
+				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > mp:getval("Rage", "Extra", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.alive then
 					fakelagtime = tick()
 					fakelagpos = client.cam.cframe.p
 					NETWORK:SetOutgoingKBPSLimit(0)
-					if client.char.spawned then
+					if client.char.alive then
 						--CreateNotification("Choking")
 					end
 				else
 					NETWORK:SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
 				end
 			end
-			if client.char.spawned and mp:getval("Rage", "Aimbot", "Enabled") then
+			if client.char.alive and mp:getval("Rage", "Aimbot", "Enabled") then
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					
 					local playerlist = Players:GetPlayers()
@@ -6056,7 +6054,7 @@ elseif mp.game == "pf" then --!SECTION
 		end)
 		local oldmag = client.cam.setmagnification
 		--[[client.cam.setmagnification = function(self, v)
-			if mp:getval("Visuals", "Camera Visuals", "Disable ADS FOV") and client.char.spawned then return end
+			if mp:getval("Visuals", "Camera Visuals", "Disable ADS FOV") and client.char.alive then return end
 			return oldmag(self, v)
 		end]]
 		local oldmenufov = client.cam.changemenufov
@@ -8117,19 +8115,19 @@ elseif mp.game == "pf" then --!SECTION
 		if mp:getval("Misc", "Movement", "Fly Hack") and key.KeyCode == mp:getval("Misc", "Movement", "Fly Hack", "keybind") then
 			keybindtoggles.flyhack = not keybindtoggles.flyhack
 		end
-		--[[if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
+		--[[if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.alive then
 			ragebot:FakeBody()
 			local msg = keybindtoggles.fakebody and "Removed fake body" or "Fake body enabled"
 			CreateNotification(msg)
 			keybindtoggles.fakebody = not keybindtoggles.fakebody
 		end]]
-		if mp:getval("Misc", "Exploits", "Invisibility") and key.KeyCode == mp:getval("Misc", "Exploits", "Invisibility", "keybind") and client.char.spawned then
+		if mp:getval("Misc", "Exploits", "Invisibility") and key.KeyCode == mp:getval("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
 			invisibility()
 			local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
 			CreateNotification(msg)
 			keybindtoggles.invis = not keybindtoggles.invis
 		end
-		if mp:getval("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == mp:getval("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.spawned then
+		if mp:getval("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == mp:getval("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
 			local sign = not mp:modkeydown("alt", "left")
 			local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
 
@@ -8148,7 +8146,7 @@ elseif mp.game == "pf" then --!SECTION
 		MouseUnlockAndShootHook()
 		debug.profilebegin("Main BB Loop")
 		--[[debug.profilebegin("Fake body check")
-		if not client.char.spawned then
+		if not client.char.alive then
 			if keybindtoggles.fakebody then
 				keybindtoggles.fakebody = false
 				CreateNotification("Removed fake body due to despawn")
@@ -8268,7 +8266,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
-			if client.char.spawned then
+			if client.char.alive then
 				debug.profilebegin("Third Person")
 				if not client.fakecharacter then
 					client.fakecharacter = true
