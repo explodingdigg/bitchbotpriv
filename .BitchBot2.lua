@@ -1926,37 +1926,37 @@ function mp.BBMenuInit(menutable)
 		keyz[v.Value] = v
 	end
 
-	function mp:getval(...)
+	function mp:getval(tab, groupbox, name, ...)
 		local args = {...}
 
-		if args[4] == nil then
-			if mp.options[args[1]][args[2]][args[3]][2] ~= "combobox" then
-				return mp.options[args[1]][args[2]][args[3]][1]
+		if args[1] == nil then
+			if mp.options[tab][groupbox][name][2] ~= "combobox" then
+				return mp.options[tab][groupbox][name][1]
 			else
 				local temptable = {}
-				for k, v in ipairs(mp.options[args[1]][args[2]][args[3]][1]) do
+				for k, v in ipairs(mp.options[tab][groupbox][name][1]) do
 					table.insert(temptable, v[2])
 				end
 				return temptable
 			end
 		else
-			if args[4] == "keybind" or args[4] == "color" then
-				if args[5] then
-					return RGB(mp.options[args[1]][args[2]][args[3]][5][1][1], mp.options[args[1]][args[2]][args[3]][5][1][2], mp.options[args[1]][args[2]][args[3]][5][1][3])
+			if args[1] == "keybind" or args[1] == "color" then
+				if args[2] then
+					return RGB(mp.options[tab][groupbox][name][5][1][1], mp.options[tab][groupbox][name][5][1][2], mp.options[tab][groupbox][name][5][1][3])
 				else
-					return mp.options[args[1]][args[2]][args[3]][5][1]
+					return mp.options[tab][groupbox][name][5][1]
 				end
-			elseif args[4] == "color1" then
-				if args[5] then
-					return RGB(mp.options[args[1]][args[2]][args[3]][5][1][1][1][1], mp.options[args[1]][args[2]][args[3]][5][1][1][1][2], mp.options[args[1]][args[2]][args[3]][5][1][1][1][3])
+			elseif args[1] == "color1" then
+				if args[2] then
+					return RGB(mp.options[tab][groupbox][name][5][1][1][1][1], mp.options[tab][groupbox][name][5][1][1][1][2], mp.options[tab][groupbox][name][5][1][1][1][3])
 				else
-					return mp.options[args[1]][args[2]][args[3]][5][1][1][1]
+					return mp.options[tab][groupbox][name][5][1][1][1]
 				end
-			elseif args[4] == "color2" then
-				if args[5] then
-					return RGB(mp.options[args[1]][args[2]][args[3]][5][1][2][1][1], mp.options[args[1]][args[2]][args[3]][5][1][2][1][2], mp.options[args[1]][args[2]][args[3]][5][1][2][1][3])
+			elseif args[1] == "color2" then
+				if args[2] then
+					return RGB(mp.options[tab][groupbox][name][5][1][2][1][1], mp.options[tab][groupbox][name][5][1][2][1][2], mp.options[tab][groupbox][name][5][1][2][1][3])
 				else
-					return mp.options[args[1]][args[2]][args[3]][5][1][2][1]
+					return mp.options[tab][groupbox][name][5][1][2][1]
 				end
 			end
 		end
@@ -7911,17 +7911,17 @@ elseif mp.game == "pf" then --!SECTION
 							if wall then damage = 0 end
 						end
 
-						local str = damage == 0 and "Safe" or damage >= client.char.health and "LETHAL" or string.format("-%d hp", damage)
+						local str = damage == 0 and "Safe" or damage >= client.char:gethealth() and "LETHAL" or string.format("-%d hp", damage)
 						nadeesp.distance[nadenum].Text = str
 
 						nadeesp.outer_c[nadenum].Color = math.ColorRange(damage, {
 							[1] = {start = 15, color = RGB(20, 20, 20)},
-							[2] = {start = client.char.health, color = RGB(150, 20, 20)}
+							[2] = {start = client.char:gethealth(), color = RGB(150, 20, 20)}
 						})
 
 						nadeesp.inner_c[nadenum].Color = math.ColorRange(damage, {
 							[1] = {start = 15, color = RGB(50, 50, 50)},
-							[2] = {start = client.char.health, color = RGB(220, 20, 20)}
+							[2] = {start = client.char:gethealth(), color = RGB(220, 20, 20)}
 						})
 
 						nadeesp.bar_outer[nadenum].Visible = true
