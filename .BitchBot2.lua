@@ -670,7 +670,6 @@ local function keyenum2name(key) -- did this all in a function cuz why not
 		keyname = keynamereturn[keyname]
 	end
 	if Nate then
-		print(colemak[keyname] or keyname, keyname)
 		return colemak[keyname] or keyname
 	else
 		return keyname
@@ -1245,6 +1244,7 @@ function mp.BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name][5] = false
 							mp.options[v.name][v1.name][v2.name][6] = {v2.minvalue, v2.maxvalue}
 							mp.options[v.name][v1.name][v2.name][7] = {v1.x + 7 + v1.width - 38, v1.y + y_pos - 1}
+							mp.options[v.name][v1.name][v2.name].round = v2.rounded == nil and true or v2.rounded
 							y_pos += 30
 						elseif v2.type == "dropbox" then
 							mp.options[v.name][v1.name][v2.name] = {}
@@ -2541,7 +2541,7 @@ function mp.BBMenuInit(menutable)
 									elseif v2[1] > v2[6][2] then
 										v2[1] = v2[6][2]
 									end
-									v2[4][5].Text = tostring(v2[1]).. v2[4][6]
+									v2[4][5].Text = (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
 									for i = 1, 4 do
 										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 									end
@@ -2848,13 +2848,16 @@ function mp.BBMenuInit(menutable)
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "slider" then
 								if v2[5] then
-									v2[1] = math.floor((v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - mp.x - v2[3][1])/v2[3][3])) + v2[6][1]
+									--ANCHOR rounding in sliders
+									local new_val =(v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - mp.x - v2[3][1])/v2[3][3])
+									v2[1] = (v2.round and math.floor(new_val) or new_val) + v2[6][1]
 									if v2[1] < v2[6][1] then
 										v2[1] = v2[6][1]
 									elseif v2[1] > v2[6][2] then
 										v2[1] = v2[6][2]
 									end
-									v2[4][5].Text = tostring(v2[1]).. v2[4][6]
+									
+									v2[4][5].Text = (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
 									for i = 1, 4 do
 										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 									end
@@ -4921,7 +4924,9 @@ elseif mp.game == "pf" then --!SECTION
 			local shootgun = client.logic.currentgun.shoot
 			if not shooties[client.logic.currentgun.shoot] then
 				client.logic.currentgun.shoot = function(...)
-					if mp.open and not (ragebot.target and mp:getval("Rage", "Aimbot", "Auto Shoot")) then return end
+					if mp and ragebot and mp.getval then
+						if mp.open and not (ragebot.target and mp:getval("Rage", "Aimbot", "Auto Shoot")) then return end
+					end
 					shootgun(...)
 				end
 			end
@@ -7151,7 +7156,7 @@ elseif mp.game == "pf" then --!SECTION
 					local smoothing = (mp:getval("Legit", "Aim Assist", "Smoothing Factor") + 2) * 0.2 / GAME_SETTINGS.MouseSensitivity
 					local fov = mp:getval("Legit", "Aim Assist", "Aimbot FOV")
 					local sFov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
-					local dzFov = mp:getval("Legit", "Aim Assist", "Deadzone FOV")/10
+					local dzFov = mp:getval("Legit", "Aim Assist", "Deadzone FOV")
 		
 					local hitboxPriority = mp:getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
 					local hitscan = misc:GetParts(mp:getval("Legit", "Aim Assist", "Hitboxes"))
@@ -8427,7 +8432,8 @@ elseif mp.game == "pf" then --!SECTION
 							value = 1,
 							minvalue = 0,
 							maxvalue = 50,
-							stradd = "/10°"
+							stradd = "°",
+							rounded = false
 						},
 						{
 							type = "dropbox",
@@ -9634,7 +9640,7 @@ elseif mp.game == "pf" then --!SECTION
 							value = 10,
 							minvalue = 0, 
 							maxvalue = 100,
-							stradd = "%"
+							stradd = "%",
 						},
 						{
 							type = "toggle", 
