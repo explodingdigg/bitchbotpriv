@@ -4427,6 +4427,10 @@ elseif mp.game == "pf" then --!SECTION
 				client.loadplayer = v
 			elseif getinfo(v).name == "rankcalculator" then
 				client.rankcalculator = v
+			elseif getinfo(v).name == "gunbob" then
+				client.gunbob = v
+			elseif getinfo(v).name == "gunsway" then
+				client.gunsway = v
 			end
 			for k1, v1 in pairs(debug.getupvalues(v)) do
 				if type(v1) == "table" then
@@ -4515,6 +4519,7 @@ elseif mp.game == "pf" then --!SECTION
 				bodyparts.head.HELMET.Slot2.Transparency = 0
 			end
 		end
+
 		local funcs = getupvalue(client.call, 1)
 
 		for hash, func in next, funcs do
@@ -5561,7 +5566,7 @@ elseif mp.game == "pf" then --!SECTION
 											end
 
 											local penetrated = ragebot:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
-
+											
 											if penetrated then
 												ragebot.firepos = barrel
 												cpart = bone
@@ -5572,6 +5577,7 @@ elseif mp.game == "pf" then --!SECTION
 											else
 												-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
 												local resolvedPosition, axesintersection = ragebot:HitscanOnAxes(barrel, player, newTargetPosition, 1, 8, true, sphereHitbox)
+												warn(resolvedPosition, axesintersection)
 												if resolvedPosition then
 													warn("penetrated through axes")
 													ragebot.firepos = resolvedPosition
@@ -5845,8 +5851,6 @@ elseif mp.game == "pf" then --!SECTION
 				if pen then
 					if returnintersection and intersectionpoint then
 						return position, intersectionpoint
-					else
-						return position
 					end
 				end
 			end
@@ -5859,8 +5863,6 @@ elseif mp.game == "pf" then --!SECTION
 				if pen then
 					if returnintersection and intersectionpoint then
 						return position, intersectionpoint
-					else
-						return position
 					end
 				end
 			end
@@ -5873,8 +5875,6 @@ elseif mp.game == "pf" then --!SECTION
 				if pen then
 					if returnintersection and intersectionpoint then
 						return position, intersectionpoint
-					else
-						return position
 					end
 				end
 			end
@@ -5887,8 +5887,6 @@ elseif mp.game == "pf" then --!SECTION
 				if pen then
 					if returnintersection and intersectionpoint then
 						return position, intersectionpoint
-					else
-						return position
 					end
 				end
 			end
@@ -5901,8 +5899,6 @@ elseif mp.game == "pf" then --!SECTION
 				if pen then
 					if returnintersection and intersectionpoint then
 						return position, intersectionpoint
-					else
-						return position
 					end
 				end
 			end
@@ -5915,8 +5911,6 @@ elseif mp.game == "pf" then --!SECTION
 				if pen then
 					if returnintersection and intersectionpoint then
 						return position, intersectionpoint
-					else
-						return position
 					end
 				end
 			end
@@ -6010,7 +6004,7 @@ elseif mp.game == "pf" then --!SECTION
 		ragebot.stancetick = tick()
 		function ragebot:Stance()
 			if LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid") then
-				if mp:getval("Rage", "Anti Aim", "Hide in Floor") and mp:getval("Rage", "Anti Aim", "Enabled") then
+				if mp:getval("Rage", "Anti Aim", "Hide in Floor") and mp:getval("Rage", "Anti Aim", "Enabled") and not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
 					LOCAL_PLAYER.Character.Humanoid.HipHeight = -1.9
 				else
 					LOCAL_PLAYER.Character.Humanoid.HipHeight = 0
@@ -7060,7 +7054,7 @@ elseif mp.game == "pf" then --!SECTION
 						local gun = client.loadedguns[args[2]].name
 						client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 					else
-						local gun = client.loadedguns[args[2]].name
+						local gun = client.loadedguns[args[3]].name
 						client.fakeupdater.equipknife(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 					end
 				end
