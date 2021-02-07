@@ -90,7 +90,7 @@ do
 				end
 			end,
 	
-			Update = function(self, num, listLength)
+			Update = function(self, num, listLength, dt)
 				local pos = self.targetPos
 	
 				local indexOffset = (listLength-num)*gap
@@ -138,21 +138,21 @@ do
 	
 					end
 	
-					time += estep -- TODO need to do the duration
-					estep += eestep
+					time += estep * dt * 128-- TODO need to do the duration
+					estep += eestep * dt * 64
 	
 					
 				end
 			end,
 	
-			Fade = function(self, num, len)
+			Fade = function(self, num, len, dt)
 				if self.pos.x > self.targetPos.x - 0.2 * len or self.fading then
 					if not self.fading then
 						estep = 0
 					end
 					self.fading = true
-					alpha -= estep / 4 * len
-					eestep += 0.01
+					alpha -= estep / 4 * len * dt * 50
+					eestep += 0.01 * dt * 100
 				end
 				if alpha <= 0 then
 					self:Remove(self.drawings[1])
@@ -177,7 +177,7 @@ do
 	end
 	
 	
-	renderStepped = game.RunService.RenderStepped:Connect(function()
+	renderStepped = game.RunService.RenderStepped:Connect(function(dt)
 		Camera = workspace.CurrentCamera
 		local smallest = math.huge
 		for k, v in pairs(notes) do
@@ -189,9 +189,9 @@ do
 		end
 		local length = #notes
 		for k, note in pairs(notes) do
-			note:Update(k, length)
+			note:Update(k, length, dt)
 			if k <= math.ceil(length/10) or note.fading then
-				note:Fade(k, length)
+				note:Fade(k, length, dt)
 			end
 		end
 	end)
