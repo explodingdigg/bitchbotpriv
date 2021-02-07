@@ -1245,6 +1245,8 @@ function mp.BBMenuInit(menutable)
 							mp.options[v.name][v1.name][v2.name][6] = {v2.minvalue, v2.maxvalue}
 							mp.options[v.name][v1.name][v2.name][7] = {v1.x + 7 + v1.width - 38, v1.y + y_pos - 1}
 							mp.options[v.name][v1.name][v2.name].round = v2.rounded == nil and true or v2.rounded
+							mp.options[v.name][v1.name][v2.name].custom = v2.custom or {}
+
 							y_pos += 30
 						elseif v2.type == "dropbox" then
 							mp.options[v.name][v1.name][v2.name] = {}
@@ -2849,15 +2851,14 @@ function mp.BBMenuInit(menutable)
 							if v2[2] == "slider" then
 								if v2[5] then
 									--ANCHOR rounding in sliders
-									local new_val =(v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - mp.x - v2[3][1])/v2[3][3])
-									v2[1] = (v2.round and math.floor(new_val) or new_val) + v2[6][1]
+									local new_val = (v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - mp.x - v2[3][1])/v2[3][3])
+									v2[1] = (v2.round and math.floor(new_val) or math.floor(new_val * 100) / 100) + v2[6][1]
 									if v2[1] < v2[6][1] then
 										v2[1] = v2[6][1]
 									elseif v2[1] > v2[6][2] then
 										v2[1] = v2[6][2]
 									end
-									
-									v2[4][5].Text = (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
+									v2[4][5].Text = v2.custom[v2[1]] or (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
 									for i = 1, 4 do
 										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 									end
@@ -3429,7 +3430,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					content = {
 						{
 							type = "toggle",
-							name = "Speed Hack",
+							name = "Speed",
 							value = false
 						},
 						{
@@ -3442,7 +3443,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						},
 						{
 							type = "dropbox",
-							name = "Speed Hack Method",
+							name = "Speed Method",
 							value = 1,
 							values = {"Velocity", "Walk Speed"}
 						},
@@ -3453,7 +3454,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						-- },
 						{
 							type = "toggle",
-							name = "Fly Hack",
+							name = "Fly",
 							value = false,
 							extra = {
 								type = "keybind",
@@ -3782,8 +3783,8 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 	local function SpeedHack()
 		local speed = mp:getval("Misc", "Movement", "Speed")
-		if mp:getval("Misc", "Movement", "Speed Hack") and LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid then
-			if mp:getval("Misc", "Movement", "Speed Hack Method") == 1 then
+		if mp:getval("Misc", "Movement", "Speed") and LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid then
+			if mp:getval("Misc", "Movement", "Speed Method") == 1 then
 				local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
 				
 				if rootpart ~= nil then
@@ -3819,7 +3820,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	end
 
 	local function FlyHack()
-		if mp:getval("Misc", "Movement", "Fly Hack") and LOCAL_PLAYER:FindFirstChild("Character") then
+		if mp:getval("Misc", "Movement", "Fly") and LOCAL_PLAYER:FindFirstChild("Character") then
 
 			local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
 			if rootpart == nil then return end
@@ -3936,7 +3937,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		if input.KeyCode == mp:getval("Misc", "Exploits", "Shift Tick Base", "keybind") then
 			mp.tickbaseadd = 0
 		end
-		if mp:getval("Misc", "Movement", "Fly Hack") and input.KeyCode == mp:getval("Misc", "Movement", "Fly Hack", "keybind") then
+		if mp:getval("Misc", "Movement", "Fly") and input.KeyCode == mp:getval("Misc", "Movement", "Fly", "keybind") then
 			cachedValues.FlyToggle = not cachedValues.FlyToggle
 			LOCAL_PLAYER.Character.HumanoidRootPart.Anchored = false
 		end
@@ -4457,13 +4458,13 @@ elseif mp.game == "pf" then --!SECTION
 				v.deploy = function(...)
 					if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
 						CreateThread(function()
-							repeat wait() until client.char.spawned
+							repeat wait() until client.char.alive
 							client.loadedguns = getupvalue(client.char.unloadguns, 2)
 							client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[client.logic.currentgun.name]), game:service("ReplicatedStorage").ExternalModels[client.logic.currentgun.name]:Clone())
 						end)
 					end
 					CreateThread(function() -- kinda yuck but oh well
-						repeat wait() until client.char.spawned
+						repeat wait() until client.char.alive
 						client.loadedguns = getupvalue(client.char.unloadguns, 2)
 						for id, gun in next, client.loadedguns do -- No gun bob or sway hook, may not work with knives for this
 							for k,v in next, getupvalues(gun.step) do
@@ -4548,7 +4549,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 
-		if client.char.spawned then
+		if client.char.alive then
 			for id, gun in next, client.loadedguns do
 				for k,v in next, gun do
 
@@ -4874,7 +4875,7 @@ elseif mp.game == "pf" then --!SECTION
 		"bbot script", "hard code", "正免费下载和使", "SERVER BACKDOOR", "Secret", "SECRET", "Unleaked", 
 		"Not Leaked", "Method", "Minecraft Steve", "Steve", "Minecraft", "Sponge Hook", "Squid Hook", "Script",
 		"Squid Hack", "Sponge Hack", "(OP)", "Verified", "All Clean", "Program", "Hook", "有毁灭", 
-		"desu", "hook", "vw HACK", "Anti Votekick", "Speed", "Fly Hack", "Big Head", "Knife Hack",
+		"desu", "hook", "vw HACK", "Anti Votekick", "Speed", "Fly", "Big Head", "Knife Hack",
 		"No Clip", "Auto", "Rapid Fire", "Fire Rate Hack", "Fire Rate", "God Mode", "God", 
 		"Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma",
 		"And", "LEAKED", "🥳🥳🥳", "RELEASE", "IP RESOLVER","Infinite Wall Bang", "Wall Bang", 
@@ -5115,7 +5116,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 
 		mt.__newindex = newcclosure(function(self, id, val)
-			if client.char.spawned and mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
+			if client.char.alive and mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
 				if self == workspace.Camera then
 					if id == "CFrame" then
 						local dist = mp:getval("Visuals", "Local Visuals", "Third Person Distance") / 10
@@ -5747,7 +5748,7 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	
 		function ragebot:FakeBody()
-			if client.char.spawned then
+			if client.char.alive then
 				if client.fakebodyroot then
 					client.fakebodyroot:Destroy()
 					client.fakebodyroot = nil
@@ -5958,18 +5959,18 @@ elseif mp.game == "pf" then --!SECTION
 			ragebot:Stance()
 			--ANCHOR FUCK YOU
 			if mp:getval("Rage", "Extra", "Fake Lag") and not mp:getval("Rage", "Extra", "Manual Choke") then
-				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > mp:getval("Rage", "Extra", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.spawned then
+				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > mp:getval("Rage", "Extra", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.alive then
 					fakelagtime = tick()
 					fakelagpos = client.cam.cframe.p
 					NETWORK:SetOutgoingKBPSLimit(0)
-					if client.char.spawned then
+					if client.char.alive then
 						--CreateNotification("Choking")
 					end
 				else
 					NETWORK:SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
 				end
 			end
-			if client.char.spawned and mp:getval("Rage", "Aimbot", "Enabled") then
+			if client.char.alive and mp:getval("Rage", "Aimbot", "Enabled") then
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					
 					local playerlist = Players:GetPlayers()
@@ -6056,7 +6057,7 @@ elseif mp.game == "pf" then --!SECTION
 		end)
 		local oldmag = client.cam.setmagnification
 		--[[client.cam.setmagnification = function(self, v)
-			if mp:getval("Visuals", "Camera Visuals", "Disable ADS FOV") and client.char.spawned then return end
+			if mp:getval("Visuals", "Camera Visuals", "Disable ADS FOV") and client.char.alive then return end
 			return oldmag(self, v)
 		end]]
 		local oldmenufov = client.cam.changemenufov
@@ -6743,8 +6744,8 @@ elseif mp.game == "pf" then --!SECTION
 		function misc:FlyHack()
 	
 	
-			if mp:getval("Misc", "Movement", "Fly Hack") and keybindtoggles.flyhack then
-				local speed = mp:getval("Misc", "Movement", "Fly Hack Speed")
+			if mp:getval("Misc", "Movement", "Fly") and keybindtoggles.flyhack then
+				local speed = mp:getval("Misc", "Movement", "Fly Speed")
 				
 				local travel = CACHED_VEC3
 				local looking = Camera.CFrame.lookVector --getting camera looking vector
@@ -6791,9 +6792,9 @@ elseif mp.game == "pf" then --!SECTION
 		function misc:SpeedHack()
 	
 			if keybindtoggles.flyhack then return end
-			local type = mp:getval("Misc", "Movement", "Speed Hack")
+			local type = mp:getval("Misc", "Movement", "Speed")
 			if type ~= 1 then
-				local speed = mp:getval("Misc", "Movement", "Speed Hack Speed")
+				local speed = mp:getval("Misc", "Movement", "Speed Speed")
 	
 				local travel = CACHED_VEC3
 				local looking = Camera.CFrame.LookVector
@@ -7153,7 +7154,6 @@ elseif mp.game == "pf" then --!SECTION
 				debug.profilebegin("Legitbot Main")
 				if mp:getval("Legit", "Aim Assist", "Enabled") then
 					local keybind = mp:getval("Legit", "Aim Assist", "Aimbot Key") - 1
-					local smoothing = (mp:getval("Legit", "Aim Assist", "Smoothing Factor") + 2) * 0.2 / GAME_SETTINGS.MouseSensitivity
 					local fov = mp:getval("Legit", "Aim Assist", "Aimbot FOV")
 					local sFov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
 					local dzFov = mp:getval("Legit", "Aim Assist", "Deadzone FOV")
@@ -7164,7 +7164,7 @@ elseif mp.game == "pf" then --!SECTION
 					if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
 						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 						legitbot.target = player
-						local smoothing = mp:getval("Legit", "Aim Assist", "Smoothing Factor")
+						local smoothing = mp:getval("Legit", "Aim Assist", "Smoothing") + 2
 						if targetPart then
 							if closest < fov and closest > dzFov then
 								legitbot:AimAtTarget(targetPart, smoothing)
@@ -8114,22 +8114,22 @@ elseif mp.game == "pf" then --!SECTION
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
 			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 		end
-		if mp:getval("Misc", "Movement", "Fly Hack") and key.KeyCode == mp:getval("Misc", "Movement", "Fly Hack", "keybind") then
+		if mp:getval("Misc", "Movement", "Fly") and key.KeyCode == mp:getval("Misc", "Movement", "Fly", "keybind") then
 			keybindtoggles.flyhack = not keybindtoggles.flyhack
 		end
-		--[[if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.spawned then
+		--[[if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.alive then
 			ragebot:FakeBody()
 			local msg = keybindtoggles.fakebody and "Removed fake body" or "Fake body enabled"
 			CreateNotification(msg)
 			keybindtoggles.fakebody = not keybindtoggles.fakebody
 		end]]
-		if mp:getval("Misc", "Exploits", "Invisibility") and key.KeyCode == mp:getval("Misc", "Exploits", "Invisibility", "keybind") and client.char.spawned then
+		if mp:getval("Misc", "Exploits", "Invisibility") and key.KeyCode == mp:getval("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
 			invisibility()
 			local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
 			CreateNotification(msg)
 			keybindtoggles.invis = not keybindtoggles.invis
 		end
-		if mp:getval("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == mp:getval("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.spawned then
+		if mp:getval("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == mp:getval("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
 			local sign = not mp:modkeydown("alt", "left")
 			local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
 
@@ -8148,7 +8148,7 @@ elseif mp.game == "pf" then --!SECTION
 		MouseUnlockAndShootHook()
 		debug.profilebegin("Main BB Loop")
 		--[[debug.profilebegin("Fake body check")
-		if not client.char.spawned then
+		if not client.char.alive then
 			if keybindtoggles.fakebody then
 				keybindtoggles.fakebody = false
 				CreateNotification("Removed fake body due to despawn")
@@ -8268,7 +8268,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
-			if client.char.spawned then
+			if client.char.alive then
 				debug.profilebegin("Third Person")
 				if not client.fakecharacter then
 					client.fakecharacter = true
@@ -8407,13 +8407,14 @@ elseif mp.game == "pf" then --!SECTION
 							type = "slider",
 							name = "Aimbot FOV",
 							value = 20,
-							minvalue = 0,
+							minvalue = 0.1,
 							maxvalue = 180,
-							stradd = "°"
+							stradd = "°",
+							rounded = false
 						},
 						{
 							type = "slider",
-							name = "Smoothing Factor",
+							name = "Smoothing",
 							value = 20,
 							minvalue = 0,
 							maxvalue = 100,
@@ -8424,7 +8425,8 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Randomization",
 							value = 5,
 							minvalue = 0,
-							maxvalue = 20
+							maxvalue = 20,
+							custom = {[0] = "off"}
 						},
 						{
 							type = "slider",
@@ -8433,7 +8435,8 @@ elseif mp.game == "pf" then --!SECTION
 							minvalue = 0,
 							maxvalue = 50,
 							stradd = "°",
-							rounded = false
+							rounded = false,
+							custom = {[0] = "off"}
 						},
 						{
 							type = "dropbox",
@@ -8529,9 +8532,10 @@ elseif mp.game == "pf" then --!SECTION
 							type = "slider",
 							name = "Silent Aim FOV",
 							value = 5,
-							minvalue = 0,
+							minvalue = 0.1,
 							maxvalue = 180,
-							stradd = "°"
+							stradd = "°",
+							rounded = false,
 						},
 						{
 							type = "slider",
@@ -9070,7 +9074,8 @@ elseif mp.game == "pf" then --!SECTION
 							name = "Max Text Length",
 							value = 0,
 							minvalue = 0,
-							maxvalue = 32
+							maxvalue = 32,
+							custom = {[0] = "Unlimited"}
 						},
 						{
 							type = "toggle",
@@ -9419,7 +9424,7 @@ elseif mp.game == "pf" then --!SECTION
 					content = {
 						{
 							type = "toggle",
-							name = "Fly Hack",
+							name = "Fly",
 							value = false,
 							extra = {
 								type = "keybind",
@@ -9428,7 +9433,7 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "slider",
-							name = "Fly Hack Speed",
+							name = "Fly Speed",
 							value = 70,
 							minvalue = 1,
 							maxvalue = 200,
@@ -9441,13 +9446,13 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "dropbox",
-							name = "Speed Hack",
+							name = "Speed",
 							value = 1,
 							values = {"Off", "Always", "In Air", "On Hop"}
 						},
 						{
 							type = "slider",
-							name = "Speed Hack Speed",
+							name = "Speed Speed",
 							value = 40,
 							minvalue = 1,
 							maxvalue = 200,
