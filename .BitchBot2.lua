@@ -4470,7 +4470,7 @@ elseif mp.game == "pf" then --!SECTION
 					CreateThread(function() -- kinda yuck but oh well
 						repeat wait() until client.char.alive
 						client.loadedguns = getupvalue(client.char.unloadguns, 2)
-						for id, gun in next, client.loadedguns do -- No gun bob or sway hook, may not work with knives for this
+						--[[for id, gun in next, client.loadedguns do -- No gun bob or sway hook, may not work with knives for this
 							for k,v in next, getupvalues(gun.step) do
 								if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 									setupvalue(client.loadedguns[id].step, k, function(...)
@@ -4478,7 +4478,7 @@ elseif mp.game == "pf" then --!SECTION
 									end)
 								end
 							end
-						end
+						end]]
 					end)
 					return olddeploy(...)
 				end
@@ -6153,13 +6153,13 @@ elseif mp.game == "pf" then --!SECTION
 			if found4 then
 				clienteventfuncs[hash] = function(knife, camodata)
 					local loadedknife = func(knife, camodata)
-					for k,v in next, getupvalues(loadedknife.step) do
+					--[[for k,v in next, getupvalues(loadedknife.step) do
 						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 							setupvalue(loadedknife.step, k, function(...)
 								return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 							end)
 						end
-					end
+					end]]
 					return loadedknife
 				end
 			end
@@ -6377,13 +6377,13 @@ elseif mp.game == "pf" then --!SECTION
 			if found2 then
 				clienteventfuncs[hash] = function(gun, mag, spare, attachdata, camodata, gunn, ggequip)
 					func(gun, mag, spare, attachdata, camodata, gunn, ggequip)
-					for k,v in next, getupvalues(client.loadedguns[ggequip].step) do -- might have fixed it.
+					--[[for k,v in next, getupvalues(client.loadedguns[ggequip].step) do -- might have fixed it.
 						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 							setupvalue(client.loadedguns[ggequip].step, k, function(...)
 								return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 							end)
 						end
-					end
+					end]]
 					if client.fakecharacter then
 						client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 					end
@@ -6784,9 +6784,9 @@ elseif mp.game == "pf" then --!SECTION
 		function misc:SpeedHack()
 	
 			if keybindtoggles.flyhack then return end
-			local type = mp:getval("Misc", "Movement", "Speed")
+			local type = mp:getval("Misc", "Movement", "Speed Type")
 			if type ~= 1 then
-				local speed = mp:getval("Misc", "Movement", "Speed Speed")
+				local speed = mp:getval("Misc", "Movement", "Speed")
 	
 				local travel = CACHED_VEC3
 				local looking = Camera.CFrame.LookVector
@@ -8259,6 +8259,39 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		end
+
+		debug.profilebegin("BB No Gun Bob or Sway")
+
+		if client.char.alive then
+			for id, gun in next, client.loadedguns do
+				if not gun.fucku then
+					for k,v in next, getupvalues(gun.step) do
+						if type(v) == "function" and getinfo(v).name:match("bob") then
+							gun.fucku = true
+							warn("found stuff")
+							setupvalue(client.loadedguns[id].step, k, function(...)
+								return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+							end)
+						end
+					end
+				end
+			end
+
+			if client.logic.currentgun.type == "KNIFE" and not client.logic.currentgun.fucku then
+				for k,v in next, getupvalues(client.logic.currentgun.step) do
+					if type(v) == "function" and getinfo(v).name:match("bob") then
+						client.logic.currentgun.fucku = true
+						warn("found stuff except for the knife")
+						setupvalue(client.logic.currentgun.step, k, function(...)
+							return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+						end)
+					end
+				end
+			end
+		end
+
+		debug.profileend("BB No Gun Bob or Sway")
+
 		if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
 			if client.char.alive then
 				debug.profilebegin("Third Person")
@@ -9438,13 +9471,13 @@ elseif mp.game == "pf" then --!SECTION
 						},
 						{
 							type = "dropbox",
-							name = "Speed",
+							name = "Speed Type",
 							value = 1,
 							values = {"Off", "Always", "In Air", "On Hop"}
 						},
 						{
 							type = "slider",
-							name = "Speed Speed",
+							name = "Speed",
 							value = 40,
 							minvalue = 1,
 							maxvalue = 200,
