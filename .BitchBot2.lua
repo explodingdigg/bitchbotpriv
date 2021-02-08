@@ -1,5 +1,7 @@
 local mp
--- yo yo yo
+assert(getgenv().v2 == nil)
+getgenv().v2 = true
+
 local loadstart = tick()
 local MenuName = "Bitch Bot"
 local Nate = isfile("cole.mak")
@@ -3058,6 +3060,7 @@ function mp.BBMenuInit(menutable)
 		renderSteppedMenu()
 	end)
 	function mp:unload()
+		getgenv().v2 = nil
 		self.unloaded = true
 		for k, v in pairs(self.connections) do
 			v:Disconnect()
@@ -7874,16 +7877,42 @@ elseif mp.game == "pf" then --!SECTION
 			debug.profilebegin("renderVisuals Dropped ESP Nade Warning")
 			if mp:getval("ESP", "Dropped ESP", "Nade Warning") then
 				local nadenum = 0
+				local health = client.char:gethealth()
 				local color1 = mp:getval("ESP", "Dropped ESP", "Nade Warning", "color", true)
 				local color2 = RGB(mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[1] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[2] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[3] - 20)
 				for index, nade in pairs(mp.activenades) do
-					local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
 					local headpos = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Head.Position or Vector3.new()
 					local nade_dist = (nade.blowupat - headpos).Magnitude
 					local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
 					
-					if nade_on_screen and nade_dist <= 80 then
+					if nade_dist <= 80 then
 
+						local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
+						
+						if not nade_on_screen then
+							
+							local relativePos = Camera.CFrame:PointToObjectSpace(nade.blowupat)
+							local angle = math.atan2(-relativePos.y, relativePos.x)
+							local ox = math.cos(angle)
+							local oy = math.sin(angle)
+							local slope = (oy)/(ox)
+							
+							local h_edge = SCREEN_SIZE.x - 36
+							local v_edge = SCREEN_SIZE.y - 72
+							if oy < 0 then
+								v_edge = 0
+							end
+							if ox < 0 then
+								h_edge = 36
+							end
+							local y = (slope * h_edge) + (SCREEN_SIZE.y / 2) - slope * (SCREEN_SIZE.x / 2)
+							if y > 0 and y < SCREEN_SIZE.y then
+								nadepos = Vector2.new(h_edge, y)
+							else 
+								nadepos = Vector2.new((v_edge - SCREEN_SIZE.y / 2 + slope * (SCREEN_SIZE.x / 2))/slope, v_edge)
+							end
+							
+						end
 						nadenum += 1
 						--
 						nadeesp.outer_c[nadenum].Visible = true
@@ -7911,17 +7940,17 @@ elseif mp.game == "pf" then --!SECTION
 							if wall then damage = 0 end
 						end
 
-						local str = damage == 0 and "Safe" or damage >= client.char:gethealth() and "LETHAL" or string.format("-%d hp", damage)
+						local str = damage == 0 and "Safe" or damage >= health and "LETHAL" or string.format("-%d hp", damage)
 						nadeesp.distance[nadenum].Text = str
 
 						nadeesp.outer_c[nadenum].Color = math.ColorRange(damage, {
 							[1] = {start = 15, color = RGB(20, 20, 20)},
-							[2] = {start = client.char:gethealth(), color = RGB(150, 20, 20)}
+							[2] = {start = health, color = RGB(150, 20, 20)}
 						})
 
 						nadeesp.inner_c[nadenum].Color = math.ColorRange(damage, {
 							[1] = {start = 15, color = RGB(50, 50, 50)},
-							[2] = {start = client.char:gethealth(), color = RGB(220, 20, 20)}
+							[2] = {start = health, color = RGB(220, 20, 20)}
 						})
 
 						nadeesp.bar_outer[nadenum].Visible = true
