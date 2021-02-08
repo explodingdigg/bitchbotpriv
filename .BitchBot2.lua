@@ -1,4 +1,4 @@
-local mp
+local menu
 assert(getgenv().v2 == nil)
 getgenv().v2 = true
 
@@ -166,7 +166,7 @@ do
 			local c = 0.28-i/80
 			Note.drawings[i] = Rectangle(200, 1, true, Color3.new(c,c,c))
 		end
-		local color = (mp and mp.getval) and customcolor or mp:getval("Settings", "Menu Settings", "Menu Accent") and Color3.fromRGB(unpack(mp:getval("Settings", "Menu Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
+		local color = (menu and menu.getval) and customcolor or menu:getval("Settings", "Menu Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:getval("Settings", "Menu Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
 		
 		Note.drawings.text = Text(t)
 		if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
@@ -202,10 +202,10 @@ do
 end
 
 local function DisplayLoadtimeFromStart()
-	CreateNotification(string.format("Done loading the ".. mp.game.. " cheat. (%d ms)", math.floor((tick() - loadstart) * 1000)))
+	CreateNotification(string.format("Done loading the ".. menu.game.. " cheat. (%d ms)", math.floor((tick() - loadstart) * 1000)))
 end
 
-mp = { -- this is for menu stuffs n shi
+menu = { -- this is for menu stuffs n shi
 	w = 500,
 	h = 600,
 	x = 200,
@@ -247,7 +247,7 @@ mp = { -- this is for menu stuffs n shi
 	}
 }
 
-function mp:modkeydown(key, direction)
+function menu:modkeydown(key, direction)
 	local keydata = self.modkeys[key]
 	return keydata.direction and keydata.direction == direction or false
 end
@@ -298,7 +298,7 @@ end
 loadstart = tick()
 
 if game.PlaceId == 292439477 or game.PlaceId == 299659045 then
-	mp.game = "pf"
+	menu.game = "pf"
 	do
 		for _,v in pairs(getgc()) do
 			if type(v) == 'function' then
@@ -335,15 +335,15 @@ else
 	end
 end
 
-if not isfolder("bitchbot/".. mp.game) then
-	makefolder("bitchbot/".. mp.game)
+if not isfolder("bitchbot/".. menu.game) then
+	makefolder("bitchbot/".. menu.game)
 end
 
 local configs = {}
 
 local function GetConfigs()
 	local result = {}
-	local directory = "bitchbot\\" .. mp.game
+	local directory = "bitchbot\\" .. menu.game
 	for k, v in pairs(listfiles(directory)) do
 		local clipped = v:sub(#directory + 2)
 		if clipped:sub(#clipped - 2) == ".bb" then
@@ -353,7 +353,7 @@ local function GetConfigs()
 		end
 	end
 	if #result <= 0 then
-		writefile("bitchbot/".. mp.game .."/Default.bb", "")
+		writefile("bitchbot/".. menu.game .."/Default.bb", "")
 	end
 	return result
 end
@@ -388,20 +388,20 @@ local function UnpackRelations()
         end
     end
 
-	mp.friends = final.friends
-	mp.priority = final.priority
+	menu.friends = final.friends
+	menu.priority = final.priority
 end
 
 CreateThread(function()
 	UnpackRelations()
-	CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players", #mp.friends, #mp.priority))
+	CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players", #menu.friends, #menu.priority))
 end)
 
 local function WriteRelations()
 	local str = "bb:{{friends:"
 	warn("yeah")
 
-	for k,v in next, mp.friends do
+	for k,v in next, menu.friends do
 		local playerobj
 		local userid
 		local pass, ret = pcall(function()
@@ -423,7 +423,7 @@ local function WriteRelations()
 
 	str = str .. "}{priority:"
 
-	for k,v in next, mp.priority do
+	for k,v in next, menu.priority do
 		local playerobj
 		local userid
 		local pass, ret = pcall(function()
@@ -461,11 +461,11 @@ local TogglePressed = Instance.new("BindableEvent")
 local PATHFINDING = game:GetService("PathfindingService")
 local GRAVITY = Vector3.new(0,-192.6, 0)
 
-mp.x = math.floor((SCREEN_SIZE.x/2) - (mp.w/2))
-mp.y = math.floor((SCREEN_SIZE.y/2) - (mp.h/2))
+menu.x = math.floor((SCREEN_SIZE.x/2) - (menu.w/2))
+menu.y = math.floor((SCREEN_SIZE.y/2) - (menu.h/2))
 
 local function IsKeybindDown(tab, group, name, on_nil)
-	local key = mp:getval(tab, group, name, "keybind")
+	local key = menu:getval(tab, group, name, "keybind")
 	if on_nil then
 		return key == nil or INPUT_SERVICE:IsKeyDown(key)
 	elseif key ~= nil then
@@ -847,37 +847,37 @@ do
 	--ANCHOR MENU ELEMENTS
 
 	function Draw:MenuOutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		Draw:OutlinedRect(visible, pos_x + mp.x, pos_y + mp.y, width, hieght, clr, tablename)
-		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+		Draw:OutlinedRect(visible, pos_x + menu.x, pos_y + menu.y, width, hieght, clr, tablename)
+		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 
 	function Draw:MenuFilledRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		Draw:FilledRect(visible, pos_x + mp.x, pos_y + mp.y, width, hieght, clr, tablename)
-		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+		Draw:FilledRect(visible, pos_x + menu.x, pos_y + menu.y, width, hieght, clr, tablename)
+		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 
 	function Draw:MenuImage(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
-		Draw:Image(visible, imagedata, pos_x + mp.x, pos_y + mp.y, width, hieght, transparency, tablename)
-		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+		Draw:Image(visible, imagedata, pos_x + menu.x, pos_y + menu.y, width, hieght, transparency, tablename)
+		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 
 	function Draw:MenuBigText(text, visible, centered, pos_x, pos_y, tablename)
-		Draw:OutlinedText(text, 2, visible, pos_x + mp.x, pos_y + mp.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
-		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+		Draw:OutlinedText(text, 2, visible, pos_x + menu.x, pos_y + menu.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
+		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 
 	function Draw:MenuSmallText(text, visible, centered, pos_x, pos_y, tablename)
-		Draw:OutlinedText(text, 1, visible, pos_x + mp.x, pos_y + mp.y, 14, centered, {225, 225, 225, 255}, {20, 20, 20}, tablename)
-		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+		Draw:OutlinedText(text, 1, visible, pos_x + menu.x, pos_y + menu.y, 14, centered, {225, 225, 225, 255}, {20, 20, 20}, tablename)
+		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 
 	function Draw:CoolBox(name, x, y, width, height, tab)
 		Draw:MenuOutlinedRect(true, x, y, width, height, {0, 0, 0, 255}, tab)
 		Draw:MenuOutlinedRect(true, x + 1, y + 1, width - 2, height - 2, {20, 20, 20, 255}, tab)
 		Draw:MenuOutlinedRect(true, x + 2, y + 2, width - 3, 1, {127, 72, 163, 255}, tab)
-		table.insert(mp.clrs.norm, tab[#tab])
+		table.insert(menu.clrs.norm, tab[#tab])
 		Draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, {87, 32, 123, 255}, tab)
-		table.insert(mp.clrs.dark, tab[#tab])
+		table.insert(menu.clrs.dark, tab[#tab])
 		Draw:MenuOutlinedRect(true, x + 2, y + 4, width - 3, 1, {20, 20, 20, 255}, tab)
 		Draw:MenuBigText(name, true, false, x + 6, y + 5, tab)
 	end
@@ -893,7 +893,7 @@ do
 			Draw:MenuFilledRect(true, x + 2, y + 2 + (i * 2), 8, 2, {0, 0, 0, 255}, tab)
 			table.insert(temptable, tab[#tab])
 			if value then
-				tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+				tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])}, [2] = {start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)}})
 			else
 				tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
 			end
@@ -947,7 +947,7 @@ do
 		for i = 0, 3 do
 			Draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), (length - 4) * ((value - minvalue) / (maxvalue - minvalue)), 2, {0, 0, 0, 255}, tab)
 			table.insert(temptable, tab[#tab])
-			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+			tab[#tab].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])}, [2] = {start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)}})
 		end
 		Draw:MenuOutlinedRect(true, x, y + 12, length, 12, {30, 30, 30, 255}, tab)
 		Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 10, {0, 0, 0, 255}, tab)
@@ -1042,25 +1042,25 @@ do
 		Draw:MenuOutlinedRect(true, x, y + 12, length, 22 * maxamount + 4, {30, 30, 30, 255}, tab)
 		Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 22 * maxamount + 2, {0, 0, 0, 255}, tab)
 
-		Draw:MenuFilledRect(true, x + length - 7, y + 16, 1, 1, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, tab)
+		Draw:MenuFilledRect(true, x + length - 7, y + 16, 1, 1, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, tab)
 		table.insert(temptable.uparrow, tab[#tab])
-		table.insert(mp.clrs.norm, tab[#tab])
-		Draw:MenuFilledRect(true, x + length - 8, y + 17, 3, 1, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, tab)
+		table.insert(menu.clrs.norm, tab[#tab])
+		Draw:MenuFilledRect(true, x + length - 8, y + 17, 3, 1, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, tab)
 		table.insert(temptable.uparrow, tab[#tab])
-		table.insert(mp.clrs.norm, tab[#tab])
-		Draw:MenuFilledRect(true, x + length - 9, y + 18, 5, 1, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, tab)
+		table.insert(menu.clrs.norm, tab[#tab])
+		Draw:MenuFilledRect(true, x + length - 9, y + 18, 5, 1, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, tab)
 		table.insert(temptable.uparrow, tab[#tab])
-		table.insert(mp.clrs.norm, tab[#tab])
+		table.insert(menu.clrs.norm, tab[#tab])
 
-		Draw:MenuFilledRect(true, x + length - 7, y + 16 + (22 * maxamount + 4) - 9, 1, 1, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, tab)
+		Draw:MenuFilledRect(true, x + length - 7, y + 16 + (22 * maxamount + 4) - 9, 1, 1, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, tab)
 		table.insert(temptable.downarrow, tab[#tab])
-		table.insert(mp.clrs.norm, tab[#tab])
-		Draw:MenuFilledRect(true, x + length - 8, y + 16 + (22 * maxamount + 4) - 10, 3, 1, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, tab)
+		table.insert(menu.clrs.norm, tab[#tab])
+		Draw:MenuFilledRect(true, x + length - 8, y + 16 + (22 * maxamount + 4) - 10, 3, 1, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, tab)
 		table.insert(temptable.downarrow, tab[#tab])
-		table.insert(mp.clrs.norm, tab[#tab])
-		Draw:MenuFilledRect(true, x + length - 9, y + 16 + (22 * maxamount + 4) - 11, 5, 1, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, tab)
+		table.insert(menu.clrs.norm, tab[#tab])
+		Draw:MenuFilledRect(true, x + length - 9, y + 16 + (22 * maxamount + 4) - 11, 5, 1, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, tab)
 		table.insert(temptable.downarrow, tab[#tab])
-		table.insert(mp.clrs.norm, tab[#tab])
+		table.insert(menu.clrs.norm, tab[#tab])
 
 
 		for i = 1, maxamount do
@@ -1123,38 +1123,38 @@ end
 
 local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.x/16), math.floor(SCREEN_SIZE.y/16), 13, true, {255, 50, 200, 255}, {0, 0, 0})
 
-function mp.BBMenuInit(menutable)
+function menu.BBMenuInit(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
 	do
-		Draw:MenuOutlinedRect(true, 0, 0, mp.w, mp.h, {0, 0, 0, 255}, bbmenu)  -- first gradent or whatever
-		Draw:MenuOutlinedRect(true, 1, 1, mp.w - 2, mp.h - 2, {20, 20, 20, 255}, bbmenu)
-		Draw:MenuOutlinedRect(true, 2, 2, mp.w - 3, 1, {127, 72, 163, 255}, bbmenu)
-		table.insert(mp.clrs.norm, bbmenu[#bbmenu])
-		Draw:MenuOutlinedRect(true, 2, 3, mp.w - 3, 1, {87, 32, 123, 255}, bbmenu)
-		table.insert(mp.clrs.dark, bbmenu[#bbmenu])
-		Draw:MenuOutlinedRect(true, 2, 4, mp.w - 3, 1, {20, 20, 20, 255}, bbmenu)
+		Draw:MenuOutlinedRect(true, 0, 0, menu.w, menu.h, {0, 0, 0, 255}, bbmenu)  -- first gradent or whatever
+		Draw:MenuOutlinedRect(true, 1, 1, menu.w - 2, menu.h - 2, {20, 20, 20, 255}, bbmenu)
+		Draw:MenuOutlinedRect(true, 2, 2, menu.w - 3, 1, {127, 72, 163, 255}, bbmenu)
+		table.insert(menu.clrs.norm, bbmenu[#bbmenu])
+		Draw:MenuOutlinedRect(true, 2, 3, menu.w - 3, 1, {87, 32, 123, 255}, bbmenu)
+		table.insert(menu.clrs.dark, bbmenu[#bbmenu])
+		Draw:MenuOutlinedRect(true, 2, 4, menu.w - 3, 1, {20, 20, 20, 255}, bbmenu)
 
 		for i = 0, 19 do
-			Draw:MenuFilledRect(true, 2, 5 + i, mp.w - 4, 1, {20, 20, 20, 255}, bbmenu)
+			Draw:MenuFilledRect(true, 2, 5 + i, menu.w - 4, 1, {20, 20, 20, 255}, bbmenu)
 			bbmenu[6 + i].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 20, color = RGB(35, 35, 35)}})
 		end
-		Draw:MenuFilledRect(true, 2, 25, mp.w - 4, mp.h - 27, {35, 35, 35, 255}, bbmenu)
+		Draw:MenuFilledRect(true, 2, 25, menu.w - 4, menu.h - 27, {35, 35, 35, 255}, bbmenu)
 		
 		Draw:MenuBigText(MenuName, true, false, 6, 6, bbmenu)
 
-		Draw:MenuOutlinedRect(true, 8, 22, mp.w - 16, mp.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
-		Draw:MenuOutlinedRect(true, 9, 23, mp.w - 18, mp.h - 32, {20, 20, 20, 255}, bbmenu)
-		Draw:MenuOutlinedRect(true, 10, 24, mp.w - 19, 1, {127, 72, 163, 255}, bbmenu)
-		table.insert(mp.clrs.norm, bbmenu[#bbmenu])
-		Draw:MenuOutlinedRect(true, 10, 25, mp.w - 19, 1, {87, 32, 123, 255}, bbmenu)
-		table.insert(mp.clrs.dark, bbmenu[#bbmenu])
-		Draw:MenuOutlinedRect(true, 10, 26, mp.w - 19, 1, {20, 20, 20, 255}, bbmenu)
+		Draw:MenuOutlinedRect(true, 8, 22, menu.w - 16, menu.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
+		Draw:MenuOutlinedRect(true, 9, 23, menu.w - 18, menu.h - 32, {20, 20, 20, 255}, bbmenu)
+		Draw:MenuOutlinedRect(true, 10, 24, menu.w - 19, 1, {127, 72, 163, 255}, bbmenu)
+		table.insert(menu.clrs.norm, bbmenu[#bbmenu])
+		Draw:MenuOutlinedRect(true, 10, 25, menu.w - 19, 1, {87, 32, 123, 255}, bbmenu)
+		table.insert(menu.clrs.dark, bbmenu[#bbmenu])
+		Draw:MenuOutlinedRect(true, 10, 26, menu.w - 19, 1, {20, 20, 20, 255}, bbmenu)
 
 		for i = 0, 14 do
-			Draw:MenuFilledRect(true, 10, 27 + (i * 2), mp.w - 20, 2, {45, 45, 45, 255}, bbmenu)
+			Draw:MenuFilledRect(true, 10, 27 + (i * 2), menu.w - 20, 2, {45, 45, 45, 255}, bbmenu)
 			bbmenu[#bbmenu].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 15, color = RGB(35, 35, 35)}})
 		end
-		Draw:MenuFilledRect(true, 10, 57, mp.w - 20, mp.h - 67, {35, 35, 35, 255}, bbmenu)
+		Draw:MenuFilledRect(true, 10, 57, menu.w - 20, menu.h - 67, {35, 35, 35, 255}, bbmenu)
 
 		
 	end
@@ -1169,13 +1169,13 @@ function mp.BBMenuInit(menutable)
 	local tabbies = {} -- i like tabby catz 🐱🐱🐱
 	
 	for k, v in pairs(menutable) do
-		Draw:MenuFilledRect(true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)), 27, math.floor((mp.w - 20)/#menutable), 32, {30, 30, 30, 255}, bbmenu)
-		Draw:MenuOutlinedRect(true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)), 27, math.floor((mp.w - 20)/#menutable), 32, {20, 20, 20, 255}, bbmenu)
-		Draw:MenuBigText(v.name, true, true, 10 + ((k - 1) * math.floor((mp.w - 20)/#menutable)) + math.floor(math.floor((mp.w - 20)/#menutable)*0.5), 35, bbmenu)
+		Draw:MenuFilledRect(true, 10 + ((k - 1) * math.floor((menu.w - 20)/#menutable)), 27, math.floor((menu.w - 20)/#menutable), 32, {30, 30, 30, 255}, bbmenu)
+		Draw:MenuOutlinedRect(true, 10 + ((k - 1) * math.floor((menu.w - 20)/#menutable)), 27, math.floor((menu.w - 20)/#menutable), 32, {20, 20, 20, 255}, bbmenu)
+		Draw:MenuBigText(v.name, true, true, 10 + ((k - 1) * math.floor((menu.w - 20)/#menutable)) + math.floor(math.floor((menu.w - 20)/#menutable)*0.5), 35, bbmenu)
 		table.insert(tabbies, {bbmenu[#bbmenu - 2], bbmenu[#bbmenu - 1], bbmenu[#bbmenu]})
-		table.insert(mp.tabnum2str, v.name)
+		table.insert(menu.tabnum2str, v.name)
 
-		mp.options[v.name] = {}
+		menu.options[v.name] = {}
 
 		local y_offies = {left = 66, right = 66}
 		if v.content ~= nil then
@@ -1193,129 +1193,129 @@ function mp.BBMenuInit(menutable)
 
 				local y_pos = 24
 
-				mp.options[v.name][v1.name] = {}
+				menu.options[v.name][v1.name] = {}
 				if v1.content ~= nil then
 					
 					for k2, v2 in pairs(v1.content) do
 						if v2.type == "toggle" then
-							mp.options[v.name][v1.name][v2.name] = {}
+							menu.options[v.name][v1.name][v2.name] = {}
 							local unsafe = false
 							if v2.unsafe then
 								unsafe = true 
 							end
-							mp.options[v.name][v1.name][v2.name][4] = Draw:Toggle(v2.name, v2.value, unsafe, v1.x + 8, v1.y + y_pos, tabz[k])
-							mp.options[v.name][v1.name][v2.name][1] = v2.value
-							mp.options[v.name][v1.name][v2.name][2] = v2.type
-							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1}
-							mp.options[v.name][v1.name][v2.name][6] = unsafe
+							menu.options[v.name][v1.name][v2.name][4] = Draw:Toggle(v2.name, v2.value, unsafe, v1.x + 8, v1.y + y_pos, tabz[k])
+							menu.options[v.name][v1.name][v2.name][1] = v2.value
+							menu.options[v.name][v1.name][v2.name][2] = v2.type
+							menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1}
+							menu.options[v.name][v1.name][v2.name][6] = unsafe
 							if v2.extra ~= nil then
 								if v2.extra.type == "keybind" then
-									mp.options[v.name][v1.name][v2.name][5] = {}
-									mp.options[v.name][v1.name][v2.name][5][4] = Draw:Keybind(v2.extra.key, v1.x + v1.width - 52, y_pos + v1.y - 2, tabz[k])
-									mp.options[v.name][v1.name][v2.name][5][1] = v2.extra.key
-									mp.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
-									mp.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 52, y_pos + v1.y - 2}
-									mp.options[v.name][v1.name][v2.name][5][5] = false
+									menu.options[v.name][v1.name][v2.name][5] = {}
+									menu.options[v.name][v1.name][v2.name][5][4] = Draw:Keybind(v2.extra.key, v1.x + v1.width - 52, y_pos + v1.y - 2, tabz[k])
+									menu.options[v.name][v1.name][v2.name][5][1] = v2.extra.key
+									menu.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
+									menu.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 52, y_pos + v1.y - 2}
+									menu.options[v.name][v1.name][v2.name][5][5] = false
 								elseif v2.extra.type == "single colorpicker" then
-									mp.options[v.name][v1.name][v2.name][5] = {}
-									mp.options[v.name][v1.name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
-									mp.options[v.name][v1.name][v2.name][5][1] = v2.extra.color
-									mp.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
-									mp.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 38, y_pos + v1.y - 1}
-									mp.options[v.name][v1.name][v2.name][5][5] = false
-									mp.options[v.name][v1.name][v2.name][5][6] = v2.extra.name
+									menu.options[v.name][v1.name][v2.name][5] = {}
+									menu.options[v.name][v1.name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
+									menu.options[v.name][v1.name][v2.name][5][1] = v2.extra.color
+									menu.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
+									menu.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 38, y_pos + v1.y - 1}
+									menu.options[v.name][v1.name][v2.name][5][5] = false
+									menu.options[v.name][v1.name][v2.name][5][6] = v2.extra.name
 								elseif v2.extra.type == "double colorpicker" then
-									mp.options[v.name][v1.name][v2.name][5] = {}
-									mp.options[v.name][v1.name][v2.name][5][1] = {}
-									mp.options[v.name][v1.name][v2.name][5][1][1] = {}
-									mp.options[v.name][v1.name][v2.name][5][1][2] = {}
-									mp.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
+									menu.options[v.name][v1.name][v2.name][5] = {}
+									menu.options[v.name][v1.name][v2.name][5][1] = {}
+									menu.options[v.name][v1.name][v2.name][5][1][1] = {}
+									menu.options[v.name][v1.name][v2.name][5][1][2] = {}
+									menu.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
 									for i = 1, 2 do
-										mp.options[v.name][v1.name][v2.name][5][1][i][4] = Draw:ColorPicker(v2.extra.color[i], v1.x + v1.width - 38 - ((i - 1) * 34), y_pos + v1.y - 1, tabz[k])
-										mp.options[v.name][v1.name][v2.name][5][1][i][1] = v2.extra.color[i]
-										mp.options[v.name][v1.name][v2.name][5][1][i][3] = {v1.x + v1.width - 38 - ((i - 1) * 34), y_pos + v1.y - 1}
-										mp.options[v.name][v1.name][v2.name][5][1][i][5] = false
-										mp.options[v.name][v1.name][v2.name][5][1][i][6] = v2.extra.name[i]
+										menu.options[v.name][v1.name][v2.name][5][1][i][4] = Draw:ColorPicker(v2.extra.color[i], v1.x + v1.width - 38 - ((i - 1) * 34), y_pos + v1.y - 1, tabz[k])
+										menu.options[v.name][v1.name][v2.name][5][1][i][1] = v2.extra.color[i]
+										menu.options[v.name][v1.name][v2.name][5][1][i][3] = {v1.x + v1.width - 38 - ((i - 1) * 34), y_pos + v1.y - 1}
+										menu.options[v.name][v1.name][v2.name][5][1][i][5] = false
+										menu.options[v.name][v1.name][v2.name][5][1][i][6] = v2.extra.name[i]
 									end
 								end
 							end
 							y_pos += 18
 						elseif v2.type == "slider" then
-							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][4] = Draw:Slider(v2.name, v2.stradd, v2.value, v2.minvalue, v2.maxvalue, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
-							mp.options[v.name][v1.name][v2.name][1] = v2.value
-							mp.options[v.name][v1.name][v2.name][2] = v2.type
-							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-							mp.options[v.name][v1.name][v2.name][5] = false
-							mp.options[v.name][v1.name][v2.name][6] = {v2.minvalue, v2.maxvalue}
-							mp.options[v.name][v1.name][v2.name][7] = {v1.x + 7 + v1.width - 38, v1.y + y_pos - 1}
-							mp.options[v.name][v1.name][v2.name].round = v2.rounded == nil and true or v2.rounded
-							mp.options[v.name][v1.name][v2.name].custom = v2.custom or {}
+							menu.options[v.name][v1.name][v2.name] = {}
+							menu.options[v.name][v1.name][v2.name][4] = Draw:Slider(v2.name, v2.stradd, v2.value, v2.minvalue, v2.maxvalue, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+							menu.options[v.name][v1.name][v2.name][1] = v2.value
+							menu.options[v.name][v1.name][v2.name][2] = v2.type
+							menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+							menu.options[v.name][v1.name][v2.name][5] = false
+							menu.options[v.name][v1.name][v2.name][6] = {v2.minvalue, v2.maxvalue}
+							menu.options[v.name][v1.name][v2.name][7] = {v1.x + 7 + v1.width - 38, v1.y + y_pos - 1}
+							menu.options[v.name][v1.name][v2.name].round = v2.rounded == nil and true or v2.rounded
+							menu.options[v.name][v1.name][v2.name].custom = v2.custom or {}
 
 							y_pos += 30
 						elseif v2.type == "dropbox" then
-							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][1] = v2.value
-							mp.options[v.name][v1.name][v2.name][2] = v2.type
-							mp.options[v.name][v1.name][v2.name][5] = false
-							mp.options[v.name][v1.name][v2.name][6] = v2.values
+							menu.options[v.name][v1.name][v2.name] = {}
+							menu.options[v.name][v1.name][v2.name][1] = v2.value
+							menu.options[v.name][v1.name][v2.name][2] = v2.type
+							menu.options[v.name][v1.name][v2.name][5] = false
+							menu.options[v.name][v1.name][v2.name][6] = v2.values
 
 							if v2.x == nil then 
-								mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-								mp.options[v.name][v1.name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+								menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+								menu.options[v.name][v1.name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
 								y_pos += 40
 							else
-								mp.options[v.name][v1.name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
-								mp.options[v.name][v1.name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v2.x + 8, v2.y, v2.w, tabz[k])
+								menu.options[v.name][v1.name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
+								menu.options[v.name][v1.name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v2.x + 8, v2.y, v2.w, tabz[k])
 							end
 						elseif v2.type == "combobox" then
-							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][4] = Draw:Combobox(v2.name, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
-							mp.options[v.name][v1.name][v2.name][1] = v2.values
-							mp.options[v.name][v1.name][v2.name][2] = v2.type
-							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-							mp.options[v.name][v1.name][v2.name][5] = false
+							menu.options[v.name][v1.name][v2.name] = {}
+							menu.options[v.name][v1.name][v2.name][4] = Draw:Combobox(v2.name, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+							menu.options[v.name][v1.name][v2.name][1] = v2.values
+							menu.options[v.name][v1.name][v2.name][2] = v2.type
+							menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+							menu.options[v.name][v1.name][v2.name][5] = false
 							y_pos += 40
 						elseif v2.type == "button" then
-							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][1] = false
-							mp.options[v.name][v1.name][v2.name][2] = v2.type
-							mp.options[v.name][v1.name][v2.name].name = v2.name
-							mp.options[v.name][v1.name][v2.name].groupbox = v1.name
-							mp.options[v.name][v1.name][v2.name].tab = v.name -- why is it all v, v1, v2 so ugly
+							menu.options[v.name][v1.name][v2.name] = {}
+							menu.options[v.name][v1.name][v2.name][1] = false
+							menu.options[v.name][v1.name][v2.name][2] = v2.type
+							menu.options[v.name][v1.name][v2.name].name = v2.name
+							menu.options[v.name][v1.name][v2.name].groupbox = v1.name
+							menu.options[v.name][v1.name][v2.name].tab = v.name -- why is it all v, v1, v2 so ugly
 							
 
 							if v2.x == nil then 
-								mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-								mp.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+								menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+								menu.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
 								y_pos += 28
 							else
-								mp.options[v.name][v1.name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
-								mp.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v2.x + 8, v2.y, v2.w, tabz[k])
+								menu.options[v.name][v1.name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
+								menu.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v2.x + 8, v2.y, v2.w, tabz[k])
 							end
 						elseif v2.type == "textbox" then
-							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][4] = Draw:TextBox(v2.name, v2.text, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
-							mp.options[v.name][v1.name][v2.name][1] = v2.text
-							mp.options[v.name][v1.name][v2.name][2] = v2.type
-							mp.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-							mp.options[v.name][v1.name][v2.name][5] = false
+							menu.options[v.name][v1.name][v2.name] = {}
+							menu.options[v.name][v1.name][v2.name][4] = Draw:TextBox(v2.name, v2.text, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+							menu.options[v.name][v1.name][v2.name][1] = v2.text
+							menu.options[v.name][v1.name][v2.name][2] = v2.type
+							menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+							menu.options[v.name][v1.name][v2.name][5] = false
 							y_pos += 28
 						elseif v2.type == "list" then
-							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][4] = Draw:List(v2.multiname, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
-							mp.options[v.name][v1.name][v2.name][1] = nil
-							mp.options[v.name][v1.name][v2.name][2] = v2.type
-							mp.options[v.name][v1.name][v2.name][3] = 1
-							mp.options[v.name][v1.name][v2.name][5] = {}
-							mp.options[v.name][v1.name][v2.name][6] = v2.size
-							mp.options[v.name][v1.name][v2.name][7] = v2.colums
-							mp.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
+							menu.options[v.name][v1.name][v2.name] = {}
+							menu.options[v.name][v1.name][v2.name][4] = Draw:List(v2.multiname, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
+							menu.options[v.name][v1.name][v2.name][1] = nil
+							menu.options[v.name][v1.name][v2.name][2] = v2.type
+							menu.options[v.name][v1.name][v2.name][3] = 1
+							menu.options[v.name][v1.name][v2.name][5] = {}
+							menu.options[v.name][v1.name][v2.name][6] = v2.size
+							menu.options[v.name][v1.name][v2.name][7] = v2.colums
+							menu.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
 							y_pos += 22 + (22 * v2.size)
 						elseif v2.type == "image" then
-							mp.options[v.name][v1.name][v2.name] = {}
-							mp.options[v.name][v1.name][v2.name][1] = Draw:ImageWithText(v2.size, nil, v2.text, v1.x + 8, v1.y + y_pos, tabz[k])
-							mp.options[v.name][v1.name][v2.name][2] = v2.type
+							menu.options[v.name][v1.name][v2.name] = {}
+							menu.options[v.name][v1.name][v2.name][1] = Draw:ImageWithText(v2.size, nil, v2.text, v1.x + 8, v1.y + y_pos, tabz[k])
+							menu.options[v.name][v1.name][v2.name][2] = v2.type
 						end
 					end
 				end
@@ -1324,7 +1324,7 @@ function mp.BBMenuInit(menutable)
 					Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, v1.height, tabz[k])
 				else
 					if v1.autofill then
-						y_pos = (mp.h - 17) - (v1.y)
+						y_pos = (menu.h - 17) - (v1.y)
 					end
 					Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, y_pos, tabz[k])
 					y_offies[v1.autopos] += y_pos + 6
@@ -1333,18 +1333,18 @@ function mp.BBMenuInit(menutable)
 		end
 	end
 
-	mp.list.addval = function(list, option)
+	menu.list.addval = function(list, option)
 		table.insert(list[5], option)
 	end
 
-	mp.list.removeval = function(list, optionnum)
+	menu.list.removeval = function(list, optionnum)
 		if list[1] == optionnum then
 			list[1] = nil
 		end
 		table.remove(list[5], optionnum)
 	end
 
-	mp.list.removeall = function(list)
+	menu.list.removeall = function(list)
 		list[5] = {}
 		for k, v in pairs(list[4].liststuff) do 
 			for i, v1 in ipairs(v) do
@@ -1355,18 +1355,18 @@ function mp.BBMenuInit(menutable)
 		end
 	end
 
-	mp.list.setval = function(list, value)
+	menu.list.setval = function(list, value)
 		list[1] = value
 	end
 
-	Draw:MenuOutlinedRect(true, 10, 59, mp.w - 20, mp.h - 69, {20, 20, 20, 255}, bbmenu)
+	Draw:MenuOutlinedRect(true, 10, 59, menu.w - 20, menu.h - 69, {20, 20, 20, 255}, bbmenu)
 
-	Draw:MenuOutlinedRect(true, 11, 58, math.floor((mp.w - 20)/#menutable) - 2, 2, {35, 35, 35, 255}, bbmenu)
-	local barguy = {bbmenu[#bbmenu], mp.postable[#mp.postable]}
+	Draw:MenuOutlinedRect(true, 11, 58, math.floor((menu.w - 20)/#menutable) - 2, 2, {35, 35, 35, 255}, bbmenu)
+	local barguy = {bbmenu[#bbmenu], menu.postable[#menu.postable]}
 
 	local function set_barguy(slot)
-		barguy[1].Position = Vector2.new((mp.x + 11 + (((math.floor((mp.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2), mp.y + 58)
-		barguy[2][2] = (11 + (((math.floor((mp.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2)
+		barguy[1].Position = Vector2.new((menu.x + 11 + (((math.floor((menu.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2), menu.y + 58)
+		barguy[2][2] = (11 + (((math.floor((menu.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2)
 		barguy[2][3] = 58
 
 		for k, v in pairs(tabbies) do
@@ -1390,7 +1390,7 @@ function mp.BBMenuInit(menutable)
 		end
 	end
 
-	set_barguy(mp.activetab)
+	set_barguy(menu.activetab)
 
 	local plusminus = {}
 
@@ -1407,8 +1407,8 @@ function mp.BBMenuInit(menutable)
 		end
 
 		if value ~= 0 then
-			plusminus[1].Position = Vector2.new(x + 3 + mp.x, y - 5 + mp.y)
-			plusminus[2].Position = Vector2.new(x + 13 + mp.x, y - 1 + mp.y)
+			plusminus[1].Position = Vector2.new(x + 3 + menu.x, y - 5 + menu.y)
+			plusminus[2].Position = Vector2.new(x + 13 + menu.x, y - 1 + menu.y)
 
 			if value == 1 then
 
@@ -1420,7 +1420,7 @@ function mp.BBMenuInit(menutable)
 			else
 				for i, v in ipairs(plusminus) do
 					if i + 1 == value then
-						v.Color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])
+						v.Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 					else
 						v.Color = RGB(255, 255, 255)
 					end
@@ -1464,7 +1464,7 @@ function mp.BBMenuInit(menutable)
 				dropboxtexty[i].Visible = true
 				dropboxtexty[i].Text = values[i]
 				if i == value then
-					dropboxtexty[i].Color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])
+					dropboxtexty[i].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 				else
 					dropboxtexty[i].Color = RGB(255, 255, 255)
 				end
@@ -1495,7 +1495,7 @@ function mp.BBMenuInit(menutable)
 				dropboxtexty[i].Visible = true
 				dropboxtexty[i].Text = values[i][1]
 				if values[i][2] then
-					dropboxtexty[i].Color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])
+					dropboxtexty[i].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 				else
 					dropboxtexty[i].Color = RGB(255, 255, 255)
 				end
@@ -1552,9 +1552,9 @@ function mp.BBMenuInit(menutable)
 	colorpicker_outlined_rect(false, 1, 1, cp.w, cp.h, {0, 0, 0, 255}, colorpickerthingy)
 	colorpicker_outlined_rect(false, 2, 2, cp.w - 2, cp.h - 2, {20, 20, 20, 255}, colorpickerthingy)
 	colorpicker_outlined_rect(false, 3, 3, cp.w - 3, 1, {127, 72, 163, 255}, colorpickerthingy)
-	table.insert(mp.clrs.norm, colorpickerthingy[#colorpickerthingy])
+	table.insert(menu.clrs.norm, colorpickerthingy[#colorpickerthingy])
 	colorpicker_outlined_rect(false, 3, 4, cp.w - 3, 1, {87, 32, 123, 255}, colorpickerthingy)
-	table.insert(mp.clrs.dark, colorpickerthingy[#colorpickerthingy])
+	table.insert(menu.clrs.dark, colorpickerthingy[#colorpickerthingy])
 	colorpicker_outlined_rect(false, 3, 5, cp.w - 3, 1, {20, 20, 20, 255}, colorpickerthingy)
 	colorpicker_big_text("color picker :D", false, false, 7, 6, colorpickerthingy)
 
@@ -1719,10 +1719,10 @@ function mp.BBMenuInit(menutable)
 		y = 240
 	}
 	Draw:Triangle(true, true, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {127, 72, 163, 255}, bbmouse)
-	table.insert(mp.clrs.norm, bbmouse[#bbmouse])
+	table.insert(menu.clrs.norm, bbmouse[#bbmouse])
 	Draw:Triangle(true, false, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {0, 0, 0, 255}, bbmouse)
 
-	function mp:set_mouse_pos(x, y)
+	function menu:set_mouse_pos(x, y)
 		for k, v in pairs(bbmouse) do
 			v.PointA = Vector2.new(x, y + 36)
 			v.PointB = Vector2.new(x, y + 36 + 15)
@@ -1730,18 +1730,18 @@ function mp.BBMenuInit(menutable)
 		end
 	end
 
-	function mp:set_menu_clr(r, g, b)
-		mp.watermark.rect[1].Color = RGB(r - 40, g - 40, b - 40)
-		mp.watermark.rect[2].Color = RGB(r, g, b)
+	function menu:set_menu_clr(r, g, b)
+		menu.watermark.rect[1].Color = RGB(r - 40, g - 40, b - 40)
+		menu.watermark.rect[2].Color = RGB(r, g, b)
 
-		for k, v in pairs(mp.clrs.norm) do
+		for k, v in pairs(menu.clrs.norm) do
 			v.Color = RGB(r, g, b)
 		end
-		for k, v in pairs(mp.clrs.dark) do
+		for k, v in pairs(menu.clrs.dark) do
 			v.Color = RGB(r - 40, g - 40, b - 40)
 		end
 		local menucolor = {r, g, b}
-		for k, v in pairs(mp.options) do
+		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
 					if v2[2] == "toggle" then
@@ -1766,7 +1766,7 @@ function mp.BBMenuInit(menutable)
 	end
 
 	local function UpdateConfigs()
-		local configthing = mp.options["Settings"]["Configuration"]["Configs"]
+		local configthing = menu.options["Settings"]["Configuration"]["Configs"]
 		
 		configthing[6] = GetConfigs()
 		if configthing[1] > #configthing[6] then
@@ -1779,7 +1779,7 @@ function mp.BBMenuInit(menutable)
 	local dropboxopen = false
 	local dropboxthatisopen = nil
 
-	mp.colorpicker_open = false
+	menu.colorpicker_open = false
 	local colorpickerthatisopen = nil
 
 	local textboxopen = false
@@ -1791,7 +1791,7 @@ function mp.BBMenuInit(menutable)
 
 		if textboxopen then
 			if key.KeyCode == Enum.KeyCode.Delete or key.KeyCode == Enum.KeyCode.Return then
-				for k, v in pairs(mp.options) do
+				for k, v in pairs(menu.options) do
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "textbox" then
@@ -1812,8 +1812,8 @@ function mp.BBMenuInit(menutable)
 			cp.dragging_r = false
 			cp.dragging_b = false
 			UpdateConfigs()
-			if mp.open and not mp.fading then
-				for k, v in pairs(mp.options) do
+			if menu.open and not menu.fading then
+				for k, v in pairs(menu.options) do
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "slider" and v2[5] then
@@ -1844,19 +1844,19 @@ function mp.BBMenuInit(menutable)
 				end
 				set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 				colorpickerthatisopen = nil
-				mp.colorpicker_open = false
+				menu.colorpicker_open = false
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 				
 			end
-			if not mp.fading then
-				mp.fading = true
-				mp.fadestart = tick()
+			if not menu.fading then
+				menu.fading = true
+				menu.fadestart = tick()
 			end
 		end
 
-		if mp == nil then return end
-		if mp.open and not mp.fading then
-			for k, v in pairs(mp.options) do
+		if menu == nil then return end
+		if menu.open and not menu.fading then
+			for k, v in pairs(menu.options) do
 
 				for k1, v1 in pairs(v) do
 
@@ -1899,23 +1899,23 @@ function mp.BBMenuInit(menutable)
 		end
 	end
 
-	function mp:set_menu_pos(x, y)
-		for k, v in pairs(mp.postable) do
+	function menu:set_menu_pos(x, y)
+		for k, v in pairs(menu.postable) do
 			if v[1].Visible then
 				v[1].Position = Vector2.new(x + v[2], y + v[3])
 			end
 		end
 	end
 
-	function mp:mouse_in_menu(x, y, width, height)
-		if LOCAL_MOUSE.x > mp.x + x and LOCAL_MOUSE.x < mp.x + x + width and LOCAL_MOUSE.y > mp.y - 36 + y and LOCAL_MOUSE.y < mp.y - 36 + y + height then
+	function menu:mouse_in_menu(x, y, width, height)
+		if LOCAL_MOUSE.x > menu.x + x and LOCAL_MOUSE.x < menu.x + x + width and LOCAL_MOUSE.y > menu.y - 36 + y and LOCAL_MOUSE.y < menu.y - 36 + y + height then
 			return true
 		else
 			return false
 		end
 	end
 
-	function mp:mouse_in_colorpicker(x, y, width, height)
+	function menu:mouse_in_colorpicker(x, y, width, height)
 		if LOCAL_MOUSE.x > cp.x + x and LOCAL_MOUSE.x < cp.x + x + width and LOCAL_MOUSE.y > cp.y - 36 + y and LOCAL_MOUSE.y < cp.y - 36 + y + height then
 			return true
 		else
@@ -1928,15 +1928,15 @@ function mp.BBMenuInit(menutable)
 		keyz[v.Value] = v
 	end
 
-	function mp:getval(tab, groupbox, name, ...)
+	function menu:getval(tab, groupbox, name, ...)
 		local args = {...}
 
 		if args[1] == nil then
-			if mp.options[tab][groupbox][name][2] ~= "combobox" then
-				return mp.options[tab][groupbox][name][1]
+			if menu.options[tab][groupbox][name][2] ~= "combobox" then
+				return menu.options[tab][groupbox][name][1]
 			else
 				local temptable = {}
-				for k, v in ipairs(mp.options[tab][groupbox][name][1]) do
+				for k, v in ipairs(menu.options[tab][groupbox][name][1]) do
 					table.insert(temptable, v[2])
 				end
 				return temptable
@@ -1944,21 +1944,21 @@ function mp.BBMenuInit(menutable)
 		else
 			if args[1] == "keybind" or args[1] == "color" then
 				if args[2] then
-					return RGB(mp.options[tab][groupbox][name][5][1][1], mp.options[tab][groupbox][name][5][1][2], mp.options[tab][groupbox][name][5][1][3])
+					return RGB(menu.options[tab][groupbox][name][5][1][1], menu.options[tab][groupbox][name][5][1][2], menu.options[tab][groupbox][name][5][1][3])
 				else
-					return mp.options[tab][groupbox][name][5][1]
+					return menu.options[tab][groupbox][name][5][1]
 				end
 			elseif args[1] == "color1" then
 				if args[2] then
-					return RGB(mp.options[tab][groupbox][name][5][1][1][1][1], mp.options[tab][groupbox][name][5][1][1][1][2], mp.options[tab][groupbox][name][5][1][1][1][3])
+					return RGB(menu.options[tab][groupbox][name][5][1][1][1][1], menu.options[tab][groupbox][name][5][1][1][1][2], menu.options[tab][groupbox][name][5][1][1][1][3])
 				else
-					return mp.options[tab][groupbox][name][5][1][1][1]
+					return menu.options[tab][groupbox][name][5][1][1][1]
 				end
 			elseif args[1] == "color2" then
 				if args[2] then
-					return RGB(mp.options[tab][groupbox][name][5][1][2][1][1], mp.options[tab][groupbox][name][5][1][2][1][2], mp.options[tab][groupbox][name][5][1][2][1][3])
+					return RGB(menu.options[tab][groupbox][name][5][1][2][1][1], menu.options[tab][groupbox][name][5][1][2][1][2], menu.options[tab][groupbox][name][5][1][2][1][3])
 				else
-					return mp.options[tab][groupbox][name][5][1][2][1]
+					return menu.options[tab][groupbox][name][5][1][2][1]
 				end
 			end
 		end
@@ -1967,19 +1967,19 @@ function mp.BBMenuInit(menutable)
 	local simpcfgnamez = {"toggle", "slider", "dropbox"}
 	local function buttonpressed(bp)
 		ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
-		if bp == mp.options["Settings"]["Extra"]["Unload Cheat"] then
-			mp.fading = true
+		if bp == menu.options["Settings"]["Extra"]["Unload Cheat"] then
+			menu.fading = true
 			wait(0.3)
-			mp:unload()
-		elseif bp == mp.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
+			menu:unload()
+		elseif bp == menu.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
-		elseif bp == mp.options["Settings"]["Configuration"]["Save Config"] then
+		elseif bp == menu.options["Settings"]["Configuration"]["Save Config"] then
 			
 			local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
 
 			for k, v in next, simpcfgnamez do
 				figgy = figgy.. v.. "s {\n"
-				for k1, v1 in pairs(mp.options) do
+				for k1, v1 in pairs(menu.options) do
 					for k2, v2 in pairs(v1) do
 						for k3, v3 in pairs(v2) do
 
@@ -1992,7 +1992,7 @@ function mp.BBMenuInit(menutable)
 				figgy = figgy.."}\n"
 			end
 			figgy = figgy.."comboboxes {\n"
-			for k, v in pairs(mp.options) do
+			for k, v in pairs(menu.options) do
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
 						if v2[2] == "combobox" then
@@ -2007,7 +2007,7 @@ function mp.BBMenuInit(menutable)
 			end
 			figgy = figgy.."}\n"
 			figgy = figgy.."keybinds {\n"
-			for k, v in pairs(mp.options) do
+			for k, v in pairs(menu.options) do
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
 						if v2[2] == "toggle" then
@@ -2026,7 +2026,7 @@ function mp.BBMenuInit(menutable)
 			end
 			figgy = figgy.."}\n"
 			figgy = figgy.."colorpickers {\n"
-			for k, v in pairs(mp.options) do
+			for k, v in pairs(menu.options) do
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
 						if v2[2] == "toggle" then
@@ -2045,7 +2045,7 @@ function mp.BBMenuInit(menutable)
 			end
 			figgy = figgy.."}\n"
 			figgy = figgy.."double colorpickers {\n"
-			for k, v in pairs(mp.options) do
+			for k, v in pairs(menu.options) do
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
 						if v2[2] == "toggle" then
@@ -2067,21 +2067,21 @@ function mp.BBMenuInit(menutable)
 				end
 			end
 			figgy = figgy.."}\n"
-			writefile("bitchbot/"..mp.game.. "/".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb", figgy)
-			CreateNotification("Saved \"".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
+			writefile("bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb", figgy)
+			CreateNotification("Saved \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 			UpdateConfigs()
-		elseif bp == mp.options["Settings"]["Configuration"]["Delete Config"] then
+		elseif bp == menu.options["Settings"]["Configuration"]["Delete Config"] then
 
-			delfile("bitchbot/"..mp.game.. "/".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb")
-			CreateNotification("Deleted \"".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
+			delfile("bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb")
+			CreateNotification("Deleted \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 			UpdateConfigs()
 
 			
-		elseif bp == mp.options["Settings"]["Configuration"]["Load Config"] then
+		elseif bp == menu.options["Settings"]["Configuration"]["Load Config"] then
 
-			local configname = "bitchbot/"..mp.game.. "/".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb"
+			local configname = "bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb"
 			if not isfile(configname) then 
-				CreateNotification("\"".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\" is not a valid config.")
+				CreateNotification("\"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\" is not a valid config.")
 				return 
 			end
 			local loadedcfg = readfile(configname)
@@ -2109,11 +2109,11 @@ function mp.BBMenuInit(menutable)
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
 					
-					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
 						if tt[4] == "true" then
-							mp.options[tt[1]][tt[2]][tt[3]][1] = true
+							menu.options[tt[1]][tt[2]][tt[3]][1] = true
 						else
-							mp.options[tt[1]][tt[2]][tt[3]][1] = false
+							menu.options[tt[1]][tt[2]][tt[3]][1] = false
 						end
 					end
 				end
@@ -2134,8 +2134,8 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
-						mp.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
+					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+						menu.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
 					end
 				end
 
@@ -2155,8 +2155,8 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
-						mp.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
+					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+						menu.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
 					end
 				end
 
@@ -2176,16 +2176,16 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
 						
 						local subs = string.split(tt[4], ",")
 
 						for i, v in ipairs(subs) do
 							local opt = string.gsub(v, " ", "")
 							if opt == "true" then
-								mp.options[tt[1]][tt[2]][tt[3]][1][i][2] = true
+								menu.options[tt[1]][tt[2]][tt[3]][1][i][2] = true
 							else
-								mp.options[tt[1]][tt[2]][tt[3]][1][i][2] = false
+								menu.options[tt[1]][tt[2]][tt[3]][1][i][2] = false
 							end
 							if i == #subs - 1 then break end
 						end
@@ -2208,11 +2208,11 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
 						if tt[4] == "nil" then
-							mp.options[tt[1]][tt[2]][tt[3]][5][1] = nil
+							menu.options[tt[1]][tt[2]][tt[3]][5][1] = nil
 						else
-							mp.options[tt[1]][tt[2]][tt[3]][5][1] = keyz[tonumber(tt[4])]
+							menu.options[tt[1]][tt[2]][tt[3]][5][1] = keyz[tonumber(tt[4])]
 						end
 					end
 				end
@@ -2233,15 +2233,15 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
 						local subs = string.split(tt[4], ",")
 
 						for i, v in ipairs(subs) do
-							if mp.options[tt[1]][tt[2]][tt[3]][5][1][i] == nil then
+							if menu.options[tt[1]][tt[2]][tt[3]][5][1][i] == nil then
 								break
 							end
 							local opt = string.gsub(v, " ", "")
-							mp.options[tt[1]][tt[2]][tt[3]][5][1][i] = tonumber(opt)
+							menu.options[tt[1]][tt[2]][tt[3]][5][1][i] = tonumber(opt)
 							if i == #subs - 1 then break end
 						end
 					end
@@ -2263,24 +2263,24 @@ function mp.BBMenuInit(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					if mp.options[tt[1]] ~= nil and mp.options[tt[1]][tt[2]] ~= nil and mp.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
 
 						local subs = {string.split(tt[4], ","), string.split(tt[5], ",")}
 
 						for i, v in ipairs(subs) do
 							for i1, v1 in ipairs(v) do
-								if mp.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] == nil then
+								if menu.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] == nil then
 									break
 								end
 								local opt = string.gsub(v1, " ", "")
-								mp.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] = tonumber(opt)
+								menu.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] = tonumber(opt)
 								if i1 == #v - 1 then break end	
 							end
 						end
 					end
 				end
 
-				for k, v in pairs(mp.options) do
+				for k, v in pairs(menu.options) do
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "toggle" then
@@ -2290,7 +2290,7 @@ function mp.BBMenuInit(menutable)
 									end
 								else
 									for i = 0, 3 do
-										v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+										v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])}, [2] = {start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)}})
 									end
 								end
 								if v2[5] ~= nil then
@@ -2347,18 +2347,18 @@ function mp.BBMenuInit(menutable)
 					end
 				end
 			end
-			CreateNotification("Loaded \"".. mp.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
+			CreateNotification("Loaded \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 		end
 	end
 	
 	local function mousebutton1downfunc()
 		dropboxopen = false
 		textboxopen = false
-		for k, v in pairs(mp.options) do
+		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
 					if v2[2] == "dropbox" and v2[5] then
-						if not mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) then
+						if not menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) then
 							set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 							v2[5] = false
 						else
@@ -2367,7 +2367,7 @@ function mp.BBMenuInit(menutable)
 						end
 					end
 					if v2[2] == "combobox" and v2[5] then
-						if not mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) then
+						if not menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) then
 							set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 							v2[5] = false
 						else
@@ -2384,21 +2384,21 @@ function mp.BBMenuInit(menutable)
 								end
 							elseif v2[5][2] == "single colorpicker" then
 								if v2[5][5] == true then
-									if not mp:mouse_in_colorpicker(0, 0, cp.w, cp.h) then
+									if not menu:mouse_in_colorpicker(0, 0, cp.w, cp.h) then
 										set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 										v2[5][5] = false
 										colorpickerthatisopen = nil
-										mp.colorpicker_open = false
+										menu.colorpicker_open = false
 									end
 								end
 							elseif v2[5][2] == "double colorpicker" then
 								for k3, v3 in pairs(v2[5][1]) do
 									if v3[5] == true then
-										if not mp:mouse_in_colorpicker(0, 0, cp.w, cp.h) then
+										if not menu:mouse_in_colorpicker(0, 0, cp.w, cp.h) then
 											set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 											v3[5] = false
 											colorpickerthatisopen = nil
-											mp.colorpicker_open = false
+											menu.colorpicker_open = false
 										end
 									end
 								end
@@ -2414,14 +2414,14 @@ function mp.BBMenuInit(menutable)
 			end
 		end
 		for i = 1, #menutable do
-			if mp:mouse_in_menu(10 + ((i - 1) * math.floor((mp.w - 20)/#menutable)), 27, math.floor((mp.w - 20)/#menutable), 32) then
-				mp.activetab = i
-				set_barguy(mp.activetab)
-				mp:set_menu_pos(mp.x, mp.y)
+			if menu:mouse_in_menu(10 + ((i - 1) * math.floor((menu.w - 20)/#menutable)), 27, math.floor((menu.w - 20)/#menutable), 32) then
+				menu.activetab = i
+				set_barguy(menu.activetab)
+				menu:set_menu_pos(menu.x, menu.y)
 			end
 		end
-		if mp.colorpicker_open then
-			if mp:mouse_in_colorpicker(197, cp.h - 25, 75, 20) then
+		if menu.colorpicker_open then
+			if menu:mouse_in_colorpicker(197, cp.h - 25, 75, 20) then
 				local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 				colorpickerthatisopen[4][1].Color = tempclr
 				for i = 2, 3 do
@@ -2432,32 +2432,32 @@ function mp.BBMenuInit(menutable)
 				else
 					colorpickerthatisopen[1] = {math.floor(tempclr.R * 255), math.floor(tempclr.G * 255), math.floor(tempclr.B * 255)}
 				end
-				mp.colorpicker_open = false
+				menu.colorpicker_open = false
 				colorpickerthatisopen = nil
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 			end
-			if mp:mouse_in_colorpicker(10, 23, 160, 160) then
+			if menu:mouse_in_colorpicker(10, 23, 160, 160) then
 				cp.dragging_m = true
-			elseif mp:mouse_in_colorpicker(176, 23, 14, 160) then
+			elseif menu:mouse_in_colorpicker(176, 23, 14, 160) then
 				cp.dragging_r = true
-			elseif mp:mouse_in_colorpicker(10, 189, 160, 14) and cp.alpha then
+			elseif menu:mouse_in_colorpicker(10, 189, 160, 14) and cp.alpha then
 				cp.dragging_b = true
 			end
 
 			--[[
-				mp.options[v.name][v1.name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
-				mp.options[v.name][v1.name][v2.name][5][1] = v2.extra.color
-				mp.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
-				mp.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 38, y_pos + v1.y - 1}
-				mp.options[v.name][v1.name][v2.name][5][5] = false
-				mp.options[v.name][v1.name][v2.name][5][6] = v2.extra.name
+				menu.options[v.name][v1.name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
+				menu.options[v.name][v1.name][v2.name][5][1] = v2.extra.color
+				menu.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
+				menu.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 38, y_pos + v1.y - 1}
+				menu.options[v.name][v1.name][v2.name][5][5] = false
+				menu.options[v.name][v1.name][v2.name][5][6] = v2.extra.name
 			]]
-			if mp:mouse_in_colorpicker(197, 37, 75, 20) then
-				mp.copied_clr = newcolor.Color
-			elseif mp:mouse_in_colorpicker(197, 57, 75, 20) then
-				if mp.copied_clr ~= nil then
+			if menu:mouse_in_colorpicker(197, 37, 75, 20) then
+				menu.copied_clr = newcolor.Color
+			elseif menu:mouse_in_colorpicker(197, 57, 75, 20) then
+				if menu.copied_clr ~= nil then
 					local cpa = false
-					local clrtable = {mp.copied_clr.R * 255, mp.copied_clr.G * 255, mp.copied_clr.B * 255}
+					local clrtable = {menu.copied_clr.R * 255, menu.copied_clr.G * 255, menu.copied_clr.B * 255}
 					if colorpickerthatisopen[1][4] ~= nil then
 						cpa = true
 						table.insert(clrtable, colorpickerthatisopen[1][4])
@@ -2473,18 +2473,18 @@ function mp.BBMenuInit(menutable)
 				end
 			end
 
-			if mp:mouse_in_colorpicker(197, 91, 75, 40) then
-				mp.copied_clr = oldcolor.Color
+			if menu:mouse_in_colorpicker(197, 91, 75, 40) then
+				menu.copied_clr = oldcolor.Color
 			end
 		else
-			for k, v in pairs(mp.options) do
-				if mp.tabnum2str[mp.activetab] == k then
+			for k, v in pairs(menu.options) do
+				if menu.tabnum2str[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "toggle" and not dropboxopen then
-								if mp:mouse_in_menu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
+								if menu:mouse_in_menu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
 									if v2[6] then
-										if mp:getval("Settings", "Extra", "Allow Unsafe Features") and v2[1] == false then
+										if menu:getval("Settings", "Extra", "Allow Unsafe Features") and v2[1] == false then
 											v2[1] = true
 										else
 											v2[1] = false
@@ -2498,21 +2498,21 @@ function mp.BBMenuInit(menutable)
 										end
 									else
 										for i = 0, 3 do
-											v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])}, [2] = {start = 3, color = RGB(mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[3] - 40)}})
+											v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])}, [2] = {start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)}})
 										end
 									end
 									TogglePressed:Fire(k1, k2, v2)
 								end
 								if v2[5] ~= nil then
 									if v2[5][2] == "keybind" then
-										if mp:mouse_in_menu(v2[5][3][1], v2[5][3][2], 44, 16) then
-											v2[5][4][2].Color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])
+										if menu:mouse_in_menu(v2[5][3][1], v2[5][3][2], 44, 16) then
+											v2[5][4][2].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 											v2[5][5] = true
 										end
 									elseif v2[5][2] == "single colorpicker" then
-										if mp:mouse_in_menu(v2[5][3][1], v2[5][3][2], 28, 14) then
+										if menu:mouse_in_menu(v2[5][3][1], v2[5][3][2], 28, 14) then
 											v2[5][5] = true
-											mp.colorpicker_open = true
+											menu.colorpicker_open = true
 											colorpickerthatisopen = v2[5]
 											if v2[5][1][4] ~= nil then
 												set_colorpicker(true, v2[5][1], v2[5], true, v2[5][6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
@@ -2522,9 +2522,9 @@ function mp.BBMenuInit(menutable)
 										end
 									elseif v2[5][2] == "double colorpicker" then
 										for k3, v3 in pairs(v2[5][1]) do
-											if mp:mouse_in_menu(v3[3][1], v3[3][2], 28, 14) then
+											if menu:mouse_in_menu(v3[3][1], v3[3][2], 28, 14) then
 												v3[5] = true
-												mp.colorpicker_open = true
+												menu.colorpicker_open = true
 												colorpickerthatisopen = v3
 												if v3[1][4] ~= nil then
 													set_colorpicker(true, v3[1], v3, true, v3[6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
@@ -2536,10 +2536,10 @@ function mp.BBMenuInit(menutable)
 									end
 								end
 							elseif v2[2] == "slider" and not dropboxopen then
-								if mp:mouse_in_menu(v2[7][1], v2[7][2], 22, 13) then
-									if mp:mouse_in_menu(v2[7][1], v2[7][2], 11, 13) then
+								if menu:mouse_in_menu(v2[7][1], v2[7][2], 22, 13) then
+									if menu:mouse_in_menu(v2[7][1], v2[7][2], 11, 13) then
 										v2[1] -= 1
-									elseif mp:mouse_in_menu(v2[7][1] + 11, v2[7][2], 11, 13) then
+									elseif menu:mouse_in_menu(v2[7][1] + 11, v2[7][2], 11, 13) then
 										v2[1] += 1
 									end
 
@@ -2553,7 +2553,7 @@ function mp.BBMenuInit(menutable)
 										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 									end
 
-								elseif mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 28) then
+								elseif menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 28) then
 									v2[5] = true
 								end
 							elseif v2[2] == "dropbox" then
@@ -2562,17 +2562,17 @@ function mp.BBMenuInit(menutable)
 										continue
 									end
 								end
-								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
+								if menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
 									if not v2[5] then
-										set_dropboxthingy(true, v2[3][1] + mp.x + 1, v2[3][2] + mp.y + 13, v2[3][3], v2[1], v2[6])
+										set_dropboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
 										v2[5] = true
 									else
 										set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 										v2[5] = false
 									end
-								elseif mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5] then
+								elseif menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5] then
 									for i = 1, #v2[6] do
-										if mp:mouse_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 21), v2[3][3], 21) then
+										if menu:mouse_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 21), v2[3][3], 21) then
 											v2[4][1].Text = v2[6][i]
 											v2[1] = i
 											set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
@@ -2580,10 +2580,10 @@ function mp.BBMenuInit(menutable)
 										end
 									end
 
-									if v2 == mp.options["Settings"]["Configuration"]["Configs"] then
-										local textbox = mp.options["Settings"]["Configuration"]["ConfigName"]
+									if v2 == menu.options["Settings"]["Configuration"]["Configs"] then
+										local textbox = menu.options["Settings"]["Configuration"]["ConfigName"]
 										local relconfigs = GetConfigs()
-										textbox[1] = relconfigs[mp.options["Settings"]["Configuration"]["Configs"][1]]
+										textbox[1] = relconfigs[menu.options["Settings"]["Configuration"]["Configs"][1]]
 										textbox[4].Text = textbox[1]
 									end
 								end
@@ -2593,17 +2593,17 @@ function mp.BBMenuInit(menutable)
 										continue
 									end
 								end
-								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
+								if menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 36) then
 									if not v2[5] then
-										set_comboboxthingy(true, v2[3][1] + mp.x + 1, v2[3][2] + mp.y + 13, v2[3][3], v2[1], v2[6])
+										set_comboboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
 										v2[5] = true
 									else
 										set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 										v2[5] = false
 									end
-								elseif mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) and v2[5] then
+								elseif menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) and v2[5] then
 									for i = 1, #v2[1] do
-										if mp:mouse_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 22), v2[3][3], 23) then
+										if menu:mouse_in_menu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 22), v2[3][3], 23) then
 											v2[1][i][2] = not v2[1][i][2]
 											local textthing = ""
 											for k, v in pairs(v2[1]) do
@@ -2620,12 +2620,12 @@ function mp.BBMenuInit(menutable)
 												textthing = string_cut(textthing, 25)
 											end
 											v2[4][1].Text = textthing
-											set_comboboxthingy(true, v2[3][1] + mp.x + 1, v2[3][2] + mp.y + 13, v2[3][3], v2[1], v2[6])
+											set_comboboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
 										end
 									end
 								end
 							elseif v2[2] == "button" and not dropboxopen then
-								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 22) then
+								if menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 22) then
 									if not v2[1] then
 										buttonpressed(v2)
 										if k2 == "Unload Cheat" then return end
@@ -2636,31 +2636,31 @@ function mp.BBMenuInit(menutable)
 									end
 								end
 							elseif v2[2] == "textbox" and not dropboxopen then
-								if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 22) then
+								if menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 22) then
 									if not v2[5] then
 										textboxopen = true
 										textboxthatisopen = v2
 
-										v2[4].Color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])
+										v2[4].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 										v2[5] = true
 									end
 
 								end
 							elseif v2[2] == "list" then
 								--[[
-									mp.options[v.name][v1.name][v2.name] = {}
-									mp.options[v.name][v1.name][v2.name][4] = Draw:List(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
-									mp.options[v.name][v1.name][v2.name][1] = nil
-									mp.options[v.name][v1.name][v2.name][2] = v2.type
-									mp.options[v.name][v1.name][v2.name][3] = 1
-									mp.options[v.name][v1.name][v2.name][5] = {}
-									mp.options[v.name][v1.name][v2.name][6] = v2.size
-									mp.options[v.name][v1.name][v2.name][7] = v2.colums
-									mp.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
+									menu.options[v.name][v1.name][v2.name] = {}
+									menu.options[v.name][v1.name][v2.name][4] = Draw:List(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
+									menu.options[v.name][v1.name][v2.name][1] = nil
+									menu.options[v.name][v1.name][v2.name][2] = v2.type
+									menu.options[v.name][v1.name][v2.name][3] = 1
+									menu.options[v.name][v1.name][v2.name][5] = {}
+									menu.options[v.name][v1.name][v2.name][6] = v2.size
+									menu.options[v.name][v1.name][v2.name][7] = v2.colums
+									menu.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
 								]]--
 								if #v2[5] > v2[6] then
 									for i = 1, v2[6] do
-										if mp:mouse_in_menu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
+										if menu:mouse_in_menu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
 											if v2[1] == tostring(v2[5][i + v2[3] - 1][1][1]) then
 												v2[1] = nil
 											else
@@ -2670,7 +2670,7 @@ function mp.BBMenuInit(menutable)
 									end
 								else
 									for i = 1, #v2[5] do
-										if mp:mouse_in_menu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
+										if menu:mouse_in_menu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
 											if v2[1] == tostring(v2[5][i + v2[3] - 1][1][1]) then
 												v2[1] = nil
 											else
@@ -2685,12 +2685,12 @@ function mp.BBMenuInit(menutable)
 				end
 			end
 		end
-		for k, v in pairs(mp.options) do
+		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
 					if v2[2] == "toggle" then
 						if v2[6] then
-							if not mp:getval("Settings", "Extra", "Allow Unsafe Features") then
+							if not menu:getval("Settings", "Extra", "Allow Unsafe Features") then
 								v2[1] = false
 								for i = 0, 3 do
 									v2[4][i + 1].Color = math.ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
@@ -2701,20 +2701,20 @@ function mp.BBMenuInit(menutable)
 				end
 			end
 		end
-		if mp.open then
-			if mp.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
-				local clr = mp.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
-				mp.mc = {clr[1], clr[2], clr[3]}
+		if menu.open then
+			if menu.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
+				local clr = menu.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
+				menu.mc = {clr[1], clr[2], clr[3]}
 			else
-				mp.mc = {127, 72, 163}
+				menu.mc = {127, 72, 163}
 			end
-			mp:set_menu_clr(mp.mc[1], mp.mc[2], mp.mc[3])
+			menu:set_menu_clr(menu.mc[1], menu.mc[2], menu.mc[3])
 
-			local wme = mp:getval("Settings", "Menu Settings", "Watermark")
-			for k, v in pairs(mp.watermark.rect) do
+			local wme = menu:getval("Settings", "Menu Settings", "Watermark")
+			for k, v in pairs(menu.watermark.rect) do
 				v.Visible = wme
 			end
-			mp.watermark.text[1].Visible = wme
+			menu.watermark.text[1].Visible = wme
 		end
 	end
 
@@ -2722,8 +2722,8 @@ function mp.BBMenuInit(menutable)
 		cp.dragging_m = false
 		cp.dragging_r = false
 		cp.dragging_b = false
-		for k, v in pairs(mp.options) do
-			if mp.tabnum2str[mp.activetab] == k then
+		for k, v in pairs(menu.options) do
+			if menu.tabnum2str[menu.activetab] == k then
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
 						if v2[2] == "slider" and v2[5] then
@@ -2746,10 +2746,10 @@ function mp.BBMenuInit(menutable)
 	local dontdrag = false
 	local clickspot_x, clickspot_y, original_menu_x, original_menu_y = 0, 0, 0, 0
 
-	mp.connections.mwf = LOCAL_MOUSE.WheelForward:Connect(function()
-		if mp.open then
-			for k, v in pairs(mp.options) do
-				if mp.tabnum2str[mp.activetab] == k then
+	menu.connections.mwf = LOCAL_MOUSE.WheelForward:Connect(function()
+		if menu.open then
+			for k, v in pairs(menu.options) do
+				if menu.tabnum2str[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "list" then
@@ -2764,10 +2764,10 @@ function mp.BBMenuInit(menutable)
 		end
 	end)
 
-	mp.connections.mwb = LOCAL_MOUSE.WheelBackward:Connect(function()
-		if mp.open then
-			for k, v in pairs(mp.options) do
-				if mp.tabnum2str[mp.activetab] == k then
+	menu.connections.mwb = LOCAL_MOUSE.WheelBackward:Connect(function()
+		if menu.open then
+			for k, v in pairs(menu.options) do
+				if menu.tabnum2str[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "list" then
@@ -2782,33 +2782,33 @@ function mp.BBMenuInit(menutable)
 		end
 	end)
 
-	function mp:set_menu_transparency(transparency)
+	function menu:set_menu_transparency(transparency)
 		for k, v in pairs(bbmouse) do
 			v.Transparency = transparency/255
 		end
 		for k, v in pairs(bbmenu) do
 			v.Transparency = transparency/255
 		end
-		for k, v in pairs(tabz[mp.activetab]) do
+		for k, v in pairs(tabz[menu.activetab]) do
 			v.Transparency = transparency/255
 		end
 	end
 
-	function mp:set_menu_visibility(visible)
+	function menu:set_menu_visibility(visible)
 		for k, v in pairs(bbmouse) do
 			v.Visible = visible
 		end
 		for k, v in pairs(bbmenu) do
 			v.Visible = visible
 		end
-		for k, v in pairs(tabz[mp.activetab]) do
+		for k, v in pairs(tabz[menu.activetab]) do
 			v.Visible = visible
 		end
 	end
 
-	mp:set_menu_transparency(0)
-	mp:set_menu_visibility(false)
-	mp.open = false
+	menu:set_menu_transparency(0)
+	menu:set_menu_visibility(false)
+	menu.open = false
 	local function renderSteppedMenu()
 		SCREEN_SIZE = Camera.ViewportSize
 		-- i pasted the old menu working ingame shit from the old source nate pls fix ty
@@ -2816,47 +2816,47 @@ function mp.BBMenuInit(menutable)
 		-- removed it :DDD
 		-- im keepin all of our comments they're fun to look at
 		-- i wish it showed comment dates that would be cool
-		if mp.fading then
-			if mp.open then
-				local timesincefade = tick() - mp.fadestart
+		if menu.fading then
+			if menu.open then
+				local timesincefade = tick() - menu.fadestart
 				local fade_amount = 255 - math.floor((timesincefade * 10) * 255)
 				set_plusminus(0, 20, 20)
-				mp:set_menu_transparency(fade_amount)
+				menu:set_menu_transparency(fade_amount)
 				if fade_amount <= 0 then
-					mp.open = false
-					mp.fading = false
-					mp:set_menu_transparency(0)
-					mp:set_menu_visibility(false)
+					menu.open = false
+					menu.fading = false
+					menu:set_menu_transparency(0)
+					menu:set_menu_visibility(false)
 				else
-					mp:set_menu_transparency(fade_amount)
+					menu:set_menu_transparency(fade_amount)
 				end
 			else
-				mp:set_menu_visibility(true)
-				set_barguy(mp.activetab)
-				local timesincefade = tick() - mp.fadestart
+				menu:set_menu_visibility(true)
+				set_barguy(menu.activetab)
+				local timesincefade = tick() - menu.fadestart
 				local fade_amount = math.floor((timesincefade * 10) * 255)
-				mp:set_menu_transparency(fade_amount)
+				menu:set_menu_transparency(fade_amount)
 				if fade_amount >= 255 then
-					mp.open = true
-					mp.fading = false
-					mp:set_menu_transparency(255)
+					menu.open = true
+					menu.fading = false
+					menu:set_menu_transparency(255)
 				else
-					mp:set_menu_transparency(fade_amount)
+					menu:set_menu_transparency(fade_amount)
 				end
 			end
 		end
 
-		if mp.open or mp.fading then
-			mp:set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
+		if menu.open or menu.fading then
+			menu:set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
 			set_plusminus(0, 20, 20)
-			for k, v in pairs(mp.options) do
-				if mp.tabnum2str[mp.activetab] == k then
+			for k, v in pairs(menu.options) do
+				if menu.tabnum2str[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "slider" then
 								if v2[5] then
 									--ANCHOR rounding in sliders
-									local new_val = (v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - mp.x - v2[3][1])/v2[3][3])
+									local new_val = (v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - menu.x - v2[3][1])/v2[3][3])
 									v2[1] = (v2.round and math.floor(new_val) or math.floor(new_val * 100) / 100) + v2[6][1]
 									if v2[1] < v2[6][1] then
 										v2[1] = v2[6][1]
@@ -2870,14 +2870,14 @@ function mp.BBMenuInit(menutable)
 									set_plusminus(1, v2[7][1], v2[7][2])
 								else
 									if not dropboxopen then
-										if mp:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 28) then
-											if mp:mouse_in_menu(v2[7][1], v2[7][2], 22, 13) then
+										if menu:mouse_in_menu(v2[3][1], v2[3][2], v2[3][3], 28) then
+											if menu:mouse_in_menu(v2[7][1], v2[7][2], 22, 13) then
 
-												if mp:mouse_in_menu(v2[7][1], v2[7][2], 11, 13) then
+												if menu:mouse_in_menu(v2[7][1], v2[7][2], 11, 13) then
 
 													set_plusminus(2, v2[7][1], v2[7][2])
 
-												elseif mp:mouse_in_menu(v2[7][1] + 11, v2[7][2], 11, 13) then
+												elseif menu:mouse_in_menu(v2[7][1] + 11, v2[7][2], 11, 13) then
 
 													set_plusminus(3, v2[7][1], v2[7][2])
 
@@ -2908,11 +2908,11 @@ function mp.BBMenuInit(menutable)
 											
 											if v2[5][i + v2[3] - 1][i1][1] == v2[1] and i1 == 1 then
 												
-												if mp.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
-													local clr = mp.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
+												if menu.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
+													local clr = menu.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
 													v2[4].liststuff.words[i][i1].Color = RGB(clr[1], clr[2], clr[3])
 												else
-													v2[4].liststuff.words[i][i1].Color = RGB(mp.mc[1], mp.mc[2], mp.mc[3])
+													v2[4].liststuff.words[i][i1].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 												end
 											else
 												v2[4].liststuff.words[i][i1].Color = v2[5][i + v2[3] - 1][i1][2]
@@ -2936,7 +2936,7 @@ function mp.BBMenuInit(menutable)
 									for k3, v3 in pairs(v2[4].uparrow) do
 										if not v3.Visible then
 											v3.Visible = true
-											mp:set_menu_pos(mp.x, mp.y)
+											menu:set_menu_pos(menu.x, menu.y)
 										end
 									end
 								end
@@ -2950,7 +2950,7 @@ function mp.BBMenuInit(menutable)
 									for k3, v3 in pairs(v2[4].downarrow) do
 										if not v3.Visible then
 											v3.Visible = true
-											mp:set_menu_pos(mp.x, mp.y)
+											menu:set_menu_pos(menu.x, menu.y)
 										end
 									end
 								end
@@ -2960,27 +2960,27 @@ function mp.BBMenuInit(menutable)
 				end
 			end
 
-			if ((LOCAL_MOUSE.x > mp.x and LOCAL_MOUSE.x < mp.x + mp.w and LOCAL_MOUSE.y > mp.y - 32 and LOCAL_MOUSE.y < mp.y - 11) or dragging) and not dontdrag then
-				if mp.mousedown then
+			if ((LOCAL_MOUSE.x > menu.x and LOCAL_MOUSE.x < menu.x + menu.w and LOCAL_MOUSE.y > menu.y - 32 and LOCAL_MOUSE.y < menu.y - 11) or dragging) and not dontdrag then
+				if menu.mousedown then
 					if dragging == false then
 						clickspot_x = LOCAL_MOUSE.x
 						clickspot_y = LOCAL_MOUSE.y - 36
-						original_menu_X = mp.x
-						original_menu_y = mp.y
+						original_menu_X = menu.x
+						original_menu_y = menu.y
 						dragging = true
 					end
-					mp.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.x
-					mp.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.y - 36
-					mp:set_menu_pos(mp.x, mp.y)
+					menu.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.x
+					menu.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.y - 36
+					menu:set_menu_pos(menu.x, menu.y)
 				else
 					dragging = false
 				end
-			elseif mp.mousedown then
+			elseif menu.mousedown then
 				dontdrag = true
-			elseif not mp.mousedown then
+			elseif not menu.mousedown then
 				dontdrag = false
 			end
-			if mp.colorpicker_open then
+			if menu.colorpicker_open then
 				if cp.dragging_m then
 					set_dragbar_m(math.clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - 2, math.clamp(LOCAL_MOUSE.y + 36, cp.y + 25, cp.y + 180) - 2)
 
@@ -2999,12 +2999,12 @@ function mp.BBMenuInit(menutable)
 					newcolor.Transparency = (math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158
 					cp.hsv.a = math.floor(((math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158) * 255)
 				else
-					local setvisnew = mp:mouse_in_colorpicker(197, 37, 75, 40)
+					local setvisnew = menu:mouse_in_colorpicker(197, 37, 75, 40)
 					for i, v in ipairs(newcopy) do
 						v.Visible = setvisnew
 					end
 
-					local setvisold = mp:mouse_in_colorpicker(197, 91, 75, 40)
+					local setvisold = menu:mouse_in_colorpicker(197, 91, 75, 40)
 					for i, v in ipairs(oldcopy) do
 						v.Visible = setvisold
 					end
@@ -3017,10 +3017,10 @@ function mp.BBMenuInit(menutable)
 		end
 	end
 
-	mp.connections.inputstart = INPUT_SERVICE.InputBegan:Connect(function(input)
+	menu.connections.inputstart = INPUT_SERVICE.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			mp.mousedown = true
-			if mp.open and not mp.fading then
+			menu.mousedown = true
+			if menu.open and not menu.fading then
 				mousebutton1downfunc()
 			end
 		end
@@ -3028,38 +3028,38 @@ function mp.BBMenuInit(menutable)
 			if input.KeyCode.Name:match("Shift") then
 				local kcn = input.KeyCode.Name
 				local direction = kcn:split("Shift")[1]
-				mp.modkeys.shift.direction = direction:lower()
+				menu.modkeys.shift.direction = direction:lower()
 			end
 			if input.KeyCode.Name:match("Alt") then
 				local kcn = input.KeyCode.Name
 				local direction = kcn:split("Alt")[1]
-				mp.modkeys.alt.direction = direction:lower()
+				menu.modkeys.alt.direction = direction:lower()
 			end
 		end
 		inputBeganMenu(input)
 	end)
 
-	mp.connections.inputended = INPUT_SERVICE.InputEnded:Connect(function(input)
+	menu.connections.inputended = INPUT_SERVICE.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			mp.mousedown = false
-			if mp.open and not mp.fading then
+			menu.mousedown = false
+			if menu.open and not menu.fading then
 				mousebutton1upfunc()
 			end
 		end
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			if input.KeyCode.Name:match("Shift") then
-				mp.modkeys.shift.direction = nil
+				menu.modkeys.shift.direction = nil
 			end
 			if input.KeyCode.Name:match("Alt") then
-				mp.modkeys.alt.direction = nil
+				menu.modkeys.alt.direction = nil
 			end
 		end
 	end)
 
-	mp.connections.renderstepped = game.RunService.RenderStepped:Connect(function()
+	menu.connections.renderstepped = game.RunService.RenderStepped:Connect(function()
 		renderSteppedMenu()
 	end)
-	function mp:unload()
+	function menu:unload()
 		getgenv().v2 = nil
 		self.unloaded = true
 		for k, v in pairs(self.connections) do
@@ -3070,7 +3070,7 @@ function mp.BBMenuInit(menutable)
 
 		setreadonly(mt, false)
 
-		local oldmt = mp.oldmt
+		local oldmt = menu.oldmt
 
 		if not oldmt then -- remember to store any "game" metatable hooks PLEASE PLEASE because this will ensure it replaces the meta so that it UNLOADS properly
 			rconsoleerr("fatal error: no old game meta found! (UNLOAD PROBABLY WON'T WORK AS EXPECTED)")
@@ -3084,15 +3084,15 @@ function mp.BBMenuInit(menutable)
 
 		setreadonly(mt, true)
 
-		if mp.game == "pf" or mp.pfunload then
-			mp:pfunload()
+		if menu.game == "pf" or menu.pfunload then
+			menu:pfunload()
 		end
 
 		
 		CreateNotification = nil
 		Draw:UnRender()
 		allrender = nil
-		mp = nil
+		menu = nil
 		Draw = nil
 		self.unloaded = true
 	end 
@@ -3109,7 +3109,7 @@ local function GetPTlayerHumanoid(player)
 end
 
 
-if mp.game == "uni" then --SECTION UNIVERSAL
+if menu.game == "uni" then --SECTION UNIVERSAL
 	local allesp = {
 		headdotoutline = {},
 		headdot = {},
@@ -3141,18 +3141,18 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.team)
 	end
 
-	mp.crosshair = {outline = {}, inner = {}}
-	for i, v in pairs(mp.crosshair) do
+	menu.crosshair = {outline = {}, inner = {}}
+	for i, v in pairs(menu.crosshair) do
 		for i = 1, 2 do
 			Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 215}, v)
 		end
 	end
 
-	mp.fovcircle = {}
-	Draw:Circle(false, 20, 20, 10, 3, 20, {10, 10, 10, 215}, mp.fovcircle)
-	Draw:Circle(false, 20, 20, 10, 1, 20, {255, 255, 255, 255}, mp.fovcircle)
+	menu.fovcircle = {}
+	Draw:Circle(false, 20, 20, 10, 3, 20, {10, 10, 10, 215}, menu.fovcircle)
+	Draw:Circle(false, 20, 20, 10, 1, 20, {255, 255, 255, 255}, menu.fovcircle)
 
-	mp.BBMenuInit({
+	menu.BBMenuInit({
 		{
 			name = "Aimbot",
 			content = {
@@ -3529,7 +3529,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 			content = {
 				{
 					name = "Player List",
-					x = mp.columns.left,
+					x = menu.columns.left,
 					y = 66,
 					width = 466,
 					height = 328,
@@ -3560,9 +3560,9 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				},
 				{
 					name = "Menu Settings",
-					x = mp.columns.left,
+					x = menu.columns.left,
 					y = 400,
-					width = mp.columns.width,
+					width = menu.columns.width,
 					height = 62,
 					content = {
 						{
@@ -3584,9 +3584,9 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				},
 				{
 					name = "Extra",
-					x = mp.columns.left,
+					x = menu.columns.left,
 					y = 468,
-					width = mp.columns.width,
+					width = menu.columns.width,
 					height = 115,
 					content = {
 						{
@@ -3606,9 +3606,9 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				},
 				{
 					name = "Configuration",
-					x = mp.columns.right,
+					x = menu.columns.right,
 					y = 400,
-					width = mp.columns.width,
+					width = menu.columns.width,
 					height = 183,
 					content = {
 						{
@@ -3641,11 +3641,11 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	})
 
 	local selected_plyr = nil
-	local plistinfo = mp.options["Settings"]["Player List"]["Player Info"][1]
-	local plist = mp.options["Settings"]["Player List"]["Players"]
+	local plistinfo = menu.options["Settings"]["Player List"]["Player Info"][1]
+	local plist = menu.options["Settings"]["Player List"]["Players"]
 	local function updateplist()
-		if mp == nil then return end 
-		local playerlistval = mp:getval("Settings", "Player List", "Players")
+		if menu == nil then return end 
+		local playerlistval = menu:getval("Settings", "Player List", "Players")
 		local playerz = {}
 
 		for i, team in pairs(TEAMS:GetTeams()) do
@@ -3683,10 +3683,10 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 			if v == LOCAL_PLAYER then
 				plyrstatus[1] = "Local Player"
 				plyrstatus[2] = RGB(66, 135, 245)
-			elseif table.find(mp.friends, v.Name) then
+			elseif table.find(menu.friends, v.Name) then
 				plyrstatus[1] = "Friend"
 				plyrstatus[2] = RGB(0, 255, 0)
-			elseif table.find(mp.priority, v.Name) then
+			elseif table.find(menu.priority, v.Name) then
 				plyrstatus[1] = "Priority"
 				plyrstatus[2] = RGB(255, 210, 0)
 			end
@@ -3702,15 +3702,15 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				end
 				if i == #playerz then
 					selected_plyr = nil
-					mp.list.setval(plist, nil)
+					menu.list.setval(plist, nil)
 				end
 			end
 		end
-		mp:set_menu_pos(mp.x, mp.y)
+		menu:set_menu_pos(menu.x, menu.y)
 	end
 
 	local function setplistinfo(player, textonly)
-		if mp == nil then return end
+		if menu == nil then return end
 		if player ~= nil then	
 			local playerteam = "None"
 			if player.Team ~= nil then
@@ -3745,7 +3745,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 
 
-	mp.list.removeall(mp.options["Settings"]["Player List"]["Players"])
+	menu.list.removeall(menu.options["Settings"]["Player List"]["Players"])
 	updateplist()
 	setplistinfo(nil)
 
@@ -3755,42 +3755,42 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		FlyToggle = false
 	}
 
-	function mp:SetVisualsColor()
-		if mp.unloaded == true then return end
+	function menu:SetVisualsColor()
+		if menu.unloaded == true then return end
 		for i = 1, Players.MaxPlayers do
-			local hdt = mp:getval("Visuals", "Player ESP", "Head Dot", "color")[4]
-			allesp.headdot[i].Color = mp:getval("Visuals", "Player ESP", "Head Dot", "color", true)
+			local hdt = menu:getval("Visuals", "Player ESP", "Head Dot", "color")[4]
+			allesp.headdot[i].Color = menu:getval("Visuals", "Player ESP", "Head Dot", "color", true)
 			allesp.headdot[i].Transparency = hdt/255
 			allesp.headdotoutline[i].Transparency = (hdt - 40)/255
 
-			local boxt =mp:getval("Visuals", "Player ESP", "Box", "color")[4]
-			allesp.box[i].Color = mp:getval("Visuals", "Player ESP", "Box", "color", true)
+			local boxt =menu:getval("Visuals", "Player ESP", "Box", "color")[4]
+			allesp.box[i].Color = menu:getval("Visuals", "Player ESP", "Box", "color", true)
 			allesp.box[i].Transparency = boxt
 			allesp.innerbox[i].Transparency = boxt
 			allesp.outerbox[i].Transparency = boxt
 
-			allesp.hptext[i].Color = mp:getval("Visuals", "Player ESP", "Health Number", "color", true)
-			allesp.hptext[i].Transparency = mp:getval("Visuals", "Player ESP", "Health Number", "color")[4]/255
+			allesp.hptext[i].Color = menu:getval("Visuals", "Player ESP", "Health Number", "color", true)
+			allesp.hptext[i].Transparency = menu:getval("Visuals", "Player ESP", "Health Number", "color")[4]/255
 
-			allesp.name[i].Color = mp:getval("Visuals", "Player ESP", "Name", "color", true)
-			allesp.name[i].Transparency = mp:getval("Visuals", "Player ESP", "Name", "color")[4]/255
+			allesp.name[i].Color = menu:getval("Visuals", "Player ESP", "Name", "color", true)
+			allesp.name[i].Transparency = menu:getval("Visuals", "Player ESP", "Name", "color")[4]/255
 
 
-			allesp.team[i].Color = mp:getval("Visuals", "Player ESP", "Team", "color", true)
-			allesp.team[i].Transparency = mp:getval("Visuals", "Player ESP", "Team", "color")[4]/255
+			allesp.team[i].Color = menu:getval("Visuals", "Player ESP", "Team", "color", true)
+			allesp.team[i].Transparency = menu:getval("Visuals", "Player ESP", "Team", "color")[4]/255
 
-			allesp.distance[i].Color = mp:getval("Visuals", "Player ESP", "Distance", "color", true)
-			allesp.distance[i].Transparency = mp:getval("Visuals", "Player ESP", "Distance", "color")[4]/255
+			allesp.distance[i].Color = menu:getval("Visuals", "Player ESP", "Distance", "color", true)
+			allesp.distance[i].Transparency = menu:getval("Visuals", "Player ESP", "Distance", "color")[4]/255
 		end
 	end
 
-	mp.tickbase_manip_added = false
-	mp.tickbaseadd = 0
+	menu.tickbase_manip_added = false
+	menu.tickbaseadd = 0
 
 	local function SpeedHack()
-		local speed = mp:getval("Misc", "Movement", "Speed")
-		if mp:getval("Misc", "Movement", "Speed") and LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid then
-			if mp:getval("Misc", "Movement", "Speed Method") == 1 then
+		local speed = menu:getval("Misc", "Movement", "Speed")
+		if menu:getval("Misc", "Movement", "Speed") and LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid then
+			if menu:getval("Misc", "Movement", "Speed Method") == 1 then
 				local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
 				
 				if rootpart ~= nil then
@@ -3826,11 +3826,11 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	end
 
 	local function FlyHack()
-		if mp:getval("Misc", "Movement", "Fly") and LOCAL_PLAYER:FindFirstChild("Character") then
+		if menu:getval("Misc", "Movement", "Fly") and LOCAL_PLAYER:FindFirstChild("Character") then
 
 			local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
 			if rootpart == nil then return end
-			if mp:getval("Misc", "Movement", "Fly Method") == 2 then
+			if menu:getval("Misc", "Movement", "Fly Method") == 2 then
 				for lI, lV in pairs(LOCAL_PLAYER.Character:GetDescendants()) do
 					if lV:IsA("BasePart") then
 						lV.CanCollide = false
@@ -3840,7 +3840,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 			if cachedValues.FlyToggle then
 
-				local speed = mp:getval("Misc", "Movement", "Fly Speed")
+				local speed = menu:getval("Misc", "Movement", "Fly Speed")
 
 				local travel = Vector3.new()
 				local looking = workspace.CurrentCamera.CFrame.lookVector --getting camera looking vector
@@ -3873,10 +3873,10 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	end
 
 	local function Aimbot()
-		if mp:getval("Aimbot", "Aimbot", "Enabled") and INPUT_SERVICE:IsKeyDown(mp:getval("Aimbot", "Aimbot", "Enabled", "keybind")) then
+		if menu:getval("Aimbot", "Aimbot", "Enabled") and INPUT_SERVICE:IsKeyDown(menu:getval("Aimbot", "Aimbot", "Enabled", "keybind")) then
 			local organizedPlayers = {}
-			local fovType = mp:getval("Aimbot", "Aimbot", "FOV Calculation")
-			local fov = mp:getval("Aimbot", "Aimbot", "Aimbot FOV")
+			local fovType = menu:getval("Aimbot", "Aimbot", "FOV Calculation")
+			local fov = menu:getval("Aimbot", "Aimbot", "Aimbot FOV")
 			local mousePos = Vector3.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36, 0)
 			for i, v in ipairs(Players:GetPlayers()) do
 				if v == LOCAL_PLAYER then
@@ -3885,7 +3885,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 				if v.Character ~= nil and v.Character:FindFirstChild("HumanoidRootPart") then
 
-					local checks = mp:getval("Aimbot", "Aimbot", "Checks")
+					local checks = menu:getval("Aimbot", "Aimbot", "Checks")
 					local humanoid = v.Character:FindFirstChild("Humanoid")
 					if humanoid then
 						if checks[1] and humanoid.Health <= 0 then
@@ -3899,7 +3899,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					if checks[2] and v.Team and v.Team == LOCAL_PLAYER.Team then
 						continue
 					end
-					if checks[3] and LOCAL_PLAYER:DistanceFromCharacter(v.Character.HumanoidRootPart.Position)/5 > mp:getval("Aimbot", "Aimbot", "Max Distance") then
+					if checks[3] and LOCAL_PLAYER:DistanceFromCharacter(v.Character.HumanoidRootPart.Position)/5 > menu:getval("Aimbot", "Aimbot", "Max Distance") then
 						continue
 					end
 
@@ -3939,77 +3939,77 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	end
 
 	local oldslectedplyr = nil
-	mp.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
-		if input.KeyCode == mp:getval("Misc", "Exploits", "Shift Tick Base", "keybind") then
-			mp.tickbaseadd = 0
+	menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
+		if input.KeyCode == menu:getval("Misc", "Exploits", "Shift Tick Base", "keybind") then
+			menu.tickbaseadd = 0
 		end
-		if mp:getval("Misc", "Movement", "Fly") and input.KeyCode == mp:getval("Misc", "Movement", "Fly", "keybind") then
+		if menu:getval("Misc", "Movement", "Fly") and input.KeyCode == menu:getval("Misc", "Movement", "Fly", "keybind") then
 			cachedValues.FlyToggle = not cachedValues.FlyToggle
 			LOCAL_PLAYER.Character.HumanoidRootPart.Anchored = false
 		end
-		if mp:getval("Misc", "Movement", "Mouse Teleport") and input.KeyCode == mp:getval("Misc", "Movement", "Mouse Teleport", "keybind") then
+		if menu:getval("Misc", "Movement", "Mouse Teleport") and input.KeyCode == menu:getval("Misc", "Movement", "Mouse Teleport", "keybind") then
 			local targetPos = LOCAL_MOUSE.Hit.p
 			local RP = LOCAL_PLAYER.Character.HumanoidRootPart
 			RP.CFrame = CFrame.new(targetPos + Vector3.new(0,7,0))
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			if mp.open then
-				if mp.tickbase_manip_added == false and mp:getval("Misc", "Exploits", "Enable Tick Manipulation") then
+			if menu.open then
+				if menu.tickbase_manip_added == false and menu:getval("Misc", "Exploits", "Enable Tick Manipulation") then
 					shared.tick_ref = hookfunc(tick, function()
-						if mp == nil then
+						if menu == nil then
 							return shared.tick_ref() 
-						elseif mp:getval("Misc", "Exploits", "Enable Tick Manipulation") and mp:getval("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(mp:getval("Misc", "Exploits", "Shift Tick Base", "keybind")) then
-							mp.tickbaseadd += mp:getval("Misc", "Exploits", "Shifted Tick Base Add") * 0.001
-							return shared.tick_ref() + mp.tickbaseadd
+						elseif menu:getval("Misc", "Exploits", "Enable Tick Manipulation") and menu:getval("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(menu:getval("Misc", "Exploits", "Shift Tick Base", "keybind")) then
+							menu.tickbaseadd += menu:getval("Misc", "Exploits", "Shifted Tick Base Add") * 0.001
+							return shared.tick_ref() + menu.tickbaseadd
 						else
 							return shared.tick_ref() 
 						end
 					end)
-					mp.tickbase_manip_added = true
+					menu.tickbase_manip_added = true
 				end
 
-				if mp.tabnum2str[mp.activetab] == "Settings" and mp.open then
+				if menu.tabnum2str[menu.activetab] == "Settings" and menu.open then
 					game.RunService.Stepped:wait()			
 
 					updateplist()
 
 					if selected_plyr ~= nil then
-						--print(LOCAL_MOUSE.x - mp.x, LOCAL_MOUSE.y - mp.y)
-						if mp:mouse_in_menu(28, 68, 448, 238) then
-							if table.find(mp.friends, selected_plyr.Name) then
-								mp.options["Settings"]["Player List"]["Player Status"][1] = 2
-								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
-							elseif table.find(mp.priority, selected_plyr.Name) then
-								mp.options["Settings"]["Player List"]["Player Status"][1] = 3
-								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
+						--print(LOCAL_MOUSE.x - menu.x, LOCAL_MOUSE.y - menu.y)
+						if menu:mouse_in_menu(28, 68, 448, 238) then
+							if table.find(menu.friends, selected_plyr.Name) then
+								menu.options["Settings"]["Player List"]["Player Status"][1] = 2
+								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
+							elseif table.find(menu.priority, selected_plyr.Name) then
+								menu.options["Settings"]["Player List"]["Player Status"][1] = 3
+								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
 							else
-								mp.options["Settings"]["Player List"]["Player Status"][1] = 1
-								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+								menu.options["Settings"]["Player List"]["Player Status"][1] = 1
+								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
 							end
 						end
 
 						
-						for k, table_ in pairs({mp.friends, mp.priority}) do
+						for k, table_ in pairs({menu.friends, menu.priority}) do
 							for index, plyrname in pairs(table_) do
 								if selected_plyr.Name == plyrname then
 									table.remove(table_, index)
 								end
 							end
 						end
-						if mp:getval("Settings", "Player List", "Player Status") == 2 then
-							if not table.find(mp.friends, selected_plyr.Name) then
-								table.insert(mp.friends, selected_plyr.Name)
+						if menu:getval("Settings", "Player List", "Player Status") == 2 then
+							if not table.find(menu.friends, selected_plyr.Name) then
+								table.insert(menu.friends, selected_plyr.Name)
 								WriteRelations()
 							end
-						elseif mp:getval("Settings", "Player List", "Player Status") == 3 then
-							if not table.find(mp.priority, selected_plyr.Name) then
-								table.insert(mp.priority, selected_plyr.Name)
+						elseif menu:getval("Settings", "Player List", "Player Status") == 3 then
+							if not table.find(menu.priority, selected_plyr.Name) then
+								table.insert(menu.priority, selected_plyr.Name)
 								WriteRelations()
 							end
 						end
 					else
-						mp.options["Settings"]["Player List"]["Player Status"][1] = 1
-						mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+						menu.options["Settings"]["Player List"]["Player Status"][1] = 1
+						menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
 					end
 
 					updateplist()
@@ -4027,38 +4027,38 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				end
 
 				game.RunService.Stepped:wait()
-				if mp == nil then return end
-				local crosshairvis = mp:getval("Visuals", "Misc Visuals", "Custom Crosshair")
-				for k, v in pairs(mp.crosshair) do
+				if menu == nil then return end
+				local crosshairvis = menu:getval("Visuals", "Misc Visuals", "Custom Crosshair")
+				for k, v in pairs(menu.crosshair) do
 					v[1].Visible = crosshairvis
 					v[2].Visible = crosshairvis
 				end
-				if mp:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV") and mp:getval("Aimbot", "Aimbot", "Enabled") then
-					mp.fovcircle[1].Visible = true
-					mp.fovcircle[2].Visible = true
+				if menu:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV") and menu:getval("Aimbot", "Aimbot", "Enabled") then
+					menu.fovcircle[1].Visible = true
+					menu.fovcircle[2].Visible = true
 
-					mp.fovcircle[2].Color = mp:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV", "color", true)
-					local transparency = mp:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV", "color")[4]
-					mp.fovcircle[1].Transparency = (transparency - 40) /255
-					mp.fovcircle[2].Transparency = transparency/255
+					menu.fovcircle[2].Color = menu:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV", "color", true)
+					local transparency = menu:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV", "color")[4]
+					menu.fovcircle[1].Transparency = (transparency - 40) /255
+					menu.fovcircle[2].Transparency = transparency/255
 				else
-					mp.fovcircle[1].Visible = false
-					mp.fovcircle[2].Visible = false
+					menu.fovcircle[1].Visible = false
+					menu.fovcircle[2].Visible = false
 				end
-				if mp:getval("Visuals", "Misc Visuals", "Custom Crosshair") then
-					local size = mp:getval("Visuals", "Misc Visuals", "Crosshair Size")
-					local color = mp:getval("Visuals", "Misc Visuals", "Custom Crosshair", "color", true)
-					mp.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
-					mp.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
+				if menu:getval("Visuals", "Misc Visuals", "Custom Crosshair") then
+					local size = menu:getval("Visuals", "Misc Visuals", "Crosshair Size")
+					local color = menu:getval("Visuals", "Misc Visuals", "Custom Crosshair", "color", true)
+					menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
+					menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
 
-					mp.crosshair.inner[1].Color = color
-					mp.crosshair.inner[2].Color = color
+					menu.crosshair.inner[1].Color = color
+					menu.crosshair.inner[2].Color = color
 
 
-					mp.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
-					mp.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
+					menu.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
+					menu.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
 				end
-				mp:SetVisualsColor()
+				menu:SetVisualsColor()
 			end
 		end
 	end)
@@ -4068,53 +4068,53 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 	-- end
 
 	
-	mp.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
+	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
 
 		SpeedHack()
 		FlyHack()
 		Aimbot()
 
-		if mp.open then
-			if mp.tabnum2str[mp.activetab] == "Settings" then
+		if menu.open then
+			if menu.tabnum2str[menu.activetab] == "Settings" then
 				if plist[1] ~= nil then
 					setplistinfo(selected_plyr, true)
 				end
 			end
 		end
 
-		if mp:getval("Visuals", "Misc Visuals", "Custom Crosshair") then
-			local size = mp:getval("Visuals", "Misc Visuals", "Crosshair Size")
-			if mp:getval("Visuals", "Misc Visuals", "Crosshair Position") == 1 then
-				mp.crosshair.inner[1].Position = Vector2.new(SCREEN_SIZE.x/2 - size, SCREEN_SIZE.y/2)
-				mp.crosshair.inner[2].Position = Vector2.new(SCREEN_SIZE.x/2, SCREEN_SIZE.y/2 - size)
+		if menu:getval("Visuals", "Misc Visuals", "Custom Crosshair") then
+			local size = menu:getval("Visuals", "Misc Visuals", "Crosshair Size")
+			if menu:getval("Visuals", "Misc Visuals", "Crosshair Position") == 1 then
+				menu.crosshair.inner[1].Position = Vector2.new(SCREEN_SIZE.x/2 - size, SCREEN_SIZE.y/2)
+				menu.crosshair.inner[2].Position = Vector2.new(SCREEN_SIZE.x/2, SCREEN_SIZE.y/2 - size)
 
-				mp.crosshair.outline[1].Position = Vector2.new(SCREEN_SIZE.x/2 - size - 1, SCREEN_SIZE.y/2 - 1)
-				mp.crosshair.outline[2].Position = Vector2.new(SCREEN_SIZE.x/2 - 1, SCREEN_SIZE.y/2 - 1 - size)
+				menu.crosshair.outline[1].Position = Vector2.new(SCREEN_SIZE.x/2 - size - 1, SCREEN_SIZE.y/2 - 1)
+				menu.crosshair.outline[2].Position = Vector2.new(SCREEN_SIZE.x/2 - 1, SCREEN_SIZE.y/2 - 1 - size)
 			else
 				-- INPUT_SERVICE.MouseIconEnabled = false
-				mp.crosshair.inner[1].Position = Vector2.new(LOCAL_MOUSE.x - size, LOCAL_MOUSE.y + 36)
-				mp.crosshair.inner[2].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36 - size)
+				menu.crosshair.inner[1].Position = Vector2.new(LOCAL_MOUSE.x - size, LOCAL_MOUSE.y + 36)
+				menu.crosshair.inner[2].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36 - size)
 
-				mp.crosshair.outline[1].Position = Vector2.new(LOCAL_MOUSE.x - size - 1, LOCAL_MOUSE.y + 35)
-				mp.crosshair.outline[2].Position = Vector2.new(LOCAL_MOUSE.x - 1, LOCAL_MOUSE.y + 35 - size)
+				menu.crosshair.outline[1].Position = Vector2.new(LOCAL_MOUSE.x - size - 1, LOCAL_MOUSE.y + 35)
+				menu.crosshair.outline[2].Position = Vector2.new(LOCAL_MOUSE.x - 1, LOCAL_MOUSE.y + 35 - size)
 			end
 		end
 
-		if mp:getval("Visuals", "Local Visuals", "Change FOV") then
-			Camera.FieldOfView = mp:getval("Visuals", "Local Visuals", "Camera FOV")
+		if menu:getval("Visuals", "Local Visuals", "Change FOV") then
+			Camera.FieldOfView = menu:getval("Visuals", "Local Visuals", "Camera FOV")
 		end
 		
-		if mp:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV") and mp:getval("Aimbot", "Aimbot", "Enabled") then
-			mp.fovcircle[1].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
-			mp.fovcircle[2].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
+		if menu:getval("Visuals", "Misc Visuals", "Draw Aimbot FOV") and menu:getval("Aimbot", "Aimbot", "Enabled") then
+			menu.fovcircle[1].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
+			menu.fovcircle[2].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
 
-			local aimfov = mp:getval("Aimbot", "Aimbot", "Aimbot FOV")
-			if mp:getval("Aimbot", "Aimbot", "FOV Calculation") == 2 then
-				mp.fovcircle[1].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.y
-				mp.fovcircle[2].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.y
-			elseif mp.open then
-				mp.fovcircle[1].Radius = aimfov
-				mp.fovcircle[2].Radius = aimfov
+			local aimfov = menu:getval("Aimbot", "Aimbot", "Aimbot FOV")
+			if menu:getval("Aimbot", "Aimbot", "FOV Calculation") == 2 then
+				menu.fovcircle[1].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.y
+				menu.fovcircle[2].Radius = aimfov / Camera.FieldOfView * Camera.ViewportSize.y
+			elseif menu.open then
+				menu.fovcircle[1].Radius = aimfov
+				menu.fovcircle[2].Radius = aimfov
 			end
 		end
 
@@ -4135,7 +4135,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 				if v.Character ~= nil and v.Character:FindFirstChild("HumanoidRootPart") then
 
-					local checks = mp:getval("Visuals", "ESP Settings", "Checks")
+					local checks = menu:getval("Visuals", "ESP Settings", "Checks")
 					local humanoid = v.Character:FindFirstChild("Humanoid")
 					if humanoid then
 						if checks[1] and humanoid.Health <= 0 then
@@ -4147,7 +4147,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							continue
 						end
 					end
-					if checks[3] and LOCAL_PLAYER:DistanceFromCharacter(v.Character.HumanoidRootPart.Position)/5 > mp:getval("Visuals", "ESP Settings", "Max Distance") then
+					if checks[3] and LOCAL_PLAYER:DistanceFromCharacter(v.Character.HumanoidRootPart.Position)/5 > menu:getval("Visuals", "ESP Settings", "Max Distance") then
 						continue
 					end
 
@@ -4156,7 +4156,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 				end
 			end
 
-			if mp:getval("Visuals", "ESP Settings", "ESP Sorting") == 2 then
+			if menu:getval("Visuals", "ESP Settings", "ESP Sorting") == 2 then
 				table.sort(organizedPlayers, function(a, b)
 					return LOCAL_PLAYER:DistanceFromCharacter(a.Character.HumanoidRootPart.Position) > LOCAL_PLAYER:DistanceFromCharacter(b.Character.HumanoidRootPart.Position)
 				end)
@@ -4182,7 +4182,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					local boxtop = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - sizeX * 0.5), math.floor(math.min(top.y, bottom.y)))
 					local boxsize = {w = sizeX, h =  sizeY}
 
-					if mp:getval("Visuals", "Player ESP", "Head Dot") then
+					if menu:getval("Visuals", "Player ESP", "Head Dot") then
 						local head = v.Character:FindFirstChild("Head")
 						if head then
 							local headpos = head.Position
@@ -4198,7 +4198,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							allesp.headdotoutline[i].Radius = difference * 2
 						end
 					end
-					if mp:getval("Visuals", "Player ESP", "Box") then
+					if menu:getval("Visuals", "Player ESP", "Box") then
 						allesp.outerbox[i].Position = Vector2.new(boxtop.x - 1, boxtop.y - 1)
 						allesp.outerbox[i].Size = Vector2.new(boxsize.w + 2, boxsize.h + 2)
 						allesp.outerbox[i].Visible = true
@@ -4214,7 +4214,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 					if humanoid then
 						local health = math.ceil(humanoid.Health)
 						local maxhealth = humanoid.MaxHealth
-						if mp:getval("Visuals", "Player ESP", "Health Bar") then
+						if menu:getval("Visuals", "Player ESP", "Health Bar") then
 							allesp.healthouter[i].Position = Vector2.new(boxtop.x - 6, boxtop.y - 1)
 							allesp.healthouter[i].Size = Vector2.new(4, boxsize.h + 2)
 							allesp.healthouter[i].Visible = true
@@ -4226,25 +4226,25 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 							allesp.healthinner[i].Size = Vector2.new(2, ySizeBar)
 							allesp.healthinner[i].Visible = true
 							allesp.healthinner[i].Color = math.ColorRange(health, {
-								[1] = {start = 0, color = mp:getval("Visuals", "Player ESP", "Health Bar", "color1", true)},
-								[2] = {start = 100, color = mp:getval("Visuals", "Player ESP", "Health Bar", "color2", true)}
+								[1] = {start = 0, color = menu:getval("Visuals", "Player ESP", "Health Bar", "color1", true)},
+								[2] = {start = 100, color = menu:getval("Visuals", "Player ESP", "Health Bar", "color2", true)}
 							})
 
-							if mp:getval("Visuals", "Player ESP", "Health Number") then
+							if menu:getval("Visuals", "Player ESP", "Health Number") then
 								allesp.hptext[i].Text = tostring(health)
 								local textsize = allesp.hptext[i].TextBounds
 								allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + math.clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
 								allesp.hptext[i].Visible = true
 							end
 
-						elseif mp:getval("Visuals", "Player ESP", "Health Number") then
+						elseif menu:getval("Visuals", "Player ESP", "Health Number") then
 							allesp.hptext[i].Text = tostring(health)
 							local textsize = allesp.hptext[i].TextBounds
 							allesp.hptext[i].Position = Vector2.new(boxtop.x - 2 - textsize.x, boxtop.y - 4)
 							allesp.hptext[i].Visible = true
 						end
 					end
-					if mp:getval("Visuals", "Player ESP", "Name") then
+					if menu:getval("Visuals", "Player ESP", "Name") then
 						local name_pos = Vector2.new(math.floor(boxtop.x + boxsize.w*0.5), math.floor(boxtop.y - 15))
 						allesp.name[i].Text = v.Name
 						allesp.name[i].Position = name_pos
@@ -4252,13 +4252,13 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 
 					end
 					local y_spot = 0
-					if mp:getval("Visuals", "Player ESP", "Team") then
+					if menu:getval("Visuals", "Player ESP", "Team") then
 						if v.Team == nil then
 							allesp.team[i].Text = "None"
 						else
 							allesp.team[i].Text = v.Team.Name
 						end
-						if mp:getval("Visuals", "Player ESP", "Team Color Based") then
+						if menu:getval("Visuals", "Player ESP", "Team Color Based") then
 							if v.Team == nil then
 								allesp.team[i].Color = RGB(255, 255, 255)
 							else
@@ -4270,7 +4270,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 						allesp.team[i].Visible = true
 						y_spot += 14
 					end
-					if mp:getval("Visuals", "Player ESP", "Distance") then
+					if menu:getval("Visuals", "Player ESP", "Distance") then
 						local dist_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
 						allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(rootpart) / 5)).. "m"
 						allesp.distance[i].Position = dist_pos
@@ -4281,7 +4281,7 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		end)
 	end)
 
-	mp.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
+	menu.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 		updateplist()
 		if plist[1] ~= nil then
 			setplistinfo(selected_plyr)
@@ -4290,11 +4290,11 @@ if mp.game == "uni" then --SECTION UNIVERSAL
 		end
 	end)
 	 
-	mp.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
+	menu.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
 		updateplist()
 	end)	
 
-elseif mp.game == "pf" then --!SECTION
+elseif menu.game == "pf" then --!SECTION
 	local sphereHitbox = Instance.new("Part", workspace)
 	local diameter
 	do
@@ -4318,7 +4318,7 @@ elseif mp.game == "pf" then --!SECTION
 		freeze = false
 	}
 
-	mp.activenades = {}
+	menu.activenades = {}
 
 	--SECTION PF BEGIN
 	local allesp = {
@@ -4466,7 +4466,7 @@ elseif mp.game == "pf" then --!SECTION
 				client.deploy = v
 				local olddeploy = v.deploy
 				v.deploy = function(...)
-					if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
+					if menu:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
 						CreateThread(function()
 							repeat wait() until client.char.alive
 							client.loadedguns = getupvalue(client.char.unloadguns, 2)
@@ -4480,7 +4480,7 @@ elseif mp.game == "pf" then --!SECTION
 							for k,v in next, getupvalues(gun.step) do
 								if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 									setupvalue(client.loadedguns[id].step, k, function(...)
-										return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+										return menu:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 									end)
 								end
 							end
@@ -4503,7 +4503,7 @@ elseif mp.game == "pf" then --!SECTION
 				local oldtask = rawget(v, "task")
 				rawset(v, "task", function(...) 
 					oldtask(...)
-					local newCF = (ragebot.silentVector and mp:getval("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE") and CFrame.lookAt(ragebot.firepos + (ragebot.firepos - client.cam.basecframe.p), ragebot.targetpart.Position) or nil
+					local newCF = (ragebot.silentVector and menu:getval("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE") and CFrame.lookAt(ragebot.firepos + (ragebot.firepos - client.cam.basecframe.p), ragebot.targetpart.Position) or nil
 					client.cam.shakecframe = newCF and newCF or client.cam.cframe
 					return
 				end)
@@ -4517,7 +4517,7 @@ elseif mp.game == "pf" then --!SECTION
 
 	--client.net:send("chatted", string.char(1))
 
-	mp.pfunload = function(self)
+	menu.pfunload = function(self)
 		for k,v in next, Players:GetPlayers() do
 			local bodyparts = client.replication.getbodyparts(v)
 			if bodyparts then
@@ -4934,15 +4934,15 @@ elseif mp.game == "pf" then --!SECTION
 			local shootgun = client.logic.currentgun.shoot
 			if not shooties[client.logic.currentgun.shoot] then
 				client.logic.currentgun.shoot = function(...)
-					if mp and ragebot and mp.getval then
-						if mp.open and not (ragebot.target and mp:getval("Rage", "Aimbot", "Auto Shoot")) then return end
+					if menu and ragebot and menu.getval then
+						if menu.open and not (ragebot.target and menu:getval("Rage", "Aimbot", "Auto Shoot")) then return end
 					end
 					shootgun(...)
 				end
 			end
 			shooties[client.logic.currentgun.shoot] = true
 		end
-		if mp.open then
+		if menu.open then
 			if client.deploy.isdeployed() then
 				INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
 			else
@@ -5008,17 +5008,17 @@ elseif mp.game == "pf" then --!SECTION
 				local ivTransparency
 	
 				if Player.Team ~= Players.LocalPlayer.Team then
-					enabled = mp:getval("ESP", "Enemy ESP", "Chams")
-					col = mp:getval("ESP", "Enemy ESP", "Chams", "color2", true)
-					vTransparency = 1 - mp:getval("ESP", "Enemy ESP", "Chams", "color2")[4]/255
-					xqz = mp:getval("ESP", "Enemy ESP", "Chams", "color1", true)
-					ivTransparency = 1 - mp:getval("ESP", "Enemy ESP", "Chams", "color1")[4]/255
+					enabled = menu:getval("ESP", "Enemy ESP", "Chams")
+					col = menu:getval("ESP", "Enemy ESP", "Chams", "color2", true)
+					vTransparency = 1 - menu:getval("ESP", "Enemy ESP", "Chams", "color2")[4]/255
+					xqz = menu:getval("ESP", "Enemy ESP", "Chams", "color1", true)
+					ivTransparency = 1 - menu:getval("ESP", "Enemy ESP", "Chams", "color1")[4]/255
 				else
-					enabled = mp:getval("ESP", "Team ESP", "Chams")
-					col = mp:getval("ESP", "Team ESP", "Chams", "color2", true)
-					vTransparency = 1 - mp:getval("ESP", "Team ESP", "Chams", "color2")[4]/255
-					xqz = mp:getval("ESP", "Team ESP", "Chams", "color1", true)
-					ivTransparency = 1 - mp:getval("ESP", "Team ESP", "Chams", "color1")[4]/255
+					enabled = menu:getval("ESP", "Team ESP", "Chams")
+					col = menu:getval("ESP", "Team ESP", "Chams", "color2", true)
+					vTransparency = 1 - menu:getval("ESP", "Team ESP", "Chams", "color2")[4]/255
+					xqz = menu:getval("ESP", "Team ESP", "Chams", "color1", true)
+					ivTransparency = 1 - menu:getval("ESP", "Team ESP", "Chams", "color1")[4]/255
 				end
 	
 	
@@ -5070,14 +5070,14 @@ elseif mp.game == "pf" then --!SECTION
 						else
 							for i = 0, 1 do
 								local adorn = i == 0 and Part.c88 or Part.c99
-								if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(mp.priority, Player.Name) then
-									xqz = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
+								if menu:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
+									xqz = menu:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
 									col = bColor:Mult(xqz, 0.6)
-								elseif mp:getval("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(mp.friends, Player.Name) then
-									xqz = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
+								elseif menu:getval("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
+									xqz = menu:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
 									col = bColor:Mult(xqz, 0.6)
-								elseif mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
-									xqz = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+								elseif menu:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
+									xqz = menu:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
 									col = bColor:Mult(xqz, 0.6)
 								end
 								adorn.Color3 = i == 0 and col or xqz
@@ -5095,17 +5095,17 @@ elseif mp.game == "pf" then --!SECTION
 	local send = client.net.send
 	
 	CreateThread(function()
-		repeat wait() until mp.fading -- this is fucking bad
+		repeat wait() until menu.fading -- this is fucking bad
 		while true do
-			if not mp then return end
-			local s = mp:getval("Misc", "Extra", "Chat Spam Delay")
+			if not menu then return end
+			local s = menu:getval("Misc", "Extra", "Chat Spam Delay")
 			local tik = math.floor(tick())
 			if math.floor(tick()) % s == 0 and chatspams.t ~= tik then
 				chatspams.t = tik
-				local cs = mp:getval("Misc", "Extra", "Chat Spam")
+				local cs = menu:getval("Misc", "Extra", "Chat Spam")
 				if cs ~= 1 then
 					local curchoice = chatspams(cs, true)
-					curchoice = mp:getval("Misc", "Extra", "Chat Spam Repeat") and string.rep(curchoice, 100) or curchoice
+					curchoice = menu:getval("Misc", "Extra", "Chat Spam Repeat") and string.rep(curchoice, 100) or curchoice
 					send(nil, "chatted", curchoice)
 				end
 			end
@@ -5125,10 +5125,10 @@ elseif mp.game == "pf" then --!SECTION
 	
 
 		mt.__newindex = newcclosure(function(self, id, val)
-			if client.char.alive and mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
+			if client.char.alive and menu:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
 				if self == workspace.Camera then
 					if id == "CFrame" then
-						local dist = mp:getval("Visuals", "Local Visuals", "Third Person Distance") / 10
+						local dist = menu:getval("Visuals", "Local Visuals", "Third Person Distance") / 10
 						local params = RaycastParams.new()
 						params.FilterType = Enum.RaycastFilterType.Blacklist
 						params.FilterDescendantsInstances = {Camera, workspace.Ignore, workspace.Players}
@@ -5144,7 +5144,7 @@ elseif mp.game == "pf" then --!SECTION
 			return oldNewIndex(self, id, val)
 		end)
 
-		mp.oldmt = {
+		menu.oldmt = {
 			__newindex = oldNewIndex,
 			__index = oldIndex
 		}
@@ -5305,7 +5305,7 @@ elseif mp.game == "pf" then --!SECTION
 				local targetParts
 				if extendPen then  
 					sphereHitbox.Position = targetPos
-					diameter = mp:getval("Rage", "Hack vs. Hack", "Extra Penetration")
+					diameter = menu:getval("Rage", "Hack vs. Hack", "Extra Penetration")
 					local distanceTarget = (targetPos - client.cam.cframe.p).Magnitude * 2 - 5
 					diameter = math.min(distanceTarget, diameter)
 					sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
@@ -5388,7 +5388,7 @@ elseif mp.game == "pf" then --!SECTION
 			if not part then 
 				ragebot.silentVector = nil
 				ragebot.firepos = nil
-				if ragebot.shooting and mp:getval("Rage", "Aimbot", "Auto Shoot") then
+				if ragebot.shooting and menu:getval("Rage", "Aimbot", "Auto Shoot") then
 					client.logic.currentgun:shoot(false)
 				end
 				ragebot.target = nil
@@ -5398,7 +5398,7 @@ elseif mp.game == "pf" then --!SECTION
 			
 			local target_pos = part.Position
 			local dir = camera:GetTrajectory(part.Position, origin) - origin
-			if not mp:getval("Rage", "Aimbot", "Silent Aim") then
+			if not menu:getval("Rage", "Aimbot", "Silent Aim") then
 				camera:LookAt(dir + origin)
 			end
 			ragebot.silentVector = dir.unit
@@ -5406,7 +5406,7 @@ elseif mp.game == "pf" then --!SECTION
 			ragebot.targetpart = part
 			ragebot.firepos = origin
 			ragebot.shooting = true
-			if mp:getval("Rage", "Aimbot", "Auto Shoot") then
+			if menu:getval("Rage", "Aimbot", "Auto Shoot") then
 				client.logic.currentgun:shoot(true)
 			end
 		end
@@ -5427,15 +5427,15 @@ elseif mp.game == "pf" then --!SECTION
 		
 			local players = players or Players:GetPlayers()
 		
-			local autowall = mp:getval("Rage", "Aimbot", "Auto Wall")
-			local aw_resolve = mp:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
-			local resolvertype = mp:getval("Rage", "Hack vs. Hack", "Resolver Type")
+			local autowall = menu:getval("Rage", "Aimbot", "Auto Wall")
+			local aw_resolve = menu:getval("Rage", "Hack vs. Hack", "Autowall Resolver")
+			local resolvertype = menu:getval("Rage", "Hack vs. Hack", "Resolver Type")
 			local barrel = --[[keybindtoggles.crimwalk and client.lastrepupdate or]] client.cam.cframe.p
 			local firepos
 
 			for i, player in next, players do
 				local usedhitscan = hitscan -- should probably do this a different way
-				if table.find(mp.friends, player.Name) then continue end
+				if table.find(menu.friends, player.Name) then continue end
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
@@ -5454,18 +5454,18 @@ elseif mp.game == "pf" then --!SECTION
 										cpart = bone
 										theplayer = player
 										firepos = barrel
-										if mp.priority[player.Name] then break end
+										if menu.priority[player.Name] then break end
 									else
 										continue
 									end
 								elseif autowall then
 									debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
 									local directionVector = camera:GetTrajectory(bone.Position, barrel)
-									if directionVector and ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, mp:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
+									if directionVector and ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:getval("Rage", "Hack vs. Hack", "Extend Penetration")) then
 										cpart = bone
 										theplayer = player
 										firepos = barrel
-										if mp.priority[player.Name] then break end
+										if menu.priority[player.Name] then break end
 									elseif aw_resolve then
 										if resolvertype == 1 then -- cubic hitscan
 											debug.profilebegin("BB Ragebot Cubic Resolver")
@@ -5476,7 +5476,7 @@ elseif mp.game == "pf" then --!SECTION
 												cpart = bone
 												theplayer = player
 												firepos = resolvedPosition
-												if mp.priority[player.Name] then break end
+												if menu.priority[player.Name] then break end
 											end
 										elseif resolvertype == 2 then -- axes
 											debug.profilebegin("BB Ragebot Axis Shifting Resolver")
@@ -5487,7 +5487,7 @@ elseif mp.game == "pf" then --!SECTION
 												cpart = bone
 												theplayer = player
 												firepos = resolvedPosition
-												if mp.priority[player.Name] then break end
+												if menu.priority[player.Name] then break end
 											end
 										elseif resolvertype == 3 then -- axes fast
 											debug.profilebegin("BB Ragebot Axis Shifting Fast Resolver")
@@ -5498,7 +5498,7 @@ elseif mp.game == "pf" then --!SECTION
 												cpart = bone
 												theplayer = player
 												firepos = resolvedPosition
-												if mp.priority[player.Name] then break end
+												if menu.priority[player.Name] then break end
 											end
 										elseif resolvertype == 4 then -- random 
 											debug.profilebegin("BB Ragebot Random Resolver")
@@ -5509,7 +5509,7 @@ elseif mp.game == "pf" then --!SECTION
 												cpart = bone
 												theplayer = player
 												firepos = resolvedPosition
-												if mp.priority[player.Name] then break end
+												if menu.priority[player.Name] then break end
 											end
 										elseif resolvertype == 5 then -- teleport
 											--[[local resolvedPosition, steps = ragebot:TP_UpHitscan(barrel, bone.Position, 10)
@@ -5520,7 +5520,7 @@ elseif mp.game == "pf" then --!SECTION
 												theplayer = player
 												firepos = resolvedPosition
 												client.tpupsteps = steps
-												if mp.priority[player.Name] then break end	
+												if menu.priority[player.Name] then break end	
 											end]]
 											debug.profilebegin("BB Ragebot Teleport Resolver")
 											local up = barrel + Vector3.new(0, 18, 0)
@@ -5532,7 +5532,7 @@ elseif mp.game == "pf" then --!SECTION
 												cpart = bone
 												theplayer = player
 												firepos = up
-												if mp.priority[player.Name] then break end
+												if menu.priority[player.Name] then break end
 											else
 												ragebot.needsTP = false	
 											end
@@ -5591,7 +5591,7 @@ elseif mp.game == "pf" then --!SECTION
 													theplayer = player
 													ragebot.intersection = axesintersection
 													firepos = resolvedPosition
-													if mp.priority[player.Name] then break end
+													if menu.priority[player.Name] then break end
 												else
 													--warn("no axes")
 													-- --local _, intersection = workspace:FindPartOnRayWithWhitelist(Ray.new(args[1].firepos, (part.Position - args[1].firepos) * 3000), {sphereHitbox})
@@ -5670,7 +5670,7 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 		
-			--[[if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and mp:getval("Misc", "Exploits", "Disable Crimwalk on Shot") then
+			--[[if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and menu:getval("Misc", "Exploits", "Disable Crimwalk on Shot") then
 				keybindtoggles.crimwalk = false
 			end]]
 
@@ -5684,7 +5684,7 @@ elseif mp.game == "pf" then --!SECTION
 			local results = {}
 	
 			for i, ply in ipairs(Players:GetPlayers()) do
-				if table.find(mp.friends, ply.Name) then continue end
+				if table.find(menu.friends, ply.Name) then continue end
 	
 				if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
 					local parts = client.replication.getbodyparts(ply)
@@ -5714,8 +5714,8 @@ elseif mp.game == "pf" then --!SECTION
 			if not client.deploy.isdeployed() then return end
 			if not LOCAL_PLAYER.Character or not LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart") then return end
 
-			if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
-				local knifetype = mp:getval("Rage", "Extra", "Knife Bot Type")
+			if menu:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
+				local knifetype = menu:getval("Rage", "Extra", "Knife Bot Type")
 				if knifetype == 2 then
 					ragebot:KnifeAura()
 				elseif knifetype == 3 then
@@ -5951,13 +5951,13 @@ elseif mp.game == "pf" then --!SECTION
 		local fakelagpos, fakelagtime
 		function ragebot:MainLoop() -- lfg
 			ragebot.silentVector = nil
-			local hitscanpreference = misc:GetParts(mp:getval("Rage", "Aimbot", "Hitscan Points"))
-			local prioritizedpart = mp:getval("Rage", "Aimbot", "Hitscan Priority")
+			local hitscanpreference = misc:GetParts(menu:getval("Rage", "Aimbot", "Hitscan Points"))
+			local prioritizedpart = menu:getval("Rage", "Aimbot", "Hitscan Priority")
 
 			ragebot:Stance()
 			--ANCHOR FUCK YOU
-			if mp:getval("Rage", "Extra", "Fake Lag") and not mp:getval("Rage", "Extra", "Manual Choke") then
-				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > mp:getval("Rage", "Extra", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.alive then
+			if menu:getval("Rage", "Extra", "Fake Lag") and not menu:getval("Rage", "Extra", "Manual Choke") then
+				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > menu:getval("Rage", "Extra", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.alive then
 					fakelagtime = tick()
 					fakelagpos = client.cam.cframe.p
 					NETWORK:SetOutgoingKBPSLimit(0)
@@ -5965,10 +5965,10 @@ elseif mp.game == "pf" then --!SECTION
 						--CreateNotification("Choking")
 					end
 				else
-					NETWORK:SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
+					NETWORK:SetOutgoingKBPSLimit(menu:getval("Rage", "Extra", "Fake Lag Amount"))
 				end
 			end
-			if client.char.alive and mp:getval("Rage", "Aimbot", "Enabled") then
+			if client.char.alive and menu:getval("Rage", "Aimbot", "Enabled") then
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					
 					local playerlist = Players:GetPlayers()
@@ -5976,7 +5976,7 @@ elseif mp.game == "pf" then --!SECTION
 					--[[CreateThread(function()
 						if not client then return end
 						local priority_list = {}
-						for k, PlayerName in pairs(mp.priority) do
+						for k, PlayerName in pairs(menu.priority) do
 							if Players:FindFirstChild(PlayerName) then
 								table.insert(priority_list, game.Players[PlayerName]) 
 							end
@@ -5989,13 +5989,13 @@ elseif mp.game == "pf" then --!SECTION
 					end)]]
 					if not client then return end
 					local priority_list = {}
-					for k, PlayerName in pairs(mp.priority) do
+					for k, PlayerName in pairs(menu.priority) do
 						if Players:FindFirstChild(PlayerName) then
 							table.insert(priority_list, game.Players[PlayerName]) 
 						end
 					end
 					local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
-					if not targetPart and not mp:getval("Rage", "Aimbot", "Target Only Priority") then 
+					if not targetPart and not menu:getval("Rage", "Aimbot", "Target Only Priority") then 
 						targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 					end
 					ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
@@ -6010,16 +6010,16 @@ elseif mp.game == "pf" then --!SECTION
 		ragebot.stancetick = tick()
 		function ragebot:Stance()
 			if LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid") then
-				if mp:getval("Rage", "Anti Aim", "Hide in Floor") and mp:getval("Rage", "Anti Aim", "Enabled") and not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+				if menu:getval("Rage", "Anti Aim", "Hide in Floor") and menu:getval("Rage", "Anti Aim", "Enabled") and not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
 					LOCAL_PLAYER.Character.Humanoid.HipHeight = -1.9
 				else
 					LOCAL_PLAYER.Character.Humanoid.HipHeight = 0
 				end
 			end
-			if mp:getval("Rage", "Anti Aim", "Enabled") then
+			if menu:getval("Rage", "Anti Aim", "Enabled") then
 				if (tick() - ragebot.stancetick) >= 0.5 then
 					ragebot.stancetick = tick()
-					local stanceId = mp:getval("Rage", "Anti Aim", "Force Stance")
+					local stanceId = menu:getval("Rage", "Anti Aim", "Force Stance")
 					if stanceId ~= 1 then
 						newStance = --ternary sex
 							stanceId == 2 and "stand"
@@ -6028,11 +6028,11 @@ elseif mp.game == "pf" then --!SECTION
 						ragebot.stance = newStance
 						send(client.net, "stance", newStance)
 					end
-					if mp:getval("Rage", "Anti Aim", "Lower Arms") then
+					if menu:getval("Rage", "Anti Aim", "Lower Arms") then
 						ragebot.sprint = true
 						send(nil, "sprint", true)
 					end
-					if mp:getval("Rage", "Anti Aim", "Tilt Neck") then
+					if menu:getval("Rage", "Anti Aim", "Tilt Neck") then
 						ragebot.tilt = true
 						send(nil, "aim", true)
 					end
@@ -6049,25 +6049,25 @@ elseif mp.game == "pf" then --!SECTION
 		--anti afk
 		
 		local VirtualUser = game:GetService("VirtualUser")
-		mp.connections.local_player_id_connect = LOCAL_PLAYER.Idled:Connect(function()
+		menu.connections.local_player_id_connect = LOCAL_PLAYER.Idled:Connect(function()
 			VirtualUser:CaptureController()
 			VirtualUser:ClickButton2(Vector2.new())
 		end)
 		local oldmag = client.cam.setmagnification
 		--[[client.cam.setmagnification = function(self, v)
-			if mp:getval("Visuals", "Camera Visuals", "Disable ADS FOV") and client.char.alive then return end
+			if menu:getval("Visuals", "Camera Visuals", "Disable ADS FOV") and client.char.alive then return end
 			return oldmag(self, v)
 		end]]
 		local oldmenufov = client.cam.changemenufov
 		client.cam.changemenufov = function(...)
-			if mp.open then return end
+			if menu.open then return end
 			oldmenufov(...)
 		end
 	
 		local shake = client.cam.shake
 		client.cam.shake = function(self, magnitude)
-			if mp:getval("Visuals", "Camera Visuals", "Reduce Camera Recoil") then
-				local scale = 1 - mp:getval("Visuals", "Camera Visuals", "Camera Recoil Reduction") * 0.01
+			if menu:getval("Visuals", "Camera Visuals", "Reduce Camera Recoil") then
+				local scale = 1 - menu:getval("Visuals", "Camera Visuals", "Camera Recoil Reduction") * 0.01
 				magnitude *= scale
 			end
 			return shake(client.cam, magnitude)
@@ -6075,7 +6075,7 @@ elseif mp.game == "pf" then --!SECTION
 	
 		local suppress = client.cam.suppress
 		client.cam.suppress = function(...)
-			if mp:getval("Visuals", "Camera Visuals", "No Visual Suppression") then return end
+			if menu:getval("Visuals", "Camera Visuals", "No Visual Suppression") then return end
 			return suppress(...)
 		end
 	
@@ -6100,27 +6100,27 @@ elseif mp.game == "pf" then --!SECTION
 			local found13 = table.find(curconstants, "Msg")
             if found then
 				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
-					if mp:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
+					if menu:getval("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
 						local frames = gdata.frames
 						local start = gdata.time
 
 						local lastframe = frames[#frames]
 						
 						
-						--local color = thrower.Team == LOCAL_PLAYER.Team and RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color2"))) or RGB(unpack(mp:getval("ESP", "Dropped ESP", "Display Nade Paths", "color1")))
+						--local color = thrower.Team == LOCAL_PLAYER.Team and RGB(unpack(menu:getval("ESP", "Dropped ESP", "Display Nade Paths", "color2"))) or RGB(unpack(menu:getval("ESP", "Dropped ESP", "Display Nade Paths", "color1")))
 
 						local curtick = tick()
 						local dst = gdata.time - curtick
 						local realtime = curtick + dst * (gdata.time + gdata.blowuptime - curtick) / (gdata.blowuptime + dst)
 						local err = realtime - curtick
 
-						--local grenadeid = #mp.activenades + 1
+						--local grenadeid = #menu.activenades + 1
 
 
 						if thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
 							local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
 							if curtick < btick then
-								table.insert(mp.activenades, {
+								table.insert(menu.activenades, {
 									thrower = thrower.Name,
 									blowupat = lastframe.p0,
 									blowuptick = btick, -- might need to be tested more
@@ -6148,7 +6148,7 @@ elseif mp.game == "pf" then --!SECTION
 					if player.Team ~= LOCAL_PLAYER.Team then
 						for k,v in next, parts do
 							if v:IsA("Part") then
-								local formattedval = (mp:getval("Legit", "Aim Assist", "Enlarge Enemy Hitboxes") / 95) + 1
+								local formattedval = (menu:getval("Legit", "Aim Assist", "Enlarge Enemy Hitboxes") / 95) + 1
 								v.Size *= v.Name == "Head" and Vector3.new(formattedval, v.Size.y * (1 + formattedval / 100), formattedval) or formattedval -- hitbox expander
 							end
 						end
@@ -6162,7 +6162,7 @@ elseif mp.game == "pf" then --!SECTION
 					--[[for k,v in next, getupvalues(loadedknife.step) do
 						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 							setupvalue(loadedknife.step, k, function(...)
-								return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+								return menu:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 							end)
 						end
 					end]]
@@ -6172,19 +6172,19 @@ elseif mp.game == "pf" then --!SECTION
 			if found5 then
 				clienteventfuncs[hash] = function(name, countdown, endtick, reqs)
 					func(name, countdown, endtick, reqs)
-					local allowautovote = mp:getval("Misc", "Extra", "Auto Vote")
-					local friends = mp:getval("Misc", "Extra", "Vote Friends")
-					local priority = mp:getval("Misc", "Extra", "Vote Priority")
-					local default = mp:getval("Misc", "Extra", "Default Vote")
+					local allowautovote = menu:getval("Misc", "Extra", "Auto Vote")
+					local friends = menu:getval("Misc", "Extra", "Vote Friends")
+					local priority = menu:getval("Misc", "Extra", "Vote Priority")
+					local default = menu:getval("Misc", "Extra", "Default Vote")
 					if allowautovote then
 						if name == LOCAL_PLAYER.Name then
 							client.hud:vote("no")
 						else
-							if table.find(mp.friends, name) and friends ~= 1 then
+							if table.find(menu.friends, name) and friends ~= 1 then
 								local choice = friends == 2 and "yes" or "no"
 								client.hud:vote(choice)
 							end
-							if table.find(mp.priority, name) and priority ~= 1 then
+							if table.find(menu.priority, name) and priority ~= 1 then
 								local choice = priority == 2 and "yes" or "no"
 								client.hud:vote(choice)
 							end
@@ -6198,7 +6198,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if found6 then
 				clienteventfuncs[hash] = function(killer, victim, dist, weapon, head)
-					--local message = mp:getval("Misc", "Extra", "Kill Say Message")
+					--local message = menu:getval("Misc", "Extra", "Kill Say Message")
 					if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER then
 						--[[if client.instancetype.IsBanland() then
 							CreateThread(function()
@@ -6225,11 +6225,11 @@ elseif mp.game == "pf" then --!SECTION
 							end)
 						end]]
 						
-						--[[if mp:getval("Misc", "Extra", "Kill Say") then
+						--[[if menu:getval("Misc", "Extra", "Kill Say") then
 							local chosenmsg = killsaymessages[math.random(1, #killsaymessages)]
 							send(nil, "chatted", string.format(chosenmsg, victim.Name:lower()))
 						end]]
-						if mp:getval("Misc", "Extra", "Kill Sound") then
+						if menu:getval("Misc", "Extra", "Kill Sound") then
 							-- 1455817260
 							--client.sound.PlaySoundId("rbxassetid://1455817260", 1.0, 1.0, workspace, nil, 0, 0.05) -- this is the quake hitsound
 							client.sound.PlaySoundId("rbxassetid://6229978482", 5.0, 1.0, workspace, nil, 0, 0.03)
@@ -6248,8 +6248,8 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if found7 then
 				clienteventfuncs[hash] = function(player, newstance) -- force 3p stances hook
-					local ting = mp:getval("Rage", "Hack vs. Hack", "Force Player Stances")
-					local choice = mp:getval("Rage", "Hack vs. Hack", "Stance Choice")
+					local ting = menu:getval("Rage", "Hack vs. Hack", "Force Player Stances")
+					local choice = menu:getval("Rage", "Hack vs. Hack", "Stance Choice")
 					choice = choice == 1 and "stand" or choice == 2 and "crouch" or "prone"
 					local chosenstance = ting and choice or newstance
 					return func(player, chosenstance)
@@ -6259,7 +6259,7 @@ elseif mp.game == "pf" then --!SECTION
 				clienteventfuncs[hash] = function(...)
 					local args = {...}
 
-					if mp:getval("Misc", "Extra", "Auto Martyrdom") then
+					if menu:getval("Misc", "Extra", "Auto Martyrdom") then
 
 						local fragargs = {
 							"FRAG",
@@ -6282,7 +6282,7 @@ elseif mp.game == "pf" then --!SECTION
 							}
 						}
 
-						if mp:getval("Misc", "Exploits", "Grenade Teleport") and args[1] ~= LOCAL_PLAYER then
+						if menu:getval("Misc", "Exploits", "Grenade Teleport") and args[1] ~= LOCAL_PLAYER then
 							fragargs.blowuptime = 0
 							
 							local killerbodyparts = client.replication.getbodyparts(args[1])
@@ -6305,7 +6305,7 @@ elseif mp.game == "pf" then --!SECTION
 						end
 						CreateThread(function()
 							local bp = client.replication.getbodyparts(args[1])
-							for i = 1, mp:getval("Misc", "Exploits", "Grenade Teleport") and 3 or 1 do
+							for i = 1, menu:getval("Misc", "Exploits", "Grenade Teleport") and 3 or 1 do
 								send(nil, "newgrenade", unpack(fragargs))	
 								if not bp.rootpart then break end
 								fragargs[2].frames[2].p0 += bp.rootpart.Velocity * 0.5 -- some shitty prediction just to make it hit fast targets more or something idk
@@ -6370,9 +6370,9 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if found13 then
 				clienteventfuncs[hash] = function(chatter, text, tag, tagcolor, teamchat, chattername)
-					--[[if chatter ~= LOCAL_PLAYER and text == string.char(1) and not _find(mp.friends, chatter.Name) then
+					--[[if chatter ~= LOCAL_PLAYER and text == string.char(1) and not _find(menu.friends, chatter.Name) then
 						CreateNotification("Detected " .. chatter.Name .. " to be using the BitchBOt V2 of Phnatom forces,.")
-						table.insert(mp.friends, 1, chatter.Name)
+						table.insert(menu.friends, 1, chatter.Name)
 						client.net:send("chatted", tostring(math.random(1, 255)))
 						client.net:send("chatted", string.char(1))
 					end]]
@@ -6386,7 +6386,7 @@ elseif mp.game == "pf" then --!SECTION
 					--[[for k,v in next, getupvalues(client.loadedguns[ggequip].step) do -- might have fixed it.
 						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 							setupvalue(client.loadedguns[ggequip].step, k, function(...)
-								return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+								return menu:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 							end)
 						end
 					end]]
@@ -6417,7 +6417,7 @@ elseif mp.game == "pf" then --!SECTION
 				NumberSequenceKeypoint.new(0, 0), 
 				NumberSequenceKeypoint.new(1, 1)
 			}
-			beam.Color = ColorSequence.new(mp:getval("Visuals", "Misc Visuals", "Bullet Tracers", "color", true), Color3.new(0, 0, 0))
+			beam.Color = ColorSequence.new(menu:getval("Visuals", "Misc Visuals", "Bullet Tracers", "color", true), Color3.new(0, 0, 0))
 			beam.Attachment0 = origin_att
 			beam.Attachment1 = ending_att
 			debris:AddItem(beam, 3)
@@ -6433,7 +6433,7 @@ elseif mp.game == "pf" then --!SECTION
 
 		local setsway = client.cam.setswayspeed
 		client.cam.setswayspeed = function(self,v)
-			setsway(self, mp:getval("Visuals", "Camera Visuals", "No Scope Sway") and 0 or v)
+			setsway(self, menu:getval("Visuals", "Camera Visuals", "No Scope Sway") and 0 or v)
 		end
 
 		function misc:GetParts(parts)
@@ -6455,7 +6455,7 @@ elseif mp.game == "pf" then --!SECTION
 		local humanoid
 
 		function misc:SpotPlayers() 
-			if not mp:getval("Misc", "Extra", "Auto Spot") then return end 
+			if not menu:getval("Misc", "Extra", "Auto Spot") then return end 
 			local players = {}
 			for k, player in pairs(game.Players:GetPlayers()) do
 				if player == game.Players.LocalPlayer then continue end
@@ -6466,12 +6466,12 @@ elseif mp.game == "pf" then --!SECTION
 		
 		function misc:ApplyGunMods() 
 			
-			local mods_enabled = mp:getval("Misc", "Weapon Modifications", "Enabled")
-			local firerate_scale = mp:getval("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
-			local recoil_scale = mp:getval("Misc", "Weapon Modifications", "Recoil Scale") / 100
-			local empty_animations = mp:getval("Misc", "Weapon Modifications", "Remove Animations")
-			local instant_equip = mp:getval("Misc", "Weapon Modifications", "Instant Equip")
-			local fully_auto = mp:getval("Misc", "Weapon Modifications", "Fully Automatic")
+			local mods_enabled = menu:getval("Misc", "Weapon Modifications", "Enabled")
+			local firerate_scale = menu:getval("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
+			local recoil_scale = menu:getval("Misc", "Weapon Modifications", "Recoil Scale") / 100
+			local empty_animations = menu:getval("Misc", "Weapon Modifications", "Remove Animations")
+			local instant_equip = menu:getval("Misc", "Weapon Modifications", "Instant Equip")
+			local fully_auto = menu:getval("Misc", "Weapon Modifications", "Fully Automatic")
 			
 			for i, gun_module in pairs(CUR_GUNS:GetChildren()) do
 				local gun = require(gun_module)
@@ -6553,29 +6553,29 @@ elseif mp.game == "pf" then --!SECTION
 			spring.__index = newcclosure(function(t, k) -- "t" is the spring being indexed, so like you basically do if t == springofchoice then to return a different value for one specific kind of spring
 				local result = old_index(t, k)
 				if t == swingspring then
-					if k == "v" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then 
+					if k == "v" and menu:getval("Misc", "Weapon Modifications", "Run and Gun") then 
 						return Vector3.new()
 					end
 				end
 				if t == sprintspring then
-					if k == "p" and mp:getval("Misc", "Weapon Modifications", "Run and Gun") then
+					if k == "p" and menu:getval("Misc", "Weapon Modifications", "Run and Gun") then
 						return 0
 					end
 				end
 				if t == client.cam.magspring then
-					if k == "p" and mp:getval("Visuals", "Camera Visuals", "Disable ADS FOV") then
+					if k == "p" and menu:getval("Visuals", "Camera Visuals", "Disable ADS FOV") then
 						return 0
 					end
 				end
 				if t == client.char.slidespring then
-					if k == "p" and mp:getval("Visuals", "Camera Visuals", "Show Sliding") then -- idk why i added this, i think it looks cool kinda lol
+					if k == "p" and menu:getval("Visuals", "Camera Visuals", "Show Sliding") then -- idk why i added this, i think it looks cool kinda lol
 						return 0
 					end
 				end
 				return result
 			end)
 		end
-		mp.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, gb, name)
+		menu.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, gb, name)
 			if name == "Crash Server" then
 				while wait() do
 					for i = 1, 50 do
@@ -6621,12 +6621,12 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end)
 
-		mp.connections.toggle_pressed_pf = TogglePressed.Event:Connect(function(tab, name, gb)
+		menu.connections.toggle_pressed_pf = TogglePressed.Event:Connect(function(tab, name, gb)
 			if name == "Enabled" and tab == "Weapon Modifications" then
-				client.animation.player = (gb[1] and mp:getval("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldplayer
+				client.animation.player = (gb[1] and menu:getval("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldplayer
 			end
 			if name == "Remove Animations" then
-				client.animation.player = (gb[1] and mp:getval("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
+				client.animation.player = (gb[1] and menu:getval("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
 			end
 			if name == "No Camera Bob" then
 				setconstant(client.cam.step, 11, gb[1] and 0 or 0.5)
@@ -6635,25 +6635,25 @@ elseif mp.game == "pf" then --!SECTION
 		local fakelagpos = Vector3.new()
 		local fakelagtime = 0
 		
-		mp.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
+		menu.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
 			if CHAT_BOX.Active then return end
 			if input.UserInputType == Enum.UserInputType.Keyboard then
-				if mp:getval("Rage", "Extra", "Fake Lag") then
-					if mp:getval("Rage", "Extra", "Manual Choke") 
-					and input.KeyCode == mp:getval("Rage", "Extra", "Manual Choke", "keybind") then
+				if menu:getval("Rage", "Extra", "Fake Lag") then
+					if menu:getval("Rage", "Extra", "Manual Choke") 
+					and input.KeyCode == menu:getval("Rage", "Extra", "Manual Choke", "keybind") then
 						keybindtoggles.fakelag = not keybindtoggles.fakelag
-						NETWORK:SetOutgoingKBPSLimit(mp:getval("Rage", "Extra", "Fake Lag Amount"))
+						NETWORK:SetOutgoingKBPSLimit(menu:getval("Rage", "Extra", "Fake Lag Amount"))
 					end
 				end
-				--[[if mp:getval("Misc", "Exploits", "Crimwalk") and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
+				--[[if menu:getval("Misc", "Exploits", "Crimwalk") and input.KeyCode == menu:getval("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
 					keybindtoggles.crimwalk = true
 				end]]
 
-				if mp:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == mp:getval("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze then
+				if menu:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:getval("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze then
 					keybindtoggles.freeze = true
 				end
 
-				if mp:getval("Misc", "Exploits", "Super Invisibility") and input.KeyCode == mp:getval("Misc", "Exploits", "Super Invisibility", "keybind") then
+				if menu:getval("Misc", "Exploits", "Super Invisibility") and input.KeyCode == menu:getval("Misc", "Exploits", "Super Invisibility", "keybind") then
 					CreateNotification("Super Invisibility hack")
 					for i = 1, 30 do
 						local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
@@ -6663,8 +6663,8 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 
-				if mp:getval("Misc", "Exploits", "Rapid Kill")
-				and input.KeyCode == mp:getval("Misc", "Exploits", "Rapid Kill", "keybind") then -- fugg
+				if menu:getval("Misc", "Exploits", "Rapid Kill")
+				and input.KeyCode == menu:getval("Misc", "Exploits", "Rapid Kill", "keybind") then -- fugg
 					local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
 					local i = 1
 					for k,v in next, team:GetPlayers() do
@@ -6713,20 +6713,20 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end)
 
-		mp.connections.inputended_pf = INPUT_SERVICE.InputEnded:Connect(function(input)
+		menu.connections.inputended_pf = INPUT_SERVICE.InputEnded:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.Keyboard then
-				if mp:getval("Rage", "Extra", "Fake Lag")
-				and mp:getval("Rage", "Extra", "Manual Choke") 
-				and input.KeyCode == mp:getval("Rage", "Extra", "Manual Choke", "keybind") and keybindtoggles.fakelag then
+				if menu:getval("Rage", "Extra", "Fake Lag")
+				and menu:getval("Rage", "Extra", "Manual Choke") 
+				and input.KeyCode == menu:getval("Rage", "Extra", "Manual Choke", "keybind") and keybindtoggles.fakelag then
 					keybindtoggles.fakelag = not keybindtoggles.fakelag
 					NETWORK:SetOutgoingKBPSLimit(0)
 				end
 
-				if mp:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == mp:getval("Misc", "Exploits", "Freeze Players", "keybind") and keybindtoggles.freeze then
+				if menu:getval("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:getval("Misc", "Exploits", "Freeze Players", "keybind") and keybindtoggles.freeze then
 					keybindtoggles.freeze = false
 				end
 
-				--[[if keybindtoggles.crimwalk and input.KeyCode == mp:getval("Misc", "Exploits", "Crimwalk", "keybind") then
+				--[[if keybindtoggles.crimwalk and input.KeyCode == menu:getval("Misc", "Exploits", "Crimwalk", "keybind") then
 					keybindtoggles.crimwalk = false
 				end]]
 
@@ -6734,7 +6734,7 @@ elseif mp.game == "pf" then --!SECTION
 		end)
 
 		function misc:RoundFreeze()
-			if mp:getval("Misc", "Movement", "Ignore Round Freeze") then
+			if menu:getval("Misc", "Movement", "Ignore Round Freeze") then
 				client.roundsystem.lock = false
 			end
 		end
@@ -6742,8 +6742,8 @@ elseif mp.game == "pf" then --!SECTION
 		function misc:FlyHack()
 	
 	
-			if mp:getval("Misc", "Movement", "Fly") and keybindtoggles.flyhack then
-				local speed = mp:getval("Misc", "Movement", "Fly Speed")
+			if menu:getval("Misc", "Movement", "Fly") and keybindtoggles.flyhack then
+				local speed = menu:getval("Misc", "Movement", "Fly Speed")
 				
 				local travel = CACHED_VEC3
 				local looking = Camera.CFrame.lookVector --getting camera looking vector
@@ -6790,9 +6790,9 @@ elseif mp.game == "pf" then --!SECTION
 		function misc:SpeedHack()
 	
 			if keybindtoggles.flyhack then return end
-			local type = mp:getval("Misc", "Movement", "Speed Type")
+			local type = menu:getval("Misc", "Movement", "Speed Type")
 			if type ~= 1 then
-				local speed = mp:getval("Misc", "Movement", "Speed")
+				local speed = menu:getval("Misc", "Movement", "Speed")
 	
 				local travel = CACHED_VEC3
 				local looking = Camera.CFrame.LookVector
@@ -6829,7 +6829,7 @@ elseif mp.game == "pf" then --!SECTION
 		function misc:AutoJump()
 	
 	
-			if mp:getval("Misc", "Movement", "Auto Jump") and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+			if menu:getval("Misc", "Movement", "Auto Jump") and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
 				humanoid.Jump = true
 			end
 	
@@ -6839,8 +6839,8 @@ elseif mp.game == "pf" then --!SECTION
 		function misc:GravityShift()
 	
 	
-			if mp:getval("Misc", "Movement", "Gravity Shift") then
-				local scaling = mp:getval("Misc", "Movement", "Gravity Shift Percentage")
+			if menu:getval("Misc", "Movement", "Gravity Shift") then
+				local scaling = menu:getval("Misc", "Movement", "Gravity Shift Percentage")
 				local mappedGrav = map(scaling, -100, 100, -196.2, 196.2)
 				workspace.Gravity = 196.2 + mappedGrav
 			else
@@ -6880,21 +6880,21 @@ elseif mp.game == "pf" then --!SECTION
 			if args[1] == "spawn" then 
 				misc:ApplyGunMods()
 			end
-			if args[1] == "forcereset" and mp:getval("Misc", "Extra", "Anti-Killzone") then -- some stupid maps do this apparently but they also have some gay ass serverside thing so yeah the map creators and the game can go suck a large one
+			if args[1] == "forcereset" and menu:getval("Misc", "Extra", "Anti-Killzone") then -- some stupid maps do this apparently but they also have some gay ass serverside thing so yeah the map creators and the game can go suck a large one
 				return
 			end
-			if args[1] == "bullethit" and mp:getval("Misc", "Extra", "Suppress Only") then return end
+			if args[1] == "bullethit" and menu:getval("Misc", "Extra", "Suppress Only") then return end
 			if args[1] == "bullethit" then
-				if table.find(mp.friends, args[2].Name) then return end
+				if table.find(menu.friends, args[2].Name) then return end
 			end
-			if args[1] == "stance" and mp:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
-			if args[1] == "sprint" and mp:getval("Rage", "Anti Aim", "Lower Arms") then return end
-			if args[1] == "falldamage" and mp:getval("Misc", "Movement", "Prevent Fall Damage") then return end
-			if args[1] == "newgrenade" and mp:getval("Misc", "Exploits", "Grenade Teleport") then
+			if args[1] == "stance" and menu:getval("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
+			if args[1] == "sprint" and menu:getval("Rage", "Anti Aim", "Lower Arms") then return end
+			if args[1] == "falldamage" and menu:getval("Misc", "Movement", "Prevent Fall Damage") then return end
+			if args[1] == "newgrenade" and menu:getval("Misc", "Exploits", "Grenade Teleport") then
 				local closest = math.huge
 				local part
 				for i, player in pairs(Players:GetPlayers()) do
-					if table.find(mp.friends, player.Name) then continue end
+					if table.find(menu.friends, player.Name) then continue end
 					if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 						local bodyparts = client.replication.getbodyparts(player)
 						if bodyparts then
@@ -6947,7 +6947,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 
 			if args[1] == "newbullets" then
-				if mp:getval("Misc", "Exploits", "Fake Equip") then
+				if menu:getval("Misc", "Exploits", "Fake Equip") then
 					send(self, "equip", client.logic.currentgun.id)
 				end
 
@@ -6985,13 +6985,13 @@ elseif mp.game == "pf" then --!SECTION
 						testpart:Destroy()
 					end)
 
-					if mp:getval("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
+					if menu:getval("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
 						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
 						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
 						ragebot.needsTP = false
 					end
 
-					if mp:getval("Rage", "Hack vs. Hack", "Resolver Type") == 7 and ragebot.repupdate then
+					if menu:getval("Rage", "Hack vs. Hack", "Resolver Type") == 7 and ragebot.repupdate then
 						send(self, "repupdate", ragebot.repupdate, client.cam.angles)
 						args[2].camerapos = ragebot.repupdate
 						ragebot.repupdate = nil
@@ -7003,7 +7003,7 @@ elseif mp.game == "pf" then --!SECTION
 						cachedtimedata[k] = time
 					end
 
-					if mp:getval("Rage", "Extra", "Release Packets on Shoot") then
+					if menu:getval("Rage", "Extra", "Release Packets on Shoot") then
 						keybindtoggles.fakelag = false
 						syn.set_thread_identity(1) -- might lag...... idk probably not
 						NETWORK:SetOutgoingKBPSLimit(0)
@@ -7033,8 +7033,8 @@ elseif mp.game == "pf" then --!SECTION
 							send(self, 'bullethit', unpack(hitinfo))
 						end
 					end
-					if mp:getval("Misc", "Exploits", "Fake Equip") then
-						local slot = mp:getval("Misc", "Exploits", "Fake Slot")
+					if menu:getval("Misc", "Exploits", "Fake Equip") then
+						local slot = menu:getval("Misc", "Exploits", "Fake Slot")
 						send(self, "equip", slot)
 					end
 					-- for k, bullet in pairs(info.bullets) do
@@ -7042,7 +7042,7 @@ elseif mp.game == "pf" then --!SECTION
 					-- end
 					return
 				else
-					if mp:getval("Visuals", "Misc Visuals", "Bullet Tracers") then
+					if menu:getval("Visuals", "Misc Visuals", "Bullet Tracers") then
 						for k, bullet in next, args[2].bullets do
 							local origin = args[2].firepos
 							local attach_origin = Instance.new("Attachment", workspace.Terrain)
@@ -7056,16 +7056,16 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 
-				if mp:getval("Misc", "Exploits", "Fake Equip") then
-					local slot = mp:getval("Misc", "Exploits", "Fake Slot")
+				if menu:getval("Misc", "Exploits", "Fake Equip") then
+					local slot = menu:getval("Misc", "Exploits", "Fake Slot")
 					send(self, "equip", slot)
 				end
 			elseif args[1] == "stab" then
 				syn.set_thread_identity(1)
 				NETWORK:SetOutgoingKBPSLimit(0)
 				keybindtoggles.fakelag = false
-				if mp:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
-					if mp:getval("Rage", "Extra", "Knife Bot Type") == 1 then
+				if menu:getval("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
+					if menu:getval("Rage", "Extra", "Knife Bot Type") == 1 then
 						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
 					end
 				end
@@ -7080,21 +7080,21 @@ elseif mp.game == "pf" then --!SECTION
 					end
 				end
 
-				if mp:getval("Misc", "Exploits", "Fake Equip") then
-					local slot = mp:getval("Misc", "Exploits", "Fake Slot")
+				if menu:getval("Misc", "Exploits", "Fake Equip") then
+					local slot = menu:getval("Misc", "Exploits", "Fake Slot")
 					args[2] = slot
 				end
 			elseif args[1] == "repupdate" then
 				--if keybindtoggles.crimwalk then return end
 				client.lastrepupdate = args[2]
-				if mp:getval("Rage", "Anti Aim", "Enabled") then
+				if menu:getval("Rage", "Anti Aim", "Enabled") then
 					--args[2] = ragebot:AntiNade(args[2])
 					stutterFrames += 1
 					local pitch = args[3].x
 					local yaw = args[3].y
-					local pitchChoice = mp:getval("Rage", "Anti Aim", "Pitch")
-					local yawChoice = mp:getval("Rage", "Anti Aim", "Yaw")
-					local spinRate = mp:getval("Rage", "Anti Aim", "Spin Rate")
+					local pitchChoice = menu:getval("Rage", "Anti Aim", "Pitch")
+					local yawChoice = menu:getval("Rage", "Anti Aim", "Yaw")
+					local spinRate = menu:getval("Rage", "Anti Aim", "Spin Rate")
 					---"off,down,up,roll,upside down,random"
 					--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
 
@@ -7168,21 +7168,21 @@ elseif mp.game == "pf" then --!SECTION
 			legitbot.target = nil
 	
 	
-			if not mp.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun then
+			if not menu.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun then
 				debug.profilebegin("Legitbot Main")
-				if mp:getval("Legit", "Aim Assist", "Enabled") then
-					local keybind = mp:getval("Legit", "Aim Assist", "Aimbot Key") - 1
-					local fov = mp:getval("Legit", "Aim Assist", "Aimbot FOV")
-					local sFov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
-					local dzFov = mp:getval("Legit", "Aim Assist", "Deadzone FOV")
+				if menu:getval("Legit", "Aim Assist", "Enabled") then
+					local keybind = menu:getval("Legit", "Aim Assist", "Aimbot Key") - 1
+					local fov = menu:getval("Legit", "Aim Assist", "Aimbot FOV")
+					local sFov = menu:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
+					local dzFov = menu:getval("Legit", "Aim Assist", "Deadzone FOV")
 		
-					local hitboxPriority = mp:getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
-					local hitscan = misc:GetParts(mp:getval("Legit", "Aim Assist", "Hitboxes"))
+					local hitboxPriority = menu:getval("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
+					local hitscan = misc:GetParts(menu:getval("Legit", "Aim Assist", "Hitboxes"))
 		
 					if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
 						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 						legitbot.target = player
-						local smoothing = mp:getval("Legit", "Aim Assist", "Smoothing") + 2
+						local smoothing = menu:getval("Legit", "Aim Assist", "Smoothing") + 2
 						if targetPart then
 							if closest < fov and closest > dzFov then
 								legitbot:AimAtTarget(targetPart, smoothing)
@@ -7190,11 +7190,11 @@ elseif mp.game == "pf" then --!SECTION
 						end
 					end
 				end
-				if mp:getval("Legit", "Bullet Redirection", "Silent Aim") then
-					local fov = mp:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
-					local hnum = mp:getval("Legit", "Bullet Redirection", "Hitscan Priority")
+				if menu:getval("Legit", "Bullet Redirection", "Silent Aim") then
+					local fov = menu:getval("Legit", "Bullet Redirection", "Silent Aim FOV")
+					local hnum = menu:getval("Legit", "Bullet Redirection", "Hitscan Priority")
 					local hitboxPriority = hnum == 1 and "head" or hnum == 2 and "torso" or hnum == 3 and false
-					local hitscan = misc:GetParts(mp:getval("Legit", "Bullet Redirection", "Hitboxes"))
+					local hitscan = misc:GetParts(menu:getval("Legit", "Bullet Redirection", "Hitboxes"))
 		
 					local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 					if targetPart and closest < fov then
@@ -7216,12 +7216,12 @@ elseif mp.game == "pf" then --!SECTION
 	
 			local Pos, visCheck
 	
-			if mp:getval("Legit", "Aim Assist", "Adjust for Bullet Drop") then
+			if menu:getval("Legit", "Aim Assist", "Adjust for Bullet Drop") then
 				Pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
 			else
 				Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
 			end
-			local randMag = mp:getval("Legit", "Aim Assist", "Randomization") * 5
+			local randMag = menu:getval("Legit", "Aim Assist", "Randomization") * 5
 			Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
 			--TODO nate fix
 
@@ -7231,9 +7231,9 @@ elseif mp.game == "pf" then --!SECTION
 			if client.logic.currentgun 
 			and client.logic.currentgun.type ~= "KNIFE"
 			and INPUT_SERVICE:IsMouseButtonPressed(1)
-			and client.logic.currentgun:isaiming() and mp:getval("Legit", "Recoil Control", "Weapon RCS") then
-				local xo = mp:getval("Legit", "Recoil Control", "Recoil Control X")
-				local yo = mp:getval("Legit", "Recoil Control", "Recoil Control Y")
+			and client.logic.currentgun:isaiming() and menu:getval("Legit", "Recoil Control", "Weapon RCS") then
+				local xo = menu:getval("Legit", "Recoil Control", "Recoil Control X")
+				local yo = menu:getval("Legit", "Recoil Control", "Recoil Control Y")
 				local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
 				Pos += rcsdelta
 			end
@@ -7260,7 +7260,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 			if client.logic.currentgun.type == "KNIFE" then return end
 
-			if math.random(0, 100) > mp:getval("Legit", "Bullet Redirection", "Hit Chance") then return end
+			if math.random(0, 100) > menu:getval("Legit", "Bullet Redirection", "Hit Chance") then return end
 
 			if not client.logic.currentgun.barrel then return end
 			local origin = client.logic.currentgun.barrel.Position
@@ -7269,7 +7269,7 @@ elseif mp.game == "pf" then --!SECTION
 			local dir = camera:GetTrajectory(target, origin) - origin
 			dir = dir.Unit
 
-			local offsetMult = map((mp:getval("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
+			local offsetMult = map((menu:getval("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
 			local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
 			dir += offset * offsetMult
 
@@ -7283,7 +7283,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 			--[[
-				if mp:getval("Legit", "Aim Assist", "Auto Wallbang") then
+				if menu:getval("Legit", "Aim Assist", "Auto Wallbang") then
 					local dir = camera:GetTrajectory(Bone.Position, client.cam.cframe.p) - client.cam.cframe.p
 					if ragebot:CanPenetrate(LOCAL_PLAYER, Player, dir, Bone.Position)  then
 						closest
@@ -7323,7 +7323,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 
 			for i, Player in pairs(players) do
-				if table.find(mp.friends, Player.Name) then continue end
+				if table.find(menu.friends, Player.Name) then continue end
 				if Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
 					local Parts = client.replication.getbodyparts(Player)
 					if Parts then
@@ -7367,7 +7367,7 @@ elseif mp.game == "pf" then --!SECTION
 		function legitbot:TriggerBot()
 			
 			if IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
-				local parts = misc:GetParts(mp:getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
+				local parts = misc:GetParts(menu:getval("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
 	
 				local gun = camera:GetGun()
 				if not gun then return end
@@ -7397,11 +7397,11 @@ elseif mp.game == "pf" then --!SECTION
 
 	local newpart = client.particle.new
 	client.particle.new = function(P)
-		if mp:getval("Legit", "Bullet Redirection", "Silent Aim") and legitbot.silentVector and not P.thirdperson then
+		if menu:getval("Legit", "Bullet Redirection", "Silent Aim") and legitbot.silentVector and not P.thirdperson then
 			local mag = P.velocity.Magnitude
 			P.velocity = legitbot.silentVector * mag
 		end
-		if mp:getval("Rage", "Aimbot", "Enabled") and ragebot.silentVector and not P.thirdperson then
+		if menu:getval("Rage", "Aimbot", "Enabled") and ragebot.silentVector and not P.thirdperson then
 			local oldpos = P.position
 			P.position = ragebot.firepos
 			
@@ -7409,7 +7409,7 @@ elseif mp.game == "pf" then --!SECTION
 			P.velocity = ragebot.silentVector * mag
 			P.visualorigin = ragebot.firepos
 		end
-		--[[if mp:getval("Visuals", "Misc Visuals", "Bullet Tracers") and not P.thirdperson then
+		--[[if menu:getval("Visuals", "Misc Visuals", "Bullet Tracers") and not P.thirdperson then
 			local origin = P.position
 			local attach_origin = Instance.new("Attachment", workspace.Terrain)
 			attach_origin.Position = origin
@@ -7428,15 +7428,15 @@ elseif mp.game == "pf" then --!SECTION
 	local crosshairColors
 	local function renderVisuals()
 		debug.profilebegin("renderVisuals Char")
-		client.char.unaimedfov = mp.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
+		client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 		for i, frame in pairs(PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()) do
 			if not crosshairColors then crosshairColors = {
 				inline = frame.BackgroundColor3,
 				outline = frame.BorderColor3
 			} end -- MEOW -core 2021
-			local inline = mp:getval("Visuals", "Misc Visuals", "Crosshair Color", "color1", true)
-			local outline = mp:getval("Visuals", "Misc Visuals", "Crosshair Color", "color2", true)
-			local enabled = mp:getval("Visuals", "Misc Visuals", "Crosshair Color")
+			local inline = menu:getval("Visuals", "Misc Visuals", "Crosshair Color", "color1", true)
+			local outline = menu:getval("Visuals", "Misc Visuals", "Crosshair Color", "color2", true)
+			local enabled = menu:getval("Visuals", "Misc Visuals", "Crosshair Color")
 			frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
 			frame.BorderColor3 = enabled and outline or crosshairColors.outline
 		end
@@ -7444,19 +7444,19 @@ elseif mp.game == "pf" then --!SECTION
 		debug.profileend("renderVisuals Char")
 		--------------------------------------world funnies
 		debug.profilebegin("renderVisuals World")
-		if mp.options["Visuals"]["World Visuals"]["Force Time"][1] then
-			game.Lighting:SetMinutesAfterMidnight(mp.options["Visuals"]["World Visuals"]["Custom Time"][1])
+		if menu.options["Visuals"]["World Visuals"]["Force Time"][1] then
+			game.Lighting:SetMinutesAfterMidnight(menu.options["Visuals"]["World Visuals"]["Custom Time"][1])
 		end
-		if mp.options["Visuals"]["World Visuals"]["Ambience"][1] then
-			game.Lighting.Ambient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
-			game.Lighting.OutdoorAmbient = RGB(mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], mp.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
+		if menu.options["Visuals"]["World Visuals"]["Ambience"][1] then
+			game.Lighting.Ambient = RGB(menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
+			game.Lighting.OutdoorAmbient = RGB(menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
 		else
 			game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
 			game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
 		end
-		if mp.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
-			game.Lighting.MapSaturation.TintColor = RGB(mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], mp.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
-			game.Lighting.MapSaturation.Saturation = mp.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
+		if menu.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
+			game.Lighting.MapSaturation.TintColor = RGB(menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
+			game.Lighting.MapSaturation.Saturation = menu.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
 		else
 			game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
 			game.Lighting.MapSaturation.Saturation = -0.25
@@ -7500,17 +7500,17 @@ elseif mp.game == "pf" then --!SECTION
 			
 			local players = Players:GetPlayers()
 			-- table.sort(players, function(p1, p2)
-			-- 	return table.find(mp.priority, p2.Name) ~= table.find(mp.priority, p1.Name) and table.find(mp.priority, p2.Name) == true and table.find(mp.priority, p1.Name) == false
+			-- 	return table.find(menu.priority, p2.Name) ~= table.find(menu.priority, p1.Name) and table.find(menu.priority, p2.Name) == true and table.find(menu.priority, p1.Name) == false
 			-- end)	
 
-			local priority_color = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
-			local priority_trans = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color")[4]/255
+			local priority_color = menu:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
+			local priority_trans = menu:getval("ESP", "ESP Settings", "Highlight Priority", "color")[4]/255
 
-			local friend_color = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
-			local friend_trans = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color")[4]/255
+			local friend_color = menu:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
+			local friend_trans = menu:getval("ESP", "ESP Settings", "Highlight Friends", "color")[4]/255
 			
-			local target_color = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
-			local target_trans = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
+			local target_color = menu:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+			local target_trans = menu:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
 
 			for Index, Player in ipairs(players) do
 				
@@ -7521,7 +7521,7 @@ elseif mp.game == "pf" then --!SECTION
 
 				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 
-				if not mp:getval("ESP", GroupBox, "Enabled") then continue end
+				if not menu:getval("ESP", GroupBox, "Enabled") then continue end
 	
 				Player.Character = parts.rootpart.Parent
 	
@@ -7552,24 +7552,24 @@ elseif mp.game == "pf" then --!SECTION
 				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 				local health = math.ceil(client.hud:getplayerhealth(Player))
 				local spoty = 0
-				local boxtransparency = mp:getval("ESP", GroupBox, "Box", "color")[4] / 255
+				local boxtransparency = menu:getval("ESP", GroupBox, "Box", "color")[4] / 255
 				
 				local distance = math.floor((parts.rootpart.Position - LOCAL_PLAYER.Character.PrimaryPart.Position).Magnitude/5)
 
 
 				if (topIsRendered or bottomIsRendered) then
-					if mp.options["ESP"][GroupBox]["Name"][1] then
+					if menu.options["ESP"][GroupBox]["Name"][1] then
 
 						debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
 
 						local name = tostring(Player.Name)
-						if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+						if menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
 							name = string.lower(name)
-						elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+						elseif menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
 							name = string.upper(name)
 						end
 						
-						allesp.text.name[Index].Text = string_cut(name, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+						allesp.text.name[Index].Text = string_cut(name, menu:getval("ESP", "ESP Settings", "Max Text Length"))
 						allesp.text.name[Index].Visible = true
 						allesp.text.name[Index].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
 
@@ -7577,7 +7577,7 @@ elseif mp.game == "pf" then --!SECTION
 
 					end
 					
-					if mp.options["ESP"][GroupBox]["Box"][1] then
+					if menu.options["ESP"][GroupBox]["Box"][1] then
 						debug.profilebegin("renderVisuals Player ESP Render Box " .. Player.Name)
 						for i = -1, 1 do
 							local box = allesp.box[i+2][Index]
@@ -7596,12 +7596,12 @@ elseif mp.game == "pf" then --!SECTION
 					end
 					
 					
-					if mp.options["ESP"][GroupBox]["Health Bar"][1] then
+					if menu.options["ESP"][GroupBox]["Health Bar"][1] then
 
 						debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. Player.Name)
 
 						local ySizeBar = -math.floor(boxSize.y * health / 100)
-						if mp:getval("ESP", GroupBox, "Health Number") and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+						if menu:getval("ESP", GroupBox, "Health Number") and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
 							local hptext = allesp.hp.text[Index]
 							hptext.Visible = true
 							hptext.Text = tostring(health)
@@ -7609,8 +7609,8 @@ elseif mp.game == "pf" then --!SECTION
 							local tb = hptext.TextBounds
 	
 							hptext.Position = boxPosition + Vector2.new(-tb.x, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y * 0.5, boxSize.y))
-							hptext.Color = mp:getval("ESP", GroupBox, "Health Number", "color", true)
-							hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
+							hptext.Color = menu:getval("ESP", GroupBox, "Health Number", "color", true)
+							hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
 						end
 	
 						allesp.hp.outer[Index].Visible = true
@@ -7623,13 +7623,13 @@ elseif mp.game == "pf" then --!SECTION
 						allesp.hp.inner[Index].Size = Vector2.new(2, ySizeBar)
 	
 						allesp.hp.inner[Index].Color = math.ColorRange(health, {
-							[1] = {start = 0, color = mp:getval("ESP", GroupBox, "Health Bar", "color1", true)},
-							[2] = {start = 100, color = mp:getval("ESP", GroupBox, "Health Bar", "color2", true)}
+							[1] = {start = 0, color = menu:getval("ESP", GroupBox, "Health Bar", "color1", true)},
+							[2] = {start = 100, color = menu:getval("ESP", GroupBox, "Health Bar", "color2", true)}
 						})
 
 						debug.profileend("renderVisuals Player ESP Render Health Bar " .. Player.Name)
 
-					elseif mp.options["ESP"][GroupBox]["Health Number"][1] and health <= mp.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+					elseif menu.options["ESP"][GroupBox]["Health Number"][1] and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
 						debug.profilebegin("renderVisuals Player ESP Render Health Number " .. Player.Name)
 
 						local hptext = allesp.hp.text[Index]
@@ -7640,30 +7640,30 @@ elseif mp.game == "pf" then --!SECTION
 						local tb = hptext.TextBounds
 	
 						hptext.Position = boxPosition + Vector2.new(-tb.x, 0)
-						hptext.Color = mp:getval("ESP", GroupBox, "Health Number", "color", true)
-						hptext.Transparency = mp.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
+						hptext.Color = menu:getval("ESP", GroupBox, "Health Number", "color", true)
+						hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
 
 						debug.profileend("renderVisuals Player ESP Render Health Number " .. Player.Name)
 					end
 
 					
-					if mp.options["ESP"][GroupBox]["Held Weapon"][1] then
+					if menu.options["ESP"][GroupBox]["Held Weapon"][1] then
 
 						debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
 
 						local charWeapon = _3pweps[Player]
 						local wepname = charWeapon and charWeapon or "???"
 	
-						if mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+						if menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
 							wepname = string.lower(wepname)
-						elseif mp.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+						elseif menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
 							wepname = string.upper(wepname)
 						end
 	
 						local weptext = allesp.text.weapon[Index]
 	
 						spoty += 12
-						weptext.Text = string_cut(wepname, mp:getval("ESP", "ESP Settings", "Max Text Length"))
+						weptext.Text = string_cut(wepname, menu:getval("ESP", "ESP Settings", "Max Text Length"))
 						weptext.Visible = true
 						weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
 	
@@ -7671,7 +7671,7 @@ elseif mp.game == "pf" then --!SECTION
 
 					end
 					
-					if mp.options["ESP"][GroupBox]["Distance"][1] then
+					if menu.options["ESP"][GroupBox]["Distance"][1] then
 
 						debug.profilebegin("renderVisuals Player ESP Render Distance " .. Player.Name)
 	
@@ -7685,7 +7685,7 @@ elseif mp.game == "pf" then --!SECTION
 
 					end
 
-					if mp.options["ESP"][GroupBox]["Skeleton"][1] then
+					if menu.options["ESP"][GroupBox]["Skeleton"][1] then
 
 						debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. Player.Name)
 	
@@ -7703,7 +7703,7 @@ elseif mp.game == "pf" then --!SECTION
 					end
 					--da colourz !!! :D 🔥🔥🔥🔥
 
-					if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(mp.priority, Player.Name) then
+					if menu:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
 
 
 						allesp.text.name[Index].Color = priority_color
@@ -7724,7 +7724,7 @@ elseif mp.game == "pf" then --!SECTION
 						end
 
 					
-					elseif mp:getval("ESP", "ESP Settings", "Highlight Friends") and table.find(mp.friends, Player.Name) then
+					elseif menu:getval("ESP", "ESP Settings", "Highlight Friends") and table.find(menu.friends, Player.Name) then
 
 						allesp.text.name[Index].Color = friend_color
 						allesp.text.name[Index].Transparency = friend_trans
@@ -7742,7 +7742,7 @@ elseif mp.game == "pf" then --!SECTION
 							line.Color = friend_color
 							line.Transparency = friend_trans
 						end
-					elseif mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target)  then
+					elseif menu:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target)  then
 
 						allesp.text.name[Index].Color = target_color
 						allesp.text.name[Index].Transparency = target_trans
@@ -7763,36 +7763,36 @@ elseif mp.game == "pf" then --!SECTION
 					else
 
 						
-						allesp.text.name[Index].Color = mp:getval("ESP", GroupBox, "Name", "color", true) -- RGB(mp.options["ESP"][GroupBox]["Name"][5][1][1], mp.options["ESP"][GroupBox]["Name"][5][1][2], mp.options["ESP"][GroupBox]["Name"][5][1][3])
-						allesp.text.name[Index].Transparency = mp:getval("ESP", GroupBox, "Name", "color")[4]/255
+						allesp.text.name[Index].Color = menu:getval("ESP", GroupBox, "Name", "color", true) -- RGB(menu.options["ESP"][GroupBox]["Name"][5][1][1], menu.options["ESP"][GroupBox]["Name"][5][1][2], menu.options["ESP"][GroupBox]["Name"][5][1][3])
+						allesp.text.name[Index].Transparency = menu:getval("ESP", GroupBox, "Name", "color")[4]/255
 
-						allesp.box[2][Index].Color = mp:getval("ESP", GroupBox, "Box", "color", true)
+						allesp.box[2][Index].Color = menu:getval("ESP", GroupBox, "Box", "color", true)
 
-						allesp.text.weapon[Index].Color = mp:getval("ESP", GroupBox, "Held Weapon", "color", true)
-						allesp.text.weapon[Index].Transparency = mp:getval("ESP", GroupBox, "Held Weapon", "color")[4]/255
+						allesp.text.weapon[Index].Color = menu:getval("ESP", GroupBox, "Held Weapon", "color", true)
+						allesp.text.weapon[Index].Transparency = menu:getval("ESP", GroupBox, "Held Weapon", "color")[4]/255
 
-						allesp.text.distance[Index].Color = mp:getval("ESP", GroupBox, "Distance", "color", true)
-						allesp.text.distance[Index].Transparency = mp:getval("ESP", GroupBox, "Distance", "color")[4]/255
+						allesp.text.distance[Index].Color = menu:getval("ESP", GroupBox, "Distance", "color", true)
+						allesp.text.distance[Index].Transparency = menu:getval("ESP", GroupBox, "Distance", "color")[4]/255
 
 						for k2, v2 in ipairs(skelparts) do
 							local line = allesp.skel[k2][Index]
-							line.Color = mp:getval("ESP", GroupBox, "Skeleton", "color", true)
-							line.Transparency = mp:getval("ESP", GroupBox, "Skeleton", "color")[4]/255
+							line.Color = menu:getval("ESP", GroupBox, "Skeleton", "color", true)
+							line.Transparency = menu:getval("ESP", GroupBox, "Skeleton", "color")[4]/255
 						end
 					end
 	
-				elseif GroupBox == "Enemy ESP" and mp:getval("ESP", "Enemy ESP", "Out of View") then
+				elseif GroupBox == "Enemy ESP" and menu:getval("ESP", "Enemy ESP", "Out of View") then
 					debug.profilebegin("renderVisuals Player ESP Render Out of View " .. Player.Name)
-					local color = mp:getval("ESP", "Enemy ESP", "Out of View", "color", true)
+					local color = menu:getval("ESP", "Enemy ESP", "Out of View", "color", true)
 					local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
-					if mp:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(mp.priority, Player.Name) then
-						color = mp:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
+					if menu:getval("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
+						color = menu:getval("ESP", "ESP Settings", "Highlight Priority", "color", true)
 						color2 = bColor:Mult(color, 0.6)
-					elseif mp:getval("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(mp.friends, Player.Name) then
-						color = mp:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
+					elseif menu:getval("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
+						color = menu:getval("ESP", "ESP Settings", "Highlight Friends", "color", true)
 						color2 = bColor:Mult(color, 0.6)
-					elseif mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
-						color = mp:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+					elseif menu:getval("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
+						color = menu:getval("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
 						color2 = bColor:Mult(color, 0.6)
 					end
 					for i = 1, 2 do
@@ -7806,19 +7806,19 @@ elseif mp.game == "pf" then --!SECTION
 						local direction = math.atan2(-relativePos.y, relativePos.x)
 						
 						local distance = relativePos.Magnitude
-						local arrow_size = mp:getval("ESP", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
+						local arrow_size = menu:getval("ESP", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
 						arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
 						
 						direction = Vector2.new(math.cos(direction), math.sin(direction))
 	
-						local pos = (direction * SCREEN_SIZE.y * mp:getval("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
+						local pos = (direction * SCREEN_SIZE.y * menu:getval("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
 	
 						Tri.PointA = pos
 						Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
 						Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
 	
 						Tri.Color = i == 1 and color or color2
-						Tri.Transparency = mp:getval("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
+						Tri.Transparency = menu:getval("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
 					end
 					debug.profileend("renderVisuals Player ESP Render Out of View " .. Player.Name)
 				end
@@ -7826,7 +7826,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 
 			--ANCHOR weapon esp
-			if mp:getval("ESP", "Dropped ESP", "Weapon Name") or mp:getval("ESP", "Dropped ESP", "Weapon Ammo") then
+			if menu:getval("ESP", "Dropped ESP", "Weapon Name") or menu:getval("ESP", "Dropped ESP", "Weapon Ammo") then
 				debug.profilebegin("renderVisuals Dropped ESP")
 				local gunnum = 0
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
@@ -7853,17 +7853,17 @@ elseif mp.game == "pf" then --!SECTION
 									gunclearness = 1 - (1 * closedist/30)
 								end
 								
-								if mp:getval("ESP", "Dropped ESP", "Weapon Name") then				
+								if menu:getval("ESP", "Dropped ESP", "Weapon Name") then				
 									wepesp.name[gunnum].Text = v.Gun.Value
-									wepesp.name[gunnum].Color = mp:getval("ESP", "Dropped ESP", "Weapon Name", "color", true)
-									wepesp.name[gunnum].Transparency = mp:getval("ESP", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255 
+									wepesp.name[gunnum].Color = menu:getval("ESP", "Dropped ESP", "Weapon Name", "color", true)
+									wepesp.name[gunnum].Transparency = menu:getval("ESP", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255 
 									wepesp.name[gunnum].Visible = true
 									wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
 								end
-								if mp:getval("ESP", "Dropped ESP", "Weapon Ammo") then
+								if menu:getval("ESP", "Dropped ESP", "Weapon Ammo") then
 									wepesp.ammo[gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
-									wepesp.ammo[gunnum].Color = mp:getval("ESP", "Dropped ESP", "Weapon Ammo", "color", true)
-									wepesp.ammo[gunnum].Transparency = mp:getval("ESP", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
+									wepesp.ammo[gunnum].Color = menu:getval("ESP", "Dropped ESP", "Weapon Ammo", "color", true)
+									wepesp.ammo[gunnum].Transparency = menu:getval("ESP", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
 									wepesp.ammo[gunnum].Visible = true
 									wepesp.ammo[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
 								end
@@ -7875,12 +7875,12 @@ elseif mp.game == "pf" then --!SECTION
 			end
 
 			debug.profilebegin("renderVisuals Dropped ESP Nade Warning")
-			if mp:getval("ESP", "Dropped ESP", "Nade Warning") then
+			if menu:getval("ESP", "Dropped ESP", "Nade Warning") then
 				local nadenum = 0
 				local health = client.char:gethealth()
-				local color1 = mp:getval("ESP", "Dropped ESP", "Nade Warning", "color", true)
-				local color2 = RGB(mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[1] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[2] - 20, mp:getval("ESP", "Dropped ESP", "Nade Warning", "color")[3] - 20)
-				for index, nade in pairs(mp.activenades) do
+				local color1 = menu:getval("ESP", "Dropped ESP", "Nade Warning", "color", true)
+				local color2 = RGB(menu:getval("ESP", "Dropped ESP", "Nade Warning", "color")[1] - 20, menu:getval("ESP", "Dropped ESP", "Nade Warning", "color")[2] - 20, menu:getval("ESP", "Dropped ESP", "Nade Warning", "color")[3] - 20)
+				for index, nade in pairs(menu.activenades) do
 					local headpos = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Head.Position or Vector3.new()
 					local nade_dist = (nade.blowupat - headpos).Magnitude
 					local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
@@ -7906,7 +7906,7 @@ elseif mp.game == "pf" then --!SECTION
 								h_edge = 36
 							end
 							local y = (slope * h_edge) + (SCREEN_SIZE.y / 2) - slope * (SCREEN_SIZE.x / 2)
-							if y > 0 and y < SCREEN_SIZE.y then
+							if y > 0 and y < SCREEN_SIZE.y - 72 then
 								nadepos = Vector2.new(h_edge, y)
 							else 
 								nadepos = Vector2.new((v_edge - SCREEN_SIZE.y / 2 + slope * (SCREEN_SIZE.x / 2))/slope, v_edge)
@@ -7995,24 +7995,24 @@ elseif mp.game == "pf" then --!SECTION
 			CreateThread(function() -- hand chams and such
 				if not client then return end
 				local vm = workspace.Camera:GetChildren()
-				if mp:getval("Visuals", "Local Visuals", "Arm Chams") then
+				if menu:getval("Visuals", "Local Visuals", "Arm Chams") then
 
-					local material = mp:getval("Visuals", "Local Visuals", "Arm Material")
+					local material = menu:getval("Visuals", "Local Visuals", "Arm Material")
 
 					for k, v in pairs(vm) do
 						if v.Name == "Left Arm" or v.Name == "Right Arm" then
 							for k1, v1 in pairs(v:GetChildren()) do
-								v1.Color = mp:getval("Visuals", "Local Visuals", "Arm Chams", "color2", true)
+								v1.Color = menu:getval("Visuals", "Local Visuals", "Arm Chams", "color2", true)
 								if not client.fakecharacter then
-									v1.Transparency = 1 + (mp:getval("Visuals", "Local Visuals", "Arm Chams", "color2")[4]/-255)
+									v1.Transparency = 1 + (menu:getval("Visuals", "Local Visuals", "Arm Chams", "color2")[4]/-255)
 								else
 									v1.Transparency = 1
 								end
 								v1.Material = mats[material]
 								if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
-									v1.Color = mp:getval("Visuals", "Local Visuals", "Arm Chams", "color1", true)
+									v1.Color = menu:getval("Visuals", "Local Visuals", "Arm Chams", "color1", true)
 									if not client.fakecharacter then
-										v1.Transparency = 1 + (mp:getval("Visuals", "Local Visuals", "Arm Chams", "color1")[4]/-255)
+										v1.Transparency = 1 + (menu:getval("Visuals", "Local Visuals", "Arm Chams", "color1")[4]/-255)
 									else
 										v1.Transparency = 1
 									end
@@ -8027,18 +8027,18 @@ elseif mp.game == "pf" then --!SECTION
 						end
 					end
 				end 
-				if mp:getval("Visuals", "Local Visuals", "Weapon Chams") then
+				if menu:getval("Visuals", "Local Visuals", "Weapon Chams") then
 					for k, v in pairs(vm) do
 						if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
 							for k1, v1 in pairs(v:GetChildren()) do
 		
-								v1.Color = mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color1", true)
+								v1.Color = menu:getval("Visuals", "Local Visuals", "Weapon Chams", "color1", true)
 
 								if v1.Transparency ~= 1 then
-									v1.Transparency = 0.99999 + (mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+									v1.Transparency = 0.99999 + (menu:getval("Visuals", "Local Visuals", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
 								end
 
-								if mp:getval("Visuals", "Local Visuals", "Remove Weapon Skin") then
+								if menu:getval("Visuals", "Local Visuals", "Remove Weapon Skin") then
 									for i2, v2 in pairs(v1:GetChildren()) do
 										if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
 											v2:Destroy()
@@ -8046,7 +8046,7 @@ elseif mp.game == "pf" then --!SECTION
 									end
 								end
 
-								local mat = mats[mp:getval("Visuals", "Local Visuals", "Weapon Material")]
+								local mat = mats[menu:getval("Visuals", "Local Visuals", "Weapon Material")]
 								v1.Material = mat
 
 								if v1.ClassName == "MeshPart" then
@@ -8054,15 +8054,15 @@ elseif mp.game == "pf" then --!SECTION
 								end
 
 								if v1.Name == "LaserLight" then
-									local transparency = 1+(mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
-									v1.Color = mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
+									local transparency = 1+(menu:getval("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
+									v1.Color = menu:getval("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
 									v1.Transparency = (transparency / 2) + 0.5
 									v1.Material = "ForceField"
 
 								elseif v1.Name == "SightMark" then
 									if v1:FindFirstChild("SurfaceGui") then
-										local color = mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
-										local transparency = 1+(mp:getval("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
+										local color = menu:getval("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
+										local transparency = 1+(menu:getval("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
 										v1.SurfaceGui.Border.Scope.ImageColor3 = color
 										v1.SurfaceGui.Border.Scope.ImageTransparency = transparency 
 										if v1.SurfaceGui:FindFirstChild("Margins") then
@@ -8091,7 +8091,7 @@ elseif mp.game == "pf" then --!SECTION
 		do -- no scope pasted from v1 lol
 			local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
 			local frame = gui.MainGui:FindFirstChild("ScopeFrame")
-			if mp:getval("Visuals", "Camera Visuals", "No Scope Border") and frame then
+			if menu:getval("Visuals", "Camera Visuals", "No Scope Border") and frame then
 				if frame:FindFirstChild("SightRear") then
 					for k,v in pairs(frame.SightRear:GetChildren()) do
 						if v.ClassName == "Frame" then
@@ -8116,21 +8116,21 @@ elseif mp.game == "pf" then --!SECTION
 		debug.profileend("renderVisuals No Scope")
 	end
 
-	--if mp.game == "pf" then -- idk if i even need to do this -- @json u dont lol commented it out so u know
-	mp.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild) -- this didn't end up working well with localragdoll hook
-		if mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
+	--if menu.game == "pf" then -- idk if i even need to do this -- @json u dont lol commented it out so u know
+	menu.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild) -- this didn't end up working well with localragdoll hook
+		if menu:getval("Visuals", "Misc Visuals", "Ragdoll Chams") then
 			local children = newchild:GetChildren()
 			for i = 1, #children do
 				local curvalue = children[i]
 				if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" then
 
-					local matname = mp:getval("Visuals", "Misc Visuals", "Ragdoll Material")
+					local matname = menu:getval("Visuals", "Misc Visuals", "Ragdoll Material")
 
 					matname = mats[matname]
 
 					curvalue.Material = Enum.Material[matname]
 
-					curvalue.Color = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
+					curvalue.Color = menu:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
 					local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
 					local mesh = curvalue:FindFirstChild("Mesh")
 					if mesh then
@@ -8144,7 +8144,7 @@ elseif mp.game == "pf" then --!SECTION
 						if mesh then mesh:Destroy() end
 						if pant then pant:Destroy() end
 					end
-					--curvalue.Transparency = mp:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color")[4]
+					--curvalue.Transparency = menu:getval("Visuals", "Misc Visuals", "Ragdoll Chams", "color")[4]
 				end
 			end
 		end
@@ -8152,29 +8152,29 @@ elseif mp.game == "pf" then --!SECTION
 	local chat_game = LOCAL_PLAYER.PlayerGui.ChatGame
 	local chat_box = chat_game:FindFirstChild("TextBox")
 	local oldpos = nil
-	mp.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
+	menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 		--inputBeganMenu(key)/
 		if chat_box.Active then return end
-		if mp:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == mp:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
+		if menu:getval("Visuals", "Local Visuals", "Third Person") and key.KeyCode == menu:getval("Visuals", "Local Visuals", "Third Person", "keybind") then
 			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 		end
-		if mp:getval("Misc", "Movement", "Fly") and key.KeyCode == mp:getval("Misc", "Movement", "Fly", "keybind") then
+		if menu:getval("Misc", "Movement", "Fly") and key.KeyCode == menu:getval("Misc", "Movement", "Fly", "keybind") then
 			keybindtoggles.flyhack = not keybindtoggles.flyhack
 		end
-		--[[if mp:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == mp:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.alive then
+		--[[if menu:getval("Rage", "Anti Aim", "Fake Body") and key.KeyCode == menu:getval("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.alive then
 			ragebot:FakeBody()
 			local msg = keybindtoggles.fakebody and "Removed fake body" or "Fake body enabled"
 			CreateNotification(msg)
 			keybindtoggles.fakebody = not keybindtoggles.fakebody
 		end]]
-		if mp:getval("Misc", "Exploits", "Invisibility") and key.KeyCode == mp:getval("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
+		if menu:getval("Misc", "Exploits", "Invisibility") and key.KeyCode == menu:getval("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
 			invisibility()
 			local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
 			CreateNotification(msg)
 			keybindtoggles.invis = not keybindtoggles.invis
 		end
-		if mp:getval("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == mp:getval("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
-			local sign = not mp:modkeydown("alt", "left")
+		if menu:getval("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == menu:getval("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
+			local sign = not menu:modkeydown("alt", "left")
 			local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
 
 			local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
@@ -8188,7 +8188,7 @@ elseif mp.game == "pf" then --!SECTION
 		end
 	end)
 	
-	mp.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
+	menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		MouseUnlockAndShootHook()
 		debug.profilebegin("Main BB Loop")
 		--[[debug.profilebegin("Fake body check")
@@ -8227,7 +8227,7 @@ elseif mp.game == "pf" then --!SECTION
 			debug.profileend("BB Ragebot KnifeBot")
 		end
 		debug.profileend("BB Misc.")
-		if not mp:getval("Rage", "Extra", "Performance Mode") then 
+		if not menu:getval("Rage", "Extra", "Performance Mode") then 
 			debug.profilebegin("BB Ragebot (Non Performance)")
 			do--ragebot
 				ragebot:MainLoop()
@@ -8239,7 +8239,7 @@ elseif mp.game == "pf" then --!SECTION
 
 	CreateThread(function() -- ragebot performance
 		while wait() do
-			if not mp then error("") end
+			if not menu then error("") end
 			renderChams()
 
 			for player, data in next, repupdates do
@@ -8254,7 +8254,7 @@ elseif mp.game == "pf" then --!SECTION
 				local time = math.abs(latestSample.tick - curtick)
 				if time >= 2 then
 					-- the player is lagging or using crimwalk
-					if player.Team ~= LOCAL_PLAYER.Team and mp:getval("Misc", "Exploits", "Grenade Teleport") then
+					if player.Team ~= LOCAL_PLAYER.Team and menu:getval("Misc", "Exploits", "Grenade Teleport") then
 						--local bodyparts = client.replication.getbodyparts(player)
 						if not client.char.head then break end
 						local args = {
@@ -8293,7 +8293,7 @@ elseif mp.game == "pf" then --!SECTION
 				end
 			end
 
-			if mp:getval("Rage", "Extra", "Performance Mode") then
+			if menu:getval("Rage", "Extra", "Performance Mode") then
 				do--ragebot
 					ragebot:MainLoop()
 				end
@@ -8302,12 +8302,12 @@ elseif mp.game == "pf" then --!SECTION
 	end)
 	
 	
-	mp.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
-		for index, nade in pairs(mp.activenades) do
+	menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
+		for index, nade in pairs(menu.activenades) do
 			local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
 			if nade_percent >= 1 then
-				if mp.activenades[index] == nade then
-					table.remove(mp.activenades, index)
+				if menu.activenades[index] == nade then
+					table.remove(menu.activenades, index)
 				end
 			end
 		end
@@ -8322,7 +8322,7 @@ elseif mp.game == "pf" then --!SECTION
 							gun.fucku = true
 							warn("found stuff")
 							setupvalue(client.loadedguns[id].step, k, function(...)
-								return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+								return menu:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 							end)
 						end
 					end
@@ -8335,7 +8335,7 @@ elseif mp.game == "pf" then --!SECTION
 						client.logic.currentgun.fucku = true
 						warn("found stuff except for the knife")
 						setupvalue(client.logic.currentgun.step, k, function(...)
-							return mp:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+							return menu:getval("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 						end)
 					end
 				end
@@ -8344,7 +8344,7 @@ elseif mp.game == "pf" then --!SECTION
 
 		debug.profileend("BB No Gun Bob or Sway")
 
-		if mp:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
+		if menu:getval("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
 			if client.char.alive then
 				debug.profilebegin("Third Person")
 				if not client.fakecharacter then
@@ -8393,11 +8393,11 @@ elseif mp.game == "pf" then --!SECTION
 						local fakeupdater = client.fakeupdater
 						fakeupdater.step(3, true)
 
-						local lchams = mp:getval("Visuals", "Local Visuals", "Local Player Chams")
+						local lchams = menu:getval("Visuals", "Local Visuals", "Local Player Chams")
 						if lchams then
-							local lchamscolor = mp:getval("Visuals", "Local Visuals", "Local Player Chams", "color", true)
+							local lchamscolor = menu:getval("Visuals", "Local Visuals", "Local Player Chams", "color", true)
 
-							local lchamsmat = mats[mp:getval("Visuals", "Local Visuals", "Local Player Material")]
+							local lchamsmat = mats[menu:getval("Visuals", "Local Visuals", "Local Player Material")]
 	
 							local curchildren = client.fake3pchar:GetChildren()
 	
@@ -8410,7 +8410,7 @@ elseif mp.game == "pf" then --!SECTION
 							end
 						end
 
-						if mp:getval("Rage", "Anti Aim", "Enabled") then
+						if menu:getval("Rage", "Anti Aim", "Enabled") then
 							fakeupdater.setlookangles(ragebot.angles)
 							fakeupdater.setstance(ragebot.stance)
 							fakeupdater.setsprint(ragebot.sprint)
@@ -8467,7 +8467,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end
 	end)
-	mp.BBMenuInit({
+	menu.BBMenuInit({
 		{--ANCHOR Legit
 			name = "Legit",
 			content = {
@@ -9764,7 +9764,7 @@ elseif mp.game == "pf" then --!SECTION
 			content = {
 				{
 					name = "Player List",
-					x = mp.columns.left,
+					x = menu.columns.left,
 					y = 66,
 					width = 466,
 					height = 328,
@@ -9802,9 +9802,9 @@ elseif mp.game == "pf" then --!SECTION
 				},
 				{
 					name = "Menu Settings",
-					x = mp.columns.left,
+					x = menu.columns.left,
 					y = 400,
-					width = mp.columns.width,
+					width = menu.columns.width,
 					height = 62,
 					content = {
 						{
@@ -9826,9 +9826,9 @@ elseif mp.game == "pf" then --!SECTION
 				},
 				{
 					name = "Extra",
-					x = mp.columns.left,
+					x = menu.columns.left,
 					y = 468,
-					width = mp.columns.width,
+					width = menu.columns.width,
 					height = 115,
 					content = {
 						{
@@ -9848,9 +9848,9 @@ elseif mp.game == "pf" then --!SECTION
 				},
 				{
 					name = "Configuration",
-					x = mp.columns.right,
+					x = menu.columns.right,
 					y = 400,
-					width = mp.columns.width,
+					width = menu.columns.width,
 					height = 183,
 					content = {
 						{
@@ -9882,11 +9882,11 @@ elseif mp.game == "pf" then --!SECTION
 		},
 	})
 	do  --TODO alan put this shit into a function so you don't have to copy paste it thanks
-		local plistinfo = mp.options["Settings"]["Player List"]["Player Info"][1]
-		local plist = mp.options["Settings"]["Player List"]["Players"]
+		local plistinfo = menu.options["Settings"]["Player List"]["Player Info"][1]
+		local plist = menu.options["Settings"]["Player List"]["Players"]
 		local function updateplist()
-			if not mp then return end
-			local playerlistval = mp:getval("Settings", "Player List", "Players")
+			if not menu then return end
+			local playerlistval = menu:getval("Settings", "Player List", "Players")
 			local players = {}
 			for i, team in pairs(TEAMS:GetTeams()) do
 				local sorted_players = {}
@@ -9910,10 +9910,10 @@ elseif mp.game == "pf" then --!SECTION
 				if v == LOCAL_PLAYER then
 					plyrstatus[1] = "Local Player"
 					plyrstatus[2] = RGB(66, 135, 245)
-				elseif table.find(mp.friends, v.Name) then
+				elseif table.find(menu.friends, v.Name) then
 					plyrstatus[1] = "Friend"
 					plyrstatus[2] = RGB(0, 255, 0)
-				elseif table.find(mp.priority, v.Name) then
+				elseif table.find(menu.priority, v.Name) then
 					plyrstatus[1] = "Priority"
 					plyrstatus[2] = RGB(255, 210, 0)
 				end
@@ -9929,11 +9929,11 @@ elseif mp.game == "pf" then --!SECTION
 					end
 					if i == #players then
 						selected_plyr = nil
-						mp.list.setval(plist, nil)
+						menu.list.setval(plist, nil)
 					end
 				end
 			end
-			mp:set_menu_pos(mp.x, mp.y)
+			menu:set_menu_pos(menu.x, menu.y)
 		end
 
 		local function setplistinfo(player, textonly)
@@ -9966,54 +9966,54 @@ elseif mp.game == "pf" then --!SECTION
 
 
 
-		mp.list.removeall(mp.options["Settings"]["Player List"]["Players"])
+		menu.list.removeall(menu.options["Settings"]["Player List"]["Players"])
 		updateplist()
 		setplistinfo()
 
 		local oldslectedplyr = nil
-		mp.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
+		menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
-				if mp.tabnum2str[mp.activetab] == "Settings" and mp.open then
+				if menu.tabnum2str[menu.activetab] == "Settings" and menu.open then
 					game.RunService.Stepped:wait()
 
 					updateplist()
 
 					if selected_plyr ~= nil then
-						--print(LOCAL_MOUSE.x - mp.x, LOCAL_MOUSE.y - mp.y)
-						if mp:mouse_in_menu(28, 68, 448, 238) then
-							if table.find(mp.friends, selected_plyr.Name) then
-								mp.options["Settings"]["Player List"]["Player Status"][1] = 2
-								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
-							elseif table.find(mp.priority, selected_plyr.Name) then
-								mp.options["Settings"]["Player List"]["Player Status"][1] = 3
-								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
+						--print(LOCAL_MOUSE.x - menu.x, LOCAL_MOUSE.y - menu.y)
+						if menu:mouse_in_menu(28, 68, 448, 238) then
+							if table.find(menu.friends, selected_plyr.Name) then
+								menu.options["Settings"]["Player List"]["Player Status"][1] = 2
+								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
+							elseif table.find(menu.priority, selected_plyr.Name) then
+								menu.options["Settings"]["Player List"]["Player Status"][1] = 3
+								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
 							else
-								mp.options["Settings"]["Player List"]["Player Status"][1] = 1
-								mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+								menu.options["Settings"]["Player List"]["Player Status"][1] = 1
+								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
 							end
 						end
 
-						for k, table_ in pairs({mp.friends, mp.priority}) do
+						for k, table_ in pairs({menu.friends, menu.priority}) do
 							for index, plyrname in pairs(table_) do
 								if selected_plyr.Name == plyrname then
 									table.remove(table_, index)
 								end
 							end
 						end
-						if mp:getval("Settings", "Player List", "Player Status") == 2 then
-							if not table.find(mp.friends, selected_plyr.Name) then
-								table.insert(mp.friends, selected_plyr.Name)
+						if menu:getval("Settings", "Player List", "Player Status") == 2 then
+							if not table.find(menu.friends, selected_plyr.Name) then
+								table.insert(menu.friends, selected_plyr.Name)
 								WriteRelations()
 							end
-						elseif mp:getval("Settings", "Player List", "Player Status") == 3 then
-							if not table.find(mp.priority, selected_plyr.Name) then
-								table.insert(mp.priority, selected_plyr.Name)
+						elseif menu:getval("Settings", "Player List", "Player Status") == 3 then
+							if not table.find(menu.priority, selected_plyr.Name) then
+								table.insert(menu.priority, selected_plyr.Name)
 								WriteRelations()
 							end
 						end
 					else
-						mp.options["Settings"]["Player List"]["Player Status"][1] = 1
-						mp.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+						menu.options["Settings"]["Player List"]["Player Status"][1] = 1
+						menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
 					end
 
 					updateplist()
@@ -10031,9 +10031,9 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end)
 
-		mp.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
-			if mp.open then
-				if mp.tabnum2str[mp.activetab] == "Settings" then
+		menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
+			if menu.open then
+				if menu.tabnum2str[menu.activetab] == "Settings" then
 					if plist[1] ~= nil then
 						setplistinfo(selected_plyr, true)
 					end
@@ -10041,7 +10041,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end)
 
-		mp.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
+		menu.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 			updateplist()
 			if plist[1] ~= nil then
 				setplistinfo(selected_plyr)
@@ -10050,7 +10050,7 @@ elseif mp.game == "pf" then --!SECTION
 			end
 		end)
 		
-		mp.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
+		menu.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
 			updateplist()
 			repupdates[player] = nil
 		end)
@@ -10058,15 +10058,15 @@ elseif mp.game == "pf" then --!SECTION
 end --!SECTION PF END
 
 do
-	local wm = mp.watermark
+	local wm = menu.watermark
 	wm.textString = MenuName .. " | Developer | " .. os.date("%b. %d, %Y")
 	wm.pos = Vector2.new(40, 10)
 	wm.text = {}
 	wm.width = (#wm.textString) * 7 + 10
 	wm.rect = {}
 
-	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 1, wm.width, 2, {mp.mc[1] - 40, mp.mc[2] - 40, mp.mc[2] - 40, 255}, wm.rect)
-	Draw:FilledRect(false, wm.pos.x, wm.pos.y, wm.width, 2, {mp.mc[1], mp.mc[2], mp.mc[3], 255}, wm.rect)
+	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 1, wm.width, 2, {menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[2] - 40, 255}, wm.rect)
+	Draw:FilledRect(false, wm.pos.x, wm.pos.y, wm.width, 2, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, wm.rect)
 	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
 	for i = 0, 14 do
 		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
@@ -10075,25 +10075,25 @@ do
 	Draw:OutlinedText(wm.textString, 2, false, wm.pos.x + 5, wm.pos.y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
 end
 --ANCHOR watermak
-for k, v in pairs(mp.watermark.rect) do
+for k, v in pairs(menu.watermark.rect) do
 	v.Visible = true
 end
-mp.watermark.text[1].Visible = true
+menu.watermark.text[1].Visible = true
 
-local textbox = mp.options["Settings"]["Configuration"]["ConfigName"]
+local textbox = menu.options["Settings"]["Configuration"]["ConfigName"]
 local relconfigs = GetConfigs()
-textbox[1] = relconfigs[mp.options["Settings"]["Configuration"]["Configs"][1]]
+textbox[1] = relconfigs[menu.options["Settings"]["Configuration"]["Configs"][1]]
 textbox[4].Text = textbox[1]
 
 DisplayLoadtimeFromStart()
 CreateNotification("Press DELETE to open and close the menu!")
 
 loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
-if not mp.open then
-	mp.fading = true
-	mp.fadestart = tick()
+if not menu.open then
+	menu.fading = true
+	menu.fadestart = tick()
 end
 
-mp.BBMenuInit = nil -- let me freeeeee
+menu.BBMenuInit = nil -- let me freeeeee
 -- not lettin u free asshole bitch
 -- i meant the program memory, alan...............  fuckyouAlan_iHateYOU from v1
