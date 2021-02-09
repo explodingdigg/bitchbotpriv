@@ -1523,6 +1523,8 @@ function menu.Initialize(menutable)
 	table.insert(menu.clrs.dark, colorpickerthingy[#colorpickerthingy])
 	colorpicker_outlined_rect(false, 3, 5, cp.w - 3, 1, {20, 20, 20, 255}, colorpickerthingy)
 	colorpicker_big_text("color picker :D", false, false, 7, 6, colorpickerthingy)
+
+	colorpicker_big_text("x", false, false, 268, 4, colorpickerthingy)
 	
 	colorpicker_outlined_rect(false, 10, 23, 160, 160, {30, 30, 30, 255}, colorpickerthingy)
 	colorpicker_outlined_rect(false, 11, 24, 158, 158, {0, 0, 0, 255}, colorpickerthingy)
@@ -2286,7 +2288,8 @@ function menu.Initialize(menutable)
 									v2[1] = v2[6][2]
 								end
 								
-								v2[4][5].Text = tostring(v2[1]).. v2[4][6]
+								v2[4][5].Text = v2.custom[v2[1]] or (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
+								--v2[4][5].Text = tostring(v2[1]).. v2[4][6]
 								
 								for i = 1, 4 do
 									v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
@@ -2403,6 +2406,11 @@ function menu.Initialize(menutable)
 				colorpickerthatisopen = nil
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 			end
+			if menu:MouseInColorPicker(264, 2, 14, 14) then
+				menu.colorpicker_open = false
+				colorpickerthatisopen = nil
+				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
+			end
 			if menu:MouseInColorPicker(10, 23, 160, 160) then
 				cp.dragging_m = true
 			elseif menu:MouseInColorPicker(176, 23, 14, 160) then
@@ -2504,10 +2512,14 @@ function menu.Initialize(menutable)
 								end
 							elseif v2[2] == "slider" and not dropboxopen then
 								if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
+									local stepval = 1
+									if not menu:modkeydown("shift", "left") and not v2.round then
+										stepval = 0.01
+									end
 									if menu:MouseInMenu(v2[7][1], v2[7][2], 11, 13) then
-										v2[1] -= 1
+										v2[1] -= stepval
 									elseif menu:MouseInMenu(v2[7][1] + 11, v2[7][2], 11, 13) then
-										v2[1] += 1
+										v2[1] += stepval
 									end
 									
 									if v2[1] < v2[6][1] then
@@ -2515,7 +2527,10 @@ function menu.Initialize(menutable)
 									elseif v2[1] > v2[6][2] then
 										v2[1] = v2[6][2]
 									end
-									v2[4][5].Text = (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
+
+									v2[4][5].Text = v2.custom[v2[1]] or (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
+									--v2[4][5].Text = (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
+
 									for i = 1, 4 do
 										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 									end
@@ -8470,7 +8485,7 @@ menu.Initialize({
 					value = 5,
 					minvalue = 0,
 					maxvalue = 20,
-					custom = {[0] = "off"}
+					custom = {[0] = "Off"}
 				},
 				{
 					type = "slider",
@@ -8480,7 +8495,7 @@ menu.Initialize({
 					maxvalue = 50,
 					stradd = "°",
 					rounded = false,
-					custom = {[0] = "off"}
+					custom = {[0] = "Off"}
 				},
 				{
 					type = "dropbox",
@@ -8849,7 +8864,7 @@ content = {
 				value = 10,
 				minvalue = -100,
 				maxvalue = 100,
-				stradd = " ° per second"
+				stradd = "°/s"
 			},
 			{
 				type = "dropbox",
