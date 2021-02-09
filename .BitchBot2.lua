@@ -2399,9 +2399,9 @@ function menu.Initialize(menutable)
 				else
 					colorpickerthatisopen[1] = {math.floor(tempclr.R * 255), math.floor(tempclr.G * 255), math.floor(tempclr.B * 255)}
 				end
-				-- menu.colorpicker_open = false
-				-- colorpickerthatisopen = nil
-				--set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
+				menu.colorpicker_open = false
+				colorpickerthatisopen = nil
+				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 			end
 			if menu:MouseInColorPicker(10, 23, 160, 160) then
 				cp.dragging_m = true
@@ -10064,3 +10064,4 @@ end
 menu.Initialize = nil -- let me freeeeee
 -- not lettin u free asshole bitch
 -- i meant the program memory, alan...............  fuckyouAlan_iHateYOU from v1
+-- im changing all the var names that had typos by me back to what they were now because of this.... enjoy hieght....
