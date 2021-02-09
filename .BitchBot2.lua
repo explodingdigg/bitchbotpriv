@@ -8,6 +8,7 @@ local Nate = isfile("cole.mak")
 if isfile("bitchbot/menuname.txt") then
 	MenuName = readfile("bitchbot/menuname.txt")
 end
+
 function map(X, A, B, C, D)
 	return (X-A)/(B-A) * (D-C) + C
 end
@@ -297,7 +298,7 @@ end
 
 loadstart = tick()
 
-if game.PlaceId == 292439477 or game.PlaceId == 299659045 then
+if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 then -- they sometimes open 5281922586
 	menu.game = "pf"
 	do
 		for _,v in pairs(getgc()) do
@@ -311,7 +312,7 @@ if game.PlaceId == 292439477 or game.PlaceId == 299659045 then
 		end
 		
 		repeat
-			game.RunService.Heartbeat:wait()
+			game.RunService.Heartbeat:Wait()
 		until net and not net.add
 	end -- wait for framwork to load
 end
@@ -333,6 +334,7 @@ else
 	if not isfile("bitchbot/relations.bb") then
 		writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
 	end
+	writefile("bitchbot/debuglog.bb", "")
 end
 
 if not isfolder("bitchbot/".. menu.game) then
@@ -382,7 +384,10 @@ local function UnpackRelations()
 						local playername = Players:GetNameFromUserIdAsync(tonumber(k))
 						table.insert(final[cellname], 1, playername)
 					end)
-					warn(status, ret)
+					if not status then
+						CreateNotification(string.format("Error occurred while identifying player \"%s\" (%s player). See debuglog.bb", k, cellname))
+						appendfile("bitchbot/debuglog.bb", tostring(ret) .. "\n" .. debug.traceback() .. "\n\n")
+					end
 				end
 			end
 		end
@@ -394,12 +399,16 @@ end
 
 CreateThread(function()
 	UnpackRelations()
-	CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players", #menu.friends, #menu.priority))
+	if (not menu or not menu.GetVal) then
+		repeat game.RunService.Heartbeat:Wait() until (menu and menu.GetVal)
+	end
+	if #menu.friends > 0 and #menu.priority > 0 then
+		CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players", #menu.friends, #menu.priority))
+	end
 end)
 
 local function WriteRelations()
 	local str = "bb:{{friends:"
-	warn("yeah")
 	
 	for k,v in next, menu.friends do
 		local playerobj
@@ -444,7 +453,7 @@ local function WriteRelations()
 	end
 	
 	str = str .. "}}"
-	warn(str)
+
 	writefile("bitchbot/relations.bb", str)
 end
 
@@ -5460,9 +5469,9 @@ local chatspams = {
 													firepos = resolvedPosition
 													if menu.priority[player.Name] then break end
 												end
-											elseif resolvertype == 2 then -- axes
+											elseif resolvertype == 2 then -- axes fast
 												debug.profilebegin("BB Ragebot Axis Shifting Resolver")
-												local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 8, 1)
+												local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 8)
 												debug.profileend("BB Ragebot Axis Shifting Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
@@ -5471,18 +5480,7 @@ local chatspams = {
 													firepos = resolvedPosition
 													if menu.priority[player.Name] then break end
 												end
-											elseif resolvertype == 3 then -- axes fast
-												debug.profilebegin("BB Ragebot Axis Shifting Fast Resolver")
-												local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 8)
-												debug.profileend("BB Ragebot Axis Shifting Fast Resolver")
-												if resolvedPosition then
-													ragebot.firepos = resolvedPosition
-													cpart = bone
-													theplayer = player
-													firepos = resolvedPosition
-													if menu.priority[player.Name] then break end
-												end
-											elseif resolvertype == 4 then -- random 
+											elseif resolvertype == 3 then -- random 
 												debug.profilebegin("BB Ragebot Random Resolver")
 												local resolvedPosition = ragebot:HitscanRandom(barrel, player, bone)
 												debug.profileend("BB Ragebot Random Resolver")
@@ -5493,7 +5491,7 @@ local chatspams = {
 													firepos = resolvedPosition
 													if menu.priority[player.Name] then break end
 												end
-											elseif resolvertype == 5 then -- teleport
+											elseif resolvertype == 4 then -- teleport
 												--[[local resolvedPosition, steps = ragebot:TP_UpHitscan(barrel, bone.Position, 10)
 												if resolvedPosition then
 													rconsolewarn(tostring(resolvedPosition) .. " | " .. tostring(#steps))
@@ -5518,7 +5516,7 @@ local chatspams = {
 												else
 													ragebot.needsTP = false	
 												end
-											elseif resolvertype == 6 then -- "combined"
+											elseif resolvertype == 5 then -- "combined"
 												-- basically combines fast axis shifting with offsetting the hitbox or just sending a raycast to the hitbox for the intersection point, really broken
 												
 												local extendSize = 4.5833333333333
@@ -5565,9 +5563,7 @@ local chatspams = {
 												else
 													-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
 													local resolvedPosition, axesintersection = ragebot:HitscanOnAxes(barrel, player, newTargetPosition, 1, 8, true, sphereHitbox)
-													warn(resolvedPosition, axesintersection)
 													if resolvedPosition then
-														warn("penetrated through axes")
 														ragebot.firepos = resolvedPosition
 														cpart = bone
 														theplayer = player
@@ -5588,7 +5584,6 @@ local chatspams = {
 														--warn(penetrated, intersectionPoint)
 														
 														if intersectionPoint then
-															warn("penetrated with standard raycast")
 															ragebot.firepos = barrel
 															cpart = bone
 															theplayer = player
@@ -5598,49 +5593,6 @@ local chatspams = {
 															--warn("no standardized autowall hit")
 														end
 													end
-												end
-											else -- underground
-												local extendSize = 4.5833333333333
-												
-												local headpos = client.char.head.Position
-												
-												local ray = Ray.new(headpos, Vector3.new(0, -90, 0) * 18)
-												
-												local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
-												
-												local newpos
-												
-												if hit ~= nil then
-													local canNoclip = (not hit.CanCollide) or hit.Name == "Window"
-													newpos = canNoclip and headpos - Vector3.new(0, 18, 0) or hitpos + Vector3.new(0, 0.02, 0)
-												else
-													newpos = headpos - Vector3.new(0, 18, 0)
-												end
-												
-												ragebot.repupdate = newpos
-												
-												local newfirepos = newpos - Vector3.new(0, 8, 0)
-												local newTargetPosition = bone.Position - Vector3.new(0, extendSize, 0)
-												
-												local pVelocity = camera:GetTrajectory(newTargetPosition, newfirepos)
-												
-												sphereHitbox.Position = newTargetPosition
-												
-												if sphereHitbox.Size ~= rageHitboxSize then
-													sphereHitbox.Size = rageHitboxSize
-												end
-												
-												--ragebot:CanPenetrateRaycast(campos, pos, penetration, returnintersection, stopPart)
-												
-												local penetrated, intersection = ragebot:CanPenetrateRaycast(newfirepos, newTargetPosition, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
-												
-												if intersection then
-													ragebot.firepos = newfirepos
-													cpart = bone
-													theplayer = player
-													ragebot.intersection = intersection
-													firepos = newfirepos
-													--warn("penetrated normally")
 												end
 											end
 										end
@@ -8302,7 +8254,6 @@ menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
 				for k,v in next, getupvalues(gun.step) do
 					if type(v) == "function" and getinfo(v).name:match("bob") then
 						gun.fucku = true
-						warn("found stuff")
 						setupvalue(client.loadedguns[id].step, k, function(...)
 							return menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 						end)
@@ -8315,7 +8266,6 @@ menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
 			for k,v in next, getupvalues(client.logic.currentgun.step) do
 				if type(v) == "function" and getinfo(v).name:match("bob") then
 					client.logic.currentgun.fucku = true
-					warn("found stuff except for the knife")
 					setupvalue(client.logic.currentgun.step, k, function(...)
 						return menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
 					end)
@@ -8739,7 +8689,7 @@ content = {
 				minvalue = 1,
 				maxvalue = 20,
 				stradd = " studs"
-			}, -- extra pen works a lot better with bullethit. (less than 12 works)
+			}, -- fuck u json
 			{
 				type = "toggle",
 				name = "Autowall Resolver",
@@ -8750,7 +8700,7 @@ content = {
 				type = "dropbox",
 				name = "Resolver Type",
 				value = 2,
-				values = {"Cubic", "Axis Shifting", "Axis Shifting Fast", "Random", "Teleport", "Axis + Hitbox Shifting", "Underground"}
+				values = {"Cubic", "Axis Shifting", "Random", "Teleport", "Axis + Hitbox Shifting"}
 			},
 			{
 				type = "slider",
