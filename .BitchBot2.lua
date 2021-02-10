@@ -6225,8 +6225,18 @@ if found8 then
 					return func(...)
 				end
 				
-				fragargs[2].frames[1].a = Vector3.new()
+				fragargs[2].frames[1].a = Vector3.new(0/0)
 				fragargs[2].frames[2] = {
+					v0 = Vector3.new(),
+					glassbreaks = {},
+					t0 = 0,
+					offset = Vector3.new(),
+					rot0 = CFrame.new(),
+					a = Vector3.new(0/0),
+					p0 = Vector3.new(0/0),
+					rotv = Vector3.new()
+				}
+				fragargs[2].frames[3] = {
 					v0 = Vector3.new(),
 					glassbreaks = {},
 					t0 = 0,
@@ -6605,6 +6615,7 @@ menu.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input
 			if i >= 4 then break end
 			if client.hud:isplayeralive(v) then
 				i += 1
+				client.logic.gammo -= 1
 				local curbodyparts = client.replication.getbodyparts(v)
 				local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10 
 				and curbodyparts.rootpart.Position or curbodyparts.head.Position
@@ -6618,8 +6629,18 @@ menu.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input
 								t0 = 0,
 								offset = Vector3.new(),
 								rot0 = CFrame.new(),
-								a = Vector3.new(),
+								a = Vector3.new(0/0),
 								p0 = client.lastrepupdate or client.char.head.Position,
+								rotv = Vector3.new()
+							},
+							{
+								v0 = Vector3.new(),
+								glassbreaks = {},
+								t0 = 0,
+								offset = Vector3.new(),
+								rot0 = CFrame.new(),
+								a = Vector3.new(0/0),
+								p0 = Vector3.new(0/0),
 								rotv = Vector3.new()
 							},
 							{
@@ -6852,8 +6873,18 @@ do--ANCHOR send hook
 								t0 = 0,
 								offset = Vector3.new(),
 								rot0 = CFrame.new(),
-								a = Vector3.new(),
+								a = Vector3.new(0 / 0),
 								p0 = client.lastrepupdate or client.char.head.Position,
+								rotv = Vector3.new()
+							},
+							{
+								v0 = Vector3.new(),
+								glassbreaks = {},
+								t0 = 0,
+								offset = Vector3.new(),
+								rot0 = CFrame.new(),
+								a = Vector3.new(0/0),
+								p0 = Vector3.new(0/0),
 								rotv = Vector3.new()
 							},
 							{
@@ -10029,4 +10060,5 @@ end
 menu.Initialize = nil -- let me freeeeee
 -- not lettin u free asshole bitch
 -- i meant the program memory, alan...............  fuckyouAlan_iHateYOU from v1
--- im changing all the var names that had typos by me back to what they were now because of this.... enjoy height....
+-- im changing all the var names that had typos by me back to what they were now because of this.... enjoy hieght....
+-- wut
