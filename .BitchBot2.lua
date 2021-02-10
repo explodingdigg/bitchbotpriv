@@ -5460,10 +5460,11 @@ local chatspams = {
 										elseif aw_resolve then
 											if resolvertype == 1 then -- cubic hitscan
 												debug.profilebegin("BB Ragebot Cubic Resolver")
-												local resolvedPosition = ragebot:CubicHitscan(8, barrel, player, k)
+												local resolvedPosition, intersection = ragebot:CubicHitscan(10, barrel, bone)
 												debug.profileend("BB Ragebot Cubic Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
+													ragebot.intersection = intersection
 													cpart = bone
 													theplayer = player
 													firepos = resolvedPosition
@@ -5719,144 +5720,176 @@ local chatspams = {
 				client.fakebodyroot = clone
 			end
 		end
+
+		function ragebot:GetCubicMultipoints(origin, extent)
+			assert(extent % 2 == 0, "extent value must be even")
+			local start = origin or client.cam.basecframe.p
+			local max_step = extent or 8
 		
-		function ragebot:ResolveCubicOffsetToTarget(startpos, extent, person, bodypart)
-			assert(startpos, "mang u need a oriegen to do cube ic scan u feel me?")
-				local resolvedPosition = nil
-				local curscanpos = startpos
-				local studs = extent or 8
-				do -- This looks sort of dumb
-					for x = 1, studs do
-						
-						curscanpos += Vector3.new(1, 0, 0)
-						local directionVector = targetpos - curscanpos
-						resolvedPosition = ragebot:CanPenetrateRaycast(curscanpos, bodypart.Position, client.logic.currentgun.data.penetrationdepth) and curscanpos or nil
-						if resolvedPosition then return resolvedPosition end
-						
-						for y = 1, studs do
-							
-							curscanpos += Vector3.new(0, -1, 0)
-							local directionVector = targetpos - curscanpos
-							resolvedPosition = ragebot:CanPenetrateRaycast(curscanpos, bodypart.Position, client.logic.currentgun.data.penetrationdepth) and curscanpos or nil
-							if resolvedPosition then return resolvedPosition end
-							
-							for z = 1, studs do
-								
-								curscanpos += Vector3.new(0, 0, -1)
-								local directionVector = targetpos - curscanpos
-								resolvedPosition = ragebot:CanPenetrateRaycast(curscanpos, bodypart.Position, client.logic.currentgun.data.penetrationdepth) and curscanpos or nil
-								if resolvedPosition then return resolvedPosition end
-								
-							end
+			start -= Vector3.new(max_step, -max_step, max_step) / 2
+		
+			local pos = start
+			local half = max_step / 2
+		
+			local points = {corner = table.create(8), inside = table.create(19)}
+
+			for x = 0, max_step do
+				for y = 0, -max_step, -1 do
+					for z = 0, max_step do
+						local isPositionCorner = x % max_step == 0 and y % max_step == 0 and z % max_step == 0
+						local isPositionInside = x % half == 0 and y % half == 0 and z % half == 0
+						if isPositionCorner then
+							pos = start + Vector3.new(x, y, z)
+		
+							table.insert(points.corner, 1, pos)
+						elseif isPositionInside then
+							pos = start + Vector3.new(x, y, z)
+		
+							table.insert(points.inside, 1, pos)
 						end
+					end
+				end
+			end
+		
+			return points
+		end
+
+		function ragebot:CubicHitscan(studs, origin, selectedpart) -- Scans in a cubic square area of size (studs) and resolves a position to hit target at
+			assert(studs, "what are you trying to do young man, this is illegal.  you do know that you have to provide us with shit to use to calculate this, you do realize this right?")
+			assert(origin, "just like before, we need information to even apply this to our things we made to provide you with ease of p100 hits 🤡")
+			assert(selectedpart, "what are you attempting to do what the fuck are you dumb?? you are just testing my patience")
+
+			local dapointz = ragebot:GetCubicMultipoints(origin, studs or 18*2)
+
+			local pos, intersection
+
+			table.foreach(dapointz.corner, function(i, point)
+				local penetrated, tintersection = ragebot:CanPenetrateRaycast(point, selectedpart.Position, client.logic.currentgun.data.penetrationdepth, true)
+				if penetrated then
+					pos = point
+					intersection = tintersection
+					return
+				end
+			end)
+
+			if pos then
+				warn("hit a corner")
+				return pos, intersection
+			end
+
+			table.foreach(dapointz.inside, function(i, point)
+				local penetrated, tintersection = ragebot:CanPenetrateRaycast(point, selectedpart.Position, client.logic.currentgun.data.penetrationdepth, true)
+				if penetrated then
+					pos = point
+					intersection = tintersection
+					return
+				end
+			end)
+
+			if pos then
+				warn("hit from the inside")
+				return pos, intersection
+			end
+
+			return nil
+		end
+		
+		local hitpoints = {}
+		function ragebot:HitscanRandom(origin, bodypart)
+			local offset
+			if #hitpoints < 50 or math.random() < 0.2 then
+				offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit * 8
+			else
+				offset = hitpoints[math.random(#points)]
+			end
+			local position = origin + offset
+			if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
+				table.insert(hitpoints, offset)
+				return position
+			end
+		end
+		
+		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
+			assert(bodypart, "hello")
+			
+			local dest = typeof(bodypart) ~= "Vector3" and bodypart.Position or bodypart -- fuck
+			
+			assert(person, "something went wrong in your nasa rocket launch")
+			local position = origin
+			local direction
+			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
+			for i = 1, max_step do
+				position = position + Vector3.new(0, step, 0)
+				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
+				if pen then
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
 					end
 				end
 			end
 			
-			function ragebot:CubicHitscan(studs, origin, person, selectedpart) -- Scans in a cubic square area of size (studs) and resolves a position to hit target at
-				if not person then return "target is null" end
-				local studs = tonumber(studs) or 8
-				local origin = client.cam.basecframe.p + Vector3.new(-studs, studs, -studs) -- Position the scan at the top left of the cube
-				local resolvedPosition = self:ResolveCubicOffsetToTarget(origin, studs, person, selectedpart)
-				
-				return resolvedPosition
-			end
-			local hitpoints = {}
-			function ragebot:HitscanRandom(origin, person, bodypart)
-				local offset
-				if #hitpoints < 50 or math.random() < 0.2 then
-					offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit * 8
-				else
-					offset = hitpoints[math.random(#points)]
-				end
-				local position = origin + offset
-				if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
-					table.insert(hitpoints, offset)
-					return position
+			position = origin
+			
+			for i = 1, max_step do
+				position = position - Vector3.new(0, step, 0)
+				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
+				if pen then
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end
 				end
 			end
 			
-			function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
-				assert(bodypart, "hello")
-				
-				local dest = typeof(bodypart) ~= "Vector3" and bodypart.Position or bodypart -- fuck
-				
-				assert(person, "something went wrong in your nasa rocket launch")
-				local position = origin
-				local direction
-				-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
-				for i = 1, max_step do
-					position = position + Vector3.new(0, step, 0)
-					local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
-					if pen then
-						if returnintersection and intersectionpoint then
-							return position, intersectionpoint
-						end
+			position = origin
+			
+			for i = 1, max_step do
+				position = position + Vector3.new(0, 0, step)
+				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
+				if pen then
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
 					end
 				end
-				
-				position = origin
-				
-				for i = 1, max_step do
-					position = position - Vector3.new(0, step, 0)
-					local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
-					if pen then
-						if returnintersection and intersectionpoint then
-							return position, intersectionpoint
-						end
-					end
-				end
-				
-				position = origin
-				
-				for i = 1, max_step do
-					position = position + Vector3.new(0, 0, step)
-					local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
-					if pen then
-						if returnintersection and intersectionpoint then
-							return position, intersectionpoint
-						end
-					end
-				end
-				
-				position = origin
-				
-				for i = 1, max_step do
-					position = position - Vector3.new(0, 0, step)
-					local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
-					if pen then
-						if returnintersection and intersectionpoint then
-							return position, intersectionpoint
-						end
-					end
-				end
-				
-				position = origin
-				
-				for i = 1, max_step do
-					position = position + Vector3.new(step, 0, 0)
-					local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
-					if pen then
-						if returnintersection and intersectionpoint then
-							return position, intersectionpoint
-						end
-					end
-				end
-				
-				position = origin
-				
-				for i = 1, max_step do
-					position = position - Vector3.new(step, 0, 0)
-					local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
-					if pen then
-						if returnintersection and intersectionpoint then
-							return position, intersectionpoint
-						end
-					end
-				end
-				
-				return nil
 			end
+			
+			position = origin
+			
+			for i = 1, max_step do
+				position = position - Vector3.new(0, 0, step)
+				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
+				if pen then
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end
+				end
+			end
+			
+			position = origin
+			
+			for i = 1, max_step do
+				position = position + Vector3.new(step, 0, 0)
+				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
+				if pen then
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end
+				end
+			end
+			
+			position = origin
+			
+			for i = 1, max_step do
+				position = position - Vector3.new(step, 0, 0)
+				local pen, intersectionpoint = ragebot:CanPenetrateRaycast(position, dest, client.logic.currentgun.data.penetrationdepth, true, customHitbox)
+				if pen then
+					if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end
+				end
+			end
+			
+			return nil
+		end
 			
 			--[[function ragebot:TP_UpHitscan(from, to, max_steps)
 			warn("ok  ! ! ! ! ! ! ! !")
