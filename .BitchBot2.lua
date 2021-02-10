@@ -671,11 +671,11 @@ do
 	end
 	--TODO rename all the functions to be CamelCased and
 	--put all related funcs into tables
-	function Draw:OutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
+	function Draw:OutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
 		local temptable = Drawing.new("Square")
 		temptable.Visible = visible
 		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, hieght)
+		temptable.Size = Vector2.new(width, height)
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		temptable.Filled = false
 		temptable.Thickness = 0
@@ -686,11 +686,11 @@ do
 		end
 	end
 	
-	function Draw:FilledRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
+	function Draw:FilledRect(visible, pos_x, pos_y, width, height, clr, tablename)
 		local temptable = Drawing.new("Square")
 		temptable.Visible = visible
 		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, hieght)
+		temptable.Size = Vector2.new(width, height)
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		temptable.Filled = true
 		temptable.Thickness = 0
@@ -715,11 +715,11 @@ do
 		end
 	end
 	
-	function Draw:Image(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
+	function Draw:Image(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
 		local temptable = Drawing.new("Image")
 		temptable.Visible = visible
 		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, hieght)
+		temptable.Size = Vector2.new(width, height)
 		temptable.Transparency = transparency
 		temptable.Data = imagedata
 		table.insert(tablename, temptable)
@@ -821,18 +821,18 @@ do
 	
 	--ANCHOR MENU ELEMENTS
 	
-	function Draw:MenuOutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		Draw:OutlinedRect(visible, pos_x + menu.x, pos_y + menu.y, width, hieght, clr, tablename)
+	function Draw:MenuOutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		Draw:OutlinedRect(visible, pos_x + menu.x, pos_y + menu.y, width, height, clr, tablename)
 		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 	
-	function Draw:MenuFilledRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		Draw:FilledRect(visible, pos_x + menu.x, pos_y + menu.y, width, hieght, clr, tablename)
+	function Draw:MenuFilledRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		Draw:FilledRect(visible, pos_x + menu.x, pos_y + menu.y, width, height, clr, tablename)
 		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 	
-	function Draw:MenuImage(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
-		Draw:Image(visible, imagedata, pos_x + menu.x, pos_y + menu.y, width, hieght, transparency, tablename)
+	function Draw:MenuImage(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+		Draw:Image(visible, imagedata, pos_x + menu.x, pos_y + menu.y, width, height, transparency, tablename)
 		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 	
@@ -1484,7 +1484,6 @@ function menu.Initialize(menutable)
 	
 	set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 	
-	local colorpickerthingy = {}
 	local cp = {
 		x = 400,
 		y = 40,
@@ -1500,87 +1499,88 @@ function menu.Initialize(menutable)
 			v = 0,
 			a = 0
 		},
-		postable = {}
+		postable = {},
+		drawings = {}
 	}
 	
-	local function colorpicker_outlined_rect(visible, pos_x, pos_y, width, hieght, clr, tablename)    -- doing all this shit to make it easier for me to make this beat look nice and shit ya fell dog :dog_head:
-		Draw:OutlinedRect(visible, pos_x + cp.x, pos_y + cp.y, width, hieght, clr, tablename)
+	local function ColorpickerOutline(visible, pos_x, pos_y, width, height, clr, tablename)    -- doing all this shit to make it easier for me to make this beat look nice and shit ya fell dog :dog_head:
+		Draw:OutlinedRect(visible, pos_x + cp.x, pos_y + cp.y, width, height, clr, tablename)
 		table.insert(cp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 	
-	local function colorpicker_filled_rect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		Draw:FilledRect(visible, pos_x + cp.x, pos_y + cp.y, width, hieght, clr, tablename)
+	local function ColorpickerRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		Draw:FilledRect(visible, pos_x + cp.x, pos_y + cp.y, width, height, clr, tablename)
 		table.insert(cp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 	
-	local function colorpicker_image(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
-		Draw:Image(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
+	local function ColorpickerImage(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+		Draw:Image(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
 		table.insert(cp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 	
-	local function colorpicker_big_text(text, visible, centered, pos_x, pos_y, tablename)
+	local function ColorpickerText(text, visible, centered, pos_x, pos_y, tablename)
 		Draw:OutlinedText(text, 2, visible, pos_x + cp.x, pos_y + cp.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
 		table.insert(cp.postable, {tablename[#tablename], pos_x, pos_y})
 	end
 	
-	colorpicker_filled_rect(false, 1, 1, cp.w, cp.h, {35, 35, 35, 255}, colorpickerthingy)
-	colorpicker_outlined_rect(false, 1, 1, cp.w, cp.h, {0, 0, 0, 255}, colorpickerthingy)
-	colorpicker_outlined_rect(false, 2, 2, cp.w - 2, cp.h - 2, {20, 20, 20, 255}, colorpickerthingy)
-	colorpicker_outlined_rect(false, 3, 3, cp.w - 3, 1, {127, 72, 163, 255}, colorpickerthingy)
-	table.insert(menu.clrs.norm, colorpickerthingy[#colorpickerthingy])
-	colorpicker_outlined_rect(false, 3, 4, cp.w - 3, 1, {87, 32, 123, 255}, colorpickerthingy)
-	table.insert(menu.clrs.dark, colorpickerthingy[#colorpickerthingy])
-	colorpicker_outlined_rect(false, 3, 5, cp.w - 3, 1, {20, 20, 20, 255}, colorpickerthingy)
-	colorpicker_big_text("color picker :D", false, false, 7, 6, colorpickerthingy)
+	ColorpickerRect(false, 1, 1, cp.w, cp.h, {35, 35, 35, 255}, cp.drawings)
+	ColorpickerOutline(false, 1, 1, cp.w, cp.h, {0, 0, 0, 255}, cp.drawings)
+	ColorpickerOutline(false, 2, 2, cp.w - 2, cp.h - 2, {20, 20, 20, 255}, cp.drawings)
+	ColorpickerOutline(false, 3, 3, cp.w - 3, 1, {127, 72, 163, 255}, cp.drawings)
+	table.insert(menu.clrs.norm, cp.drawings[#cp.drawings])
+	ColorpickerOutline(false, 3, 4, cp.w - 3, 1, {87, 32, 123, 255}, cp.drawings)
+	table.insert(menu.clrs.dark, cp.drawings[#cp.drawings])
+	ColorpickerOutline(false, 3, 5, cp.w - 3, 1, {20, 20, 20, 255}, cp.drawings)
+	ColorpickerText("color picker :D", false, false, 7, 6, cp.drawings)
 
-	colorpicker_big_text("x", false, false, 268, 4, colorpickerthingy)
+	ColorpickerText("x", false, false, 268, 4, cp.drawings)
 	
-	colorpicker_outlined_rect(false, 10, 23, 160, 160, {30, 30, 30, 255}, colorpickerthingy)
-	colorpicker_outlined_rect(false, 11, 24, 158, 158, {0, 0, 0, 255}, colorpickerthingy)
-	colorpicker_filled_rect(false, 12, 25, 156, 156, {0, 0, 0, 255}, colorpickerthingy)
-	local maincolor = colorpickerthingy[#colorpickerthingy]
-	colorpicker_image(false, BBOT_IMAGES[1], 12, 25, 156, 156, 1, colorpickerthingy)
+	ColorpickerOutline(false, 10, 23, 160, 160, {30, 30, 30, 255}, cp.drawings)
+	ColorpickerOutline(false, 11, 24, 158, 158, {0, 0, 0, 255}, cp.drawings)
+	ColorpickerRect(false, 12, 25, 156, 156, {0, 0, 0, 255}, cp.drawings)
+	local maincolor = cp.drawings[#cp.drawings]
+	ColorpickerImage(false, BBOT_IMAGES[1], 12, 25, 156, 156, 1, cp.drawings)
 	
 	--https://i.imgur.com/jG3NjxN.png
 	local alphabar = {}
-	colorpicker_outlined_rect(false, 10, 189, 160, 14, {30, 30, 30, 255}, colorpickerthingy)
-	table.insert(alphabar, colorpickerthingy[#colorpickerthingy])
-	colorpicker_outlined_rect(false, 11, 190, 158, 12, {0, 0, 0, 255}, colorpickerthingy)
-	table.insert(alphabar, colorpickerthingy[#colorpickerthingy])
-	colorpicker_image(false, BBOT_IMAGES[2], 12, 191, 159, 10, 1, colorpickerthingy)
-	table.insert(alphabar, colorpickerthingy[#colorpickerthingy])
+	ColorpickerOutline(false, 10, 189, 160, 14, {30, 30, 30, 255}, cp.drawings)
+	table.insert(alphabar, cp.drawings[#cp.drawings])
+	ColorpickerOutline(false, 11, 190, 158, 12, {0, 0, 0, 255}, cp.drawings)
+	table.insert(alphabar, cp.drawings[#cp.drawings])
+	ColorpickerImage(false, BBOT_IMAGES[2], 12, 191, 159, 10, 1, cp.drawings)
+	table.insert(alphabar, cp.drawings[#cp.drawings])
 	
-	colorpicker_outlined_rect(false, 176, 23, 14, 160, {30, 30, 30, 255}, colorpickerthingy)
-	colorpicker_outlined_rect(false, 177, 24, 12, 158, {0, 0, 0, 255}, colorpickerthingy)
+	ColorpickerOutline(false, 176, 23, 14, 160, {30, 30, 30, 255}, cp.drawings)
+	ColorpickerOutline(false, 177, 24, 12, 158, {0, 0, 0, 255}, cp.drawings)
 	--https://i.imgur.com/2Ty4u2O.png
-	colorpicker_image(false, BBOT_IMAGES[3], 178, 25, 10, 156, 1, colorpickerthingy)
+	ColorpickerImage(false, BBOT_IMAGES[3], 178, 25, 10, 156, 1, cp.drawings)
 	
-	colorpicker_big_text("New Color", false, false, 198, 23, colorpickerthingy)
-	colorpicker_outlined_rect(false, 197, 37, 75, 40, {30, 30, 30, 255}, colorpickerthingy)
-	colorpicker_outlined_rect(false, 198, 38, 73, 38, {0, 0, 0, 255}, colorpickerthingy)
-	colorpicker_image(false, BBOT_IMAGES[4], 199, 39, 71, 36, 1, colorpickerthingy)
+	ColorpickerText("New Color", false, false, 198, 23, cp.drawings)
+	ColorpickerOutline(false, 197, 37, 75, 40, {30, 30, 30, 255}, cp.drawings)
+	ColorpickerOutline(false, 198, 38, 73, 38, {0, 0, 0, 255}, cp.drawings)
+	ColorpickerImage(false, BBOT_IMAGES[4], 199, 39, 71, 36, 1, cp.drawings)
 	
-	colorpicker_filled_rect(false, 199, 39, 71, 36, {255, 0, 0, 255}, colorpickerthingy)
-	local newcolor = colorpickerthingy[#colorpickerthingy]
+	ColorpickerRect(false, 199, 39, 71, 36, {255, 0, 0, 255}, cp.drawings)
+	local newcolor = cp.drawings[#cp.drawings]
 	
-	colorpicker_big_text("copy", false, true, 198 + 36, 41, colorpickerthingy)
-	colorpicker_big_text("paste", false, true, 198 + 37, 56, colorpickerthingy)
-	local newcopy = {colorpickerthingy[#colorpickerthingy - 1], colorpickerthingy[#colorpickerthingy]}
+	ColorpickerText("copy", false, true, 198 + 36, 41, cp.drawings)
+	ColorpickerText("paste", false, true, 198 + 37, 56, cp.drawings)
+	local newcopy = {cp.drawings[#cp.drawings - 1], cp.drawings[#cp.drawings]}
 	
-	colorpicker_big_text("Old Color", false, false, 198, 77, colorpickerthingy)
-	colorpicker_outlined_rect(false, 197, 91, 75, 40, {30, 30, 30, 255}, colorpickerthingy)
-	colorpicker_outlined_rect(false, 198, 92, 73, 38, {0, 0, 0, 255}, colorpickerthingy)
-	colorpicker_image(false, BBOT_IMAGES[4], 199, 93, 71, 36, 1, colorpickerthingy)
+	ColorpickerText("Old Color", false, false, 198, 77, cp.drawings)
+	ColorpickerOutline(false, 197, 91, 75, 40, {30, 30, 30, 255}, cp.drawings)
+	ColorpickerOutline(false, 198, 92, 73, 38, {0, 0, 0, 255}, cp.drawings)
+	ColorpickerImage(false, BBOT_IMAGES[4], 199, 93, 71, 36, 1, cp.drawings)
 	
-	colorpicker_filled_rect(false, 199, 93, 71, 36, {255, 0, 0, 255}, colorpickerthingy)
-	local oldcolor = colorpickerthingy[#colorpickerthingy]
+	ColorpickerRect(false, 199, 93, 71, 36, {255, 0, 0, 255}, cp.drawings)
+	local oldcolor = cp.drawings[#cp.drawings]
 	
-	colorpicker_big_text("copy", false, true, 198 + 36, 103	, colorpickerthingy)
-	local oldcopy = {colorpickerthingy[#colorpickerthingy]}
+	ColorpickerText("copy", false, true, 198 + 36, 103	, cp.drawings)
+	local oldcopy = {cp.drawings[#cp.drawings]}
 	
-	--colorpicker_filled_rect(false, 197, cp.h - 25, 75, 20, {30, 30, 30, 255}, colorpickerthingy)
-	colorpicker_big_text("[ Apply ]", false, true, 235, cp.h - 23, colorpickerthingy)
-	local applytext = colorpickerthingy[#colorpickerthingy]
+	--ColorpickerRect(false, 197, cp.h - 25, 75, 20, {30, 30, 30, 255}, cp.drawings)
+	ColorpickerText("[ Apply ]", false, true, 235, cp.h - 23, cp.drawings)
+	local applytext = cp.drawings[#cp.drawings]
 	
 	local function set_newcolor(r, g, b, a)
 		
@@ -1602,24 +1602,24 @@ function menu.Initialize(menutable)
 	end
 	
 	local dragbar_r = {}
-	Draw:OutlinedRect(true, 30, 30, 16, 5, {0, 0, 0, 255}, colorpickerthingy)
-	table.insert(dragbar_r, colorpickerthingy[#colorpickerthingy])
-	Draw:OutlinedRect(true, 31, 31, 14, 3, {255, 255, 255, 255}, colorpickerthingy)
-	table.insert(dragbar_r, colorpickerthingy[#colorpickerthingy])
+	Draw:OutlinedRect(true, 30, 30, 16, 5, {0, 0, 0, 255}, cp.drawings)
+	table.insert(dragbar_r, cp.drawings[#cp.drawings])
+	Draw:OutlinedRect(true, 31, 31, 14, 3, {255, 255, 255, 255}, cp.drawings)
+	table.insert(dragbar_r, cp.drawings[#cp.drawings])
 	
 	local dragbar_b = {}
-	Draw:OutlinedRect(true, 30, 30, 5, 16, {0, 0, 0, 255}, colorpickerthingy)
-	table.insert(dragbar_b, colorpickerthingy[#colorpickerthingy])
-	table.insert(alphabar, colorpickerthingy[#colorpickerthingy])
-	Draw:OutlinedRect(true, 31, 31, 3, 14, {255, 255, 255, 255}, colorpickerthingy)
-	table.insert(dragbar_b, colorpickerthingy[#colorpickerthingy])
-	table.insert(alphabar, colorpickerthingy[#colorpickerthingy])
+	Draw:OutlinedRect(true, 30, 30, 5, 16, {0, 0, 0, 255}, cp.drawings)
+	table.insert(dragbar_b, cp.drawings[#cp.drawings])
+	table.insert(alphabar, cp.drawings[#cp.drawings])
+	Draw:OutlinedRect(true, 31, 31, 3, 14, {255, 255, 255, 255}, cp.drawings)
+	table.insert(dragbar_b, cp.drawings[#cp.drawings])
+	table.insert(alphabar, cp.drawings[#cp.drawings])
 	
 	local dragbar_m = {}
-	Draw:OutlinedRect(true, 30, 30, 5, 5, {0, 0, 0, 255}, colorpickerthingy)
-	table.insert(dragbar_m, colorpickerthingy[#colorpickerthingy])
-	Draw:OutlinedRect(true, 31, 31, 3, 3, {255, 255, 255, 255}, colorpickerthingy)
-	table.insert(dragbar_m, colorpickerthingy[#colorpickerthingy])
+	Draw:OutlinedRect(true, 30, 30, 5, 5, {0, 0, 0, 255}, cp.drawings)
+	table.insert(dragbar_m, cp.drawings[#cp.drawings])
+	Draw:OutlinedRect(true, 31, 31, 3, 3, {255, 255, 255, 255}, cp.drawings)
+	table.insert(dragbar_m, cp.drawings[#cp.drawings])
 	
 	local function set_dragbar_r(x, y)
 		dragbar_r[1].Position = Vector2.new(x, y)
@@ -1638,7 +1638,7 @@ function menu.Initialize(menutable)
 	
 	local colorpicker_alpha
 	local function set_colorpicker(visible, color, value, alpha, text, x, y)
-		for k, v in pairs(colorpickerthingy) do
+		for k, v in pairs(cp.drawings) do
 			v.Visible = visible
 		end
 		
@@ -1666,9 +1666,9 @@ function menu.Initialize(menutable)
 				end
 				cp.h = 191
 				for i = 1, 2 do
-					colorpickerthingy[i].Size = Vector2.new(cp.w, cp.h)
+					cp.drawings[i].Size = Vector2.new(cp.w, cp.h)
 				end
-				colorpickerthingy[3].Size = Vector2.new(cp.w - 2, cp.h - 2)
+				cp.drawings[3].Size = Vector2.new(cp.w - 2, cp.h - 2)
 			else
 				cp.hsv.a = color[4]
 				cp.alpha = true
@@ -1676,15 +1676,15 @@ function menu.Initialize(menutable)
 				set_oldcolor(color[1], color[2], color[3], color[4])
 				cp.h = 211
 				for i = 1, 2 do
-					colorpickerthingy[i].Size = Vector2.new(cp.w, cp.h)
+					cp.drawings[i].Size = Vector2.new(cp.w, cp.h)
 				end
-				colorpickerthingy[3].Size = Vector2.new(cp.w - 2, cp.h - 2)
+				cp.drawings[3].Size = Vector2.new(cp.w - 2, cp.h - 2)
 				set_dragbar_b(cp.x + 12 + math.floor(156 * (color[4]/255)), cp.y + 188)
 			end
 			
 			applytext.Position = Vector2.new(235 + cp.x, cp.y + cp.h - 23)
 			maincolor.Color = Color3.fromHSV(h, 1, 1)
-			colorpickerthingy[7].Text = text
+			cp.drawings[7].Text = text
 		end
 	end
 	
@@ -5929,7 +5929,7 @@ local chatspams = {
 					end
 				end
 				local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
-				if not targetPart and not menu:GetVal("Rage", "Aimbot", "Target Only Priority") then 
+				if not targetPart and not menu:GetVal("Rage", "Aimbot", "Target Only Priority Players") then 
 					targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 				end
 				ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
@@ -8668,7 +8668,7 @@ content = {
 			},
 			{
 				type = "toggle",
-				name = "Target Only Priority",
+				name = "Target Only Priority Players",
 				value = false
 			},
 		},
@@ -9991,7 +9991,7 @@ end --!SECTION PF END
 
 do
 	local wm = menu.watermark
-	wm.textString = MenuName .. " | Developer | " .. os.date("%b. %d, %Y")
+	wm.textString = MenuName .. " | Waiting for release for 2 months | " .. os.date("%b. %d, %Y")
 	wm.pos = Vector2.new(40, 10)
 	wm.text = {}
 	wm.width = (#wm.textString) * 7 + 10
@@ -10029,4 +10029,4 @@ end
 menu.Initialize = nil -- let me freeeeee
 -- not lettin u free asshole bitch
 -- i meant the program memory, alan...............  fuckyouAlan_iHateYOU from v1
--- im changing all the var names that had typos by me back to what they were now because of this.... enjoy hieght....
+-- im changing all the var names that had typos by me back to what they were now because of this.... enjoy height....
