@@ -4471,7 +4471,7 @@ for k, v in pairs(getgc(true)) do
 					for k,v in next, getupvalues(gun.step) do
 						if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 							setupvalue(client.loadedguns[id].step, k, function(...)
-								return menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+								return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or v(...)
 							end)
 						end
 					end
@@ -4505,6 +4505,8 @@ end
 local function animhook(...)
 	return function(...) end
 end
+
+local debris = game:service("Debris")
 
 --client.net:send("chatted", string.char(1))
 
@@ -4986,7 +4988,7 @@ local chatspams = {
 				end
 				
 				
-				local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps
+				local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK
 					for k, Player in pairs(Players:GetPlayers()) do
 						if Player == LOCAL_PLAYER then continue end -- doing this for now, i'll have to change the way the third person model will end up working
 						local Body = client.replication.getbodyparts(Player)
@@ -5470,11 +5472,11 @@ local chatspams = {
 										elseif aw_resolve then
 											if resolvertype == 1 then -- cubic hitscan
 												debug.profilebegin("BB Ragebot Cubic Resolver")
-												local resolvedPosition, intersection = ragebot:CubicHitscan(10, barrel, bone)
+												local resolvedPosition = ragebot:CubicHitscan(8, barrel, bone)
 												debug.profileend("BB Ragebot Cubic Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
-													ragebot.intersection = intersection
+													--ragebot.intersection = intersection
 													cpart = bone
 													theplayer = player
 													firepos = resolvedPosition
@@ -5515,8 +5517,8 @@ local chatspams = {
 												end]]
 												debug.profilebegin("BB Ragebot Teleport Resolver")
 												local up = barrel + Vector3.new(0, 18, 0)
-												local pen = ragebot:CanPenetrateRaycast(up, bone.Position, client.logic.currentgun.data.penetrationdepth)
-												debug.profileend("BB Ragebot Random Resolver")
+												local pen = ragebot:CanPenetrateFast(up, bone, client.logic.currentgun.data.penetrationdepth)
+												debug.profileend("BB Ragebot Teleport Resolver") -- fuck
 												if pen then
 													ragebot.firepos = up
 													ragebot.needsTP = true
@@ -5554,7 +5556,7 @@ local chatspams = {
 												
 												local newTargetPosition = bone.Position + bestDirection
 												
-												local pVelocity = camera:GetTrajectory(newTargetPosition, barrel)
+												--local pVelocity = camera:GetTrajectory(newTargetPosition, barrel)
 												
 												sphereHitbox.Position = bone.Position
 												
@@ -5563,7 +5565,7 @@ local chatspams = {
 												end
 												
 												--local penetrated = ragebot:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
-												local penetrated = ragebot:CanPenetrateFast(newTargetPosition, sphereHitbox, client.logic.currentgun.data.penetrationdepth)
+												local penetrated = ragebot:CanPenetrateFast(barrel, sphereHitbox, client.logic.currentgun.data.penetrationdepth)
 												
 												if penetrated then
 													ragebot.firepos = barrel
@@ -5574,12 +5576,12 @@ local chatspams = {
 													--warn("penetrated normally")
 												else
 													-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
-													local resolvedPosition, axesintersection = ragebot:HitscanOnAxes(barrel, player, newTargetPosition, 1, 8, true, sphereHitbox)
+													local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, sphereHitbox, 1, 8)
 													if resolvedPosition then
 														ragebot.firepos = resolvedPosition
 														cpart = bone
 														theplayer = player
-														ragebot.intersection = axesintersection
+														ragebot.intersection = newTargetPosition
 														firepos = resolvedPosition
 														if menu.priority[player.Name] then break end
 													else
@@ -5776,7 +5778,7 @@ local chatspams = {
 			-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
 			table.foreach(dapointz.corner, function(i, point)
 				local penetrated = ragebot:CanPenetrateFast(point, selectedpart, client.logic.currentgun.data.penetrationdepth)
-
+				
 				if penetrated then
 					pos = point
 					return
@@ -5819,8 +5821,8 @@ local chatspams = {
 				return position
 			end
 		end
-		
-		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
+		--ragebot:CanPenetrateFast(origin, target, penetration)
+		--[[function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
 			assert(bodypart, "hello")
 			
 			local dest = typeof(bodypart) ~= "Vector3" and bodypart.Position or bodypart -- fuck
@@ -5896,6 +5898,94 @@ local chatspams = {
 					if returnintersection and intersectionpoint then
 						return position, intersectionpoint
 					end
+				end
+			end
+			
+			return nil
+		end]]
+		
+		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
+			assert(bodypart, "hello")
+			
+			local dest = typeof(bodypart) ~= "Vector3" and bodypart.Position or bodypart -- fuck
+			
+			assert(person, "something went wrong in your nasa rocket launch")
+			local position = origin
+			local direction
+			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
+			for i = 1, max_step do
+				position = position + Vector3.new(0, step, 0)
+				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				if pen then
+					return position
+					--[[if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end]]
+				end
+			end
+			
+			position = origin
+			
+			for i = 1, max_step do
+				position = position - Vector3.new(0, step, 0)
+				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				if pen then
+					return position
+					--[[if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end]]
+				end
+			end
+			
+			position = origin
+			
+			for i = 1, max_step do
+				position = position + Vector3.new(0, 0, step)
+				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				if pen then
+					return position
+					--[[if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end]]
+				end
+			end
+			
+			position = origin
+			
+			for i = 1, max_step do
+				position = position - Vector3.new(0, 0, step)
+				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				if pen then
+					return position
+					--[[if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end]]
+				end
+			end
+			
+			position = origin
+			
+			for i = 1, max_step do
+				position = position + Vector3.new(step, 0, 0)
+				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				if pen then
+					return position
+					--[[if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end]]
+				end
+			end
+			
+			position = origin
+			
+			for i = 1, max_step do
+				position = position - Vector3.new(step, 0, 0)
+				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				if pen then
+					return position
+					--[[if returnintersection and intersectionpoint then
+						return position, intersectionpoint
+					end]]
 				end
 			end
 			
@@ -6060,6 +6150,48 @@ end
 -- client event hooks! for grenade paths... and other shit (idk where to put this)
 local clienteventfuncs = getupvalue(client.call, 1)
 
+local function create_outlined_square(pos, destroydelay, colordata)
+	local newpart = Instance.new("Part", workspace)
+	newpart.CanCollide = false
+	newpart.Anchored = true
+	newpart.Size = Vector3.new(0.35, 0.35, 0.35)
+	newpart.Position = pos
+	newpart.Material = Enum.Material.Neon
+	newpart.Transparency = 0.85
+
+	local colors = colordata or {Color3.fromRGB(255, 255, 255), Color3.fromRGB(239, 62, 62)}
+
+	for i = 1, 2 do
+		local box = Instance.new("BoxHandleAdornment", newpart)
+		box.AlwaysOnTop = true
+		box.Adornee = box.Parent
+		box.ZIndex = i == 1 and 5 or 1
+		box.Color3 = i == 1 and colors[1] or colors[2]
+		box.Size = i == 1 and newpart.Size / 1.3 or newpart.Size * 1.3
+		box.Transparency = i == 1 and 0 or 0.3
+	end
+
+	debris:AddItem(newpart, destroydelay)
+end
+
+local function create_line(origin_att, ending_att, destroydelay) -- pasting this from the misc create beam but oh well im a faggot so yeah :troll:
+	local beam = Instance.new("Beam")
+	beam.LightEmission = 1
+	beam.LightInfluence = 1
+	beam.Enabled = true
+	beam.Color = ColorSequence.new(menu:GetVal("ESP", "Dropped ESP", "Grenade ESP", "color2", true))
+	beam.Attachment0 = origin_att
+	beam.Attachment1 = ending_att
+	beam.Width0 = 0.2
+	beam.Width1 = 0.2
+
+	beam.Parent = workspace
+
+	debris:AddItem(beam, destroydelay)
+	debris:AddItem(origin_att, destroydelay)
+	debris:AddItem(ending_att, destroydelay)
+end
+
 for hash, func in next, clienteventfuncs do
 	local curconstants = getconstants(func)
 	local found = table.find(curconstants, "Frag")
@@ -6078,29 +6210,75 @@ for hash, func in next, clienteventfuncs do
 	local found13 = table.find(curconstants, "Msg")
 	if found then
 		clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
-			if menu:GetVal("ESP", "Dropped ESP", "Nade Warning") and gdata.blowuptime > 0 then
+			if gdata.blowuptime > 0 and thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
+				local lastrealpos
+
 				local frames = gdata.frames
-				local start = gdata.time
-				
-				local lastframe = frames[#frames]
-				
-				
-				--local color = thrower.Team == LOCAL_PLAYER.Team and RGB(unpack(menu:GetVal("ESP", "Dropped ESP", "Display Nade Paths", "color2"))) or RGB(unpack(menu:GetVal("ESP", "Dropped ESP", "Display Nade Paths", "color1")))
-				
+				local blowup, st = gdata.blowuptime, gdata.time
+				local inc = 0.016666666666666666
+
 				local curtick = tick()
-				local dst = gdata.time - curtick
-				local realtime = curtick + dst * (gdata.time + gdata.blowuptime - curtick) / (gdata.blowuptime + dst)
+				local dst = st - curtick
+				local realtime = curtick + dst * (st + blowup - curtick) / (blowup + dst)
 				local err = realtime - curtick
-				
-				--local grenadeid = #menu.activenades + 1
-				
-				
-				if thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
+
+				local j = 1
+
+				for dt = 0, blowup / inc do
+					local t = inc * dt
+
+					do
+						local realtime = tick() + t
+						local time = realtime + dst * (st + blowup - realtime) / (blowup + dst)
+
+						local rtnext = tick() + (inc * (dt + 1))
+						local next_time = rtnext + dst * (st + blowup - rtnext) / (blowup + dst)
+						
+						local frame = frames[j]
+						local nextframe = j + 1 <= #frames and frames[j + 1] or nil
+
+						if nextframe and time > st + nextframe.t0 then
+							j += 1
+							frame = nextframe
+						end
+					
+						local t = time - (st + frame.t0)
+						local next_t = next_time - (st + frame.t0)
+
+						local pos = frame.p0 + t * frame.v0 + t * t / 2 * frame.a + frame.offset
+						local nextpos = frame.p0 + next_t * frame.v0 + next_t * next_t / 2 * frame.a + frame.offset
+						--local rot = client.cframe.fromaxisangle(t * frame.rotv) * frame.rot0
+						lastrealpos = pos
+
+						if menu:GetVal("ESP", "Dropped ESP", "Grenade ESP") then
+							local c1 = menu:GetVal("ESP", "Dropped ESP", "Grenade ESP", "color1", true)
+							local c2 = menu:GetVal("ESP", "Dropped ESP", "Grenade ESP", "color2", true)
+							local colorz = {c1, c2}
+							if nextpos then
+								--local mag = (nextpos - pos).magnitude
+								--if mag > 1.5 then
+								-- magnitude stuff wont work because the line will just end for no reason
+								create_outlined_square(pos, blowup, colorz)
+								local a1 = Instance.new("Attachment", workspace.Terrain)
+								a1.Position = pos
+								local a2 = Instance.new("Attachment", workspace.Terrain)
+								a2.Position = nextpos
+
+								create_line(a1, a2, blowup, colorz)
+								--end
+							else
+								create_outlined_square(pos, blowup, colorz)
+							end
+						end
+					end
+				end
+
+				if menu:GetVal("ESP", "Dropped ESP", "Nade Warning") then
 					local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
 					if curtick < btick then
 						table.insert(menu.activenades, {
 							thrower = thrower.Name,
-							blowupat = lastframe.p0,
+							blowupat = lastrealpos,
 							blowuptick = btick, -- might need to be tested more
 							start = curtick
 						})
@@ -6140,7 +6318,7 @@ for hash, func in next, clienteventfuncs do
 			--[[for k,v in next, getupvalues(loadedknife.step) do
 			if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 				setupvalue(loadedknife.step, k, function(...)
-					return menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+					return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or v(...)
 				end)
 			end
 		end]]
@@ -6374,7 +6552,7 @@ if found2 then
 		--[[for k,v in next, getupvalues(client.loadedguns[ggequip].step) do -- might have fixed it.
 		if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
 			setupvalue(client.loadedguns[ggequip].step, k, function(...)
-				return menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+				return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or v(...)
 			end)
 		end
 	end]]
@@ -6388,7 +6566,6 @@ setupvalue(client.call, 1, clienteventfuncs)
 end
 
 do -- ANCHOR misc definitionz
-	local debris = game:service("Debris")
 	local tween = game:service("TweenService")
 	
 	function misc:CreateBeam(origin_att, ending_att)
@@ -6413,7 +6590,7 @@ do -- ANCHOR misc definitionz
 		debris:AddItem(ending_att, 3)
 		
 		local speedtween = TweenInfo.new(3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0)
-		tween:Create(beam, speedtween, {TextureSpeed = 4}):Play()
+		tween:Create(beam, speedtween, {TextureSpeed = 0}):Play()
 		
 		beam.Parent = workspace
 		return beam
@@ -8330,7 +8507,7 @@ menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
 					if type(v) == "function" and getinfo(v).name:match("bob") then
 						gun.fucku = true
 						setupvalue(client.loadedguns[id].step, k, function(...)
-							return menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+							return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or v(...)
 						end)
 					end
 				end
@@ -8342,7 +8519,7 @@ menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
 				if type(v) == "function" and getinfo(v).name:match("bob") then
 					client.logic.currentgun.fucku = true
 					setupvalue(client.logic.currentgun.step, k, function(...)
-						return menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway") and CFrame.new() or v(...)
+						return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or v(...)
 					end)
 				end
 			end
@@ -9227,6 +9404,16 @@ content = {
 					type = "single colorpicker",
 					name = "Slider Color",
 					color = {68, 92, 227},
+				}
+			},
+			{
+				type = "toggle",
+				name = "Grenade ESP",
+				value = false,
+				extra = {
+					type = "double colorpicker",
+					name = {"Inner Color", "Outer Color"},
+					color = {{195, 163, 255}, {123, 69, 224}},
 				}
 			},
 		}
