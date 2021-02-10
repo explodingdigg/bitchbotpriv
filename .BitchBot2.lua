@@ -5329,7 +5329,15 @@ local chatspams = {
 						end
 					end
 				end
-				
+
+				function ragebot:CanPenetrateFast(origin, target, penetration)
+					local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed)
+
+					local penetrated = client.bulletcheck(origin, target.Position, d, GRAVITY, penetration)
+					-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
+					return penetrated
+				end
+
 				local dot = Vector3.new().Dot
 				
 				function ragebot:CanPenetrateRaycast(campos, pos, penetration, returnintersection, stopPart)
@@ -5452,7 +5460,9 @@ local chatspams = {
 									elseif autowall then
 										debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
 										local directionVector = camera:GetTrajectory(bone.Position, barrel)
-										if directionVector and ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration")) then
+										-- ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
+										-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
+										if directionVector and ragebot:CanPenetrateFast(barrel, bone, client.logic.currentgun.data.penetrationdepth) then
 											cpart = bone
 											theplayer = player
 											firepos = barrel
@@ -5552,7 +5562,8 @@ local chatspams = {
 													sphereHitbox.Size = rageHitboxSize
 												end
 												
-												local penetrated = ragebot:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
+												--local penetrated = ragebot:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
+												local penetrated = ragebot:CanPenetrateFast(newTargetPosition, sphereHitbox, client.logic.currentgun.data.penetrationdepth)
 												
 												if penetrated then
 													ragebot.firepos = barrel
@@ -5761,34 +5772,34 @@ local chatspams = {
 
 			local dapointz = ragebot:GetCubicMultipoints(origin, studs or 18*2)
 
-			local pos, intersection
-
+			local pos
+			-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
 			table.foreach(dapointz.corner, function(i, point)
-				local penetrated, tintersection = ragebot:CanPenetrateRaycast(point, selectedpart.Position, client.logic.currentgun.data.penetrationdepth, true)
+				local penetrated = ragebot:CanPenetrateFast(point, selectedpart, client.logic.currentgun.data.penetrationdepth)
+
 				if penetrated then
 					pos = point
-					intersection = tintersection
 					return
 				end
 			end)
 
 			if pos then
 				warn("hit a corner")
-				return pos, intersection
+				return pos
 			end
 
 			table.foreach(dapointz.inside, function(i, point)
-				local penetrated, tintersection = ragebot:CanPenetrateRaycast(point, selectedpart.Position, client.logic.currentgun.data.penetrationdepth, true)
+				local penetrated = ragebot:CanPenetrateFast(point, selectedpart, client.logic.currentgun.data.penetrationdepth)
+
 				if penetrated then
 					pos = point
-					intersection = tintersection
 					return
 				end
 			end)
 
 			if pos then
 				warn("hit from the inside")
-				return pos, intersection
+				return pos
 			end
 
 			return nil
