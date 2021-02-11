@@ -6064,7 +6064,7 @@ local chatspams = {
 			end
 
 			if client.char.alive then
-				if menu:GetVal("Misc", "Movement", "Circle Strafe") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Misc", "Movement", "Circle Strafe", "keybind")) then
+				if menu:GetVal("Misc", "Movement", "Circle Strafe") and IsKeybindDown("Misc", "Movement", "Circle Strafe") then
 					local speedcheatspeed = menu:GetVal("Misc", "Movement", "Speed")
 					local rootpart = client.char.rootpart
 					rootpart.Velocity = Vector3.new(math.sin(tick() * speedcheatspeed / 10) * speedcheatspeed, rootpart.Velocity.Y, math.cos(tick() * speedcheatspeed / 10) * speedcheatspeed)
