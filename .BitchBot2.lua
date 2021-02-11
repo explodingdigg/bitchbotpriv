@@ -12,7 +12,6 @@ end
 function map(X, A, B, C, D)
 	return (X-A)/(B-A) * (D-C) + C
 end
-
 do
 	local notes = {}
 	local function DrawingObject(t, col)
@@ -4312,6 +4311,7 @@ elseif menu.game == "pf" then --!SECTION
 menu.activenades = {}
 
 --SECTION PF BEGIN
+
 local allesp = {
 	skel = {
 		[1] = {},
@@ -4507,9 +4507,35 @@ local function animhook(...)
 end
 
 local debris = game:service("Debris")
-
+local teamdata = {}
+do
+	local pgui = game.Players.LocalPlayer.PlayerGui
+	local board = pgui:WaitForChild("Leaderboard")
+	local main = board:WaitForChild("Main")
+	local global = board:WaitForChild("Global")
+	local ghost = main:WaitForChild("Ghosts")
+	local phantom = main:WaitForChild("Phantoms")
+	local gdataframe = ghost:WaitForChild("DataFrame")
+	local pdataframe = phantom:WaitForChild("DataFrame")
+	local ghostdata = gdataframe:WaitForChild("Data")
+	local phantomdata = pdataframe:WaitForChild("Data")
+	teamdata[1] = phantomdata
+	teamdata[2] = ghostdata
+end
+local GetPlayerData = function(player_name)
+	return teamdata[1]:FindFirstChild(player_name) or teamdata[2]:FindFirstChild(player_name)
+end
 --client.net:send("chatted", string.char(1))
-
+local CommandFunctions = {
+	targetBelowRank = function(min) 
+		for k, player in pairs(Players:GetPlayers()) do
+			local data = GetPlayerData(player.Name)
+			if data.Rank.Text < min then
+				table.insert(menu.priority, player.Name) 
+			end
+		end
+	end,
+}
 menu.pfunload = function(self)
 	for k,v in next, Players:GetPlayers() do
 		local bodyparts = client.replication.getbodyparts(v)
@@ -7064,6 +7090,26 @@ do--ANCHOR send hook
 		local args = {...}
 		if args[1] == "spawn" then 
 			misc:ApplyGunMods()
+		end
+		if args[1] == "chatted" then
+			local message = args[2]
+			local commandLocation = string.find(message, "\\")
+			if commandLocation == 1 then
+				local i = 1
+				local args = {}
+				local func
+				for f in message:gmatch("%w+") do
+					if i == 1 then
+						if CommandFunctions[f] then
+							func = CommandFunctions[f]
+						end
+					else
+						table.insert(args, f)
+					end
+					i += 1
+				end
+				return func(unpack(args))
+			end
 		end
 		if args[1] == "forcereset" and menu:GetVal("Misc", "Extra", "Anti-Killzone") then -- some stupid maps do this apparently but they also have some gay ass serverside thing so yeah the map creators and the game can go suck a large one
 			return
@@ -10158,13 +10204,20 @@ do  --TODO alan put this shit into a function so you don't have to copy paste it
 			
 			local alive = client.hud:isplayeralive(player)
 			if alive then 
-				playerhealth = math.ceil(client.hud:getplayerhealth(player))
+				playerhealth = math.ceil(client.hud:getplayerhealth(player))					
 			else
 				playerhealth = "Dead"
 			end
-			
-			plistinfo[1].Text = "Name: ".. player.Name.."\nTeam: ".. playerteam .."\nHealth: ".. playerhealth
-			
+			local playerdata = teamdata[1]:FindFirstChild(player.Name) or teamdata[2]:FindFirstChild(player.Name)
+			local playerrank = playerdata.Rank.Text
+			local kills = playerdata.Kills.Text
+			local deaths = playerdata.Deaths.Text
+			plistinfo[1].Text = string.format([[
+Name: %s 
+Health: %s
+Rank: %d
+K/D: %d/%d
+			]], player.Name, tostring(playerhealth), playerrank, kills, deaths)
 			if textonly == nil then
 				plistinfo[2].Data = BBOT_IMAGES[5]
 				plistinfo[2].Data = game:HttpGet(Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100))
