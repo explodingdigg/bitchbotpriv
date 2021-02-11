@@ -6036,6 +6036,15 @@ local chatspams = {
 					NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Extra", "Fake Lag Amount"))
 				end
 			end
+
+			if client.char.alive then
+				if menu:GetVal("Misc", "Movement", "Circle Strafe") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Misc", "Movement", "Circle Strafe", "keybind")) then
+					local speedcheatspeed = menu:GetVal("Misc", "Movement", "Speed")
+					local rootpart = client.char.rootpart
+					rootpart.Velocity = Vector3.new(math.sin(tick() * speedcheatspeed / 10) * speedcheatspeed, rootpart.Velocity.Y, math.cos(tick() * speedcheatspeed / 10) * speedcheatspeed)
+				end
+			end
+
 			if client.char.alive and menu:GetVal("Rage", "Aimbot", "Enabled") then
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					
@@ -9728,6 +9737,14 @@ content = {
 				minvalue = 1,
 				maxvalue = 200,
 				stradd = " stud/s"
+			},
+			{
+				type = "toggle",
+				name = "Circle Strafe",
+				value = false,
+				extra = {
+					type = "keybind"
+				}
 			},
 			{
 				type = "toggle",
