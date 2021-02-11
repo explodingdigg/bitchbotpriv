@@ -206,45 +206,45 @@ local function DisplayLoadtimeFromStart()
 end
 
 menu = { -- this is for menu stuffs n shi
-w = 500,
-h = 600,
-x = 200,
-y = 300,
-columns = {
-	width = 230,
-	left = 17,
-	right = 253
-},
-activetab = 1, -- do not change this value please its not made to be fucked with sorry
-open = true,
-fadestart = 0,
-fading = false,
-mousedown = false,
-postable = {},
-options = {},
-clrs = {
-	norm = {},
-	dark = {},
-	togz = {}
-},
-mc = {127, 72, 163},
-watermark = {},
-connections = {},
-list = {},
-unloaded = false,
-copied_clr = nil,
-game = "uni",
-tabnames = {}, -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
-friends = {},
-priority = {},
-modkeys = {
-	alt = {
-		direction = nil
+	w = 500,
+	h = 650,
+	x = 200,
+	y = 300,
+	columns = {
+		width = 230,
+		left = 17,
+		right = 253
 	},
-	shift = {
-		direction = nil
+	activetab = 1, -- do not change this value please its not made to be fucked with sorry
+	open = true,
+	fadestart = 0,
+	fading = false,
+	mousedown = false,
+	postable = {},
+	options = {},
+	clrs = {
+		norm = {},
+		dark = {},
+		togz = {}
+	},
+	mc = {127, 72, 163},
+	watermark = {},
+	connections = {},
+	list = {},
+	unloaded = false,
+	copied_clr = nil,
+	game = "uni",
+	tabnames = {}, -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
+	friends = {},
+	priority = {},
+	modkeys = {
+		alt = {
+			direction = nil
+		},
+		shift = {
+			direction = nil
+		}
 	}
-}
 }
 
 function menu:modkeydown(key, direction)
@@ -5802,28 +5802,28 @@ local chatspams = {
 
 			local pos
 			-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
-			table.foreach(dapointz.corner, function(i, point)
+			for i, point in pairs(dapointz.corner) do
 				local penetrated = ragebot:CanPenetrateFast(point, selectedpart, client.logic.currentgun.data.penetrationdepth)
 				
 				if penetrated then
 					pos = point
 					return
 				end
-			end)
+			end
 
 			if pos then
 				warn("hit a corner")
 				return pos
 			end
 
-			table.foreach(dapointz.inside, function(i, point)
+			for i, point in pairs(dapointz.inside) do
 				local penetrated = ragebot:CanPenetrateFast(point, selectedpart, client.logic.currentgun.data.penetrationdepth)
 
 				if penetrated then
 					pos = point
 					return
 				end
-			end)
+			end
 
 			if pos then
 				warn("hit from the inside")
@@ -10086,7 +10086,7 @@ content = {
 		x = menu.columns.left,
 		y = 468,
 		width = menu.columns.width,
-		height = 115,
+		height = 165,
 		content = {
 			{
 				type = "button",
@@ -10108,7 +10108,7 @@ content = {
 		x = menu.columns.right,
 		y = 400,
 		width = menu.columns.width,
-		height = 183,
+		height = 233,
 		content = {
 			{
 				type = "textbox",
