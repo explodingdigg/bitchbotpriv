@@ -4412,6 +4412,8 @@ local camera = {}
 
 client.loadedguns = {}
 
+local raycastutil
+
 for k, v in pairs(getgc(true)) do
 	if type(v) == "function" then
 		if getinfo(v).name == "bulletcheck" then
@@ -4487,6 +4489,12 @@ for k, v in pairs(getgc(true)) do
 		client.vectorutil = v
 	elseif rawget(v, "IsVIP") then
 		client.instancetype = v
+	elseif rawget(v, "timehit") then
+		client.physics = v
+	elseif rawget(v, "raycastSingleExit") then
+		raycastutil = v
+	elseif rawget(v, "bulletLifeTime") then
+		client.publicsettings = v
 	elseif rawget(v, "player") and rawget(v, "reset") then
 		client.animation = v
 		client.animation.oldplayer = client.animation.player
@@ -5144,19 +5152,31 @@ local chatspams = {
 					
 					
 					mt.__newindex = newcclosure(function(self, id, val)
-						if client.char.alive and menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
-							if self == workspace.Camera then
+						if client.char.alive then
+							if menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
+								if self == workspace.Camera then
+									if id == "CFrame" then
+										local dist = menu:GetVal("Visuals", "Local Visuals", "Third Person Distance") / 10
+										local params = RaycastParams.new()
+										params.FilterType = Enum.RaycastFilterType.Blacklist
+										params.FilterDescendantsInstances = {Camera, workspace.Ignore, workspace.Players}
+										
+										local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
+										if hit and not hit.Instance.CanCollide then return oldNewIndex(self, id, val * CFrame.new(0, 0, dist)) end
+										local mag = hit and (hit.Position - val.p).Magnitude or nil
+										
+										val *= CFrame.new(0, 0, mag and mag or dist)
+									end
+								end
+							end
+
+							if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
 								if id == "CFrame" then
-									local dist = menu:GetVal("Visuals", "Local Visuals", "Third Person Distance") / 10
-									local params = RaycastParams.new()
-									params.FilterType = Enum.RaycastFilterType.Blacklist
-									params.FilterDescendantsInstances = {Camera, workspace.Ignore, workspace.Players}
-									
-									local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
-									if hit and not hit.Instance.CanCollide then return oldNewIndex(self, id, val * CFrame.new(0, 0, dist)) end
-									local mag = hit and (hit.Position - val.p).Magnitude or nil
-									
-									val *= CFrame.new(0, 0, mag and mag or dist)
+									if self == client.char.rootpart then
+										local offset = Vector3.new(0, client.fakeoffset, 0)
+										self.Position = val.p - offset
+										self.Position = val.p + offset
+									end
 								end
 							end
 						end
@@ -5184,6 +5204,7 @@ local chatspams = {
 						end
 					end
 				end
+
 				function camera:SetArmsVisible(flag)
 					local larm, rarm = Camera:FindFirstChild("Left Arm"), Camera:FindFirstChild("Right Arm")
 					assert(larm, "arms are missing")
@@ -5266,52 +5287,7 @@ local chatspams = {
 			do--ANCHOR ragebot definitions
 				ragebot.sprint = true
 				ragebot.shooting = false
-				do
-					local dot = Vector3.new().Dot
-					local ignore
-					local lifetime
-					local velocity
-					local acceleration
-					local position
-					local penetrationDepth
-					local FindPartOnRayWithIgnoreList = workspace.FindPartOnRayWithIgnoreList
-					local FindPartOnRayWithWhitelist = workspace.FindPartOnRayWithWhitelist
-					
-					local function BulletStep(deltaTime, curTick, targetParts)
-						if lifetime and lifetime < curTick then
-							return 1
-						end
-						local direction = deltaTime * velocity + deltaTime * deltaTime / 2 * acceleration
-						local hitPartInstance, hitPartPos = FindPartOnRayWithIgnoreList(workspace, Ray.new(position, direction), ignore, false, true)
-						if hitPartInstance then
-							if targetParts[hitPartInstance] then return 0 end
-							
-							local partSize = hitPartInstance.Size.magnitude * direction.unit
-							local hasPenetration = not hitPartInstance.CanCollide or hitPartInstance.Transparency == 1
-							if hitPartInstance.Name == "killbullet" then
-								return 2
-							end
-							if not hasPenetration then
-								local _, otherSideOfPart = FindPartOnRayWithWhitelist(workspace, Ray.new(hitPartPos + partSize, -partSize), {hitPartInstance}, false)
-								local penetrationAmount = dot(direction.unit, otherSideOfPart - hitPartPos)
-								if penetrationAmount < penetrationDepth then
-									penetrationDepth = penetrationDepth - penetrationAmount
-								else
-									return 3
-								end
-							end
-							position = hitPartPos + 0.01 * direction.unit
-							velocity = velocity + dot(direction, hitPartPos - position) / dot(direction, direction) * deltaTime * acceleration
-							ignore[#ignore + 1] = hitPartInstance
-						else
-							position = position + direction
-							velocity = velocity + deltaTime * acceleration
-						end
-					end
-					
-					local step = 1 / 200
-					local maxSteps = 1200
-					
+				do	
 					local function GetPartTable(ply)
 						local tbl = {}
 						for k, v in pairs(ply) do
@@ -5319,54 +5295,100 @@ local chatspams = {
 						end
 						return tbl
 					end
-					
-					function ragebot:CanPenetrate(ply, target, targetDir, targetPos, customOrigin, extendPen, customHitbox)
-						local targetParts
-						if extendPen then  
-							sphereHitbox.Position = targetPos
-							diameter = menu:GetVal("Rage", "Hack vs. Hack", "Extra Penetration")
-							local distanceTarget = (targetPos - client.cam.cframe.p).Magnitude * 2 - 5
-							diameter = math.min(distanceTarget, diameter)
-							sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
-							targetParts = {[sphereHitbox] = sphereHitbox}
-						elseif client.hud:isplayeralive(target) then
-							local oldparts = client.replication.getbodyparts(target)
-							targetParts = GetPartTable(oldparts)
-						end
-						
-						if customHitbox then
-							targetParts[customHitbox] = customHitbox
-						end
-						
-						local origin = customOrigin or client.cam.cframe.p
-						
-						ignore = {workspace.Terrain, workspace.Ignore, workspace.CurrentCamera, workspace.Players[ply.Team.Name]}
-						lifetime = 1.5
-						velocity = (targetDir - origin).Unit * client.logic.currentgun.data.bulletspeed
-						acceleration = GRAVITY
-						position = origin
-						penetrationDepth = client.logic.currentgun.data.penetrationdepth
-						
-						for i = 1, maxSteps do
-							local ret = BulletStep(step, i * step, targetParts)
-							if ret == 0 then
-								return true
-							elseif ret ~= nil then
-								return false
-							end
-						end
-					end
 				end
 
-				function ragebot:CanPenetrateFast(origin, target, penetration)
-					local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed)
+				local timehit = client.physics.timehit
 
-					local penetrated = client.bulletcheck(origin, target.Position, d, GRAVITY, penetration)
-					-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
-					return penetrated
+				local function isdirtyfloat(f) -- if we dont use this theres a large chance the autowall will break
+					local dirtyflag = true -- that being said this function is actually useful, pretty much a QNAN check or whatever
+					if f == f then
+						dirtyflag = true
+						if f ~= (1 / 0) then
+							dirtyflag = f == (-1 / 0)
+						end
+					end
+					return dirtyflag
+				end
+
+				local bulletLifeTime = client.publicsettings.bulletLifeTime
+
+				local function ignorecheck(p)
+					if not p.CanCollide then
+						return true
+					end
+					if p.Transparency == 1 then
+						return true
+					end
+					if p.Name ~= "Window" then
+						return
+					end
+					return true
 				end
 
 				local dot = Vector3.new().Dot
+
+				local function bulletcheck(origin, dest, velocity, acceleration, bulletspeed, whitelist) -- reversed
+					local ignorelist = { workspace.Terrain, workspace.Players, workspace.Ignore, workspace.CurrentCamera }
+					local bullettime = 0
+					local exited = false
+					local penetrated = true
+					local step_pos = origin
+					local s = bulletspeed
+					local maxtime = timehit(step_pos, velocity, acceleration, dest)
+					local bulletintersection
+					if not (not isdirtyfloat(maxtime)) or bulletLifeTime < maxtime or maxtime == 0 then
+						return false
+					end
+					while bullettime < maxtime do
+						local dt = maxtime - bullettime
+						if dt > 0.03333333333333333 then
+							dt = 0.03333333333333333
+						end
+						local bulletvelocity = dt * velocity + dt * dt / 2 * acceleration
+						local enter = raycastutil.raycast(step_pos, bulletvelocity, ignorelist, ignorecheck, true)
+						if enter then
+							local hit = enter.Instance
+							local intersection = enter.Position
+							local normalized = bulletvelocity.unit
+							bulletintersection = enter
+							if whitelist and whitelist[hit] then
+								penetrated = true
+								break
+							end
+							local exit = raycastutil.raycastSingleExit(intersection, hit.Size.magnitude * normalized, hit)
+							if exit then
+								local norm = exit.Normal
+								local dist = dot(normalized, exit.Position - intersection)
+								local diff = dot(bulletvelocity, intersection - step_pos) / dot(bulletvelocity, bulletvelocity) * dt
+								step_pos = intersection + 0.01 * normalized
+								velocity = velocity + diff * acceleration
+								bullettime = bullettime + diff
+								if not (dist < s) then
+									penetrated = false
+									break
+								end
+								s = s - dist
+								table.insert(ignorelist, hit)
+								exited = true
+							else
+								step_pos = step_pos + bulletvelocity
+								velocity = velocity + dt * acceleration
+								bullettime = bullettime + dt
+							end
+						else
+							step_pos = step_pos + bulletvelocity
+							velocity = velocity + dt * acceleration
+							bullettime = bullettime + dt
+						end	
+					end
+					return penetrated, exited, bulletintersection
+				end
+
+				function ragebot:CanPenetrateFast(origin, target, penetration, whitelist)
+					local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed)
+					-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
+					return bulletcheck(origin, target.Position, d, GRAVITY, penetration, whitelist)
+				end
 				
 				function ragebot:CanPenetrateRaycast(campos, pos, penetration, returnintersection, stopPart)
 					local dir = (pos - campos)
@@ -5457,7 +5479,8 @@ local chatspams = {
 					local autowall = menu:GetVal("Rage", "Aimbot", "Auto Wall")
 					local aw_resolve = menu:GetVal("Rage", "Hack vs. Hack", "Autowall Resolver")
 					local resolvertype = menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type")
-					local barrel = --[[keybindtoggles.crimwalk and client.lastrepupdate or]] client.cam.cframe.p
+					local campos = client.cam.cframe.p
+					local barrel = keybindtoggles.fakebody and campos - Vector3.new(0, client.fakeoffset, 0) or campos
 					local firepos
 					
 					for i, player in next, players do
@@ -5466,7 +5489,7 @@ local chatspams = {
 						if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 							local curbodyparts = client.replication.getbodyparts(player)
 							if curbodyparts and client.hud:isplayeralive(player) then
-								--[[if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 18 then -- fake body resolver
+								--[[if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 18 then -- Noclip Cheat resolver
 								usedhitscan = {
 									rootpart = true -- because all other parts cannot be hit, only rootpart can be
 								}
@@ -5591,8 +5614,11 @@ local chatspams = {
 												end
 												
 												--local penetrated = ragebot:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
-												local penetrated = ragebot:CanPenetrateFast(barrel, sphereHitbox, client.logic.currentgun.data.penetrationdepth)
-												
+												local wl = {
+													[sphereHitbox] = true
+												}
+
+												local penetrated = ragebot:CanPenetrateFast(barrel, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
 												if penetrated then
 													ragebot.firepos = barrel
 													cpart = bone
@@ -5601,13 +5627,13 @@ local chatspams = {
 													firepos = barrel
 													--warn("penetrated normally")
 												else
-													-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
-													local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, sphereHitbox, 1, 8)
+													-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
+													local resolvedPosition, bulletintersection = ragebot:HitscanOnAxes(barrel, player, sphereHitbox, 1, 8, wl)
 													if resolvedPosition then
 														ragebot.firepos = resolvedPosition
 														cpart = bone
 														theplayer = player
-														ragebot.intersection = newTargetPosition
+														ragebot.intersection = bulletintersection.Position
 														firepos = resolvedPosition
 														if menu.priority[player.Name] then break end
 													else
@@ -5619,15 +5645,16 @@ local chatspams = {
 															sphereHitbox.Size = rageHitboxSize
 														end
 														
-														local penetrated, intersectionPoint = ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
+														-- dick sucking god.
+														local penetrated, exited, newintersection = ragebot:CanPenetrateFast(barrel, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
 														
 														--warn(penetrated, intersectionPoint)
 														
-														if intersectionPoint then
+														if penetrated then
 															ragebot.firepos = barrel
 															cpart = bone
 															theplayer = player
-															ragebot.intersection = intersectionPoint
+															ragebot.intersection = newintersection.Position
 															firepos = barrel
 														else
 															--warn("no standardized autowall hit")
@@ -5731,7 +5758,7 @@ local chatspams = {
 			send(client.net, "knifehit", target.player, tick(), newhit or target.part)
 		end
 		
-		function ragebot:FakeBody()
+		--[[function ragebot:FakeBody()
 			if client.char.alive then
 				if client.fakebodyroot then
 					client.fakebodyroot:Destroy()
@@ -5758,7 +5785,7 @@ local chatspams = {
 				client.net.send = oldsend
 				client.fakebodyroot = clone
 			end
-		end
+		end]]
 
 		function ragebot:GetCubicMultipoints(origin, extent)
 			assert(extent % 2 == 0, "extent value must be even")
@@ -5930,7 +5957,7 @@ local chatspams = {
 			return nil
 		end]]
 		
-		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, returnintersection, customHitbox)
+		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
 			assert(bodypart, "hello")
 			
 			local dest = typeof(bodypart) ~= "Vector3" and bodypart.Position or bodypart -- fuck
@@ -5941,12 +5968,9 @@ local chatspams = {
 			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
 			for i = 1, max_step do
 				position = position + Vector3.new(0, step, 0)
-				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position
-					--[[if returnintersection and intersectionpoint then
-						return position, intersectionpoint
-					end]]
+					return position, bulletintersection
 				end
 			end
 			
@@ -5954,12 +5978,9 @@ local chatspams = {
 			
 			for i = 1, max_step do
 				position = position - Vector3.new(0, step, 0)
-				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position
-					--[[if returnintersection and intersectionpoint then
-						return position, intersectionpoint
-					end]]
+					return position, bulletintersection
 				end
 			end
 			
@@ -5967,12 +5988,9 @@ local chatspams = {
 			
 			for i = 1, max_step do
 				position = position + Vector3.new(0, 0, step)
-				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position
-					--[[if returnintersection and intersectionpoint then
-						return position, intersectionpoint
-					end]]
+					return position, bulletintersection
 				end
 			end
 			
@@ -5980,12 +5998,9 @@ local chatspams = {
 			
 			for i = 1, max_step do
 				position = position - Vector3.new(0, 0, step)
-				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position
-					--[[if returnintersection and intersectionpoint then
-						return position, intersectionpoint
-					end]]
+					return position, bulletintersection
 				end
 			end
 			
@@ -5993,12 +6008,9 @@ local chatspams = {
 			
 			for i = 1, max_step do
 				position = position + Vector3.new(step, 0, 0)
-				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position
-					--[[if returnintersection and intersectionpoint then
-						return position, intersectionpoint
-					end]]
+					return position, bulletintersection
 				end
 			end
 			
@@ -6006,12 +6018,9 @@ local chatspams = {
 			
 			for i = 1, max_step do
 				position = position - Vector3.new(step, 0, 0)
-				local pen = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position
-					--[[if returnintersection and intersectionpoint then
-						return position, intersectionpoint
-					end]]
+					return position, bulletintersection
 				end
 			end
 			
@@ -7208,6 +7217,9 @@ do--ANCHOR send hook
 			if ragebot.silentVector then
 				-- duct tape fix or whatever the fuck its called for this its stupid
 				args[2].firepos = ragebot.firepos
+				if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
+					args[2].camerapos = ragebot.firepos
+				end
 				local cachedtimedata = {}
 				
 				local hitpoint = ragebot.intersection ~= nil and Vector3.new(ragebot.intersection.X, ragebot.intersection.Y, ragebot.intersection.Z) or ragebot.targetpart.Position -- fuckkkkkkkkk
@@ -7328,6 +7340,12 @@ do--ANCHOR send hook
 		elseif args[1] == "repupdate" then
 			--if keybindtoggles.crimwalk then return end
 			client.lastrepupdate = args[2]
+			if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
+				if not client.fakeoffset then client.fakeoffset = 18 end
+				
+				local nextinc = client.fakeoffset + 9
+				client.fakeoffset = nextinc <= 48 and nextinc or client.fakeoffset
+			end
 			if menu:GetVal("Rage", "Anti Aim", "Enabled") then
 				--args[2] = ragebot:AntiNade(args[2])
 				stutterFrames += 1
@@ -8402,52 +8420,59 @@ menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 	if menu:GetVal("Misc", "Movement", "Fly") and key.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
 		keybindtoggles.flyhack = not keybindtoggles.flyhack
 	end
-	--[[if menu:GetVal("Rage", "Anti Aim", "Fake Body") and key.KeyCode == menu:GetVal("Rage", "Anti Aim", "Fake Body", "keybind") and client.char.alive then
-	ragebot:FakeBody()
-	local msg = keybindtoggles.fakebody and "Removed fake body" or "Fake body enabled"
-	CreateNotification(msg)
-	keybindtoggles.fakebody = not keybindtoggles.fakebody
-end]]
-if menu:GetVal("Misc", "Exploits", "Invisibility") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
-	invisibility()
-	local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
-	CreateNotification(msg)
-	keybindtoggles.invis = not keybindtoggles.invis
-end
-if menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
-	local sign = not menu:modkeydown("alt", "left")
-	local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
-	
-	local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
-	
-	if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-		client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
-		CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
-	else
-		CreateNotification("Unable to floor clip!")
+	if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and key.KeyCode == menu:GetVal("Rage", "Anti Aim", "Noclip Cheat", "keybind") and client.char.alive then
+		--[[ragebot:FakeBody()
+		local msg = keybindtoggles.fakebody and "Removed Noclip Cheat" or "Noclip Cheat enabled"
+		CreateNotification(msg)
+		keybindtoggles.fakebody = not keybindtoggles.fakebody]]
+		local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
+		
+		local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+		
+		if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
+			CreateNotification("Disable to respawn (you are going to die)")
+			keybindtoggles.fakebody = not keybindtoggles.fakebody
+			client.fakeoffset = 18
+		else
+			CreateNotification("Do this when you spawn or over glass (make sure your as close to ground as possible)")
+		end
 	end
-end
+	if menu:GetVal("Misc", "Exploits", "Invisibility") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
+		invisibility()
+		local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
+		CreateNotification(msg)
+		keybindtoggles.invis = not keybindtoggles.invis
+	end
+	if menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
+		local sign = not menu:modkeydown("alt", "left")
+		local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
+		
+		local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+		
+		if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
+			client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
+			CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
+		else
+			CreateNotification("Unable to floor clip!")
+		end
+	end
 end)
 
 menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 	MouseUnlockAndShootHook()
 	debug.profilebegin("Main BB Loop")
-	--[[debug.profilebegin("Fake body check")
+	debug.profilebegin("Noclip Cheat check")
+	if client.char.alive then
+		warn(client.fakeoffset)
+	end
 	if not client.char.alive then
 		if keybindtoggles.fakebody then
 			keybindtoggles.fakebody = false
-			CreateNotification("Removed fake body due to despawn")
-			client.fakebodyroot:Destroy()
-			client.fakebodyroot = nil
-		end
-		if keybindtoggles.invis then
-			keybindtoggles.invis = false
-			CreateNotification("Turned off invisibility due to despawn")
-			client.invismodel:Destroy()
-			client.invismodel = nil
+			CreateNotification("Noclip Cheat Disabled 2021")
+			client.fakeoffset = 18
 		end
 	end
-	debug.profileend("Fake body check")]]
+	debug.profileend("Noclip Cheat check")
 	
 	debug.profilebegin("BB Rendering")
 	do --rendering
@@ -9144,16 +9169,16 @@ content = {
 				name = "Tilt Neck",
 				value = false
 			},
-			--[[{
+			{
 			type = "toggle",
-			name = "Fake Body",
+			name = "Noclip Cheat",
 			value = false,
 			extra = {
 				type = "keybind",
 				key = nil
 			},
 			unsafe = true
-		}]]
+		} -- good job fucking up indentation
 	}
 },
 }
