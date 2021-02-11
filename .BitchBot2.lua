@@ -207,7 +207,7 @@ end
 
 menu = { -- this is for menu stuffs n shi
 	w = 500,
-	h = 650,
+	h = 600,
 	x = 200,
 	y = 300,
 	columns = {
@@ -10111,7 +10111,7 @@ content = {
 		x = menu.columns.left,
 		y = 468,
 		width = menu.columns.width,
-		height = 165,
+		height = 115,
 		content = {
 			{
 				type = "button",
@@ -10133,7 +10133,7 @@ content = {
 		x = menu.columns.right,
 		y = 400,
 		width = menu.columns.width,
-		height = 233,
+		height = 183,
 		content = {
 			{
 				type = "textbox",
