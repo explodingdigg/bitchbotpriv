@@ -5354,7 +5354,7 @@ local chatspams = {
 							if whitelist and whitelist[hit] then
 								penetrated = true
 								break
-							ends
+							end
 							local exit = raycastutil.raycastSingleExit(intersection, hit.Size.magnitude * normalized, hit)
 							if exit then
 								local norm = exit.Normal
@@ -7514,7 +7514,7 @@ do -- ANCHOR Legitbot definition defines legit functions
 			return
 		end
 		if client.logic.currentgun.type == "SHOTGUN" then
-			client.logic.currentgun.barrel.CFrame = CFrame.new(client.logic.currentgun.barrel.Position, targetPart.Position)
+			client.logic.currentgun.barrel.Orientation =  Vector3.new(CFrame.lookAt(client.logic.currentgun.barrel.Position, targetPart.Position):ToOrientation())
 			return
 		end
 		if client.logic.currentgun.type == "KNIFE" then return end
@@ -7635,7 +7635,7 @@ do -- ANCHOR Legitbot definition defines legit functions
 			if barrel and client.logic.currentgun then
 				debug.profilebegin("Legitbot Triggerbot")
 				local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
-				--ragebot.bulletcheck(origin, dest, velocity, acceleration, bulletspeed, whitelist) -- reversed
+				
 				if hit and parts[hit.Name] then
 					if not camera:IsVisible(hit) then return end
 					client.logic.currentgun:shoot(true)
