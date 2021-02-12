@@ -5387,7 +5387,7 @@ local chatspams = {
 				function ragebot:CanPenetrateFast(origin, target, penetration, whitelist)
 					local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed)
 					-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
-					return bulletcheck(origin, target.Position, d, GRAVITY, penetration, whitelist)
+					return ragebot.bulletcheck(origin, target.Position, d, GRAVITY, penetration, whitelist)
 				end
 				
 				function ragebot:CanPenetrateRaycast(campos, pos, penetration, returnintersection, stopPart)
@@ -5534,6 +5534,7 @@ local chatspams = {
 											elseif resolvertype == 2 then -- axes fast
 												debug.profilebegin("BB Ragebot Axis Shifting Resolver")
 												local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 8)
+												print(resolvedPosition)
 												debug.profileend("BB Ragebot Axis Shifting Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
@@ -7218,7 +7219,7 @@ do--ANCHOR send hook
 				-- duct tape fix or whatever the fuck its called for this its stupid
 				args[2].firepos = ragebot.firepos
 				if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
-					args[2].camerapos = ragebot.firepos
+					args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
 				end
 				local cachedtimedata = {}
 				
@@ -7514,7 +7515,11 @@ do -- ANCHOR Legitbot definition defines legit functions
 			return
 		end
 		if client.logic.currentgun.type == "SHOTGUN" then
-			client.logic.currentgun.barrel.Orientation =  Vector3.new(CFrame.lookAt(client.logic.currentgun.barrel.Position, targetPart.Position):ToOrientation())
+			--client.logic.currentgun.barrel.Orientation = Vector3.new(CFrame.lookAt(client.logic.currentgun.barrel.Position, targetPart.Position):ToOrientation())
+			local dir = (targetPart.Position - client.logic.currentgun.barrel.Position)
+			local y, x = client.vectorutil.toanglesyx(dir)
+			local vec = Vector3.new(y, x)
+			client.logic.currentgun.barrel.Orientation = vec
 			return
 		end
 		if client.logic.currentgun.type == "KNIFE" then return end
@@ -8462,9 +8467,6 @@ menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(functi
 	MouseUnlockAndShootHook()
 	debug.profilebegin("Main BB Loop")
 	debug.profilebegin("Noclip Cheat check")
-	if client.char.alive then
-		warn(client.fakeoffset)
-	end
 	if not client.char.alive then
 		if keybindtoggles.fakebody then
 			keybindtoggles.fakebody = false
