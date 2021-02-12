@@ -7329,7 +7329,7 @@ do--ANCHOR send hook
 					local gun = client.loadedguns[args[2]].name
 					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 				else
-					local gun = client.loadedguns[args[3]].name
+					local gun = client.logic.currentgun.name
 					client.fakeupdater.equipknife(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
 				end
 			end
