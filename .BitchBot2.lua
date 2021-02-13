@@ -8,7 +8,13 @@ local Nate = isfile("cole.mak")
 if isfile("bitchbot/menuname.txt") then
 	MenuName = readfile("bitchbot/menuname.txt")
 end
-
+local customChatSpam = {}
+if isfile("bitchbot/chatspam.txt") then
+	local customtxt = readfile("bitchbot/chatspam.txt")
+	for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
+		table.insert(customChatSpam, s)
+	end
+end
 function map(X, A, B, C, D)
 	return (X-A)/(B-A) * (D-C) + C
 end
@@ -1763,7 +1769,7 @@ function menu.Initialize(menutable)
 	
 	local shooties = {}
 	
-	function inputBeganMenu(key)
+	function InputBeganMenu(key)
 		
 		if textboxopen then
 			if key.KeyCode == Enum.KeyCode.Delete or key.KeyCode == Enum.KeyCode.Return then
@@ -3026,7 +3032,7 @@ function menu.Initialize(menutable)
 				menu.modkeys.alt.direction = direction:lower()
 			end
 		end
-		inputBeganMenu(input)
+		InputBeganMenu(input)
 	end)
 	
 	menu.connections.inputended = INPUT_SERVICE.InputEnded:Connect(function(input)
@@ -4801,8 +4807,6 @@ local chatspams = {
 		"how does it feel to not have bbot 🤣🤣🤣😂😂😹😹😹 ",
 		"im a firing my laza! 🙀🙀🙀 ",
 		"😂😂😂😂😂GAMING CHAIR😂😂😂😂😂",
-	},
-	[7] = {
 		"NEXUS ",
 		"NEXUS ON TOP ",
 		"ｎｅｘｕｓ ｄｏｅｓｎ＇ｔ ｃａｒｅ 🤏",
@@ -4841,118 +4845,120 @@ local chatspams = {
 		"By the time you have completed reading this very factual and groundbreaking evidence that I am truly more superior, thoughtful, and presentable than you are, I will have prospered (that means make negotiable currency or the American Dollar) more than your entire family hierarchy will have ever made in its time span 💰",
 		"I am more seggsually stable and better looking than you are 👨",
 		"I get along with women easier than you do 👩‍🚀",
-			"I am very good at debating 🗣️🧑‍⚖️ ",
-			"I hit more head than you do 🏆",
-				"I win more hvh than you do 🏆",
-					"I am more victorious than you are🏆",
-					"Due to my agility, I am better than you at basketball, and all of your favorite sports or any sport for that matter (I will probably break your ankles in basketball by pure accident) "
-				},
-				[8] = {
-					"WE THE BEST CHEATS 🔥🔥🔥🔥 ",
-					"Phantom Force Hack Unlook Gun And Aimbot ",
-					"banlands 🔨 🗻 down 🏚️  ⏬ STOP CRASHING BANLANDS!! 🤣",
-					"antares hack client isn't real ",
-					"squidhook.xyz 🦑 ",
-					"squidhook > all ",
-					"spongehook 🤣🤣🤣💕",
-					"retardheadass ",
-					"🏀🏀 did i break your ankles brother ",
-					"he has access to HACK SERVER AND CHANGE WEIGHTS!!!!! STOOOOOOP 😡😒😒😡😡😡😡😡",
-					"\"cmon dude don't use that\" you asked for it LOL ",
-					"ima just quit mid hvh 🚶‍♀️ ",
-					"BABY 👶👶👶👶🤱🤱🤱🤱🤱",
-					"BOO HOO 😢😢😭😭😭 STOP CRYING D∪MBASS",
-					"BOO HOO 😢😢😭😭😭 STOP CRYING ",
-					"🤏",
-					"🤏 <-- just to elaborate that i have no care for this situation or you at all, kid (not that you would understand anyways, you're too stupid to understand what i'm saying to begin with)",
-					"y",
-					"b",
-					"before bbot 😭 📢				after bbot 😁😁😜					don't be like the person who doesn't have bbot",
-					"							MADE YOU LOOK ",
-					"							LOOK BRO LOOK LOOK AT ME ",
-					"	A	",
-					"			B		B		O		T	",
-					"																																																																																																																								I HAVE AJAX YALL BETTER WATCH OUT OR YOU'LL DIE, WATCH WHO YOU'RE SHOOTING",
-					"																																																																																																																								WATCH YOUR STEP KID",
-					"BROOOO HE HAS																										GOD MODE BRO HE HAS GOD MODE 🚶‍♀️🚶‍♀️🚶‍♀️😜😂😂🤦‍♂️🤦‍♂️😭😭😭👶",
-					"\"guys what hub has auto shooting\" 																										",
-					"god i wish i had bbot..... 🙏🙏🥺🥺🥺													plzzzzz brooooo 🛐 GIVE IT🛐🛐",
-					"buh bot 												",
-					"votekick him!!!!!!! 😠 vk VK VK VK VOTEKICK HIM!!!!!!!!! 😠 😢 VOTE KICK !!!!! PRESS Y WHY DIDNT U PRESS Y LOL!!!!!! 😭 ", -- shufy made this
-					"Bbot omg omggg omggg its BBot its BBOt OMGGG!!!  🙏🙏🥺🥺😌😒😡",
-					"HOw do you get ACCESS to this BBOT ",
-						"I NEED ACCESS 🔑🔓 TO BBOT 🤖📃📃📃 👈 THIS THING CALLED BBOT SCRIPT, I NEED IT ",
-						"\"this god mode guy is annoying\", Pr0blematicc says as he loses roblox hvh ",
-						"you can call me crimson chin 🦹‍♂️🦹‍♂️ cause i turned your screen red 🟥🟥🟥🟥 									",
-						"clipped that 🤡 ",
-						"Clipped and Uploaded. 🤡",
-						"nodus client slime castle crashers minecraft dupeing hack wizardhax xronize grief ... Tlcharger minecraft crack Oggi spiegheremo come creare un ip grabber!",
-						"Off synonyme syls midge, smiled at mashup 2 mixed in key free download procom, ... Okay, love order and chaos online gameplayer hack amber forcen ahdistus",
-						"ˢᵗᵃʸ ᵐᵃᵈ ˢᵗᵃʸ ᵇᵇᵒᵗˡᵉˢˢ $ ",
-						"bbot does not relent "
-					}
-				}
-				--local
-				-- "音频少年公民记忆欲求无尽 heywe 僵尸强迫身体哑集中排水",
-				-- "持有毁灭性的神经重景气游行脸红青铜色类别创意案",
-				-- "诶比西迪伊艾弗吉艾尺艾杰开艾勒艾马艾娜哦屁吉吾",
-				-- "完成与草屋两个苏巴完成与草屋两个苏巴完成与草屋",
-				-- "庆崇你好我讨厌你愚蠢的母愚蠢的母庆崇",
-				local spam_words = {
-					"Hack", "Unlock", "Cheat", "Roblox", "Mod Menu", "Mod", "Menu", "God Mode", "Kill All",
-					"Silent", "Silent Aim", "X Ray", "Aim", "Bypass", "Glitch", "Wallhack", "ESP", "Infinite",
-					"Infinite Credits", "XP", "XP Hack", "Infinite Credits", "Unlook All", "Server Backdoor",
-					"Serverside", "2021", "Working", "(WORKING)", "瞄准无声目标绕过", "Gamesense", "Onetap",
-					"PF Exploit", "Phantom Force", "Cracked", "TP Hack", "PF MOD MENU", "DOWNLOAD", "Paste Bin",
-					"download", "Download", "Teleport", "100% legit", "100%", "pro", "Professional", "灭性的神经",
-					"No Virus All Clean", "No Survey", "No Ads", "Free", "Not Paid", "Real", "REAL 2020",
-					"2020", "Real 2017", "BBot", "Cracked", "BBOT CRACKED by vw", "2014", "desuhook crack",
-					"Aimware", "Hacks", "Cheats", "Exploits", "(FREE)", "🕶😎", "😎", "😂", "😛", "paste bin",
-					"bbot script", "hard code", "正免费下载和使", "SERVER BACKDOOR", "Secret", "SECRET", "Unleaked",
-					"Not Leaked", "Method", "Minecraft Steve", "Steve", "Minecraft", "Sponge Hook", "Squid Hook", "Script",
-					"Squid Hack", "Sponge Hack", "(OP)", "Verified", "All Clean", "Program", "Hook", "有毁灭",
-					"desu", "hook", "vw HACK", "Anti Votekick", "Speed", "Fly", "Big Head", "Knife Hack",
-					"No Clip", "Auto", "Rapid Fire", "Fire Rate Hack", "Fire Rate", "God Mode", "God",
-					"Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma",
-					"And", "LEAKED", "🥳🥳🥳", "RELEASE", "IP RESOLVER","Infinite Wall Bang", "Wall Bang",
-					"Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱","Free Download EHUB",
-					"Taps", "Owns", "Owns All", "Trolling", "Troll", "Grief", "Kill", "弗吉艾尺艾杰开",
-					"Nate", "Alan", "JSON", "Classy", "BBOT Developers", "Logic", "And", "and", "Glitch", "Server Hack",
-					"Babies", "Children", "TAP", "Meme", "MEME", "Laugh", "LOL!", "Lol!", "ROFLSAUCE", "Rofl",
-					";p", ":D", "=D", "xD", "XD", "=>", "₽", "$", "8=>", "😹😹😹", "🎮🎮🎮", "🎱", "⭐", "✝",
-					"Gato Hack", "Blaze Hack", "Fuego Hack", "Nat Hook", "Ransomware", "Malware",
-					"SKID", "Pasted vw", "Encrypted", "Brute Force", "Cheat Code", "Hack Code", ";v",
-					"No Ban", "Bot", "Editing", "Modification", "injection", "Bypass Anti Cheat", "铜色类别创意",
-					"Cheat Exploit", "Hitbox Expansion", "Cheating AI", "Auto Wall Shoot", "Konami Code",
-					"Debug", "Debug Menu", "🗿", "£", "¥", "₽", "₭", "€", "₿", "Meow", "MEOW", "meow"
-				}
+		"I am very good at debating 🗣️🧑‍⚖️ ",
+		"I hit more head than you do 🏆",
+		"I win more hvh than you do 🏆",
+		"I am more victorious than you are🏆",
+		"Due to my agility, I am better than you at basketball, and all of your favorite sports or any sport for that matter (I will probably break your ankles in basketball by pure accident) ",
+		"WE THE BEST CHEATS 🔥🔥🔥🔥 ",
+		"Phantom Force Hack Unlook Gun And Aimbot ",
+		"banlands 🔨 🗻 down 🏚️  ⏬ STOP CRASHING BANLANDS!! 🤣",
+		"antares hack client isn't real ",
+		"squidhook.xyz 🦑 ",
+		"squidhook > all ",
+		"spongehook 🤣🤣🤣💕",
+		"retardheadass ",
+		"🏀🏀 did i break your ankles brother ",
+		"he has access to HACK SERVER AND CHANGE WEIGHTS!!!!! STOOOOOOP 😡😒😒😡😡😡😡😡",
+		"\"cmon dude don't use that\" you asked for it LOL ",
+		"ima just quit mid hvh 🚶‍♀️ ",
+		"BABY 👶👶👶👶🤱🤱🤱🤱🤱",
+		"BOO HOO 😢😢😭😭😭 STOP CRYING D∪MBASS",
+		"BOO HOO 😢😢😭😭😭 STOP CRYING ",
+		"🤏",
+		"🤏 <-- just to elaborate that i have no care for this situation or you at all, kid (not that you would understand anyways, you're too stupid to understand what i'm saying to begin with)",
+		"y",
+		"b",
+		"before bbot 😭 📢				after bbot 😁😁😜					don't be like the person who doesn't have bbot",
+		"							MADE YOU LOOK ",
+		"							LOOK BRO LOOK LOOK AT ME ",
+		"	A	",
+		"			B		B		O		T	",
+		"																																																																																																																								I HAVE AJAX YALL BETTER WATCH OUT OR YOU'LL DIE, WATCH WHO YOU'RE SHOOTING",
+		"																																																																																																																								WATCH YOUR STEP KID",
+		"BROOOO HE HAS																										GOD MODE BRO HE HAS GOD MODE 🚶‍♀️🚶‍♀️🚶‍♀️😜😂😂🤦‍♂️🤦‍♂️😭😭😭👶",
+		"\"guys what hub has auto shooting\" 																										",
+		"god i wish i had bbot..... 🙏🙏🥺🥺🥺													plzzzzz brooooo 🛐 GIVE IT🛐🛐",
+		"buh bot 												",
+		"votekick him!!!!!!! 😠 vk VK VK VK VOTEKICK HIM!!!!!!!!! 😠 😢 VOTE KICK !!!!! PRESS Y WHY DIDNT U PRESS Y LOL!!!!!! 😭 ", -- shufy made this
+		"Bbot omg omggg omggg its BBot its BBOt OMGGG!!!  🙏🙏🥺🥺😌😒😡",
+		"HOw do you get ACCESS to this BBOT ",
+		"I NEED ACCESS 🔑🔓 TO BBOT 🤖📃📃📃 👈 THIS THING CALLED BBOT SCRIPT, I NEED IT ",
+		"\"this god mode guy is annoying\", Pr0blematicc says as he loses roblox hvh ",
+		"you can call me crimson chin 🦹‍♂️🦹‍♂️ cause i turned your screen red 🟥🟥🟥🟥 									",
+		"clipped that 🤡 ",
+		"Clipped and Uploaded. 🤡",
+		"nodus client slime castle crashers minecraft dupeing hack wizardhax xronize grief ... Tlcharger minecraft crack Oggi spiegheremo come creare un ip grabber!",
+		"Off synonyme syls midge, smiled at mashup 2 mixed in key free download procom, ... Okay, love order and chaos online gameplayer hack amber forcen ahdistus",
+		"ˢᵗᵃʸ ᵐᵃᵈ ˢᵗᵃʸ ᵇᵇᵒᵗˡᵉˢˢ $ ",
+		"bbot does not relent "
+	}
+}
+--local
+-- "音频少年公民记忆欲求无尽 heywe 僵尸强迫身体哑集中排水",
+-- "持有毁灭性的神经重景气游行脸红青铜色类别创意案",
+-- "诶比西迪伊艾弗吉艾尺艾杰开艾勒艾马艾娜哦屁吉吾",
+-- "完成与草屋两个苏巴完成与草屋两个苏巴完成与草屋",
+-- "庆崇你好我讨厌你愚蠢的母愚蠢的母庆崇",
+local spam_words = {
+	"Hack", "Unlock", "Cheat", "Roblox", "Mod Menu", "Mod", "Menu", "God Mode", "Kill All",
+	"Silent", "Silent Aim", "X Ray", "Aim", "Bypass", "Glitch", "Wallhack", "ESP", "Infinite",
+	"Infinite Credits", "XP", "XP Hack", "Infinite Credits", "Unlook All", "Server Backdoor",
+	"Serverside", "2021", "Working", "(WORKING)", "瞄准无声目标绕过", "Gamesense", "Onetap",
+	"PF Exploit", "Phantom Force", "Cracked", "TP Hack", "PF MOD MENU", "DOWNLOAD", "Paste Bin",
+	"download", "Download", "Teleport", "100% legit", "100%", "pro", "Professional", "灭性的神经",
+	"No Virus All Clean", "No Survey", "No Ads", "Free", "Not Paid", "Real", "REAL 2020",
+	"2020", "Real 2017", "BBot", "Cracked", "BBOT CRACKED by vw", "2014", "desuhook crack",
+	"Aimware", "Hacks", "Cheats", "Exploits", "(FREE)", "🕶😎", "😎", "😂", "😛", "paste bin",
+	"bbot script", "hard code", "正免费下载和使", "SERVER BACKDOOR", "Secret", "SECRET", "Unleaked",
+	"Not Leaked", "Method", "Minecraft Steve", "Steve", "Minecraft", "Sponge Hook", "Squid Hook", "Script",
+	"Squid Hack", "Sponge Hack", "(OP)", "Verified", "All Clean", "Program", "Hook", "有毁灭",
+	"desu", "hook", "vw HACK", "Anti Votekick", "Speed", "Fly", "Big Head", "Knife Hack",
+	"No Clip", "Auto", "Rapid Fire", "Fire Rate Hack", "Fire Rate", "God Mode", "God",
+	"Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma",
+	"And", "LEAKED", "🥳🥳🥳", "RELEASE", "IP RESOLVER","Infinite Wall Bang", "Wall Bang",
+	"Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱","Free Download EHUB",
+	"Taps", "Owns", "Owns All", "Trolling", "Troll", "Grief", "Kill", "弗吉艾尺艾杰开",
+	"Nate", "Alan", "JSON", "Classy", "BBOT Developers", "Logic", "And", "and", "Glitch", "Server Hack",
+	"Babies", "Children", "TAP", "Meme", "MEME", "Laugh", "LOL!", "Lol!", "ROFLSAUCE", "Rofl",
+	";p", ":D", "=D", "xD", "XD", "=>", "₽", "$", "8=>", "😹😹😹", "🎮🎮🎮", "🎱", "⭐", "✝",
+	"Gato Hack", "Blaze Hack", "Fuego Hack", "Nat Hook", "Ransomware", "Malware",
+	"SKID", "Pasted vw", "Encrypted", "Brute Force", "Cheat Code", "Hack Code", ";v",
+	"No Ban", "Bot", "Editing", "Modification", "injection", "Bypass Anti Cheat", "铜色类别创意",
+	"Cheat Exploit", "Hitbox Expansion", "Cheating AI", "Auto Wall Shoot", "Konami Code",
+	"Debug", "Debug Menu", "🗿", "£", "¥", "₽", "₭", "€", "₿", "Meow", "MEOW", "meow", "Under Age",
+	"underage", "UNDER AGE", "18-", "not finite", "Left", "Right", "Up", "Down", 
+	"Left Right Up Down A B Start", "Noclip Cheat", "Bullet Check Bypass", 
+	"client.char:setbasewalkspeed(999) SPEED CHEAT.", "diff = dot(bulletpos, intersection - step_pos) / dot(bulletpos, bulletpos) * dt",
+	"E = MC^2", "Beyond superstring theory", "It is conceivable that the five superstring theories are approximated to a theory in higher dimensions possibly involving membranes."
+}
 				
-				setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
-				__call = function(self, type, debounce)
-					if type ~= 1 then
-						if type == 9 then
-							local message = ""
-							for i = 5, math.random(50) do
-								message = message .. " " .. spam_words[math.random(#spam_words)]
-							end
-							return message
-						end
-						local chatspamtype = self[type]
-						local rand = math.random(1, #chatspamtype)
-						if debounce then
-							if self.lastchoice == rand then
-								repeat
-									rand = math.random(1, #chatspamtype)
-								until rand ~= self.lastchoice
-							end
-							self.lastchoice = rand
-						end
-						local curchoice = chatspamtype[rand]
-						return curchoice
-					end
-				end,
-				__metatable = "neck yourself weird kid the fuck you trying to do"
-				})
+setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
+	__call = function(self, type, debounce)
+		if type ~= 1 then
+			if type == 7 then
+				local message = ""
+				for i = 1, math.random(25) do
+					message = message .. " " .. spam_words[math.random(#spam_words)]
+				end
+				return message
+			end
+			local chatspamtype = type == 8 and customChatSpam or self[type]
+			local rand = math.random(1, #chatspamtype)
+			if debounce then
+				if self.lastchoice == rand then
+					repeat
+						rand = math.random(1, #chatspamtype)
+					until rand ~= self.lastchoice
+				end
+				self.lastchoice = rand
+			end
+			local curchoice = chatspamtype[rand]
+			return curchoice
+		end
+	end,
+	__metatable = "neck yourself weird kid the fuck you trying to do"
+})
 				
 				local skelparts = {"Head", "Right Arm", "Right Leg", "Left Leg", "Left Arm"}
 				
@@ -8417,7 +8423,7 @@ local chat_game = LOCAL_PLAYER.PlayerGui.ChatGame
 local chat_box = chat_game:FindFirstChild("TextBox")
 local oldpos = nil
 menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
-	--inputBeganMenu(key)/
+	--InputBeganMenu(key)/
 	if chat_box.Active then return end
 	if menu:GetVal("Visuals", "Local Visuals", "Third Person") and key.KeyCode == menu:GetVal("Visuals", "Local Visuals", "Third Person", "keybind") then
 		keybindtoggles.thirdperson = not keybindtoggles.thirdperson
@@ -9886,7 +9892,7 @@ content = {
 				type = "dropbox",
 				name = "Chat Spam",
 				value = 1,
-				values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Ion Cannon", "Nexus", "\"funny\"", "Youtube Title"}
+				values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Deluxe", "Youtube Title", "Custom"}
 			},
 			{
 				type = "toggle",
@@ -10350,7 +10356,7 @@ end --!SECTION PF END
 
 do
 	local wm = menu.watermark
-	wm.textString = MenuName .. " | Waiting for release for 2 months | " .. os.date("%b. %d, %Y")
+	wm.textString = MenuName .. " | Waiting for release for 2.4 months | " .. os.date("%b. %d, %Y")
 	wm.pos = Vector2.new(40, 10)
 	wm.text = {}
 	wm.width = (#wm.textString) * 7 + 10
