@@ -4541,13 +4541,26 @@ local GetPlayerData = function(player_name)
 end
 --client.net:send("chatted", string.char(1))
 local CommandFunctions = {
-	targetBelowRank = function(min)
+	targetbelowrank = function(min)
+		local targetted = 0
 		for k, player in pairs(Players:GetPlayers()) do
 			local data = GetPlayerData(player.Name)
 			if data.Rank.Text < min then
 				table.insert(menu.priority, player.Name)
 			end
+			targetted += 1
 		end
+		CreateNotification(("Targetted %d players below rank %d"):format(targetted, min))
+	end,
+	updatechatspam = function()
+		customChatSpam = {}
+		if isfile("bitchbot/chatspam.txt") then
+			local customtxt = readfile("bitchbot/chatspam.txt")
+			for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
+				table.insert(customChatSpam, s)
+			end
+		end
+		CreateNotification("Custom Chatspam Updated")
 	end,
 }
 menu.pfunload = function(self)
@@ -5761,7 +5774,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 			--send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
 			if stab then send(client.net, "stab") end
 			local newhit = nil
-			newhit = {Name = target.part.Name, Position = Vector3.new(0 / 0)} -- fuckin hack
+			newhit = {Name = target.part.Name, Position = Vector3.new(math.random(-2^12, 2^12))} -- fuckin hack
 			send(client.net, "knifehit", target.player, tick(), newhit or target.part)
 		end
 		
@@ -7116,8 +7129,8 @@ do--ANCHOR send hook
 				local func
 				for f in message:gmatch("%w+") do
 					if i == 1 then
-						if CommandFunctions[f] then
-							func = CommandFunctions[f]
+						if CommandFunctions[f:lower()] then
+							func = CommandFunctions[f:lower()]
 						end
 					else
 						table.insert(args, f)
@@ -9892,7 +9905,7 @@ content = {
 				type = "dropbox",
 				name = "Chat Spam",
 				value = 1,
-				values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Deluxe", "Youtube Title", "Custom"}
+				values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Deluxe", "Youtube Title", "Custom", "Custom Combination"}
 			},
 			{
 				type = "toggle",

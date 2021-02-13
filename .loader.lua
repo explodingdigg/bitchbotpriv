@@ -1521,7 +1521,7 @@ function mp.BBMenuInit(menutable)
 end
 
 mp.loaderinfo = {
-	username = "bitch",
+	username = "\%s",
 	updated = "10/20/2020",
 	ver = "2.0",
 	expires = "Never",
