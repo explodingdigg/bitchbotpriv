@@ -10240,10 +10240,10 @@ do  --TODO alan put this shit into a function so you don't have to copy paste it
 			local kills = playerdata.Kills.Text
 			local deaths = playerdata.Deaths.Text
 			plistinfo[1].Text = string.format([[
-			Name: %s
-			Health: %s
-			Rank: %d
-			K/D: %d/%d
+Name: %s
+Health: %s
+Rank: %d
+K/D: %d/%d
 			]], player.Name, tostring(playerhealth), playerrank, kills, deaths)
 			if textonly == nil then
 				plistinfo[2].Data = BBOT_IMAGES[5]
