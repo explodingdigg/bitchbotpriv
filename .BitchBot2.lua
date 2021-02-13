@@ -1230,6 +1230,7 @@ function menu.Initialize(menutable)
 							menu.options[v.name][v1.name][v2.name][6] = {v2.minvalue, v2.maxvalue}
 							menu.options[v.name][v1.name][v2.name][7] = {v1.x + 7 + v1.width - 38, v1.y + y_pos - 1}
 							menu.options[v.name][v1.name][v2.name].round = v2.rounded == nil and true or v2.rounded
+							menu.options[v.name][v1.name][v2.name].stepsize = v2.stepsize == nil and true or v2.stepsize
 							menu.options[v.name][v1.name][v2.name].custom = v2.custom or {}
 							
 							y_pos += 30
@@ -2526,9 +2527,9 @@ function menu.Initialize(menutable)
 								end
 							elseif v2[2] == "slider" and not dropboxopen then
 								if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
-									local stepval = 1
-									if not menu:modkeydown("shift", "left") and not v2.round then
-										stepval = 0.01
+									local stepval = v2.stepsize or 1
+									if not menu:modkeydown("shift", "left") then
+										stepval = v2.round and 0.1 or 1
 									end
 									if menu:MouseInMenu(v2[7][1], v2[7][2], 11, 13) then
 										v2[1] -= stepval
@@ -10087,7 +10088,8 @@ content = {
 			value = 6000,
 			minvalue = 80,
 			maxvalue = 200000,
-			stradd = " studs"
+			stradd = " studs",
+			stepsize = 100
 		}
 	},
 },
