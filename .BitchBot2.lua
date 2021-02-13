@@ -5404,9 +5404,10 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 				end
 				
 				function ragebot:CanPenetrateFast(origin, target, penetration, whitelist)
-					local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed)
+					local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed * 25)
+					local z = d.Unit * client.logic.currentgun.data.bulletspeed * 25 -- bullet speed cheat
 					-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
-					return ragebot.bulletcheck(origin, target.Position, d, GRAVITY, penetration, whitelist)
+					return ragebot.bulletcheck(origin, target.Position, z, GRAVITY, penetration, whitelist)
 				end
 				
 				function ragebot:CanPenetrateRaycast(campos, pos, penetration, returnintersection, stopPart)
@@ -6902,6 +6903,7 @@ menu.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input
 				i += 1
 				client.logic.gammo -= 1
 				local curbodyparts = client.replication.getbodyparts(v)
+				if not curbodyparts then return end
 				local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10
 				and curbodyparts.rootpart.Position or curbodyparts.head.Position
 				local args = {
@@ -7140,9 +7142,6 @@ do--ANCHOR send hook
 				return func(unpack(args))
 			end
 		end
-		if args[1] == "forcereset" and menu:GetVal("Misc", "Extra", "Anti-Killzone") then -- some stupid maps do this apparently but they also have some gay ass serverside thing so yeah the map creators and the game can go suck a large one
-			return
-		end
 		if args[1] == "bullethit" and menu:GetVal("Misc", "Extra", "Suppress Only") then return end
 		if args[1] == "bullethit" then
 			if table.find(menu.friends, args[2].Name) then return end
@@ -7220,6 +7219,14 @@ do--ANCHOR send hook
 			if menu:GetVal("Misc", "Exploits", "Fake Equip") then
 				send(self, "equip", client.logic.currentgun.id)
 			end
+
+			if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
+				local new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
+				for k, bullet in pairs(args[2].bullets) do
+					local old_velocity = bullet[1]
+					bullet[1] = {unit = (old_velocity.Unit * new_speed) / client.logic.currentgun.data.bulletspeed}
+				end
+			end
 			
 			if legitbot.silentVector then
 				for k, bullet in pairs(args[2].bullets) do
@@ -7269,11 +7276,14 @@ do--ANCHOR send hook
 					args[2].camerapos = ragebot.repupdate
 					ragebot.repupdate = nil
 				end
-				
+				local time
 				for k, bullet in pairs(args[2].bullets) do
-					local angle, time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed)
-					bullet[1] = angle
-					cachedtimedata[k] = time
+					local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed * 25)
+					local new_angle = angle.Unit * client.logic.currentgun.data.bulletspeed * 25
+					bullet[1] = {unit = new_angle} -- THIS IS SO FUCKING STUIPD THE FACT IT WORKS LMAO (ABUSING SHIT SERVER SIDE MISTAKE)
+					-- BULLET SPEED CHEAT ^
+					time = bullet_time
+					--cachedtimedata[k] = bullet_time
 				end
 				
 				if menu:GetVal("Rage", "Extra", "Release Packets on Shoot") then
@@ -7282,13 +7292,14 @@ do--ANCHOR send hook
 					NETWORK:SetOutgoingKBPSLimit(0)
 				end
 				
+				args[3] -= time
 				send(self, unpack(args))
 				
 				for k, bullet in pairs(args[2].bullets) do
 					local origin = args[2].firepos
 					local attach_origin = Instance.new("Attachment", workspace.Terrain)
 					attach_origin.Position = origin
-					local ending = origin + bullet[1] * 300
+					local ending = origin + bullet[1].unit.Unit * 300
 					local attach_ending = Instance.new("Attachment", workspace.Terrain)
 					attach_ending.Position = ending
 					local beam = misc:CreateBeam(attach_origin, attach_ending)
@@ -7298,13 +7309,15 @@ do--ANCHOR send hook
 						ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
 					}
 					--send(self, 'bullethit', unpack(hitinfo))
-					if not client.instancetype.IsBanland() then
+					--[[if not client.instancetype.IsBanland() then
 						delay(cachedtimedata[k], function()
 							send(self, 'bullethit', unpack(hitinfo))
 						end)
 					else
 						send(self, 'bullethit', unpack(hitinfo))
-					end
+					end]]
+
+					send(self, 'bullethit', unpack(hitinfo))
 				end
 				if menu:GetVal("Misc", "Exploits", "Fake Equip") then
 					local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
@@ -7680,17 +7693,27 @@ end
 
 local newpart = client.particle.new
 client.particle.new = function(P)
-	if menu:GetVal("Legit", "Bullet Redirection", "Silent Aim") and legitbot.silentVector and not P.thirdperson then
-		local mag = P.velocity.Magnitude
-		P.velocity = legitbot.silentVector * mag
+	local new_speed
+
+	if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
+		new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
 	end
-	if menu:GetVal("Rage", "Aimbot", "Enabled") and ragebot.silentVector and not P.thirdperson then
-		local oldpos = P.position
-		P.position = ragebot.firepos
-		
-		local mag = P.velocity.Magnitude
-		P.velocity = ragebot.silentVector * mag
-		P.visualorigin = ragebot.firepos
+
+	local mag = new_speed or P.velocity.Magnitude
+
+	if not P.thirdperson then
+		if menu:GetVal("Legit", "Bullet Redirection", "Silent Aim") and legitbot.silentVector then
+			P.velocity = legitbot.silentVector.Unit * mag
+		elseif menu:GetVal("Rage", "Aimbot", "Enabled") and ragebot.silentVector then
+			local oldpos = P.position
+			P.position = ragebot.firepos
+			P.velocity = ragebot.silentVector.Unit * mag
+			P.visualorigin = ragebot.firepos
+		else
+			if new_speed then
+				P.velocity = P.velocity.Unit * new_speed
+			end
+		end
 	end
 	--[[if menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers") and not P.thirdperson then
 	local origin = P.position
@@ -9925,11 +9948,6 @@ content = {
 				name = "Auto Martyrdom",
 				value = false
 			},
-			{
-				type = "toggle",
-				name = "Anti-Killzone",
-				value = false
-			},
 		}
 	},
 	{
@@ -10058,6 +10076,19 @@ content = {
 			name = "Run and Gun",
 			value = false
 		},
+		{
+			type = "toggle",
+			name = "Edit Bullet Speed",
+			value = false
+		},
+		{
+			type = "slider",
+			name = "Bullet Speed",
+			value = 6000,
+			minvalue = 80,
+			maxvalue = 200000,
+			stradd = " studs"
+		}
 	},
 },
 }
