@@ -4982,10 +4982,11 @@ local spam_words = {
 setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 	__call = function(self, type, debounce)
 		if type ~= 1 then
-			if type == 7 then
+			if type == 7 or type == 9 then
+				local words = type == 7 and spam_words or customChatSpam
 				local message = ""
 				for i = 1, math.random(25) do
-					message = message .. " " .. spam_words[math.random(#spam_words)]
+					message = message .. " " .. words[math.random(#words)]
 				end
 				return message
 			end
