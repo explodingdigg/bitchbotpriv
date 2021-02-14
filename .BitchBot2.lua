@@ -4292,6 +4292,7 @@ end)
 
 elseif menu.game == "pf" then --!SECTION
 	local sphereHitbox = Instance.new("Part", workspace)
+	sphereHitbox.Name = "abcdefg"
 	local diameter
 	do
 		diameter = 11 -- up to 12 works
@@ -4304,17 +4305,49 @@ elseif menu.game == "pf" then --!SECTION
 	end
 	
 	local keybindtoggles = { -- ANCHOR keybind toggles
-	crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
-	flyhack = false,
-	thirdperson = false,
-	fakebody = false, -- maybe lol
-	invis = false,
-	fakelag = false,
-	crimwalk = false,
-	freeze = false
-}
+		crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
+		flyhack = false,
+		thirdperson = false,
+		fakebody = false, -- maybe lol
+		invis = false,
+		fakelag = false,
+		crimwalk = false,
+		freeze = false
+	}
 
 menu.activenades = {}
+
+local shitting_my_pants = false
+local stylis = {
+	[525919] = true, 
+	[1667819] = true, 
+	[195329] = true, 
+	[5725475] = true, 
+	[52250025] = true, 
+	[18659509] = true, 
+	[31137804] = true, 
+	[484782977] = true, -- superusers end here, anything else following is just people i know that could probably have direct access to a developer console or data store or anything to catch us in the act of creating and abusing and exploiting their game
+	[750972253] = true, 
+	[169798359] = true, -- not confirmed but this dude has a tag with no equal signs so kinda sus and he respond to ltierally no fucking body
+	[94375158] = true,
+	[53275569] = true, -- banlands advocate
+	[2346908601] = true, -- sus
+	[192018294] = true,
+	[73654327] = true,
+	[1509251] = true,
+	[151207617] = true,
+}
+
+CreateThread(function()
+	while wait(2) do -- fuck off
+		local count = 0
+		for _, player in next, Players:GetPlayers() do
+			local d = stylis[player.UserId]
+			if d then count += 1 end
+		end
+		shitting_my_pants = count > 0
+	end
+end)
 
 --SECTION PF BEGIN
 
@@ -5332,6 +5365,9 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 				local bulletLifeTime = client.publicsettings.bulletLifeTime
 				
 				local function ignorecheck(p)
+					if p.Name == "abcdefg" then
+						return false
+					end
 					if not p.CanCollide then
 						return true
 					end
@@ -5347,14 +5383,14 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 				local dot = Vector3.new().Dot
 				
 				function ragebot.bulletcheck(origin, dest, velocity, acceleration, bulletspeed, whitelist) -- reversed
-					local ignorelist = { workspace.Terrain, workspace.Players, workspace.Ignore, workspace.CurrentCamera }
+					local ignorelist = { workspace.Terrain--[[, workspace.Players]], workspace.Ignore, workspace.CurrentCamera }
 					local bullettime = 0
 					local exited = false
 					local penetrated = true
 					local step_pos = origin
 					local s = bulletspeed
 					local maxtime = timehit(step_pos, velocity, acceleration, dest)
-					local bulletintersection
+					--local bulletintersection
 					if not (not isdirtyfloat(maxtime)) or bulletLifeTime < maxtime or maxtime == 0 then
 						return false
 					end
@@ -5369,9 +5405,9 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 							local hit = enter.Instance
 							local intersection = enter.Position
 							local normalized = bulletvelocity.unit
-							bulletintersection = enter
 							if whitelist and whitelist[hit] then
 								penetrated = true
+								step_pos = intersection
 								break
 							end
 							local exit = raycastutil.raycastSingleExit(intersection, hit.Size.magnitude * normalized, hit)
@@ -5400,7 +5436,8 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 							bullettime = bullettime + dt
 						end
 					end
-					return penetrated, exited, bulletintersection
+
+					return penetrated, exited, step_pos
 				end
 				
 				function ragebot:CanPenetrateFast(origin, target, penetration, whitelist)
@@ -5554,7 +5591,6 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 											elseif resolvertype == 2 then -- axes fast
 												debug.profilebegin("BB Ragebot Axis Shifting Resolver")
 												local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 8)
-												print(resolvedPosition)
 												debug.profileend("BB Ragebot Axis Shifting Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
@@ -5639,12 +5675,12 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 													[sphereHitbox] = true
 												}
 												
-												local penetrated = ragebot:CanPenetrateFast(barrel, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
+												local penetrated, exited, intersectionpos = ragebot:CanPenetrateFast(barrel, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
 												if penetrated then
 													ragebot.firepos = barrel
 													cpart = bone
 													theplayer = player
-													ragebot.intersection = newTargetPosition
+													ragebot.intersection = intersectionpos
 													firepos = barrel
 													--warn("penetrated normally")
 												else
@@ -5654,7 +5690,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 														ragebot.firepos = resolvedPosition
 														cpart = bone
 														theplayer = player
-														ragebot.intersection = bulletintersection.Position
+														ragebot.intersection = bulletintersection
 														firepos = resolvedPosition
 														if menu.priority[player.Name] then break end
 													else
@@ -5675,7 +5711,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 															ragebot.firepos = barrel
 															cpart = bone
 															theplayer = player
-															ragebot.intersection = newintersection.Position
+															ragebot.intersection = newintersection
 															firepos = barrel
 														else
 															--warn("no standardized autowall hit")
@@ -6889,17 +6925,26 @@ menu.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input
 		keybindtoggles.crimwalk = true
 	end]]
 	
-	if menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze then
+
+	if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze) then
 		keybindtoggles.freeze = true
+	else
+		if shitting_my_pants == true then
+			CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
+		end
 	end
 	
-	if menu:GetVal("Misc", "Exploits", "Super Invisibility") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind") then
-		CreateNotification("Super Invisibility hack")
-		for i = 1, 30 do
+	if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Super Invisibility") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind")) then
+		CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
+		for i = 1, 50 do
 			local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
 			send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
 			---- what this does is fucking overflow the lookangles spring (since it does spring:accelerate(num) i think instead of just doing spring.t = num) and stuff and it causes the entire model on the client to just disappear
 			---- (basically the equivelant of doing rootpart.Orientation = Vector3.new(math.huge, math.huge, math.huge) LOL
+		end
+	else
+		if shitting_my_pants == true then
+			CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
 		end
 	end
 	
@@ -6974,8 +7019,12 @@ menu.connections.inputended_pf = INPUT_SERVICE.InputEnded:Connect(function(input
 			NETWORK:SetOutgoingKBPSLimit(0)
 		end
 		
-		if menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and keybindtoggles.freeze then
+		if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and keybindtoggles.freeze) then
 			keybindtoggles.freeze = false
+		else
+			if shitting_my_pants == true then
+				CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
+			end
 		end
 		
 		--[[if keybindtoggles.crimwalk and input.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") then
@@ -7230,7 +7279,7 @@ do--ANCHOR send hook
 				send(self, "equip", client.logic.currentgun.id)
 			end
 
-			if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
+			if shitting_my_pants == false and menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
 				local new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
 				for k, bullet in pairs(args[2].bullets) do
 					local old_velocity = bullet[1]
@@ -7244,7 +7293,7 @@ do--ANCHOR send hook
 				end
 			end
 			
-			if keybindtoggles.freeze then
+			if shitting_my_pants == false and keybindtoggles.freeze then
 				for k, bullet in pairs(args[2].bullets) do
 					bullet[1] = Vector2.new()
 				end
@@ -7254,7 +7303,7 @@ do--ANCHOR send hook
 			if ragebot.silentVector then
 				-- duct tape fix or whatever the fuck its called for this its stupid
 				args[2].firepos = ragebot.firepos
-				if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
+				if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
 					args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
 				end
 				local cachedtimedata = {}
@@ -7288,12 +7337,19 @@ do--ANCHOR send hook
 				end
 				local time
 				for k, bullet in pairs(args[2].bullets) do
-					local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed * 25)
-					local new_angle = angle.Unit * client.logic.currentgun.data.bulletspeed * 25
-					bullet[1] = {unit = new_angle} -- THIS IS SO FUCKING STUIPD THE FACT IT WORKS LMAO (ABUSING SHIT SERVER SIDE MISTAKE)
-					-- BULLET SPEED CHEAT ^
-					time = bullet_time
-					--cachedtimedata[k] = bullet_time
+					if shitting_my_pants == false then
+						local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed * 25)
+						local new_angle = angle.Unit * client.logic.currentgun.data.bulletspeed * 25
+						bullet[1] = {unit = new_angle} -- THIS IS SO FUCKING STUIPD THE FACT IT WORKS LMAO (ABUSING SHIT SERVER SIDE MISTAKE)
+						-- BULLET SPEED CHEAT ^
+						time = bullet_time
+						--cachedtimedata[k] = bullet_time
+					else
+						local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed)
+						bullet[1] = angle
+						time = bullet_time
+						--cachedtimedata[k] = bullet_time
+					end
 				end
 				
 				if menu:GetVal("Rage", "Extra", "Release Packets on Shoot") then
@@ -7382,7 +7438,7 @@ do--ANCHOR send hook
 			end
 		elseif args[1] == "repupdate" then
 			client.lastrepupdate = args[2]
-			if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
+			if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
 				if not client.fakeoffset then client.fakeoffset = 18 end
 				
 				local nextinc = client.fakeoffset + 9
@@ -8492,13 +8548,13 @@ menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 			CreateNotification("Do this when you spawn or over glass (make sure your as close to ground as possible)")
 		end
 	end
-	if menu:GetVal("Misc", "Exploits", "Invisibility") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
+	--[[if menu:GetVal("Misc", "Exploits", "Invisibility") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
 		invisibility()
 		local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
 		CreateNotification(msg)
 		keybindtoggles.invis = not keybindtoggles.invis
-	end
-	if menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
+	end]]
+	if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive) then
 		local sign = not menu:modkeydown("alt", "left")
 		local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
 		
@@ -8509,6 +8565,10 @@ menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 			CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
 		else
 			CreateNotification("Unable to floor clip!")
+		end
+	else
+		if shitting_my_pants == true then
+			CreateNotification("You may not use this exploit while game administrators/moderators are in your server.")
 		end
 	end
 end)
@@ -8560,7 +8620,7 @@ CreateThread(function() -- ragebot performance
 		if not menu then error("") end
 		renderChams()
 		
-		for player, data in next, repupdates do
+		--[[for player, data in next, repupdates do
 			if not client.hud:isplayeralive(player) and #data > 0 then
 				repupdates[player] = {}
 				continue
@@ -8609,7 +8669,7 @@ CreateThread(function() -- ragebot performance
 					send(client.net, "newgrenade", unpack(args))
 				end
 			end
-		end
+		end]]
 		
 		if menu:GetVal("Rage", "Extra", "Performance Mode") then
 			do--ragebot
