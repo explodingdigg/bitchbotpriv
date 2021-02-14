@@ -213,7 +213,7 @@ end
 
 menu = { -- this is for menu stuffs n shi
 	w = 500,
-	h = 625,
+	h = 650,
 	x = 200,
 	y = 300,
 	columns = {
@@ -221,7 +221,7 @@ menu = { -- this is for menu stuffs n shi
 		left = 17,
 		right = 253
 	},
-	activetab = 1, -- do not change this value please its not made to be fucked with sorry
+	activetab = 6,
 	open = true,
 	fadestart = 0,
 	fading = false,
@@ -243,6 +243,7 @@ menu = { -- this is for menu stuffs n shi
 	tabnames = {}, -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
 	friends = {},
 	priority = {},
+	spectating = false,
 	modkeys = {
 		alt = {
 			direction = nil
@@ -1606,7 +1607,7 @@ function menu.Initialize(menutable)
 			oldcolor.Transparency = 1
 		end
 	end
-	
+	-- all this color picker shit is disgusting, why can't it be in it's own fucking scope. these are all global 
 	local dragbar_r = {}
 	Draw:OutlinedRect(true, 30, 30, 16, 5, {0, 0, 0, 255}, cp.drawings)
 	table.insert(dragbar_r, cp.drawings[#cp.drawings])
@@ -1642,7 +1643,6 @@ function menu.Initialize(menutable)
 		dragbar_m[2].Position = Vector2.new(x + 1, y + 1)
 	end
 	
-	local colorpicker_alpha
 	local function set_colorpicker(visible, color, value, alpha, text, x, y)
 		for k, v in pairs(cp.drawings) do
 			v.Visible = visible
@@ -1694,7 +1694,7 @@ function menu.Initialize(menutable)
 		end
 	end
 	
-	set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 0, 0)
+	set_colorpicker(false, {255, 0, 0}, nil, false, "", 0, 0)
 	
 	local bbmouse = {}
 	local mousie = {
@@ -1957,7 +1957,7 @@ function menu.Initialize(menutable)
 			menu:unload()
 		elseif bp == menu.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
-		elseif bp == menu.options["Settings"]["Configuration"]["Save Config"] then
+		elseif bp == menu.options["Settings"]["Configuration"]["Save Config"] and messagebox('save config?', 'object oriented menu systems are really nice', 4) == 6 then
 			
 			local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
 			
@@ -2054,14 +2054,14 @@ function menu.Initialize(menutable)
 			writefile("bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb", figgy)
 			CreateNotification("Saved \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 			UpdateConfigs()
-		elseif bp == menu.options["Settings"]["Configuration"]["Delete Config"] then
+		elseif bp == menu.options["Settings"]["Configuration"]["Delete Config"] and messagebox('delete config?', 'object oriented menu systems are really nice', 4) == 6 then
 			
 			delfile("bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb")
 			CreateNotification("Deleted \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 			UpdateConfigs()
 			
 			
-		elseif bp == menu.options["Settings"]["Configuration"]["Load Config"] then
+		elseif bp == menu.options["Settings"]["Configuration"]["Load Config"] and messagebox('load config?', 'object oriented menu systems are really nice', 4) == 6 then
 			
 			local configname = "bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb"
 			if not isfile(configname) then
@@ -2303,7 +2303,7 @@ function menu.Initialize(menutable)
 									v2[1] = v2[6][2]
 								end
 								
-								v2[4][5].Text = v2.custom[v2[1]] or (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
+								v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
 								--v2[4][5].Text = tostring(v2[1]).. v2[4][6]
 								
 								for i = 1, 4 do
@@ -2543,8 +2543,7 @@ function menu.Initialize(menutable)
 										v2[1] = v2[6][2]
 									end
 									
-									v2[4][5].Text = v2.custom[v2[1]] or (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
-									--v2[4][5].Text = (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
+									v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
 									
 									for i = 1, 4 do
 										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
@@ -2854,13 +2853,13 @@ function menu.Initialize(menutable)
 								if v2[5] then
 									--ANCHOR rounding in sliders
 									local new_val = (v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - menu.x - v2[3][1])/v2[3][3])
-									v2[1] = (v2.round and math.floor(new_val) or math.floor(new_val * 100) / 100) + v2[6][1]
+									v2[1] = (v2.round and math.floor(new_val) or math.floor(new_val * 10) / 10) + v2[6][1]
 									if v2[1] < v2[6][1] then
 										v2[1] = v2[6][1]
 									elseif v2[1] > v2[6][2] then
 										v2[1] = v2[6][2]
 									end
-									v2[4][5].Text = v2.custom[v2[1]] or (tostring(v2[1]):match("%d+[\.]%d%d") or tostring(v2[1])) .. v2[4][6]
+									v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
 									for i = 1, 4 do
 										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 									end
@@ -3637,7 +3636,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	},
 })
 
-local selected_plyr = nil
+local selectedPlayer = nil
 local plistinfo = menu.options["Settings"]["Player List"]["Player Info"][1]
 local plist = menu.options["Settings"]["Player List"]["Players"]
 local function updateplist()
@@ -3694,11 +3693,11 @@ local function updateplist()
 	if playerlistval ~= nil then
 		for i, v in ipairs(playerz) do
 			if v.Name == playerlistval then
-				selected_plyr = v
+				selectedPlayer = v
 				break
 			end
 			if i == #playerz then
-				selected_plyr = nil
+				selectedPlayer = nil
 				menu.list.setval(plist, nil)
 			end
 		end
@@ -3970,13 +3969,13 @@ menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 				
 				updateplist()
 				
-				if selected_plyr ~= nil then
+				if selectedPlayer ~= nil then
 					--print(LOCAL_MOUSE.x - menu.x, LOCAL_MOUSE.y - menu.y)
 					if menu:MouseInMenu(28, 68, 448, 238) then
-						if table.find(menu.friends, selected_plyr.Name) then
+						if table.find(menu.friends, selectedPlayer.Name) then
 							menu.options["Settings"]["Player List"]["Player Status"][1] = 2
 							menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
-						elseif table.find(menu.priority, selected_plyr.Name) then
+						elseif table.find(menu.priority, selectedPlayer.Name) then
 							menu.options["Settings"]["Player List"]["Player Status"][1] = 3
 							menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
 						else
@@ -3988,19 +3987,19 @@ menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 					
 					for k, table_ in pairs({menu.friends, menu.priority}) do
 						for index, plyrname in pairs(table_) do
-							if selected_plyr.Name == plyrname then
+							if selectedPlayer.Name == plyrname then
 								table.remove(table_, index)
 							end
 						end
 					end
 					if menu:GetVal("Settings", "Player List", "Player Status") == 2 then
-						if not table.find(menu.friends, selected_plyr.Name) then
-							table.insert(menu.friends, selected_plyr.Name)
+						if not table.find(menu.friends, selectedPlayer.Name) then
+							table.insert(menu.friends, selectedPlayer.Name)
 							WriteRelations()
 						end
 					elseif menu:GetVal("Settings", "Player List", "Player Status") == 3 then
-						if not table.find(menu.priority, selected_plyr.Name) then
-							table.insert(menu.priority, selected_plyr.Name)
+						if not table.find(menu.priority, selectedPlayer.Name) then
+							table.insert(menu.priority, selectedPlayer.Name)
 							WriteRelations()
 						end
 					end
@@ -4012,9 +4011,9 @@ menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 				updateplist()
 				
 				if plist[1] ~= nil then
-					if oldslectedplyr ~= selected_plyr then
-						setplistinfo(selected_plyr)
-						oldslectedplyr = selected_plyr
+					if oldslectedplyr ~= selectedPlayer then
+						setplistinfo(selectedPlayer)
+						oldslectedplyr = selectedPlayer
 					end
 				else
 					setplistinfo(nil)
@@ -4074,7 +4073,7 @@ menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function
 	if menu.open then
 		if menu.tabnames[menu.activetab] == "Settings" then
 			if plist[1] ~= nil then
-				setplistinfo(selected_plyr, true)
+				setplistinfo(selectedPlayer, true)
 			end
 		end
 	end
@@ -4281,7 +4280,7 @@ end)
 menu.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 	updateplist()
 	if plist[1] ~= nil then
-		setplistinfo(selected_plyr)
+		setplistinfo(selectedPlayer)
 	else
 		setplistinfo(nil)
 	end
@@ -4463,7 +4462,7 @@ for k, v in pairs(getgc(true)) do
 	
 	if type(v) == "table" then
 		if rawget(v, "deploy") then
-			client.deploy = v
+			client.menu = v
 			local olddeploy = v.deploy
 			v.deploy = function(...)
 				if menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
@@ -4755,7 +4754,7 @@ OLD_GUNS.Parent = game:GetService("ReplicatedStorage")
 
 local CUR_GUNS = game:GetService("ReplicatedStorage").GunModules
 
-local selected_plyr = nil
+local selectedPlayer = nil
 
 local players = {
 	Enemy = {},
@@ -4990,13 +4989,13 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 						shooties[client.logic.currentgun.shoot] = true
 					end
 					if menu.open then
-						if client.deploy.isdeployed() then
+						if client.char.alive then
 							INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
 						else
 							INPUT_SERVICE.MouseIconEnabled = false
 						end
 					else
-						if client.deploy.isdeployed() then
+						if client.char.alive then
 							INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.LockCenter
 							INPUT_SERVICE.MouseIconEnabled = false
 						else
@@ -5734,7 +5733,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 		
 		function ragebot:KnifeBotMain()
 			if keybindtoggles.crash then return end
-			if not client.deploy.isdeployed() then return end
+			if not client.char.alive then return end
 			if not LOCAL_PLAYER.Character or not LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart") then return end
 			
 			if menu:GetVal("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
@@ -6322,7 +6321,6 @@ for hash, func in next, clienteventfuncs do
 							local colorz = {c1, c2}
 							if nextpos then
 								--local mag = (nextpos - pos).magnitude
-								--if mag > 1.5 then
 								-- magnitude stuff wont work because the line will just end for no reason
 								create_outlined_square(pos, blowup, colorz)
 								local a1 = Instance.new("Attachment", workspace.Terrain)
@@ -6331,7 +6329,6 @@ for hash, func in next, clienteventfuncs do
 								a2.Position = nextpos
 								
 								create_line(a1, a2, blowup, colorz)
-								--end
 							else
 								create_outlined_square(pos, blowup, colorz)
 							end
@@ -6840,14 +6837,26 @@ menu.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, g
 			end
 		end
 	end
-	if name == "Votekick Player" then
+	if name == "Votekick" then
 		local rank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
-		if not selected_plyr then return end
+		if not selectedPlayer then return end
 		
 		if rank >= 25 then
-			client.net:send("modcmd", string.format("/votekick:%s", selected_plyr.Name))
+			client.net:send("modcmd", string.format("/votekick:%s", selectedPlayer.Name))
 		else
 			CreateNotification(string.format("Your account must be rank 25 or above to votekick! (Rank %d)", rank))
+		end
+	elseif name == "Spectate" then
+		if menu.spectating ~= selectedPlayer and client.hud:isplayeralive(selectedPlayer) then
+			client.cam:setspectate(selectedPlayer)
+			menu.spectating = selectedPlayer
+		else
+			if client.char.alive then
+				client.cam:setfirstpersoncam()
+			else
+				client.menu:loadmenu()
+			end
+			menu.spectating = false
 		end
 	end
 end)
@@ -7372,7 +7381,6 @@ do--ANCHOR send hook
 				args[2] = slot
 			end
 		elseif args[1] == "repupdate" then
-			--if keybindtoggles.crimwalk then return end
 			client.lastrepupdate = args[2]
 			if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
 				if not client.fakeoffset then client.fakeoffset = 18 end
@@ -7752,7 +7760,7 @@ local function renderVisuals()
 	--------------------------------------world funnies
 	debug.profilebegin("renderVisuals World")
 	if menu.options["Visuals"]["World Visuals"]["Force Time"][1] then
-		game.Lighting:SetMinutesAfterMidnight(menu.options["Visuals"]["World Visuals"]["Custom Time"][1])
+		game.Lighting.ClockTime = menu.options["Visuals"]["World Visuals"]["Custom Time"][1] 
 	end
 	if menu.options["Visuals"]["World Visuals"]["Ambience"][1] then
 		game.Lighting.Ambient = RGB(menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
@@ -7861,7 +7869,7 @@ local function renderVisuals()
 			local spoty = 0
 			local boxtransparency = menu:GetVal("ESP", GroupBox, "Box", "color")[4] / 255
 			
-			local distance = math.floor((parts.rootpart.Position - LOCAL_PLAYER.Character.PrimaryPart.Position).Magnitude/5)
+			local distance = math.floor((parts.rootpart.Position - client.cam.cframe.p).Magnitude/5)
 			
 			
 			if (topIsRendered or bottomIsRendered) then
@@ -8423,7 +8431,6 @@ local function renderVisuals()
 	debug.profileend("renderVisuals No Scope")
 end
 
---if menu.game == "pf" then -- idk if i even need to do this -- @json u dont lol commented it out so u know
 menu.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild) -- this didn't end up working well with localragdoll hook
 if menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams") then
 	local children = newchild:GetChildren()
@@ -9712,7 +9719,8 @@ content = {
 				name = "Custom Time",
 				value = 0,
 				minvalue = 0,
-				maxvalue = 1400,
+				maxvalue = 24,
+				rounded = false
 			},
 			{
 				type = "toggle",
@@ -10129,10 +10137,17 @@ content = {
 			},
 			{
 				type = "button",
-				name = "Votekick Player",
+				name = "Votekick",
 				x = 307,
 				y = 356,
-				w = 160,
+				w = 80,
+			},
+			{
+				type = "button",
+				name = "Spectate",
+				x = 387,
+				y = 356,
+				w = 80,
 			},
 		}
 	},
@@ -10165,7 +10180,7 @@ content = {
 		x = menu.columns.left,
 		y = 468,
 		width = menu.columns.width,
-		height = 115,
+		height = 165,
 		content = {
 			{
 				type = "button",
@@ -10187,7 +10202,7 @@ content = {
 		x = menu.columns.right,
 		y = 400,
 		width = menu.columns.width,
-		height = 183,
+		height = 233,
 		content = {
 			{
 				type = "textbox",
@@ -10260,11 +10275,11 @@ do  --TODO alan put this shit into a function so you don't have to copy paste it
 		if playerlistval ~= nil then
 			for i, v in ipairs(players) do
 				if v.Name == playerlistval then
-					selected_plyr = v
+					selectedPlayer = v
 					break
 				end
 				if i == #players then
-					selected_plyr = nil
+					selectedPlayer = nil
 					menu.list.setval(plist, nil)
 				end
 			end
@@ -10321,13 +10336,13 @@ K/D: %d/%d
 				
 				updateplist()
 				
-				if selected_plyr ~= nil then
+				if selectedPlayer ~= nil then
 					--print(LOCAL_MOUSE.x - menu.x, LOCAL_MOUSE.y - menu.y)
 					if menu:MouseInMenu(28, 68, 448, 238) then
-						if table.find(menu.friends, selected_plyr.Name) then
+						if table.find(menu.friends, selectedPlayer.Name) then
 							menu.options["Settings"]["Player List"]["Player Status"][1] = 2
 							menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
-						elseif table.find(menu.priority, selected_plyr.Name) then
+						elseif table.find(menu.priority, selectedPlayer.Name) then
 							menu.options["Settings"]["Player List"]["Player Status"][1] = 3
 							menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
 						else
@@ -10338,19 +10353,19 @@ K/D: %d/%d
 					
 					for k, table_ in pairs({menu.friends, menu.priority}) do
 						for index, plyrname in pairs(table_) do
-							if selected_plyr.Name == plyrname then
+							if selectedPlayer.Name == plyrname then
 								table.remove(table_, index)
 							end
 						end
 					end
 					if menu:GetVal("Settings", "Player List", "Player Status") == 2 then
-						if not table.find(menu.friends, selected_plyr.Name) then
-							table.insert(menu.friends, selected_plyr.Name)
+						if not table.find(menu.friends, selectedPlayer.Name) then
+							table.insert(menu.friends, selectedPlayer.Name)
 							WriteRelations()
 						end
 					elseif menu:GetVal("Settings", "Player List", "Player Status") == 3 then
-						if not table.find(menu.priority, selected_plyr.Name) then
-							table.insert(menu.priority, selected_plyr.Name)
+						if not table.find(menu.priority, selectedPlayer.Name) then
+							table.insert(menu.priority, selectedPlayer.Name)
 							WriteRelations()
 						end
 					end
@@ -10362,9 +10377,9 @@ K/D: %d/%d
 				updateplist()
 				
 				if plist[1] ~= nil then
-					if oldslectedplyr ~= selected_plyr then
-						setplistinfo(selected_plyr)
-						oldslectedplyr = selected_plyr
+					if oldslectedplyr ~= selectedPlayer then
+						setplistinfo(selectedPlayer)
+						oldslectedplyr = selectedPlayer
 					end
 				else
 					setplistinfo(nil)
@@ -10376,18 +10391,42 @@ K/D: %d/%d
 	
 	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
 		if menu.open then
+			if menu.y < 0 then
+				menu.y = 0
+				menu:SetMenuPos(menu.x, 0)
+			end
+			if menu.x < 0 then
+				menu.x = 0
+				menu:SetMenuPos(0, menu.y)
+			end
+			if menu.x + menu.w > SCREEN_SIZE.x then
+				menu.x = SCREEN_SIZE.x - menu.w
+				menu:SetMenuPos(SCREEN_SIZE.x - menu.w, menu.y)
+			end
+			if menu.y > SCREEN_SIZE.y - 20 then
+				menu.y = SCREEN_SIZE.y - 20
+				menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
+			end
 			if menu.tabnames[menu.activetab] == "Settings" then
 				if plist[1] ~= nil then
-					setplistinfo(selected_plyr, true)
+					setplistinfo(selectedPlayer, true)
 				end
 			end
+		end
+		if menu.spectating and not client.cam:isspectating() then
+			if client.menu.isdeployed() then
+				client.cam:setfirstpersoncam()
+			else
+				client.menu:loadmenu()
+			end
+			menu.spectating = false
 		end
 	end)
 	
 	menu.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 		updateplist()
 		if plist[1] ~= nil then
-			setplistinfo(selected_plyr)
+			setplistinfo(selectedPlayer)
 		else
 			setplistinfo(nil)
 		end
