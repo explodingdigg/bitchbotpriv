@@ -4469,6 +4469,8 @@ for k, v in pairs(getgc(true)) do
 			client.gunbob = v
 		elseif getinfo(v).name == "gunsway" then
 			client.gunsway = v
+		elseif getinfo(v).name == "sphereraycast" then
+			client.sphereraycast = v
 		end
 		for k1, v1 in pairs(debug.getupvalues(v)) do
 			if type(v1) == "table" then
@@ -4551,6 +4553,24 @@ end
 
 local function animhook(...)
 	return function(...) end
+end
+
+local function supersphereraycast(origin, direction, radius, ignore)
+	local newignore = {}
+	newignore[#newignore + 1] = ignore
+	if client.char.alive then
+		newignore[#newignore + 1] = client.char.head.Parent
+	end
+	newignore[#newignore + 1] = workspace.CurrentCamera
+	return client.sphereraycast(origin, direction, radius, newignore)
+end
+
+for k,v in next, getupvalues(client.cam.step) do
+	if type(v) == "function" then
+		if getinfo(v).name == "sphereraycast" then
+			setupvalue(client.cam.step, k, supersphereraycast)
+		end
+	end
 end
 
 local debris = game:service("Debris")
@@ -6891,7 +6911,9 @@ menu.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, g
 			if client.char.alive then
 				client.cam:setfirstpersoncam()
 			else
-				client.menu:loadmenu()
+				local curlobby = workspace:FindFirstChild("MenuLobby")
+				client.cam:setmenucam(curlobby)
+				client.menu:setlighting(true)
 			end
 			menu.spectating = false
 		end
@@ -10476,9 +10498,12 @@ K/D: %d/%d
 		end
 		if menu.spectating and not client.cam:isspectating() then
 			if client.menu.isdeployed() then
-				client.cam:setfirstpersoncam()
+				--client.cam:setfirstpersoncam()
+				--client.cam.spectatetype = "thirdperson"
 			else
-				client.menu:loadmenu()
+				local curlobby = workspace:FindFirstChild("MenuLobby")
+				client.cam:setmenucam(curlobby)
+				client.menu:setlighting(true)
 			end
 			menu.spectating = false
 		end
@@ -10486,7 +10511,7 @@ K/D: %d/%d
 	
 	menu.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 		updateplist()
-		if plist[1] ~= nil then
+		if plist[1] ~= nil then	
 			setplistinfo(selectedPlayer)
 		else
 			setplistinfo(nil)
