@@ -334,11 +334,11 @@ setfpscap(300)
 if not isfolder("bitchbot") then
 	makefolder("bitchbot")
 	if not isfile("bitchbot/relations.bb") then
-		writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
+		writefile("bitchbot/relations.bb", "relations:{{friends:}{priority:}")
 	end
 else
-	if not isfile("bitchbot/relations.bb") then
-		writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
+	if isfile("bitchbot/relations.bb") and not readfile("bitchbot/relations.bb"):find("bb") then
+		writefile("bitchbot/relations.bb", "relations:{{friends:}{priority:}")
 	end
 	writefile("bitchbot/debuglog.bb", "")
 end
@@ -385,15 +385,9 @@ local function UnpackRelations()
 		for _, data in next, tb do
 			local cellname = data:match("%a+")
 			if final[cellname] then
-				for k,v in data:gmatch "%d+[^,}]" do
-					local status, ret = pcall(function() -- wrapping this in a pcall since roblox will throw an error if the player user ID does not exist
-						local playername = Players:GetNameFromUserIdAsync(tonumber(k))
-						table.insert(final[cellname], 1, playername)
-					end)
-					if not status then
-						CreateNotification(string.format("Error occurred while identifying player \"%s\" (%s player). See debuglog.bb", k, cellname))
-						appendfile("bitchbot/debuglog.bb", tostring(ret) .. "\n" .. debug.traceback() .. "\n\n")
-					end
+				for s in data:gmatch "%d+[^,}]" do -- wrapping this in a pcall since roblox will throw an error if the player user ID does not exist
+					local playername = s
+					table.insert(final[cellname], 1, playername)
 				end
 			end
 		end
@@ -414,7 +408,7 @@ CreateThread(function()
 end)
 
 local function WriteRelations()
-	local str = "bb:{{friends:"
+	local str = "relations:{{friends:"
 	
 	for k,v in next, menu.friends do
 		local playerobj
@@ -441,15 +435,10 @@ local function WriteRelations()
 	for k,v in next, menu.priority do
 		local playerobj
 		local userid
-		local pass, ret = pcall(function()
-			playerobj = Players[v]
-		end)
 		
-		if not pass then
-			local newpass, newret = pcall(function()
-				userid = Players:GetUserIdFromNameAsync(v)
-			end)
-		end
+		local newpass, newret = pcall(function()
+			userid = v
+		end)
 		
 		if userid then
 			str = str .. tostring(userid) .. ","
@@ -4580,10 +4569,35 @@ local CommandFunctions = {
 			local data = GetPlayerData(player.Name)
 			if data.Rank.Text < min then
 				table.insert(menu.priority, player.Name)
+				targetted += 1
 			end
-			targetted += 1
 		end
 		CreateNotification(("Targetted %d players below rank %d"):format(targetted, min))
+	end,
+	friendaboverank = function(max)
+		local targetted = 0
+		for k, player in pairs(Players:GetPlayers()) do
+			local data = GetPlayerData(player.Name)
+			if data.Rank.Text > max then
+				table.insert(menu.friends, player.Name)
+				targetted += 1
+			end
+		end
+		CreateNotification(("Friended %d players below rank %d"):format(targetted, max))
+	end,
+	friend = function(name)
+		if Players[name] then
+			table.insert(menu.friends, name)
+			return CreateNotification("Friended " .. name)
+		end
+		CreateNotification(name .. " is not a player!")
+	end,
+	target = function(name)
+		if Players[name] then
+			table.insert(menu.priority, name)
+			return CreateNotification("Prioritized " .. name)
+		end
+		CreateNotification(name .. " is not a player!")
 	end,
 	updatechatspam = function()
 		customChatSpam = {}
