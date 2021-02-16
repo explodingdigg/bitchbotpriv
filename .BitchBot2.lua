@@ -10092,7 +10092,8 @@ content = {
 			},
 			{
 				type = "button",
-				name = "Crash Server"
+				name = "Crash Server",
+				doubleclick = true,
 			},
 			{
 				type = "toggle",
