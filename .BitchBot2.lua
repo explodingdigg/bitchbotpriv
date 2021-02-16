@@ -763,14 +763,13 @@ do
 		temptable.Outline = true
 		temptable.OutlineColor = RGB(clr2[1], clr2[2], clr2[3])
 		temptable.Font = font
-		if tablename then
-			table.insert(tablename, temptable)
-		else
-			return temptable
-		end
 		if not table.find(allrender, tablename) then
 			table.insert(allrender, tablename)
 		end
+		if tablename then
+			table.insert(tablename, temptable)
+		end
+		return temptable
 	end
 	
 	function Draw:Triangle(visible, filled, pa, pb, pc, clr, tablename)
@@ -843,8 +842,9 @@ do
 	end
 	
 	function Draw:MenuBigText(text, visible, centered, pos_x, pos_y, tablename)
-		Draw:OutlinedText(text, 2, visible, pos_x + menu.x, pos_y + menu.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
+		local text = Draw:OutlinedText(text, 2, visible, pos_x + menu.x, pos_y + menu.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
 		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
+		return text
 	end
 	
 	function Draw:MenuSmallText(text, visible, centered, pos_x, pos_y, tablename)
@@ -1008,7 +1008,7 @@ do
 		
 		Draw:MenuOutlinedRect(true, x, y, length, 22, {30, 30, 30, 255}, tab)
 		Draw:MenuOutlinedRect(true, x + 1, y + 1, length - 2, 20, {0, 0, 0, 255}, tab)
-		Draw:MenuBigText(name, true, true, x + math.floor(length * 0.5), y + 4 , tab)
+		temptable.text = Draw:MenuBigText(name, true, true, x + math.floor(length * 0.5), y + 4 , tab)
 		
 		return temptable
 	end
@@ -1265,7 +1265,7 @@ function menu.Initialize(menutable)
 							menu.options[v.name][v1.name][v2.name].name = v2.name
 							menu.options[v.name][v1.name][v2.name].groupbox = v1.name
 							menu.options[v.name][v1.name][v2.name].tab = v.name -- why is it all v, v1, v2 so ugly
-							
+							menu.options[v.name][v1.name][v2.name].doubleclick = v2.doubleclick
 							
 							if v2.x == nil then
 								menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
@@ -1948,8 +1948,20 @@ function menu.Initialize(menutable)
 		end
 	end
 	
-	local simpcfgnamez = {"toggle", "slider", "dropbox"}
+	local menuElementTypes = {"toggle", "slider", "dropbox"}
+	local doubleclickDelay = 1
+	local buttonsInQue = {}
 	local function buttonpressed(bp)
+		
+		if bp.doubleclick then
+			table.foreach(bp, print)
+			if buttonsInQue[bp] and tick() - buttonsInQue[bp] < doubleclickDelay then
+				buttonsInQue[bp] = 0
+			else
+				buttonsInQue[bp] = tick()
+				return
+			end
+		end
 		ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
 		if bp == menu.options["Settings"]["Extra"]["Unload Cheat"] then
 			menu.fading = true
@@ -1957,11 +1969,11 @@ function menu.Initialize(menutable)
 			menu:unload()
 		elseif bp == menu.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
-		elseif bp == menu.options["Settings"]["Configuration"]["Save Config"] and messagebox('save config?', 'object oriented menu systems are really nice', 4) == 6 then
+		elseif bp == menu.options["Settings"]["Configuration"]["Save Config"] then
 			
 			local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
 			
-			for k, v in next, simpcfgnamez do
+			for k, v in next, menuElementTypes do
 				figgy = figgy.. v.. "s {\n"
 				for k1, v1 in pairs(menu.options) do
 					for k2, v2 in pairs(v1) do
@@ -2054,14 +2066,14 @@ function menu.Initialize(menutable)
 			writefile("bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb", figgy)
 			CreateNotification("Saved \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 			UpdateConfigs()
-		elseif bp == menu.options["Settings"]["Configuration"]["Delete Config"] and messagebox('delete config?', 'object oriented menu systems are really nice', 4) == 6 then
+		elseif bp == menu.options["Settings"]["Configuration"]["Delete Config"] then
 			
 			delfile("bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb")
 			CreateNotification("Deleted \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 			UpdateConfigs()
 			
 			
-		elseif bp == menu.options["Settings"]["Configuration"]["Load Config"] and messagebox('load config?', 'object oriented menu systems are really nice', 4) == 6 then
+		elseif bp == menu.options["Settings"]["Configuration"]["Load Config"]  then
 			
 			local configname = "bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb"
 			if not isfile(configname) then
@@ -2812,6 +2824,15 @@ function menu.Initialize(menutable)
 		-- removed it :DDD
 		-- im keepin all of our comments they're fun to look at
 		-- i wish it showed comment dates that would be cool
+		for button, time in next, buttonsInQue do
+			if tick() - time < doubleclickDelay then
+				button[4].text.Color = menu:GetVal("Settings", "Menu Settings", "Menu Accent", "color", true)
+				button[4].text.Text = "Confirm?"
+			else
+				button[4].text.Color = Color3.new(1,1,1)
+				button[4].text.Text = button.name
+			end
+		end
 		if menu.fading then
 			if menu.open then
 				local timesincefade = tick() - menu.fadestart
@@ -3587,11 +3608,12 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				content = {
 					{
 						type = "button",
-						name = "Set Clipboard Game ID"
+						name = "Set Clipboard Game ID",
 					},
 					{
 						type = "button",
-						name = "Unload Cheat"
+						name = "Unload Cheat",
+						doubleclick = true,
 					},
 					{
 						type = "toggle",
@@ -3620,15 +3642,18 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					},
 					{
 						type = "button",
-						name = "Load Config"
+						name = "Load Config",
+						doubleclick = true,
 					},
 					{
 						type = "button",
-						name = "Save Config"
+						name = "Save Config",
+						doubleclick = true,
 					},
 					{
 						type = "button",
-						name = "Delete Config"
+						name = "Delete Config",
+						doubleclick = true,
 					},
 				}
 			}
@@ -10270,11 +10295,12 @@ content = {
 		content = {
 			{
 				type = "button",
-				name = "Set Clipboard Game ID"
+				name = "Set Clipboard Game ID",
 			},
 			{
 				type = "button",
-				name = "Unload Cheat"
+				name = "Unload Cheat",
+				doubleclick = true,
 			},
 			{
 				type = "toggle",
@@ -10293,7 +10319,7 @@ content = {
 			{
 				type = "textbox",
 				name = "ConfigName",
-				text = "poop"
+				text = ""
 			},
 			{
 				type = "dropbox",
@@ -10303,15 +10329,18 @@ content = {
 			},
 			{
 				type = "button",
-				name = "Load Config"
+				name = "Load Config",
+				doubleclick = true,
 			},
 			{
 				type = "button",
-				name = "Save Config"
+				name = "Save Config",
+				doubleclick = true,
 			},
 			{
 				type = "button",
-				name = "Delete Config"
+				name = "Delete Config",
+				doubleclick = true,
 			},
 		}
 	}
