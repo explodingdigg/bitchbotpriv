@@ -78,7 +78,7 @@ do
 			
 			enabled = true,
 			
-			targetPos = Vector2.new(40, 33),
+			targetPos = Vector2.new(50, 33),
 			
 			size = Vector2.new(200, width),
 			
@@ -320,6 +320,10 @@ if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 528
 		repeat
 			game.RunService.Heartbeat:Wait()
 		until net and not net.add
+		local annoyingFuckingMusic = workspace:FindFirstChild"memes"
+		if annoyingFuckingMusic then
+			annoyingFuckingMusic:Destroy()
+		end
 	end -- wait for framwork to load
 end
 
@@ -2989,6 +2993,22 @@ function menu.Initialize(menutable)
 					menu.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.x
 					menu.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.y - 36
 					menu:SetMenuPos(menu.x, menu.y)
+					if menu.y < 0 then
+						menu.y = 0
+						menu:SetMenuPos(menu.x, 0)
+					end
+					if menu.x < 0 then
+						menu.x = 0
+						menu:SetMenuPos(0, menu.y)
+					end
+					if menu.x + menu.w > SCREEN_SIZE.x then
+						menu.x = SCREEN_SIZE.x - menu.w
+						menu:SetMenuPos(SCREEN_SIZE.x - menu.w, menu.y)
+					end
+					if menu.y > SCREEN_SIZE.y - 20 then
+						menu.y = SCREEN_SIZE.y - 20
+						menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
+					end
 				else
 					dragging = false
 				end
@@ -10532,7 +10552,7 @@ K/D: %d/%d
 		if menu.spectating and not client.cam:isspectating() then
 			if client.menu.isdeployed() then
 				client.cam:setfirstpersoncam()
-			else
+			elseif client.cam.type ~= "menu" then
 				client.menu:loadmenu()
 			end
 			menu.spectating = false
@@ -10558,7 +10578,7 @@ end --!SECTION PF END
 do
 	local wm = menu.watermark
 	wm.textString = MenuName .. " | Waiting for release for 2.4 months | " .. os.date("%b. %d, %Y")
-	wm.pos = Vector2.new(40, 10)
+	wm.pos = Vector2.new(50, 10)
 	wm.text = {}
 	wm.width = (#wm.textString) * 7 + 10
 	wm.rect = {}
