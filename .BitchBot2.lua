@@ -9,6 +9,7 @@ if isfile("bitchbot/menuname.txt") then
 	MenuName = readfile("bitchbot/menuname.txt")
 end
 local customChatSpam = {}
+local e = 2.718281828459045
 if isfile("bitchbot/chatspam.txt") then
 	local customtxt = readfile("bitchbot/chatspam.txt")
 	for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
@@ -5293,7 +5294,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 								end
 							end
 							
-							if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
+							if menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
 								if id == "CFrame" then
 									if self == client.char.rootpart then
 										local offset = Vector3.new(0, client.fakeoffset, 0)
@@ -6882,7 +6883,9 @@ do -- spring hook
 	local old_index = spring.__index
 	local swingspring = debug.getupvalue(client.char.step, 21)
 	local sprintspring = debug.getupvalue(client.char.setsprint, 10)
-	
+	local zoommodspring = debug.getupvalue(client.char.step, 1) -- sex.
+	client.zoommodspring = zoommodspring -- fuck
+
 	client.springindex = old_index
 	
 	spring.__index = newcclosure(function(t, k) -- "t" is the spring being indexed, so like you basically do if t == springofchoice then to return a different value for one specific kind of spring
@@ -6897,8 +6900,16 @@ do -- spring hook
 				return 0
 			end
 		end
-		if t == client.cam.magspring then
+		--[[if t == client.cam.magspring then
 			if k == "p" and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then
+				local zoom = math.tan(client.cam.basefov * math.pi / 360) / math.tan(client.char.unaimedfov * math.pi / 360)
+				local fov = zoom ^ zoommodspring.p
+				warn(result)
+				return fov
+			end
+		end]]
+		if t == zoommodspring then
+			if k == "p" and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then -- this is being retarded
 				return 0
 			end
 		end
@@ -7374,7 +7385,7 @@ do--ANCHOR send hook
 			if ragebot.silentVector then
 				-- duct tape fix or whatever the fuck its called for this its stupid
 				args[2].firepos = ragebot.firepos
-				if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
+				if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then
 					args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
 				end
 				local cachedtimedata = {}
@@ -7509,7 +7520,7 @@ do--ANCHOR send hook
 			end
 		elseif args[1] == "repupdate" then
 			client.lastrepupdate = args[2]
-			if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and keybindtoggles.fakebody then
+			if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then
 				if not client.fakeoffset then client.fakeoffset = 18 end
 				
 				local nextinc = client.fakeoffset + 9
@@ -7801,24 +7812,91 @@ do -- ANCHOR Legitbot definition defines legit functions
 		if IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
 			local parts = misc:GetParts(menu:GetVal("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
 			
-			local gun = camera:GetGun()
+			local gun = client.logic.currentgun
 			if not gun then return end
-			
-			local barrel = gun.Flame
-			if barrel and client.logic.currentgun then
-				debug.profilebegin("Legitbot Triggerbot")
-				local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
-				
-				if hit and parts[hit.Name] then
-					if not camera:IsVisible(hit) then return end
-					client.logic.currentgun:shoot(true)
-					legitbot.triggerbotShooting = true
-				elseif legitbot.triggerbotShooting then
-					client.logic.currentgun:shoot(false)
-					legitbot.triggerbotShooting = false
-				end
-				debug.profileend("Legitbot Triggerbot")
+			local dsrgposrdjiogjaiogjaoeihjoaiest = "data" -- it loves it
+
+			local thebarrel = gun.barrel
+			debug.profilebegin("Legitbot Triggerbot")
+			local bulletspeed = gun.data.bulletspeed
+			local isaiming = gun:isaiming()
+			local zoomval = menu:GetVal("Legit", "Trigger Bot", "Aim Percentage") / 100
+			--local shootallowed = menu:GetVal("Legit", "Trigger Bot", "Trigger When Aiming") and (isaiming and (client.zoommodspring.p > zoomval) or false) or true -- isaiming and (zoommodspring.p > zoomval) or false is somewhat redundant but oh well lmao
+			local shootallowed
+
+			if menu:GetVal("Legit", "Trigger Bot", "Trigger When Aiming") then
+				shootallowed = isaiming and (client.zoommodspring.p >= zoomval) or false
+			else
+				shootallowed = true
 			end
+			
+			if shootallowed then
+				for player, bodyparts in next, getupvalue(client.replication.getallparts, 1) do
+					if player.Team ~= LOCAL_PLAYER.Team then
+						for bpartname, bodypart in next, bodyparts do
+							if bodypart:IsA("Part") and bodypart.Transparency == 0 and parts[bpartname] then
+								if camera:IsVisible(bodypart) then
+									local barrel = isaiming and gun.aimsightdata[1].sightpart or thebarrel
+									local delta = (bodypart.Position - barrel.Position)
+									local direction = client.trajectory(barrel.Position, GRAVITY, bodypart.Position, bulletspeed).Unit
+									local barrelLV = barrel.CFrame.LookVector
+									local normalized = barrelLV.unit
+		
+									local dot = normalized:Dot(direction)
+									
+									if delta.magnitude > 250 then
+										if barrelLV.Y >= direction.Y then
+											local dist = delta.magnitude ^ -2.3
+									
+											local dotthreshold = 1 - dist
+			
+											if dot >= dotthreshold then
+												gun:shoot(true)
+												legitbot.triggerbotShooting = true
+												if isaiming then
+													gun:setaim(false)
+												end
+											end
+										end
+									else
+										local whitelist = {bodypart}
+		
+										if gun.type == "SHOTGUN" or gun.data.pelletcount then
+											table.insert(whitelist, sphereHitbox)
+											sphereHitbox.Position = bodypart.Position
+										end
+		
+										local hit, hitpos = workspace:FindPartOnRayWithWhitelist(Ray.new(barrel.Position, normalized * 4000), whitelist)
+										if hit and hit:IsDescendantOf(bodypart.Parent.Parent) or hit == sphereHitbox then
+											local hitdir = (hitpos - barrel.Position).unit
+											if hitdir:Dot(direction) > 0.9993 then
+												gun:shoot(true)
+												if isaiming then
+													gun:setaim(false)
+												end
+											end
+										end
+									end
+								end
+							elseif legitbot.triggerbotShooting then
+								gun:shoot(false)
+								legitbot.triggerbotShooting = false
+							end
+						end
+					end
+				end
+			end
+			--[[local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
+			
+			if hit and parts[hit.Name] then
+				if not camera:IsVisible(hit) then return end
+				client.logic.currentgun:shoot(true)
+				legitbot.triggerbotShooting = true
+			elseif legitbot.triggerbotShooting then
+				client.logic.currentgun:shoot(false)
+				legitbot.triggerbotShooting = false
+			end]]
+			debug.profileend("Legitbot Triggerbot")
 		end
 		
 		
@@ -8606,7 +8684,7 @@ menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 	if menu:GetVal("Misc", "Movement", "Fly") and key.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
 		keybindtoggles.flyhack = not keybindtoggles.flyhack
 	end
-	if menu:GetVal("Rage", "Anti Aim", "Noclip Cheat") and key.KeyCode == menu:GetVal("Rage", "Anti Aim", "Noclip Cheat", "keybind") and client.char.alive then
+	if menu:GetVal("Rage", "Anti Aim", "Noclip") and key.KeyCode == menu:GetVal("Rage", "Anti Aim", "Noclip", "keybind") and client.char.alive then
 		--[[ragebot:FakeBody()
 		local msg = keybindtoggles.fakebody and "Removed Noclip Cheat" or "Noclip Cheat enabled"
 		CreateNotification(msg)
@@ -8616,11 +8694,11 @@ menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 		local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
 		
 		if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-			CreateNotification("Disable to respawn (you are going to die)")
+			CreateNotification("Attempting to enable noclip... (you may die)")
 			keybindtoggles.fakebody = not keybindtoggles.fakebody
 			client.fakeoffset = 18
 		else
-			CreateNotification("Do this when you spawn or over glass (make sure your as close to ground as possible)")
+			CreateNotification("Unable to noclip. Do this as soon as you spawn or over glass. (be as close to ground as possible for best results)")
 		end
 	end
 	--[[if menu:GetVal("Misc", "Exploits", "Invisibility") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
@@ -8655,7 +8733,7 @@ menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(functi
 	if not client.char.alive then
 		if keybindtoggles.fakebody then
 			keybindtoggles.fakebody = false
-			CreateNotification("Noclip Cheat Disabled 2021")
+			CreateNotification("Noclip automatically disabled due to death")
 			client.fakeoffset = 18
 		end
 	end
@@ -8862,6 +8940,7 @@ menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
 					end
 					
 					if menu:GetVal("Rage", "Anti Aim", "Enabled") then
+						local angles = "angles" -- TODO SOMEONE FIGURE OUT WHY REMOVING THIS LINE MAKES RAGEBOT.ANGLES NIL???????????????????
 						fakeupdater.setlookangles(ragebot.angles)
 						fakeupdater.setstance(ragebot.stance)
 						fakeupdater.setsprint(ragebot.sprint)
@@ -9016,6 +9095,20 @@ menu.Initialize({
 					name = "Trigger Bot Hitboxes",
 					values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
 				},
+				{
+					type = "toggle",
+					name = "Trigger When Aiming",
+					value = false
+				},
+				{
+					type = "slider",
+					name = "Aim Percentage",
+					minvalue = 0,
+					maxvalue = 100,
+					value = 90,
+					stradd = "%",
+					rounded = false
+				}
 				--[[
 				{
 					type = "toggle",
@@ -9358,7 +9451,7 @@ content = {
 			},
 			{
 				type = "toggle",
-				name = "Noclip Cheat",
+				name = "Noclip",
 				value = false,
 				extra = {
 					type = "keybind",
@@ -9903,16 +9996,6 @@ content = {
 	autopos = "right",
 	autofill = true,
 	content = {
-		{
-			type = "toggle",
-			name = "Custom Blood Color",
-			value = false,
-			extra = {
-				type = "single colorpicker",
-				name = "Blood",
-				color = {255, 255, 255, 255}
-			},
-		},
 		{
 			type = "toggle",
 			name = "Crosshair Color",
