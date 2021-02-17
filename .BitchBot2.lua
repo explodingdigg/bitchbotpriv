@@ -7818,7 +7818,7 @@ do -- ANCHOR Legitbot definition defines legit functions
 
 			local thebarrel = gun.barrel
 			debug.profilebegin("Legitbot Triggerbot")
-			local bulletspeed = gun.data.bulletspeed
+			local bulletspeed = client.logic.currentgun.data.bulletspeed
 			local isaiming = gun:isaiming()
 			local zoomval = menu:GetVal("Legit", "Trigger Bot", "Aim Percentage") / 100
 			--local shootallowed = menu:GetVal("Legit", "Trigger Bot", "Trigger When Aiming") and (isaiming and (client.zoommodspring.p > zoomval) or false) or true -- isaiming and (zoommodspring.p > zoomval) or false is somewhat redundant but oh well lmao
