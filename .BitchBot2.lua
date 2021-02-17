@@ -8490,6 +8490,10 @@ local function renderVisuals()
 							
 							local mat = mats[menu:GetVal("Visuals", "Local Visuals", "Weapon Material")]
 							v1.Material = mat
+
+							if v1:IsA("UnionOperation") then
+								v1.UsePartColor = true
+							end
 							
 							if v1.ClassName == "MeshPart" then
 								v1.TextureID = mat == "ForceField" and "rbxassetid://5843010904" or ""
