@@ -3148,422 +3148,422 @@ end
 
 
 if menu.game == "uni" then --SECTION UNIVERSAL
-		local allesp = {
-			headdotoutline = {},
-			headdot = {},
-			name = {},
-			outerbox = {},
-			box = {},
-			innerbox = {},
-			healthouter = {},
-			healthinner = {},
-			hptext = {},
-			distance = {},
-			team = {},
-		}
+	local allesp = {
+		headdotoutline = {},
+		headdot = {},
+		name = {},
+		outerbox = {},
+		box = {},
+		innerbox = {},
+		healthouter = {},
+		healthinner = {},
+		hptext = {},
+		distance = {},
+		team = {},
+	}
+	
+	for i = 1, Players.MaxPlayers do
+		Draw:Circle(false, 20, 20, 10, 3,10,  {10, 10, 10, 215}, allesp.headdotoutline)
+		Draw:Circle(false, 20, 20, 10, 1, 10, {255, 255, 255, 255}, allesp.headdot)
 		
-		for i = 1, Players.MaxPlayers do
-			Draw:Circle(false, 20, 20, 10, 3,10,  {10, 10, 10, 215}, allesp.headdotoutline)
-			Draw:Circle(false, 20, 20, 10, 1, 10, {255, 255, 255, 255}, allesp.headdot)
-			
-			Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.outerbox)
-			Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.innerbox)
-			Draw:OutlinedRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.box)
-			
-			Draw:FilledRect(false, 20, 20, 4, 20, {10, 10, 10, 215}, allesp.healthouter)
-			Draw:FilledRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.healthinner)
-			
-			Draw:OutlinedText("", 1, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, allesp.hptext)
-			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.distance)
-			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.name)
-			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.team)
+		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.outerbox)
+		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.innerbox)
+		Draw:OutlinedRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.box)
+		
+		Draw:FilledRect(false, 20, 20, 4, 20, {10, 10, 10, 215}, allesp.healthouter)
+		Draw:FilledRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.healthinner)
+		
+		Draw:OutlinedText("", 1, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, allesp.hptext)
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.distance)
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.name)
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.team)
+	end
+	
+	menu.crosshair = {outline = {}, inner = {}}
+	for i, v in pairs(menu.crosshair) do
+		for i = 1, 2 do
+			Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 215}, v)
 		end
-		
-		menu.crosshair = {outline = {}, inner = {}}
-		for i, v in pairs(menu.crosshair) do
-			for i = 1, 2 do
-				Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 215}, v)
-			end
-		end
-		
-		menu.fovcircle = {}
-		Draw:Circle(false, 20, 20, 10, 3, 20, {10, 10, 10, 215}, menu.fovcircle)
-		Draw:Circle(false, 20, 20, 10, 1, 20, {255, 255, 255, 255}, menu.fovcircle)
-		
-		menu.Initialize({
-			{
-				name = "Aimbot",
-				content = {
-					{
-						name = "Aimbot",
-						autopos = "left",
-						autofill = true,
-						content = {
-							{
-								type = "toggle",
-								name = "Enabled",
-								value = false,
-								extra = {
-									type = "keybind",
-									key = Enum.KeyCode.J,
-								},
+	end
+	
+	menu.fovcircle = {}
+	Draw:Circle(false, 20, 20, 10, 3, 20, {10, 10, 10, 215}, menu.fovcircle)
+	Draw:Circle(false, 20, 20, 10, 1, 20, {255, 255, 255, 255}, menu.fovcircle)
+	
+	menu.Initialize({
+		{
+			name = "Aimbot",
+			content = {
+				{
+					name = "Aimbot",
+					autopos = "left",
+					autofill = true,
+					content = {
+						{
+							type = "toggle",
+							name = "Enabled",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.J,
 							},
-							{
-								type = "combobox",
-								name = "Checks",
-								values = {{"Alive", true}, {"Same Team", false}, {"Distance", false}},
-							},
-							{
-								type = "slider",
-								name = "Max Distance",
-								value = 100,
-								minvalue = 30,
-								maxvalue = 500,
-								stradd = "m"
-							},
-							{
-								type = "slider",
-								name = "Aimbot FOV",
-								value = 0,
-								minvalue = 0,
-								maxvalue = 360,
-								stradd = "°"
-							},
-							{
-								type = "dropbox",
-								name = "FOV Calculation",
-								value = 1,
-								values = {"Static", "Actual FOV"}
-							},
-							{
-								type = "toggle",
-								name = "Visibility Check",
-								value = false,
-							},
-							{
-								type = "toggle",
-								name = "Auto Shoot",
-								value = false,
-							},
-							{
-								type = "toggle",
-								name = "Smoothing",
-								value = false,
-							},
-							{
-								type = "slider",
-								name = "Smoothing Value",
-								value = 0,
-								minvalue = 0,
-								maxvalue = 100,
-								stradd = "%"
-							},
-						}
-					},
-				}
-			},
-			{
-				name = "Visuals",
-				content = {
-					{
-						name = "Player ESP",
-						autopos = "left",
-						content = {
-							{
-								type = "toggle",
-								name = "Name",
-								value = false,
-								extra = {
-									type = "single colorpicker",
-									name = "Name ESP",
-									color = {255, 255, 255, 255}
-								}
-							},
-							{
-								type = "toggle",
-								name = "Head Dot",
-								value = false,
-								extra = {
-									type = "single colorpicker",
-									name = "Head Dot",
-									color = {255, 255, 255, 255}
-								}
-							},
-							{
-								type = "toggle",
-								name = "Box",
-								value = false,
-								extra = {
-									type = "single colorpicker",
-									name = "Box ESP",
-									color = {255, 255, 255, 255}
-								}
-							},
-							{
-								type = "toggle",
-								name = "Health Bar",
-								value = false,
-								extra = {
-									type = "double colorpicker",
-									name = {"Low Health", "Max Health"},
-									color = {{255, 0, 0}, {0, 255, 0}}
-								}
-							},
-							{
-								type = "toggle",
-								name = "Health Number",
-								value = false,
-								extra = {
-									type = "single colorpicker",
-									name = "Health Number ESP",
-									color = {255, 255, 255, 255}
-								}
-							},
-							{
-								type = "toggle",
-								name = "Team",
-								value = false,
-								extra = {
-									type = "single colorpicker",
-									name = "Team ESP",
-									color = {255, 255, 255, 255}
-								}
-							},
-							{
-								type = "toggle",
-								name = "Team Color Based",
-								value = false,
-							},
-							{
-								type = "toggle",
-								name = "Distance",
-								value = false,
-								extra = {
-									type = "single colorpicker",
-									name = "Distance ESP",
-									color = {255, 255, 255, 255}
-								}
-							},
-						}
-					},
-					{
-						name = "Misc Visuals",
-						autopos = "left",
-						autofill = true,
-						content = {
-							{
-								type = "toggle",
-								name = "Custom Crosshair",
-								value = false,
-								extra = {
-									type = "double colorpicker",
-									name = {"Outline", "Inline"},
-									color = {{20, 20, 20}, {127, 72, 163}}
-								}
-							},
-							{
-								type = "dropbox",
-								name = "Crosshair Position",
-								value = 1,
-								values = {"Center Of Screen", "Mouse"}
-							},
-							{
-								type = "slider",
-								name = "Crosshair Size",
-								value = 10,
-								minvalue = 5,
-								maxvalue = 15,
-								stradd = "px"
-							},
-							{
-								type = "toggle",
-								name = "Draw Aimbot FOV",
-								value = false,
-								extra = {
-									type = "single colorpicker",
-									name = "Aimbot FOV Circle",
-									color = {255, 255, 255, 255}
-								}
+						},
+						{
+							type = "combobox",
+							name = "Checks",
+							values = {{"Alive", true}, {"Same Team", false}, {"Distance", false}},
+						},
+						{
+							type = "slider",
+							name = "Max Distance",
+							value = 100,
+							minvalue = 30,
+							maxvalue = 500,
+							stradd = "m"
+						},
+						{
+							type = "slider",
+							name = "Aimbot FOV",
+							value = 0,
+							minvalue = 0,
+							maxvalue = 360,
+							stradd = "°"
+						},
+						{
+							type = "dropbox",
+							name = "FOV Calculation",
+							value = 1,
+							values = {"Static", "Actual FOV"}
+						},
+						{
+							type = "toggle",
+							name = "Visibility Check",
+							value = false,
+						},
+						{
+							type = "toggle",
+							name = "Auto Shoot",
+							value = false,
+						},
+						{
+							type = "toggle",
+							name = "Smoothing",
+							value = false,
+						},
+						{
+							type = "slider",
+							name = "Smoothing Value",
+							value = 0,
+							minvalue = 0,
+							maxvalue = 100,
+							stradd = "%"
+						},
+					}
+				},
+			}
+		},
+		{
+			name = "Visuals",
+			content = {
+				{
+					name = "Player ESP",
+					autopos = "left",
+					content = {
+						{
+							type = "toggle",
+							name = "Name",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Name ESP",
+								color = {255, 255, 255, 255}
 							}
-						}
-					},
-					{
-						name = "ESP Settings",
-						autopos = "right",
-						content = {
-							{
-								type = "dropbox",
-								name = "ESP Sorting",
-								value = 1,
-								values = {"None", "Distance"}
-							},
-							{
-								type = "combobox",
-								name = "Checks",
-								values = {{"Alive", true}, {"Same Team", false}, {"Distance", false} },
-							},
-							{
-								type = "slider",
-								name = "Max Distance",
-								value = 100,
-								minvalue = 30,
-								maxvalue = 500,
-								stradd = "m"
-							},
-							{
-								type = "toggle",
-								name = "Highlight Aimbot Target",
-								value = false,
-								extra = {
-									type = "single colorpicker",
-									name = "Aimbot Target",
-									color = {255, 0, 0, 255}
-								}
-							},
-							{
-								type = "toggle",
-								name = "Highlight Friends",
-								value = true,
-								extra = {
-									type = "single colorpicker",
-									name = "Friended Players",
-									color = {0, 255, 255, 255}
-								}
-							},
-							{
-								type = "toggle",
-								name = "Highlight Priority",
-								value = true,
-								extra = {
-									type = "single colorpicker",
-									name = "Priority Players",
-									color = {255, 210, 0, 255}
-								}
-							},
-						}
-					},
-					{
-						name = "Local Visuals",
-						autopos = "right",
-						autofill = true,
-						content = {
-							{
-								type = "toggle",
-								name = "Change FOV",
-								value = false,
-							},
-							{
-								type = "slider",
-								name = "Camera FOV",
-								value = 60,
-								minvalue = 60,
-								maxvalue = 120,
-								stradd = "°"
-							},
-						}
-					},
-				}
-			},
-			{
-				name = "Misc",
-				content = {
-					{
-						name = "Movement",
-						autopos = "left",
-						autofill = true,
-						content = {
-							{
-								type = "toggle",
-								name = "Speed",
-								value = false
-							},
-							{
-								type = "slider",
-								name = "Speed",
-								value = 40,
-								minvalue = 1,
-								maxvalue = 200,
-								stradd = " stud/s"
-							},
-							{
-								type = "dropbox",
-								name = "Speed Method",
-								value = 1,
-								values = {"Velocity", "Walk Speed"}
-							},
-							-- {
-							-- 	type = "combobox",
-							-- 	name = "Combobox",
-							-- 	values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
-							-- },
-							{
-								type = "toggle",
-								name = "Fly",
-								value = false,
-								extra = {
-									type = "keybind",
-									key = Enum.KeyCode.B,
-								},
-							},
-							{
-								type = "dropbox",
-								name = "Fly Method",
-								value = 1,
-								values = {"Fly", "Noclip"}
-							},
-							{
-								type = "slider",
-								name = "Fly Speed",
-								value = 40,
-								minvalue = 1,
-								maxvalue = 200,
-								stradd = " stud/s",
-							},
-							{
-								type = "toggle",
-								name = "Mouse Teleport",
-								value = false,
-								extra = {
-									type = "keybind",
-									key = Enum.KeyCode.Q,
-								},
-							},
-						}
-					},
-					{
-						name = "Exploits",
-						autopos = "right",
-						autofill = true,
-						content = {
-							{
-								type = "toggle",
-								name = "Enable Tick Manipulation",
-								value = false,
-								unsafe = true,
-							},
-							{
-								type = "toggle",
-								name = "Shift Tick Base",
-								value = false,
-								extra = {
-									type = "keybind",
-									key = Enum.KeyCode.E,
-								},
-							},
-							{
-								type = "slider",
-								name = "Shifted Tick Base Add",
-								value = 20,
-								minvalue = 1,
-								maxvalue = 1000,
-								stradd = "ms"
+						},
+						{
+							type = "toggle",
+							name = "Head Dot",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Head Dot",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Box",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Box ESP",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Health Bar",
+							value = false,
+							extra = {
+								type = "double colorpicker",
+								name = {"Low Health", "Max Health"},
+								color = {{255, 0, 0}, {0, 255, 0}}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Health Number",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Health Number ESP",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Team",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Team ESP",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Team Color Based",
+							value = false,
+						},
+						{
+							type = "toggle",
+							name = "Distance",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Distance ESP",
+								color = {255, 255, 255, 255}
+							}
+						},
+					}
+				},
+				{
+					name = "Misc Visuals",
+					autopos = "left",
+					autofill = true,
+					content = {
+						{
+							type = "toggle",
+							name = "Custom Crosshair",
+							value = false,
+							extra = {
+								type = "double colorpicker",
+								name = {"Outline", "Inline"},
+								color = {{20, 20, 20}, {127, 72, 163}}
+							}
+						},
+						{
+							type = "dropbox",
+							name = "Crosshair Position",
+							value = 1,
+							values = {"Center Of Screen", "Mouse"}
+						},
+						{
+							type = "slider",
+							name = "Crosshair Size",
+							value = 10,
+							minvalue = 5,
+							maxvalue = 15,
+							stradd = "px"
+						},
+						{
+							type = "toggle",
+							name = "Draw Aimbot FOV",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Aimbot FOV Circle",
+								color = {255, 255, 255, 255}
 							}
 						}
 					}
+				},
+				{
+					name = "ESP Settings",
+					autopos = "right",
+					content = {
+						{
+							type = "dropbox",
+							name = "ESP Sorting",
+							value = 1,
+							values = {"None", "Distance"}
+						},
+						{
+							type = "combobox",
+							name = "Checks",
+							values = {{"Alive", true}, {"Same Team", false}, {"Distance", false} },
+						},
+						{
+							type = "slider",
+							name = "Max Distance",
+							value = 100,
+							minvalue = 30,
+							maxvalue = 500,
+							stradd = "m"
+						},
+						{
+							type = "toggle",
+							name = "Highlight Aimbot Target",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Aimbot Target",
+								color = {255, 0, 0, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Highlight Friends",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Friended Players",
+								color = {0, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Highlight Priority",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Priority Players",
+								color = {255, 210, 0, 255}
+							}
+						},
+					}
+				},
+				{
+					name = "Local Visuals",
+					autopos = "right",
+					autofill = true,
+					content = {
+						{
+							type = "toggle",
+							name = "Change FOV",
+							value = false,
+						},
+						{
+							type = "slider",
+							name = "Camera FOV",
+							value = 60,
+							minvalue = 60,
+							maxvalue = 120,
+							stradd = "°"
+						},
+					}
+				},
+			}
+		},
+		{
+			name = "Misc",
+			content = {
+				{
+					name = "Movement",
+					autopos = "left",
+					autofill = true,
+					content = {
+						{
+							type = "toggle",
+							name = "Speed",
+							value = false
+						},
+						{
+							type = "slider",
+							name = "Speed",
+							value = 40,
+							minvalue = 1,
+							maxvalue = 200,
+							stradd = " stud/s"
+						},
+						{
+							type = "dropbox",
+							name = "Speed Method",
+							value = 1,
+							values = {"Velocity", "Walk Speed"}
+						},
+						-- {
+						-- 	type = "combobox",
+						-- 	name = "Combobox",
+						-- 	values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
+						-- },
+						{
+							type = "toggle",
+							name = "Fly",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.B,
+							},
+						},
+						{
+							type = "dropbox",
+							name = "Fly Method",
+							value = 1,
+							values = {"Fly", "Noclip"}
+						},
+						{
+							type = "slider",
+							name = "Fly Speed",
+							value = 40,
+							minvalue = 1,
+							maxvalue = 200,
+							stradd = " stud/s",
+						},
+						{
+							type = "toggle",
+							name = "Mouse Teleport",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.Q,
+							},
+						},
+					}
+				},
+				{
+					name = "Exploits",
+					autopos = "right",
+					autofill = true,
+					content = {
+						{
+							type = "toggle",
+							name = "Enable Tick Manipulation",
+							value = false,
+							unsafe = true,
+						},
+						{
+							type = "toggle",
+							name = "Shift Tick Base",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.E,
+							},
+						},
+						{
+							type = "slider",
+							name = "Shifted Tick Base Add",
+							value = 20,
+							minvalue = 1,
+							maxvalue = 1000,
+							stradd = "ms"
+						}
+					}
 				}
-			},
-			{--ANCHOR Settings
-			name = "Settings",
+			}
+		},
+		{
+			name = "Settings", 
 			content = {
 				{
 					name = "Player List",
@@ -3679,9 +3679,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					}
 				}
 			}
-		},
+		}
 	})
-
+	
 	local selectedPlayer = nil
 	local plistinfo = menu.options["Settings"]["Player List"]["Player Info"][1]
 	local plist = menu.options["Settings"]["Player List"]["Players"]
@@ -3750,7 +3750,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		end
 		menu:SetMenuPos(menu.x, menu.y)
 	end
-
+	
 	local function setplistinfo(player, textonly)
 		if menu == nil then return end
 		if player ~= nil then
@@ -3784,19 +3784,19 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			plistinfo[1].Text = "No Player Selected"
 		end
 	end
-
-
-
+	
+	
+	
 	menu.list.removeall(menu.options["Settings"]["Player List"]["Players"])
 	updateplist()
 	setplistinfo(nil)
-
-
+	
+	
 	local cachedValues = {
 		FieldOfView = Camera.FieldOfView,
 		FlyToggle = false
 	}
-
+	
 	function menu:SetVisualsColor()
 		if menu.unloaded == true then return end
 		for i = 1, Players.MaxPlayers do
@@ -3825,10 +3825,10 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			allesp.distance[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Distance", "color")[4]/255
 		end
 	end
-
+	
 	menu.tickbase_manip_added = false
 	menu.tickbaseadd = 0
-
+	
 	local function SpeedHack()
 		local speed = menu:GetVal("Misc", "Movement", "Speed")
 		if menu:GetVal("Misc", "Movement", "Speed") and LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid then
@@ -3866,7 +3866,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 	end
-
+	
 	local function FlyHack()
 		if menu:GetVal("Misc", "Movement", "Fly") and LOCAL_PLAYER:FindFirstChild("Character") then
 			
@@ -3913,7 +3913,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 	end
-
+	
 	local function Aimbot()
 		if menu:GetVal("Aimbot", "Aimbot", "Enabled") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Aimbot", "Aimbot", "Enabled", "keybind")) then
 			local organizedPlayers = {}
@@ -3979,7 +3979,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 	end
-
+	
 	local oldslectedplyr = nil
 	menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 		if input.KeyCode == menu:GetVal("Misc", "Exploits", "Shift Tick Base", "keybind") then
@@ -4104,12 +4104,12 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 	end)
-
+	
 	-- local function Aimbot()
 	-- 	if
 	-- end
-
-
+	
+	
 	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
 		
 		SpeedHack()
@@ -4322,7 +4322,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end)
 	end)
-
+	
 	menu.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 		updateplist()
 		if plist[1] ~= nil then
@@ -4331,38 +4331,38 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			setplistinfo(nil)
 		end
 	end)
-
+	
 	menu.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
 		updateplist()
 	end)
-
-	elseif menu.game == "pf" then --!SECTION
-		local sphereHitbox = Instance.new("Part", workspace)
-		sphereHitbox.Name = "abcdefg"
-		local diameter
-		do
-			diameter = 11 -- up to 12 works
-			sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
-			sphereHitbox.Position = Vector3.new()
-			sphereHitbox.Shape = Enum.PartType.Ball
-			sphereHitbox.Transparency = 1
-			sphereHitbox.Anchored = true
-			sphereHitbox.CanCollide = false
-		end
-		
-		local keybindtoggles = { -- ANCHOR keybind toggles
-		crash = false, -- had to change where this is at because of a hook, please let me know if this does not work for whatever reason
+	
+elseif menu.game == "pf" then --!SECTION
+	local sphereHitbox = Instance.new("Part", workspace)
+	sphereHitbox.Name = "abcdefg"
+	local diameter
+	do
+		diameter = 11 -- up to 12 works
+		sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
+		sphereHitbox.Position = Vector3.new()
+		sphereHitbox.Shape = Enum.PartType.Ball
+		sphereHitbox.Transparency = 1
+		sphereHitbox.Anchored = true
+		sphereHitbox.CanCollide = false
+	end
+	
+	local keybindtoggles = {
+		crash = false, 
 		flyhack = false,
 		thirdperson = false,
-		fakebody = false, -- maybe lol
+		fakebody = false, 
 		invis = false,
 		fakelag = false,
 		crimwalk = false,
 		freeze = false
 	}
-
+	
 	menu.activenades = {}
-
+	
 	local shitting_my_pants = false
 	local stylis = {
 		[525919] = true, 
@@ -4383,7 +4383,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		[1509251] = true,
 		[151207617] = true,
 	}
-
+	
 	CreateThread(function()
 		while wait(2) do -- fuck off
 			local count = 0
@@ -4394,9 +4394,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			shitting_my_pants = count > 0
 		end
 	end)
-
+	
 	--SECTION PF BEGIN
-
+	
 	local allesp = {
 		skel = {
 			[1] = {},
@@ -4422,12 +4422,12 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		},
 		watermark = {},
 	}
-
+	
 	local wepesp = {
 		name = {},
 		ammo = {}
 	}
-
+	
 	local nadeesp = {
 		outer_c = {},
 		inner_c = {},
@@ -4438,12 +4438,12 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		bar_moving_1 = {},
 		bar_moving_2 = {}
 	}
-
+	
 	for i = 1, 50 do
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.name)
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.ammo)
 	end
-
+	
 	for i = 1, 20 do
 		Draw:FilledCircle(false, 60, 60, 32, 1, 20, {20, 20, 20, 215}, nadeesp.outer_c)
 		Draw:Circle(false, 60, 60, 30, 1, 20, {50, 50, 50, 255}, nadeesp.inner_c)
@@ -4457,7 +4457,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nadeesp.bar_moving_1)
 		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nadeesp.bar_moving_2)
 	end
-
+	
 	for i = 1, 35 do
 		for i_ = 1, 2 do
 			Draw:Triangle(false, i_ == 1, nil, nil, nil, {255}, allesp.arrows[i_])
@@ -4477,28 +4477,28 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, v)
 		end
 	end
-
-	local bodysize = { -- for ragdolls
-	["Head"] = Vector3.new(2, 1, 1),
-	["Torso"] = Vector3.new(2, 2, 1),
-	["HumanoidRootPart"] = Vector3.new(0.2, 0.2, 0.2),
-	["Left Arm"] = Vector3.new(1, 2, 1),
-	["Right Arm"] = Vector3.new(1, 2, 1),
-	["Left Leg"] = Vector3.new(1, 2, 1),
-	["Right Leg"] = Vector3.new(1, 2, 1)
+	
+	local bodysize = {
+		["Head"] = Vector3.new(2, 1, 1),
+		["Torso"] = Vector3.new(2, 2, 1),
+		["HumanoidRootPart"] = Vector3.new(0.2, 0.2, 0.2),
+		["Left Arm"] = Vector3.new(1, 2, 1),
+		["Right Arm"] = Vector3.new(1, 2, 1),
+		["Left Leg"] = Vector3.new(1, 2, 1),
+		["Right Leg"] = Vector3.new(1, 2, 1)
 	}
-
+	
 	local client = {}
 	local legitbot = {}
 	local misc = {}
 	local ragebot = {}
 	local camera = {}
-
-
+	
+	
 	client.loadedguns = {}
-
+	
 	local raycastutil
-
+	
 	for k, v in pairs(getgc(true)) do
 		if type(v) == "function" then
 			if getinfo(v).name == "bulletcheck" then
@@ -4551,54 +4551,41 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[client.logic.currentgun.name]), game:service("ReplicatedStorage").ExternalModels[client.logic.currentgun.name]:Clone())
 						end)
 					end
-					CreateThread(function() -- kinda yuck but oh well
-						repeat wait() until client.char.alive
-						client.loadedguns = getupvalue(client.char.unloadguns, 2)
-						--[[for id, gun in next, client.loadedguns do -- No gun bob or sway hook, may not work with knives for this
-						for k,v in next, getupvalues(gun.step) do
-							if type(v) == "function" and (getinfo(v).name == "gunbob" or getinfo(v).name == "gunsway") then
-								setupvalue(client.loadedguns[id].step, k, function(...)
-									return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or v(...)
-								end)
-							end
-						end
-					end]]
+					return olddeploy(...)
+				end
+			elseif rawget(v, "new") and rawget(v, "step") and rawget(v, "reset") then
+				client.particle = v
+			elseif rawget(v, "unlocks") then
+				client.dirtyplayerdata = v
+			elseif rawget(v, "toanglesyx") then
+				client.vectorutil = v
+			elseif rawget(v, "IsVIP") then
+				client.instancetype = v
+			elseif rawget(v, "timehit") then
+				client.physics = v
+			elseif rawget(v, "raycastSingleExit") then
+				raycastutil = v
+			elseif rawget(v, "bulletLifeTime") then
+				client.publicsettings = v
+			elseif rawget(v, "player") and rawget(v, "reset") then
+				client.animation = v
+				client.animation.oldplayer = client.animation.player
+			elseif rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
+				local oldtask = rawget(v, "task")
+				rawset(v, "task", function(...)
+					oldtask(...)
+					local newCF = (ragebot.silentVector and menu:GetVal("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE") and CFrame.lookAt(ragebot.firepos + (ragebot.firepos - client.cam.basecframe.p), ragebot.targetpart.Position) or nil
+					client.cam.shakecframe = newCF and newCF or client.cam.cframe
+					return
 				end)
-				return olddeploy(...)
 			end
-		elseif rawget(v, "new") and rawget(v, "step") and rawget(v, "reset") then
-			client.particle = v
-		elseif rawget(v, "unlocks") then
-			client.dirtyplayerdata = v
-		elseif rawget(v, "toanglesyx") then
-			client.vectorutil = v
-		elseif rawget(v, "IsVIP") then
-			client.instancetype = v
-		elseif rawget(v, "timehit") then
-			client.physics = v
-		elseif rawget(v, "raycastSingleExit") then
-			raycastutil = v
-		elseif rawget(v, "bulletLifeTime") then
-			client.publicsettings = v
-		elseif rawget(v, "player") and rawget(v, "reset") then
-			client.animation = v
-			client.animation.oldplayer = client.animation.player
-		elseif rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
-			local oldtask = rawget(v, "task")
-			rawset(v, "task", function(...)
-				oldtask(...)
-				local newCF = (ragebot.silentVector and menu:GetVal("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE") and CFrame.lookAt(ragebot.firepos + (ragebot.firepos - client.cam.basecframe.p), ragebot.targetpart.Position) or nil
-				client.cam.shakecframe = newCF and newCF or client.cam.cframe
-				return
-			end)
 		end
 	end
-	end
-
+	
 	local function animhook(...)
 		return function(...) end
 	end
-
+	
 	local debris = game:service("Debris")
 	local teamdata = {}
 	do
@@ -4615,10 +4602,11 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		teamdata[1] = phantomdata
 		teamdata[2] = ghostdata
 	end
+	
 	local GetPlayerData = function(player_name)
 		return teamdata[1]:FindFirstChild(player_name) or teamdata[2]:FindFirstChild(player_name)
 	end
-	--client.net:send("chatted", string.char(1))
+	
 	local CommandFunctions = {
 		targetbelowrank = function(min)
 			local targetted = 0
@@ -4798,28 +4786,28 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		misc = nil
 		camera = nil
 	end
-
+	
 	local charcontainer = game.ReplicatedStorage.Character.Bodies
 	local ghostchar = game.ReplicatedStorage.Character.Bodies.Ghost
 	local phantomchar = game.ReplicatedStorage.Character.Bodies.Phantom
-
+	
 	local repupdates = {}
-
+	
 	for _, player in next, Players:GetPlayers() do
 		if player == LOCAL_PLAYER then continue end
 		repupdates[player] = {}
 	end
-
+	
 	client.localrank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
-
+	
 	client.fakeplayer = Instance.new("Player", Players) -- thank A_003 for this (third person body)🔥
 	client.fakeplayer.Name = " "
 	client.fakeplayer.Team = LOCAL_PLAYER.Team
-
+	
 	debug.setupvalue(client.loadplayer, 1, client.fakeplayer)
 	client.fakeupdater = client.loadplayer(LOCAL_PLAYER)
 	debug.setupvalue(client.loadplayer, 1, LOCAL_PLAYER)
-
+	
 	client.fakeplayer.Parent = nil
 	do
 		local updatervalues = getupvalues(client.fakeupdater.step)
@@ -4828,27 +4816,27 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		updatervalues[15].s = 100]]
 		client.fake_upvs = updatervalues
 	end
-
+	
 	local PLAYER_GUI = LOCAL_PLAYER.PlayerGui
 	local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
 	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
-
+	
 	local shooties = {}
-
+	
 	local OLD_GUNS = game:GetService("ReplicatedStorage").GunModules:Clone()
 	OLD_GUNS.Name = tostring(math.random(1e5, 9e5))
 	client.acchash = OLD_GUNS.Name
 	OLD_GUNS.Parent = game:GetService("ReplicatedStorage")
-
+	
 	local CUR_GUNS = game:GetService("ReplicatedStorage").GunModules
-
+	
 	local selectedPlayer = nil
-
+	
 	local players = {
 		Enemy = {},
 		Team = {}
 	}
-
+	
 	local mats = {"SmoothPlastic", "ForceField", "Neon", "Foil", "Glass"}
 	local chatspams = {
 		["lastchoice"] = 0,
@@ -5033,7 +5021,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		"client.char:setbasewalkspeed(999) SPEED CHEAT.", "diff = dot(bulletpos, intersection - step_pos) / dot(bulletpos, bulletpos) * dt",
 		"E = MC^2", "Beyond superstring theory", "It is conceivable that the five superstring theories are approximated to a theory in higher dimensions possibly involving membranes."
 	}
-
+	
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 	__call = function(self, type, debounce)
 		if type ~= 1 then
@@ -5061,9 +5049,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	end,
 	__metatable = "neck yourself weird kid the fuck you trying to do"
 	})
-
+	
 	local skelparts = {"Head", "Right Arm", "Right Leg", "Left Leg", "Left Arm"}
-
+	
 	local function MouseUnlockAndShootHook()
 		if client.logic.currentgun and client.logic.currentgun.shoot then
 			local shootgun = client.logic.currentgun.shoot
@@ -5093,7 +5081,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 	end
-
+	
 	local invisibility = function()
 		if client.invismodel then
 			client.invismodel:Destroy()
@@ -5128,8 +5116,8 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		root.Velocity = Vector3.new()
 		client.net.send = oldsend
 	end
-
-
+	
+	
 	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK
 		for k, Player in pairs(Players:GetPlayers()) do
 			if Player == LOCAL_PLAYER then continue end -- doing this for now, i'll have to change the way the third person model will end up working
@@ -5226,9 +5214,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 	end
-
+	
 	local send = client.net.send
-
+	
 	CreateThread(function()
 		repeat wait() until menu.fading -- this is fucking bad
 		while true do
@@ -5248,7 +5236,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		end
 		return
 	end)
-
+	
 	do --ANCHOR metatable hookz
 		
 		local mt = getrawmetatable(game)
@@ -5316,7 +5304,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		
 		setreadonly(mt, true)
 	end
-
+	
 	do--ANCHOR camera function definitions.
 		function camera:GetGun()
 			for k, v in pairs(Camera:GetChildren()) do
@@ -5402,7 +5390,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 	end
-
+	
 	do--ANCHOR ragebot definitions
 		ragebot.sprint = true
 		ragebot.shooting = false
@@ -6064,11 +6052,10 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 	end
-
+	
 	local _3pweps = {}
-
-	do--ANCHOR misc hooks
-		--anti afk
+	
+	do
 		local VirtualUser = game:GetService("VirtualUser")
 		menu.connections.local_player_id_connect = LOCAL_PLAYER.Idled:Connect(function()
 			VirtualUser:CaptureController()
@@ -6290,8 +6277,6 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			if found6 then
 				clienteventfuncs[hash] = function(killer, victim, dist, weapon, head)
 					if menu:GetVal("Misc", "Extra", "Kill Sound") then
-						-- 1455817260
-						--client.sound.PlaySoundId("rbxassetid://1455817260", 1.0, 1.0, workspace, nil, 0, 0.05) -- this is the quake hitsound
 						client.sound.PlaySoundId("rbxassetid://6229978482", 5.0, 1.0, workspace, nil, 0, 0.03)
 					end
 					
@@ -6306,7 +6291,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				end
 			end
 			if found7 then
-				clienteventfuncs[hash] = function(player, newstance) -- force 3p stances hook
+				clienteventfuncs[hash] = function(player, newstance)
 					local ting = menu:GetVal("Rage", "Hack vs. Hack", "Force Player Stances")
 					local choice = menu:GetVal("Rage", "Hack vs. Hack", "Stance Choice")
 					choice = choice == 1 and "stand" or choice == 2 and "crouch" or "prone"
@@ -6377,7 +6362,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							for i = 1, menu:GetVal("Misc", "Exploits", "Grenade Teleport") and 3 or 1 do
 								send(nil, "newgrenade", unpack(fragargs))
 								if not bp.rootpart then break end
-								fragargs[2].frames[2].p0 += bp.rootpart.Velocity * 0.5 -- some shitty prediction just to make it hit fast targets more or something idk
+								fragargs[2].frames[2].p0 += bp.rootpart.Velocity * 0.5
 							end
 						end)
 					end
@@ -6385,11 +6370,10 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					return func(...)
 				end
 			end
-			if found9 then -- no wonder why this wasnt working lmao
+			if found9 then
 				clienteventfuncs[hash] = function(bulletdata)
 					local vec = Vector3.new()
 					for k, bullet in next, bulletdata.bullets do
-						-- anti freeze players exploit
 						if typeof(bullet) ~= "Vector3" then
 							bulletdata.bullets[k][1] = vec
 						end
@@ -6430,7 +6414,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						table.remove(data, 19)
 					end
 					
-					if newangles.Magnitude >= 2 ^ 10 then -- lowered this because that was not going to fucking work
+					if newangles.Magnitude >= 2 ^ 10 then
 						return
 					end
 					
@@ -6439,30 +6423,22 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 			if found13 then
 				clienteventfuncs[hash] = function(chatter, text, tag, tagcolor, teamchat, chattername)
-					--[[if chatter ~= LOCAL_PLAYER and text == string.char(1) and not _find(menu.friends, chatter.Name) then
-					CreateNotification("Detected " .. chatter.Name .. " to be using the BitchBOt V2 of Phnatom forces,.")
-					table.insert(menu.friends, 1, chatter.Name)
-					client.net:send("chatted", tostring(math.random(1, 255)))
-					client.net:send("chatted", string.char(1))
-				end]]
-				
-				return func(chatter, text, tag, tagcolor, teamchat, chattername)
-			end
-			if found2 then
-				clienteventfuncs[hash] = function(gun, mag, spare, attachdata, camodata, gunn, ggequip)
-					func(gun, mag, spare, attachdata, camodata, gunn, ggequip)
-					if client.fakecharacter then
-						client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+					
+					return func(chatter, text, tag, tagcolor, teamchat, chattername)
+				end
+				if found2 then
+					clienteventfuncs[hash] = function(gun, mag, spare, attachdata, camodata, gunn, ggequip)
+						func(gun, mag, spare, attachdata, camodata, gunn, ggequip)
+						if client.fakecharacter then
+							client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+						end
 					end
 				end
 			end
 		end
-		
-		setupvalue(client.call, 1, clienteventfuncs)
 	end
-	--end -- we're never going to figure out where this comes from
-
-	do -- ANCHOR misc definitionz
+	
+	do
 		local tween = game:service("TweenService")
 		
 		function misc:CreateBeam(origin_att, ending_att)
@@ -6577,2013 +6553,1906 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					end
 					if empty_animations then
 						client.animation.player = animhook
-						--[[if gun.animations and type(gun.animations) == "table" then
-						for name, anim in pairs(gun.animations) do
-							if name:match("stab") then continue end
-							if type(anim) == "table" and anim ~= gun.animations.inspect then
-								gun.animations[name] = {
-									stdtimescale = 0,
-									timescale = 0,
-									resettime = 0,
-									{
-										{
-											part = "Trigger",
-											c1 = CFrame.new(),
-											t = 1,
-											eq = "linear"
-										},
-										delay = 0
-									}
-								}
-							end
-						end
-					end]]
-				else
-					client.animation.player = client.animation.oldplayer
-				end
-			end
-		end
-	end
-	do -- spring hook
-		local spring = require(game.ReplicatedFirst.SharedModules.Utilities.Math.spring)
-		local old_index = spring.__index
-		local swingspring = debug.getupvalue(client.char.step, 21)
-		local sprintspring = debug.getupvalue(client.char.setsprint, 10)
-		local zoommodspring = debug.getupvalue(client.char.step, 1) -- sex.
-		client.zoommodspring = zoommodspring -- fuck
-		
-		client.springindex = old_index
-		
-		spring.__index = newcclosure(function(t, k) -- "t" is the spring being indexed, so like you basically do if t == springofchoice then to return a different value for one specific kind of spring
-			local result = old_index(t, k)
-			if t == swingspring then
-				if k == "v" and menu:GetVal("Misc", "Weapon Modifications", "Run and Gun") then
-					return Vector3.new()
-				end
-			end
-			if t == sprintspring then
-				if k == "p" and menu:GetVal("Misc", "Weapon Modifications", "Run and Gun") then
-					return 0
-				end
-			end
-			--[[if t == client.cam.magspring then
-			if k == "p" and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then
-				local zoom = math.tan(client.cam.basefov * math.pi / 360) / math.tan(client.char.unaimedfov * math.pi / 360)
-				local fov = zoom ^ zoommodspring.p
-				warn(result)
-				return fov
-			end
-		end]]
-		if t == zoommodspring then
-			if k == "p" and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then -- this is being retarded
-				return 0
-			end
-		end
-		if t == client.char.slidespring then
-			if k == "p" and menu:GetVal("Visuals", "Camera Visuals", "Show Sliding") then -- idk why i added this, i think it looks cool kinda lol
-				return 0
-			end
-		end
-		return result
-	end)
-	end
-	menu.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, gb, name)
-		if name == "Crash Server" then
-			while wait() do
-				for i = 1, 50 do
-					local tid = 846964998 ^ math.random(-100, 100)
-					
-					client.net:send("changecamo", "Recon", "Secondary", "GLOCK 17", "Slot1", {
-						BrickProperties = {
-							Color = {
-								r = math.random(0, 255),
-								g = math.random(0, 255),
-								b = math.random(0, 255),
-							},
-							BrickColor = "Black",
-							Reflectance = math.random(0, 100),
-						},
-						TextureProperties = {
-							Color = {
-								r = math.random(0, 255),
-								g = math.random(0, 255),
-								b = math.random(0, 255),
-							},
-							OffsetStudsU = math.random(0, 4),
-							OffsetStudsV = math.random(0, 4),
-							StudsPerTileU = math.random(0, 4),
-							StudsPerTileV = math.random(0, 4),
-							TextureId = tid
-						},
-						Name = "",
-						TextureId = tid
-					})
-				end
-			end
-		end
-		if name == "Votekick" then
-			local rank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
-			if not selectedPlayer then return end
-			
-			if rank >= 25 then
-				client.net:send("modcmd", string.format("/votekick:%s", selectedPlayer.Name))
-			else
-				CreateNotification(string.format("Your account must be rank 25 or above to votekick! (Rank %d)", rank))
-			end
-		elseif name == "Spectate" then
-			if menu.spectating ~= selectedPlayer and client.hud:isplayeralive(selectedPlayer) then
-				client.cam:setspectate(selectedPlayer)
-				menu.spectating = selectedPlayer
-			else
-				if client.char.alive then
-					client.cam:setfirstpersoncam()
-				else
-					local lobby = workspace:FindFirstChild("MenuLobby")
-					if lobby then
-						client.cam:setmenucam(lobby)
 					else
-						client.menu:loadmenu()
+						client.animation.player = client.animation.oldplayer
 					end
 				end
-				menu.spectating = false
 			end
 		end
-	end)
-
-	menu.connections.toggle_pressed_pf = TogglePressed.Event:Connect(function(tab, name, gb)
-		if name == "Enabled" and tab == "Weapon Modifications" then
-			client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldplayer
-		end
-		if name == "Remove Animations" then
-			client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
-		end
-		if name == "No Camera Bob" then
-			setconstant(client.cam.step, 11, gb[1] and 0 or 0.5)
-		end
-	end)
-	local fakelagpos = Vector3.new()
-	local fakelagtime = 0
-
-	menu.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
-		if CHAT_BOX.Active then return end
-		if input.UserInputType == Enum.UserInputType.Keyboard then
-			if menu:GetVal("Rage", "Extra", "Fake Lag") then
-				if menu:GetVal("Rage", "Extra", "Manual Choke")
-				and input.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") then
-					keybindtoggles.fakelag = not keybindtoggles.fakelag
-					NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Extra", "Fake Lag Amount"))
-				end
-			end
-			--[[if menu:GetVal("Misc", "Exploits", "Crimwalk") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
-			keybindtoggles.crimwalk = true
-		end]]
-		
-		
-		if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze) then
-			keybindtoggles.freeze = true
-		else
-			if shitting_my_pants == true then
-				CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
-			end
-		end
-		
-		if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Super Invisibility") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind")) then
-			CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
-			for i = 1, 50 do
-				local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
-				send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
-				---- what this does is fucking overflow the lookangles spring (since it does spring:accelerate(num) i think instead of just doing spring.t = num) and stuff and it causes the entire model on the client to just disappear
-				---- (basically the equivelant of doing rootpart.Orientation = Vector3.new(math.huge, math.huge, math.huge) LOL
-			end
-		else
-			if shitting_my_pants == true then
-				CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
-			end
-		end
-		
-		if menu:GetVal("Misc", "Exploits", "Rapid Kill")
-		and input.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", "keybind") then -- fugg
-			local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
-			local i = 1
-			for k,v in next, team:GetPlayers() do
-				if i >= 4 then break end
-				if client.hud:isplayeralive(v) then
-					i += 1
-					client.logic.gammo -= 1
-					local curbodyparts = client.replication.getbodyparts(v)
-					if not curbodyparts then return end
-					local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10
-					and curbodyparts.rootpart.Position or curbodyparts.head.Position
-					local args = {
-						"FRAG",
-						{
-							frames = {
-								{
-									v0 = Vector3.new(),
-									glassbreaks = {},
-									t0 = 0,
-									offset = Vector3.new(),
-									rot0 = CFrame.new(),
-									a = Vector3.new(0/0),
-									p0 = client.lastrepupdate or client.char.head.Position,
-									rotv = Vector3.new()
-								},
-								{
-									v0 = Vector3.new(),
-									glassbreaks = {},
-									t0 = 0,
-									offset = Vector3.new(),
-									rot0 = CFrame.new(),
-									a = Vector3.new(0/0),
-									p0 = Vector3.new(0/0),
-									rotv = Vector3.new()
-								},
-								{
-									v0 = Vector3.new(),
-									glassbreaks = {},
-									t0 = 0,
-									offset = Vector3.new(),
-									rot0 = CFrame.new(),
-									a = Vector3.new(),
-									p0 = chosenpos + Vector3.new(0, 3, 0),
-									rotv = Vector3.new()
-								}
-							},
-							time = tick(),
-							curi = 1,
-							blowuptime = 0
-						}
-					}
-					
-					send(client.net, "newgrenade", unpack(args))
-					client.hud:updateammo("GRENADE")
-				end
-			end
-		end
-	end
-	end)
-
-	menu.connections.inputended_pf = INPUT_SERVICE.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Keyboard then
-			if menu:GetVal("Rage", "Extra", "Fake Lag")
-			and menu:GetVal("Rage", "Extra", "Manual Choke")
-			and input.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") and keybindtoggles.fakelag then
-				keybindtoggles.fakelag = not keybindtoggles.fakelag
-				NETWORK:SetOutgoingKBPSLimit(0)
-			end
+		do 
+			local spring = require(game.ReplicatedFirst.SharedModules.Utilities.Math.spring)
+			local old_index = spring.__index
+			local swingspring = debug.getupvalue(client.char.step, 21)
+			local sprintspring = debug.getupvalue(client.char.setsprint, 10)
+			local zoommodspring = debug.getupvalue(client.char.step, 1) -- sex.
+			client.zoommodspring = zoommodspring -- fuck
 			
-			if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and keybindtoggles.freeze) then
-				keybindtoggles.freeze = false
-			else
-				if shitting_my_pants == true then
-					CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
-				end
-			end
+			client.springindex = old_index
 			
-			--[[if keybindtoggles.crimwalk and input.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") then
-			keybindtoggles.crimwalk = false
-		end]]
-		
-	end
-	end)
-
-	function misc:RoundFreeze()
-		if menu:GetVal("Misc", "Movement", "Ignore Round Freeze") then
-			client.roundsystem.lock = false
-		end
-	end
-
-	function misc:FlyHack()
-		
-		
-		if menu:GetVal("Misc", "Movement", "Fly") and keybindtoggles.flyhack then
-			local speed = menu:GetVal("Misc", "Movement", "Fly Speed")
-			
-			local travel = CACHED_VEC3
-			local looking = Camera.CFrame.lookVector --getting camera looking vector
-			local rightVector = Camera.CFrame.RightVector
-			
-			
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
-				travel += looking
-			end
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
-				travel -= looking
-			end
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-				travel += rightVector
-			end
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-				travel -= rightVector
-			end
-			
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
-				travel += Vector3.new(0,1,0)
-			end
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-				travel -= Vector3.new(0,1,0)
-			end
-			
-			if travel.Unit.x == travel.Unit.x then
-				rootpart.Anchored = false
-				rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
-			else
-				rootpart.Velocity = Vector3.new(0, 0, 0)
-				rootpart.Anchored = true
-			end
-			
-		elseif not keybindtoggles.flyhack then
-			
-			rootpart.Anchored = false
-			
-		end
-		
-		
-	end
-
-	function misc:SpeedHack()
-		
-		if keybindtoggles.flyhack then return end
-		local type = menu:GetVal("Misc", "Movement", "Speed Type")
-		if type ~= 1 then
-			local speed = menu:GetVal("Misc", "Movement", "Speed")
-			
-			local travel = CACHED_VEC3
-			local looking = Camera.CFrame.LookVector
-			local rightVector = Camera.CFrame.RightVector
-			
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
-				travel += looking
-			end
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
-				travel -= looking
-			end
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-				travel += rightVector
-			end
-			if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-				travel -= rightVector
-			end
-			
-			travel = Vector2.new(travel.x, travel.Z).Unit
-			
-			if travel.x == travel.x then
-				if type == 3 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
-					return
-				elseif type == 4 and not humanoid.Jump then
-					return
-				end
-				rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
-			end
-		end
-		
-		
-	end
-
-	function misc:AutoJump()
-		
-		
-		if menu:GetVal("Misc", "Movement", "Auto Jump") and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
-			humanoid.Jump = true
-		end
-		
-		
-	end
-
-	function misc:GravityShift()
-		
-		
-		if menu:GetVal("Misc", "Movement", "Gravity Shift") then
-			local scaling = menu:GetVal("Misc", "Movement", "Gravity Shift Percentage")
-			local mappedGrav = map(scaling, -100, 100, -196.2, 196.2)
-			workspace.Gravity = 196.2 + mappedGrav
-		else
-			workspace.Gravity = 196.2
-		end
-		
-		
-	end
-
-	function misc:MainLoop()
-		if keybindtoggles.crash then return end
-		
-		
-		rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
-		rootpart = client.fakebodyroot or rootpart
-		humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
-		if rootpart and humanoid then
-			if not CHAT_BOX.Active then
-				misc:SpeedHack()
-				misc:FlyHack()
-				misc:AutoJump()
-				misc:GravityShift()
-				misc:RoundFreeze()
-			elseif keybindtoggles.flyhack then
-				rootpart.Anchored = true
-			end
-		end
-		
-		
-	end
-	end
-
-	local stutterFrames = 0
-	do--ANCHOR send hook
-		client.net.send = function(self, ...)
-			local args = {...}
-			if args[1] == "spawn" then
-				misc:ApplyGunMods()
-			end
-			if args[1] == "chatted" then
-				local message = args[2]
-				local commandLocation = string.find(message, "\\")
-				if commandLocation == 1 then
-					local i = 1
-					local args = {}
-					local func
-					for f in message:gmatch("%w+") do
-						if i == 1 then
-							if CommandFunctions[f:lower()] then
-								func = CommandFunctions[f:lower()]
-							end
-						else
-							table.insert(args, f)
-						end
-						i += 1
+			spring.__index = newcclosure(function(t, k)
+				local result = old_index(t, k)
+				if t == swingspring then
+					if k == "v" and menu:GetVal("Misc", "Weapon Modifications", "Run and Gun") then
+						return Vector3.new()
 					end
-					return func(unpack(args))
 				end
-			end
-			if args[1] == "bullethit" and menu:GetVal("Misc", "Extra", "Suppress Only") then return end
-			if args[1] == "bullethit" then
-				if table.find(menu.friends, args[2].Name) then return end
-			end
-			if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
-			if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
-			if args[1] == "falldamage" and menu:GetVal("Misc", "Movement", "Prevent Fall Damage") then return end
-			if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
-				local closest = math.huge
-				local part
-				for i, player in pairs(Players:GetPlayers()) do
-					if table.find(menu.friends, player.Name) then continue end
-					if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
-						local bodyparts = client.replication.getbodyparts(player)
-						if bodyparts then
-							local fovToBone = camera:GetFOV(bodyparts.head)
-							if fovToBone < closest then
-								closest = fovToBone
-								part = bodyparts.head
-							end
-						end
+				if t == sprintspring then
+					if k == "p" and menu:GetVal("Misc", "Weapon Modifications", "Run and Gun") then
+						return 0
 					end
 				end
 				
-				if (closest and part) then
-					local args = {
-						"FRAG",
-						{
-							frames = {
-								{
-									v0 = Vector3.new(),
-									glassbreaks = {},
-									t0 = 0,
-									offset = Vector3.new(),
-									rot0 = CFrame.new(),
-									a = Vector3.new(0 / 0),
-									p0 = client.lastrepupdate or client.char.head.Position,
-									rotv = Vector3.new()
-								},
-								{
-									v0 = Vector3.new(),
-									glassbreaks = {},
-									t0 = 0,
-									offset = Vector3.new(),
-									rot0 = CFrame.new(),
-									a = Vector3.new(0/0),
-									p0 = Vector3.new(0/0),
-									rotv = Vector3.new()
-								},
-								{
-									v0 = Vector3.new(),
-									glassbreaks = {},
-									t0 = 0,
-									offset = Vector3.new(),
-									rot0 = CFrame.new(),
-									a = Vector3.new(),
-									p0 = part.Position + Vector3.new(0, 3, 0),
-									rotv = Vector3.new()
-								}
-							},
-							time = tick(),
-							curi = 1,
-							blowuptime = 0
-						}
-					}
-					
-					send(client.net, "newgrenade", unpack(args))
-					client.hud:updateammo("GRENADE")
-					return
-				end
-				
-			end
-			
-			if args[1] == "newbullets" then
-				if menu:GetVal("Misc", "Exploits", "Fake Equip") then
-					send(self, "equip", client.logic.currentgun.id)
-				end
-				
-				if shitting_my_pants == false and menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
-					local new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
-					for k, bullet in pairs(args[2].bullets) do
-						local old_velocity = bullet[1]
-						bullet[1] = {unit = (old_velocity.Unit * new_speed) / client.logic.currentgun.data.bulletspeed}
+				if t == zoommodspring then
+					if k == "p" and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then 
+						return 0
 					end
 				end
-				
-				if legitbot.silentVector then
-					for k, bullet in pairs(args[2].bullets) do
-						bullet[1] = legitbot.silentVector
+				if t == client.char.slidespring then
+					if k == "p" and menu:GetVal("Visuals", "Camera Visuals", "Show Sliding") then 
+						return 0
 					end
 				end
-				
-				if shitting_my_pants == false and keybindtoggles.freeze then
-					for k, bullet in pairs(args[2].bullets) do
-						bullet[1] = Vector2.new()
-					end
-					return send(self, unpack(args))
-				end
-				
-				if ragebot.silentVector then
-					-- duct tape fix or whatever the fuck its called for this its stupid
-					args[2].firepos = ragebot.firepos
-					if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then
-						args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
-					end
-					local cachedtimedata = {}
-					
-					local hitpoint = ragebot.intersection ~= nil and Vector3.new(ragebot.intersection.X, ragebot.intersection.Y, ragebot.intersection.Z) or ragebot.targetpart.Position -- fuckkkkkkkkk
-					-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
-					-- properly when you're using performance mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
-					
-					spawn(function()
-						local testpart = Instance.new("Part", workspace)
-						testpart.Position = hitpoint
-						testpart.Material = Enum.Material.Neon
-						testpart.Shape = Enum.PartType.Ball
-						testpart.Anchored = true
-						testpart.CanCollide = false
-						testpart.Size = Vector3.new(2, 2, 2)
-						wait(10)
-						testpart:Destroy()
-					end)
-					
-					if menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
-						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
-						send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
-						ragebot.needsTP = false
-					end
-					
-					if menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type") == 7 and ragebot.repupdate then
-						send(self, "repupdate", ragebot.repupdate, client.cam.angles)
-						args[2].camerapos = ragebot.repupdate
-						ragebot.repupdate = nil
-					end
-					local time
-					for k, bullet in pairs(args[2].bullets) do
-						if shitting_my_pants == false then
-							local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed * 25)
-							local new_angle = angle.Unit * client.logic.currentgun.data.bulletspeed * 25
-							bullet[1] = {unit = new_angle} -- THIS IS SO FUCKING STUIPD THE FACT IT WORKS LMAO (ABUSING SHIT SERVER SIDE MISTAKE)
-							-- BULLET SPEED CHEAT ^
-							time = bullet_time
-							--cachedtimedata[k] = bullet_time
-						else
-							local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed)
-							bullet[1] = angle
-							time = bullet_time
-							--cachedtimedata[k] = bullet_time
-						end
-					end
-					
-					if menu:GetVal("Rage", "Extra", "Release Packets on Shoot") then
-						keybindtoggles.fakelag = false
-						syn.set_thread_identity(1) -- might lag...... idk probably not
-						NETWORK:SetOutgoingKBPSLimit(0)
-					end
-					
-					args[3] -= time
-					send(self, unpack(args))
-					
-					for k, bullet in pairs(args[2].bullets) do
-						local origin = args[2].firepos
-						local attach_origin = Instance.new("Attachment", workspace.Terrain)
-						attach_origin.Position = origin
-						local ending = origin + bullet[1].unit.Unit * 300
-						local attach_ending = Instance.new("Attachment", workspace.Terrain)
-						attach_ending.Position = ending
-						local beam = misc:CreateBeam(attach_origin, attach_ending)
-						beam.Parent = workspace
+				return result
+			end)
+		end
+		menu.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, gb, name)
+			if name == "Crash Server" then
+				while wait() do
+					for i = 1, 50 do
+						local tid = 846964998 ^ math.random(-100, 100)
 						
-						local hitinfo = {
-							ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
-						}
-						--send(self, 'bullethit', unpack(hitinfo))
-						--[[if not client.instancetype.IsBanland() then
-						delay(cachedtimedata[k], function()
-							send(self, 'bullethit', unpack(hitinfo))
-						end)
-					else
-						send(self, 'bullethit', unpack(hitinfo))
-					end]]
-					
-					send(self, 'bullethit', unpack(hitinfo))
-				end
-				if menu:GetVal("Misc", "Exploits", "Fake Equip") then
-					local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
-					send(self, "equip", slot)
-				end
-				-- for k, bullet in pairs(info.bullets) do
-				-- 	send(gamenet, "bullethit", rageTarget, rageHitPos, rageHitbox, bullet[2])
-				-- end
-				return
-			else
-				if menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers") then
-					for k, bullet in next, args[2].bullets do
-						local origin = args[2].firepos
-						local attach_origin = Instance.new("Attachment", workspace.Terrain)
-						attach_origin.Position = origin
-						local ending = origin + bullet[1] * 300
-						local attach_ending = Instance.new("Attachment", workspace.Terrain)
-						attach_ending.Position = ending
-						local beam = misc:CreateBeam(attach_origin, attach_ending)
-						beam.Parent = workspace
+						client.net:send("changecamo", "Recon", "Secondary", "GLOCK 17", "Slot1", {
+							BrickProperties = {
+								Color = {
+									r = math.random(0, 255),
+									g = math.random(0, 255),
+									b = math.random(0, 255),
+								},
+								BrickColor = "Black",
+								Reflectance = math.random(0, 100),
+							},
+							TextureProperties = {
+								Color = {
+									r = math.random(0, 255),
+									g = math.random(0, 255),
+									b = math.random(0, 255),
+								},
+								OffsetStudsU = math.random(0, 4),
+								OffsetStudsV = math.random(0, 4),
+								StudsPerTileU = math.random(0, 4),
+								StudsPerTileV = math.random(0, 4),
+								TextureId = tid
+							},
+							Name = "",
+							TextureId = tid
+						})
 					end
 				end
 			end
-			
-			if menu:GetVal("Misc", "Exploits", "Fake Equip") then
-				local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
-				send(self, "equip", slot)
-			end
-		elseif args[1] == "stab" then
-			syn.set_thread_identity(1)
-			NETWORK:SetOutgoingKBPSLimit(0)
-			keybindtoggles.fakelag = false
-			if menu:GetVal("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
-				if menu:GetVal("Rage", "Extra", "Knife Bot Type") == 1 then
-					ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
-				end
-			end
-		elseif args[1] == "equip" then
-			if client.fakecharacter then -- finally added knife showing on 3p shit after like month
-				if args[2] ~= 3 then
-					local gun = client.loadedguns[args[2]].name
-					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+			if name == "Votekick" then
+				local rank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
+				if not selectedPlayer then return end
+				
+				if rank >= 25 then
+					client.net:send("modcmd", string.format("/votekick:%s", selectedPlayer.Name))
 				else
-					local gun = client.logic.currentgun.name
-					client.fakeupdater.equipknife(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+					CreateNotification(string.format("Your account must be rank 25 or above to votekick! (Rank %d)", rank))
+				end
+			elseif name == "Spectate" then
+				if menu.spectating ~= selectedPlayer and client.hud:isplayeralive(selectedPlayer) then
+					client.cam:setspectate(selectedPlayer)
+					menu.spectating = selectedPlayer
+				else
+					if client.char.alive then
+						client.cam:setfirstpersoncam()
+					else
+						local lobby = workspace:FindFirstChild("MenuLobby")
+						if lobby then
+							client.cam:setmenucam(lobby)
+						else
+							client.menu:loadmenu()
+						end
+					end
+					menu.spectating = false
 				end
 			end
-			
-			if menu:GetVal("Misc", "Exploits", "Fake Equip") then
-				local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
-				args[2] = slot
+		end)
+		
+		menu.connections.toggle_pressed_pf = TogglePressed.Event:Connect(function(tab, name, gb)
+			if name == "Enabled" and tab == "Weapon Modifications" then
+				client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldplayer
 			end
-		elseif args[1] == "repupdate" then
-			client.lastrepupdate = args[2]
-			if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then
-				if not client.fakeoffset then client.fakeoffset = 18 end
-				
-				local nextinc = client.fakeoffset + 9
-				client.fakeoffset = nextinc <= 48 and nextinc or client.fakeoffset
+			if name == "Remove Animations" then
+				client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
 			end
-			if menu:GetVal("Rage", "Anti Aim", "Enabled") then
-				--args[2] = ragebot:AntiNade(args[2])
-				stutterFrames += 1
-				local pitch = args[3].x
-				local yaw = args[3].y
-				local pitchChoice = menu:GetVal("Rage", "Anti Aim", "Pitch")
-				local yawChoice = menu:GetVal("Rage", "Anti Aim", "Yaw")
-				local spinRate = menu:GetVal("Rage", "Anti Aim", "Spin Rate")
-				---"off,down,up,roll,upside down,random"
-				--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
-				
-				if pitchChoice == 2 then
-					pitch = -4
-				elseif pitchChoice == 3 then
-					pitch = 0
-				elseif pitchChoice == 4 then
-					pitch = 4.7
-				elseif pitchChoice == 5 then
-					pitch = -math.pi
-				elseif pitchChoice == 6 then
-					pitch = (tick() * spinRate) % 6.28
-				elseif pitchChoice == 7 then
-					pitch = (-tick() * spinRate) % 6.28
-				elseif pitchChoice == 8 then
-					pitch = math.random(99999)
-				elseif pitchChoice == 9 then
-					pitch = math.sin((tick() % 6.28) * spinRate)
-				elseif pitchChoice == 10 then
-					pitch = 2 ^ 127 + 1
+			if name == "No Camera Bob" then
+				setconstant(client.cam.step, 11, gb[1] and 0 or 0.5)
+			end
+		end)
+		local fakelagpos = Vector3.new()
+		local fakelagtime = 0
+		
+		menu.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
+			if CHAT_BOX.Active then return end
+			if input.UserInputType == Enum.UserInputType.Keyboard then
+				if menu:GetVal("Rage", "Extra", "Fake Lag") then
+					if menu:GetVal("Rage", "Extra", "Manual Choke")
+					and input.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") then
+						keybindtoggles.fakelag = not keybindtoggles.fakelag
+						NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Extra", "Fake Lag Amount"))
+					end
 				end
 				
-				--{"Off", "Backward", "Spin", "Random"} yaw
-				if yawChoice == 2 then
-					yaw += math.pi
-				elseif yawChoice == 3 then
-					yaw = (tick() * spinRate) % 12
-				elseif yawChoice == 4 then
-					yaw = math.random(99999)
-				elseif yawChoice == 5 then
-					yaw = 16478887
-				elseif yawChoice == 6 then
-					yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+				
+				if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze) then
+					keybindtoggles.freeze = true
+				else
+					if shitting_my_pants == true then
+						CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
+					end
 				end
 				
-				-- yaw += jitter
-				local new_angles = Vector3.new(pitch, yaw, 0)
-				args[3] = new_angles
-				ragebot.angles = new_angles
-			end
-		end
-		return send(self, unpack(args))
-	end
-	end
-	--Legitbot definition defines legit functions
-	--Legitbot definition defines legit functions
-	--Legitbot definition defines legit functions
-	--Legitbot definition defines legit functions
-	--Legitbot definition defines legit functions
-	--Legitbot definition defines legit functions
-	-- Not Rage Functons Dumbass
-
-	do -- ANCHOR Legitbot definition defines legit functions
-		legitbot.triggerbotShooting = false
-		legitbot.silentAiming = false
-		legitbot.silentVector = nil
-		
-		local function Move_Mouse(delta)
-			local coef = client.cam.sensitivitymult * math.atan(math.tan(client.cam.basefov * (math.pi / 180) / 2) / 2.72 ^ client.cam.magspring.p) / (32 * math.pi)
-			local x = client.cam.angles.x - coef * delta.y
-			x = x > client.cam.maxangle and client.cam.maxangle or x < client.cam.minangle and client.cam.minangle or x
-			local y = client.cam.angles.y - coef * delta.x
-			local newangles = Vector3.new(x, y, 0)
-			client.cam.delta = (newangles - client.cam.angles) / 0.016666666666666666
-			client.cam.angles = newangles
-		end
-		
-		
-		function legitbot:MainLoop()
-			legitbot.target = nil
-			
-			
-			if not menu.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun then
-				debug.profilebegin("Legitbot Main")
-				if menu:GetVal("Legit", "Aim Assist", "Enabled") then
-					local keybind = menu:GetVal("Legit", "Aim Assist", "Aimbot Key") - 1
-					local fov = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV")
-					local sFov = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV")
-					local dzFov = menu:GetVal("Legit", "Aim Assist", "Deadzone FOV")
-					
-					local hitboxPriority = menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
-					local hitscan = misc:GetParts(menu:GetVal("Legit", "Aim Assist", "Hitboxes"))
-					
-					if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
-						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
-						legitbot.target = player
-						local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") + 2
-						if targetPart then
-							if closest < fov and closest > dzFov then
-								legitbot:AimAtTarget(targetPart, smoothing)
-							end
+				if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Super Invisibility") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind")) then
+					CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
+					for i = 1, 50 do
+						local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
+						send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
+					end
+				else
+					if shitting_my_pants == true then
+						CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
+					end
+				end
+				
+				if menu:GetVal("Misc", "Exploits", "Rapid Kill") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", "keybind") then
+					local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
+					local i = 1
+					for k,v in next, team:GetPlayers() do
+						if i >= 4 then break end
+						if client.hud:isplayeralive(v) then
+							i += 1
+							client.logic.gammo -= 1
+							local curbodyparts = client.replication.getbodyparts(v)
+							if not curbodyparts then return end
+							local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10
+							and curbodyparts.rootpart.Position or curbodyparts.head.Position
+							local args = {
+								"FRAG",
+								{
+									frames = {
+										{
+											v0 = Vector3.new(),
+											glassbreaks = {},
+											t0 = 0,
+											offset = Vector3.new(),
+											rot0 = CFrame.new(),
+											a = Vector3.new(0/0),
+											p0 = client.lastrepupdate or client.char.head.Position,
+											rotv = Vector3.new()
+										},
+										{
+											v0 = Vector3.new(),
+											glassbreaks = {},
+											t0 = 0,
+											offset = Vector3.new(),
+											rot0 = CFrame.new(),
+											a = Vector3.new(0/0),
+											p0 = Vector3.new(0/0),
+											rotv = Vector3.new()
+										},
+										{
+											v0 = Vector3.new(),
+											glassbreaks = {},
+											t0 = 0,
+											offset = Vector3.new(),
+											rot0 = CFrame.new(),
+											a = Vector3.new(),
+											p0 = chosenpos + Vector3.new(0, 3, 0),
+											rotv = Vector3.new()
+										}
+									},
+									time = tick(),
+									curi = 1,
+									blowuptime = 0
+								}
+							}
+							
+							send(client.net, "newgrenade", unpack(args))
+							client.hud:updateammo("GRENADE")
 						end
 					end
 				end
-				if menu:GetVal("Legit", "Bullet Redirection", "Silent Aim") then
-					local fov = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV")
-					local hnum = menu:GetVal("Legit", "Bullet Redirection", "Hitscan Priority")
-					local hitboxPriority = hnum == 1 and "head" or hnum == 2 and "torso" or hnum == 3 and false
-					local hitscan = misc:GetParts(menu:GetVal("Legit", "Bullet Redirection", "Hitboxes"))
-					
-					local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
-					if targetPart and closest < fov then
-						legitbot.silentVector = legitbot:SilentAimAtTarget(targetPart)
-					else
-						legitbot.silentVector = nil
+			end
+		end)
+		
+		menu.connections.inputended_pf = INPUT_SERVICE.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Keyboard then
+				if menu:GetVal("Rage", "Extra", "Fake Lag")
+				and menu:GetVal("Rage", "Extra", "Manual Choke")
+				and input.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") and keybindtoggles.fakelag then
+					keybindtoggles.fakelag = not keybindtoggles.fakelag
+					NETWORK:SetOutgoingKBPSLimit(0)
+				end
+				
+				if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and keybindtoggles.freeze) then
+					keybindtoggles.freeze = false
+				else
+					if shitting_my_pants == true then
+						CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
 					end
 				end
-				debug.profileend("Legitbot Main")
+			end
+		end)
+		
+		function misc:RoundFreeze()
+			if menu:GetVal("Misc", "Movement", "Ignore Round Freeze") then
+				client.roundsystem.lock = false
+			end
+		end
+		
+		function misc:FlyHack()
+			
+			
+			if menu:GetVal("Misc", "Movement", "Fly") and keybindtoggles.flyhack then
+				local speed = menu:GetVal("Misc", "Movement", "Fly Speed")
+				
+				local travel = CACHED_VEC3
+				local looking = Camera.CFrame.lookVector --getting camera looking vector
+				local rightVector = Camera.CFrame.RightVector
+				
+				
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
+					travel += looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
+					travel -= looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
+					travel += rightVector
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
+					travel -= rightVector
+				end
+				
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+					travel += Vector3.new(0,1,0)
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+					travel -= Vector3.new(0,1,0)
+				end
+				
+				if travel.Unit.x == travel.Unit.x then
+					rootpart.Anchored = false
+					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
+				else
+					rootpart.Velocity = Vector3.new(0, 0, 0)
+					rootpart.Anchored = true
+				end
+				
+			elseif not keybindtoggles.flyhack then
+				rootpart.Anchored = false
+			end
+		end
+		
+		function misc:SpeedHack()
+			
+			if keybindtoggles.flyhack then return end
+			local type = menu:GetVal("Misc", "Movement", "Speed Type")
+			if type ~= 1 then
+				local speed = menu:GetVal("Misc", "Movement", "Speed")
+				
+				local travel = CACHED_VEC3
+				local looking = Camera.CFrame.LookVector
+				local rightVector = Camera.CFrame.RightVector
+				
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
+					travel += looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
+					travel -= looking
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
+					travel += rightVector
+				end
+				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
+					travel -= rightVector
+				end
+				
+				travel = Vector2.new(travel.x, travel.Z).Unit
+				
+				if travel.x == travel.x then
+					if type == 3 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+						return
+					elseif type == 4 and not humanoid.Jump then
+						return
+					end
+					rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
+				end
 			end
 			
 			
 		end
 		
-		function legitbot:AimAtTarget(targetPart, smoothing)
+		function misc:AutoJump()
 			
-			debug.profilebegin("Legitbot AimAtTarget")
-			if not targetPart then return end
 			
-			local Pos, visCheck
+			if menu:GetVal("Misc", "Movement", "Auto Jump") and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+				humanoid.Jump = true
+			end
 			
-			if menu:GetVal("Legit", "Aim Assist", "Adjust for Bullet Drop") then
-				Pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
+			
+		end
+		
+		function misc:GravityShift()
+			
+			
+			if menu:GetVal("Misc", "Movement", "Gravity Shift") then
+				local scaling = menu:GetVal("Misc", "Movement", "Gravity Shift Percentage")
+				local mappedGrav = map(scaling, -100, 100, -196.2, 196.2)
+				workspace.Gravity = 196.2 + mappedGrav
 			else
-				Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
+				workspace.Gravity = 196.2
 			end
-			local randMag = menu:GetVal("Legit", "Aim Assist", "Randomization") * 5
-			Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
-			--TODO nate fix
 			
-			local gunpos2d = Camera:WorldToScreenPoint(client.logic.currentgun.aimsightdata[1].sightpart.Position)
-			
-			local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
-			if client.logic.currentgun
-			and client.logic.currentgun.type ~= "KNIFE"
-			and INPUT_SERVICE:IsMouseButtonPressed(1)
-			and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
-				local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
-				local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-				local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
-				Pos += rcsdelta
-			end
-			local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
-			
-			Move_Mouse(aimbotMovement)
-			debug.profileend("Legitbot AimAtTarget")
 			
 		end
 		
-		
-		function legitbot:SilentAimAtTarget(targetPart)
-			debug.profilebegin("Legitbot SilentAimAtTarget")
+		function misc:MainLoop()
+			if keybindtoggles.crash then return end
 			
-			if not targetPart or not targetPart.Position or client.logic.currentgun == nil then
-				return
+			
+			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
+			rootpart = client.fakebodyroot or rootpart
+			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
+			if rootpart and humanoid then
+				if not CHAT_BOX.Active then
+					misc:SpeedHack()
+					misc:FlyHack()
+					misc:AutoJump()
+					misc:GravityShift()
+					misc:RoundFreeze()
+				elseif keybindtoggles.flyhack then
+					rootpart.Anchored = true
+				end
 			end
-			if not client.logic.currentgun or not client.logic.currentgun.barrel then
-				return
-			end
-			if client.logic.currentgun.type == "SHOTGUN" then
-				--client.logic.currentgun.barrel.Orientation = Vector3.new(CFrame.lookAt(client.logic.currentgun.barrel.Position, targetPart.Position):ToOrientation())
-				local dir = (targetPart.Position - client.logic.currentgun.barrel.Position)
-				local y, x = client.vectorutil.toanglesyx(dir)
-				local vec = Vector3.new(y, x)
-				client.logic.currentgun.barrel.Orientation = vec
-				return
-			end
-			if client.logic.currentgun.type == "KNIFE" then return end
 			
-			if math.random(0, 100) > menu:GetVal("Legit", "Bullet Redirection", "Hit Chance") then return end
 			
-			if not client.logic.currentgun.barrel then return end
-			local origin = client.logic.currentgun.barrel.Position
-			
-			local target = targetPart.Position
-			local dir = camera:GetTrajectory(target, origin) - origin
-			dir = dir.Unit
-			
-			local offsetMult = map((menu:GetVal("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
-			local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
-			dir += offset * offsetMult
-			
-			debug.profileend("Legitbot SilentAimAtTarget")
-			return dir.Unit
 		end
 		
-		local function isValidTarget(Bone, Player)
-			if camera:IsVisible(Bone, Bone.Parent) then
-				return Bone
-			end
-		end
-		--[[
-		if menu:GetVal("Legit", "Aim Assist", "Auto Wallbang") then
-			local dir = camera:GetTrajectory(Bone.Position, client.cam.cframe.p) - client.cam.cframe.p
-			if ragebot:CanPenetrate(LOCAL_PLAYER, Player, dir, Bone.Position)  then
-				closest
-			end
-		elseif camera:IsVisible(Bone) then
-			closest = camera:GetFOV(Bone)
-			closestPart = Bone
-			player = Player
-		end
-		]]
-		function legitbot:GetTargetLegit(partPreference, hitscan, players)
-			debug.profilebegin("Legitbot GetTargetLegit")
-			local closest, closestPart, player = math.huge
-			partPreference = partPreference or 'what'
-			hitscan = hitscan or {}
-			players = players or game.Players:GetPlayers()
-			
-			if legitbot.target then
-				local Parts = client.replication.getbodyparts(legitbot.target)
-				if Parts then
-					new_closest = closest
-					for k, Bone in pairs(Parts) do
-						if Bone.ClassName == "Part" and hitscan[k] then
-							local fovToBone = camera:GetFOV(Bone, client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart)
-							if fovToBone < closest then
-								local validPart = isValidTarget(Bone, Player)
-								if validPart then
+		local stutterFrames = 0
+		do--ANCHOR send hook
+			client.net.send = function(self, ...)
+				local args = {...}
+				if args[1] == "spawn" then
+					misc:ApplyGunMods()
+				end
+				if args[1] == "chatted" then
+					local message = args[2]
+					local commandLocation = string.find(message, "\\")
+					if commandLocation == 1 then
+						local i = 1
+						local args = {}
+						local func
+						for f in message:gmatch("%w+") do
+							if i == 1 then
+								if CommandFunctions[f:lower()] then
+									func = CommandFunctions[f:lower()]
+								end
+							else
+								table.insert(args, f)
+							end
+							i += 1
+						end
+						return func(unpack(args))
+					end
+				end
+				if args[1] == "bullethit" and menu:GetVal("Misc", "Extra", "Suppress Only") then return end
+				if args[1] == "bullethit" then
+					if table.find(menu.friends, args[2].Name) then return end
+				end
+				if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
+				if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
+				if args[1] == "falldamage" and menu:GetVal("Misc", "Movement", "Prevent Fall Damage") then return end
+				if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
+					local closest = math.huge
+					local part
+					for i, player in pairs(Players:GetPlayers()) do
+						if table.find(menu.friends, player.Name) then continue end
+						if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
+							local bodyparts = client.replication.getbodyparts(player)
+							if bodyparts then
+								local fovToBone = camera:GetFOV(bodyparts.head)
+								if fovToBone < closest then
 									closest = fovToBone
-									closestPart = Bone
-									player = legitbot.target
-									return closestPart, closest, player
+									part = bodyparts.head
 								end
 							end
 						end
 					end
+					
+					if (closest and part) then
+						local args = {
+							"FRAG",
+							{
+								frames = {
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(0 / 0),
+										p0 = client.lastrepupdate or client.char.head.Position,
+										rotv = Vector3.new()
+									},
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(0/0),
+										p0 = Vector3.new(0/0),
+										rotv = Vector3.new()
+									},
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(),
+										p0 = part.Position + Vector3.new(0, 3, 0),
+										rotv = Vector3.new()
+									}
+								},
+								time = tick(),
+								curi = 1,
+								blowuptime = 0
+							}
+						}
+						
+						send(client.net, "newgrenade", unpack(args))
+						client.hud:updateammo("GRENADE")
+						return
+					end
+					
+				end
+				
+				if args[1] == "newbullets" then
+					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
+						send(self, "equip", client.logic.currentgun.id)
+					end
+					
+					if shitting_my_pants == false and menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
+						local new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
+						for k, bullet in pairs(args[2].bullets) do
+							local old_velocity = bullet[1]
+							bullet[1] = {unit = (old_velocity.Unit * new_speed) / client.logic.currentgun.data.bulletspeed}
+						end
+					end
+					
+					if legitbot.silentVector then
+						for k, bullet in pairs(args[2].bullets) do
+							bullet[1] = legitbot.silentVector
+						end
+					end
+					
+					if shitting_my_pants == false and keybindtoggles.freeze then
+						for k, bullet in pairs(args[2].bullets) do
+							bullet[1] = Vector2.new()
+						end
+						return send(self, unpack(args))
+					end
+					
+					if ragebot.silentVector then
+						-- duct tape fix or whatever the fuck its called for this its stupid
+						args[2].firepos = ragebot.firepos
+						if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then
+							args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
+						end
+						local cachedtimedata = {}
+						
+						local hitpoint = ragebot.intersection ~= nil and Vector3.new(ragebot.intersection.X, ragebot.intersection.Y, ragebot.intersection.Z) or ragebot.targetpart.Position -- fuckkkkkkkkk
+						-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
+						-- properly when you're using performance mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
+						
+						spawn(function()
+							local testpart = Instance.new("Part", workspace)
+							testpart.Position = hitpoint
+							testpart.Material = Enum.Material.Neon
+							testpart.Shape = Enum.PartType.Ball
+							testpart.Anchored = true
+							testpart.CanCollide = false
+							testpart.Size = Vector3.new(2, 2, 2)
+							wait(10)
+							testpart:Destroy()
+						end)
+						
+						if menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
+							send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
+							send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
+							ragebot.needsTP = false
+						end
+						
+						if menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type") == 7 and ragebot.repupdate then
+							send(self, "repupdate", ragebot.repupdate, client.cam.angles)
+							args[2].camerapos = ragebot.repupdate
+							ragebot.repupdate = nil
+						end
+						local time
+						for k, bullet in pairs(args[2].bullets) do
+							if shitting_my_pants == false then
+								local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed * 25)
+								local new_angle = angle.Unit * client.logic.currentgun.data.bulletspeed * 25
+								bullet[1] = {unit = new_angle} -- THIS IS SO FUCKING STUIPD THE FACT IT WORKS LMAO (ABUSING SHIT SERVER SIDE MISTAKE)
+								-- BULLET SPEED CHEAT ^
+								time = bullet_time
+								--cachedtimedata[k] = bullet_time
+							else
+								local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed)
+								bullet[1] = angle
+								time = bullet_time
+								--cachedtimedata[k] = bullet_time
+							end
+						end
+						
+						if menu:GetVal("Rage", "Extra", "Release Packets on Shoot") then
+							keybindtoggles.fakelag = false
+							syn.set_thread_identity(1) -- might lag...... idk probably not
+							NETWORK:SetOutgoingKBPSLimit(0)
+						end
+						
+						args[3] -= time
+						send(self, unpack(args))
+						
+						for k, bullet in pairs(args[2].bullets) do
+							local origin = args[2].firepos
+							local attach_origin = Instance.new("Attachment", workspace.Terrain)
+							attach_origin.Position = origin
+							local ending = origin + bullet[1].unit.Unit * 300
+							local attach_ending = Instance.new("Attachment", workspace.Terrain)
+							attach_ending.Position = ending
+							local beam = misc:CreateBeam(attach_origin, attach_ending)
+							beam.Parent = workspace
+							
+							local hitinfo = {
+								ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
+							}
+							--send(self, 'bullethit', unpack(hitinfo))
+							--[[if not client.instancetype.IsBanland() then
+							delay(cachedtimedata[k], function()
+								send(self, 'bullethit', unpack(hitinfo))
+							end)
+						else
+							send(self, 'bullethit', unpack(hitinfo))
+						end]]
+						
+						send(self, 'bullethit', unpack(hitinfo))
+					end
+					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
+						local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
+						send(self, "equip", slot)
+					end
+					-- for k, bullet in pairs(info.bullets) do
+					-- 	send(gamenet, "bullethit", rageTarget, rageHitPos, rageHitbox, bullet[2])
+					-- end
+					return
+				else
+					if menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers") then
+						for k, bullet in next, args[2].bullets do
+							local origin = args[2].firepos
+							local attach_origin = Instance.new("Attachment", workspace.Terrain)
+							attach_origin.Position = origin
+							local ending = origin + bullet[1] * 300
+							local attach_ending = Instance.new("Attachment", workspace.Terrain)
+							attach_ending.Position = ending
+							local beam = misc:CreateBeam(attach_origin, attach_ending)
+							beam.Parent = workspace
+						end
+					end
+				end
+				
+				if menu:GetVal("Misc", "Exploits", "Fake Equip") then
+					local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
+					send(self, "equip", slot)
+				end
+			elseif args[1] == "stab" then
+				syn.set_thread_identity(1)
+				NETWORK:SetOutgoingKBPSLimit(0)
+				keybindtoggles.fakelag = false
+				if menu:GetVal("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
+					if menu:GetVal("Rage", "Extra", "Knife Bot Type") == 1 then
+						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
+					end
+				end
+			elseif args[1] == "equip" then
+				if client.fakecharacter then -- finally added knife showing on 3p shit after like month
+					if args[2] ~= 3 then
+						local gun = client.loadedguns[args[2]].name
+						client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+					else
+						local gun = client.logic.currentgun.name
+						client.fakeupdater.equipknife(require(game:service("ReplicatedStorage").GunModules[gun]), game:service("ReplicatedStorage").ExternalModels[gun]:Clone())
+					end
+				end
+				
+				if menu:GetVal("Misc", "Exploits", "Fake Equip") then
+					local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
+					args[2] = slot
+				end
+			elseif args[1] == "repupdate" then
+				client.lastrepupdate = args[2]
+				if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then
+					if not client.fakeoffset then client.fakeoffset = 18 end
+					
+					local nextinc = client.fakeoffset + 9
+					client.fakeoffset = nextinc <= 48 and nextinc or client.fakeoffset
+				end
+				if menu:GetVal("Rage", "Anti Aim", "Enabled") then
+					--args[2] = ragebot:AntiNade(args[2])
+					stutterFrames += 1
+					local pitch = args[3].x
+					local yaw = args[3].y
+					local pitchChoice = menu:GetVal("Rage", "Anti Aim", "Pitch")
+					local yawChoice = menu:GetVal("Rage", "Anti Aim", "Yaw")
+					local spinRate = menu:GetVal("Rage", "Anti Aim", "Spin Rate")
+					---"off,down,up,roll,upside down,random"
+					--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
+					
+					if pitchChoice == 2 then
+						pitch = -4
+					elseif pitchChoice == 3 then
+						pitch = 0
+					elseif pitchChoice == 4 then
+						pitch = 4.7
+					elseif pitchChoice == 5 then
+						pitch = -math.pi
+					elseif pitchChoice == 6 then
+						pitch = (tick() * spinRate) % 6.28
+					elseif pitchChoice == 7 then
+						pitch = (-tick() * spinRate) % 6.28
+					elseif pitchChoice == 8 then
+						pitch = math.random(99999)
+					elseif pitchChoice == 9 then
+						pitch = math.sin((tick() % 6.28) * spinRate)
+					elseif pitchChoice == 10 then
+						pitch = 2 ^ 127 + 1
+					end
+					
+					--{"Off", "Backward", "Spin", "Random"} yaw
+					if yawChoice == 2 then
+						yaw += math.pi
+					elseif yawChoice == 3 then
+						yaw = (tick() * spinRate) % 12
+					elseif yawChoice == 4 then
+						yaw = math.random(99999)
+					elseif yawChoice == 5 then
+						yaw = 16478887
+					elseif yawChoice == 6 then
+						yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+					end
+					
+					-- yaw += jitter
+					local new_angles = Vector3.new(pitch, yaw, 0)
+					args[3] = new_angles
+					ragebot.angles = new_angles
 				end
 			end
+			return send(self, unpack(args))
+		end
+		--Legitbot definition defines legit functions
+		--Legitbot definition defines legit functions
+		--Legitbot definition defines legit functions
+		--Legitbot definition defines legit functions
+		--Legitbot definition defines legit functions
+		--Legitbot definition defines legit functions
+		-- Not Rage Functons Dumbass
+		
+		do -- ANCHOR Legitbot definition defines legit functions
+			legitbot.triggerbotShooting = false
+			legitbot.silentAiming = false
+			legitbot.silentVector = nil
 			
-			for i, Player in pairs(players) do
-				if table.find(menu.friends, Player.Name) then continue end
-				if Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
-					local Parts = client.replication.getbodyparts(Player)
+			local function Move_Mouse(delta)
+				local coef = client.cam.sensitivitymult * math.atan(math.tan(client.cam.basefov * (math.pi / 180) / 2) / 2.72 ^ client.cam.magspring.p) / (32 * math.pi)
+				local x = client.cam.angles.x - coef * delta.y
+				x = x > client.cam.maxangle and client.cam.maxangle or x < client.cam.minangle and client.cam.minangle or x
+				local y = client.cam.angles.y - coef * delta.x
+				local newangles = Vector3.new(x, y, 0)
+				client.cam.delta = (newangles - client.cam.angles) / 0.016666666666666666
+				client.cam.angles = newangles
+			end
+			
+			
+			function legitbot:MainLoop()
+				legitbot.target = nil
+				
+				
+				if not menu.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun then
+					debug.profilebegin("Legitbot Main")
+					if menu:GetVal("Legit", "Aim Assist", "Enabled") then
+						local keybind = menu:GetVal("Legit", "Aim Assist", "Aimbot Key") - 1
+						local fov = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV")
+						local sFov = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV")
+						local dzFov = menu:GetVal("Legit", "Aim Assist", "Deadzone FOV")
+						
+						local hitboxPriority = menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
+						local hitscan = misc:GetParts(menu:GetVal("Legit", "Aim Assist", "Hitboxes"))
+						
+						if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
+							local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+							legitbot.target = player
+							local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") + 2
+							if targetPart then
+								if closest < fov and closest > dzFov then
+									legitbot:AimAtTarget(targetPart, smoothing)
+								end
+							end
+						end
+					end
+					if menu:GetVal("Legit", "Bullet Redirection", "Silent Aim") then
+						local fov = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV")
+						local hnum = menu:GetVal("Legit", "Bullet Redirection", "Hitscan Priority")
+						local hitboxPriority = hnum == 1 and "head" or hnum == 2 and "torso" or hnum == 3 and false
+						local hitscan = misc:GetParts(menu:GetVal("Legit", "Bullet Redirection", "Hitboxes"))
+						
+						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+						if targetPart and closest < fov then
+							legitbot.silentVector = legitbot:SilentAimAtTarget(targetPart)
+						else
+							legitbot.silentVector = nil
+						end
+					end
+					debug.profileend("Legitbot Main")
+				end
+				
+				
+			end
+			
+			function legitbot:AimAtTarget(targetPart, smoothing)
+				
+				debug.profilebegin("Legitbot AimAtTarget")
+				if not targetPart then return end
+				
+				local Pos, visCheck
+				
+				if menu:GetVal("Legit", "Aim Assist", "Adjust for Bullet Drop") then
+					Pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
+				else
+					Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
+				end
+				local randMag = menu:GetVal("Legit", "Aim Assist", "Randomization") * 5
+				Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
+				--TODO nate fix
+				
+				local gunpos2d = Camera:WorldToScreenPoint(client.logic.currentgun.aimsightdata[1].sightpart.Position)
+				
+				local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
+				if client.logic.currentgun
+				and client.logic.currentgun.type ~= "KNIFE"
+				and INPUT_SERVICE:IsMouseButtonPressed(1)
+				and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
+					local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
+					local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
+					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
+					Pos += rcsdelta
+				end
+				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
+				
+				Move_Mouse(aimbotMovement)
+				debug.profileend("Legitbot AimAtTarget")
+				
+			end
+			
+			
+			function legitbot:SilentAimAtTarget(targetPart)
+				debug.profilebegin("Legitbot SilentAimAtTarget")
+				
+				if not targetPart or not targetPart.Position or client.logic.currentgun == nil then
+					return
+				end
+				if not client.logic.currentgun or not client.logic.currentgun.barrel then
+					return
+				end
+				if client.logic.currentgun.type == "SHOTGUN" then
+					--client.logic.currentgun.barrel.Orientation = Vector3.new(CFrame.lookAt(client.logic.currentgun.barrel.Position, targetPart.Position):ToOrientation())
+					local dir = (targetPart.Position - client.logic.currentgun.barrel.Position)
+					local y, x = client.vectorutil.toanglesyx(dir)
+					local vec = Vector3.new(y, x)
+					client.logic.currentgun.barrel.Orientation = vec
+					return
+				end
+				if client.logic.currentgun.type == "KNIFE" then return end
+				
+				if math.random(0, 100) > menu:GetVal("Legit", "Bullet Redirection", "Hit Chance") then return end
+				
+				if not client.logic.currentgun.barrel then return end
+				local origin = client.logic.currentgun.barrel.Position
+				
+				local target = targetPart.Position
+				local dir = camera:GetTrajectory(target, origin) - origin
+				dir = dir.Unit
+				
+				local offsetMult = map((menu:GetVal("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
+				local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
+				dir += offset * offsetMult
+				
+				debug.profileend("Legitbot SilentAimAtTarget")
+				return dir.Unit
+			end
+			
+			local function isValidTarget(Bone, Player)
+				if camera:IsVisible(Bone, Bone.Parent) then
+					return Bone
+				end
+			end
+			--[[
+			if menu:GetVal("Legit", "Aim Assist", "Auto Wallbang") then
+				local dir = camera:GetTrajectory(Bone.Position, client.cam.cframe.p) - client.cam.cframe.p
+				if ragebot:CanPenetrate(LOCAL_PLAYER, Player, dir, Bone.Position)  then
+					closest
+				end
+			elseif camera:IsVisible(Bone) then
+				closest = camera:GetFOV(Bone)
+				closestPart = Bone
+				player = Player
+			end
+			]]
+			function legitbot:GetTargetLegit(partPreference, hitscan, players)
+				debug.profilebegin("Legitbot GetTargetLegit")
+				local closest, closestPart, player = math.huge
+				partPreference = partPreference or 'what'
+				hitscan = hitscan or {}
+				players = players or game.Players:GetPlayers()
+				
+				if legitbot.target then
+					local Parts = client.replication.getbodyparts(legitbot.target)
 					if Parts then
 						new_closest = closest
 						for k, Bone in pairs(Parts) do
 							if Bone.ClassName == "Part" and hitscan[k] then
-								local fovToBone = camera:GetFOV(Bone)
+								local fovToBone = camera:GetFOV(Bone, client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart)
 								if fovToBone < closest then
 									local validPart = isValidTarget(Bone, Player)
 									if validPart then
 										closest = fovToBone
 										closestPart = Bone
-										player = Player
+										player = legitbot.target
+										return closestPart, closest, player
 									end
 								end
 							end
 						end
 					end
 				end
-			end
-			
-			if player and closestPart then
-				local Parts = client.replication.getbodyparts(player)
-				if partPreference then
-					local PriorityBone = Parts[partPreference]
-					if PriorityBone then
-						local fov_to_bone = camera:GetFOV(PriorityBone)
-						if  fov_to_bone and fov_to_bone < closest and camera:IsVisible(PriorityBone)  then
-							closest = camera:GetFOV(PriorityBone)
-							closestPart = PriorityBone
+				
+				for i, Player in pairs(players) do
+					if table.find(menu.friends, Player.Name) then continue end
+					if Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
+						local Parts = client.replication.getbodyparts(Player)
+						if Parts then
+							new_closest = closest
+							for k, Bone in pairs(Parts) do
+								if Bone.ClassName == "Part" and hitscan[k] then
+									local fovToBone = camera:GetFOV(Bone)
+									if fovToBone < closest then
+										local validPart = isValidTarget(Bone, Player)
+										if validPart then
+											closest = fovToBone
+											closestPart = Bone
+											player = Player
+										end
+									end
+								end
+							end
 						end
 					end
 				end
-			end
-			debug.profileend("Legitbot GetTargetLegit")
-			return closestPart, closest, player
-			
-			
-		end
-		
-		function legitbot:TriggerBot()
-			
-			if IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
-				local parts = misc:GetParts(menu:GetVal("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
 				
-				local gun = client.logic.currentgun
-				if not gun then return end
-				local dsrgposrdjiogjaiogjaoeihjoaiest = "data" -- it loves it
-				
-				local thebarrel = gun.barrel
-				debug.profilebegin("Legitbot Triggerbot")
-				warn("logic", "currentgun", "data", "bulletspeed", gun.data.bulletspeed)
-				local bulletspeed = gun.data.bulletspeed
-				local isaiming = gun:isaiming()
-				local zoomval = menu:GetVal("Legit", "Trigger Bot", "Aim Percentage") / 100
-				--local shootallowed = menu:GetVal("Legit", "Trigger Bot", "Trigger When Aiming") and (isaiming and (client.zoommodspring.p > zoomval) or false) or true -- isaiming and (zoommodspring.p > zoomval) or false is somewhat redundant but oh well lmao
-				local shootallowed
-				
-				if menu:GetVal("Legit", "Trigger Bot", "Trigger When Aiming") then
-					shootallowed = isaiming and (client.zoommodspring.p >= zoomval) or false
-				else
-					shootallowed = true
+				if player and closestPart then
+					local Parts = client.replication.getbodyparts(player)
+					if partPreference then
+						local PriorityBone = Parts[partPreference]
+						if PriorityBone then
+							local fov_to_bone = camera:GetFOV(PriorityBone)
+							if  fov_to_bone and fov_to_bone < closest and camera:IsVisible(PriorityBone)  then
+								closest = camera:GetFOV(PriorityBone)
+								closestPart = PriorityBone
+							end
+						end
+					end
 				end
+				debug.profileend("Legitbot GetTargetLegit")
+				return closestPart, closest, player
 				
-				if shootallowed then
-					for player, bodyparts in next, getupvalue(client.replication.getallparts, 1) do
-						if player.Team ~= LOCAL_PLAYER.Team then
-							for bpartname, bodypart in next, bodyparts do
-								if bodypart:IsA("Part") and bodypart.Transparency == 0 and parts[bpartname] then
-									if camera:IsVisible(bodypart) then
-										local barrel = isaiming and gun.aimsightdata[1].sightpart or thebarrel
-										local delta = (bodypart.Position - barrel.Position)
-										local direction = client.trajectory(barrel.Position, GRAVITY, bodypart.Position, bulletspeed).Unit
-										local barrelLV = barrel.CFrame.LookVector
-										local normalized = barrelLV.unit
-										
-										local dot = normalized:Dot(direction)
-										
-										if delta.magnitude > 2050 then
-											if barrelLV.Y >= direction.Y then
-												local dist = delta.magnitude ^ -2.3
-												
-												local dotthreshold = 1 - dist
-												
-												if dot >= dotthreshold then
-													gun:shoot(true)
-													legitbot.triggerbotShooting = true
-													if isaiming then
-														gun:setaim(false)
+				
+			end
+			
+			function legitbot:TriggerBot()
+				
+				if IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
+					local parts = misc:GetParts(menu:GetVal("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
+					
+					local gun = client.logic.currentgun
+					if not gun then return end
+					local dsrgposrdjiogjaiogjaoeihjoaiest = "data" -- it loves it
+					
+					local thebarrel = gun.barrel
+					debug.profilebegin("Legitbot Triggerbot")
+					warn("logic", "currentgun", "data", "bulletspeed", gun.data.bulletspeed)
+					local bulletspeed = gun.data.bulletspeed
+					local isaiming = gun:isaiming()
+					local zoomval = menu:GetVal("Legit", "Trigger Bot", "Aim Percentage") / 100
+					--local shootallowed = menu:GetVal("Legit", "Trigger Bot", "Trigger When Aiming") and (isaiming and (client.zoommodspring.p > zoomval) or false) or true -- isaiming and (zoommodspring.p > zoomval) or false is somewhat redundant but oh well lmao
+					local shootallowed
+					
+					if menu:GetVal("Legit", "Trigger Bot", "Trigger When Aiming") then
+						shootallowed = isaiming and (client.zoommodspring.p >= zoomval) or false
+					else
+						shootallowed = true
+					end
+					
+					if shootallowed then
+						for player, bodyparts in next, getupvalue(client.replication.getallparts, 1) do
+							if player.Team ~= LOCAL_PLAYER.Team then
+								for bpartname, bodypart in next, bodyparts do
+									if bodypart:IsA("Part") and bodypart.Transparency == 0 and parts[bpartname] then
+										if camera:IsVisible(bodypart) then
+											local barrel = isaiming and gun.aimsightdata[1].sightpart or thebarrel
+											local delta = (bodypart.Position - barrel.Position)
+											local direction = client.trajectory(barrel.Position, GRAVITY, bodypart.Position, bulletspeed).Unit
+											local barrelLV = barrel.CFrame.LookVector
+											local normalized = barrelLV.unit
+											
+											local dot = normalized:Dot(direction)
+											
+											if delta.magnitude > 2050 then
+												if barrelLV.Y >= direction.Y then
+													local dist = delta.magnitude ^ -2.3
+													
+													local dotthreshold = 1 - dist
+													
+													if dot >= dotthreshold then
+														gun:shoot(true)
+														legitbot.triggerbotShooting = true
+														if isaiming then
+															gun:setaim(false)
+														end
 													end
 												end
-											end
-										else
-											local whitelist = {bodypart}
-											
-											if gun.type == "SHOTGUN" or gun.data.pelletcount then
-												table.insert(whitelist, sphereHitbox)
-												sphereHitbox.Position = bodypart.Position
-											end
-											
-											local hit, hitpos = workspace:FindPartOnRayWithWhitelist(Ray.new(barrel.Position, normalized * 4000), whitelist)
-											if hit and hit:IsDescendantOf(bodypart.Parent.Parent) or hit == sphereHitbox then
-												local hitdir = (hitpos - barrel.Position).unit
-												if hitdir:Dot(direction) > 0.9993 then
-													gun:shoot(true)
-													if isaiming then
-														gun:setaim(false)
+											else
+												local whitelist = {bodypart}
+												
+												if gun.type == "SHOTGUN" or gun.data.pelletcount then
+													table.insert(whitelist, sphereHitbox)
+													sphereHitbox.Position = bodypart.Position
+												end
+												
+												local hit, hitpos = workspace:FindPartOnRayWithWhitelist(Ray.new(barrel.Position, normalized * 4000), whitelist)
+												if hit and hit:IsDescendantOf(bodypart.Parent.Parent) or hit == sphereHitbox then
+													local hitdir = (hitpos - barrel.Position).unit
+													if hitdir:Dot(direction) > 0.9993 then
+														gun:shoot(true)
+														if isaiming then
+															gun:setaim(false)
+														end
 													end
 												end
 											end
 										end
+									elseif legitbot.triggerbotShooting then
+										gun:shoot(false)
+										legitbot.triggerbotShooting = false
 									end
-								elseif legitbot.triggerbotShooting then
-									gun:shoot(false)
-									legitbot.triggerbotShooting = false
 								end
 							end
 						end
 					end
+					--[[local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
+					
+					if hit and parts[hit.Name] then
+						if not camera:IsVisible(hit) then return end
+						client.logic.currentgun:shoot(true)
+						legitbot.triggerbotShooting = true
+					elseif legitbot.triggerbotShooting then
+						client.logic.currentgun:shoot(false)
+						legitbot.triggerbotShooting = false
+					end]]
+					debug.profileend("Legitbot Triggerbot")
 				end
-				--[[local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
 				
-				if hit and parts[hit.Name] then
-					if not camera:IsVisible(hit) then return end
-					client.logic.currentgun:shoot(true)
-					legitbot.triggerbotShooting = true
-				elseif legitbot.triggerbotShooting then
-					client.logic.currentgun:shoot(false)
-					legitbot.triggerbotShooting = false
-				end]]
-				debug.profileend("Legitbot Triggerbot")
+				
 			end
 			
 			
 		end
 		
-		
-	end
-
-	local newpart = client.particle.new
-	client.particle.new = function(P)
-		local new_speed
-		
-		if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
-			new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
+		local newpart = client.particle.new
+		client.particle.new = function(P)
+			local new_speed
+			
+			if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
+				new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
+			end
+			
+			local mag = new_speed or P.velocity.Magnitude
+			
+			if not P.thirdperson then
+				if menu:GetVal("Legit", "Bullet Redirection", "Silent Aim") and legitbot.silentVector then
+					P.velocity = legitbot.silentVector.Unit * mag
+				elseif menu:GetVal("Rage", "Aimbot", "Enabled") and ragebot.silentVector then
+					local oldpos = P.position
+					P.position = ragebot.firepos
+					P.velocity = ragebot.silentVector.Unit * mag
+					P.visualorigin = ragebot.firepos
+				else
+					if new_speed then
+						P.velocity = P.velocity.Unit * new_speed
+					end
+				end
+			end
 		end
 		
-		local mag = new_speed or P.velocity.Magnitude
 		
-		if not P.thirdperson then
-			if menu:GetVal("Legit", "Bullet Redirection", "Silent Aim") and legitbot.silentVector then
-				P.velocity = legitbot.silentVector.Unit * mag
-			elseif menu:GetVal("Rage", "Aimbot", "Enabled") and ragebot.silentVector then
-				local oldpos = P.position
-				P.position = ragebot.firepos
-				P.velocity = ragebot.silentVector.Unit * mag
-				P.visualorigin = ragebot.firepos
+		--ADS Fov hook
+		local crosshairColors
+		local function renderVisuals()
+			debug.profilebegin("renderVisuals Char")
+			client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
+			for i, frame in pairs(PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()) do
+				if not crosshairColors then crosshairColors = {
+					inline = frame.BackgroundColor3,
+					outline = frame.BorderColor3
+				} end -- MEOW -core 2021
+				local inline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color1", true)
+				local outline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color2", true)
+				local enabled = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color")
+				frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
+				frame.BorderColor3 = enabled and outline or crosshairColors.outline
+			end
+			
+			debug.profileend("renderVisuals Char")
+			--------------------------------------world funnies
+			debug.profilebegin("renderVisuals World")
+			if menu.options["Visuals"]["World Visuals"]["Force Time"][1] then
+				game.Lighting.ClockTime = menu.options["Visuals"]["World Visuals"]["Custom Time"][1] 
+			end
+			if menu.options["Visuals"]["World Visuals"]["Ambience"][1] then
+				game.Lighting.Ambient = RGB(menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
+				game.Lighting.OutdoorAmbient = RGB(menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
 			else
-				if new_speed then
-					P.velocity = P.velocity.Unit * new_speed
-				end
+				game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
+				game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
 			end
-		end
-		--[[if menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers") and not P.thirdperson then
-		local origin = P.position
-		local attach_origin = Instance.new("Attachment", workspace.Terrain)
-		attach_origin.Position = origin
-		local ending = origin + P.velocity.Unit * 300
-		local attach_ending = Instance.new("Attachment", workspace.Terrain)
-		attach_ending.Position = ending
-		local beam = misc:CreateBeam(attach_origin, attach_ending)
-		beam.Parent = workspace
-	end]]
-	newpart(P)
-	-- THIS IS SILENT AIM. :partying_face:🥳🥳🥳🥳🥳🥳
-	end
-
-
-	--ADS Fov hook
-	local crosshairColors
-	local function renderVisuals()
-		debug.profilebegin("renderVisuals Char")
-		client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
-		for i, frame in pairs(PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()) do
-			if not crosshairColors then crosshairColors = {
-				inline = frame.BackgroundColor3,
-				outline = frame.BorderColor3
-			} end -- MEOW -core 2021
-			local inline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color1", true)
-			local outline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color2", true)
-			local enabled = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color")
-			frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
-			frame.BorderColor3 = enabled and outline or crosshairColors.outline
-		end
-		
-		debug.profileend("renderVisuals Char")
-		--------------------------------------world funnies
-		debug.profilebegin("renderVisuals World")
-		if menu.options["Visuals"]["World Visuals"]["Force Time"][1] then
-			game.Lighting.ClockTime = menu.options["Visuals"]["World Visuals"]["Custom Time"][1] 
-		end
-		if menu.options["Visuals"]["World Visuals"]["Ambience"][1] then
-			game.Lighting.Ambient = RGB(menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
-			game.Lighting.OutdoorAmbient = RGB(menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
-		else
-			game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
-			game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
-		end
-		if menu.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
-			game.Lighting.MapSaturation.TintColor = RGB(menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
-			game.Lighting.MapSaturation.Saturation = menu.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
-		else
-			game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
-			game.Lighting.MapSaturation.Saturation = -0.25
-		end
-		debug.profileend("renderVisuals World")
-		
-		debug.profilebegin("renderVisuals Player ESP Reset")
-		-- TODO this reset may need to be improved to a large extent, it's taking up some time but idk if the frame times are becoming worse because of this
-		for k, v in pairs(allesp) do
-			for k1, v1 in pairs(v) do
-				if type(v1) ~= "table" then continue end
-				for k2, drawing in ipairs(v1) do
-					drawing.Visible = false
-				end
+			if menu.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
+				game.Lighting.MapSaturation.TintColor = RGB(menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
+				game.Lighting.MapSaturation.Saturation = menu.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
+			else
+				game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
+				game.Lighting.MapSaturation.Saturation = -0.25
 			end
-		end
-		
-		for k, v in ipairs(allesp.skel) do
-			for k1, v1 in ipairs(v) do
-				v1.Visible = false
-			end
-		end
-		
-		for k, v in pairs(wepesp) do
-			for k1, v1 in pairs(v) do
-				v1.Visible = false
-			end
-		end
-		
-		for k, v in pairs(nadeesp) do
-			for k1, v1 in pairs(v) do
-				v1.Visible = false
-			end
-		end
-		
-		debug.profileend("renderVisuals Player ESP Reset")
-		
-		----------
-		debug.profilebegin("renderVisuals Main")
-		if client.cam.type ~= "menu" then
+			debug.profileend("renderVisuals World")
 			
-			local players = Players:GetPlayers()
-			-- table.sort(players, function(p1, p2)
-			-- 	return table.find(menu.priority, p2.Name) ~= table.find(menu.priority, p1.Name) and table.find(menu.priority, p2.Name) == true and table.find(menu.priority, p1.Name) == false
-			-- end)
-			
-			local priority_color = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color", true)
-			local priority_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color")[4]/255
-			
-			local friend_color = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color", true)
-			local friend_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color")[4]/255
-			
-			local target_color = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
-			local target_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
-			
-			for Index, Player in ipairs(players) do
-				
-				if not client.hud:isplayeralive(Player) then continue end
-				local parts = client.replication.getbodyparts(Player)
-				
-				if not parts then continue end
-				
-				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
-				
-				if not menu:GetVal("ESP", GroupBox, "Enabled") then continue end
-				
-				Player.Character = parts.rootpart.Parent
-				
-				
-				local torso = parts.torso.CFrame
-				local cam = Camera.CFrame
-				
-				debug.profilebegin("renderVisuals Player ESP Box Calculation " .. Player.Name)
-				
-				local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
-				local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
-				
-				local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
-				local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
-				
-				-- local minY = math.abs(bottom.y - top.y)
-				-- local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
-				-- local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
-				
-				-- local boxSize = Vector2.new(sizeX, sizeY)
-				local _width = math.floor(math.abs(top.x - bottom.x))
-				local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width/2))
-				local boxSize = Vector2.new(math.floor(math.max(_height/1.5, _width)), _height)
-				local boxPosition = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.y, bottom.y)))
-				
-				debug.profileend("renderVisuals Player ESP Box Calculation " .. Player.Name)
-				
-				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
-				local health = math.ceil(client.hud:getplayerhealth(Player))
-				local spoty = 0
-				local boxtransparency = menu:GetVal("ESP", GroupBox, "Box", "color")[4] / 255
-				
-				local distance = math.floor((parts.rootpart.Position - client.cam.cframe.p).Magnitude/5)
-				
-				
-				if (topIsRendered or bottomIsRendered) then
-					if menu.options["ESP"][GroupBox]["Name"][1] then
-						
-						debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
-						
-						local name = tostring(Player.Name)
-						if menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
-							name = string.lower(name)
-						elseif menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
-							name = string.upper(name)
-						end
-						
-						allesp.text.name[Index].Text = string_cut(name, menu:GetVal("ESP", "ESP Settings", "Max Text Length"))
-						allesp.text.name[Index].Visible = true
-						allesp.text.name[Index].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
-						
-						debug.profileend("renderVisuals Player ESP Render Name " .. Player.Name)
-						
+			debug.profilebegin("renderVisuals Player ESP Reset")
+			-- TODO this reset may need to be improved to a large extent, it's taking up some time but idk if the frame times are becoming worse because of this
+			for k, v in pairs(allesp) do
+				for k1, v1 in pairs(v) do
+					if type(v1) ~= "table" then continue end
+					for k2, drawing in ipairs(v1) do
+						drawing.Visible = false
 					end
+				end
+			end
+			
+			for k, v in ipairs(allesp.skel) do
+				for k1, v1 in ipairs(v) do
+					v1.Visible = false
+				end
+			end
+			
+			for k, v in pairs(wepesp) do
+				for k1, v1 in pairs(v) do
+					v1.Visible = false
+				end
+			end
+			
+			for k, v in pairs(nadeesp) do
+				for k1, v1 in pairs(v) do
+					v1.Visible = false
+				end
+			end
+			
+			debug.profileend("renderVisuals Player ESP Reset")
+			
+			----------
+			debug.profilebegin("renderVisuals Main")
+			if client.cam.type ~= "menu" then
+				
+				local players = Players:GetPlayers()
+				-- table.sort(players, function(p1, p2)
+				-- 	return table.find(menu.priority, p2.Name) ~= table.find(menu.priority, p1.Name) and table.find(menu.priority, p2.Name) == true and table.find(menu.priority, p1.Name) == false
+				-- end)
+				
+				local priority_color = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color", true)
+				local priority_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color")[4]/255
+				
+				local friend_color = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color", true)
+				local friend_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color")[4]/255
+				
+				local target_color = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+				local target_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
+				
+				for Index, Player in ipairs(players) do
 					
-					if menu.options["ESP"][GroupBox]["Box"][1] then
-						debug.profilebegin("renderVisuals Player ESP Render Box " .. Player.Name)
-						for i = -1, 1 do
-							local box = allesp.box[i+2][Index]
-							box.Visible = true
-							box.Position = boxPosition + Vector2.new(i, i)
-							box.Size = boxSize - Vector2.new(i*2, i*2)
-							box.Transparency = boxtransparency
+					if not client.hud:isplayeralive(Player) then continue end
+					local parts = client.replication.getbodyparts(Player)
+					
+					if not parts then continue end
+					
+					local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
+					
+					if not menu:GetVal("ESP", GroupBox, "Enabled") then continue end
+					
+					Player.Character = parts.rootpart.Parent
+					
+					
+					local torso = parts.torso.CFrame
+					local cam = Camera.CFrame
+					
+					debug.profilebegin("renderVisuals Player ESP Box Calculation " .. Player.Name)
+					
+					local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
+					local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
+					
+					local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
+					local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
+					
+					-- local minY = math.abs(bottom.y - top.y)
+					-- local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
+					-- local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
+					
+					-- local boxSize = Vector2.new(sizeX, sizeY)
+					local _width = math.floor(math.abs(top.x - bottom.x))
+					local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width/2))
+					local boxSize = Vector2.new(math.floor(math.max(_height/1.5, _width)), _height)
+					local boxPosition = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.y, bottom.y)))
+					
+					debug.profileend("renderVisuals Player ESP Box Calculation " .. Player.Name)
+					
+					local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
+					local health = math.ceil(client.hud:getplayerhealth(Player))
+					local spoty = 0
+					local boxtransparency = menu:GetVal("ESP", GroupBox, "Box", "color")[4] / 255
+					
+					local distance = math.floor((parts.rootpart.Position - client.cam.cframe.p).Magnitude/5)
+					
+					
+					if (topIsRendered or bottomIsRendered) then
+						if menu.options["ESP"][GroupBox]["Name"][1] then
 							
-							if i ~= 0 then
-								box.Color = RGB(20, 20, 20)
+							debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
+							
+							local name = tostring(Player.Name)
+							if menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+								name = string.lower(name)
+							elseif menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+								name = string.upper(name)
 							end
-							--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+							
+							allesp.text.name[Index].Text = string_cut(name, menu:GetVal("ESP", "ESP Settings", "Max Text Length"))
+							allesp.text.name[Index].Visible = true
+							allesp.text.name[Index].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
+							
+							debug.profileend("renderVisuals Player ESP Render Name " .. Player.Name)
 							
 						end
-						debug.profileend("renderVisuals Player ESP Render Box " .. Player.Name)
-					end
-					
-					
-					if menu.options["ESP"][GroupBox]["Health Bar"][1] then
 						
-						debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. Player.Name)
+						if menu.options["ESP"][GroupBox]["Box"][1] then
+							debug.profilebegin("renderVisuals Player ESP Render Box " .. Player.Name)
+							for i = -1, 1 do
+								local box = allesp.box[i+2][Index]
+								box.Visible = true
+								box.Position = boxPosition + Vector2.new(i, i)
+								box.Size = boxSize - Vector2.new(i*2, i*2)
+								box.Transparency = boxtransparency
+								
+								if i ~= 0 then
+									box.Color = RGB(20, 20, 20)
+								end
+								--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+								
+							end
+							debug.profileend("renderVisuals Player ESP Render Box " .. Player.Name)
+						end
 						
-						local ySizeBar = -math.floor(boxSize.y * health / 100)
-						if menu:GetVal("ESP", GroupBox, "Health Number") and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+						
+						if menu.options["ESP"][GroupBox]["Health Bar"][1] then
+							
+							debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. Player.Name)
+							
+							local ySizeBar = -math.floor(boxSize.y * health / 100)
+							if menu:GetVal("ESP", GroupBox, "Health Number") and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+								local hptext = allesp.hp.text[Index]
+								hptext.Visible = true
+								hptext.Text = tostring(health)
+								
+								local tb = hptext.TextBounds
+								
+								hptext.Position = boxPosition + Vector2.new(-tb.x, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y * 0.5, boxSize.y))
+								hptext.Color = menu:GetVal("ESP", GroupBox, "Health Number", "color", true)
+								hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
+							end
+							
+							allesp.hp.outer[Index].Visible = true
+							allesp.hp.outer[Index].Position = Vector2.new(math.floor(boxPosition.x) - 6, math.floor(boxPosition.y) - 1)
+							allesp.hp.outer[Index].Size = Vector2.new(4, boxSize.y + 2)
+							
+							allesp.hp.inner[Index].Visible = true
+							allesp.hp.inner[Index].Position = Vector2.new(math.floor(boxPosition.x) - 5, math.floor(boxPosition.y + boxSize.y))
+							
+							allesp.hp.inner[Index].Size = Vector2.new(2, ySizeBar)
+							
+							allesp.hp.inner[Index].Color = ColorRange(health, {
+								[1] = {start = 0, color = menu:GetVal("ESP", GroupBox, "Health Bar", "color1", true)},
+								[2] = {start = 100, color = menu:GetVal("ESP", GroupBox, "Health Bar", "color2", true)}
+							})
+							
+							debug.profileend("renderVisuals Player ESP Render Health Bar " .. Player.Name)
+							
+						elseif menu.options["ESP"][GroupBox]["Health Number"][1] and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+							debug.profilebegin("renderVisuals Player ESP Render Health Number " .. Player.Name)
+							
 							local hptext = allesp.hp.text[Index]
+							
 							hptext.Visible = true
 							hptext.Text = tostring(health)
 							
 							local tb = hptext.TextBounds
 							
-							hptext.Position = boxPosition + Vector2.new(-tb.x, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y * 0.5, boxSize.y))
+							hptext.Position = boxPosition + Vector2.new(-tb.x, 0)
 							hptext.Color = menu:GetVal("ESP", GroupBox, "Health Number", "color", true)
-							hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
-						end
-						
-						allesp.hp.outer[Index].Visible = true
-						allesp.hp.outer[Index].Position = Vector2.new(math.floor(boxPosition.x) - 6, math.floor(boxPosition.y) - 1)
-						allesp.hp.outer[Index].Size = Vector2.new(4, boxSize.y + 2)
-						
-						allesp.hp.inner[Index].Visible = true
-						allesp.hp.inner[Index].Position = Vector2.new(math.floor(boxPosition.x) - 5, math.floor(boxPosition.y + boxSize.y))
-						
-						allesp.hp.inner[Index].Size = Vector2.new(2, ySizeBar)
-						
-						allesp.hp.inner[Index].Color = ColorRange(health, {
-							[1] = {start = 0, color = menu:GetVal("ESP", GroupBox, "Health Bar", "color1", true)},
-							[2] = {start = 100, color = menu:GetVal("ESP", GroupBox, "Health Bar", "color2", true)}
-						})
-						
-						debug.profileend("renderVisuals Player ESP Render Health Bar " .. Player.Name)
-						
-					elseif menu.options["ESP"][GroupBox]["Health Number"][1] and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
-						debug.profilebegin("renderVisuals Player ESP Render Health Number " .. Player.Name)
-						
-						local hptext = allesp.hp.text[Index]
-						
-						hptext.Visible = true
-						hptext.Text = tostring(health)
-						
-						local tb = hptext.TextBounds
-						
-						hptext.Position = boxPosition + Vector2.new(-tb.x, 0)
-						hptext.Color = menu:GetVal("ESP", GroupBox, "Health Number", "color", true)
-						hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
-						
-						debug.profileend("renderVisuals Player ESP Render Health Number " .. Player.Name)
-					end
-					
-					
-					if menu.options["ESP"][GroupBox]["Held Weapon"][1] then
-						
-						debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
-						
-						local charWeapon = _3pweps[Player]
-						local wepname = charWeapon and charWeapon or "???"
-						
-						if menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
-							wepname = string.lower(wepname)
-						elseif menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
-							wepname = string.upper(wepname)
-						end
-						
-						local weptext = allesp.text.weapon[Index]
-						
-						spoty += 12
-						weptext.Text = string_cut(wepname, menu:GetVal("ESP", "ESP Settings", "Max Text Length"))
-						weptext.Visible = true
-						weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
-						
-						debug.profileend("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
-						
-					end
-					
-					if menu.options["ESP"][GroupBox]["Distance"][1] then
-						
-						debug.profilebegin("renderVisuals Player ESP Render Distance " .. Player.Name)
-						
-						local disttext = allesp.text.distance[Index]
-						
-						disttext.Text = tostring(distance).."m"
-						disttext.Visible = true
-						disttext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y + spoty)
-						
-						debug.profileend("renderVisuals Player ESP Render Distance " .. Player.Name)
-						
-					end
-					
-					if menu.options["ESP"][GroupBox]["Skeleton"][1] then
-						
-						debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. Player.Name)
-						
-						local torso = Camera:WorldToViewportPoint(Player.Character.Torso.Position)
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
+							hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
 							
-							local posie = Camera:WorldToViewportPoint(Player.Character:FindFirstChild(v2).Position)
-							line.From = Vector2.new(posie.x, posie.y)
-							line.To = Vector2.new(torso.x, torso.y)
-							line.Visible = true
+							debug.profileend("renderVisuals Player ESP Render Health Number " .. Player.Name)
+						end
+						
+						
+						if menu.options["ESP"][GroupBox]["Held Weapon"][1] then
 							
-						end
-						debug.profileend("renderVisuals Player ESP Render Skeleton" .. Player.Name)
-					end
-					--da colourz !!! :D 🔥🔥🔥🔥
-					
-					if menu:GetVal("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
-						
-						
-						allesp.text.name[Index].Color = priority_color
-						allesp.text.name[Index].Transparency = priority_trans
-						
-						allesp.box[2][Index].Color = priority_color
-						
-						allesp.text.weapon[Index].Color = priority_color
-						allesp.text.weapon[Index].Transparency = priority_trans
-						
-						allesp.text.distance[Index].Color = priority_color
-						allesp.text.distance[Index].Transparency = priority_trans
-						
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
-							line.Color = priority_color
-							line.Transparency = priority_trans
-						end
-						
-						
-					elseif menu:GetVal("ESP", "ESP Settings", "Highlight Friends") and table.find(menu.friends, Player.Name) then
-						
-						allesp.text.name[Index].Color = friend_color
-						allesp.text.name[Index].Transparency = friend_trans
-						
-						allesp.box[2][Index].Color = friend_color
-						
-						allesp.text.weapon[Index].Color = friend_color
-						allesp.text.weapon[Index].Transparency = friend_trans
-						
-						allesp.text.distance[Index].Color = friend_color
-						allesp.text.distance[Index].Transparency = friend_trans
-						
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
-							line.Color = friend_color
-							line.Transparency = friend_trans
-						end
-					elseif menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target)  then
-						
-						allesp.text.name[Index].Color = target_color
-						allesp.text.name[Index].Transparency = target_trans
-						
-						allesp.box[2][Index].Color = target_color
-						
-						allesp.text.weapon[Index].Color = target_color
-						allesp.text.weapon[Index].Transparency = target_trans
-						
-						allesp.text.distance[Index].Color = target_color
-						allesp.text.distance[Index].Transparency = target_trans
-						
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
-							line.Color = target_color
-							line.Transparency = target_trans
-						end
-					else
-						
-						
-						allesp.text.name[Index].Color = menu:GetVal("ESP", GroupBox, "Name", "color", true) -- RGB(menu.options["ESP"][GroupBox]["Name"][5][1][1], menu.options["ESP"][GroupBox]["Name"][5][1][2], menu.options["ESP"][GroupBox]["Name"][5][1][3])
-						allesp.text.name[Index].Transparency = menu:GetVal("ESP", GroupBox, "Name", "color")[4]/255
-						
-						allesp.box[2][Index].Color = menu:GetVal("ESP", GroupBox, "Box", "color", true)
-						
-						allesp.text.weapon[Index].Color = menu:GetVal("ESP", GroupBox, "Held Weapon", "color", true)
-						allesp.text.weapon[Index].Transparency = menu:GetVal("ESP", GroupBox, "Held Weapon", "color")[4]/255
-						
-						allesp.text.distance[Index].Color = menu:GetVal("ESP", GroupBox, "Distance", "color", true)
-						allesp.text.distance[Index].Transparency = menu:GetVal("ESP", GroupBox, "Distance", "color")[4]/255
-						
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
-							line.Color = menu:GetVal("ESP", GroupBox, "Skeleton", "color", true)
-							line.Transparency = menu:GetVal("ESP", GroupBox, "Skeleton", "color")[4]/255
-						end
-					end
-					
-				elseif GroupBox == "Enemy ESP" and menu:GetVal("ESP", "Enemy ESP", "Out of View") then
-					debug.profilebegin("renderVisuals Player ESP Render Out of View " .. Player.Name)
-					local color = menu:GetVal("ESP", "Enemy ESP", "Out of View", "color", true)
-					local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
-					if menu:GetVal("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
-						color = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color", true)
-						color2 = bColor:Mult(color, 0.6)
-					elseif menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
-						color = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color", true)
-						color2 = bColor:Mult(color, 0.6)
-					elseif menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
-						color = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
-						color2 = bColor:Mult(color, 0.6)
-					end
-					for i = 1, 2 do
-						local Tri = allesp.arrows[i][Index]
-						
-						local partCFrame = Player.Character.HumanoidRootPart.CFrame -- these HAVE to move now theres no way
-						
-						Tri.Visible = true
-						
-						local relativePos = Camera.CFrame:PointToObjectSpace(partCFrame.Position)
-						local direction = math.atan2(-relativePos.y, relativePos.x)
-						
-						local distance = relativePos.Magnitude
-						local arrow_size = menu:GetVal("ESP", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
-						arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
-						
-						direction = Vector2.new(math.cos(direction), math.sin(direction))
-						
-						local pos = (direction * SCREEN_SIZE.y * menu:GetVal("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
-						
-						Tri.PointA = pos
-						Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
-						Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
-						
-						Tri.Color = i == 1 and color or color2
-						Tri.Transparency = menu:GetVal("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
-					end
-					debug.profileend("renderVisuals Player ESP Render Out of View " .. Player.Name)
-				end
-				
-			end
-			
-			--ANCHOR weapon esp
-			if menu:GetVal("ESP", "Dropped ESP", "Weapon Name") or menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo") then
-				debug.profilebegin("renderVisuals Dropped ESP")
-				local gunnum = 0
-				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
-					CreateThread(function()
-						if not client then return end
-						if v.Name == "Dropped" then
-							local gunpos = v.Slot1.Position
-							local gun_dist = (gunpos - client.cam.cframe.p).Magnitude
-							if gun_dist > 80 then return end
-							local hasgun = false
-							local gunpos2d, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(gunpos)
-							for k1, v1 in pairs(v:GetChildren()) do
-								if tostring(v1) == "Gun" then
-									hasgun = true
-									break
-								end
+							debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
+							
+							local charWeapon = _3pweps[Player]
+							local wepname = charWeapon and charWeapon or "???"
+							
+							if menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+								wepname = string.lower(wepname)
+							elseif menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+								wepname = string.upper(wepname)
 							end
 							
-							if gun_on_screen and gunnum <= 50 and hasgun then
-								gunnum = gunnum + 1
-								local gunclearness = 1
-								if gun_dist >= 50 then
-									local closedist = gun_dist - 50
-									gunclearness = 1 - (1 * closedist/30)
+							local weptext = allesp.text.weapon[Index]
+							
+							spoty += 12
+							weptext.Text = string_cut(wepname, menu:GetVal("ESP", "ESP Settings", "Max Text Length"))
+							weptext.Visible = true
+							weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
+							
+							debug.profileend("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
+							
+						end
+						
+						if menu.options["ESP"][GroupBox]["Distance"][1] then
+							
+							debug.profilebegin("renderVisuals Player ESP Render Distance " .. Player.Name)
+							
+							local disttext = allesp.text.distance[Index]
+							
+							disttext.Text = tostring(distance).."m"
+							disttext.Visible = true
+							disttext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y + spoty)
+							
+							debug.profileend("renderVisuals Player ESP Render Distance " .. Player.Name)
+							
+						end
+						
+						if menu.options["ESP"][GroupBox]["Skeleton"][1] then
+							
+							debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. Player.Name)
+							
+							local torso = Camera:WorldToViewportPoint(Player.Character.Torso.Position)
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+								
+								local posie = Camera:WorldToViewportPoint(Player.Character:FindFirstChild(v2).Position)
+								line.From = Vector2.new(posie.x, posie.y)
+								line.To = Vector2.new(torso.x, torso.y)
+								line.Visible = true
+								
+							end
+							debug.profileend("renderVisuals Player ESP Render Skeleton" .. Player.Name)
+						end
+						--da colourz !!! :D 🔥🔥🔥🔥
+						
+						if menu:GetVal("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
+							
+							
+							allesp.text.name[Index].Color = priority_color
+							allesp.text.name[Index].Transparency = priority_trans
+							
+							allesp.box[2][Index].Color = priority_color
+							
+							allesp.text.weapon[Index].Color = priority_color
+							allesp.text.weapon[Index].Transparency = priority_trans
+							
+							allesp.text.distance[Index].Color = priority_color
+							allesp.text.distance[Index].Transparency = priority_trans
+							
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+								line.Color = priority_color
+								line.Transparency = priority_trans
+							end
+							
+							
+						elseif menu:GetVal("ESP", "ESP Settings", "Highlight Friends") and table.find(menu.friends, Player.Name) then
+							
+							allesp.text.name[Index].Color = friend_color
+							allesp.text.name[Index].Transparency = friend_trans
+							
+							allesp.box[2][Index].Color = friend_color
+							
+							allesp.text.weapon[Index].Color = friend_color
+							allesp.text.weapon[Index].Transparency = friend_trans
+							
+							allesp.text.distance[Index].Color = friend_color
+							allesp.text.distance[Index].Transparency = friend_trans
+							
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+								line.Color = friend_color
+								line.Transparency = friend_trans
+							end
+						elseif menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target)  then
+							
+							allesp.text.name[Index].Color = target_color
+							allesp.text.name[Index].Transparency = target_trans
+							
+							allesp.box[2][Index].Color = target_color
+							
+							allesp.text.weapon[Index].Color = target_color
+							allesp.text.weapon[Index].Transparency = target_trans
+							
+							allesp.text.distance[Index].Color = target_color
+							allesp.text.distance[Index].Transparency = target_trans
+							
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+								line.Color = target_color
+								line.Transparency = target_trans
+							end
+						else
+							
+							
+							allesp.text.name[Index].Color = menu:GetVal("ESP", GroupBox, "Name", "color", true) -- RGB(menu.options["ESP"][GroupBox]["Name"][5][1][1], menu.options["ESP"][GroupBox]["Name"][5][1][2], menu.options["ESP"][GroupBox]["Name"][5][1][3])
+							allesp.text.name[Index].Transparency = menu:GetVal("ESP", GroupBox, "Name", "color")[4]/255
+							
+							allesp.box[2][Index].Color = menu:GetVal("ESP", GroupBox, "Box", "color", true)
+							
+							allesp.text.weapon[Index].Color = menu:GetVal("ESP", GroupBox, "Held Weapon", "color", true)
+							allesp.text.weapon[Index].Transparency = menu:GetVal("ESP", GroupBox, "Held Weapon", "color")[4]/255
+							
+							allesp.text.distance[Index].Color = menu:GetVal("ESP", GroupBox, "Distance", "color", true)
+							allesp.text.distance[Index].Transparency = menu:GetVal("ESP", GroupBox, "Distance", "color")[4]/255
+							
+							for k2, v2 in ipairs(skelparts) do
+								local line = allesp.skel[k2][Index]
+								line.Color = menu:GetVal("ESP", GroupBox, "Skeleton", "color", true)
+								line.Transparency = menu:GetVal("ESP", GroupBox, "Skeleton", "color")[4]/255
+							end
+						end
+						
+					elseif GroupBox == "Enemy ESP" and menu:GetVal("ESP", "Enemy ESP", "Out of View") then
+						debug.profilebegin("renderVisuals Player ESP Render Out of View " .. Player.Name)
+						local color = menu:GetVal("ESP", "Enemy ESP", "Out of View", "color", true)
+						local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
+						if menu:GetVal("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
+							color = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color", true)
+							color2 = bColor:Mult(color, 0.6)
+						elseif menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
+							color = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color", true)
+							color2 = bColor:Mult(color, 0.6)
+						elseif menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
+							color = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+							color2 = bColor:Mult(color, 0.6)
+						end
+						for i = 1, 2 do
+							local Tri = allesp.arrows[i][Index]
+							
+							local partCFrame = Player.Character.HumanoidRootPart.CFrame -- these HAVE to move now theres no way
+							
+							Tri.Visible = true
+							
+							local relativePos = Camera.CFrame:PointToObjectSpace(partCFrame.Position)
+							local direction = math.atan2(-relativePos.y, relativePos.x)
+							
+							local distance = relativePos.Magnitude
+							local arrow_size = menu:GetVal("ESP", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
+							arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
+							
+							direction = Vector2.new(math.cos(direction), math.sin(direction))
+							
+							local pos = (direction * SCREEN_SIZE.y * menu:GetVal("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
+							
+							Tri.PointA = pos
+							Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
+							Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
+							
+							Tri.Color = i == 1 and color or color2
+							Tri.Transparency = menu:GetVal("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
+						end
+						debug.profileend("renderVisuals Player ESP Render Out of View " .. Player.Name)
+					end
+					
+				end
+				
+				--ANCHOR weapon esp
+				if menu:GetVal("ESP", "Dropped ESP", "Weapon Name") or menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo") then
+					debug.profilebegin("renderVisuals Dropped ESP")
+					local gunnum = 0
+					for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
+						CreateThread(function()
+							if not client then return end
+							if v.Name == "Dropped" then
+								local gunpos = v.Slot1.Position
+								local gun_dist = (gunpos - client.cam.cframe.p).Magnitude
+								if gun_dist > 80 then return end
+								local hasgun = false
+								local gunpos2d, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(gunpos)
+								for k1, v1 in pairs(v:GetChildren()) do
+									if tostring(v1) == "Gun" then
+										hasgun = true
+										break
+									end
 								end
 								
-								if menu:GetVal("ESP", "Dropped ESP", "Weapon Name") then
-									wepesp.name[gunnum].Text = v.Gun.Value
-									wepesp.name[gunnum].Color = menu:GetVal("ESP", "Dropped ESP", "Weapon Name", "color", true)
-									wepesp.name[gunnum].Transparency = menu:GetVal("ESP", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
-									wepesp.name[gunnum].Visible = true
-									wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
-								end
-								if menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo") then
-									wepesp.ammo[gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
-									wepesp.ammo[gunnum].Color = menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo", "color", true)
-									wepesp.ammo[gunnum].Transparency = menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
-									wepesp.ammo[gunnum].Visible = true
-									wepesp.ammo[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
+								if gun_on_screen and gunnum <= 50 and hasgun then
+									gunnum = gunnum + 1
+									local gunclearness = 1
+									if gun_dist >= 50 then
+										local closedist = gun_dist - 50
+										gunclearness = 1 - (1 * closedist/30)
+									end
+									
+									if menu:GetVal("ESP", "Dropped ESP", "Weapon Name") then
+										wepesp.name[gunnum].Text = v.Gun.Value
+										wepesp.name[gunnum].Color = menu:GetVal("ESP", "Dropped ESP", "Weapon Name", "color", true)
+										wepesp.name[gunnum].Transparency = menu:GetVal("ESP", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
+										wepesp.name[gunnum].Visible = true
+										wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
+									end
+									if menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo") then
+										wepesp.ammo[gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
+										wepesp.ammo[gunnum].Color = menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo", "color", true)
+										wepesp.ammo[gunnum].Transparency = menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
+										wepesp.ammo[gunnum].Visible = true
+										wepesp.ammo[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
+									end
 								end
 							end
-						end
-					end)
+						end)
+					end
+					debug.profileend("renderVisuals Dropped ESP")
 				end
-				debug.profileend("renderVisuals Dropped ESP")
-			end
-			
-			debug.profilebegin("renderVisuals Dropped ESP Nade Warning")
-			if menu:GetVal("ESP", "Dropped ESP", "Nade Warning") then
-				local nadenum = 0
-				local health = client.char:gethealth()
-				local color1 = menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color", true)
-				local color2 = RGB(menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color")[1] - 20, menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color")[2] - 20, menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color")[3] - 20)
-				for index, nade in pairs(menu.activenades) do
-					local headpos = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Head.Position or Vector3.new()
-					local nade_dist = (nade.blowupat - headpos).Magnitude
-					local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
-					
-					if nade_dist <= 80 then
+				
+				debug.profilebegin("renderVisuals Dropped ESP Nade Warning")
+				if menu:GetVal("ESP", "Dropped ESP", "Nade Warning") then
+					local nadenum = 0
+					local health = client.char:gethealth()
+					local color1 = menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color", true)
+					local color2 = RGB(menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color")[1] - 20, menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color")[2] - 20, menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color")[3] - 20)
+					for index, nade in pairs(menu.activenades) do
+						local headpos = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Head.Position or Vector3.new()
+						local nade_dist = (nade.blowupat - headpos).Magnitude
+						local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
 						
-						local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
-						
-						if not nade_on_screen then
+						if nade_dist <= 80 then
 							
-							local relativePos = Camera.CFrame:PointToObjectSpace(nade.blowupat)
-							local angle = math.atan2(-relativePos.y, relativePos.x)
-							local ox = math.cos(angle)
-							local oy = math.sin(angle)
-							local slope = (oy)/(ox)
+							local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
 							
-							local h_edge = SCREEN_SIZE.x - 36
-							local v_edge = SCREEN_SIZE.y - 72
-							if oy < 0 then
-								v_edge = 0
+							if not nade_on_screen then
+								
+								local relativePos = Camera.CFrame:PointToObjectSpace(nade.blowupat)
+								local angle = math.atan2(-relativePos.y, relativePos.x)
+								local ox = math.cos(angle)
+								local oy = math.sin(angle)
+								local slope = (oy)/(ox)
+								
+								local h_edge = SCREEN_SIZE.x - 36
+								local v_edge = SCREEN_SIZE.y - 72
+								if oy < 0 then
+									v_edge = 0
+								end
+								if ox < 0 then
+									h_edge = 36
+								end
+								local y = (slope * h_edge) + (SCREEN_SIZE.y / 2) - slope * (SCREEN_SIZE.x / 2)
+								if y > 0 and y < SCREEN_SIZE.y - 72 then
+									nadepos = Vector2.new(h_edge, y)
+								else
+									nadepos = Vector2.new((v_edge - SCREEN_SIZE.y / 2 + slope * (SCREEN_SIZE.x / 2))/slope, v_edge)
+								end
+								
 							end
-							if ox < 0 then
-								h_edge = 36
-							end
-							local y = (slope * h_edge) + (SCREEN_SIZE.y / 2) - slope * (SCREEN_SIZE.x / 2)
-							if y > 0 and y < SCREEN_SIZE.y - 72 then
-								nadepos = Vector2.new(h_edge, y)
-							else
-								nadepos = Vector2.new((v_edge - SCREEN_SIZE.y / 2 + slope * (SCREEN_SIZE.x / 2))/slope, v_edge)
+							nadenum += 1
+							--
+							nadeesp.outer_c[nadenum].Visible = true
+							nadeesp.outer_c[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
+							
+							nadeesp.inner_c[nadenum].Visible = true
+							nadeesp.inner_c[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
+							
+							nadeesp.text[nadenum].Visible = true
+							nadeesp.text[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 10, math.floor(nadepos.y + 10))
+							
+							nadeesp.distance[nadenum].Visible = true
+							nadeesp.distance[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
+							
+							local d0 = 250 -- max damage
+							local d1 = 15 -- min damage
+							local r0 = 8 -- maximum range before the damage starts dropping off due to distance
+							local r1 = 30 -- minimum range i think idk
+							
+							local damage = nade_dist < r0 and d0 or nade_dist < r1 and (d1-d0) / (r1-r0) * (nade_dist-r0) + d0 or 0
+							
+							local wall
+							if damage > 0 then
+								wall = workspace:FindPartOnRayWithWhitelist(Ray.new(headpos, (nade.blowupat - headpos)), client.roundsystem.raycastwhitelist)
+								if wall then damage = 0 end
 							end
 							
-						end
-						nadenum += 1
-						--
-						nadeesp.outer_c[nadenum].Visible = true
-						nadeesp.outer_c[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
-						
-						nadeesp.inner_c[nadenum].Visible = true
-						nadeesp.inner_c[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
-						
-						nadeesp.text[nadenum].Visible = true
-						nadeesp.text[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 10, math.floor(nadepos.y + 10))
-						
-						nadeesp.distance[nadenum].Visible = true
-						nadeesp.distance[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
-						
-						local d0 = 250 -- max damage
-						local d1 = 15 -- min damage
-						local r0 = 8 -- maximum range before the damage starts dropping off due to distance
-						local r1 = 30 -- minimum range i think idk
-						
-						local damage = nade_dist < r0 and d0 or nade_dist < r1 and (d1-d0) / (r1-r0) * (nade_dist-r0) + d0 or 0
-						
-						local wall
-						if damage > 0 then
-							wall = workspace:FindPartOnRayWithWhitelist(Ray.new(headpos, (nade.blowupat - headpos)), client.roundsystem.raycastwhitelist)
-							if wall then damage = 0 end
-						end
-						
-						local str = damage == 0 and "Safe" or damage >= health and "LETHAL" or string.format("-%d hp", damage)
-						nadeesp.distance[nadenum].Text = str
-						
-						nadeesp.outer_c[nadenum].Color = ColorRange(damage, {
-							[1] = {start = 15, color = RGB(20, 20, 20)},
-							[2] = {start = health, color = RGB(150, 20, 20)}
-						})
-						
-						nadeesp.inner_c[nadenum].Color = ColorRange(damage, {
-							[1] = {start = 15, color = RGB(50, 50, 50)},
-							[2] = {start = health, color = RGB(220, 20, 20)}
-						})
-						
-						nadeesp.bar_outer[nadenum].Visible = true
-						nadeesp.bar_outer[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 16, math.floor(nadepos.y + 50))
-						
-						nadeesp.bar_inner[nadenum].Visible = true
-						nadeesp.bar_inner[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
-						
-						--print(nade.blowuptick - nade.start)
-						
-						nadeesp.bar_moving_1[nadenum].Visible = true
-						nadeesp.bar_moving_1[nadenum].Size = Vector2.new(30 * (1 - nade_percent), 2)
-						nadeesp.bar_moving_1[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
-						nadeesp.bar_moving_1[nadenum].Color = color1
-						
-						nadeesp.bar_moving_2[nadenum].Visible = true
-						nadeesp.bar_moving_2[nadenum].Size = Vector2.new(30 * (1 - nade_percent), 2)
-						nadeesp.bar_moving_2[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 53))
-						nadeesp.bar_moving_2[nadenum].Color = color2
-						
-						
-						local tranz = 1
-						if nade_dist >= 50 then
-							local closedist = nade_dist - 50
-							tranz = 1 - (1 * closedist/30)
-						end
-						
-						for k, v in pairs(nadeesp) do
-							v[nadenum].Transparency = tranz
+							local str = damage == 0 and "Safe" or damage >= health and "LETHAL" or string.format("-%d hp", damage)
+							nadeesp.distance[nadenum].Text = str
+							
+							nadeesp.outer_c[nadenum].Color = ColorRange(damage, {
+								[1] = {start = 15, color = RGB(20, 20, 20)},
+								[2] = {start = health, color = RGB(150, 20, 20)}
+							})
+							
+							nadeesp.inner_c[nadenum].Color = ColorRange(damage, {
+								[1] = {start = 15, color = RGB(50, 50, 50)},
+								[2] = {start = health, color = RGB(220, 20, 20)}
+							})
+							
+							nadeesp.bar_outer[nadenum].Visible = true
+							nadeesp.bar_outer[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 16, math.floor(nadepos.y + 50))
+							
+							nadeesp.bar_inner[nadenum].Visible = true
+							nadeesp.bar_inner[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
+							
+							--print(nade.blowuptick - nade.start)
+							
+							nadeesp.bar_moving_1[nadenum].Visible = true
+							nadeesp.bar_moving_1[nadenum].Size = Vector2.new(30 * (1 - nade_percent), 2)
+							nadeesp.bar_moving_1[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
+							nadeesp.bar_moving_1[nadenum].Color = color1
+							
+							nadeesp.bar_moving_2[nadenum].Visible = true
+							nadeesp.bar_moving_2[nadenum].Size = Vector2.new(30 * (1 - nade_percent), 2)
+							nadeesp.bar_moving_2[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 53))
+							nadeesp.bar_moving_2[nadenum].Color = color2
+							
+							
+							local tranz = 1
+							if nade_dist >= 50 then
+								local closedist = nade_dist - 50
+								tranz = 1 - (1 * closedist/30)
+							end
+							
+							for k, v in pairs(nadeesp) do
+								v[nadenum].Transparency = tranz
+							end
+							
 						end
 						
 					end
 					
 				end
 				
-			end
-			
-			debug.profileend("renderVisuals Dropped ESP Nade Warning")
-			
-			debug.profilebegin("renderVisuals Local Visuals")
-			
-			CreateThread(function() -- hand chams and such
-				if not client then return end
-				local vm = workspace.Camera:GetChildren()
-				if menu:GetVal("Visuals", "Local Visuals", "Arm Chams") then
-					
-					local material = menu:GetVal("Visuals", "Local Visuals", "Arm Material")
-					
-					for k, v in pairs(vm) do
-						if v.Name == "Left Arm" or v.Name == "Right Arm" then
-							for k1, v1 in pairs(v:GetChildren()) do
-								v1.Color = menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color2", true)
-								if not client.fakecharacter then
-									v1.Transparency = 1 + (menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color2")[4]/-255)
-								else
-									v1.Transparency = 1
-								end
-								v1.Material = mats[material]
-								if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
-									v1.Color = menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color1", true)
+				debug.profileend("renderVisuals Dropped ESP Nade Warning")
+				
+				debug.profilebegin("renderVisuals Local Visuals")
+				
+				CreateThread(function() -- hand chams and such
+					if not client then return end
+					local vm = workspace.Camera:GetChildren()
+					if menu:GetVal("Visuals", "Local Visuals", "Arm Chams") then
+						
+						local material = menu:GetVal("Visuals", "Local Visuals", "Arm Material")
+						
+						for k, v in pairs(vm) do
+							if v.Name == "Left Arm" or v.Name == "Right Arm" then
+								for k1, v1 in pairs(v:GetChildren()) do
+									v1.Color = menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color2", true)
 									if not client.fakecharacter then
-										v1.Transparency = 1 + (menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color1")[4]/-255)
+										v1.Transparency = 1 + (menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color2")[4]/-255)
 									else
 										v1.Transparency = 1
 									end
-									if v1.TextureID and tostring(material) ~= "ForceField" then
-										v1.TextureID = ""
-									else
-										v1.TextureID = "rbxassetid://2163189692"
+									v1.Material = mats[material]
+									if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
+										v1.Color = menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color1", true)
+										if not client.fakecharacter then
+											v1.Transparency = 1 + (menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color1")[4]/-255)
+										else
+											v1.Transparency = 1
+										end
+										if v1.TextureID and tostring(material) ~= "ForceField" then
+											v1.TextureID = ""
+										else
+											v1.TextureID = "rbxassetid://2163189692"
+										end
+										v1:ClearAllChildren()
 									end
-									v1:ClearAllChildren()
 								end
 							end
 						end
 					end
-				end
-				if menu:GetVal("Visuals", "Local Visuals", "Weapon Chams") then
-					for k, v in pairs(vm) do
-						if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
-							for k1, v1 in pairs(v:GetChildren()) do
-								
-								v1.Color = menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color1", true)
-								
-								if v1.Transparency ~= 1 then
-									v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
-								end
-								
-								if menu:GetVal("Visuals", "Local Visuals", "Remove Weapon Skin") then
-									for i2, v2 in pairs(v1:GetChildren()) do
-										if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
-											v2:Destroy()
-										end
-									end
-								end
-								
-								local mat = mats[menu:GetVal("Visuals", "Local Visuals", "Weapon Material")]
-								v1.Material = mat
-								
-								if v1:IsA("UnionOperation") then
-									v1.UsePartColor = true
-								end
-								
-								if v1.ClassName == "MeshPart" then
-									v1.TextureID = mat == "ForceField" and "rbxassetid://5843010904" or ""
-								end
-								
-								if v1.Name == "LaserLight" then
-									local transparency = 1+(menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
-									v1.Color = menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
-									v1.Transparency = (transparency / 2) + 0.5
-									v1.Material = "ForceField"
+					if menu:GetVal("Visuals", "Local Visuals", "Weapon Chams") then
+						for k, v in pairs(vm) do
+							if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
+								for k1, v1 in pairs(v:GetChildren()) do
 									
-								elseif v1.Name == "SightMark" then
-									if v1:FindFirstChild("SurfaceGui") then
-										local color = menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
+									v1.Color = menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color1", true)
+									
+									if v1.Transparency ~= 1 then
+										v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+									end
+									
+									if menu:GetVal("Visuals", "Local Visuals", "Remove Weapon Skin") then
+										for i2, v2 in pairs(v1:GetChildren()) do
+											if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
+												v2:Destroy()
+											end
+										end
+									end
+									
+									local mat = mats[menu:GetVal("Visuals", "Local Visuals", "Weapon Material")]
+									v1.Material = mat
+									
+									if v1:IsA("UnionOperation") then
+										v1.UsePartColor = true
+									end
+									
+									if v1.ClassName == "MeshPart" then
+										v1.TextureID = mat == "ForceField" and "rbxassetid://5843010904" or ""
+									end
+									
+									if v1.Name == "LaserLight" then
 										local transparency = 1+(menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
-										v1.SurfaceGui.Border.Scope.ImageColor3 = color
-										v1.SurfaceGui.Border.Scope.ImageTransparency = transparency
-										if v1.SurfaceGui:FindFirstChild("Margins") then
-											v1.SurfaceGui.Margins.BackgroundColor3 = color
-											v1.SurfaceGui.Margins.ImageColor3 = color
-											v1.SurfaceGui.Margins.ImageTransparency = (transparency/5) + 0.7
-										elseif v1.SurfaceGui:FindFirstChild("Border") then
-											v1.SurfaceGui.Border.BackgroundColor3 = color
-											v1.SurfaceGui.Border.ImageColor3 = color
-											v1.SurfaceGui.Border.ImageTransparency = 1
+										v1.Color = menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
+										v1.Transparency = (transparency / 2) + 0.5
+										v1.Material = "ForceField"
+										
+									elseif v1.Name == "SightMark" then
+										if v1:FindFirstChild("SurfaceGui") then
+											local color = menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
+											local transparency = 1+(menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
+											v1.SurfaceGui.Border.Scope.ImageColor3 = color
+											v1.SurfaceGui.Border.Scope.ImageTransparency = transparency
+											if v1.SurfaceGui:FindFirstChild("Margins") then
+												v1.SurfaceGui.Margins.BackgroundColor3 = color
+												v1.SurfaceGui.Margins.ImageColor3 = color
+												v1.SurfaceGui.Margins.ImageTransparency = (transparency/5) + 0.7
+											elseif v1.SurfaceGui:FindFirstChild("Border") then
+												v1.SurfaceGui.Border.BackgroundColor3 = color
+												v1.SurfaceGui.Border.ImageColor3 = color
+												v1.SurfaceGui.Border.ImageTransparency = 1
+											end
 										end
 									end
 								end
 							end
 						end
 					end
-				end
-			end)
-			
-			debug.profileend("renderVisuals Local Visuals")
-			
-			
-		end
-		debug.profileend("renderVisuals Main")
-		debug.profilebegin("renderVisuals No Scope")
-		do -- no scope pasted from v1 lol
-			local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
-			local frame = gui.MainGui:FindFirstChild("ScopeFrame")
-			if menu:GetVal("Visuals", "Camera Visuals", "No Scope Border") and frame then
-				if frame:FindFirstChild("SightRear") then
-					for k,v in pairs(frame.SightRear:GetChildren()) do
-						if v.ClassName == "Frame" then
-							v.Visible = false
+				end)
+				
+				debug.profileend("renderVisuals Local Visuals")
+				
+				
+			end
+			debug.profileend("renderVisuals Main")
+			debug.profilebegin("renderVisuals No Scope")
+			do -- no scope pasted from v1 lol
+				local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
+				local frame = gui.MainGui:FindFirstChild("ScopeFrame")
+				if menu:GetVal("Visuals", "Camera Visuals", "No Scope Border") and frame then
+					if frame:FindFirstChild("SightRear") then
+						for k,v in pairs(frame.SightRear:GetChildren()) do
+							if v.ClassName == "Frame" then
+								v.Visible = false
+							end
 						end
+						frame.SightFront.Visible = false
+						frame.SightRear.ImageTransparency = 1
 					end
-					frame.SightFront.Visible = false
-					frame.SightRear.ImageTransparency = 1
-				end
-			elseif frame then
-				if frame:FindFirstChild("SightRear") then
-					for k,v in pairs(frame.SightRear:GetChildren()) do
-						if v.ClassName == "Frame" then
-							v.Visible = true
+				elseif frame then
+					if frame:FindFirstChild("SightRear") then
+						for k,v in pairs(frame.SightRear:GetChildren()) do
+							if v.ClassName == "Frame" then
+								v.Visible = true
+							end
 						end
+						frame.SightFront.Visible = true
+						frame.SightRear.ImageTransparency = 0
 					end
-					frame.SightFront.Visible = true
-					frame.SightRear.ImageTransparency = 0
 				end
 			end
+			debug.profileend("renderVisuals No Scope")
 		end
-		debug.profileend("renderVisuals No Scope")
-	end
-
-	menu.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild) -- this didn't end up working well with localragdoll hook
-	if menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams") then
-		local children = newchild:GetChildren()
-		for i = 1, #children do
-			local curvalue = children[i]
-			if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" then
-				
-				local matname = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Material")
-				
-				matname = mats[matname]
-				
-				curvalue.Material = Enum.Material[matname]
-				
-				curvalue.Color = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
-				local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
-				local mesh = curvalue:FindFirstChild("Mesh")
-				if mesh then
-					mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
+		
+		menu.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild)
+			if menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams") then
+				local children = newchild:GetChildren()
+				for i = 1, #children do
+					local curvalue = children[i]
+					if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" then
+						
+						local matname = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Material")
+						
+						matname = mats[matname]
+						
+						curvalue.Material = Enum.Material[matname]
+						
+						curvalue.Color = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
+						local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
+						local mesh = curvalue:FindFirstChild("Mesh")
+						if mesh then
+							mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
+						end
+						
+						if curvalue:IsA("Pants") then curvalue:Destroy() end
+						
+						if matname ~= "ForceField" then
+							local pant = curvalue:FindFirstChild("Pant")
+							if mesh then mesh:Destroy() end
+							if pant then pant:Destroy() end
+						end
+					end
 				end
-				
-				if curvalue:IsA("Pants") then curvalue:Destroy() end
-				
-				if matname ~= "ForceField" then
-					local pant = curvalue:FindFirstChild("Pant")
-					if mesh then mesh:Destroy() end
-					if pant then pant:Destroy() end
-				end
-				--curvalue.Transparency = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams", "color")[4]
 			end
-		end
-	end
-	end)
-	local chat_game = LOCAL_PLAYER.PlayerGui.ChatGame
-	local chat_box = chat_game:FindFirstChild("TextBox")
-	local oldpos = nil
-	menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
-		--InputBeganMenu(key)/
-		if chat_box.Active then return end
-		if menu:GetVal("Visuals", "Local Visuals", "Third Person") and key.KeyCode == menu:GetVal("Visuals", "Local Visuals", "Third Person", "keybind") then
-			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
-		end
-		if menu:GetVal("Misc", "Movement", "Fly") and key.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
-			keybindtoggles.flyhack = not keybindtoggles.flyhack
-		end
-		if menu:GetVal("Rage", "Anti Aim", "Noclip") and key.KeyCode == menu:GetVal("Rage", "Anti Aim", "Noclip", "keybind") and client.char.alive then
-			--[[ragebot:FakeBody()
-			local msg = keybindtoggles.fakebody and "Removed Noclip Cheat" or "Noclip Cheat enabled"
-			CreateNotification(msg)
-			keybindtoggles.fakebody = not keybindtoggles.fakebody]]
-			local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
-			
-			local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
-			
-			if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-				CreateNotification("Attempting to enable noclip... (you may die)")
-				keybindtoggles.fakebody = not keybindtoggles.fakebody
-				client.fakeoffset = 18
+		end)
+		local chat_game = LOCAL_PLAYER.PlayerGui.ChatGame
+		local chat_box = chat_game:FindFirstChild("TextBox")
+		local oldpos = nil
+		menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
+			if chat_box.Active then return end
+			if menu:GetVal("Visuals", "Local Visuals", "Third Person") and key.KeyCode == menu:GetVal("Visuals", "Local Visuals", "Third Person", "keybind") then
+				keybindtoggles.thirdperson = not keybindtoggles.thirdperson
+			end
+			if menu:GetVal("Misc", "Movement", "Fly") and key.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
+				keybindtoggles.flyhack = not keybindtoggles.flyhack
+			end
+			if menu:GetVal("Rage", "Anti Aim", "Noclip") and key.KeyCode == menu:GetVal("Rage", "Anti Aim", "Noclip", "keybind") and client.char.alive then
+				local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
+				
+				local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+				
+				if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
+					CreateNotification("Attempting to enable noclip... (you may die)")
+					keybindtoggles.fakebody = not keybindtoggles.fakebody
+					client.fakeoffset = 18
+				else
+					CreateNotification("Unable to noclip. Do this as soon as you spawn or over glass. (be as close to ground as possible for best results)")
+				end
+			end
+			if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive) then
+				local sign = not menu:modkeydown("alt", "left")
+				local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
+				
+				local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+				
+				if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
+					client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
+					CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
+				else
+					CreateNotification("Unable to floor clip!")
+				end
 			else
-				CreateNotification("Unable to noclip. Do this as soon as you spawn or over glass. (be as close to ground as possible for best results)")
-			end
-		end
-		--[[if menu:GetVal("Misc", "Exploits", "Invisibility") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") and client.char.alive then
-		invisibility()
-		local msg = keybindtoggles.invis and "Invisibility off" or "Made you invisible!"
-		CreateNotification(msg)
-		keybindtoggles.invis = not keybindtoggles.invis
-	end]]
-	if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive) then
-		local sign = not menu:modkeydown("alt", "left")
-		local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
-		
-		local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
-		
-		if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-			client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
-			CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
-		else
-			CreateNotification("Unable to floor clip!")
-		end
-	else
-		if shitting_my_pants == true then
-			CreateNotification("You may not use this exploit while game administrators/moderators are in your server.")
-		end
-	end
-	end)
-
-	menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
-		MouseUnlockAndShootHook()
-		debug.profilebegin("Main BB Loop")
-		debug.profilebegin("Noclip Cheat check")
-		if not client.char.alive then
-			if keybindtoggles.fakebody then
-				keybindtoggles.fakebody = false
-				CreateNotification("Noclip automatically disabled due to death")
-				client.fakeoffset = 18
-			end
-		end
-		debug.profileend("Noclip Cheat check")
-		
-		debug.profilebegin("BB Rendering")
-		do --rendering
-			renderVisuals()
-		end
-		debug.profileend("BB Rendering")
-		debug.profilebegin("BB Legitbot")
-		do--legitbot
-			legitbot:TriggerBot()
-			legitbot:MainLoop()
-		end
-		debug.profileend("BB Legitbot")
-		debug.profilebegin("BB Misc.")
-		do --misc
-			misc:MainLoop()
-			debug.profilebegin("BB Ragebot KnifeBot")
-			ragebot:KnifeBotMain()
-			debug.profileend("BB Ragebot KnifeBot")
-		end
-		debug.profileend("BB Misc.")
-		if not menu:GetVal("Rage", "Extra", "Performance Mode") then
-			debug.profilebegin("BB Ragebot (Non Performance)")
-			do--ragebot
-				ragebot:MainLoop()
-			end
-			debug.profileend("BB Ragebot (Non Performance)")
-		end
-		debug.profileend("Main BB Loop")
-	end)
-
-	CreateThread(function() -- ragebot performance
-		while wait() do
-			if not menu then error("") end
-			renderChams()
-			
-			--[[for player, data in next, repupdates do
-			if not client.hud:isplayeralive(player) and #data > 0 then
-				repupdates[player] = {}
-				continue
-			end
-			if #data == 0 then continue end
-			local curtick = tick()
-			
-			local latestSample = data[#data]
-			local time = math.abs(latestSample.tick - curtick)
-			if time >= 2 then
-				-- the player is lagging or using crimwalk
-				if player.Team ~= LOCAL_PLAYER.Team and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
-					--local bodyparts = client.replication.getbodyparts(player)
-					if not client.char.head then break end
-					local args = {
-						"FRAG",
-						{
-							frames = {
-								{
-									v0 = Vector3.new(),
-									glassbreaks = {},
-									t0 = 0,
-									offset = Vector3.new(),
-									rot0 = CFrame.new(),
-									a = Vector3.new(),
-									p0 = client.lastrepupdate or client.char.head.Position,
-									rotv = Vector3.new()
-								},
-								{
-									v0 = Vector3.new(),
-									glassbreaks = {},
-									t0 = 0,
-									offset = Vector3.new(),
-									rot0 = CFrame.new(),
-									a = Vector3.new(),
-									p0 = latestSample.position + Vector3.new(0, 3, 0),
-									rotv = Vector3.new()
-								}
-							},
-							time = tick(),
-							curi = 1,
-							blowuptime = 0
-						}
-					}
-					
-					send(client.net, "newgrenade", unpack(args))
+				if shitting_my_pants == true then
+					CreateNotification("You may not use this exploit while game administrators/moderators are in your server.")
 				end
 			end
-		end]]
+		end)
 		
-		if menu:GetVal("Rage", "Extra", "Performance Mode") then
-			do--ragebot
-				ragebot:MainLoop()
-			end
-		end
-	end
-	end)
-
-
-	menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
-		for index, nade in pairs(menu.activenades) do
-			local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
-			if nade_percent >= 1 then
-				if menu.activenades[index] == nade then
-					table.remove(menu.activenades, index)
+		menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
+			MouseUnlockAndShootHook()
+			debug.profilebegin("Main BB Loop")
+			debug.profilebegin("Noclip Cheat check")
+			if not client.char.alive then
+				if keybindtoggles.fakebody then
+					keybindtoggles.fakebody = false
+					CreateNotification("Noclip automatically disabled due to death")
+					client.fakeoffset = 18
 				end
 			end
-		end
+			debug.profileend("Noclip Cheat check")
+			
+			debug.profilebegin("BB Rendering")
+			do --rendering
+				renderVisuals()
+			end
+			debug.profileend("BB Rendering")
+			debug.profilebegin("BB Legitbot")
+			do--legitbot
+				legitbot:TriggerBot()
+				legitbot:MainLoop()
+			end
+			debug.profileend("BB Legitbot")
+			debug.profilebegin("BB Misc.")
+			do --misc
+				misc:MainLoop()
+				debug.profilebegin("BB Ragebot KnifeBot")
+				ragebot:KnifeBotMain()
+				debug.profileend("BB Ragebot KnifeBot")
+			end
+			debug.profileend("BB Misc.")
+			if not menu:GetVal("Rage", "Extra", "Performance Mode") then
+				debug.profilebegin("BB Ragebot (Non Performance)")
+				do--ragebot
+					ragebot:MainLoop()
+				end
+				debug.profileend("BB Ragebot (Non Performance)")
+			end
+			debug.profileend("Main BB Loop")
+		end)
 		
-		debug.profilebegin("BB No Gun Bob or Sway")
+		CreateThread(function() -- ragebot performance
+			while wait() do
+				if not menu then error("") end
+				renderChams()
+				
+				
+				if menu:GetVal("Rage", "Extra", "Performance Mode") then
+					do--ragebot
+						ragebot:MainLoop()
+					end
+				end
+			end
+		end)
 		
-		if client.char.alive then
-			for id, gun in next, client.loadedguns do
-				if not gun.fucku then
-					for k,v in next, getupvalues(gun.step) do
+		
+		menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
+			for index, nade in pairs(menu.activenades) do
+				local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
+				if nade_percent >= 1 then
+					if menu.activenades[index] == nade then
+						table.remove(menu.activenades, index)
+					end
+				end
+			end
+			
+			debug.profilebegin("BB No Gun Bob or Sway")
+			
+			if client.char.alive then
+				for id, gun in next, client.loadedguns do
+					if not gun.fucku then
+						for k,v in next, getupvalues(gun.step) do
+							if type(v) == "function" and getinfo(v).name:match("bob") then
+								gun.fucku = true
+								setupvalue(client.loadedguns[id].step, k, function(...)
+									return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or v(...)
+								end)
+							end
+						end
+					end
+				end
+				
+				if client.logic.currentgun.type == "KNIFE" and not client.logic.currentgun.fucku then
+					for k,v in next, getupvalues(client.logic.currentgun.step) do
 						if type(v) == "function" and getinfo(v).name:match("bob") then
-							gun.fucku = true
-							setupvalue(client.loadedguns[id].step, k, function(...)
+							client.logic.currentgun.fucku = true
+							setupvalue(client.logic.currentgun.step, k, function(...)
 								return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or v(...)
 							end)
 						end
@@ -8591,1603 +8460,1556 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				end
 			end
 			
-			if client.logic.currentgun.type == "KNIFE" and not client.logic.currentgun.fucku then
-				for k,v in next, getupvalues(client.logic.currentgun.step) do
-					if type(v) == "function" and getinfo(v).name:match("bob") then
-						client.logic.currentgun.fucku = true
-						setupvalue(client.logic.currentgun.step, k, function(...)
-							return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or v(...)
-						end)
-					end
-				end
-			end
-		end
-		
-		debug.profileend("BB No Gun Bob or Sway")
-		
-		if menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
-			if client.char.alive then
-				debug.profilebegin("Third Person")
-				if not client.fakecharacter then
-					client.fakecharacter = true
-					client.loadedguns = getupvalue(client.char.unloadguns, 2)
-					local localchar = LOCAL_PLAYER.Character:Clone()
-					
-					for k,v in next, localchar:GetChildren() do
-						if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-							v.Transparency = 0
-						end
-					end
-					
-					localchar.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-					
-					localchar.Parent = workspace["Ignore"]
-					
-					client.fakerootpart = localchar.HumanoidRootPart
-					localchar.HumanoidRootPart.Anchored = true
-					
-					local torso = localchar.Torso
-					client.fakeupdater.updatecharacter({
-						head = localchar.Head,
-						torso = torso,
-						neck = torso.Neck,
-						rsh = torso["Right Shoulder"],
-						lsh = torso["Left Shoulder"],
-						lhip = torso["Left Hip"],
-						rhip = torso["Right Hip"],
-						rarm = localchar["Right Arm"],
-						larm = localchar["Left Arm"],
-						rleg = localchar["Right Leg"],
-						lleg = localchar["Left Leg"],
-						rootpart = localchar.HumanoidRootPart,
-						rootjoint = localchar.HumanoidRootPart.RootJoint,
-						char = localchar
-					})
-					
-					client.fakeupdater.setstance(client.char.movementmode)
-					
-					local guntoequip = client.logic.currentgun.type == "KNIFE" and client.loadedguns[1].name or client.logic.currentgun.name -- POOP
-					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[guntoequip]), game:service("ReplicatedStorage").ExternalModels[guntoequip]:Clone())
-					client.fake3pchar = localchar
-				else
-					if not keybindtoggles.fakelag then
-						local fakeupdater = client.fakeupdater
-						fakeupdater.step(3, true)
+			debug.profileend("BB No Gun Bob or Sway")
+			
+			if menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
+				if client.char.alive then
+					debug.profilebegin("Third Person")
+					if not client.fakecharacter then
+						client.fakecharacter = true
+						client.loadedguns = getupvalue(client.char.unloadguns, 2)
+						local localchar = LOCAL_PLAYER.Character:Clone()
 						
-						local lchams = menu:GetVal("Visuals", "Local Visuals", "Local Player Chams")
-						if lchams then
-							local lchamscolor = menu:GetVal("Visuals", "Local Visuals", "Local Player Chams", "color", true)
-							
-							local lchamsmat = mats[menu:GetVal("Visuals", "Local Visuals", "Local Player Material")]
-							
-							local curchildren = client.fake3pchar:GetChildren()
-							
-							for i = 1, #curchildren do
-								local curvalue = curchildren[i]
-								if curvalue:IsA("BasePart") and curvalue.Name ~= "HumanoidRootPart" then
-									curvalue.Material = Enum.Material[lchamsmat]
-									curvalue.Color = lchamscolor
-								end
+						for k,v in next, localchar:GetChildren() do
+							if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
+								v.Transparency = 0
 							end
 						end
 						
-						if menu:GetVal("Rage", "Anti Aim", "Enabled") then
-							local angles = "angles" -- TODO SOMEONE FIGURE OUT WHY REMOVING THIS LINE MAKES RAGEBOT.ANGLES NIL???????????????????
-							fakeupdater.setlookangles(ragebot.angles)
-							fakeupdater.setstance(ragebot.stance)
-							fakeupdater.setsprint(ragebot.sprint)
-						else
-							local silentangles = ragebot.silentVector and Vector3.new(CFrame.new(Vector3.new(), ragebot.silentVector):ToOrientation()) or nil
-							fakeupdater.setlookangles(silentangles or client.cam.angles) -- TODO make this face silent aim vector at some point lol
-							fakeupdater.setstance(client.char.movementmode)
-							fakeupdater.setsprint(client.char:sprinting())
-						end
-						if client.logic.currentgun then
-							if client.logic.currentgun.type ~= "KNIFE" then
-								local bool = client.logic.currentgun:isaiming()
-								fakeupdater.setaim(bool)
-								for k,v in next, client.fake3pchar:GetChildren() do -- this is probably going to cause a 1 fps drop or some shit lmao
-									if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-										v.Transparency = bool and 0.6 or 0
+						localchar.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+						
+						localchar.Parent = workspace["Ignore"]
+						
+						client.fakerootpart = localchar.HumanoidRootPart
+						localchar.HumanoidRootPart.Anchored = true
+						
+						local torso = localchar.Torso
+						client.fakeupdater.updatecharacter({
+							head = localchar.Head,
+							torso = torso,
+							neck = torso.Neck,
+							rsh = torso["Right Shoulder"],
+							lsh = torso["Left Shoulder"],
+							lhip = torso["Left Hip"],
+							rhip = torso["Right Hip"],
+							rarm = localchar["Right Arm"],
+							larm = localchar["Left Arm"],
+							rleg = localchar["Right Leg"],
+							lleg = localchar["Left Leg"],
+							rootpart = localchar.HumanoidRootPart,
+							rootjoint = localchar.HumanoidRootPart.RootJoint,
+							char = localchar
+						})
+						
+						client.fakeupdater.setstance(client.char.movementmode)
+						
+						local guntoequip = client.logic.currentgun.type == "KNIFE" and client.loadedguns[1].name or client.logic.currentgun.name -- POOP
+						client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[guntoequip]), game:service("ReplicatedStorage").ExternalModels[guntoequip]:Clone())
+						client.fake3pchar = localchar
+					else
+						if not keybindtoggles.fakelag then
+							local fakeupdater = client.fakeupdater
+							fakeupdater.step(3, true)
+							
+							local lchams = menu:GetVal("Visuals", "Local Visuals", "Local Player Chams")
+							if lchams then
+								local lchamscolor = menu:GetVal("Visuals", "Local Visuals", "Local Player Chams", "color", true)
+								
+								local lchamsmat = mats[menu:GetVal("Visuals", "Local Visuals", "Local Player Material")]
+								
+								local curchildren = client.fake3pchar:GetChildren()
+								
+								for i = 1, #curchildren do
+									local curvalue = curchildren[i]
+									if curvalue:IsA("BasePart") and curvalue.Name ~= "HumanoidRootPart" then
+										curvalue.Material = Enum.Material[lchamsmat]
+										curvalue.Color = lchamscolor
 									end
-									if v:IsA("Model") then
-										for k,v in next, v:GetChildren() do
+								end
+							end
+							
+							if menu:GetVal("Rage", "Anti Aim", "Enabled") then
+								local angles = "angles" -- TODO SOMEONE FIGURE OUT WHY REMOVING THIS LINE MAKES RAGEBOT.ANGLES NIL???????????????????
+								fakeupdater.setlookangles(ragebot.angles)
+								fakeupdater.setstance(ragebot.stance)
+								fakeupdater.setsprint(ragebot.sprint)
+							else
+								local silentangles = ragebot.silentVector and Vector3.new(CFrame.new(Vector3.new(), ragebot.silentVector):ToOrientation()) or nil
+								fakeupdater.setlookangles(silentangles or client.cam.angles) -- TODO make this face silent aim vector at some point lol
+								fakeupdater.setstance(client.char.movementmode)
+								fakeupdater.setsprint(client.char:sprinting())
+							end
+							if client.logic.currentgun then
+								if client.logic.currentgun.type ~= "KNIFE" then
+									local bool = client.logic.currentgun:isaiming()
+									fakeupdater.setaim(bool)
+									for k,v in next, client.fake3pchar:GetChildren() do -- this is probably going to cause a 1 fps drop or some shit lmao
+										if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
 											v.Transparency = bool and 0.6 or 0
+										end
+										if v:IsA("Model") then
+											for k,v in next, v:GetChildren() do
+												v.Transparency = bool and 0.6 or 0
+											end
 										end
 									end
 								end
 							end
-						end
-						
-						-- 3 am already wtf 🌃
-						
-						if client.char.rootpart then
-							client.fakerootpart.CFrame = client.char.rootpart.CFrame
-							local rootpartpos = client.char.rootpart.Position
-							client.fake_upvs[4].p = rootpartpos
-							client.fake_upvs[4].t = rootpartpos
-							client.fake_upvs[4].v = Vector3.new()
+							
+							-- 3 am already wtf 🌃
+							
+							if client.char.rootpart then
+								client.fakerootpart.CFrame = client.char.rootpart.CFrame
+								local rootpartpos = client.char.rootpart.Position
+								client.fake_upvs[4].p = rootpartpos
+								client.fake_upvs[4].t = rootpartpos
+								client.fake_upvs[4].v = Vector3.new()
+							end
 						end
 					end
+					debug.profileend("Third Person")
 				end
-				debug.profileend("Third Person")
-			end
-		else
-			if client.fakecharacter then
-				client.fakecharacter = false
-				--client.replication.removecharacterhash(client.fakeplayer)
-				for k,v in next, client.fake3pchar:GetChildren() do
-					if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-						v.Transparency = 1
-					end
-					if v:IsA("Model") then
-						for k,v in next, v:GetChildren() do
+			else
+				if client.fakecharacter then
+					client.fakecharacter = false
+					--client.replication.removecharacterhash(client.fakeplayer)
+					for k,v in next, client.fake3pchar:GetChildren() do
+						if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
 							v.Transparency = 1
 						end
+						if v:IsA("Model") then
+							for k,v in next, v:GetChildren() do
+								v.Transparency = 1
+							end
+						end
 					end
 				end
 			end
-		end
-	end)
+		end)
 		menu.Initialize({
-			{--ANCHOR Legit
-			name = "Legit",
-			content = {
-				{
-					name = "Aim Assist",
-					autopos = "left",
-					content = {
-						{
-							type = "toggle",
-							name = "Enabled",
-							value = true
-						},
-						{
-							type = "slider",
-							name = "Aimbot FOV",
-							value = 20,
-							minvalue = 0.1,
-							maxvalue = 180,
-							stradd = "°",
-							rounded = false
-						},
-						{
-							type = "slider",
-							name = "Smoothing",
-							value = 20,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
-						},
-						{
-							type = "slider",
-							name = "Randomization",
-							value = 5,
-							minvalue = 0,
-							maxvalue = 20,
-							custom = {[0] = "Off"}
-						},
-						{
-							type = "slider",
-							name = "Deadzone FOV",
-							value = 1,
-							minvalue = 0,
-							maxvalue = 50,
-							stradd = "°",
-							rounded = false,
-							custom = {[0] = "Off"}
-						},
-						{
-							type = "dropbox",
-							name = "Aimbot Key",
-							value = 1,
-							values = {"Mouse 1", "Mouse 2", "Always"}
-						},
-						{
-							type = "dropbox",
-							name = "Hitscan Priority",
-							value = 1,
-							values = {"Head", "Body"}
-						},
-						{
-							type = "combobox",
-							name = "Hitboxes",
-							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
-						},
-						{
-							type = "toggle",
-							name = "Adjust for Bullet Drop",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Enlarge Enemy Hitboxes",
-							value = 0,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
+			{
+				name = "Legit",
+				content = {
+					{
+						name = "Aim Assist",
+						autopos = "left",
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = true
+							},
+							{
+								type = "slider",
+								name = "Aimbot FOV",
+								value = 20,
+								minvalue = 0.1,
+								maxvalue = 180,
+								stradd = "°",
+								rounded = false
+							},
+							{
+								type = "slider",
+								name = "Smoothing",
+								value = 20,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%"
+							},
+							{
+								type = "slider",
+								name = "Randomization",
+								value = 5,
+								minvalue = 0,
+								maxvalue = 20,
+								custom = {[0] = "Off"}
+							},
+							{
+								type = "slider",
+								name = "Deadzone FOV",
+								value = 1,
+								minvalue = 0,
+								maxvalue = 50,
+								stradd = "°",
+								rounded = false,
+								custom = {[0] = "Off"}
+							},
+							{
+								type = "dropbox",
+								name = "Aimbot Key",
+								value = 1,
+								values = {"Mouse 1", "Mouse 2", "Always"}
+							},
+							{
+								type = "dropbox",
+								name = "Hitscan Priority",
+								value = 1,
+								values = {"Head", "Body"}
+							},
+							{
+								type = "combobox",
+								name = "Hitboxes",
+								values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
+							},
+							{
+								type = "toggle",
+								name = "Adjust for Bullet Drop",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Enlarge Enemy Hitboxes",
+								value = 0,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%"
+							}
+						}
+					},
+					{
+						name = "Trigger Bot",
+						autopos = "right",
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = false,
+								extra = {
+									type = "keybind",
+									key = Enum.KeyCode.M,
+								}
+							},
+							{
+								type = "combobox",
+								name = "Trigger Bot Hitboxes",
+								values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
+							},
+							{
+								type = "toggle",
+								name = "Trigger When Aiming",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Aim Percentage",
+								minvalue = 0,
+								maxvalue = 100,
+								value = 90,
+								stradd = "%",
+								rounded = false
+							}
+							--[[
+							{
+								type = "toggle",
+								name = "Magnet Triggerbot",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Magnet FOV",
+								value = 80,
+								minvalue = 0,
+								maxvalue = 180,
+								stradd = "°"
+							},
+							{
+								type = "slider",
+								name = "Magnet Smoothing Factor",
+								value = 20,
+								minvalue = 0,
+								maxvalue = 50,
+								stradd = "%"
+							},
+							{
+								type = "dropbox",
+								name = "Magnet Priority",
+								value = 1,
+								values = {"Head", "Body"}
+							},]]
+						}
+					},
+					{
+						name = "Bullet Redirection",
+						autopos = "right",
+						autofill = true,
+						content = {
+							{
+								type = "toggle",
+								name = "Silent Aim",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Silent Aim FOV",
+								value = 5,
+								minvalue = 0.1,
+								maxvalue = 180,
+								stradd = "°",
+								rounded = false,
+							},
+							{
+								type = "slider",
+								name = "Hit Chance",
+								value = 30,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%"
+							},
+							{
+								type = "slider",
+								name = "Accuracy",
+								value = 90,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%"
+							},
+							{
+								type = "dropbox",
+								name = "Hitscan Priority",
+								value = 1,
+								values = {"Head", "Body", "Closest"}
+							},
+							{
+								type = "combobox",
+								name = "Hitboxes",
+								values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
+							},
+						}
+					},
+					{
+						name = "Recoil Control",
+						autopos = "left",
+						autofill = true,
+						content = {
+							{
+								type = "toggle",
+								name = "Weapon RCS",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Recoil Control X",
+								value = 10,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%"
+							},
+							{
+								type = "slider",
+								name = "Recoil Control Y",
+								value = 10,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%"
+							},
 						}
 					}
-				},
-				{
-					name = "Trigger Bot",
-					autopos = "right",
-					content = {
-						{
-							type = "toggle",
-							name = "Enabled",
-							value = false,
-							extra = {
-								type = "keybind",
-								key = Enum.KeyCode.M,
+				}
+			},
+			{
+				name = "Rage",
+				content = {
+					{
+						name = "Aimbot",
+						autopos = "left",
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = false,
+								extra = {
+									type = "keybind",
+								},
+								unsafe = true
+							},
+							{
+								type = "toggle",
+								name = "Silent Aim",
+								value = false,
+								unsafe = true
+							},
+							{
+								type = "toggle",
+								name = "Rotate Viewmodel",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Aimbot FOV",
+								value = 180,
+								minvalue = 0,
+								maxvalue = 180,
+								stradd = "°"
+							},
+							{
+								type = "toggle",
+								name = "Auto Wall",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Auto Shoot",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Auto Scope",
+								value = false
+							},
+							{
+								type = "combobox",
+								name = "Hitscan Points",
+								values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
+							},
+							{
+								type = "dropbox",
+								name = "Hitscan Priority",
+								value = 1,
+								values = {"Head", "Body"}
+							},
+							{
+								type = "toggle",
+								name = "Target Only Priority Players",
+								value = false
+							},
+						},
+					},
+					{
+						name = "Hack vs. Hack",
+						autopos = "right",
+						content = {
+							{
+								type = "toggle",
+								name = "Extend Penetration",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Extra Penetration",
+								value = 11,
+								minvalue = 1,
+								maxvalue = 20,
+								stradd = " studs"
+							}, -- fuck u json
+							{
+								type = "toggle",
+								name = "Autowall Resolver",
+								value = false,
+								unsafe = true
+							},
+							{
+								type = "dropbox",
+								name = "Resolver Type",
+								value = 2,
+								values = {"Cubic", "Axis Shifting", "Random", "Teleport", "Axis + Hitbox Shifting"}
+							},
+							{
+								type = "slider",
+								name = "Autowall Resolver Step",
+								value = 50,
+								minvalue = 5,
+								maxvalue = 100,
+								stradd = " studs"
+							},
+							{
+								type = "toggle",
+								name = "Force Player Stances",
+								value = false
+							},
+							{
+								type = "dropbox",
+								name = "Stance Choice",
+								value = 1,
+								values = {"Stand", "Crouch", "Prone"}
+							}
+						}
+					},
+					{
+						name = "Extra",
+						autopos = "left",
+						autofill = true,
+						content = {
+							{
+								type = "toggle",
+								name = "Knife Bot",
+								value = false,
+								extra = {
+									type = "keybind",
+								},
+								unsafe = true
+							},
+							{
+								type = "dropbox",
+								name = "Knife Bot Type",
+								value = 2,
+								values = {"Assist", "Multi Aura", "Flight Aura"}
+							},
+							{
+								type = "toggle",
+								name = "Performance Mode",
+								value = true
+							},
+							{
+								type = "toggle",
+								name = "Fake Lag",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Fake Lag Amount",
+								value = 1,
+								minvalue = 1,
+								maxvalue = 1000,
+								stradd = " kbps"
+							},
+							{
+								type = "slider",
+								name = "Fake Lag Distance",
+								value = 1,
+								minvalue = 1,
+								maxvalue = 40,
+								stradd = " studs"
+							},
+							{
+								type = "toggle",
+								name = "Manual Choke",
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Release Packets on Shoot",
+								value = false
 							}
 						},
-						{
-							type = "combobox",
-							name = "Trigger Bot Hitboxes",
-							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
-						},
-						{
-							type = "toggle",
-							name = "Trigger When Aiming",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Aim Percentage",
-							minvalue = 0,
-							maxvalue = 100,
-							value = 90,
-							stradd = "%",
-							rounded = false
-						}
-						--[[
-						{
-							type = "toggle",
-							name = "Magnet Triggerbot",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Magnet FOV",
-							value = 80,
-							minvalue = 0,
-							maxvalue = 180,
-							stradd = "°"
-						},
-						{
-							type = "slider",
-							name = "Magnet Smoothing Factor",
-							value = 20,
-							minvalue = 0,
-							maxvalue = 50,
-							stradd = "%"
-						},
-						{
-							type = "dropbox",
-							name = "Magnet Priority",
-							value = 1,
-							values = {"Head", "Body"}
-						},]]
-					}
-				},
-				{
-					name = "Bullet Redirection",
-					autopos = "right",
-					autofill = true,
-					content = {
-						{
-							type = "toggle",
-							name = "Silent Aim",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Silent Aim FOV",
-							value = 5,
-							minvalue = 0.1,
-							maxvalue = 180,
-							stradd = "°",
-							rounded = false,
-						},
-						{
-							type = "slider",
-							name = "Hit Chance",
-							value = 30,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
-						},
-						{
-							type = "slider",
-							name = "Accuracy",
-							value = 90,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
-						},
-						{
-							type = "dropbox",
-							name = "Hitscan Priority",
-							value = 1,
-							values = {"Head", "Body", "Closest"}
-						},
-						{
-							type = "combobox",
-							name = "Hitboxes",
-							values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
-						},
-					}
-				},
-				{
-					name = "Recoil Control",
-					autopos = "left",
-					autofill = true,
-					content = {
-						{
-							type = "toggle",
-							name = "Weapon RCS",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Recoil Control X",
-							value = 10,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
-						},
-						{
-							type = "slider",
-							name = "Recoil Control Y",
-							value = 10,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
-						},
-					}
-				}
-			}
-		},
-		{--ANCHOR Rage
-		name = "Rage",
-		content = {
-			{
-				name = "Aimbot",
-				autopos = "left",
-				content = {
-					{
-						type = "toggle",
-						name = "Enabled",
-						value = false,
-						extra = {
-							type = "keybind",
-						},
-						unsafe = true
 					},
 					{
-						type = "toggle",
-						name = "Silent Aim",
-						value = false,
-						unsafe = true
-					},
-					{
-						type = "toggle",
-						name = "Rotate Viewmodel",
-						value = false
-					},
-					{
-						type = "slider",
-						name = "Aimbot FOV",
-						value = 180,
-						minvalue = 0,
-						maxvalue = 180,
-						stradd = "°"
-					},
-					{
-						type = "toggle",
-						name = "Auto Wall",
-						value = false
-					},
-					{
-						type = "toggle",
-						name = "Auto Shoot",
-						value = false
-					},
-					{
-						type = "toggle",
-						name = "Auto Scope",
-						value = false
-					},
-					{
-						type = "combobox",
-						name = "Hitscan Points",
-						values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
-					},
-					{
-						type = "dropbox",
-						name = "Hitscan Priority",
-						value = 1,
-						values = {"Head", "Body"}
-					},
-					{
-						type = "toggle",
-						name = "Target Only Priority Players",
-						value = false
-					},
-				},
-			},
-			{
-				name = "Hack vs. Hack",
-				autopos = "right",
-				content = {
-					{
-						type = "toggle",
-						name = "Extend Penetration",
-						value = false
-					},
-					{
-						type = "slider",
-						name = "Extra Penetration",
-						value = 11,
-						minvalue = 1,
-						maxvalue = 20,
-						stradd = " studs"
-					}, -- fuck u json
-					{
-						type = "toggle",
-						name = "Autowall Resolver",
-						value = false,
-						unsafe = true
-					},
-					{
-						type = "dropbox",
-						name = "Resolver Type",
-						value = 2,
-						values = {"Cubic", "Axis Shifting", "Random", "Teleport", "Axis + Hitbox Shifting"}
-					},
-					{
-						type = "slider",
-						name = "Autowall Resolver Step",
-						value = 50,
-						minvalue = 5,
-						maxvalue = 100,
-						stradd = " studs"
-					},
-					{
-						type = "toggle",
-						name = "Force Player Stances",
-						value = false
-					},
-					{
-						type = "dropbox",
-						name = "Stance Choice",
-						value = 1,
-						values = {"Stand", "Crouch", "Prone"}
-					}
-				}
-			},
-			{
-				name = "Extra",
-				autopos = "left",
-				autofill = true,
-				content = {
-					{
-						type = "toggle",
-						name = "Knife Bot",
-						value = false,
-						extra = {
-							type = "keybind",
-						},
-						unsafe = true
-					},
-					{
-						type = "dropbox",
-						name = "Knife Bot Type",
-						value = 2,
-						values = {"Assist", "Multi Aura", "Flight Aura"}
-					},
-					{
-						type = "toggle",
-						name = "Performance Mode",
-						value = true
-					},
-					{
-						type = "toggle",
-						name = "Fake Lag",
-						value = false
-					},
-					{
-						type = "slider",
-						name = "Fake Lag Amount",
-						value = 1,
-						minvalue = 1,
-						maxvalue = 1000,
-						stradd = " kbps"
-					},
-					{
-						type = "slider",
-						name = "Fake Lag Distance",
-						value = 1,
-						minvalue = 1,
-						maxvalue = 40,
-						stradd = " studs"
-					},
-					{
-						type = "toggle",
-						name = "Manual Choke",
-						extra = {
-							type = "keybind"
-						}
-					},
-					{
-						type = "toggle",
-						name = "Release Packets on Shoot",
-						value = false
-					}
-				},
-			},
-			{
-				name = "Anti Aim",
-				autopos = "right",
-				autofill = true,
-				content = {
-					{
-						type = "toggle",
-						name = "Enabled",
-						value = false,
-						extra = {
-							type = "keybind"
-						},
-					},
-					{
-						type = "dropbox",
-						name = "Pitch",
-						value = 4,
-						values = {"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch"}
-					},
-					{
-						type = "dropbox",
-						name = "Yaw",
-						value = 2,
-						values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"}
-					},
-					{
-						type = "slider",
-						name = "Spin Rate",
-						value = 10,
-						minvalue = -100,
-						maxvalue = 100,
-						stradd = "°/s"
-					},
-					{
-						type = "dropbox",
-						name = "Force Stance",
-						value = 4,
-						values = {"Off", "Stand", "Crouch", "Prone"}
-					},
-					{
-						type = "toggle",
-						name = "Hide in Floor",
-						value = true,
-					},
-					{
-						type = "toggle",
-						name = "Lower Arms",
-						value = false,
-					},
-					{
-						type = "toggle",
-						name = "Tilt Neck",
-						value = false
-					},
-					{
-						type = "toggle",
-						name = "Noclip",
-						value = false,
-						extra = {
-							type = "keybind",
-							key = nil
-						},
-						unsafe = true
-					} -- good job fucking up indentation
-				}
-			},
-		}
-		},
-		{--ANCHOR ESP
-		name = "ESP",
-		content = {
-			{
-				name = "Enemy ESP",
-				autopos = "left",
-				content = {
-					{
-						type = "toggle",
-						name = "Enabled",
-						value = true
-					},
-					{
-						type = "toggle",
-						name = "Name",
-						value = true,
-						extra = {
-							type = "single colorpicker",
-							name = "Enemy Name",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Box",
-						value = true,
-						extra = {
-							type = "single colorpicker",
-							name = "Enemy Box",
-							color = {255, 0, 0, 130}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Health Bar",
-						value = true,
-						extra = {
-							type = "double colorpicker",
-							name = {"Enemy Low Health", "Enemy Max Health"},
-							color = {{255, 0, 0}, {0, 255, 0}}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Health Number",
-						value = true,
-						extra = {
-							type = "single colorpicker",
-							name = "Enemy Health Number",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Held Weapon",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Enemy Held Weapon",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Distance",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Enemy Distance",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Chams",
-						value = true,
-						extra = {
-							type = "double colorpicker",
-							name = {"Visible Enemy Chams", "Invisible Enemy Chams"},
-							color = {{255, 0, 0, 200}, {100, 0, 0, 100}}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Skeleton",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Enemy skeleton",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Out of View",
-						value = true,
-						extra = {
-							type = "single colorpicker",
-							name = "Arrow Color",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "slider",
-						name = "Arrow Distance",
-						value = 50,
-						minvalue = 10,
-						maxvalue = 100,
-						stradd = "%",
-					},
-					{
-						type = "toggle",
-						name = "Dynamic Arrow Size",
-						value = true
-					},
-				}
-			},
-			{
-				name = "Team ESP",
-				autopos = "right",
-				content = {
-					{
-						type = "toggle",
-						name = "Enabled",
-						value = true
-					},
-					{
-						type = "toggle",
-						name = "Name",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Team Name",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Box",
-						value = true,
-						extra = {
-							type = "single colorpicker",
-							name = "Team Box",
-							color = {0, 255, 0, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Health Bar",
-						value = false,
-						extra = {
-							type = "double colorpicker",
-							name = {"Team Low Health", "Team Max Health"},
-							color = {{255, 0, 0}, {0, 255, 0}}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Health Number",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Team Health Number",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Held Weapon",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Team Held Weapon",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Distance",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Team Distance",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Chams",
-						value = false,
-						extra = {
-							type = "double colorpicker",
-							name = {"Visible Team Chams", "Invisible Team Chams"},
-							color = {{0, 255, 0, 200}, {0, 100, 0, 100}}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Skeleton",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Team skeleton",
-							color = {255, 255, 255, 255}
+						name = "Anti Aim",
+						autopos = "right",
+						autofill = true,
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = false,
+								extra = {
+									type = "keybind"
+								},
+							},
+							{
+								type = "dropbox",
+								name = "Pitch",
+								value = 4,
+								values = {"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch"}
+							},
+							{
+								type = "dropbox",
+								name = "Yaw",
+								value = 2,
+								values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"}
+							},
+							{
+								type = "slider",
+								name = "Spin Rate",
+								value = 10,
+								minvalue = -100,
+								maxvalue = 100,
+								stradd = "°/s"
+							},
+							{
+								type = "dropbox",
+								name = "Force Stance",
+								value = 4,
+								values = {"Off", "Stand", "Crouch", "Prone"}
+							},
+							{
+								type = "toggle",
+								name = "Hide in Floor",
+								value = true,
+							},
+							{
+								type = "toggle",
+								name = "Lower Arms",
+								value = false,
+							},
+							{
+								type = "toggle",
+								name = "Tilt Neck",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Noclip",
+								value = false,
+								extra = {
+									type = "keybind",
+									key = nil
+								},
+								unsafe = true
+							}
 						}
 					},
 				}
 			},
 			{
-				name = "ESP Settings",
-				autopos = "right",
-				autofill = true,
+				name = "ESP",
 				content = {
 					{
-						type = "slider",
-						name = "Max HP Visibility Cap",
-						value = 90,
-						minvalue = 50,
-						maxvalue = 100,
-						stradd = "hp"
-					},
-					{
-						type = "dropbox",
-						name = "Text Case",
-						value = 2,
-						values = {"lowercase", "Normal", "UPPERCASE"}
-					},
-					{
-						type = "slider",
-						name = "Max Text Length",
-						value = 0,
-						minvalue = 0,
-						maxvalue = 32,
-						custom = {[0] = "Unlimited"}
-					},
-					{
-						type = "toggle",
-						name = "Highlight Aimbot Target",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Aimbot Target",
-							color = {255, 0, 0, 255}
+						name = "Enemy ESP",
+						autopos = "left",
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = true
+							},
+							{
+								type = "toggle",
+								name = "Name",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Name",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Box",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Box",
+									color = {255, 0, 0, 130}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Health Bar",
+								value = true,
+								extra = {
+									type = "double colorpicker",
+									name = {"Enemy Low Health", "Enemy Max Health"},
+									color = {{255, 0, 0}, {0, 255, 0}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Health Number",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Health Number",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Held Weapon",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Held Weapon",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Distance",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Distance",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Chams",
+								value = true,
+								extra = {
+									type = "double colorpicker",
+									name = {"Visible Enemy Chams", "Invisible Enemy Chams"},
+									color = {{255, 0, 0, 200}, {100, 0, 0, 100}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Skeleton",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy skeleton",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Out of View",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Arrow Color",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "slider",
+								name = "Arrow Distance",
+								value = 50,
+								minvalue = 10,
+								maxvalue = 100,
+								stradd = "%",
+							},
+							{
+								type = "toggle",
+								name = "Dynamic Arrow Size",
+								value = true
+							},
 						}
 					},
 					{
-						type = "toggle",
-						name = "Highlight Friends",
-						value = true,
-						extra = {
-							type = "single colorpicker",
-							name = "Friended Players",
-							color = {0, 255, 255, 255}
+						name = "Team ESP",
+						autopos = "right",
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = true
+							},
+							{
+								type = "toggle",
+								name = "Name",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Name",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Box",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Box",
+									color = {0, 255, 0, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Health Bar",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Team Low Health", "Team Max Health"},
+									color = {{255, 0, 0}, {0, 255, 0}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Health Number",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Health Number",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Held Weapon",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Held Weapon",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Distance",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Distance",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Chams",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Visible Team Chams", "Invisible Team Chams"},
+									color = {{0, 255, 0, 200}, {0, 100, 0, 100}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Skeleton",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team skeleton",
+									color = {255, 255, 255, 255}
+								}
+							},
 						}
 					},
 					{
-						type = "toggle",
-						name = "Highlight Priority",
-						value = true,
-						extra = {
-							type = "single colorpicker",
-							name = "Priority Players",
-							color = {255, 210, 0, 255}
+						name = "ESP Settings",
+						autopos = "right",
+						autofill = true,
+						content = {
+							{
+								type = "slider",
+								name = "Max HP Visibility Cap",
+								value = 90,
+								minvalue = 50,
+								maxvalue = 100,
+								stradd = "hp"
+							},
+							{
+								type = "dropbox",
+								name = "Text Case",
+								value = 2,
+								values = {"lowercase", "Normal", "UPPERCASE"}
+							},
+							{
+								type = "slider",
+								name = "Max Text Length",
+								value = 0,
+								minvalue = 0,
+								maxvalue = 32,
+								custom = {[0] = "Unlimited"}
+							},
+							{
+								type = "toggle",
+								name = "Highlight Aimbot Target",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Aimbot Target",
+									color = {255, 0, 0, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Highlight Friends",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Friended Players",
+									color = {0, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Highlight Priority",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Priority Players",
+									color = {255, 210, 0, 255}
+								}
+							},
+							
 						}
 					},
-					
+					{
+						name = "Dropped ESP",
+						autopos = "left",
+						autofill = true,
+						content = {
+							{
+								type = "toggle",
+								name = "Weapon Name",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Weapon Name",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Weapon Ammo",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Weapon Ammo",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Nade Warning",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Slider Color",
+									color = {68, 92, 227},
+								}
+							},
+							{
+								type = "toggle",
+								name = "Grenade ESP",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Inner Color", "Outer Color"},
+									color = {{195, 163, 255}, {123, 69, 224}},
+								}
+							},
+						}
+					},
 				}
 			},
 			{
-				name = "Dropped ESP",
-				autopos = "left",
-				autofill = true,
+				name = "Visuals",
 				content = {
 					{
-						type = "toggle",
-						name = "Weapon Name",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Weapon Name",
-							color = {255, 255, 255, 255}
+						name = "Local Visuals",
+						autopos = "left",
+						autofill = false,
+						content = {
+							{
+								type = "toggle",
+								name = "Arm Chams",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Sleeve Color", "Hand Color"},
+									color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
+								}
+							},
+							{
+								type = "dropbox",
+								name = "Arm Material",
+								value = 1,
+								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
+							{
+								type = "toggle",
+								name = "Weapon Chams",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Weapon Color", "Lazer Color"},
+									color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
+								}
+							},
+							{
+								type = "dropbox",
+								name = "Weapon Material",
+								value = 1,
+								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
+							{
+								type = "toggle",
+								name = "Remove Weapon Skin",
+								value = false,
+							},
+							{
+								type = "toggle",
+								name = "Third Person",
+								value = false,
+								extra = {
+									type = "keybind",
+									key = nil
+								}
+							},
+							{
+								type = "slider",
+								name = "Third Person Distance",
+								value = 60,
+								minvalue = 1,
+								maxvalue = 150,
+							},
+							{
+								type = "toggle",
+								name = "Local Player Chams",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Local Player Chams",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "dropbox",
+								name = "Local Player Material",
+								value = 1,
+								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
+							
 						}
 					},
 					{
-						type = "toggle",
-						name = "Weapon Ammo",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Weapon Ammo",
-							color = {255, 255, 255, 255}
+						name = "Camera Visuals",
+						autopos = "right",
+						content = {
+							{
+								type = "slider",
+								name = "Camera FOV",
+								value = 85,
+								minvalue = 60,
+								maxvalue = 120,
+								stradd = "°"
+							},
+							{
+								type = "toggle",
+								name = "No Camera Bob",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "No Scope Sway",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Disable ADS FOV",
+								value = false,
+							},
+							{
+								type = "toggle",
+								name = "No Scope Border",
+								value = false,
+							},
+							{
+								type = "toggle",
+								name = "No Visual Suppression",
+								value = false,
+							},
+							{
+								type = "toggle",
+								name = "No Gun Bob or Sway",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Reduce Camera Recoil",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Camera Recoil Reduction",
+								value = 10,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%"
+							},
+							{
+								type = "toggle",
+								name = "Show Sliding",
+								value = false
+							}
 						}
 					},
 					{
-						type = "toggle",
-						name = "Nade Warning",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Slider Color",
-							color = {68, 92, 227},
+						name = "World Visuals",
+						autopos = "left",
+						autofill = true,
+						content = {
+							{
+								type = "toggle",
+								name = "Ambience",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Inside Ambience", "Outside Ambience"},
+									color = {{255, 255, 255}, {255, 255, 255}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Force Time",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Custom Time",
+								value = 0,
+								minvalue = 0,
+								maxvalue = 24,
+								rounded = false
+							},
+							{
+								type = "toggle",
+								name = "Custom Saturation",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Saturation Tint",
+									color = {255, 255, 255}
+								}
+							},
+							{
+								type = "slider",
+								name = "Saturation Density",
+								value = 0,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%",
+							},
 						}
 					},
 					{
-						type = "toggle",
-						name = "Grenade ESP",
-						value = false,
-						extra = {
-							type = "double colorpicker",
-							name = {"Inner Color", "Outer Color"},
-							color = {{195, 163, 255}, {123, 69, 224}},
+						name = "Misc Visuals",
+						autopos = "right",
+						autofill = true,
+						content = {
+							{
+								type = "toggle",
+								name = "Crosshair Color",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Inline", "Outline"},
+									color = {{127, 72, 163}, {25, 25, 25}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Ragdoll Chams",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Ragdoll Chams",
+									color = {255, 255, 255, 255}
+								},
+							},
+							{
+								type = "dropbox",
+								name = "Ragdoll Material",
+								value = 1,
+								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
+							{
+								type = "toggle",
+								name = "Bullet Tracers",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Bullet Tracers",
+									color = {255, 255, 255, 255}
+								},
+							},
 						}
-					},
-				}
-			},
-		}
-		},
-		{--ANCHOR Visuals
-		name = "Visuals",
-		content = {
-			{
-				name = "Local Visuals",
-				autopos = "left",
-				autofill = false,
-				content = {
-					{
-						type = "toggle",
-						name = "Arm Chams",
-						value = false,
-						extra = {
-							type = "double colorpicker",
-							name = {"Sleeve Color", "Hand Color"},
-							color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
-						}
-					},
-					{
-						type = "dropbox",
-						name = "Arm Material",
-						value = 1,
-						values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
-					},
-					{
-						type = "toggle",
-						name = "Weapon Chams",
-						value = false,
-						extra = {
-							type = "double colorpicker",
-							name = {"Weapon Color", "Lazer Color"},
-							color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
-						}
-					},
-					{
-						type = "dropbox",
-						name = "Weapon Material",
-						value = 1,
-						values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
-					},
-					{
-						type = "toggle",
-						name = "Remove Weapon Skin",
-						value = false,
-					},
-					{
-						type = "toggle",
-						name = "Third Person",
-						value = false,
-						extra = {
-							type = "keybind",
-							key = nil
-						}
-					},
-					{
-						type = "slider",
-						name = "Third Person Distance",
-						value = 60,
-						minvalue = 1,
-						maxvalue = 150,
-					},
-					{
-						type = "toggle",
-						name = "Local Player Chams",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Local Player Chams",
-							color = {255, 255, 255, 255}
-						}
-					},
-					{
-						type = "dropbox",
-						name = "Local Player Material",
-						value = 1,
-						values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
-					},
-					
-				}
-			},
-			{
-				name = "Camera Visuals",
-				autopos = "right",
-				content = {
-					{
-						type = "slider",
-						name = "Camera FOV",
-						value = 85,
-						minvalue = 60,
-						maxvalue = 120,
-						stradd = "°"
-					},
-					{
-						type = "toggle",
-						name = "No Camera Bob",
-						value = false
-					},
-					{
-						type = "toggle",
-						name = "No Scope Sway",
-						value = false
-					},
-					{
-						type = "toggle",
-						name = "Disable ADS FOV",
-						value = false,
-					},
-					{
-						type = "toggle",
-						name = "No Scope Border",
-						value = false,
-					},
-					{
-						type = "toggle",
-						name = "No Visual Suppression",
-						value = false,
-					},
-					{
-						type = "toggle",
-						name = "No Gun Bob or Sway",
-						value = false
-					},
-					{
-						type = "toggle",
-						name = "Reduce Camera Recoil",
-						value = false
-					},
-					{
-						type = "slider",
-						name = "Camera Recoil Reduction",
-						value = 10,
-						minvalue = 0,
-						maxvalue = 100,
-						stradd = "%"
-					},
-					{
-						type = "toggle",
-						name = "Show Sliding",
-						value = false
 					}
 				}
 			},
 			{
-				name = "World Visuals",
-				autopos = "left",
-				autofill = true,
+				name = "Misc",
 				content = {
 					{
-						type = "toggle",
-						name = "Ambience",
-						value = false,
-						extra = {
-							type = "double colorpicker",
-							name = {"Inside Ambience", "Outside Ambience"},
-							color = {{255, 255, 255}, {255, 255, 255}}
+						name = "Movement",
+						autopos = "left",
+						content = {
+							{
+								type = "toggle",
+								name = "Fly",
+								value = false,
+								extra = {
+									type = "keybind",
+									key = Enum.KeyCode.B
+								}
+							},
+							{
+								type = "slider",
+								name = "Fly Speed",
+								value = 70,
+								minvalue = 1,
+								maxvalue = 200,
+								stradd = " stud/s"
+							},
+							{
+								type = "toggle",
+								name = "Auto Jump",
+								value = false
+							},
+							{
+								type = "dropbox",
+								name = "Speed Type",
+								value = 1,
+								values = {"Off", "Always", "In Air", "On Hop"}
+							},
+							{
+								type = "slider",
+								name = "Speed",
+								value = 40,
+								minvalue = 1,
+								maxvalue = 200,
+								stradd = " stud/s"
+							},
+							{
+								type = "toggle",
+								name = "Circle Strafe",
+								value = false,
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Gravity Shift",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Gravity Shift Percentage",
+								value = -50,
+								minvalue = -100,
+								maxvalue = 100,
+								stradd = "%"
+							},
+							{
+								type = "toggle",
+								name = "Prevent Fall Damage",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Ignore Round Freeze",
+								value = false,
+								unsafe = true
+							}
+						},
+					},
+					{
+						name = "Extra",
+						autopos = "right",
+						content = {
+							{
+								type = "toggle",
+								name = "Suppress Only",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Auto Vote",
+								value = false
+							},
+							{
+								type = "dropbox",
+								name = "Vote Friends",
+								value = 1,
+								values = {"Off", "Yes", "No"}
+							},
+							{
+								type = "dropbox",
+								name = "Vote Priority",
+								value = 1,
+								values = {"Off", "Yes", "No"}
+							},
+							{
+								type = "dropbox",
+								name = "Default Vote",
+								value = 1,
+								values = {"Off", "Yes", "No"}
+							},
+							{
+								type = "toggle",
+								name = "Kill Sound",
+								value = false
+							},
+							{
+								type = "dropbox",
+								name = "Chat Spam",
+								value = 1,
+								values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Deluxe", "Youtube Title", "Custom", "Custom Combination"}
+							},
+							{
+								type = "toggle",
+								name = "Chat Spam Repeat",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Chat Spam Delay",
+								minvalue = 1,
+								maxvalue = 10,
+								value = 5,
+								stradd = " seconds"
+							},
+							{
+								type = "toggle",
+								name = "Auto Martyrdom",
+								value = false
+							},
 						}
 					},
 					{
-						type = "toggle",
-						name = "Force Time",
-						value = false
-					},
-					{
-						type = "slider",
-						name = "Custom Time",
-						value = 0,
-						minvalue = 0,
-						maxvalue = 24,
-						rounded = false
-					},
-					{
-						type = "toggle",
-						name = "Custom Saturation",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Saturation Tint",
-							color = {255, 255, 255}
+						name = "Exploits",
+						autopos = "left",
+						autofill = true,
+						content = {
+							{
+								type = "toggle",
+								name = "Invisibility",
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Super Invisibility",
+								value = false,
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "button",
+								name = "Crash Server",
+								doubleclick = true,
+							},
+							{
+								type = "toggle",
+								name = "Rapid Kill",
+								value = false,
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Grenade Teleport",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Freeze Players",
+								value = false,
+								extra = {
+									type = "keybind"
+								},
+								unsafe = true
+							},
+							{
+								type = "toggle",
+								name = "Vertical Floor Clip",
+								value = false,
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Fake Equip",
+								value = false
+							},
+							{
+								type = "dropbox",
+								name = "Fake Slot",
+								values = {"Primary", "Secondary", "Melee"},
+								value = 1
+							}
 						}
 					},
 					{
-						type = "slider",
-						name = "Saturation Density",
-						value = 0,
-						minvalue = 0,
-						maxvalue = 100,
-						stradd = "%",
+						name = "Weapon Modifications",
+						autopos = "right",
+						autofill = true,
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Fire Rate Scale",
+								value = 150,
+								minvalue = 50,
+								maxvalue = 500,
+								stradd = "%"
+							},
+							{
+								type = "slider",
+								name = "Recoil Scale",
+								value = 10,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%",
+							},
+							{
+								type = "toggle",
+								name = "Remove Animations",
+								value = true
+							},
+							{
+								type = "toggle",
+								name = "Instant Equip",
+								value = true
+							},
+							{
+								type = "toggle",
+								name = "Fully Automatic",
+								value = true
+							},
+							{
+								type = "toggle",
+								name = "Run and Gun",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Edit Bullet Speed",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Bullet Speed",
+								value = 6000,
+								minvalue = 80,
+								maxvalue = 200000,
+								stradd = " studs",
+								stepsize = 100
+							}
+						},
 					},
-					--[[{
-					type = "toggle",
-					name = "Custom Bloom",
-					value = false
-				},
-				{
-					type = "slider",
-					name = "Bloom Size",
-					value = 0,
-					minvalue = 0,
-					maxvalue = 100,
-					stradd = "%",
-				},
-				{
-					type = "slider",
-					name = "Bloom Intensity",
-					value = 0,
-					minvalue = 0,
-					maxvalue = 100,
-					stradd = "%",
-				},]]
-			}
-		},
-		{
-			name = "Misc Visuals",
-			autopos = "right",
-			autofill = true,
-			content = {
-				{
-					type = "toggle",
-					name = "Crosshair Color",
-					value = false,
-					extra = {
-						type = "double colorpicker",
-						name = {"Inline", "Outline"},
-						color = {{127, 72, 163}, {25, 25, 25}}
+				}
+			},
+			{
+				name = "Settings",
+				content = {
+					{
+						name = "Player List",
+						x = menu.columns.left,
+						y = 66,
+						width = 466,
+						height = 328,
+						content = {
+							{
+								type = "list",
+								name = "Players",
+								multiname = {"Name", "Team", "Status"},
+								size = 9,
+								colums = 3
+							},
+							{
+								type = "image",
+								name = "Player Info",
+								text = "No Player Selected",
+								size = 72
+							},
+							{
+								type = "dropbox",
+								name = "Player Status",
+								x = 307,
+								y = 314,
+								w = 160,
+								value = 1,
+								values = {"None", "Friend", "Priority"}
+							},
+							{
+								type = "button",
+								name = "Votekick",
+								x = 307,
+								y = 356,
+								w = 80,
+							},
+							{
+								type = "button",
+								name = "Spectate",
+								x = 387,
+								y = 356,
+								w = 80,
+							},
+						}
+					},
+					{
+						name = "Menu Settings",
+						x = menu.columns.left,
+						y = 400,
+						width = menu.columns.width,
+						height = 62,
+						content = {
+							{
+								type = "toggle",
+								name = "Menu Accent",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Accent Color",
+									color = {127, 72, 163}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Watermark",
+								value = true,
+							},
+						}
+					},
+					{
+						name = "Extra",
+						x = menu.columns.left,
+						y = 468,
+						width = menu.columns.width,
+						height = 165,
+						content = {
+							{
+								type = "button",
+								name = "Set Clipboard Game ID",
+							},
+							{
+								type = "button",
+								name = "Unload Cheat",
+								doubleclick = true,
+							},
+							{
+								type = "toggle",
+								name = "Allow Unsafe Features",
+								value = false,
+							},
+						}
+					},
+					{
+						name = "Configuration",
+						x = menu.columns.right,
+						y = 400,
+						width = menu.columns.width,
+						height = 233,
+						content = {
+							{
+								type = "textbox",
+								name = "ConfigName",
+								text = ""
+							},
+							{
+								type = "dropbox",
+								name = "Configs",
+								value = 1,
+								values = GetConfigs()
+							},
+							{
+								type = "button",
+								name = "Load Config",
+								doubleclick = true,
+							},
+							{
+								type = "button",
+								name = "Save Config",
+								doubleclick = true,
+							},
+							{
+								type = "button",
+								name = "Delete Config",
+								doubleclick = true,
+							},
+						}
 					}
-				},
-				{
-					type = "toggle",
-					name = "Ragdoll Chams",
-					value = false,
-					extra = {
-						type = "single colorpicker",
-						name = "Ragdoll Chams",
-						color = {255, 255, 255, 255}
-					},
-				},
-				{
-					type = "dropbox",
-					name = "Ragdoll Material",
-					value = 1,
-					values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
-				},
-				{
-					type = "toggle",
-					name = "Bullet Tracers",
-					value = false,
-					extra = {
-						type = "single colorpicker",
-						name = "Bullet Tracers",
-						color = {255, 255, 255, 255}
-					},
-				},
-			}
-		}
-		}
-
-		},
-		{--ANCHOR Misc
-		name = "Misc",
-		content = {
-			{
-				name = "Movement",
-				autopos = "left",
-				content = {
-					{
-						type = "toggle",
-						name = "Fly",
-						value = false,
-						extra = {
-							type = "keybind",
-							key = Enum.KeyCode.B
-						}
-					},
-					{
-						type = "slider",
-						name = "Fly Speed",
-						value = 70,
-						minvalue = 1,
-						maxvalue = 200,
-						stradd = " stud/s"
-					},
-					{
-						type = "toggle",
-						name = "Auto Jump",
-						value = false
-					},
-					{
-						type = "dropbox",
-						name = "Speed Type",
-						value = 1,
-						values = {"Off", "Always", "In Air", "On Hop"}
-					},
-					{
-						type = "slider",
-						name = "Speed",
-						value = 40,
-						minvalue = 1,
-						maxvalue = 200,
-						stradd = " stud/s"
-					},
-					{
-						type = "toggle",
-						name = "Circle Strafe",
-						value = false,
-						extra = {
-							type = "keybind"
-						}
-					},
-					{
-						type = "toggle",
-						name = "Gravity Shift",
-						value = false
-					},
-					{
-						type = "slider",
-						name = "Gravity Shift Percentage",
-						value = -50,
-						minvalue = -100,
-						maxvalue = 100,
-						stradd = "%"
-					},
-					{
-						type = "toggle",
-						name = "Prevent Fall Damage",
-						value = false
-					},
-					{
-						type = "toggle",
-						name = "Ignore Round Freeze",
-						value = false,
-						unsafe = true
-					}
-				},
-			},
-			{
-				name = "Extra",
-				autopos = "right",
-				content = {
-					{
-						type = "toggle",
-						name = "Suppress Only",
-						value = false
-					},
-					{
-						type = "toggle",
-						name = "Auto Vote",
-						value = false
-					},
-					{
-						type = "dropbox",
-						name = "Vote Friends",
-						value = 1,
-						values = {"Off", "Yes", "No"}
-					},
-					{
-						type = "dropbox",
-						name = "Vote Priority",
-						value = 1,
-						values = {"Off", "Yes", "No"}
-					},
-					{
-						type = "dropbox",
-						name = "Default Vote",
-						value = 1,
-						values = {"Off", "Yes", "No"}
-					},
-					{
-						type = "toggle",
-						name = "Kill Sound",
-						value = false
-					},
-					{
-						type = "dropbox",
-						name = "Chat Spam",
-						value = 1,
-						values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Deluxe", "Youtube Title", "Custom", "Custom Combination"}
-					},
-					{
-						type = "toggle",
-						name = "Chat Spam Repeat",
-						value = false
-					},
-					{
-						type = "slider",
-						name = "Chat Spam Delay",
-						minvalue = 1,
-						maxvalue = 10,
-						value = 5,
-						stradd = " seconds"
-					},
-					{
-						type = "toggle",
-						name = "Auto Martyrdom",
-						value = false
-					},
 				}
 			},
-			{
-				name = "Exploits",
-				autopos = "left",
-				autofill = true,
-				content = {
-					{
-						type = "toggle",
-						name = "Invisibility",
-						extra = {
-							type = "keybind"
-						}
-					},
-					{
-						type = "toggle",
-						name = "Super Invisibility",
-						value = false,
-						extra = {
-							type = "keybind"
-						}
-					},
-					{
-						type = "button",
-						name = "Crash Server",
-						doubleclick = true,
-					},
-					{
-						type = "toggle",
-						name = "Rapid Kill",
-						value = false,
-						extra = {
-							type = "keybind"
-						}
-					},
-					{
-						type = "toggle",
-						name = "Grenade Teleport",
-						value = false
-					},
-					--[[{
-					type = "toggle",
-					name = "Crimwalk",
-					value = false,
-					extra = {
-						type = "keybind"
-					}
-				},
-				{
-					type = "toggle",
-					name = "Disable Crimwalk on Shot",
-					value = false
-				},]]
-				{
-					type = "toggle",
-					name = "Freeze Players",
-					value = false,
-					extra = {
-						type = "keybind"
-					},
-					unsafe = true
-				},
-				{
-					type = "toggle",
-					name = "Vertical Floor Clip",
-					value = false,
-					extra = {
-						type = "keybind"
-					}
-				},
-				{
-					type = "toggle",
-					name = "Fake Equip",
-					value = false
-				},
-				{
-					type = "dropbox",
-					name = "Fake Slot",
-					values = {"Primary", "Secondary", "Melee"},
-					value = 1
-				}
-			}
-		},
-		{
-			name = "Weapon Modifications",
-			autopos = "right",
-			autofill = true,
-			content = {
-				{
-					type = "toggle",
-					name = "Enabled",
-					value = false
-				},
-				{
-					type = "slider",
-					name = "Fire Rate Scale",
-					value = 150,
-					minvalue = 50,
-					maxvalue = 500,
-					stradd = "%"
-				},
-				{
-					type = "slider",
-					name = "Recoil Scale",
-					value = 10,
-					minvalue = 0,
-					maxvalue = 100,
-					stradd = "%",
-				},
-				{
-					type = "toggle",
-					name = "Remove Animations",
-					value = true
-				},
-				{
-					type = "toggle",
-					name = "Instant Equip",
-					value = true
-				},
-				{
-					type = "toggle",
-					name = "Fully Automatic",
-					value = true
-				},
-				{
-					type = "toggle",
-					name = "Run and Gun",
-					value = false
-				},
-				{
-					type = "toggle",
-					name = "Edit Bullet Speed",
-					value = false
-				},
-				{
-					type = "slider",
-					name = "Bullet Speed",
-					value = 6000,
-					minvalue = 80,
-					maxvalue = 200000,
-					stradd = " studs",
-					stepsize = 100
-				}
-			},
-		},
-		}
-		},
-		{--ANCHOR Settings
-		name = "Settings",
-		content = {
-			{
-				name = "Player List",
-				x = menu.columns.left,
-				y = 66,
-				width = 466,
-				height = 328,
-				content = {
-					{
-						type = "list",
-						name = "Players",
-						multiname = {"Name", "Team", "Status"},
-						size = 9,
-						colums = 3
-					},
-					{
-						type = "image",
-						name = "Player Info",
-						text = "No Player Selected",
-						size = 72
-					},
-					{
-						type = "dropbox",
-						name = "Player Status",
-						x = 307,
-						y = 314,
-						w = 160,
-						value = 1,
-						values = {"None", "Friend", "Priority"}
-					},
-					{
-						type = "button",
-						name = "Votekick",
-						x = 307,
-						y = 356,
-						w = 80,
-					},
-					{
-						type = "button",
-						name = "Spectate",
-						x = 387,
-						y = 356,
-						w = 80,
-					},
-				}
-			},
-			{
-				name = "Menu Settings",
-				x = menu.columns.left,
-				y = 400,
-				width = menu.columns.width,
-				height = 62,
-				content = {
-					{
-						type = "toggle",
-						name = "Menu Accent",
-						value = false,
-						extra = {
-							type = "single colorpicker",
-							name = "Accent Color",
-							color = {127, 72, 163}
-						}
-					},
-					{
-						type = "toggle",
-						name = "Watermark",
-						value = true,
-					},
-				}
-			},
-			{
-				name = "Extra",
-				x = menu.columns.left,
-				y = 468,
-				width = menu.columns.width,
-				height = 165,
-				content = {
-					{
-						type = "button",
-						name = "Set Clipboard Game ID",
-					},
-					{
-						type = "button",
-						name = "Unload Cheat",
-						doubleclick = true,
-					},
-					{
-						type = "toggle",
-						name = "Allow Unsafe Features",
-						value = false,
-					},
-				}
-			},
-			{
-				name = "Configuration",
-				x = menu.columns.right,
-				y = 400,
-				width = menu.columns.width,
-				height = 233,
-				content = {
-					{
-						type = "textbox",
-						name = "ConfigName",
-						text = ""
-					},
-					{
-						type = "dropbox",
-						name = "Configs",
-						value = 1,
-						values = GetConfigs()
-					},
-					{
-						type = "button",
-						name = "Load Config",
-						doubleclick = true,
-					},
-					{
-						type = "button",
-						name = "Save Config",
-						doubleclick = true,
-					},
-					{
-						type = "button",
-						name = "Delete Config",
-						doubleclick = true,
-					},
-				}
-			}
-		}
-		},
 		})
-		do  --TODO alan put this shit into a function so you don't have to copy paste it thanks end
+		do
 			local plistinfo = menu.options["Settings"]["Player List"]["Player Info"][1]
 			local plist = menu.options["Settings"]["Player List"]["Players"]
 			local function updateplist()
@@ -10398,6 +10220,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end)
 		end
 	end --!SECTION PF END
+end
 end
 
 do
