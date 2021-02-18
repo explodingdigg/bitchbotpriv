@@ -272,6 +272,23 @@ function MultiThreadList(obj)
 	end
 end
 
+local DeepRestoreTableFunctions
+DeepRestoreTableFunctions = function(tbl)
+	for k, v in next, tbl do
+		if type(v) == "function" and is_synapse_function(v) then
+			for k1, v1 in next, getupvalues(v) do
+				if type(v1) == "function" and islclosure(v1) and not is_synapse_function(v1) then
+					tbl[k] = v1
+				end
+			end
+		end
+
+		if type(v) == "table" then
+			DeepRestoreTableFunctions(v)
+		end
+	end
+end
+
 
 local BBOT_IMAGES = {}
 MultiThreadList({
@@ -4665,6 +4682,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 	}
+
 	menu.pfunload = function(self)
 		for k,v in next, Players:GetPlayers() do
 			local bodyparts = client.replication.getbodyparts(v)
@@ -4737,25 +4755,9 @@ elseif menu.game == "pf" then --!SECTION
 		
 		local spring = require(game.ReplicatedFirst.SharedModules.Utilities.Math.spring)
 		spring.__index = client.springindex
-		
-		for module_name, module_data in next, client do
-			if type(module_data) == "table" then
-				for key, value in next, module_data do
-					
-					if type(value) == "function" and is_synapse_function(value) then
-						
-						for k,v in next, getupvalues(value) do
-							
-							if type(v) == "function" and islclosure(v) and not is_synapse_function(v) then
-								
-								module_data[key] = v
-								
-							end
-						end
-					end
-				end
-			end
-		end
+
+		client.fake_upvs = nil
+		DeepRestoreTableFunctions(client)
 		
 		local gunstore = game.ReplicatedStorage.GunModules
 		gunstore:Destroy()
@@ -4795,6 +4797,7 @@ elseif menu.game == "pf" then --!SECTION
 		legitbot = nil
 		misc = nil
 		camera = nil
+		DeepRestoreTableFunctions = nil
 	end
 	
 	local charcontainer = game.ReplicatedStorage.Character.Bodies
@@ -7638,6 +7641,8 @@ elseif menu.game == "pf" then --!SECTION
 					end
 				end
 			end
+
+			return newpart(P)
 		end
 		
 		
@@ -8456,7 +8461,7 @@ elseif menu.game == "pf" then --!SECTION
 	
 	CreateThread(function() -- ragebot performance
 		while wait() do
-			if not menu then error("") end
+			if not menu then return end
 			renderChams()
 			
 			
