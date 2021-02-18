@@ -5255,6 +5255,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 					
 					local oldNewIndex = mt.__newindex
 					local oldIndex = mt.__index
+					local oldNamecall = mt.__namecall
 					
 					setreadonly(mt, false)
 					
@@ -5291,9 +5292,26 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 						return oldNewIndex(self, id, val)
 					end)
 					
+					mt.__namecall = newcclosure(function(self, ...)
+						if not checkcaller() then
+							local namecallmethod = getnamecallmethod()
+							local fkunate = {...}
+							if self == workspace and namecallmethod == "FindPartsInRegion3" then
+								if menu.spectating then
+									-- sphereraycast cheat 2021	
+									fkunate[2] = workspace.CurrentCamera
+								end
+								return oldNamecall(self, unpack(fkunate))
+							end
+						end
+
+						return oldNamecall(self, ...)
+					end)
+
 					menu.oldmt = {
 						__newindex = oldNewIndex,
-						__index = oldIndex
+						__index = oldIndex,
+						__namecall = oldNamecall
 					}
 					
 					--[[mt.__index = newcclosure(function(table, key) -- (json) fuck this shit for now, it's probably causing a lot of crashing and we aren't even using it yet (?)
@@ -6914,7 +6932,12 @@ menu.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, g
 			if client.char.alive then
 				client.cam:setfirstpersoncam()
 			else
-				client.menu:loadmenu()
+				local lobby = workspace:FindFirstChild("MenuLobby")
+				if lobby then
+					client.cam:setmenucam(lobby)
+				else
+					client.menu:loadmenu()
+				end
 			end
 			menu.spectating = false
 		end
@@ -10583,7 +10606,12 @@ K/D: %d/%d
 			if client.menu.isdeployed() then
 				client.cam:setfirstpersoncam()
 			elseif client.cam.type ~= "menu" then
-				client.menu:loadmenu()
+				local lobby = workspace:FindFirstChild("MenuLobby")
+				if lobby then
+					client.cam:setmenucam(lobby)
+				else
+					--client.menu:loadmenu() super redundant
+				end
 			end
 			menu.spectating = false
 		end
