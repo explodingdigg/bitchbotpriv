@@ -472,13 +472,13 @@ local LOCAL_PLAYER = Players.LocalPlayer
 local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
 local TEAMS = game:GetService("Teams")
 local INPUT_SERVICE = game:GetService("UserInputService")
-local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
+--local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
 local CACHED_VEC3 = Vector3.new()
 local Camera = workspace.CurrentCamera
 local SCREEN_SIZE = Camera.ViewportSize
 local ButtonPressed = Instance.new("BindableEvent")
 local TogglePressed = Instance.new("BindableEvent")
-local PATHFINDING = game:GetService("PathfindingService")
+--local PATHFINDING = game:GetService("PathfindingService")
 local GRAVITY = Vector3.new(0,-192.6, 0)
 
 menu.x = math.floor((SCREEN_SIZE.x/2) - (menu.w/2))
@@ -4816,23 +4816,6 @@ client.fakeplayer = Instance.new("Player", Players) -- thank A_003 for this (thi
 client.fakeplayer.Name = " "
 client.fakeplayer.Team = LOCAL_PLAYER.Team
 
-local killsaymessages = {
-	"%s i killed you",
-	"%s GIVE UP stop trying to live",
-	"%s you died to me LOL",
-	"%s LOL",
-	"%s you're pretty bad if i'm being honest here",
-	"%s rekt",
-	"you died %s",
-	".",
-	"%s STOP TRYING TO KILL ANYONE OR LIVE BECAUSE YOU WON'T EVER BE CAPABLE OF IT",
-	"%s LOLOLOLOLLOL",
-	"%s please stop trying",
-	"%s GIVE UP",
-	"stop complaining when you die %s because it wont get you anywhere in life legit you're on roblox",
-	"%s you genuinely have the reaction time of an autist"
-}
-
 debug.setupvalue(client.loadplayer, 1, client.fakeplayer)
 client.fakeupdater = client.loadplayer(LOCAL_PLAYER)
 debug.setupvalue(client.loadplayer, 1, LOCAL_PLAYER)
@@ -4845,6 +4828,7 @@ do
 	updatervalues[15].s = 100]]
 	client.fake_upvs = updatervalues
 end
+
 local PLAYER_GUI = LOCAL_PLAYER.PlayerGui
 local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
 local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
@@ -5519,48 +5503,6 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 					return ragebot.bulletcheck(origin, target.Position, z, GRAVITY, penetration, whitelist)
 				end
 				
-				function ragebot:CanPenetrateRaycast(campos, pos, penetration, returnintersection, stopPart)
-					local dir = (pos - campos)
-					local hit, enter, norm = workspace:FindPartOnRayWithIgnoreList(Ray.new(campos, dir), {workspace.Terrain, workspace.Ignore, workspace.CurrentCamera, workspace.Players[LOCAL_PLAYER.Team.Name]})
-					
-					if hit then
-						if stopPart and hit == stopPart then
-							if returnintersection then
-								return true, enter
-							else
-								return true
-							end
-							--return returnintersection and true, enter or true
-						end
-						local unit = dir.Unit
-						local maxextent = hit.Size.Magnitude * unit
-						local _, exit, exitnorm = workspace:FindPartOnRayWithWhitelist(Ray.new(enter + maxextent, -maxextent), {hit})
-						local diff = exit - enter
-						local dist = dot(unit, diff)
-						local pass = not hit.CanCollide or hit.Transparency == 1
-						--local exited = false
-						
-						local newpos = enter + 0.01 * unit
-						
-						if not pass then
-							if dist < penetration then
-								penetration = penetration - dist
-							else
-								return false
-							end
-						end
-						
-						return self:CanPenetrateRaycast(newpos, pos, penetration, returnintersection, stopPart)
-					else
-						if returnintersection then
-							return true, enter
-						else
-							return true
-						end
-						return returnintersection and true, enter or true
-					end
-				end
-				
 				function ragebot:AimAtTarget(part, target, origin)
 					local origin = origin or client.cam.cframe.p
 					if not part then
@@ -5599,7 +5541,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 					ragebot.intersection = nil
 					
 					debug.profilebegin("BB Ragebot GetTarget")
-					local hitscan = hitscan or {}
+					--local hitscan = hitscan or {}
 					local partPreference = hitboxPriority or "you know who i am? well you about to find out, your barbecue boy"
 					local closest, cpart, theplayer = math.huge
 					
@@ -7818,7 +7760,8 @@ do -- ANCHOR Legitbot definition defines legit functions
 
 			local thebarrel = gun.barrel
 			debug.profilebegin("Legitbot Triggerbot")
-			local bulletspeed = client.logic.currentgun.data.bulletspeed
+			warn("logic", "currentgun", "data", "bulletspeed", gun.data.bulletspeed)
+			local bulletspeed = gun.data.bulletspeed
 			local isaiming = gun:isaiming()
 			local zoomval = menu:GetVal("Legit", "Trigger Bot", "Aim Percentage") / 100
 			--local shootallowed = menu:GetVal("Legit", "Trigger Bot", "Trigger When Aiming") and (isaiming and (client.zoommodspring.p > zoomval) or false) or true -- isaiming and (zoommodspring.p > zoomval) or false is somewhat redundant but oh well lmao
@@ -7844,7 +7787,7 @@ do -- ANCHOR Legitbot definition defines legit functions
 		
 									local dot = normalized:Dot(direction)
 									
-									if delta.magnitude > 250 then
+									if delta.magnitude > 2050 then
 										if barrelLV.Y >= direction.Y then
 											local dist = delta.magnitude ^ -2.3
 									
