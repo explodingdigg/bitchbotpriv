@@ -305,7 +305,7 @@ end
 
 loadstart = tick()
 
-if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 then -- they sometimes open 5281922586
+if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459 then -- they sometimes open 5281922586
 	menu.game = "pf"
 	do
 		for _,v in pairs(getgc()) do
@@ -5568,8 +5568,9 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 					local autowall = menu:GetVal("Rage", "Aimbot", "Auto Wall")
 					local aw_resolve = menu:GetVal("Rage", "Hack vs. Hack", "Autowall Resolver")
 					local resolvertype = menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type")
-					local campos = client.cam.cframe.p
-					local barrel = keybindtoggles.fakebody and campos - Vector3.new(0, client.fakeoffset, 0) or campos
+					local campos = client.cam.basecframe
+					local camposreal = keybindtoggles.fakebody and campos - Vector3.new(0, client.fakeoffset, 0) or campos
+					local camposv3 = camposreal.p
 					local firepos
 					
 					for i, player in next, players do
@@ -5586,31 +5587,31 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 							end]]
 							for k, bone in next, curbodyparts do
 								if bone.ClassName == "Part" and usedhitscan[k] then
-									if camera:IsVisible(bone, bone.Parent, barrel) then
+									if camera:IsVisible(bone, bone.Parent, camposv3) then
 										local fovToBone = camera:GetFOV(bone)
 										if fovToBone < closest then
 											closest = fovToBone
 											cpart = bone
 											theplayer = player
-											firepos = barrel
+											firepos = camposv3
 											if menu.priority[player.Name] then break end
 										else
 											continue
 										end
 									elseif autowall then
 										debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
-										local directionVector = camera:GetTrajectory(bone.Position, barrel)
+										local directionVector = camera:GetTrajectory(bone.Position, camposv3)
 										-- ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
 										-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
-										if directionVector and ragebot:CanPenetrateFast(barrel, bone, client.logic.currentgun.data.penetrationdepth) then
+										if directionVector and ragebot:CanPenetrateFast(camposv3, bone, client.logic.currentgun.data.penetrationdepth) then
 											cpart = bone
 											theplayer = player
-											firepos = barrel
+											firepos = camposv3
 											if menu.priority[player.Name] then break end
 										elseif aw_resolve then
 											if resolvertype == 1 then -- cubic hitscan
 												debug.profilebegin("BB Ragebot Cubic Resolver")
-												local resolvedPosition = ragebot:CubicHitscan(8, barrel, bone)
+												local resolvedPosition = ragebot:CubicHitscan(8, camposv3, bone)
 												debug.profileend("BB Ragebot Cubic Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
@@ -5622,7 +5623,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 												end
 											elseif resolvertype == 2 then -- axes fast
 												debug.profilebegin("BB Ragebot Axis Shifting Resolver")
-												local resolvedPosition = ragebot:HitscanOnAxes(barrel, player, bone, 1, 8)
+												local resolvedPosition = ragebot:HitscanOnAxes(camposreal, player, bone, 1, 8)
 												debug.profileend("BB Ragebot Axis Shifting Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
@@ -5633,7 +5634,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 												end
 											elseif resolvertype == 3 then -- random
 												debug.profilebegin("BB Ragebot Random Resolver")
-												local resolvedPosition = ragebot:HitscanRandom(barrel, player, bone)
+												local resolvedPosition = ragebot:HitscanRandom(camposv3, player, bone)
 												debug.profileend("BB Ragebot Random Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
@@ -5654,7 +5655,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 													if menu.priority[player.Name] then break end
 												end]]
 												debug.profilebegin("BB Ragebot Teleport Resolver")
-												local up = barrel + Vector3.new(0, 18, 0)
+												local up = camposreal + Vector3.new(0, 18, 0)
 												local pen = ragebot:CanPenetrateFast(up, bone, client.logic.currentgun.data.penetrationdepth)
 												debug.profileend("BB Ragebot Teleport Resolver") -- fuck
 												if pen then
@@ -5676,9 +5677,9 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 												local boneY = bone.Position.Y
 												local boneZ = bone.Position.Z
 												
-												local localX = barrel.X
-												local localY = barrel.Y
-												local localZ = barrel.Z
+												local localX = camposv3.X
+												local localY = camposv3.Y
+												local localZ = camposv3.Z
 												
 												local extendX = Vector3.new(extendSize, 0, 0)
 												local extendY = Vector3.new(0, extendSize, 0)
@@ -5696,7 +5697,7 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 												
 												--local pVelocity = camera:GetTrajectory(newTargetPosition, barrel)
 												
-												sphereHitbox.Position = bone.Position
+												sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
 												
 												if sphereHitbox.Size ~= rageHitboxSize then
 													sphereHitbox.Size = rageHitboxSize
@@ -5707,22 +5708,22 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 													[sphereHitbox] = true
 												}
 												
-												local penetrated, exited, intersectionpos = ragebot:CanPenetrateFast(barrel, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
+												local penetrated, exited, intersectionpos = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
 												if penetrated then
-													ragebot.firepos = barrel
+													ragebot.firepos = camposv3
 													cpart = bone
 													theplayer = player
-													ragebot.intersection = intersectionpos
-													firepos = barrel
+													ragebot.intersection = newTargetPosition
+													firepos = camposv3
 													--warn("penetrated normally")
 												else
 													-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
-													local resolvedPosition, bulletintersection = ragebot:HitscanOnAxes(barrel, player, sphereHitbox, 1, 8, wl)
+													local resolvedPosition, bulletintersection = ragebot:HitscanOnAxes(camposreal, player, sphereHitbox, 1, 8, wl)
 													if resolvedPosition then
 														ragebot.firepos = resolvedPosition
 														cpart = bone
 														theplayer = player
-														ragebot.intersection = bulletintersection
+														ragebot.intersection = newTargetPosition
 														firepos = resolvedPosition
 														if menu.priority[player.Name] then break end
 													else
@@ -5735,16 +5736,16 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 														end
 														
 														-- dick sucking god.
-														local penetrated, exited, newintersection = ragebot:CanPenetrateFast(barrel, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
+														local penetrated, exited, newintersection = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
 														
 														--warn(penetrated, intersectionPoint)
 														
 														if penetrated then
-															ragebot.firepos = barrel
+															ragebot.firepos = camposv3
 															cpart = bone
 															theplayer = player
 															ragebot.intersection = newintersection
-															firepos = barrel
+															firepos = camposv3
 														else
 															--warn("no standardized autowall hit")
 														end
@@ -5928,7 +5929,6 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 				end
 				
 				if pos then
-					warn("hit a corner")
 					return pos
 				end
 				
@@ -5942,7 +5942,6 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 				end
 				
 				if pos then
-					warn("hit from the inside")
 					return pos
 				end
 				
@@ -6052,64 +6051,64 @@ setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
 			local dest = typeof(bodypart) ~= "Vector3" and bodypart.Position or bodypart -- fuck
 			
 			assert(person, "something went wrong in your nasa rocket launch")
+			assert(typeof(origin) == "CFrame", "what are you trying to do young man")
 			local position = origin
-			local direction
 			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
 			for i = 1, max_step do
-				position = position + Vector3.new(0, step, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				position = position * CFrame.new(0, step, 0)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position, bulletintersection
+					return position.p, bulletintersection
 				end
 			end
 			
 			position = origin
 			
 			for i = 1, max_step do
-				position = position - Vector3.new(0, step, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				position = position * CFrame.new(0, -step, 0)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position, bulletintersection
+					return position.p, bulletintersection
 				end
 			end
 			
 			position = origin
 			
 			for i = 1, max_step do
-				position = position + Vector3.new(0, 0, step)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				position = position * CFrame.new(0, 0, step)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position, bulletintersection
+					return position.p, bulletintersection
 				end
 			end
 			
 			position = origin
 			
 			for i = 1, max_step do
-				position = position - Vector3.new(0, 0, step)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				position = position * CFrame.new(0, 0, -step)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position, bulletintersection
+					return position.p, bulletintersection
 				end
 			end
 			
 			position = origin
 			
 			for i = 1, max_step do
-				position = position + Vector3.new(step, 0, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				position = position * CFrame.new(step, 0, 0)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position, bulletintersection
+					return position.p, bulletintersection
 				end
 			end
 			
 			position = origin
 			
 			for i = 1, max_step do
-				position = position - Vector3.new(step, 0, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				position = position * CFrame.new(-step, 0, 0)
+				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					return position, bulletintersection
+					return position.p, bulletintersection
 				end
 			end
 			
@@ -7367,7 +7366,7 @@ do--ANCHOR send hook
 					testpart.Anchored = true
 					testpart.CanCollide = false
 					testpart.Size = Vector3.new(2, 2, 2)
-					wait(2)
+					wait(10)
 					testpart:Destroy()
 				end)
 				
