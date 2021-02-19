@@ -6485,6 +6485,50 @@ elseif menu.game == "pf" then --!SECTION
 	do
 		local tween = game:service("TweenService")
 		
+		client.closecast = require(game.ReplicatedFirst.SharedModules.Utilities.Geometry.CloseCast)
+		local partnames = { "head", "torso", "lleg", "rleg", "larm", "rarm" }
+		local partexpansionarray = { 0.75, 1.5, 1.5, 1.5, 1.5, 1.5 }
+
+		local nv = Vector3.new()
+		local dot = nv.Dot
+
+		local bodyarrayinfo = getupvalue(client.replication.thickcastplayers, 8)
+		local chartable = getupvalue(client.replication.getallparts, 1)
+
+		function client.thickcastplayers(origin, direction) -- i might attempt to use this on bulletcheck later
+			local castresults = nil
+			for player, bodyparts in next, chartable do
+				local delta = bodyparts.torso.Position - origin
+				local directiondot = dot(direction, direction)
+				local diff = dot(direction, delta)
+				if diff > 0 and diff < directiondot and directiondot * dot(delta, delta) - diff * diff < directiondot * 6 * 6 then
+					for i = 1, #partnames do
+						local maxdist = 0.0425 -- regular on pc with controller is just this
+						--[[if lol then
+							if i == 1 then
+								maxexpansion = lol / 2
+							else
+								maxexpansion = lol
+							end
+						elseif partexpansionarray then
+							maxexpansion = partexpansionarray[i]
+						end]]
+						maxdist = partexpansionarray[i]
+						local curbodypart = bodyparts[partnames[i]]
+						local pos, what, hitpos, dist = closecast.closeCastPart(curbodypart, origin, direction)
+						if pos and dist < maxdist then
+							if not castresults then
+								castresults = {}
+							end
+							castresults[#castresults + 1] = { bodyarrayinfo[curbodypart], curbodypart, hitpos, (what - hitpos).unit, what, dist }
+							break
+						end
+					end
+				end
+			end
+			return castresults
+		end
+
 		function misc:CreateBeam(origin_att, ending_att)
 			local beam = Instance.new("Beam")
 			beam.Texture = "http://www.roblox.com/asset/?id=446111271"
@@ -6708,9 +6752,6 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			if name == "Remove Animations" then
 				client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
-			end
-			if name == "No Camera Bob" then
-				setconstant(client.cam.step, 11, gb[1] and 0 or 0.5)
 			end
 		end)
 		local fakelagpos = Vector3.new()
@@ -7106,18 +7147,6 @@ elseif menu.game == "pf" then --!SECTION
 						-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
 						-- properly when you're using performance mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
 						
-						spawn(function()
-							local testpart = Instance.new("Part", workspace)
-							testpart.Position = hitpoint
-							testpart.Material = Enum.Material.Neon
-							testpart.Shape = Enum.PartType.Ball
-							testpart.Anchored = true
-							testpart.CanCollide = false
-							testpart.Size = Vector3.new(2, 2, 2)
-							wait(10)
-							testpart:Destroy()
-						end)
-						
 						if menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
 							send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
 							send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
@@ -7176,7 +7205,8 @@ elseif menu.game == "pf" then --!SECTION
 						else
 							send(self, 'bullethit', unpack(hitinfo))
 						end]]
-						
+						client.hud:firehitmarker(ragebot.targetpart.Name == "Head")
+						client.sound.PlaySound("hitmarker", nil, 1, 1.5)
 						send(self, 'bullethit', unpack(hitinfo))
 					end
 					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
@@ -7193,7 +7223,7 @@ elseif menu.game == "pf" then --!SECTION
 							local origin = args[2].firepos
 							local attach_origin = Instance.new("Attachment", workspace.Terrain)
 							attach_origin.Position = origin
-							local ending = origin + bullet[1] * 300
+							local ending = origin + (type(bullet[1]) == "table" and bullet[1].unit.Unit or bullet[1].Unit) * 300
 							local attach_ending = Instance.new("Attachment", workspace.Terrain)
 							attach_ending.Position = ending
 							local beam = misc:CreateBeam(attach_origin, attach_ending)
@@ -7635,6 +7665,7 @@ elseif menu.game == "pf" then --!SECTION
 					P.position = ragebot.firepos
 					P.velocity = ragebot.silentVector.Unit * mag
 					P.visualorigin = ragebot.firepos
+					P.ontouch = nil -- paster gave me this idea it will probably help the ragebot not be detected and other shit
 				else
 					if new_speed then
 						P.velocity = P.velocity.Unit * new_speed
@@ -8385,6 +8416,13 @@ elseif menu.game == "pf" then --!SECTION
 		if menu:GetVal("Misc", "Movement", "Fly") and key.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
 			keybindtoggles.flyhack = not keybindtoggles.flyhack
 		end
+		if menu:GetVal("Rage", "Extra", "Teleport Up") and key.KeyCode == menu:GetVal("Rage", "Extra", "Teleport Up", "keybind") and client.char.alive then
+			setfpscap(8)
+			wait()
+			client.char.rootpart.Position += Vector3.new(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
+			setfpscap(300)
+			wait()
+		end
 		if menu:GetVal("Rage", "Anti Aim", "Noclip") and key.KeyCode == menu:GetVal("Rage", "Anti Aim", "Noclip", "keybind") and client.char.alive then
 			local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
 			
@@ -8433,6 +8471,9 @@ elseif menu.game == "pf" then --!SECTION
 		debug.profilebegin("BB Rendering")
 		do --rendering
 			renderVisuals()
+			if menu.open then
+				setconstant(client.cam.step, 11, menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
+			end
 		end
 		debug.profileend("BB Rendering")
 		debug.profilebegin("BB Legitbot")
@@ -8456,6 +8497,21 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			debug.profileend("BB Ragebot (Non Performance)")
 		end
+
+		if menu.spectating and not client.cam:isspectating() then
+			if client.menu.isdeployed() then
+				client.cam:setfirstpersoncam()
+			elseif client.cam.type ~= "menu" then
+				local lobby = workspace:FindFirstChild("MenuLobby")
+				if lobby then
+					client.cam:setmenucam(lobby)
+				else
+					--client.menu:loadmenu()
+				end
+			end
+			menu.spectating = false
+		end
+
 		debug.profileend("Main BB Loop")
 	end)
 	
@@ -8472,7 +8528,6 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 	end)
-	
 	
 	menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
 		for index, nade in pairs(menu.activenades) do
@@ -9033,6 +9088,14 @@ elseif menu.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Release Packets on Shoot",
 							value = false
+						},
+						{
+							type = "toggle",
+							name = "Teleport Up",
+							value = false,
+							extra = {
+								type = "keybind"
+							}
 						}
 					},
 				},
@@ -10241,19 +10304,6 @@ elseif menu.game == "pf" then --!SECTION
 						setplistinfo(selectedPlayer, true)
 					end
 				end
-			end
-			if menu.spectating and not client.cam:isspectating() then
-				if client.menu.isdeployed() then
-					client.cam:setfirstpersoncam()
-				elseif client.cam.type ~= "menu" then
-					local lobby = workspace:FindFirstChild("MenuLobby")
-					if lobby then
-						client.cam:setmenucam(lobby)
-					else
-						--client.menu:loadmenu() super redundant
-					end
-				end
-				menu.spectating = false
 			end
 		end)
 		
