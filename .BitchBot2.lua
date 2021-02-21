@@ -8695,10 +8695,6 @@ elseif menu.game == "pf" then --!SECTION
 
 	menu.Initialize({
 		{
-			name = "FUCk",
-			content = {}
-		},
-		{
 			name = "Legit",
 			content = {
 				{
