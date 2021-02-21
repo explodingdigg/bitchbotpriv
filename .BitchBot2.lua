@@ -1172,9 +1172,9 @@ function menu.Initialize(menutable)
 	local tabs = {} -- i like tabby catz 🐱🐱🐱
 	
 	for k, v in pairs(menutable) do
-		Draw:MenuFilledRect(true, 10 + ((k - 1) * math.floor((menu.w - 20)/#menutable)), 27, math.floor((menu.w - 20)/#menutable), 32, {30, 30, 30, 255}, bbmenu)
-		Draw:MenuOutlinedRect(true, 10 + ((k - 1) * math.floor((menu.w - 20)/#menutable)), 27, math.floor((menu.w - 20)/#menutable), 32, {20, 20, 20, 255}, bbmenu)
-		Draw:MenuBigText(v.name, true, true, 10 + ((k - 1) * math.floor((menu.w - 20)/#menutable)) + math.floor(math.floor((menu.w - 20)/#menutable)*0.5), 35, bbmenu)
+		Draw:MenuFilledRect(true, 10 + ((k - 1) * ((menu.w - 20)/#menutable)), 27, ((menu.w - 20)/#menutable), 32, {30, 30, 30, 255}, bbmenu)
+		Draw:MenuOutlinedRect(true, 10 + ((k - 1) * ((menu.w - 20)/#menutable)), 27, ((menu.w - 20)/#menutable), 32, {20, 20, 20, 255}, bbmenu)
+		Draw:MenuBigText(v.name, true, true, math.floor(10 + ((k - 1) * ((menu.w - 20)/#menutable)) + (((menu.w - 20)/#menutable)*0.5)), 35, bbmenu)
 		table.insert(tabs, {bbmenu[#bbmenu - 2], bbmenu[#bbmenu - 1], bbmenu[#bbmenu]})
 		table.insert(menu.tabnames, v.name)
 		
@@ -1365,12 +1365,12 @@ function menu.Initialize(menutable)
 	
 	Draw:MenuOutlinedRect(true, 10, 59, menu.w - 20, menu.h - 69, {20, 20, 20, 255}, bbmenu)
 	
-	Draw:MenuOutlinedRect(true, 11, 58, math.floor((menu.w - 20)/#menutable) - 2, 2, {35, 35, 35, 255}, bbmenu)
+	Draw:MenuOutlinedRect(true, 11, 58, ((menu.w - 20)/#menutable) - 2, 2, {35, 35, 35, 255}, bbmenu)
 	local barguy = {bbmenu[#bbmenu], menu.postable[#menu.postable]}
 	
-	local function set_barguy(slot)
-		barguy[1].Position = Vector2.new((menu.x + 11 + (((math.floor((menu.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2), menu.y + 58)
-		barguy[2][2] = (11 + (((math.floor((menu.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2)
+	local function setActiveTab(slot)
+		barguy[1].Position = Vector2.new((menu.x + 11 + (((((menu.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2), menu.y + 58)
+		barguy[2][2] = (11 + (((((menu.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2)
 		barguy[2][3] = 58
 		
 		for k, v in pairs(tabs) do
@@ -1394,7 +1394,7 @@ function menu.Initialize(menutable)
 		end
 	end
 	
-	set_barguy(menu.activetab)
+	setActiveTab(menu.activetab)
 	
 	local plusminus = {}
 	
@@ -2435,7 +2435,7 @@ function menu.Initialize(menutable)
 		for i = 1, #menutable do
 			if menu:MouseInMenu(10 + ((i - 1) * math.floor((menu.w - 20)/#menutable)), 27, math.floor((menu.w - 20)/#menutable), 32) then
 				menu.activetab = i
-				set_barguy(menu.activetab)
+				setActiveTab(menu.activetab)
 				menu:SetMenuPos(menu.x, menu.y)
 			end
 		end
@@ -2871,7 +2871,7 @@ function menu.Initialize(menutable)
 				end
 			else
 				menu:set_menu_visibility(true)
-				set_barguy(menu.activetab)
+				setActiveTab(menu.activetab)
 				local timesincefade = tick() - menu.fadestart
 				local fade_amount = math.floor((timesincefade * 10) * 255)
 				menu:set_menu_transparency(fade_amount)
@@ -8694,6 +8694,10 @@ elseif menu.game == "pf" then --!SECTION
 	end)
 
 	menu.Initialize({
+		{
+			name = "FUCk",
+			content = {}
+		},
 		{
 			name = "Legit",
 			content = {
