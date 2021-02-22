@@ -257,9 +257,9 @@ function menu:modkeydown(key, direction)
 	return keydata.direction and keydata.direction == direction or false
 end
 
-function CreateThread(func)
+function CreateThread(func, ...) -- improved... yay.
 	local thread = coroutine.create(func)
-	coroutine.resume(thread)
+	coroutine.resume(thread, ...)
 	return thread
 end
 
@@ -284,6 +284,74 @@ DeepRestoreTableFunctions = function(tbl)
 			DeepRestoreTableFunctions(v)
 		end
 	end
+end
+
+local event = {}
+
+local allevent = {}
+
+function event.new(eventname, eventtable, requirename) -- fyi you can put in a table of choice to make the table you want an "event" pretty cool its like doing & in c lol!
+	if eventname then
+		assert(allevent[eventname] ~= nil, ("the event '%s' already exists in the event table"):format(eventname))
+	end
+	local newevent = eventtable or {}
+	local funcs = {}
+	local disconnectlist = {}
+
+	function newevent:connect(func)
+		funcs[#funcs + 1] = func
+		local disconnected = false
+		local function disconnect()
+			if not disconnected then
+				disconnected = true
+				disconnectlist[func] = true
+			end
+		end
+		return disconnect
+	end
+
+	local function fire(...)
+		local n = #funcs
+		local j = 0
+		for i = 1, n do
+			local func = funcs[i]
+			if disconnectlist[func] then
+				disconnectlist[func] = nil
+			else
+				j = j + 1
+				funcs[j] = func
+			end
+		end
+		for i = j + 1, n do
+			funcs[i] = nil
+		end
+		for i = 1, j do
+			CreateThread(function(...)
+				pcall(funcs[i], ...)
+			end, ...)
+		end
+	end
+
+	if eventname then
+		allevent[eventname] = {
+			event = newevent,
+			fire = fire
+		}
+	end
+
+	return newevent, fire
+end
+
+local function FireEvent(eventname, ...)
+	if allevent[eventname] then
+		return allevent[eventname].fire(...)
+	else
+		warn(("Event %s does not exist!"):format(eventname))
+	end
+end
+
+local function GetEvent(eventname)
+	return allevent[eventname]
 end
 
 
