@@ -7553,10 +7553,7 @@ elseif menu.game == "pf" then --!SECTION
 					local y, x = client.vectorutil.toanglesyx(dir)
 					local vec = Vector3.new(y, x)
 					client.logic.currentgun.barrel.Orientation = vec
-					return CreateThread(function()
-						game.RunService.RenderStepped:Wait()
-						client.logic.currentgun.barrel.Orientation = oldOrientation					
-					end)
+					return 
 				end
 				if client.logic.currentgun.type == "KNIFE" then return end
 				
