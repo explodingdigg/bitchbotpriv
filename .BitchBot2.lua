@@ -213,46 +213,46 @@ local function DisplayLoadtimeFromStart()
 end
 
 menu = { -- this is for menu stuffs n shi
-w = 500,
-h = 650,
-x = 200,
-y = 300,
-columns = {
-	width = 230,
-	left = 17,
-	right = 253
-},
-activetab = 6,
-open = true,
-fadestart = 0,
-fading = false,
-mousedown = false,
-postable = {},
-options = {},
-clrs = {
-	norm = {},
-	dark = {},
-	togz = {}
-},
-mc = {127, 72, 163},
-watermark = {},
-connections = {},
-list = {},
-unloaded = false,
-copied_clr = nil,
-game = "uni",
-tabnames = {}, -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
-friends = {},
-priority = {},
-spectating = false,
-modkeys = {
-	alt = {
-		direction = nil
+	w = 500,
+	h = 650,
+	x = 200,
+	y = 300,
+	columns = {
+		width = 230,
+		left = 17,
+		right = 253
 	},
-	shift = {
-		direction = nil
+	activetab = 1,
+	open = true,
+	fadestart = 0,
+	fading = false,
+	mousedown = false,
+	postable = {},
+	options = {},
+	clrs = {
+		norm = {},
+		dark = {},
+		togz = {}
+	},
+	mc = {127, 72, 163},
+	watermark = {},
+	connections = {},
+	list = {},
+	unloaded = false,
+	copied_clr = nil,
+	game = "uni",
+	tabnames = {}, -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
+	friends = {},
+	priority = {},
+	spectating = false,
+	modkeys = {
+		alt = {
+			direction = nil
+		},
+		shift = {
+			direction = nil
+		}
 	}
-}
 }
 
 function menu:modkeydown(key, direction)
@@ -1885,6 +1885,7 @@ function menu.Initialize(menutable)
 						elseif v2[2] == "textbox" then
 							if v2[5] then
 								if table.find(textBoxLetters, KeyEnumToName(key.KeyCode)) and string.len(v2[1]) <= 28 then
+									--print(tostring(INPUT_SERVICE:IsModifierKeyDown()))
 									if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
 										v2[1] = v2[1].. string.upper(KeyEnumToName(key.KeyCode))
 									else
@@ -3011,22 +3012,22 @@ function menu.Initialize(menutable)
 					menu.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.x
 					menu.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.y - 36
 					menu:SetMenuPos(menu.x, menu.y)
-					if menu.y < 0 then
-						menu.y = 0
-						menu:SetMenuPos(menu.x, 0)
-					end
-					if menu.x < 0 then
-						menu.x = 0
-						menu:SetMenuPos(0, menu.y)
-					end
-					if menu.x + menu.w > SCREEN_SIZE.x then
-						menu.x = SCREEN_SIZE.x - menu.w
-						menu:SetMenuPos(SCREEN_SIZE.x - menu.w, menu.y)
-					end
-					if menu.y > SCREEN_SIZE.y - 20 then
-						menu.y = SCREEN_SIZE.y - 20
-						menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
-					end
+					-- if menu.y < 0 then
+					-- 	menu.y = 0
+					-- 	menu:SetMenuPos(menu.x, 0)
+					-- end
+					-- if menu.x < 0 then
+					-- 	menu.x = 0
+					-- 	menu:SetMenuPos(0, menu.y)
+					-- end
+					-- if menu.x + menu.w > SCREEN_SIZE.x then
+					-- 	menu.x = SCREEN_SIZE.x - menu.w
+					-- 	menu:SetMenuPos(SCREEN_SIZE.x - menu.w, menu.y)
+					-- end
+					-- if menu.y > SCREEN_SIZE.y - 20 then
+					-- 	menu.y = SCREEN_SIZE.y - 20
+					-- 	menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
+					-- end
 				else
 					dragging = false
 				end
@@ -3165,6 +3166,8 @@ end
 
 
 if menu.game == "uni" then --SECTION UNIVERSAL
+	menu.activetab = 4
+
 	local allesp = {
 		headdotoutline = {},
 		headdot = {},
@@ -4354,6 +4357,8 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	end)
 	
 elseif menu.game == "pf" then --!SECTION
+	menu.activetab = 6
+
 	local sphereHitbox = Instance.new("Part", workspace)
 	sphereHitbox.Name = "abcdefg"
 	local diameter
@@ -10283,22 +10288,6 @@ K/D: %d/%d
 		
 		menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
 			if menu.open then
-				if menu.y < 0 then
-					menu.y = 0
-					menu:SetMenuPos(menu.x, 0)
-				end
-				if menu.x < 0 then
-					menu.x = 0
-					menu:SetMenuPos(0, menu.y)
-				end
-				if menu.x + menu.w > SCREEN_SIZE.x then
-					menu.x = SCREEN_SIZE.x - menu.w
-					menu:SetMenuPos(SCREEN_SIZE.x - menu.w, menu.y)
-				end
-				if menu.y > SCREEN_SIZE.y - 20 then
-					menu.y = SCREEN_SIZE.y - 20
-					menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
-				end
 				if menu.tabnames[menu.activetab] == "Settings" then
 					if plist[1] ~= nil then
 						setplistinfo(selectedPlayer, true)
