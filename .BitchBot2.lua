@@ -7680,22 +7680,23 @@ elseif menu.game == "pf" then --!SECTION
 		--ADS Fov hook
 		local crosshairColors
 		local function renderVisuals()
-			debug.profilebegin("renderVisuals Char")
-			client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
-			for i, frame in pairs(PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()) do
-				if not crosshairColors then crosshairColors = {
-					inline = frame.BackgroundColor3,
-					outline = frame.BorderColor3
-				} 
-			end -- MEOW -core 2021
-			local inline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color1", true)
-			local outline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color2", true)
-			local enabled = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color")
-			frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
-			frame.BorderColor3 = enabled and outline or crosshairColors.outline
-		end
-		
-		debug.profileend("renderVisuals Char")
+			if menu.open then
+				debug.profilebegin("renderVisuals Char")
+				client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
+				for i, frame in pairs(PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()) do
+					if not crosshairColors then crosshairColors = {
+						inline = frame.BackgroundColor3,
+						outline = frame.BorderColor3
+					} 
+				end -- MEOW -core 2021
+				local inline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color1", true)
+				local outline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color2", true)
+				local enabled = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color")
+				frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
+				frame.BorderColor3 = enabled and outline or crosshairColors.outline
+				debug.profileend()
+			end
+		end -- fun end!
 		--------------------------------------world funnies
 		debug.profilebegin("renderVisuals World")
 		if menu.options["Visuals"]["World Visuals"]["Force Time"][1] then
@@ -7756,6 +7757,7 @@ elseif menu.game == "pf" then --!SECTION
 			-- table.sort(players, function(p1, p2)
 			-- 	return table.find(menu.priority, p2.Name) ~= table.find(menu.priority, p1.Name) and table.find(menu.priority, p2.Name) == true and table.find(menu.priority, p1.Name) == false
 			-- end)
+			local cam = Camera.CFrame
 			
 			local priority_color = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color", true)
 			local priority_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color")[4]/255
@@ -7781,7 +7783,6 @@ elseif menu.game == "pf" then --!SECTION
 				
 				
 				local torso = parts.torso.CFrame
-				local cam = Camera.CFrame
 				
 				debug.profilebegin("renderVisuals Player ESP Box Calculation " .. Player.Name)
 				
