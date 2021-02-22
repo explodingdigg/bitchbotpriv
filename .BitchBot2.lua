@@ -1784,14 +1784,14 @@ function menu.Initialize(menutable)
 	menu.colorpicker_open = false
 	local colorpickerthatisopen = nil
 	
-	local textboxopen = false
-	local textboxthatisopen = nil
+	menu.textboxopen = false
+	menu.textboxthatisopen = nil
 	
 	local shooties = {}
 	
 	function InputBeganMenu(key)
 		
-		if textboxopen then
+		if menu.textboxopen then
 			if key.KeyCode == Enum.KeyCode.Delete or key.KeyCode == Enum.KeyCode.Return then
 				for k, v in pairs(menu.options) do
 					for k1, v1 in pairs(v) do
@@ -1800,7 +1800,7 @@ function menu.Initialize(menutable)
 								if v2[5] then
 									v2[5] = false
 									v2[4].Color = RGB(255, 255, 255)
-									textboxopen = false
+									menu.textboxopen = false
 									v2[4].Text = v2[1]
 								end
 							end
@@ -2403,7 +2403,7 @@ function menu.Initialize(menutable)
 	
 	local function mousebutton1downfunc()
 		dropboxopen = false
-		textboxopen = false
+		menu.textboxopen = false
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
@@ -2699,8 +2699,8 @@ function menu.Initialize(menutable)
 							elseif v2[2] == "textbox" and not dropboxopen then
 								if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 22) then
 									if not v2[5] then
-										textboxopen = true
-										textboxthatisopen = v2
+										menu.textboxopen = true
+										menu.textboxthatisopen = v2
 										
 										v2[4].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 										v2[5] = true
@@ -4665,6 +4665,43 @@ elseif menu.game == "pf" then --!SECTION
 
 	client.loadedguns = getupvalue(client.char.unloadguns, 2) -- i hope this works
 	
+	client.roundsystem.lock = nil -- we do a little trolling
+
+	client.lastlock = false -- fucking dumb
+
+	setrawmetatable(client.roundsystem, {
+		__index = function(self, val)
+			if not menu then
+				setrawmetatable(self, nil)
+				return false
+			end
+
+			if val == "lock" then
+				if menu.textboxopen then 
+					return true 
+				end
+
+				if menu:GetVal("Misc", "Movement", "Ignore Round Freeze") then
+					return false
+				else
+					return client.lastlock
+				end
+			end
+		end,
+		__newindex = function(self, key, value)
+			if not menu then
+				setrawmetatable(self, nil)
+				pcall(rawset, self, key, value)
+				return
+			end
+
+			if key == "lock" then
+				client.lastlock = value
+				return
+			end
+		end
+	})
+
 	local debris = game:service("Debris")
 	local teamdata = {}
 	do
@@ -5230,7 +5267,7 @@ elseif menu.game == "pf" then --!SECTION
 				
 				Player.Character = Body.rootpart.Parent
 				for k1, Part in pairs(Player.Character:GetChildren()) do
-					debug.profilebegin("renderChams " .. Player.Name)
+					--debug.profilebegin("renderChams " .. Player.Name)
 					if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
 						
 						local helmet = Part:FindFirstChild("HELMET")
@@ -5292,7 +5329,7 @@ elseif menu.game == "pf" then --!SECTION
 							end
 						end
 					end
-					debug.profileend("renderChams " .. Player.Name)
+					--debug.profileend("renderChams " .. Player.Name)
 				end
 			end
 		end
@@ -5360,6 +5397,7 @@ elseif menu.game == "pf" then --!SECTION
 					end
 				end
 			end
+
 			return oldNewIndex(self, id, val)
 		end)
 		
@@ -5378,7 +5416,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			return oldNamecall(self, ...)
 		end)
-		
+
 		menu.oldmt = {
 			__newindex = oldNewIndex,
 			__index = oldIndex,
@@ -5622,7 +5660,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			ragebot.intersection = nil
 			
-			debug.profilebegin("BB Ragebot GetTarget")
+			--debug.profilebegin("BB Ragebot GetTarget")
 			--local hitscan = hitscan or {}
 			local partPreference = hitboxPriority or "you know who i am? well you about to find out, your barbecue boy"
 			local closest, cpart, theplayer = math.huge
@@ -5657,7 +5695,7 @@ elseif menu.game == "pf" then --!SECTION
 										continue
 									end
 								elseif autowall then
-									debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
+									--debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
 									local directionVector = camera:GetTrajectory(bone.Position, camposv3)
 									-- ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
 									-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
@@ -5668,9 +5706,9 @@ elseif menu.game == "pf" then --!SECTION
 										if menu.priority[player.Name] then break end
 									elseif aw_resolve then
 										if resolvertype == 1 then -- cubic hitscan
-											debug.profilebegin("BB Ragebot Cubic Resolver")
+											--debug.profilebegin("BB Ragebot Cubic Resolver")
 											local resolvedPosition = ragebot:CubicHitscan(8, camposv3, bone)
-											debug.profileend("BB Ragebot Cubic Resolver")
+											--debug.profileend("BB Ragebot Cubic Resolver")
 											if resolvedPosition then
 												ragebot.firepos = resolvedPosition
 												--ragebot.intersection = intersection
@@ -5680,9 +5718,9 @@ elseif menu.game == "pf" then --!SECTION
 												if menu.priority[player.Name] then break end
 											end
 										elseif resolvertype == 2 then -- axes fast
-											debug.profilebegin("BB Ragebot Axis Shifting Resolver")
+											--debug.profilebegin("BB Ragebot Axis Shifting Resolver")
 											local resolvedPosition = ragebot:HitscanOnAxes(camposreal, player, bone, 1, 8)
-											debug.profileend("BB Ragebot Axis Shifting Resolver")
+											--debug.profileend("BB Ragebot Axis Shifting Resolver")
 											if resolvedPosition then
 												ragebot.firepos = resolvedPosition
 												cpart = bone
@@ -5691,9 +5729,9 @@ elseif menu.game == "pf" then --!SECTION
 												if menu.priority[player.Name] then break end
 											end
 										elseif resolvertype == 3 then -- random
-											debug.profilebegin("BB Ragebot Random Resolver")
+											--debug.profilebegin("BB Ragebot Random Resolver")
 											local resolvedPosition = ragebot:HitscanRandom(camposv3, player, bone)
-											debug.profileend("BB Ragebot Random Resolver")
+											--debug.profileend("BB Ragebot Random Resolver")
 											if resolvedPosition then
 												ragebot.firepos = resolvedPosition
 												cpart = bone
@@ -5702,10 +5740,10 @@ elseif menu.game == "pf" then --!SECTION
 												if menu.priority[player.Name] then break end
 											end
 										elseif resolvertype == 4 then -- teleport
-											debug.profilebegin("BB Ragebot Teleport Resolver")
+											--debug.profilebegin("BB Ragebot Teleport Resolver")
 											local up = camposreal + Vector3.new(0, 18, 0)
 											local pen = ragebot:CanPenetrateFast(up, bone, client.logic.currentgun.data.penetrationdepth)
-											debug.profileend("BB Ragebot Teleport Resolver") -- fuck
+											--debug.profileend("BB Ragebot Teleport Resolver") -- fuck
 											if pen then
 												ragebot.firepos = up
 												ragebot.needsTP = true
@@ -5801,14 +5839,14 @@ elseif menu.game == "pf" then --!SECTION
 											end
 										end
 									end
-									debug.profileend("BB Ragebot Penetration Check " .. player.Name)
+									--debug.profileend("BB Ragebot Penetration Check " .. player.Name)
 								end
 							end
 						end
 					end
 				end
 			end
-			debug.profileend("BB Ragebot GetTarget")
+			--debug.profileend("BB Ragebot GetTarget")
 			
 			return cpart, theplayer, closest, firepos
 		end
@@ -6939,11 +6977,15 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end)
 		
-		function misc:RoundFreeze()
+		--[[function misc:RoundFreeze()
+			if textboxopen then
+				client.roundsystem.lock = true
+				return
+			end
 			if menu:GetVal("Misc", "Movement", "Ignore Round Freeze") then
 				client.roundsystem.lock = false
 			end
-		end
+		end]]
 		
 		function misc:FlyHack()
 			
@@ -7065,7 +7107,7 @@ elseif menu.game == "pf" then --!SECTION
 					misc:FlyHack()
 					misc:AutoJump()
 					misc:GravityShift()
-					misc:RoundFreeze()
+					--misc:RoundFreeze()
 				elseif keybindtoggles.flyhack then
 					rootpart.Anchored = true
 				end
@@ -7419,7 +7461,7 @@ elseif menu.game == "pf" then --!SECTION
 				
 				
 				if not menu.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun then
-					debug.profilebegin("Legitbot Main")
+					--debug.profilebegin("Legitbot Main")
 					if menu:GetVal("Legit", "Aim Assist", "Enabled") then
 						local keybind = menu:GetVal("Legit", "Aim Assist", "Aimbot Key") - 1
 						local fov = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV")
@@ -7453,7 +7495,7 @@ elseif menu.game == "pf" then --!SECTION
 							legitbot.silentVector = nil
 						end
 					end
-					debug.profileend("Legitbot Main")
+					--debug.profileend("Legitbot Main")
 				end
 				
 				
@@ -7461,7 +7503,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			function legitbot:AimAtTarget(targetPart, smoothing)
 				
-				debug.profilebegin("Legitbot AimAtTarget")
+				--debug.profilebegin("Legitbot AimAtTarget")
 				if not targetPart then return end
 				
 				local Pos, visCheck
@@ -7490,13 +7532,13 @@ elseif menu.game == "pf" then --!SECTION
 				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
 				
 				Move_Mouse(aimbotMovement)
-				debug.profileend("Legitbot AimAtTarget")
+				--debug.profileend("Legitbot AimAtTarget")
 				
 			end
 			
 			
 			function legitbot:SilentAimAtTarget(targetPart)
-				debug.profilebegin("Legitbot SilentAimAtTarget")
+				--debug.profilebegin("Legitbot SilentAimAtTarget")
 				
 				if not targetPart or not targetPart.Position or client.logic.currentgun == nil then
 					return
@@ -7527,7 +7569,7 @@ elseif menu.game == "pf" then --!SECTION
 				local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
 				dir += offset * offsetMult
 				
-				debug.profileend("Legitbot SilentAimAtTarget")
+				--debug.profileend("Legitbot SilentAimAtTarget")
 				return dir.Unit
 			end
 			
@@ -7549,7 +7591,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			]]
 			function legitbot:GetTargetLegit(partPreference, hitscan, players)
-				debug.profilebegin("Legitbot GetTargetLegit")
+				--debug.profilebegin("Legitbot GetTargetLegit")
 				local closest, closestPart, player = math.huge
 				partPreference = partPreference or 'what'
 				hitscan = hitscan or {}
@@ -7612,7 +7654,7 @@ elseif menu.game == "pf" then --!SECTION
 						end
 					end
 				end
-				debug.profileend("Legitbot GetTargetLegit")
+				--debug.profileend("Legitbot GetTargetLegit")
 				return closestPart, closest, player
 				
 				
@@ -7628,7 +7670,7 @@ elseif menu.game == "pf" then --!SECTION
 					local dsrgposrdjiogjaiogjaoeihjoaiest = "data" -- it loves it
 					
 					local thebarrel = gun.barrel
-					debug.profilebegin("Legitbot Triggerbot")
+					--debug.profilebegin("Legitbot Triggerbot")
 					warn("logic", "currentgun", "data", "bulletspeed", gun.data.bulletspeed)
 					local bulletspeed = gun.data.bulletspeed
 					local isaiming = gun:isaiming()
@@ -7708,7 +7750,7 @@ elseif menu.game == "pf" then --!SECTION
 						client.logic.currentgun:shoot(false)
 						legitbot.triggerbotShooting = false
 					end]]
-					debug.profileend("Legitbot Triggerbot")
+					--debug.profileend("Legitbot Triggerbot")
 				end
 				
 				
@@ -7751,7 +7793,7 @@ elseif menu.game == "pf" then --!SECTION
 		local crosshairColors
 		local function renderVisuals()
 			if menu.open then
-				debug.profilebegin("renderVisuals Char")
+				--debug.profilebegin("renderVisuals Char")
 				client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 				for i, frame in pairs(PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()) do
 					if not crosshairColors then crosshairColors = {
@@ -7764,11 +7806,11 @@ elseif menu.game == "pf" then --!SECTION
 				local enabled = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color")
 				frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
 				frame.BorderColor3 = enabled and outline or crosshairColors.outline
-				debug.profileend()
+				--debug.profileend()
 			end
 		end -- fun end!
 		--------------------------------------world funnies
-		debug.profilebegin("renderVisuals World")
+		--debug.profilebegin("renderVisuals World")
 		if menu.options["Visuals"]["World Visuals"]["Force Time"][1] then
 			game.Lighting.ClockTime = menu.options["Visuals"]["World Visuals"]["Custom Time"][1] 
 		end
@@ -7786,9 +7828,9 @@ elseif menu.game == "pf" then --!SECTION
 			game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
 			game.Lighting.MapSaturation.Saturation = -0.25
 		end
-		debug.profileend("renderVisuals World")
+		--debug.profileend("renderVisuals World")
 		
-		debug.profilebegin("renderVisuals Player ESP Reset")
+		--debug.profilebegin("renderVisuals Player ESP Reset")
 		-- TODO this reset may need to be improved to a large extent, it's taking up some time but idk if the frame times are becoming worse because of this
 		for k, v in pairs(allesp) do
 			for k1, v1 in pairs(v) do
@@ -7817,10 +7859,10 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 		
-		debug.profileend("renderVisuals Player ESP Reset")
+		--debug.profileend("renderVisuals Player ESP Reset")
 		
 		----------
-		debug.profilebegin("renderVisuals Main")
+		--debug.profilebegin("renderVisuals Main")
 		if client.cam.type ~= "menu" then
 			
 			local players = Players:GetPlayers()
@@ -7854,7 +7896,7 @@ elseif menu.game == "pf" then --!SECTION
 				
 				local torso = parts.torso.CFrame
 				
-				debug.profilebegin("renderVisuals Player ESP Box Calculation " .. Player.Name)
+				--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. Player.Name)
 				
 				local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
 				local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
@@ -7872,7 +7914,7 @@ elseif menu.game == "pf" then --!SECTION
 				local boxSize = Vector2.new(math.floor(math.max(_height/1.5, _width)), _height)
 				local boxPosition = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.y, bottom.y)))
 				
-				debug.profileend("renderVisuals Player ESP Box Calculation " .. Player.Name)
+				--debug.profileend("renderVisuals Player ESP Box Calculation " .. Player.Name)
 				
 				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 				local health = math.ceil(client.hud:getplayerhealth(Player))
@@ -7885,7 +7927,7 @@ elseif menu.game == "pf" then --!SECTION
 				if (topIsRendered or bottomIsRendered) then
 					if menu.options["ESP"][GroupBox]["Name"][1] then
 						
-						debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
+						--debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
 						
 						local name = tostring(Player.Name)
 						if menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
@@ -7898,12 +7940,12 @@ elseif menu.game == "pf" then --!SECTION
 						allesp.text.name[Index].Visible = true
 						allesp.text.name[Index].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
 						
-						debug.profileend("renderVisuals Player ESP Render Name " .. Player.Name)
+						--debug.profileend("renderVisuals Player ESP Render Name " .. Player.Name)
 						
 					end
 					
 					if menu.options["ESP"][GroupBox]["Box"][1] then
-						debug.profilebegin("renderVisuals Player ESP Render Box " .. Player.Name)
+						--debug.profilebegin("renderVisuals Player ESP Render Box " .. Player.Name)
 						for i = -1, 1 do
 							local box = allesp.box[i+2][Index]
 							box.Visible = true
@@ -7917,13 +7959,13 @@ elseif menu.game == "pf" then --!SECTION
 							--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 							
 						end
-						debug.profileend("renderVisuals Player ESP Render Box " .. Player.Name)
+						--debug.profileend("renderVisuals Player ESP Render Box " .. Player.Name)
 					end
 					
 					
 					if menu.options["ESP"][GroupBox]["Health Bar"][1] then
 						
-						debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. Player.Name)
+						--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. Player.Name)
 						
 						local ySizeBar = -math.floor(boxSize.y * health / 100)
 						if menu:GetVal("ESP", GroupBox, "Health Number") and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
@@ -7952,10 +7994,10 @@ elseif menu.game == "pf" then --!SECTION
 							[2] = {start = 100, color = menu:GetVal("ESP", GroupBox, "Health Bar", "color2", true)}
 						})
 						
-						debug.profileend("renderVisuals Player ESP Render Health Bar " .. Player.Name)
+						--debug.profileend("renderVisuals Player ESP Render Health Bar " .. Player.Name)
 						
 					elseif menu.options["ESP"][GroupBox]["Health Number"][1] and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
-						debug.profilebegin("renderVisuals Player ESP Render Health Number " .. Player.Name)
+						--debug.profilebegin("renderVisuals Player ESP Render Health Number " .. Player.Name)
 						
 						local hptext = allesp.hp.text[Index]
 						
@@ -7968,13 +8010,13 @@ elseif menu.game == "pf" then --!SECTION
 						hptext.Color = menu:GetVal("ESP", GroupBox, "Health Number", "color", true)
 						hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
 						
-						debug.profileend("renderVisuals Player ESP Render Health Number " .. Player.Name)
+						--debug.profileend("renderVisuals Player ESP Render Health Number " .. Player.Name)
 					end
 					
 					
 					if menu.options["ESP"][GroupBox]["Held Weapon"][1] then
 						
-						debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
+						--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
 						
 						local charWeapon = _3pweps[Player]
 						local wepname = charWeapon and charWeapon or "???"
@@ -7992,13 +8034,13 @@ elseif menu.game == "pf" then --!SECTION
 						weptext.Visible = true
 						weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
 						
-						debug.profileend("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
+						--debug.profileend("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
 						
 					end
 					
 					if menu.options["ESP"][GroupBox]["Distance"][1] then
 						
-						debug.profilebegin("renderVisuals Player ESP Render Distance " .. Player.Name)
+						--debug.profilebegin("renderVisuals Player ESP Render Distance " .. Player.Name)
 						
 						local disttext = allesp.text.distance[Index]
 						
@@ -8006,13 +8048,13 @@ elseif menu.game == "pf" then --!SECTION
 						disttext.Visible = true
 						disttext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y + spoty)
 						
-						debug.profileend("renderVisuals Player ESP Render Distance " .. Player.Name)
+						--debug.profileend("renderVisuals Player ESP Render Distance " .. Player.Name)
 						
 					end
 					
 					if menu.options["ESP"][GroupBox]["Skeleton"][1] then
 						
-						debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. Player.Name)
+						--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. Player.Name)
 						
 						local torso = Camera:WorldToViewportPoint(Player.Character.Torso.Position)
 						for k2, v2 in ipairs(skelparts) do
@@ -8024,7 +8066,7 @@ elseif menu.game == "pf" then --!SECTION
 							line.Visible = true
 							
 						end
-						debug.profileend("renderVisuals Player ESP Render Skeleton" .. Player.Name)
+						--debug.profileend("renderVisuals Player ESP Render Skeleton" .. Player.Name)
 					end
 					--da colourz !!! :D 🔥🔥🔥🔥
 					
@@ -8107,7 +8149,7 @@ elseif menu.game == "pf" then --!SECTION
 					end
 					
 				elseif GroupBox == "Enemy ESP" and menu:GetVal("ESP", "Enemy ESP", "Out of View") then
-					debug.profilebegin("renderVisuals Player ESP Render Out of View " .. Player.Name)
+					--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. Player.Name)
 					local color = menu:GetVal("ESP", "Enemy ESP", "Out of View", "color", true)
 					local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
 					if menu:GetVal("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
@@ -8145,14 +8187,14 @@ elseif menu.game == "pf" then --!SECTION
 						Tri.Color = i == 1 and color or color2
 						Tri.Transparency = menu:GetVal("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
 					end
-					debug.profileend("renderVisuals Player ESP Render Out of View " .. Player.Name)
+					--debug.profileend("renderVisuals Player ESP Render Out of View " .. Player.Name)
 				end
 				
 			end
 			
 			--ANCHOR weapon esp
 			if menu:GetVal("ESP", "Dropped ESP", "Weapon Name") or menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo") then
-				debug.profilebegin("renderVisuals Dropped ESP")
+				--debug.profilebegin("renderVisuals Dropped ESP")
 				local gunnum = 0
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
 					CreateThread(function()
@@ -8196,10 +8238,10 @@ elseif menu.game == "pf" then --!SECTION
 						end
 					end)
 				end
-				debug.profileend("renderVisuals Dropped ESP")
+				--debug.profileend("renderVisuals Dropped ESP")
 			end
 			
-			debug.profilebegin("renderVisuals Dropped ESP Nade Warning")
+			--debug.profilebegin("renderVisuals Dropped ESP Nade Warning")
 			if menu:GetVal("ESP", "Dropped ESP", "Nade Warning") then
 				local nadenum = 0
 				local health = client.char:gethealth()
@@ -8313,9 +8355,9 @@ elseif menu.game == "pf" then --!SECTION
 				
 			end
 			
-			debug.profileend("renderVisuals Dropped ESP Nade Warning")
+			--debug.profileend("renderVisuals Dropped ESP Nade Warning")
 			
-			debug.profilebegin("renderVisuals Local Visuals")
+			--debug.profilebegin("renderVisuals Local Visuals")
 			
 			CreateThread(function() -- hand chams and such
 				if not client then return end
@@ -8411,12 +8453,12 @@ elseif menu.game == "pf" then --!SECTION
 				end
 			end)
 			
-			debug.profileend("renderVisuals Local Visuals")
+			--debug.profileend("renderVisuals Local Visuals")
 			
 			
 		end
-		debug.profileend("renderVisuals Main")
-		debug.profilebegin("renderVisuals No Scope")
+		--debug.profileend("renderVisuals Main")
+		--debug.profilebegin("renderVisuals No Scope")
 		do -- no scope pasted from v1 lol
 			local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
 			local frame = gui.MainGui:FindFirstChild("ScopeFrame")
@@ -8442,7 +8484,7 @@ elseif menu.game == "pf" then --!SECTION
 				end
 			end
 		end
-		debug.profileend("renderVisuals No Scope")
+		--debug.profileend("renderVisuals No Scope")
 	end
 	
 	menu.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild)
@@ -8528,8 +8570,8 @@ elseif menu.game == "pf" then --!SECTION
 	
 	menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		MouseUnlockAndShootHook()
-		debug.profilebegin("Main BB Loop")
-		debug.profilebegin("Noclip Cheat check")
+		--debug.profilebegin("Main BB Loop")
+		--debug.profilebegin("Noclip Cheat check")
 		if not client.char.alive then
 			if keybindtoggles.fakebody then
 				keybindtoggles.fakebody = false
@@ -8537,36 +8579,36 @@ elseif menu.game == "pf" then --!SECTION
 				client.fakeoffset = 18
 			end
 		end
-		debug.profileend("Noclip Cheat check")
+		--debug.profileend("Noclip Cheat check")
 		
-		debug.profilebegin("BB Rendering")
+		--debug.profilebegin("BB Rendering")
 		do --rendering
 			renderVisuals()
 			if menu.open then
 				setconstant(client.cam.step, 11, menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
 			end
 		end
-		debug.profileend("BB Rendering")
-		debug.profilebegin("BB Legitbot")
+		--debug.profileend("BB Rendering")
+		--debug.profilebegin("BB Legitbot")
 		do--legitbot
 			legitbot:TriggerBot()
 			legitbot:MainLoop()
 		end
-		debug.profileend("BB Legitbot")
-		debug.profilebegin("BB Misc.")
+		--debug.profileend("BB Legitbot")
+		--debug.profilebegin("BB Misc.")
 		do --misc
 			misc:MainLoop()
-			debug.profilebegin("BB Ragebot KnifeBot")
+			--debug.profilebegin("BB Ragebot KnifeBot")
 			ragebot:KnifeBotMain()
-			debug.profileend("BB Ragebot KnifeBot")
+			--debug.profileend("BB Ragebot KnifeBot")
 		end
-		debug.profileend("BB Misc.")
+		--debug.profileend("BB Misc.")
 		if not menu:GetVal("Rage", "Extra", "Performance Mode") then
-			debug.profilebegin("BB Ragebot (Non Performance)")
+			--debug.profilebegin("BB Ragebot (Non Performance)")
 			do--ragebot
 				ragebot:MainLoop()
 			end
-			debug.profileend("BB Ragebot (Non Performance)")
+			--debug.profileend("BB Ragebot (Non Performance)")
 		end
 
 		if menu.spectating and not client.cam:isspectating() then
@@ -8583,7 +8625,7 @@ elseif menu.game == "pf" then --!SECTION
 			menu.spectating = false
 		end
 
-		debug.profileend("Main BB Loop")
+		--debug.profileend("Main BB Loop")
 	end)
 	
 	CreateThread(function() -- ragebot performance
@@ -8610,7 +8652,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 		
-		debug.profilebegin("BB No Gun Bob or Sway")
+		--debug.profilebegin("BB No Gun Bob or Sway")
 		
 		if client.char.alive then
 			for id, gun in next, client.loadedguns do
@@ -8638,11 +8680,11 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 		
-		debug.profileend()
+		--debug.profileend()
 		
 		if menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
 			if client.char.alive then
-				debug.profilebegin("Third Person")
+				--debug.profilebegin("Third Person")
 				if not client.fakecharacter then
 					client.fakecharacter = true
 					local localchar = LOCAL_PLAYER.Character:Clone()
@@ -8744,7 +8786,7 @@ elseif menu.game == "pf" then --!SECTION
 						end
 					end
 				end
-				debug.profileend("Third Person")
+				--debug.profileend("Third Person")
 			end
 		else
 			if client.fakecharacter then
