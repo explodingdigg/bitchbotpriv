@@ -2,6 +2,7 @@ local menu
 assert(getgenv().v2 == nil)
 getgenv().v2 = true
 
+local MenuName = isfile("bitchbot/menuname.txt") and readfile("bitchbot/menuname.txt") or nil
 local loadstart = tick()
 local Nate = isfile("cole.mak")
 
@@ -3764,12 +3765,12 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						{
 							type = "toggle",
 							name = "Custom Menu Name",
-							value = false,
+							value = MenuName and true or false,
 						},
 						{
 							type = "textbox",
 							name = "MenuName",
-							text = "Bitch Bot"
+							text = MenuName or "Bitch Bot"
 						}
 					}
 				},
@@ -7615,12 +7616,12 @@ elseif menu.game == "pf" then --!SECTION
 					return
 				end
 				if client.logic.currentgun.type == "SHOTGUN" then
-					--client.logic.currentgun.barrel.Orientation = Vector3.new(CFrame.lookAt(client.logic.currentgun.barrel.Position, targetPart.Position):ToOrientation())
+					local oldOrientation = client.logic.currentgun.barrel.Orientation
 					local dir = (targetPart.Position - client.logic.currentgun.barrel.Position)
 					local y, x = client.vectorutil.toanglesyx(dir)
 					local vec = Vector3.new(y, x)
 					client.logic.currentgun.barrel.Orientation = vec
-					return
+					return 
 				end
 				if client.logic.currentgun.type == "KNIFE" then return end
 				
@@ -10207,6 +10208,7 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "button",
 							name = "Votekick",
+							doubleclick = true,
 							x = 307,
 							y = 356,
 							w = 80,
@@ -10245,12 +10247,12 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Custom Menu Name",
-							value = false,
+							value = MenuName and true or false,
 						},
 						{
 							type = "textbox",
 							name = "MenuName",
-							text = "Bitch Bot"
+							text = MenuName or "Bitch Bot"
 						}
 					}
 				},
