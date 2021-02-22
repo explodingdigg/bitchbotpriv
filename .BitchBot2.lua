@@ -1891,6 +1891,14 @@ function menu.Initialize(menutable)
 									else
 										v2[1] = v2[1].. string.lower(KeyEnumToName(key.KeyCode))
 									end
+								elseif KeyEnumToName(key.KeyCode) == "Space" then
+									v2[1] = v2[1].. " "
+								elseif KeyEnumToName(key.KeyCode) == "-" then
+									if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+										v2[1] = v2[1].. "_"
+									else
+										v2[1] = v2[1].. "-"
+									end
 								elseif KeyEnumToName(key.KeyCode) == "Back" and v2[1] ~= "" then
 									v2[1] = string.sub(v2[1], 0, #(v2[1]) - 1)
 								end
