@@ -3,11 +3,8 @@ assert(getgenv().v2 == nil)
 getgenv().v2 = true
 
 local loadstart = tick()
-local MenuName = "Bitch Bot"
 local Nate = isfile("cole.mak")
-if isfile("bitchbot/menuname.txt") then
-	MenuName = readfile("bitchbot/menuname.txt")
-end
+
 local customChatSpam = {}
 local e = 2.718281828459045
 if isfile("bitchbot/chatspam.txt") then
@@ -1143,7 +1140,7 @@ function menu.Initialize(menutable)
 		end
 		Draw:MenuFilledRect(true, 2, 25, menu.w - 4, menu.h - 27, {35, 35, 35, 255}, bbmenu)
 		
-		Draw:MenuBigText(MenuName, true, false, 6, 6, bbmenu)
+		Draw:MenuBigText("Bitch Bot", true, false, 6, 6, bbmenu)
 		
 		Draw:MenuOutlinedRect(true, 8, 22, menu.w - 16, menu.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
 		Draw:MenuOutlinedRect(true, 9, 23, menu.w - 18, menu.h - 32, {20, 20, 20, 255}, bbmenu)
@@ -1979,7 +1976,7 @@ function menu.Initialize(menutable)
 		end
 	end
 	
-	local menuElementTypes = {"toggle", "slider", "dropbox"}
+	local menuElementTypes = {"toggle", "slider", "dropbox", "textbox"}
 	local doubleclickDelay = 1
 	local buttonsInQue = {}
 	local function buttonpressed(bp)
@@ -2010,7 +2007,7 @@ function menu.Initialize(menutable)
 					for k2, v2 in pairs(v1) do
 						for k3, v3 in pairs(v2) do
 							
-							if v3[2] == tostring(v) and k3 ~= "Configs" and k3 ~= "Player Status" then
+							if v3[2] == tostring(v) and k3 ~= "Configs" and k3 ~= "Player Status" and k3 ~= "ConfigName" then
 								figgy = figgy..k1.. "|".. k2.."|".. k3.."|"..tostring(v3[1]).. "\n"
 							end
 						end
@@ -2187,6 +2184,29 @@ function menu.Initialize(menutable)
 					end
 				end
 				
+				local start = nil
+				for i, v in next, lines do
+					if v == "textboxs {" then
+						start = i
+						break
+					end
+				end
+				if start ~= nil then
+					local end_ = nil
+					for i, v in next, lines do
+						if i > start and v == "}" then
+							end_ = i
+							break
+						end
+					end
+					for i = 1, end_ - start - 1 do
+						local tt = string.split(lines[i + start], "|")
+						if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+							menu.options[tt[1]][tt[2]][tt[3]][1] = tostring(tt[4])
+						end
+					end
+				end
+
 				local start = nil
 				for i, v in next, lines do
 					if v == "comboboxes {" then
@@ -2370,6 +2390,8 @@ function menu.Initialize(menutable)
 									textthing = string_cut(textthing, 25)
 								end
 								v2[4][1].Text = textthing
+							elseif v2[2] == "textbox" then
+								v2[4].Text = v2[1]
 							end
 						end
 					end
@@ -3101,6 +3123,31 @@ function menu.Initialize(menutable)
 			end
 		end
 		InputBeganMenu(input)
+		if menu.open then
+			if menu.tabnames[menu.activetab] == "Settings" then
+				if menu:GetVal("Settings", "Menu Settings", "Custom Menu Name") then
+					bbmenu[27].Text = menu.options["Settings"]["Menu Settings"]["MenuName"][1]
+
+					menu.watermark.text[1].Text = menu.options["Settings"]["Menu Settings"]["MenuName"][1].. menu.watermark.textString
+
+					for i, v in ipairs(menu.watermark.rect) do
+						v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
+					end
+				else 
+					if bbmenu[27].Text ~= "Bitch Bot" then
+						bbmenu[27].Text = "Bitch Bot"
+					end
+
+					if menu.watermark.text[1].Text ~= "Bitch Bot".. menu.watermark.textString then
+						menu.watermark.text[1].Text = "Bitch Bot".. menu.watermark.textString
+
+						for i, v in ipairs(menu.watermark.rect) do
+							v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
+						end
+					end
+				end
+			end
+		end
 	end)
 	
 	menu.connections.inputended = INPUT_SERVICE.InputEnded:Connect(function(input)
@@ -3591,7 +3638,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			}
 		},
 		{
-			name = "Settings", 
+			name = "Settings",
 			content = {
 				{
 					name = "Player List",
@@ -3621,7 +3668,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							w = 160,
 							value = 1,
 							values = {"None", "Friend", "Priority"}
-						},
+						}
 					}
 				},
 				{
@@ -3629,7 +3676,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					x = menu.columns.left,
 					y = 400,
 					width = menu.columns.width,
-					height = 62,
+					height = 108,
 					content = {
 						{
 							type = "toggle",
@@ -3646,14 +3693,24 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							name = "Watermark",
 							value = true,
 						},
+						{
+							type = "toggle",
+							name = "Custom Menu Name",
+							value = false,
+						},
+						{
+							type = "textbox",
+							name = "MenuName",
+							text = "Bitch Bot"
+						}
 					}
 				},
 				{
 					name = "Extra",
 					x = menu.columns.left,
-					y = 468,
+					y = 514,
 					width = menu.columns.width,
-					height = 115,
+					height = 119,
 					content = {
 						{
 							type = "button",
@@ -3668,7 +3725,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							type = "toggle",
 							name = "Allow Unsafe Features",
 							value = false,
-						}
+						},
 					}
 				},
 				{
@@ -3676,18 +3733,18 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					x = menu.columns.right,
 					y = 400,
 					width = menu.columns.width,
-					height = 183,
+					height = 233,
 					content = {
 						{
 							type = "textbox",
 							name = "ConfigName",
-							text = "poop"
+							text = ""
 						},
 						{
 							type = "dropbox",
 							name = "Configs",
 							value = 1,
-							values = GetConfigs() --TODO make this dynamic
+							values = GetConfigs()
 						},
 						{
 							type = "button",
@@ -3707,7 +3764,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					}
 				}
 			}
-		}
+		},
 	})
 	
 	local selectedPlayer = nil
@@ -10057,7 +10114,7 @@ elseif menu.game == "pf" then --!SECTION
 					x = menu.columns.left,
 					y = 400,
 					width = menu.columns.width,
-					height = 62,
+					height = 108,
 					content = {
 						{
 							type = "toggle",
@@ -10074,14 +10131,24 @@ elseif menu.game == "pf" then --!SECTION
 							name = "Watermark",
 							value = true,
 						},
+						{
+							type = "toggle",
+							name = "Custom Menu Name",
+							value = false,
+						},
+						{
+							type = "textbox",
+							name = "MenuName",
+							text = "Bitch Bot"
+						}
 					}
 				},
 				{
 					name = "Extra",
 					x = menu.columns.left,
-					y = 468,
+					y = 514,
 					width = menu.columns.width,
-					height = 165,
+					height = 119,
 					content = {
 						{
 							type = "button",
@@ -10324,20 +10391,21 @@ end
 
 do
 	local wm = menu.watermark
-	wm.textString = MenuName .. " | Waiting for release for 2.4 months | " .. os.date("%b. %d, %Y")
+	wm.textString = " | Dev Build | " .. os.date("%b. %d, %Y")
 	wm.pos = Vector2.new(50, 10)
 	wm.text = {}
-	wm.width = (#wm.textString) * 7 + 10
+	local fulltext = "Bitch Bot".. wm.textString 
+	wm.width = (#fulltext) * 7 + 10
 	wm.rect = {}
 	
-	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 1, wm.width, 2, {menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[2] - 40, 255}, wm.rect)
+	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 1, wm.width, 2, {menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40, 255}, wm.rect)
 	Draw:FilledRect(false, wm.pos.x, wm.pos.y, wm.width, 2, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, wm.rect)
-	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2, wm.width, 16, {50, 50, 50, 255}, wm.rect)
+	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 3, wm.width, 14, {50, 50, 50, 255}, wm.rect)
 	for i = 0, 14 do
-		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 2 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
+		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 3 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
 	end
 	Draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
-	Draw:OutlinedText(wm.textString, 2, false, wm.pos.x + 5, wm.pos.y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
+	Draw:OutlinedText(fulltext, 2, false, wm.pos.x + 5, wm.pos.y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
 end
 --ANCHOR watermak
 for k, v in pairs(menu.watermark.rect) do
