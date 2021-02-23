@@ -264,9 +264,9 @@ function CreateThread(func, ...) -- improved... yay.
 	return thread
 end
 
-function MultiThreadList(obj)
+function MultiThreadList(obj, ...)
 	for i, v in pairs(obj) do
-		CreateThread(v)
+		CreateThread(v, ...)
 	end
 end
 
@@ -4492,6 +4492,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	
 elseif menu.game == "pf" then --!SECTION
 	menu.activetab = 6
+	menu.annoylist = table.create(game.Players.MaxPlayers - 1)
 
 	local sphereHitbox = Instance.new("Part", workspace)
 	sphereHitbox.Name = "abcdefg"
@@ -4795,6 +4796,8 @@ elseif menu.game == "pf" then --!SECTION
 	local CommandInfo = {
 		targetbelowrank = "<number> rank",
 		friendaboverank = "<number> rank",
+		annoy = "player name",
+		clearannoylist = "clear the annoy list, if anyone exists in it",
 		friend = "player name",
 		target = "player name",
 		updatechatspam = "",
@@ -4824,19 +4827,44 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			CreateNotification(("Friended %d players below rank %d"):format(targetted, max))
 		end,
-		friend = function(name)
-			if Players[name] then
-				table.insert(menu.friends, name)
-				return CreateNotification("Friended " .. name)
+		annoy = function(name)
+			if name:lower():match(LOCAL_PLAYER.Name:lower()) then
+				return CreateNotification("You cannot annoy yourself!")
 			end
-			CreateNotification(name .. " is not a player!")
+			for _, player in next, Players:GetPlayers() do
+				if player.Name:lower():match(name:lower()) then
+					local exists = table.find(menu.annoylist, player.Name)
+					if not exists then
+						table.insert(menu.annoylist, player.Name)
+					else
+						table.remove(menu.annoylist, exists)
+						return CreateNotification("No longer repeating everything " .. player.Name .. " says in chat.")
+					end
+					return CreateNotification("Now repeating everything " .. player.Name .. " says in chat.")
+				end
+			end
+			CreateNotification("No such player by the name '" .. name .. "' was found in the game.")
+		end,
+		clearannoylist = function()
+			table.clear(menu.annoylist)
+		end,
+		friend = function(name)
+			for _, player in next, Players:GetPlayers() do
+				if player.Name:lower():match(name:lower()) then
+					table.insert(menu.friends, name)
+					return CreateNotification("Friended " .. name)
+				end
+			end
+			CreateNotification("No such player by the name '" .. name .. "' was found in the game.")
 		end,
 		target = function(name)
-			if Players[name] then
-				table.insert(menu.priority, name)
-				return CreateNotification("Prioritized " .. name)
+			for _, player in next, Players:GetPlayers() do
+				if player.Name:lower():match(name:lower()) then
+					table.insert(menu.priority, name)
+					return CreateNotification("Prioritized " .. name)
+				end
 			end
-			CreateNotification(name .. " is not a player!")
+			CreateNotification("No such player by the name '" .. name .. "' was found in the game.")
 		end,
 		updatechatspam = function()
 			customChatSpam = {}
@@ -6616,7 +6644,9 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			if found13 then
 				clienteventfuncs[hash] = function(chatter, text, tag, tagcolor, teamchat, chattername)
-					
+					if table.find(menu.annoylist, chatter.Name) and not text:find("gay") then -- lel
+						send(nil, "chatted", text)
+					end
 					return func(chatter, text, tag, tagcolor, teamchat, chattername)
 				end
 				if found2 then
