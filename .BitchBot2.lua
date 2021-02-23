@@ -7796,8 +7796,8 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			
 			function legitbot:TriggerBot()
-				
-				if Menu:GetVal("Legit", "Trigger Bot", "Enabled") and IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
+				-- i swear to god the capital GetVal makes me do Menu:GetVal so much
+				if menu:GetVal("Legit", "Trigger Bot", "Enabled") and IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
 					local parts = misc:GetParts(menu:GetVal("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
 					
 					local gun = client.logic.currentgun
