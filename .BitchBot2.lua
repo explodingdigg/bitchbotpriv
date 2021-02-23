@@ -5760,7 +5760,7 @@ elseif menu.game == "pf" then --!SECTION
 			--debug.profilebegin("BB Ragebot GetTarget")
 			--local hitscan = hitscan or {}
 			local partPreference = hitboxPriority or "you know who i am? well you about to find out, your barbecue boy"
-			local closest, cpart, theplayer = math.huge
+			local closest, cpart, theplayer = math.huge, nil, nil
 			
 			local players = players or Players:GetPlayers()
 			
@@ -5771,6 +5771,8 @@ elseif menu.game == "pf" then --!SECTION
 			local camposreal = keybindtoggles.fakebody and campos - Vector3.new(0, client.fakeoffset, 0) or campos
 			local camposv3 = camposreal.p
 			local firepos
+
+			local aimbotFov = menu:GetVal("Rage", "Aimbot", "Aimbot FOV")
 			
 			for i, player in next, players do
 				local usedhitscan = hitscan -- should probably do this a different way
@@ -5780,163 +5782,165 @@ elseif menu.game == "pf" then --!SECTION
 					if curbodyparts and client.hud:isplayeralive(player) then
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and usedhitscan[k] then
-								if camera:IsVisible(bone, bone.Parent, camposv3) then
-									local fovToBone = camera:GetFOV(bone)
-									if fovToBone < closest then
-										closest = fovToBone
-										cpart = bone
-										theplayer = player
-										firepos = camposv3
-										if menu.priority[player.Name] then break end
-									else
-										continue
-									end
-								elseif autowall then
-									--debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
-									local directionVector = camera:GetTrajectory(bone.Position, camposv3)
-									-- ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
-									-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
-									if directionVector and ragebot:CanPenetrateFast(camposv3, bone, client.logic.currentgun.data.penetrationdepth) then
-										cpart = bone
-										theplayer = player
-										firepos = camposv3
-										if menu.priority[player.Name] then break end
-									elseif aw_resolve then
-										if resolvertype == 1 then -- cubic hitscan
-											--debug.profilebegin("BB Ragebot Cubic Resolver")
-											local resolvedPosition = ragebot:CubicHitscan(8, camposv3, bone)
-											--debug.profileend("BB Ragebot Cubic Resolver")
-											if resolvedPosition then
-												ragebot.firepos = resolvedPosition
-												--ragebot.intersection = intersection
-												cpart = bone
-												theplayer = player
-												firepos = resolvedPosition
-												if menu.priority[player.Name] then break end
-											end
-										elseif resolvertype == 2 then -- axes fast
-											--debug.profilebegin("BB Ragebot Axis Shifting Resolver")
-											local resolvedPosition = ragebot:HitscanOnAxes(camposreal, player, bone, 1, 8)
-											--debug.profileend("BB Ragebot Axis Shifting Resolver")
-											if resolvedPosition then
-												ragebot.firepos = resolvedPosition
-												cpart = bone
-												theplayer = player
-												firepos = resolvedPosition
-												if menu.priority[player.Name] then break end
-											end
-										elseif resolvertype == 3 then -- random
-											--debug.profilebegin("BB Ragebot Random Resolver")
-											local resolvedPosition = ragebot:HitscanRandom(camposv3, player, bone)
-											--debug.profileend("BB Ragebot Random Resolver")
-											if resolvedPosition then
-												ragebot.firepos = resolvedPosition
-												cpart = bone
-												theplayer = player
-												firepos = resolvedPosition
-												if menu.priority[player.Name] then break end
-											end
-										elseif resolvertype == 4 then -- teleport
-											--debug.profilebegin("BB Ragebot Teleport Resolver")
-											local up = camposreal + Vector3.new(0, 18, 0)
-											local pen = ragebot:CanPenetrateFast(up, bone, client.logic.currentgun.data.penetrationdepth)
-											--debug.profileend("BB Ragebot Teleport Resolver") -- fuck
-											if pen then
-												ragebot.firepos = up
-												ragebot.needsTP = true
-												cpart = bone
-												theplayer = player
-												firepos = up
-												if menu.priority[player.Name] then break end
-											else
-												ragebot.needsTP = false
-											end
-										elseif resolvertype == 5 then -- "combined"
-											-- basically combines fast axis shifting with offsetting the hitbox or just sending a raycast to the hitbox for the intersection point, really broken
-											
-											local extendSize = 4.5833333333333
-											
-											local boneX = bone.Position.X
-											local boneY = bone.Position.Y
-											local boneZ = bone.Position.Z
-											
-											local localX = camposv3.X
-											local localY = camposv3.Y
-											local localZ = camposv3.Z
-											
-											local extendX = Vector3.new(extendSize, 0, 0)
-											local extendY = Vector3.new(0, extendSize, 0)
-											local extendZ = Vector3.new(0, 0, extendSize)
-											
-											local bestDirection =
-											boneY < localY and extendY or
-											boneY > localY and -extendY or
-											boneX < localX and extendX or
-											boneX > localX and -extendX or
-											boneZ < localZ and extendZ or
-											boneZ > localZ and -extendZ or "wtf"
-											
-											local newTargetPosition = bone.Position + bestDirection
-											
-											--local pVelocity = camera:GetTrajectory(newTargetPosition, barrel)
-											
-											sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
-											
-											if sphereHitbox.Size ~= rageHitboxSize then
-												sphereHitbox.Size = rageHitboxSize
-											end
-											
-											--local penetrated = ragebot:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
-											local wl = {
-												[sphereHitbox] = true
-											}
-											
-											local penetrated, exited, intersectionpos = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
-											if penetrated then
-												ragebot.firepos = camposv3
-												cpart = bone
-												theplayer = player
-												ragebot.intersection = newTargetPosition
-												firepos = camposv3
-												--warn("penetrated normally")
-											else
-												-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
-												local resolvedPosition, bulletintersection = ragebot:HitscanOnAxes(camposreal, player, sphereHitbox, 1, 8, wl)
+								local fovToBone = camera:GetFOV(bone)
+								if fovToBone < aimbotFov or aimbotFov > 180 then -- Awesome
+									if camera:IsVisible(bone, bone.Parent, camposv3) then
+										if fovToBone < closest then
+											closest = fovToBone
+											cpart = bone
+											theplayer = player
+											firepos = camposv3
+											if menu.priority[player.Name] then break end
+										else
+											continue
+										end
+									elseif autowall then
+										--debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
+										local directionVector = camera:GetTrajectory(bone.Position, camposv3)
+										-- ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
+										-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
+										if directionVector and ragebot:CanPenetrateFast(camposv3, bone, client.logic.currentgun.data.penetrationdepth) then
+											cpart = bone
+											theplayer = player
+											firepos = camposv3
+											if menu.priority[player.Name] then break end
+										elseif aw_resolve then
+											if resolvertype == 1 then -- cubic hitscan
+												--debug.profilebegin("BB Ragebot Cubic Resolver")
+												local resolvedPosition = ragebot:CubicHitscan(8, camposv3, bone)
+												--debug.profileend("BB Ragebot Cubic Resolver")
+												if resolvedPosition then
+													ragebot.firepos = resolvedPosition
+													--ragebot.intersection = intersection
+													cpart = bone
+													theplayer = player
+													firepos = resolvedPosition
+													if menu.priority[player.Name] then break end
+												end
+											elseif resolvertype == 2 then -- axes fast
+												--debug.profilebegin("BB Ragebot Axis Shifting Resolver")
+												local resolvedPosition = ragebot:HitscanOnAxes(camposreal, player, bone, 1, 8)
+												--debug.profileend("BB Ragebot Axis Shifting Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
 													cpart = bone
 													theplayer = player
-													ragebot.intersection = newTargetPosition
 													firepos = resolvedPosition
 													if menu.priority[player.Name] then break end
+												end
+											elseif resolvertype == 3 then -- random
+												--debug.profilebegin("BB Ragebot Random Resolver")
+												local resolvedPosition = ragebot:HitscanRandom(camposv3, player, bone)
+												--debug.profileend("BB Ragebot Random Resolver")
+												if resolvedPosition then
+													ragebot.firepos = resolvedPosition
+													cpart = bone
+													theplayer = player
+													firepos = resolvedPosition
+													if menu.priority[player.Name] then break end
+												end
+											elseif resolvertype == 4 then -- teleport
+												--debug.profilebegin("BB Ragebot Teleport Resolver")
+												local up = camposreal + Vector3.new(0, 18, 0)
+												local pen = ragebot:CanPenetrateFast(up, bone, client.logic.currentgun.data.penetrationdepth)
+												--debug.profileend("BB Ragebot Teleport Resolver") -- fuck
+												if pen then
+													ragebot.firepos = up
+													ragebot.needsTP = true
+													cpart = bone
+													theplayer = player
+													firepos = up
+													if menu.priority[player.Name] then break end
 												else
-													--warn("no axes")
-													-- --local _, intersection = workspace:FindPartOnRayWithWhitelist(Ray.new(args[1].firepos, (part.Position - args[1].firepos) * 3000), {sphereHitbox})
-													sphereHitbox.Position = bone.Position
-													
-													if sphereHitbox.Size ~= rageHitboxSize then
-														sphereHitbox.Size = rageHitboxSize
-													end
-													
-													-- dick sucking god.
-													local penetrated, exited, newintersection = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
-													
-													--warn(penetrated, intersectionPoint)
-													
-													if penetrated then
-														ragebot.firepos = camposv3
+													ragebot.needsTP = false
+												end
+											elseif resolvertype == 5 then -- "combined"
+												-- basically combines fast axis shifting with offsetting the hitbox or just sending a raycast to the hitbox for the intersection point, really broken
+												
+												local extendSize = 4.5833333333333
+												
+												local boneX = bone.Position.X
+												local boneY = bone.Position.Y
+												local boneZ = bone.Position.Z
+												
+												local localX = camposv3.X
+												local localY = camposv3.Y
+												local localZ = camposv3.Z
+												
+												local extendX = Vector3.new(extendSize, 0, 0)
+												local extendY = Vector3.new(0, extendSize, 0)
+												local extendZ = Vector3.new(0, 0, extendSize)
+												
+												local bestDirection =
+												boneY < localY and extendY or
+												boneY > localY and -extendY or
+												boneX < localX and extendX or
+												boneX > localX and -extendX or
+												boneZ < localZ and extendZ or
+												boneZ > localZ and -extendZ or "wtf"
+												
+												local newTargetPosition = bone.Position + bestDirection
+												
+												--local pVelocity = camera:GetTrajectory(newTargetPosition, barrel)
+												
+												sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
+												
+												if sphereHitbox.Size ~= rageHitboxSize then
+													sphereHitbox.Size = rageHitboxSize
+												end
+												
+												--local penetrated = ragebot:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
+												local wl = {
+													[sphereHitbox] = true
+												}
+												
+												local penetrated, exited, intersectionpos = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
+												if penetrated then
+													ragebot.firepos = camposv3
+													cpart = bone
+													theplayer = player
+													ragebot.intersection = newTargetPosition
+													firepos = camposv3
+													--warn("penetrated normally")
+												else
+													-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
+													local resolvedPosition, bulletintersection = ragebot:HitscanOnAxes(camposreal, player, sphereHitbox, 1, 8, wl)
+													if resolvedPosition then
+														ragebot.firepos = resolvedPosition
 														cpart = bone
 														theplayer = player
-														ragebot.intersection = newintersection
-														firepos = camposv3
+														ragebot.intersection = newTargetPosition
+														firepos = resolvedPosition
+														if menu.priority[player.Name] then break end
 													else
-														--warn("no standardized autowall hit")
+														--warn("no axes")
+														-- --local _, intersection = workspace:FindPartOnRayWithWhitelist(Ray.new(args[1].firepos, (part.Position - args[1].firepos) * 3000), {sphereHitbox})
+														sphereHitbox.Position = bone.Position
+														
+														if sphereHitbox.Size ~= rageHitboxSize then
+															sphereHitbox.Size = rageHitboxSize
+														end
+														
+														-- dick sucking god.
+														local penetrated, exited, newintersection = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
+														
+														--warn(penetrated, intersectionPoint)
+														
+														if penetrated then
+															ragebot.firepos = camposv3
+															cpart = bone
+															theplayer = player
+															ragebot.intersection = newintersection
+															firepos = camposv3
+														else
+															--warn("no standardized autowall hit")
+														end
 													end
 												end
 											end
 										end
+										--debug.profileend("BB Ragebot Penetration Check " .. player.Name)
 									end
-									--debug.profileend("BB Ragebot Penetration Check " .. player.Name)
 								end
 							end
 						end
@@ -6701,6 +6705,7 @@ elseif menu.game == "pf" then --!SECTION
 
 		local bodyarrayinfo = getupvalue(client.replication.thickcastplayers, 8)
 		local chartable = getupvalue(client.replication.getallparts, 1)
+		client.chartable = chartable
 
 		function client.thickcastplayers(origin, direction) -- i might attempt to use this on bulletcheck later
 			local castresults = nil
@@ -6966,6 +6971,37 @@ elseif menu.game == "pf" then --!SECTION
 		
 		menu.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
 			if CHAT_BOX.Active then return end
+			if input.UserInputType == Enum.UserInputType.MouseButton3 and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftAlt) then
+				local p = client.cam.basecframe.p
+				local lv = client.cam.basecframe.lookVector.Unit
+
+				local d = 0
+				local bestplayer
+
+				local checkTable = INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) and menu.priority or menu.friends
+
+				for player, bodyparts in next, client.chartable do
+					local lvToTorso = (bodyparts.torso.Position - p).Unit
+					local dot = lv:Dot(lvToTorso)
+
+					if dot > d then
+						d = dot
+						bestplayer = player
+					end
+				end
+
+				if bestplayer then
+					local pname = bestplayer.Name
+					local existsInFriends = table.find(menu.friends, pname)
+					if existsInFriends then
+						table.remove(checkTable, existsInFriends)
+						CreateNotification(string.format("Removed %s from the friends list.", pname))
+					else
+						table.insert(checkTable, pname)
+						CreateNotification(string.format("Added %s as a friend.", pname))
+					end
+				end
+			end
 			if input.UserInputType == Enum.UserInputType.Keyboard then
 				if menu:GetVal("Rage", "Extra", "Fake Lag") then
 					if menu:GetVal("Rage", "Extra", "Manual Choke")
@@ -7761,7 +7797,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			function legitbot:TriggerBot()
 				
-				if IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
+				if Menu:GetVal("Legit", "Trigger Bot", "Enabled") and IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
 					local parts = misc:GetParts(menu:GetVal("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
 					
 					local gun = client.logic.currentgun
@@ -9157,8 +9193,9 @@ elseif menu.game == "pf" then --!SECTION
 							name = "Aimbot FOV",
 							value = 180,
 							minvalue = 0,
-							maxvalue = 180,
-							stradd = "°"
+							maxvalue = 181,
+							stradd = "°",
+							custom = {[181] = "Ignored"}
 						},
 						{
 							type = "toggle",
