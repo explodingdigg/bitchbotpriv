@@ -206,10 +206,6 @@ do
 	--CreateNotification("Loading...")
 end
 
-local function DisplayLoadtimeFromStart()
-	CreateNotification(string.format("Done loading the ".. menu.game.. " cheat. (%d ms)", math.floor((tick() - loadstart) * 1000)))
-end
-
 menu = { -- this is for menu stuffs n shi
 	w = 500,
 	h = 650,
@@ -244,6 +240,7 @@ menu = { -- this is for menu stuffs n shi
 	priority = {},
 	spectating = false,
 	stat_menu = false,
+	load_time = 0,
 	modkeys = {
 		alt = {
 			direction = nil
@@ -1281,7 +1278,7 @@ Draw:Line(false, 1, 10, 10, 10, 10, {68, 255, 0, 255}, graphs.outgoing.graph)
 Draw:OutlinedText("avg: 20", 2, false, 20, 20, 13, false, {68, 255, 0, 255}, {10, 10, 10}, graphs.outgoing.graph)
 -- the fuckin fps and stuff i think xDDDDDd
 
-Draw:OutlinedText("draw objects: \nfps:", 2, false, 35, infopos + 180, 13, false, {255, 255, 255, 255}, {10, 10, 10}, graphs.other)
+Draw:OutlinedText("loading...", 2, false, 35, infopos + 180, 13, false, {255, 255, 255, 255}, {10, 10, 10}, graphs.other)
 
 -- finish
 
@@ -3316,27 +3313,7 @@ function menu.Initialize(menutable)
 			end
 		end
 
-		--[[
-			local graphs = {
-				incoming = {
-					pos = {
-						x = 30,
-						y = 400
-					},
-					sides = {},
-					graph = {}
-				},
-				outgoing = {
-					pos = {
-						x = 30,
-						y = 500
-					},
-					sides = {},
-					graph = {}
-				}
-			}
-		]]
-		if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftControl) and input.KeyCode == Enum.KeyCode.R then
+		if input.KeyCode == Enum.KeyCode.Home then
 			menu.stat_menu = not menu.stat_menu
 
 			for k, v in pairs(graphs) do
@@ -3426,9 +3403,45 @@ local function GetPTlayerHumanoid(player)
 	end
 end
 
+--[[
+	local FpsLabel = script.Parent
+local Heartbeat = game:GetService("RunService").Heartbeat
+
+local LastIteration, Start
+local FrameUpdateTable = { }
+
+local function HeartbeatUpdate()
+	LastIteration = tick()
+	for Index = #FrameUpdateTable, 1, -1 do
+		FrameUpdateTable[Index + 1] = (FrameUpdateTable[Index] >= LastIteration - 1) and FrameUpdateTable[Index] or nil
+	end
+	
+	FrameUpdateTable[1] = LastIteration
+	local CurrentFPS = (tick() - Start >= 1 and #FrameUpdateTable) or (#FrameUpdateTable / (tick() - Start))
+	CurrentFPS = math.floor(CurrentFPS )
+	FpsLabel.Text = "" .. CurrentFPS .. " FPS"
+end
+
+Start = tick()
+]]
+
+local LastIteration
+local Start = tick()
+local FrameUpdateTable = { }
+
 menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
 	
 	if menu.stat_menu == false then return end
+
+	LastIteration = tick()
+	for Index = #FrameUpdateTable, 1, -1 do
+		FrameUpdateTable[Index + 1] = (FrameUpdateTable[Index] >= LastIteration - 1) and FrameUpdateTable[Index] or nil
+	end
+	
+	FrameUpdateTable[1] = LastIteration
+	local CurrentFPS = (tick() - Start >= 1 and #FrameUpdateTable) or (#FrameUpdateTable / (tick() - Start))
+	CurrentFPS = math.floor(CurrentFPS)
+
 	if tick() > lasttick + 0.25 then
 		table.remove(networkin.incoming, 1)
 		table.insert(networkin.incoming, stats.DataReceiveKbps)
@@ -3473,7 +3486,7 @@ menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
 		local biggestnum = 10
 		for i = 1, 21 do
 			if math.ceil(networkin.outgoing[i]) > biggestnum - 5 then
-				biggestnum = (math.ceil(networkin.outgoing[i]/5) + 0.5) * 5
+				biggestnum = (math.ceil(networkin.outgoing[i]/5) + 1) * 5
 			end
 		end
 		
@@ -3500,6 +3513,12 @@ menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
 
 		graphs.outgoing.sides[1].Text = "outgoing kbps: ".. tostring(round(networkin.outgoing[21], 2))
 
+		local drawnobjects = 0
+		for k, v in pairs(allrender) do
+			drawnobjects += #v
+		end
+
+		graphs.other[1].Text = string.format("initiation time: %d ms\ndrawn objects: %d\ntick: %d\nfps: %d", menu.load_time, drawnobjects, tick(), CurrentFPS)
 		lasttick = tick()
 	end
 end)
@@ -10818,7 +10837,8 @@ local relconfigs = GetConfigs()
 textbox[1] = relconfigs[menu.options["Settings"]["Configuration"]["Configs"][1]]
 textbox[4].Text = textbox[1]
 
-DisplayLoadtimeFromStart()
+menu.load_time = math.floor((tick() - loadstart) * 1000)
+CreateNotification(string.format("Done loading the ".. menu.game.. " cheat. (%d ms)", menu.load_time))
 CreateNotification("Press DELETE to open and close the menu!")
 
 loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
