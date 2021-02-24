@@ -243,6 +243,7 @@ menu = { -- this is for menu stuffs n shi
 	friends = {},
 	priority = {},
 	spectating = false,
+	stat_menu = false,
 	modkeys = {
 		alt = {
 			direction = nil
@@ -252,6 +253,19 @@ menu = { -- this is for menu stuffs n shi
 		}
 	}
 }
+
+local function round(num, numDecimalPlaces)
+	local mult = 10^(numDecimalPlaces or 0)
+	return math.floor(num * mult + 0.5) / mult
+end
+
+local function average(t)
+	local sum = 0
+		for _,v in pairs(t) do -- Get the sum of all numbers in t
+			sum = sum + v
+		end
+	return sum / #t
+end
 
 function menu:modkeydown(key, direction)
 	local keydata = self.modkeys[key]
@@ -455,6 +469,7 @@ local function GetConfigs()
 end
 
 local Players = game:GetService("Players")
+local stats = game:GetService("Stats")
 
 local function UnpackRelations()
 	local str = isfile("bitchbot/relations.bb") and readfile("bitchbot/relations.bb") or nil
@@ -1189,6 +1204,86 @@ do
 		return tab[#tab]
 	end
 end
+
+--funny graf
+local networkin = {
+	incoming = {},
+	outgoing = {}
+}
+
+for i = 1, 21 do
+	networkin.incoming[i] = 20
+	networkin.outgoing[i] = 2
+end
+local lasttick = tick()
+
+local infopos = 400
+
+local graphs = {
+	incoming = {
+		pos = {
+			x = 35,
+			y = infopos
+		},
+		sides = {},
+		graph = {}
+	},
+	outgoing = {
+		pos = {
+			x = 35,
+			y = infopos + 97
+		},
+		sides = {},
+		graph = {}
+	},
+	other = {}
+}
+--- incoming
+Draw:OutlinedText("incoming kbps: 20", 2, false, graphs.incoming.pos.x - 1, graphs.incoming.pos.y - 15, 13, false, {255, 255, 255, 255}, {10, 10, 10}, graphs.incoming.sides)
+Draw:OutlinedText("80", 2, false, graphs.incoming.pos.x - 21, graphs.incoming.pos.y - 7, 13, false, {255, 255, 255, 255}, {10, 10, 10}, graphs.incoming.sides)
+
+Draw:FilledRect(false,  graphs.incoming.pos.x - 1, graphs.incoming.pos.y - 1, 222, 82, {10, 10, 10, 50}, graphs.incoming.sides)
+
+Draw:Line(false, 3, graphs.incoming.pos.x, graphs.incoming.pos.y - 1, graphs.incoming.pos.x, graphs.incoming.pos.y + 82, {20, 20, 20, 225}, graphs.incoming.sides)
+Draw:Line(false, 3, graphs.incoming.pos.x, graphs.incoming.pos.y + 80, graphs.incoming.pos.x + 221, graphs.incoming.pos.y + 80, {20, 20, 20, 225}, graphs.incoming.sides)
+Draw:Line(false, 3, graphs.incoming.pos.x, graphs.incoming.pos.y, graphs.incoming.pos.x - 6, graphs.incoming.pos.y, {20, 20, 20, 225}, graphs.incoming.sides)
+
+Draw:Line(false, 1, graphs.incoming.pos.x, graphs.incoming.pos.y, graphs.incoming.pos.x, graphs.incoming.pos.y + 80, {255, 255, 255, 225}, graphs.incoming.sides)
+Draw:Line(false, 1, graphs.incoming.pos.x, graphs.incoming.pos.y + 80, graphs.incoming.pos.x + 220, graphs.incoming.pos.y + 80, {255, 255, 255, 225}, graphs.incoming.sides)
+Draw:Line(false, 1, graphs.incoming.pos.x, graphs.incoming.pos.y, graphs.incoming.pos.x - 5, graphs.incoming.pos.y, {255, 255, 255, 225}, graphs.incoming.sides)
+
+for i = 1, 20 do
+	Draw:Line(false, 1, 10, 10, 10, 10, {255, 255, 255, 225}, graphs.incoming.graph)
+end
+
+Draw:Line(false, 1, 10, 10, 10, 10, {68, 255, 0, 255}, graphs.incoming.graph)
+Draw:OutlinedText("avg: 20", 2, false, 20, 20, 13, false, {68, 255, 0, 255}, {10, 10, 10}, graphs.incoming.graph)
+
+--- outgoing
+Draw:OutlinedText("outgoing kbps: 5", 2, false, graphs.outgoing.pos.x - 1, graphs.outgoing.pos.y - 15, 13, false, {255, 255, 255, 255}, {10, 10, 10}, graphs.outgoing.sides)
+Draw:OutlinedText("10", 2, false, graphs.outgoing.pos.x - 21, graphs.outgoing.pos.y - 7, 13, false, {255, 255, 255, 255}, {10, 10, 10}, graphs.outgoing.sides)
+
+Draw:FilledRect(false,  graphs.outgoing.pos.x - 1, graphs.outgoing.pos.y - 1, 222, 82, {10, 10, 10, 50}, graphs.outgoing.sides)
+
+Draw:Line(false, 3, graphs.outgoing.pos.x, graphs.outgoing.pos.y - 1, graphs.outgoing.pos.x, graphs.outgoing.pos.y + 82, {20, 20, 20, 225}, graphs.outgoing.sides)
+Draw:Line(false, 3, graphs.outgoing.pos.x, graphs.outgoing.pos.y + 80, graphs.outgoing.pos.x + 221, graphs.outgoing.pos.y + 80, {20, 20, 20, 225}, graphs.outgoing.sides)
+Draw:Line(false, 3, graphs.outgoing.pos.x, graphs.outgoing.pos.y, graphs.outgoing.pos.x - 6, graphs.outgoing.pos.y, {20, 20, 20, 225}, graphs.outgoing.sides)
+
+Draw:Line(false, 1, graphs.outgoing.pos.x, graphs.outgoing.pos.y, graphs.outgoing.pos.x, graphs.outgoing.pos.y + 80, {255, 255, 255, 225}, graphs.outgoing.sides)
+Draw:Line(false, 1, graphs.outgoing.pos.x, graphs.outgoing.pos.y + 80, graphs.outgoing.pos.x + 220, graphs.outgoing.pos.y + 80, {255, 255, 255, 225}, graphs.outgoing.sides)
+Draw:Line(false, 1, graphs.outgoing.pos.x, graphs.outgoing.pos.y, graphs.outgoing.pos.x - 5, graphs.outgoing.pos.y, {255, 255, 255, 225}, graphs.outgoing.sides)
+
+for i = 1, 20 do
+	Draw:Line(false, 1, 10, 10, 10, 10, {255, 255, 255, 225}, graphs.outgoing.graph)
+end
+
+Draw:Line(false, 1, 10, 10, 10, 10, {68, 255, 0, 255}, graphs.outgoing.graph)
+Draw:OutlinedText("avg: 20", 2, false, 20, 20, 13, false, {68, 255, 0, 255}, {10, 10, 10}, graphs.outgoing.graph)
+-- the fuckin fps and stuff i think xDDDDDd
+
+Draw:OutlinedText("draw objects: \nfps:", 2, false, 35, infopos + 180, 13, false, {255, 255, 255, 255}, {10, 10, 10}, graphs.other)
+
+-- finish
 
 local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.x/16), math.floor(SCREEN_SIZE.y/16), 13, true, {255, 50, 200, 255}, {0, 0, 0})
 
@@ -3194,6 +3289,7 @@ function menu.Initialize(menutable)
 			end
 		end
 		InputBeganMenu(input)
+
 		if menu.open then
 			if menu.tabnames[menu.activetab] == "Settings" then
 				if menu:GetVal("Settings", "Menu Settings", "Custom Menu Name") then
@@ -3217,6 +3313,46 @@ function menu.Initialize(menutable)
 						end
 					end
 				end
+			end
+		end
+
+		--[[
+			local graphs = {
+				incoming = {
+					pos = {
+						x = 30,
+						y = 400
+					},
+					sides = {},
+					graph = {}
+				},
+				outgoing = {
+					pos = {
+						x = 30,
+						y = 500
+					},
+					sides = {},
+					graph = {}
+				}
+			}
+		]]
+		if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftControl) and input.KeyCode == Enum.KeyCode.R then
+			menu.stat_menu = not menu.stat_menu
+
+			for k, v in pairs(graphs) do
+				if k ~= "other" then
+					for k1, v1 in pairs(v) do
+						if k1 ~= "pos" then
+							for k2, v2 in pairs(v1) do
+								v2.Visible = menu.stat_menu
+							end
+						end
+					end
+				end
+			end
+
+			for k, v in pairs(graphs.other) do
+				v.Visible = menu.stat_menu
 			end
 		end
 	end)
@@ -3290,6 +3426,83 @@ local function GetPTlayerHumanoid(player)
 	end
 end
 
+menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
+	
+	if menu.stat_menu == false then return end
+	if tick() > lasttick + 0.25 then
+		table.remove(networkin.incoming, 1)
+		table.insert(networkin.incoming, stats.DataReceiveKbps)
+
+		table.remove(networkin.outgoing, 1)
+		table.insert(networkin.outgoing, stats.DataSendKbps)
+
+		--incoming
+		local biggestnum = 80
+		for i = 1, 21 do
+			if math.ceil(networkin.incoming[i]) > biggestnum - 10 then
+				print(networkin.incoming[i])
+				biggestnum = (math.ceil(networkin.incoming[i]/10) + 1) * 10
+				--graphs.incoming.pos.x - 21, graphs.incoming.pos.y - 7,
+			end
+		end
+
+		local numstr = tostring(biggestnum)
+		graphs.incoming.sides[2].Text = numstr
+		graphs.incoming.sides[2].Position = Vector2.new(graphs.incoming.pos.x - ((#numstr + 1)* 7) , graphs.incoming.pos.y - 7)
+			
+
+		for i = 1, 20 do
+			local line = graphs.incoming.graph[i]
+			
+			line.From = Vector2.new(((i - 1) * 11) + graphs.incoming.pos.x, graphs.incoming.pos.y + 80 - math.floor(networkin.incoming[i] / biggestnum * 80))
+
+			line.To = Vector2.new((i * 11) + graphs.incoming.pos.x ,  graphs.incoming.pos.y + 80 - math.floor(networkin.incoming[i + 1] / biggestnum * 80))
+		end
+
+		local avgbar_h = average(networkin.incoming)
+
+		graphs.incoming.graph[21].From = Vector2.new(graphs.incoming.pos.x + 1, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
+		graphs.incoming.graph[21].To = Vector2.new(graphs.incoming.pos.x + 220, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
+
+		graphs.incoming.graph[22].Position = Vector2.new(graphs.incoming.pos.x + 222, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80) - 8)
+		graphs.incoming.graph[22].Text = "avg: ".. tostring(round(avgbar_h, 2))
+
+		graphs.incoming.sides[1].Text = "incoming kbps: ".. tostring(round(networkin.incoming[21], 2))
+
+		-- outgoing
+		local biggestnum = 10
+		for i = 1, 21 do
+			if math.ceil(networkin.outgoing[i]) > biggestnum - 5 then
+				biggestnum = (math.ceil(networkin.outgoing[i]/5) + 0.5) * 5
+			end
+		end
+		
+		local numstr = tostring(biggestnum)
+		graphs.outgoing.sides[2].Text = numstr
+		graphs.outgoing.sides[2].Position = Vector2.new(graphs.outgoing.pos.x - ((#numstr + 1)* 7) , graphs.outgoing.pos.y - 7)
+		
+
+		for i = 1, 20 do
+			local line = graphs.outgoing.graph[i]
+			
+			line.From = Vector2.new(((i - 1) * 11) + graphs.outgoing.pos.x, graphs.outgoing.pos.y + 80 - math.floor(networkin.outgoing[i] / biggestnum * 80))
+
+			line.To = Vector2.new((i * 11) + graphs.outgoing.pos.x ,  graphs.outgoing.pos.y + 80 - math.floor(networkin.outgoing[i + 1] / biggestnum * 80))
+		end
+
+		local avgbar_h = average(networkin.outgoing)
+
+		graphs.outgoing.graph[21].From = Vector2.new(graphs.outgoing.pos.x + 1, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
+		graphs.outgoing.graph[21].To = Vector2.new(graphs.outgoing.pos.x + 220, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
+
+		graphs.outgoing.graph[22].Position = Vector2.new(graphs.outgoing.pos.x + 222, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80) - 8)
+		graphs.outgoing.graph[22].Text = "avg: ".. tostring(round(avgbar_h, 2))
+
+		graphs.outgoing.sides[1].Text = "outgoing kbps: ".. tostring(round(networkin.outgoing[21], 2))
+
+		lasttick = tick()
+	end
+end)
 
 if menu.game == "uni" then --SECTION UNIVERSAL
 	menu.activetab = 4
@@ -4616,7 +4829,7 @@ elseif menu.game == "pf" then --!SECTION
 		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nadeesp.bar_moving_1)
 		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nadeesp.bar_moving_2)
 	end
-	
+
 	for i = 1, 35 do
 		for i_ = 1, 2 do
 			Draw:Triangle(false, i_ == 1, nil, nil, nil, {255}, allesp.arrows[i_])
@@ -5048,6 +5261,7 @@ elseif menu.game == "pf" then --!SECTION
 	OLD_GUNS.Parent = game:GetService("ReplicatedStorage")
 	
 	local CUR_GUNS = game:GetService("ReplicatedStorage").GunModules
+
 	
 	local selectedPlayer = nil
 	
@@ -8778,8 +8992,12 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 	end)
-	
+
 	menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
+
+		-- print("incoming: ", stats.DataReceiveKbps)
+		-- print("outgoing: ", stats.DataSendKbps)
+
 		for index, nade in pairs(menu.activenades) do
 			local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
 			if nade_percent >= 1 then
