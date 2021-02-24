@@ -6529,7 +6529,6 @@ elseif menu.game == "pf" then --!SECTION
 					local args = {...}
 					
 					if menu:GetVal("Misc", "Extra", "Auto Martyrdom") then
-						
 						local fragargs = {
 							"FRAG",
 							{
@@ -6538,7 +6537,7 @@ elseif menu.game == "pf" then --!SECTION
 										v0 = Vector3.new(),
 										glassbreaks = {},
 										t0 = 0,
-										offset = Vector3.new(),
+										offset = Vector3.new(0/0, 0/0, 0/0),
 										rot0 = CFrame.new(),
 										a = Vector3.new(0, -80, 0),
 										p0 = client.lastrepupdate or client.char.head.Position,
@@ -6552,7 +6551,7 @@ elseif menu.game == "pf" then --!SECTION
 						}
 						
 						if menu:GetVal("Misc", "Exploits", "Grenade Teleport") and args[1] ~= LOCAL_PLAYER then
-							fragargs.blowuptime = 0
+							fragargs.blowuptime = 1
 							
 							local killerbodyparts = client.replication.getbodyparts(args[1])
 							
@@ -6562,11 +6561,11 @@ elseif menu.game == "pf" then --!SECTION
 							
 							fragargs[2].frames[1].a = Vector3.new(0/0)
 							fragargs[2].frames[2] = {
-								v0 = Vector3.new(),
+								v0 = Vector3.new(0/0, 0/0, 0/0),
 								glassbreaks = {},
-								t0 = 0,
-								offset = Vector3.new(),
-								rot0 = CFrame.new(),
+								t0 = 0/0,
+								offset = Vector3.new(0/0, 0/0, 0/0),
+								rot0 = CFrame.new(0/0, 0/0, 0/0),
 								a = Vector3.new(0/0),
 								p0 = Vector3.new(0/0),
 								rotv = Vector3.new()
@@ -7796,7 +7795,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			
 			function legitbot:TriggerBot()
-				-- i swear to god the capital GetVal makes me do Menu:GetVal so much
+				-- i swear to god the capital GetVal makes me do Menu:GetVal
 				if menu:GetVal("Legit", "Trigger Bot", "Enabled") and IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
 					local parts = misc:GetParts(menu:GetVal("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
 					
@@ -9205,11 +9204,6 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Auto Shoot",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "Auto Scope",
 							value = false
 						},
 						{
