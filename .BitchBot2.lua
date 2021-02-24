@@ -3403,32 +3403,11 @@ local function GetPTlayerHumanoid(player)
 	end
 end
 
---[[
-	local FpsLabel = script.Parent
-local Heartbeat = game:GetService("RunService").Heartbeat
-
-local LastIteration, Start
-local FrameUpdateTable = { }
-
-local function HeartbeatUpdate()
-	LastIteration = tick()
-	for Index = #FrameUpdateTable, 1, -1 do
-		FrameUpdateTable[Index + 1] = (FrameUpdateTable[Index] >= LastIteration - 1) and FrameUpdateTable[Index] or nil
-	end
-	
-	FrameUpdateTable[1] = LastIteration
-	local CurrentFPS = (tick() - Start >= 1 and #FrameUpdateTable) or (#FrameUpdateTable / (tick() - Start))
-	CurrentFPS = math.floor(CurrentFPS )
-	FpsLabel.Text = "" .. CurrentFPS .. " FPS"
-end
-
-Start = tick()
-]]
-
 local LastIteration
 local Start = tick()
 local FrameUpdateTable = { }
 
+-- I STOLE THE FPS COUNTER FROM https://devforum.roblox.com/t/get-client-fps-trough-a-script/282631/14 😿😿😿😢😭
 menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
 	
 	if menu.stat_menu == false then return end
