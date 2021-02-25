@@ -2509,6 +2509,8 @@ function menu.Initialize(menutable)
 										end
 									elseif v2[5][2] == "double colorpicker" then
 										for i, v3 in ipairs(v2[5][1]) do
+
+											print(tostring(k2))
 											v3[4][1].Color = RGB(v3[1][1], v3[1][2], v3[1][3])
 											for i1 = 2, 3 do
 												v3[4][i1].Color = RGB(v3[1][1] - 40, v3[1][2] - 40, v3[1][3] - 40)
@@ -3285,7 +3287,7 @@ function menu.Initialize(menutable)
 		InputBeganMenu(input)
 
 		if menu == nil then return end
-			
+
 		if menu.open then
 			if menu.tabnames[menu.activetab] == "Settings" then
 				if menu:GetVal("Settings", "Menu Settings", "Custom Menu Name") then
@@ -3712,9 +3714,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							name = "Custom Crosshair",
 							value = false,
 							extra = {
-								type = "double colorpicker",
-								name = {"Outline", "Inline"},
-								color = {{20, 20, 20}, {127, 72, 163}}
+								type = "single colorpicker",
+								name = "Crosshair Color",
+								color = {255, 255, 255, 255}
 							}
 						},
 						{
@@ -3737,7 +3739,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							value = false,
 							extra = {
 								type = "single colorpicker",
-								name = "Aimbot FOV Circle",
+								name = "Aimbot FOV Circle Color",
 								color = {255, 255, 255, 255}
 							}
 						}
@@ -3835,7 +3837,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						},
 						{
 							type = "slider",
-							name = "Speed",
+							name = "Speed Factor",
 							value = 40,
 							minvalue = 1,
 							maxvalue = 200,
@@ -4196,7 +4198,8 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	menu.tickbaseadd = 0
 	
 	local function SpeedHack()
-		local speed = menu:GetVal("Misc", "Movement", "Speed")
+		local speed = menu:GetVal("Misc", "Movement", "Speed Factor")
+
 		if menu:GetVal("Misc", "Movement", "Speed") and LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid then
 			if menu:GetVal("Misc", "Movement", "Speed Method") == 1 then
 				local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
@@ -4234,8 +4237,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	end
 	
 	local function FlyHack()
-		if menu:GetVal("Misc", "Movement", "Fly") and LOCAL_PLAYER:FindFirstChild("Character") then
-			
+		if menu:GetVal("Misc", "Movement", "Fly") then
 			local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
 			if rootpart == nil then return end
 			if menu:GetVal("Misc", "Movement", "Fly Method") == 2 then
