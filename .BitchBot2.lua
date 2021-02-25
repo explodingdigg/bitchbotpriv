@@ -947,10 +947,6 @@ do
 		return text
 	end
 	
-	function Draw:MenuSmallText(text, visible, centered, pos_x, pos_y, tablename)
-		Draw:OutlinedText(text, 1, visible, pos_x + menu.x, pos_y + menu.y, 14, centered, {225, 225, 225, 255}, {20, 20, 20}, tablename)
-		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
-	end
 	
 	function Draw:CoolBox(name, x, y, width, height, tab)
 		Draw:MenuOutlinedRect(true, x, y, width, height, {0, 0, 0, 255}, tab)
@@ -10784,20 +10780,21 @@ end
 do
 	local wm = menu.watermark
 	wm.textString = " | Dev Build | " .. os.date("%b. %d, %Y")
-	wm.pos = Vector2.new(50, 10)
+	wm.pos = Vector2.new(50, 9)
 	wm.text = {}
 	local fulltext = "Bitch Bot".. wm.textString 
 	wm.width = (#fulltext) * 7 + 10
+	wm.height = 19
 	wm.rect = {}
 	
 	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 1, wm.width, 2, {menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40, 255}, wm.rect)
 	Draw:FilledRect(false, wm.pos.x, wm.pos.y, wm.width, 2, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, wm.rect)
-	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 3, wm.width, 14, {50, 50, 50, 255}, wm.rect)
-	for i = 0, 14 do
+	Draw:FilledRect(false, wm.pos.x, wm.pos.y + 3, wm.width, wm.height-5, {50, 50, 50, 255}, wm.rect)
+	for i = 0, wm.height-4 do
 		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 3 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
 	end
-	Draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, 18, {0, 0, 0, 255}, wm.rect)
-	Draw:OutlinedText(fulltext, 2, false, wm.pos.x + 5, wm.pos.y + 2, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
+	Draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, wm.height, {0, 0, 0, 255}, wm.rect)
+	Draw:OutlinedText(fulltext, 2, false, wm.pos.x + 5, wm.pos.y + 3, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
 end
 --ANCHOR watermak
 for k, v in pairs(menu.watermark.rect) do
