@@ -2336,8 +2336,14 @@ function menu.Initialize(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
+					
+
 					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
-						menu.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
+						local num = tonumber(tt[4])
+						if num > #menu.options[tt[1]][tt[2]][tt[3]][6] then
+							num = #menu.options[tt[1]][tt[2]][tt[3]][6]
+						end
+						menu.options[tt[1]][tt[2]][tt[3]][1] = num
 					end
 				end
 				
@@ -2510,7 +2516,6 @@ function menu.Initialize(menutable)
 									elseif v2[5][2] == "double colorpicker" then
 										for i, v3 in ipairs(v2[5][1]) do
 
-											print(tostring(k2))
 											v3[4][1].Color = RGB(v3[1][1], v3[1][2], v3[1][3])
 											for i1 = 2, 3 do
 												v3[4][i1].Color = RGB(v3[1][1] - 40, v3[1][2] - 40, v3[1][3] - 40)
@@ -3433,7 +3438,6 @@ menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
 		local biggestnum = 80
 		for i = 1, 21 do
 			if math.ceil(networkin.incoming[i]) > biggestnum - 10 then
-				print(networkin.incoming[i])
 				biggestnum = (math.ceil(networkin.incoming[i]/10) + 1) * 10
 				--graphs.incoming.pos.x - 21, graphs.incoming.pos.y - 7,
 			end
@@ -6425,7 +6429,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			if client.char.alive then
 				if menu:GetVal("Misc", "Movement", "Circle Strafe") and IsKeybindDown("Misc", "Movement", "Circle Strafe") then
-					local speedcheatspeed = menu:GetVal("Misc", "Movement", "Speed")
+					local speedcheatspeed = menu:GetVal("Misc", "Movement", "Speed Factor")
 					local rootpart = client.char.rootpart
 					rootpart.Velocity = Vector3.new(math.sin(tick() * speedcheatspeed / 10) * speedcheatspeed, rootpart.Velocity.Y, math.cos(tick() * speedcheatspeed / 10) * speedcheatspeed)
 				end
@@ -7384,8 +7388,8 @@ elseif menu.game == "pf" then --!SECTION
 			
 			if keybindtoggles.flyhack then return end
 			local type = menu:GetVal("Misc", "Movement", "Speed Type")
-			if type ~= 1 then
-				local speed = menu:GetVal("Misc", "Movement", "Speed")
+			if menu:GetVal("Misc", "Movement", "Speed Hack") then
+				local speed = menu:GetVal("Misc", "Movement", "Speed Factor")
 				
 				local travel = CACHED_VEC3
 				local looking = Camera.CFrame.LookVector
@@ -7407,12 +7411,20 @@ elseif menu.game == "pf" then --!SECTION
 				travel = Vector2.new(travel.x, travel.Z).Unit
 				
 				if travel.x == travel.x then
-					if type == 3 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+					
+					if type == 2 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
 						return
-					elseif type == 4 and not humanoid.Jump then
+					elseif type == 3 and not humanoid.Jump then
 						return
 					end
-					rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
+
+					if type == 1 then
+						if menu:GetVal("Misc", "Movement", "Speed Hack", "keybind") == nil or INPUT_SERVICE:IsKeyDown(menu:GetVal("Misc", "Movement", "Speed Hack", "keybind")) then
+							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
+						end
+					else
+						rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
+					end
 				end
 			end
 			
@@ -9398,8 +9410,7 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Silent Aim",
-							value = false,
-							unsafe = true
+							value = false
 						},
 						{
 							type = "toggle",
@@ -10192,6 +10203,7 @@ elseif menu.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Fly",
 							value = false,
+							unsafe = true,
 							extra = {
 								type = "keybind",
 								key = Enum.KeyCode.B
@@ -10211,14 +10223,24 @@ elseif menu.game == "pf" then --!SECTION
 							value = false
 						},
 						{
+							type = "toggle",
+							name = "Speed Hack",
+							value = false,
+							unsafe = true,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.N
+							}
+						},
+						{
 							type = "dropbox",
 							name = "Speed Type",
 							value = 1,
-							values = {"Off", "Always", "In Air", "On Hop"}
+							values = {"On Key", "In Air", "On Hop"}
 						},
 						{
 							type = "slider",
-							name = "Speed",
+							name = "Speed Factor",
 							value = 40,
 							minvalue = 1,
 							maxvalue = 200,
