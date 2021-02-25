@@ -1948,25 +1948,6 @@ function menu.Initialize(menutable)
 	
 	function InputBeganMenu(key)
 		
-		if menu.textboxopen then
-			if key.KeyCode == Enum.KeyCode.Delete or key.KeyCode == Enum.KeyCode.Return then
-				for k, v in pairs(menu.options) do
-					for k1, v1 in pairs(v) do
-						for k2, v2 in pairs(v1) do
-							if v2[2] == "textbox" then
-								if v2[5] then
-									v2[5] = false
-									v2[4].Color = RGB(255, 255, 255)
-									menu.textboxopen = false
-									v2[4].Text = v2[1]
-								end
-							end
-						end
-					end
-				end
-			end
-		end
-		
 		if key.KeyCode == Enum.KeyCode.Delete and not loadingthing.Visible then
 			cp.dragging_m = false
 			cp.dragging_r = false
@@ -2015,6 +1996,26 @@ function menu.Initialize(menutable)
 		end
 		
 		if menu == nil then return end
+
+		if menu.textboxopen then
+			if key.KeyCode == Enum.KeyCode.Delete or key.KeyCode == Enum.KeyCode.Return then
+				for k, v in pairs(menu.options) do
+					for k1, v1 in pairs(v) do
+						for k2, v2 in pairs(v1) do
+							if v2[2] == "textbox" then
+								if v2[5] then
+									v2[5] = false
+									v2[4].Color = RGB(255, 255, 255)
+									menu.textboxopen = false
+									v2[4].Text = v2[1]
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+
 		if menu.open and not menu.fading then
 			for k, v in pairs(menu.options) do
 				
@@ -3283,6 +3284,8 @@ function menu.Initialize(menutable)
 		end
 		InputBeganMenu(input)
 
+		if menu == nil then return end
+			
 		if menu.open then
 			if menu.tabnames[menu.activetab] == "Settings" then
 				if menu:GetVal("Settings", "Menu Settings", "Custom Menu Name") then
