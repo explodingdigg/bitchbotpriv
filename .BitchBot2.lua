@@ -264,6 +264,20 @@ local function average(t)
 	return sum / #t
 end
 
+setreadonly(math, false)
+
+math.clamp = function(a, lowerNum, higher) -- DONT REMOVE this math.clamp is better then roblox's because it doesnt error when its not lower or heigher
+	if a > higher then
+		return higher
+	elseif a < lowerNum then
+		return lowerNum
+	else
+		return a
+	end
+end
+
+setreadonly(math, true)
+
 function menu:modkeydown(key, direction)
 	local keydata = self.modkeys[key]
 	return keydata.direction and keydata.direction == direction or false
@@ -4846,7 +4860,7 @@ elseif menu.game == "pf" then --!SECTION
 		
 		Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 210}, allesp.hp.outer)
 		Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 255}, allesp.hp.inner)
-		Draw:OutlinedText("", 1, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.hp.text)
+		Draw:OutlinedText("", 1, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, allesp.hp.text)
 		
 		for i_, v in pairs(allesp.text) do
 			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, v)
@@ -8329,16 +8343,27 @@ elseif menu.game == "pf" then --!SECTION
 						--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. Player.Name)
 						
 						local ySizeBar = -math.floor(boxSize.y * health / 100)
-						if menu:GetVal("ESP", GroupBox, "Health Number") and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+						if menu.options["ESP"][GroupBox]["Health Number"][1] and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
 							local hptext = allesp.hp.text[Index]
 							hptext.Visible = true
 							hptext.Text = tostring(health)
 							
 							local tb = hptext.TextBounds
 							
-							hptext.Position = boxPosition + Vector2.new(-tb.x, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y * 0.5, boxSize.y))
+							-- math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y, boxSize.y - tb.y )
+							hptext.Position = boxPosition + Vector2.new(-tb.x - 7, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -4, boxSize.y - 10))
+							--hptext.Position = Vector2.new(boxPosition.x - 7 - tb.x, boxPosition.y + math.clamp(boxSize.y + ySizeBar - 8, -4, boxSize.y - 10))
 							hptext.Color = menu:GetVal("ESP", GroupBox, "Health Number", "color", true)
 							hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
+
+							--[[
+							if menu:GetVal("Visuals", "Player ESP", "Health Number") then
+								allesp.hptext[i].Text = tostring(health)
+								local textsize = allesp.hptext[i].TextBounds
+								allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + math.clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
+								allesp.hptext[i].Visible = true
+							end
+							]]
 						end
 						
 						allesp.hp.outer[Index].Visible = true
@@ -8367,7 +8392,7 @@ elseif menu.game == "pf" then --!SECTION
 						
 						local tb = hptext.TextBounds
 						
-						hptext.Position = boxPosition + Vector2.new(-tb.x, 0)
+						hptext.Position = boxPosition + Vector2.new(-tb.x - 2, - 4)
 						hptext.Color = menu:GetVal("ESP", GroupBox, "Health Number", "color", true)
 						hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
 						
