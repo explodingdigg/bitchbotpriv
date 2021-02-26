@@ -7442,9 +7442,9 @@ elseif menu.game == "pf" then --!SECTION
 				
 				if travel.x == travel.x then
 					
-					if type == 2 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+					if type == 2 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall or not humanoid.Jump then
 						return
-					elseif type == 3 and not humanoid.Jump then
+					elseif type == 3 and not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
 						return
 					end
 
