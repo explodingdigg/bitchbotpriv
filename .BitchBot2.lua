@@ -1949,14 +1949,11 @@ function menu.Initialize(menutable)
 		
 	end
 	
-	local dropboxopen = false
-	local dropboxthatisopen = nil
+	menu.dropbox_open = nil
 	
 	menu.colorpicker_open = false
-	local colorpickerthatisopen = nil
 	
-	menu.textboxopen = false
-	menu.textboxthatisopen = nil
+	menu.textboxopen = nil
 	
 	local shooties = {}
 	
@@ -1998,8 +1995,8 @@ function menu.Initialize(menutable)
 					end
 				end
 				set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
-				colorpickerthatisopen = nil
-				menu.colorpicker_open = false
+				menu.colorpicker_open = nil
+				menu.colorpicker_open = nil
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 				
 			end
@@ -2580,7 +2577,7 @@ function menu.Initialize(menutable)
 	end
 	
 	local function mousebutton1downfunc()
-		dropboxopen = false
+		menu.dropbox_open = nil
 		menu.textboxopen = false
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
@@ -2590,8 +2587,8 @@ function menu.Initialize(menutable)
 							set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 							v2[5] = false
 						else
-							dropboxthatisopen = v2
-							dropboxopen = true
+							menu.dropbox_open = v2
+							menu.dropbox_open = v2
 						end
 					end
 					if v2[2] == "combobox" and v2[5] then
@@ -2599,8 +2596,8 @@ function menu.Initialize(menutable)
 							set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 							v2[5] = false
 						else
-							dropboxthatisopen = v2
-							dropboxopen = true
+							menu.dropbox_open = v2
+							menu.dropbox_open = v2
 						end
 					end
 					if v2[2] == "toggle" then
@@ -2615,8 +2612,8 @@ function menu.Initialize(menutable)
 									if not menu:MouseInColorPicker(0, 0, cp.w, cp.h) then
 										set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 										v2[5][5] = false
-										colorpickerthatisopen = nil
-										menu.colorpicker_open = false
+										menu.colorpicker_open = nil
+										menu.colorpicker_open = nil
 									end
 								end
 							elseif v2[5][2] == "double colorpicker" then
@@ -2625,8 +2622,8 @@ function menu.Initialize(menutable)
 										if not menu:MouseInColorPicker(0, 0, cp.w, cp.h) then
 											set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 											v3[5] = false
-											colorpickerthatisopen = nil
-											menu.colorpicker_open = false
+											menu.colorpicker_open = nil
+											menu.colorpicker_open = nil
 										end
 									end
 								end
@@ -2651,22 +2648,22 @@ function menu.Initialize(menutable)
 		if menu.colorpicker_open then
 			if menu:MouseInColorPicker(197, cp.h - 25, 75, 20) then
 				local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
-				colorpickerthatisopen[4][1].Color = tempclr
+				menu.colorpicker_open[4][1].Color = tempclr
 				for i = 2, 3 do
-					colorpickerthatisopen[4][i].Color = RGB(math.floor(tempclr.R * 255) - 40, math.floor(tempclr.G * 255) - 40, math.floor(tempclr.B * 255) - 40)
+					menu.colorpicker_open[4][i].Color = RGB(math.floor(tempclr.R * 255) - 40, math.floor(tempclr.G * 255) - 40, math.floor(tempclr.B * 255) - 40)
 				end
 				if cp.alpha then
-					colorpickerthatisopen[1] = {math.floor(tempclr.R * 255), math.floor(tempclr.G * 255), math.floor(tempclr.B * 255), cp.hsv.a}
+					menu.colorpicker_open[1] = {math.floor(tempclr.R * 255), math.floor(tempclr.G * 255), math.floor(tempclr.B * 255), cp.hsv.a}
 				else
-					colorpickerthatisopen[1] = {math.floor(tempclr.R * 255), math.floor(tempclr.G * 255), math.floor(tempclr.B * 255)}
+					menu.colorpicker_open[1] = {math.floor(tempclr.R * 255), math.floor(tempclr.G * 255), math.floor(tempclr.B * 255)}
 				end
-				menu.colorpicker_open = false
-				colorpickerthatisopen = nil
+				menu.colorpicker_open = nil
+				menu.colorpicker_open = nil
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 			end
 			if menu:MouseInColorPicker(264, 2, 14, 14) then
-				menu.colorpicker_open = false
-				colorpickerthatisopen = nil
+				menu.colorpicker_open = nil
+				menu.colorpicker_open = nil
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 			end
 			if menu:MouseInColorPicker(10, 23, 160, 160) then
@@ -2691,15 +2688,15 @@ function menu.Initialize(menutable)
 				if menu.copied_clr ~= nil then
 					local cpa = false
 					local clrtable = {menu.copied_clr.R * 255, menu.copied_clr.G * 255, menu.copied_clr.B * 255}
-					if colorpickerthatisopen[1][4] ~= nil then
+					if menu.colorpicker_open[1][4] ~= nil then
 						cpa = true
-						table.insert(clrtable, colorpickerthatisopen[1][4])
+						table.insert(clrtable, menu.colorpicker_open[1][4])
 					end
 					
-					set_colorpicker(true, clrtable, colorpickerthatisopen, cpa, colorpickerthatisopen[6], cp.x, cp.y)
-					local oldclr = colorpickerthatisopen[4][1].Color
-					if colorpickerthatisopen[1][4] ~= nil then
-						set_oldcolor(oldclr.R * 255, oldclr.G * 255, oldclr.B * 255, colorpickerthatisopen[1][4])
+					set_colorpicker(true, clrtable, menu.colorpicker_open, cpa, menu.colorpicker_open[6], cp.x, cp.y)
+					local oldclr = menu.colorpicker_open[4][1].Color
+					if menu.colorpicker_open[1][4] ~= nil then
+						set_oldcolor(oldclr.R * 255, oldclr.G * 255, oldclr.B * 255, menu.colorpicker_open[1][4])
 					else
 						set_oldcolor(oldclr.R * 255, oldclr.G * 255, oldclr.B * 255)
 					end
@@ -2714,7 +2711,7 @@ function menu.Initialize(menutable)
 				if menu.tabnames[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
-							if v2[2] == "toggle" and not dropboxopen then
+							if v2[2] == "toggle" and not menu.dropbox_open then
 								if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
 									if v2[6] then
 										if menu:GetVal("Settings", "Extra", "Allow Unsafe Features") and v2[1] == false then
@@ -2745,8 +2742,8 @@ function menu.Initialize(menutable)
 									elseif v2[5][2] == "single colorpicker" then
 										if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 28, 14) then
 											v2[5][5] = true
-											menu.colorpicker_open = true
-											colorpickerthatisopen = v2[5]
+											menu.colorpicker_open = v2[5]
+											menu.colorpicker_open = v2[5]
 											if v2[5][1][4] ~= nil then
 												set_colorpicker(true, v2[5][1], v2[5], true, v2[5][6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
 											else
@@ -2757,8 +2754,8 @@ function menu.Initialize(menutable)
 										for k3, v3 in pairs(v2[5][1]) do
 											if menu:MouseInMenu(v3[3][1], v3[3][2], 28, 14) then
 												v3[5] = true
-												menu.colorpicker_open = true
-												colorpickerthatisopen = v3
+												menu.colorpicker_open = v3
+												menu.colorpicker_open = v3
 												if v3[1][4] ~= nil then
 													set_colorpicker(true, v3[1], v3, true, v3[6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
 												else
@@ -2768,7 +2765,7 @@ function menu.Initialize(menutable)
 										end
 									end
 								end
-							elseif v2[2] == "slider" and not dropboxopen then
+							elseif v2[2] == "slider" and not menu.dropbox_open then
 								if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
 									local stepval = 1
 									if v2.stepsize then 
@@ -2799,8 +2796,8 @@ function menu.Initialize(menutable)
 									v2[5] = true
 								end
 							elseif v2[2] == "dropbox" then
-								if dropboxopen then
-									if v2 ~= dropboxthatisopen then
+								if menu.dropbox_open then
+									if v2 ~= menu.dropbox_open then
 										continue
 									end
 								end
@@ -2830,8 +2827,8 @@ function menu.Initialize(menutable)
 									end
 								end
 							elseif v2[2] == "combobox" then
-								if dropboxopen then
-									if v2 ~= dropboxthatisopen then
+								if menu.dropbox_open then
+									if v2 ~= menu.dropbox_open then
 										continue
 									end
 								end
@@ -2866,7 +2863,7 @@ function menu.Initialize(menutable)
 										end
 									end
 								end
-							elseif v2[2] == "button" and not dropboxopen then
+							elseif v2[2] == "button" and not menu.dropbox_open then
 								if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 22) then
 									if not v2[1] then
 										buttonpressed(v2)
@@ -2877,11 +2874,10 @@ function menu.Initialize(menutable)
 										v2[1] = true
 									end
 								end
-							elseif v2[2] == "textbox" and not dropboxopen then
+							elseif v2[2] == "textbox" and not menu.dropbox_open then
 								if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 22) then
 									if not v2[5] then
-										menu.textboxopen = true
-										menu.textboxthatisopen = v2
+										menu.textboxopen = v2
 										
 										v2[4].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 										v2[5] = true
@@ -3120,7 +3116,7 @@ function menu.Initialize(menutable)
 									end
 									set_plusminus(1, v2[7][1], v2[7][2])
 								else
-									if not dropboxopen then
+									if not menu.dropbox_open then
 										if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
 											if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
 												
@@ -4138,7 +4134,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	end
 	
 	local function setplistinfo(player, textonly)
-		if menu == nil then return end
+		if not menu then return end
 		if player ~= nil then
 			local playerteam = "None"
 			if player.Team ~= nil then
@@ -4384,7 +4380,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			if menu.open then
 				if menu.tickbase_manip_added == false and menu:GetVal("Misc", "Exploits", "Enable Tick Manipulation") then
 					shared.tick_ref = hookfunc(tick, function()
-						if menu == nil then
+						if not menu then
 							return shared.tick_ref()
 						elseif menu:GetVal("Misc", "Exploits", "Enable Tick Manipulation") and menu:GetVal("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Misc", "Exploits", "Shift Tick Base", "keybind")) then
 							menu.tickbaseadd += menu:GetVal("Misc", "Exploits", "Shifted Tick Base Add") * 0.001
@@ -4455,7 +4451,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				end
 				
 				game.RunService.Stepped:wait()
-				if menu == nil then return end
+				if not menu then return end
 				local crosshairvis = menu:GetVal("Visuals", "Misc Visuals", "Custom Crosshair")
 				for k, v in pairs(menu.crosshair) do
 					v[1].Visible = crosshairvis
@@ -7432,12 +7428,12 @@ elseif menu.game == "pf" then --!SECTION
 						return
 					end
 
-					if type == 1 then
-						if menu:GetVal("Misc", "Movement", "Speed Hack", "keybind") == nil or INPUT_SERVICE:IsKeyDown(menu:GetVal("Misc", "Movement", "Speed Hack", "keybind")) then
+					if IsKeybindDown("Misc", "Movement", "Speed Hack", true) then
+						if type == 1 then
 							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
-						end
-					else
-						rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
+						else
+							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
+						end--ANCHOR FUCK
 					end
 				end
 			end
@@ -7915,7 +7911,7 @@ elseif menu.game == "pf" then --!SECTION
 			function legitbot:SilentAimAtTarget(targetPart)
 				--debug.profilebegin("Legitbot SilentAimAtTarget")
 				
-				if not targetPart or not targetPart.Position or client.logic.currentgun == nil then
+				if not targetPart or not targetPart.Position or not client.logic.currentgun then
 					return
 				end
 				if not client.logic.currentgun or not client.logic.currentgun.barrel then
@@ -10261,7 +10257,7 @@ elseif menu.game == "pf" then --!SECTION
 							type = "dropbox",
 							name = "Speed Type",
 							value = 1,
-							values = {"On Key", "In Air", "On Hop"}
+							values = {"Always", "In Air", "On Hop"}
 						},
 						{
 							type = "slider",
