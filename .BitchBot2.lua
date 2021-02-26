@@ -6444,7 +6444,6 @@ elseif menu.game == "pf" then --!SECTION
 			local prioritizedpart = menu:GetVal("Rage", "Aimbot", "Hitscan Priority")
 			
 			ragebot:Stance()
-			--ANCHOR FUCK YOU
 			if menu:GetVal("Rage", "Extra", "Fake Lag") and not menu:GetVal("Rage", "Extra", "Manual Choke") then
 				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > menu:GetVal("Rage", "Extra", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.alive then
 					fakelagtime = tick()
@@ -7454,7 +7453,7 @@ elseif menu.game == "pf" then --!SECTION
 							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
 						else
 							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
-						end--ANCHOR FUCK
+						end
 					end
 				end
 			end
@@ -8272,7 +8271,7 @@ elseif menu.game == "pf" then --!SECTION
 			local target_color = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
 			local target_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
 			
-			for Index, Player in next, camera:GetPlayersOrganizedByFov() do
+			for Index, Player in next, Players:GetPlayers() do
 				
 				if not client.hud:isplayeralive(Player) then continue end
 				local parts = client.replication.getbodyparts(Player)
