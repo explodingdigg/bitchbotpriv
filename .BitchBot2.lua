@@ -5782,6 +5782,27 @@ elseif menu.game == "pf" then --!SECTION
 			local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
 			return math.deg(ang.Magnitude)
 		end
+
+		function camera:GetPlayersOrganizedByFov(players)
+			local result = {}
+			local playerobjects = {}
+			players = players or Players:GetPlayers()
+			for i, player in next, players do
+				
+				local curbodyparts = client.replication.getbodyparts(player)
+				if curbodyparts and client.hud:isplayeralive(player) then
+					local fov = camera:GetFOV(curbodyparts.rootpart)
+					result[i] = fov
+				else
+					result[i] = 999
+				end
+			end
+			table.sort(result)
+			for i, fov in next, result do
+				playerobjects[fov] = players[i]
+			end
+			return playerobjects
+		end
 		
 		function camera:IsVisible(Part, Parent, origin)
 			
@@ -8251,7 +8272,7 @@ elseif menu.game == "pf" then --!SECTION
 			local target_color = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
 			local target_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
 			
-			for Index, Player in ipairs(players) do
+			for Index, Player in next, camera:GetPlayersOrganizedByFov() do
 				
 				if not client.hud:isplayeralive(Player) then continue end
 				local parts = client.replication.getbodyparts(Player)
@@ -10641,24 +10662,26 @@ elseif menu.game == "pf" then --!SECTION
 		},
 	})
 	do
+
 		local plistinfo = menu.options["Settings"]["Player List"]["Player Info"][1]
 		local plist = menu.options["Settings"]["Player List"]["Players"]
 		local function updateplist()
 			if not menu then return end
 			local playerlistval = menu:GetVal("Settings", "Player List", "Players")
 			local players = {}
+			
 			for i, team in pairs(TEAMS:GetTeams()) do
 				local sorted_players = {}
 				for i1, player in pairs(team:GetPlayers()) do
 					table.insert(sorted_players, player.Name)
 				end
-				table.sort(sorted_players)
+				table.sort(sorted_players) -- why the fuck doesn't this shit work ...
 				for i1, player_name in pairs(sorted_players) do
 					table.insert(players, Players:FindFirstChild(player_name))
 				end
 			end
 			local templist = {}
-			for k, v in pairs(players) do
+			for k, v in ipairs(players) do
 				local plyrname = {v.Name, RGB(255, 255, 255)}
 				local teamtext = {"None", RGB(255, 255, 255)}
 				local plyrstatus = {"None", RGB(255, 255, 255)}
