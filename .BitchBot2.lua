@@ -2068,6 +2068,8 @@ function menu.Initialize(menutable)
 									else
 										v2[1] = v2[1].. "-"
 									end
+								elseif key.KeyCode.Name == "Period" then
+									v2[1] = v2[1] .. "."
 								elseif KeyEnumToName(key.KeyCode) == "Back" and v2[1] ~= "" then
 									v2[1] = string.sub(v2[1], 0, #(v2[1]) - 1)
 								end
@@ -4771,6 +4773,7 @@ elseif menu.game == "pf" then --!SECTION
 		[73654327] = true,
 		[1509251] = true,
 		[151207617] = true,
+		[334009865] = true
 	}
 	
 	CreateThread(function()
@@ -6791,7 +6794,30 @@ elseif menu.game == "pf" then --!SECTION
 				clienteventfuncs[hash] = function(killer, victim, dist, weapon, head)
 					if killer == LOCAL_PLAYER and victim ~= LOCAL_PLAYER then
 						if menu:GetVal("Misc", "Extra", "Kill Sound") then
-							client.sound.PlaySoundId("rbxassetid://6229978482", 5.0, 1.0, workspace, nil, 0, 0.03)
+							local soundid = menu:GetVal("Misc", "Extra", "killsoundid")
+							local soundEmpty = soundid == ""
+							soundid = soundEmpty and "rbxassetid://6229978482" or soundid
+
+							if not soundEmpty then
+								warn("Sound id was not empty")
+								local isSoundPath = soundid:match("%D+") or false
+								print(isSoundPath, "Awesome")
+								if isSoundPath then
+									warn("Sound id is a path")
+									if not soundid:match("^rbxassetid://") then
+										local validPath = isfile(soundid)
+										if validPath then
+											soundid = getsynasset(soundid)
+										end
+									end
+								else
+									local shit = soundid:match("%d+")
+									soundid = string.format("rbxassetid://%d", shit)
+								end
+							end
+							warn(soundid)
+
+							client.sound.PlaySoundId(soundid, 5.0, 1.0, workspace, nil, 0, 0.03)
 						end
 					end
 					
@@ -10434,6 +10460,11 @@ elseif menu.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Kill Sound",
 							value = false
+						},
+						{
+							type = "textbox",
+							name = "killsoundid",
+							text = "6229978482"
 						},
 						{
 							type = "dropbox",
