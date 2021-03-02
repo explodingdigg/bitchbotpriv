@@ -31,6 +31,8 @@ for k, v in pairs(getgc(true)) do
 					client.sound = v1
 				elseif rawget(v1, "checkkillzone") then
 					client.roundsystem = v1
+				elseif rawget(v1, "new") and rawget(v1, "reset") then
+					client.particle = v1
 				end
 			end
 		end
@@ -42,9 +44,17 @@ for k, v in pairs(getgc(true)) do
 	end
 end
 
+--[[local newpart = client.particle.new
+
+client.particle.new = function(p)
+	for k,v in next, p do
+		warn(k,v)
+	end
+
+	return newpart(p)
+end]]
+
 client.NetworkEncode = require(game.ReplicatedFirst.SharedModules.Utilities.Network.NetworkEncode)
-
-
 --[[wait(1)
 
 local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 10000)
@@ -78,34 +88,66 @@ for k,v in next, client.NetworkEncode.decode(data) do
 	warn(k,v)
 end]]
 
-client.network.send = function(t, event, ...)
-	local args = {...}
-
-	if event == "knifehit" then
-		local old = args[3]
+--[[for i = 1, 5 do
+	local str = "We have cheats, I'm not lying"
 	
-		local dumbpos = (client.char.head.CFrame * CFrame.new(0, 0, 10)).p
-		local vtorsolv = args[3].Parent.Torso.CFrame.LookVector
-		local fuckinhack = -vtorsolv.Unit:Dot(workspace.CurrentCamera.CFrame.LookVector.Unit)
-		local newpos = old.Position:Lerp(dumbpos, fuckinhack)
-		t:send("chatted", tostring(fuckinhack))
-		if (fuckinhack <= 0.6 and fuckinhack >= -0.6) then
-			local sign = fuckinhack >= -0 and -1 or 1
-			newpos += Vector3.new(0, 0, 10) * sign
-		end
-
-		args[3] = {Name = old.Name, Position = newpos}
+	if i % 2 == 0 then
+		str = str .. string.char(1):rep(math.random(10))
 	end
 
-	--[[if event == "bullethit" then
-		args[2] = game:service("Players").LocalPlayer.Character.Torso.Position
-		local data = game.ReplicatedStorage.RemoteFunction:InvokeServer("bullethit", args)
-		warn(data)
-		for k,v in next, client.NetworkEncode.decode(data) do
-			warn(k,v)
-		end
-		return
-	end]]
+	client.network:send("chatted", str)
+end]]
 
-	return oldsend(t, event, unpack(args))
+--[[game.ReplicatedStorage.RemoteFunction:InvokeServer("swapweapon", {
+	workspace.Ignore.GunDrop.Dropped, 8
+})
+
+for k,v in next, getupvalue(client.char.unloadguns, 2) do
+	warn(k,v)
+end
+
+warn(client.logic.currentgun.id)]]
+
+local mt = getrawmetatable(game)
+
+if not _G.newindex then
+	_G.newindex = mt.__newindex
+end
+
+local currentcamera = workspace.CurrentCamera
+
+local newindex = _G.newindex or mt.__newindex
+
+setreadonly(mt, false)
+
+mt.__newindex = function(t, p, v)
+
+	if not checkcaller() and t == currentcamera and client.char.alive then
+		if p == "CFrame" then
+			local translatedcf = v + v.lookVector * -20
+			return newindex(t, p, translatedcf)
+		end
+	end
+
+	return newindex(t, p, v)
+end
+
+setreadonly(mt, true)
+
+local ajax = 0
+
+local renderStepped = game.RunService.RenderStepped
+local stepWait = renderStepped.Wait
+
+local debris = game:service("Debris")
+
+local uberpart = workspace:FindFirstChild("uber")
+
+if not uberpart then
+	uberpart = Instance.new("Part", workspace)
+	uberpart.Name = "uber"
+	uberpart.Material = Enum.Material.Neon
+	uberpart.Anchored = true
+	uberpart.CanCollide = false
+	uberpart.Size = Vector3.new(1, 1, 1)
 end
