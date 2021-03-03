@@ -5052,8 +5052,8 @@ elseif menu.game == "pf" then --!SECTION
 		ragebot.nextRagebotShot = shoot and future or ragebot.nextRagebotShot
 	
 		if shoot and client.logic.currentgun.burst == 0 then
-			--client.logic.currentgun.burst = menu.flags.dt and 2 or 1
-			client.logic.currentgun.burst = 1
+			local dt = menu:GetVal("Rage", "Aimbot", "Double Tap")
+			client.logic.currentgun.burst = dt and 2 or 1
 		end
 	end
 
@@ -6102,7 +6102,8 @@ elseif menu.game == "pf" then --!SECTION
 			ragebot.firepos = origin
 			ragebot.shooting = true
 			if menu:GetVal("Rage", "Aimbot", "Auto Shoot") then
-				local scaledFirerate = client.logic.currentgun.data.firerate * menu:GetVal("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
+				local firerate = type(client.logic.currentgun.data.firerate) == "table" and client.logic.currentgun.data.firerate[1] or client.logic.currentgun.data.firerate
+				local scaledFirerate = firerate * menu:GetVal("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
 				ragebot:shoot(scaledFirerate)
 			end
 		end
@@ -9637,6 +9638,11 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Auto Shoot",
+							value = false
+						},
+						{
+							type = "toggle",
+							name = "Double Tap",
 							value = false
 						},
 						{
