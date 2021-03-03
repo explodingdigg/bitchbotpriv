@@ -6102,7 +6102,8 @@ elseif menu.game == "pf" then --!SECTION
 			ragebot.firepos = origin
 			ragebot.shooting = true
 			if menu:GetVal("Rage", "Aimbot", "Auto Shoot") then
-				local scaledFirerate = client.logic.currentgun.data.firerate * menu:GetVal("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
+				local firerate = type(client.logic.currentgun.data.firerate) == "table" and client.logic.currentgun.data.firerate[1] or client.logic.currentgun.data.firerate
+				local scaledFirerate = firerate * menu:GetVal("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
 				ragebot:shoot(scaledFirerate)
 			end
 		end
