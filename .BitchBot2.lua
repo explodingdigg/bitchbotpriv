@@ -4886,6 +4886,7 @@ elseif menu.game == "pf" then --!SECTION
 	local ragebot = {}
 	local camera = {}
 	
+	ragebot.nextRagebotShot = -1
 	
 	client.loadedguns = {}
 	
@@ -4952,6 +4953,7 @@ elseif menu.game == "pf" then --!SECTION
 			elseif rawget(v, "player") and rawget(v, "reset") then
 				client.animation = v
 				client.animation.oldplayer = client.animation.player
+				client.animation.oldreset = client.animation.reset
 			elseif rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
 				local oldtask = rawget(v, "task")
 				rawset(v, "task", function(...)
@@ -5006,6 +5008,54 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 	})
+
+	function ragebot:shoot(rageFirerate)
+		local firerate = rageFirerate or client.logic.currentgun.data.firerate
+		local mag = getupvalue(client.logic.currentgun.shoot, 2)
+		local chambered = getupvalue(client.logic.currentgun.shoot, 3)
+		if not chambered then
+			setupvalue(client.logic.currentgun.shoot, 3, true)
+		end
+		local chamber = client.logic.currentgun.data.chamber
+		local reloading = getupvalue(client.logic.currentgun.shoot, 4)
+		local spare = getupvalue(client.logic.currentgun.dropguninfo, 2)
+		--[[local yieldtoanimation = getupvalue(client.logic.currentgun.playanimation, 3)
+		local animating = getupvalue(client.logic.currentgun.playanimation, 5)
+		if yieldtoanimation then
+			setupvalue(client.logic.currentgun.playanimation, 3, false)
+		end
+
+		if animating then
+			setupvalue(client.logic.currentgun.playanimation, 5, false)
+		end]]
+		
+		if mag == 0 and not reloading then
+			spare += mag
+			local wants = (mag == 0 or not chamber) and magsize or magsize + 1
+			mag = wants > spare and spare or wants
+			spare -= mag
+			setupvalue(client.logic.currentgun.shoot, 2, mag)
+			setupvalue(client.logic.currentgun.dropguninfo, 2, spare)
+			client.hud:updateammo(mag, spare)
+			--client.logic.currentgun:reload()
+			return
+		end
+		
+		if reloading and mag > 0 then
+			client.logic.currentgun:reloadcancel()
+		end
+
+		local curTick = tick()
+		local future = curTick + (60 / firerate)
+	
+		local shoot = curTick > ragebot.nextRagebotShot
+		ragebot.nextRagebotShot = shoot and future or ragebot.nextRagebotShot
+	
+		if shoot and client.logic.currentgun.burst == 0 then
+			--client.logic.currentgun.burst = menu.flags.dt and 2 or 1
+			client.logic.currentgun.burst = 1
+		end
+	end
 
 	local debris = game:service("Debris")
 	local teamdata = {}
@@ -5511,7 +5561,7 @@ elseif menu.game == "pf" then --!SECTION
 	}
 	
 	setrawmetatable(chatspams, { -- this is the dumbest shit i've ever fucking done
-	__call = function(self, type, debounce)
+	__call = function(self, type, debounce, time)
 		if type ~= 1 then
 			if type == 7 or type == 9 then
 				local words = type == 7 and spam_words or customChatSpam
@@ -5522,8 +5572,9 @@ elseif menu.game == "pf" then --!SECTION
 				return message
 			end
 			local chatspamtype = type == 8 and customChatSpam or self[type]
-			local rand = math.random(1, #chatspamtype)
-			if debounce then
+
+			local rand = time and 1 + time % #chatspamtype or math.random(1, #chatspamtype)
+			if (not time) and debounce then
 				if self.lastchoice == rand then
 					repeat
 						rand = math.random(1, #chatspamtype)
@@ -5704,10 +5755,25 @@ elseif menu.game == "pf" then --!SECTION
 	end
 	
 	local send = client.net.send
-	
+	local last_chat = os.time()
+
 	CreateThread(function()
 		repeat wait() until menu.fading -- this is fucking bad
 		while true do
+			local current_time = os.time()  
+			local speed = menu:GetVal("Misc", "Extra", "Chat Spam Delay")
+			if current_time % speed == 0 and current_time ~= last_chat then
+				local cs = menu:GetVal("Misc", "Extra", "Chat Spam")
+				if cs ~= 1 then
+					local curchoice = chatspams(cs, false, current_time)
+					curchoice = menu:GetVal("Misc", "Extra", "Chat Spam Repeat") and string.rep(curchoice, 100) or curchoice
+					send(nil, "chatted", curchoice)
+				end
+				last_chat = current_time
+			end
+			game.RunService.RenderStepped:Wait()
+		end
+		--[[while true do
 			if not menu then return end
 			local s = menu:GetVal("Misc", "Extra", "Chat Spam Delay")
 			local tik = math.floor(tick())
@@ -5721,7 +5787,7 @@ elseif menu.game == "pf" then --!SECTION
 				end
 			end
 			game.RunService.RenderStepped:Wait()
-		end
+		end]]
 		return
 	end)
 	
@@ -6017,9 +6083,9 @@ elseif menu.game == "pf" then --!SECTION
 			if not part then
 				ragebot.silentVector = nil
 				ragebot.firepos = nil
-				if ragebot.shooting and menu:GetVal("Rage", "Aimbot", "Auto Shoot") then
+				--[[ if ragebot.shooting and menu:GetVal("Rage", "Aimbot", "Auto Shoot") then
 					client.logic.currentgun:shoot(false)
-				end
+				end ]]
 				ragebot.target = nil
 				ragebot.shooting = false
 				return
@@ -6036,7 +6102,8 @@ elseif menu.game == "pf" then --!SECTION
 			ragebot.firepos = origin
 			ragebot.shooting = true
 			if menu:GetVal("Rage", "Aimbot", "Auto Shoot") then
-				client.logic.currentgun:shoot(true)
+				local scaledFirerate = client.logic.currentgun.data.firerate * menu:GetVal("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
+				ragebot:shoot(scaledFirerate)
 			end
 		end
 		
@@ -6799,11 +6866,8 @@ elseif menu.game == "pf" then --!SECTION
 							soundid = soundEmpty and "rbxassetid://6229978482" or soundid
 
 							if not soundEmpty then
-								warn("Sound id was not empty")
 								local isSoundPath = soundid:match("%D+") or false
-								print(isSoundPath, "Awesome")
 								if isSoundPath then
-									warn("Sound id is a path")
 									if not soundid:match("^rbxassetid://") then
 										local validPath = isfile(soundid)
 										if validPath then
@@ -6815,7 +6879,6 @@ elseif menu.game == "pf" then --!SECTION
 									soundid = string.format("rbxassetid://%d", shit)
 								end
 							end
-							warn(soundid)
 
 							client.sound.PlaySoundId(soundid, 5.0, 1.0, workspace, nil, 0, 0.03)
 						end
@@ -7134,7 +7197,7 @@ elseif menu.game == "pf" then --!SECTION
 				end
 				
 				if mods_enabled then
-					do --firerate
+					--[[do --firerate
 						if gun.variablefirerate then
 							for k, v in pairs(gun.firerate) do
 								v *= firerate_scale
@@ -7142,7 +7205,7 @@ elseif menu.game == "pf" then --!SECTION
 						elseif gun.firerate then
 							gun.firerate *= firerate_scale
 						end
-					end
+					end]]
 					if fully_auto and gun.firemodes then
 						gun.firemodes = {true, 3, 1}
 					end
@@ -7168,8 +7231,10 @@ elseif menu.game == "pf" then --!SECTION
 					end
 					if empty_animations then
 						client.animation.player = animhook
+						client.animation.reset = animhook
 					else
 						client.animation.player = client.animation.oldplayer
+						client.animation.reset = client.animation.oldreset
 					end
 				end
 			end
@@ -7276,9 +7341,11 @@ elseif menu.game == "pf" then --!SECTION
 		menu.connections.toggle_pressed_pf = TogglePressed.Event:Connect(function(tab, name, gb)
 			if name == "Enabled" and tab == "Weapon Modifications" then
 				client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldplayer
+				client.animation.reset = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldreset
 			end
 			if name == "Remove Animations" then
 				client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
+				client.animation.reset = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldreset
 			end
 		end)
 		local fakelagpos = Vector3.new()
