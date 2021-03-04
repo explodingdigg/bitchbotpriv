@@ -3381,6 +3381,8 @@ function menu.Initialize(menutable)
 		for k, v in pairs(self.connections) do
 			v:Disconnect()
 		end
+
+		game:service("ContextActionService"):UnbindAction("BB Keycheck")
 		
 		local mt = getrawmetatable(game)
 		
@@ -4369,18 +4371,6 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	
 	local oldslectedplyr = nil
 	menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
-		if input.KeyCode == menu:GetVal("Misc", "Exploits", "Shift Tick Base", "keybind") then
-			menu.tickbaseadd = 0
-		end
-		if menu:GetVal("Misc", "Movement", "Fly") and input.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
-			cachedValues.FlyToggle = not cachedValues.FlyToggle
-			LOCAL_PLAYER.Character.HumanoidRootPart.Anchored = false
-		end
-		if menu:GetVal("Misc", "Movement", "Mouse Teleport") and input.KeyCode == menu:GetVal("Misc", "Movement", "Mouse Teleport", "keybind") then
-			local targetPos = LOCAL_MOUSE.Hit.p
-			local RP = LOCAL_PLAYER.Character.HumanoidRootPart
-			RP.CFrame = CFrame.new(targetPos + Vector3.new(0,7,0))
-		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			if menu.open then
 				if menu.tickbase_manip_added == false and menu:GetVal("Misc", "Exploits", "Enable Tick Manipulation") then
@@ -4749,7 +4739,8 @@ elseif menu.game == "pf" then --!SECTION
 		fakelag = false,
 		crimwalk = false,
 		freeze = false,
-		freestand = false
+		freestand = false,
+		superaa = false
 	}
 	
 	menu.activenades = {}
@@ -4975,6 +4966,9 @@ elseif menu.game == "pf" then --!SECTION
 	client.roundsystem.lock = nil -- we do a little trolling
 
 	client.lastlock = false -- fucking dumb
+
+	local fakelagpos = Vector3.new()
+	local fakelagtime = 0
 
 	setrawmetatable(client.roundsystem, {
 		__index = function(self, val)
@@ -5441,7 +5435,7 @@ elseif menu.game == "pf" then --!SECTION
 			"NEXUS ",
 			"NEXUS ON TOP ",
 			"ｎｅｘｕｓ ｄｏｅｓｎ＇ｔ ｃａｒｅ 🤏",
-			"ｈｔｔｐｓ_ｇｅｔｕｇｔ_ｃｏｍ 🔥",
+			"ｈ���ｔｐｓ_ｇｅｔｕｇｔ_ｃｏｍ 🔥",
 			"retardheadass",
 			"can't hear you over these kill sounds ",
 			"i'm just built different yo 🧱🧱🧱 ",
@@ -5808,9 +5802,9 @@ elseif menu.game == "pf" then --!SECTION
 		
 		mt.__newindex = newcclosure(function(self, id, val)
 			if client.char.alive then
-				if menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
-					if self == workspace.Camera then
-						if id == "CFrame" then
+				if self == workspace.Camera then
+					if id == "CFrame" then
+						if not keybindtoggles.superaa and menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
 							local dist = menu:GetVal("Visuals", "Local Visuals", "Third Person Distance") / 10
 							local params = RaycastParams.new()
 							params.FilterType = Enum.RaycastFilterType.Blacklist
@@ -5822,15 +5816,30 @@ elseif menu.game == "pf" then --!SECTION
 							
 							val *= CFrame.new(0, 0, mag or dist)
 						end
+
+						if keybindtoggles.superaa then
+							local angles = val - val.p
+							local newcf = client.superaastart * angles
+							return oldNewIndex(self, id, newcf)
+						end
 					end
 				end
 				
-				if menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
+				if self == client.char.rootpart then
 					if id == "CFrame" then
-						if self == client.char.rootpart then
+						if not keybindtoggles.superaa and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
 							local offset = Vector3.new(0, client.fakeoffset, 0)
 							self.Position = val.p - offset
 							self.Position = val.p + offset
+						end
+
+						if keybindtoggles.superaa then
+							local uber = client.superaastart.p + Vector3.new(math.sin(tick() * 7) * 200, 50, math.cos(tick() * 7) * 100)
+							local retarded = CFrame.new()
+							oldNewIndex(self, id, client.superaastart)
+							oldNewIndex(self, "Position", uber)
+							oldNewIndex(self, "Velocity", Vector3.new(0, 0, 0))
+							return
 						end
 					end
 				end
@@ -6555,8 +6564,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			return nil
 		end
-		
-		local fakelagpos, fakelagtime
+
 		function ragebot:MainLoop() -- lfg
 			ragebot.silentVector = nil
 			local hitscanpreference = misc:GetParts(menu:GetVal("Rage", "Aimbot", "Hitscan Points"))
@@ -7356,151 +7364,6 @@ elseif menu.game == "pf" then --!SECTION
 			if name == "Remove Animations" then
 				client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
 				client.animation.reset = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldreset
-			end
-		end)
-		local fakelagpos = Vector3.new()
-		local fakelagtime = 0
-		
-		menu.connections.inputstart_pf = INPUT_SERVICE.InputBegan:Connect(function(input)
-			if CHAT_BOX.Active then return end
-			if input.UserInputType == Enum.UserInputType.MouseButton3 and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftAlt) then
-				local p = client.cam.basecframe.p
-				local lv = client.cam.basecframe.lookVector.Unit
-
-				local d = 0
-				local bestplayer
-
-				local checkTable = INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) and menu.priority or menu.friends
-
-				for player, bodyparts in next, client.chartable do
-					local lvToTorso = (bodyparts.torso.Position - p).Unit
-					local dot = lv:Dot(lvToTorso)
-
-					if dot > d then
-						d = dot
-						bestplayer = player
-					end
-				end
-
-				if bestplayer then
-					local pname = bestplayer.Name
-					local existsInFriends = table.find(menu.friends, pname)
-					if existsInFriends then
-						table.remove(checkTable, existsInFriends)
-						CreateNotification(string.format("Removed %s from the friends list.", pname))
-					else
-						table.insert(checkTable, pname)
-						CreateNotification(string.format("Added %s as a friend.", pname))
-					end
-				end
-			end
-			if input.UserInputType == Enum.UserInputType.Keyboard then
-				if menu:GetVal("Rage", "Extra", "Fake Lag") then
-					if menu:GetVal("Rage", "Extra", "Manual Choke")
-					and input.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") then
-						keybindtoggles.fakelag = not keybindtoggles.fakelag
-						NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Extra", "Fake Lag Amount"))
-					end
-				end
-				
-				
-				if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and not keybindtoggles.freeze) then
-					keybindtoggles.freeze = true
-				else
-					if shitting_my_pants == true then
-						CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
-					end
-				end
-				
-				if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Super Invisibility") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind")) then
-					CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
-					for i = 1, 50 do
-						local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
-						send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
-					end
-				else
-					if shitting_my_pants == true then
-						CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
-					end
-				end
-				
-				if menu:GetVal("Misc", "Exploits", "Rapid Kill") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", "keybind") then
-					local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
-					local i = 1
-					for k,v in next, team:GetPlayers() do
-						if i >= 4 then break end
-						if client.hud:isplayeralive(v) then
-							i += 1
-							client.logic.gammo -= 1
-							local curbodyparts = client.replication.getbodyparts(v)
-							if not curbodyparts then return end
-							local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10
-							and curbodyparts.rootpart.Position or curbodyparts.head.Position
-							local args = {
-								"FRAG",
-								{
-									frames = {
-										{
-											v0 = Vector3.new(),
-											glassbreaks = {},
-											t0 = 0,
-											offset = Vector3.new(),
-											rot0 = CFrame.new(),
-											a = Vector3.new(0/0),
-											p0 = client.lastrepupdate or client.char.head.Position,
-											rotv = Vector3.new()
-										},
-										{
-											v0 = Vector3.new(),
-											glassbreaks = {},
-											t0 = 0,
-											offset = Vector3.new(),
-											rot0 = CFrame.new(),
-											a = Vector3.new(0/0),
-											p0 = Vector3.new(0/0),
-											rotv = Vector3.new()
-										},
-										{
-											v0 = Vector3.new(),
-											glassbreaks = {},
-											t0 = 0,
-											offset = Vector3.new(),
-											rot0 = CFrame.new(),
-											a = Vector3.new(),
-											p0 = chosenpos + Vector3.new(0, 3, 0),
-											rotv = Vector3.new()
-										}
-									},
-									time = tick(),
-									curi = 1,
-									blowuptime = 0
-								}
-							}
-							
-							send(client.net, "newgrenade", unpack(args))
-							client.hud:updateammo("GRENADE")
-						end
-					end
-				end
-			end
-		end)
-		
-		menu.connections.inputended_pf = INPUT_SERVICE.InputEnded:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.Keyboard then
-				if menu:GetVal("Rage", "Extra", "Fake Lag")
-				and menu:GetVal("Rage", "Extra", "Manual Choke")
-				and input.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") and keybindtoggles.fakelag then
-					keybindtoggles.fakelag = not keybindtoggles.fakelag
-					NETWORK:SetOutgoingKBPSLimit(0)
-				end
-				
-				if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Freeze Players") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") and keybindtoggles.freeze) then
-					keybindtoggles.freeze = false
-				else
-					if shitting_my_pants == true then
-						CreateNotification("You may not use exploits while game administrators/moderators are in your server.")
-					end
-				end
 			end
 		end)
 		
@@ -9092,60 +8955,209 @@ elseif menu.game == "pf" then --!SECTION
 	local chat_game = LOCAL_PLAYER.PlayerGui.ChatGame
 	local chat_box = chat_game:FindFirstChild("TextBox")
 	local oldpos = nil
-	menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
+
+	local function keycheck(actionName, inputState, inputObject)
+		if actionName == "BB Keycheck" then
+			if menu.game == "pf" then
+				if inputState == Enum.UserInputState.Begin then
+					------------------------------------------
+					------------"TOGGLES AND SHIT"------------
+					------------------------------------------
+					if menu:GetVal("Visuals", "Local Visuals", "Third Person") and inputObject.KeyCode == menu:GetVal("Visuals", "Local Visuals", "Third Person", "keybind") then
+						keybindtoggles.thirdperson = not keybindtoggles.thirdperson
+						return Enum.ContextActionResult.Sink
+					end
+					if menu:GetVal("Rage", "Hack vs. Hack", "Freestanding") and inputObject.KeyCode == menu:GetVal("Rage", "Hack vs. Hack", "Freestanding", "keybind") then
+						keybindtoggles.freestand = not keybindtoggles.freestand
+						return Enum.ContextActionResult.Sink
+					end
+					if menu:GetVal("Rage", "Anti Aim", "SUPER ANTI AIM (TEMPORARY NAME OBVIOUSLY)") and inputObject.KeyCode == menu:GetVal("Rage", "Anti Aim", "SUPER ANTI AIM (TEMPORARY NAME OBVIOUSLY)", "keybind") then
+						keybindtoggles.superaa = not keybindtoggles.superaa
+						if keybindtoggles.superaa then
+							client.superaastart = client.char.rootpart.CFrame
+						else
+							client.superaastart = nil
+						end
+						return Enum.ContextActionResult.Sink
+					end
+					if menu:GetVal("Misc", "Movement", "Fly") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
+						keybindtoggles.flyhack = not keybindtoggles.flyhack
+						return Enum.ContextActionResult.Sink
+					end
+					if menu:GetVal("Rage", "Extra", "Teleport Up") and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Teleport Up", "keybind") and client.char.alive then
+						setfpscap(8)
+						wait()
+						client.char.rootpart.Position += Vector3.new(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
+						setfpscap(300)
+						wait()
+						return Enum.ContextActionResult.Sink
+					end
+					if menu:GetVal("Rage", "Anti Aim", "Noclip") and inputObject.KeyCode == menu:GetVal("Rage", "Anti Aim", "Noclip", "keybind") and client.char.alive then
+						local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
+						
+						local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+						
+						if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
+							CreateNotification("Attempting to enable noclip... (you may die)")
+							keybindtoggles.fakebody = not keybindtoggles.fakebody
+							client.fakeoffset = 18
+						else
+							CreateNotification("Unable to noclip. Do this as soon as you spawn or over glass. (be as close to ground as possible for best results)")
+						end
+						return Enum.ContextActionResult.Sink
+					end
+					if shitting_my_pants == false then
+						if menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
+							local sign = not menu:modkeydown("alt", "left")
+							local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
+							
+							local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+							
+							if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
+								client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
+								CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
+							else
+								CreateNotification("Unable to floor clip!")
+							end
+							return Enum.ContextActionResult.Sink
+						end
+					end
+
+					if menu:GetVal("Misc", "Exploits", "Rapid Kill") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", "keybind") then
+						local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
+						local i = 1
+						for k,v in next, team:GetPlayers() do
+							if i >= 4 then break end
+							if client.hud:isplayeralive(v) then
+								i += 1
+								client.logic.gammo -= 1
+								local curbodyparts = client.replication.getbodyparts(v)
+								if not curbodyparts then return end
+								local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10
+								and curbodyparts.rootpart.Position or curbodyparts.head.Position
+								local args = {
+									"FRAG",
+									{
+										frames = {
+											{
+												v0 = Vector3.new(),
+												glassbreaks = {},
+												t0 = 0,
+												offset = Vector3.new(),
+												rot0 = CFrame.new(),
+												a = Vector3.new(0/0),
+												p0 = client.lastrepupdate or client.char.head.Position,
+												rotv = Vector3.new()
+											},
+											{
+												v0 = Vector3.new(),
+												glassbreaks = {},
+												t0 = 0,
+												offset = Vector3.new(),
+												rot0 = CFrame.new(),
+												a = Vector3.new(0/0),
+												p0 = Vector3.new(0/0),
+												rotv = Vector3.new()
+											},
+											{
+												v0 = Vector3.new(),
+												glassbreaks = {},
+												t0 = 0,
+												offset = Vector3.new(),
+												rot0 = CFrame.new(),
+												a = Vector3.new(),
+												p0 = chosenpos + Vector3.new(0, 3, 0),
+												rotv = Vector3.new()
+											}
+										},
+										time = tick(),
+										curi = 1,
+										blowuptime = 0
+									}
+								}
+								
+								send(client.net, "newgrenade", unpack(args))
+								client.hud:updateammo("GRENADE")
+							end
+						end
+						return Enum.ContextActionResult.Sink
+					end
+				end
+			elseif menu.game == "uni" then -- TODO SOMEONE MAKE SURE I DIDNT FUCK UP UNI AND STUFF end
+				-- TODO SOMEONE MAKE SURE I DIDNT FUCK UP UNI AND STUFF end
+				-- TODO SOMEONE MAKE SURE I DIDNT FUCK UP UNI AND STUFF end
+				-- TODO SOMEONE MAKE SURE I DIDNT FUCK UP UNI AND STUFF end
+				-- TODO SOMEONE MAKE SURE I DIDNT FUCK UP UNI AND STUFF end
+				if inputState == Enum.UserInputState.Begin then
+					if menu:GetVal("Misc", "Movement", "Fly") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
+						cachedValues.FlyToggle = not cachedValues.FlyToggle
+						LOCAL_PLAYER.Character.HumanoidRootPart.Anchored = false
+						return Enum.ContextActionResult.Sink
+					end
+					if menu:GetVal("Misc", "Movement", "Mouse Teleport") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Mouse Teleport", "keybind") then
+						local targetPos = LOCAL_MOUSE.Hit.p
+						local RP = LOCAL_PLAYER.Character.HumanoidRootPart
+						RP.CFrame = CFrame.new(targetPos + Vector3.new(0,7,0))
+						return Enum.ContextActionResult.Sink
+					end
+				end
+			end
+
+			-----------------------------------------
+			------------"HELD KEY ACTION"------------
+			-----------------------------------------
+			local keyflag = inputState == Enum.UserInputState.Begin
+			
+			if menu.game == "pf" then
+				if shitting_my_pants == false then
+					if menu:GetVal("Misc", "Exploits", "Freeze Players") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") then
+						keybindtoggles.freeze = keyflag
+						return Enum.ContextActionResult.Sink
+					end
+
+					if menu:GetVal("Misc", "Exploits", "Super Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind") then
+						CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
+						for i = 1, 50 do
+							local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
+							send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
+						end
+						return Enum.ContextActionResult.Sink
+					end
+				end
+
+				if menu:GetVal("Rage", "Extra", "Fake Lag") and menu:GetVal("Rage", "Extra", "Manual Choke")
+				and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") then
+					keybindtoggles.fakelag = keyflag
+					if not keyflag then
+						NETWORK:SetOutgoingKBPSLimit(0)
+					else
+						NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Extra", "Fake Lag Amount"))
+					end
+					return Enum.ContextActionResult.Sink
+				end
+
+			elseif menu.game == "uni" then
+				if inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Shift Tick Base", "keybind") then
+					menu.tickbaseadd = 0
+					return Enum.ContextActionResult.Sink
+				end
+			end
+
+			return Enum.ContextActionResult.Pass -- this will let any other keyboard action proceed
+		end
+	end
+
+	game:service("ContextActionService"):BindAction("BB Keycheck", keycheck, false, Enum.UserInputType.Keyboard)
+
+	--[[ menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 		if chat_box.Active then return end
-		if menu:GetVal("Visuals", "Local Visuals", "Third Person") and key.KeyCode == menu:GetVal("Visuals", "Local Visuals", "Third Person", "keybind") then
-			keybindtoggles.thirdperson = not keybindtoggles.thirdperson
-		end
-		if menu:GetVal("Rage", "Hack vs. Hack", "Freestanding") and key.KeyCode == menu:GetVal("Rage", "Hack vs. Hack", "Freestanding", "keybind") then
-			keybindtoggles.freestand = not keybindtoggles.freestand
-		end
-		if menu:GetVal("Misc", "Movement", "Fly") and key.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
-			keybindtoggles.flyhack = not keybindtoggles.flyhack
-		end
-		if menu:GetVal("Rage", "Extra", "Teleport Up") and key.KeyCode == menu:GetVal("Rage", "Extra", "Teleport Up", "keybind") and client.char.alive then
-			setfpscap(8)
-			wait()
-			client.char.rootpart.Position += Vector3.new(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
-			setfpscap(300)
-			wait()
-		end
-		if menu:GetVal("Rage", "Anti Aim", "Noclip") and key.KeyCode == menu:GetVal("Rage", "Anti Aim", "Noclip", "keybind") and client.char.alive then
-			local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
-			
-			local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
-			
-			if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-				CreateNotification("Attempting to enable noclip... (you may die)")
-				keybindtoggles.fakebody = not keybindtoggles.fakebody
-				client.fakeoffset = 18
-			else
-				CreateNotification("Unable to noclip. Do this as soon as you spawn or over glass. (be as close to ground as possible for best results)")
-			end
-		end
-		if shitting_my_pants == false and (menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and key.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive) then
-			local sign = not menu:modkeydown("alt", "left")
-			local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
-			
-			local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
-			
-			if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-				client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
-				CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
-			else
-				CreateNotification("Unable to floor clip!")
-			end
-		else
-			if shitting_my_pants == true then
-				CreateNotification("You may not use this exploit while game administrators/moderators are in your server.")
-			end
-		end
-	end)
+	end) ]]
 	
 	menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		MouseUnlockAndShootHook()
 		--debug.profilebegin("Main BB Loop")
 		--debug.profilebegin("Noclip Cheat check")
+		warn(keybindtoggles.freeze)
 		if not client.char.alive then
 			if keybindtoggles.fakebody then
 				keybindtoggles.fakebody = false
@@ -9861,6 +9873,14 @@ elseif menu.game == "pf" then --!SECTION
 								key = nil
 							},
 							unsafe = true
+						},
+						{
+							type = "toggle",
+							name = "SUPER ANTI AIM (TEMPORARY NAME OBVIOUSLY)",
+							value = false,
+							extra = {
+								type = "keybind"
+							}
 						}
 					}
 				},
