@@ -5057,6 +5057,10 @@ elseif menu.game == "pf" then --!SECTION
 		end
 	end
 
+	function ragebot:LogicAllowed()
+		return tick() > ragebot.nextRagebotShot
+	end
+
 	local debris = game:service("Debris")
 	local teamdata = {}
 	do
@@ -5816,7 +5820,7 @@ elseif menu.game == "pf" then --!SECTION
 							if hit and not hit.Instance.CanCollide then return oldNewIndex(self, id, val * CFrame.new(0, 0, dist)) end
 							local mag = hit and (hit.Position - val.p).Magnitude or nil
 							
-							val *= CFrame.new(0, 0, mag and mag or dist)
+							val *= CFrame.new(0, 0, mag or dist)
 						end
 					end
 				end
@@ -6014,7 +6018,7 @@ elseif menu.game == "pf" then --!SECTION
 		local dot = Vector3.new().Dot
 		
 		function ragebot.bulletcheck(origin, dest, velocity, acceleration, bulletspeed, whitelist) -- reversed
-			local ignorelist = { workspace.Terrain--[[, workspace.Players]], workspace.Ignore, workspace.CurrentCamera }
+			local ignorelist = { workspace.Terrain, workspace.Players, workspace.Ignore, workspace.CurrentCamera }
 			local bullettime = 0
 			local exited = false
 			local penetrated = true
@@ -6161,7 +6165,8 @@ elseif menu.game == "pf" then --!SECTION
 										local directionVector = camera:GetTrajectory(bone.Position, camposv3)
 										-- ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
 										-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
-										if directionVector and ragebot:CanPenetrateFast(camposv3, bone, client.logic.currentgun.data.penetrationdepth) then
+										if not directionVector then continue end
+										if ragebot:CanPenetrateFast(camposv3, bone, client.logic.currentgun.data.penetrationdepth) then
 											cpart = bone
 											theplayer = player
 											firepos = camposv3
@@ -6181,7 +6186,7 @@ elseif menu.game == "pf" then --!SECTION
 												end
 											elseif resolvertype == 2 then -- axes fast
 												--debug.profilebegin("BB Ragebot Axis Shifting Resolver")
-												local resolvedPosition = ragebot:HitscanOnAxes(camposreal, player, bone, 1, 8)
+												local resolvedPosition = ragebot:HitscanOnAxes(camposreal, player, bone, 1, 9)
 												--debug.profileend("BB Ragebot Axis Shifting Resolver")
 												if resolvedPosition then
 													ragebot.firepos = resolvedPosition
@@ -6219,7 +6224,7 @@ elseif menu.game == "pf" then --!SECTION
 											elseif resolvertype == 5 then -- "combined"
 												-- basically combines fast axis shifting with offsetting the hitbox or just sending a raycast to the hitbox for the intersection point, really broken
 												
-												local extendSize = 4.5833333333333
+												--[[ local extendSize = 4.5833333333333
 												
 												local boneX = bone.Position.X
 												local boneY = bone.Position.Y
@@ -6239,9 +6244,11 @@ elseif menu.game == "pf" then --!SECTION
 												boneX < localX and extendX or
 												boneX > localX and -extendX or
 												boneZ < localZ and extendZ or
-												boneZ > localZ and -extendZ or "wtf"
+												boneZ > localZ and -extendZ or "wtf" ]]
 												
-												local newTargetPosition = bone.Position + bestDirection
+												local pullVector = (bone.Position - camposv3).Unit * 4.5833333333333
+
+												local newTargetPosition = bone.Position - pullVector
 												
 												--local pVelocity = camera:GetTrajectory(newTargetPosition, barrel)
 												
@@ -6256,7 +6263,7 @@ elseif menu.game == "pf" then --!SECTION
 													[sphereHitbox] = true
 												}
 												
-												local penetrated, exited, intersectionpos = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
+												local penetrated, exited, intersectionpos = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth)
 												if penetrated then
 													ragebot.firepos = camposv3
 													cpart = bone
@@ -6266,7 +6273,7 @@ elseif menu.game == "pf" then --!SECTION
 													--warn("penetrated normally")
 												else
 													-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
-													local resolvedPosition, bulletintersection = ragebot:HitscanOnAxes(camposreal, player, sphereHitbox, 1, 8, wl)
+													local resolvedPosition, bulletintersection = ragebot:HitscanOnAxes(camposreal, player, sphereHitbox, 1, 9)
 													if resolvedPosition then
 														ragebot.firepos = resolvedPosition
 														cpart = bone
@@ -6580,20 +6587,22 @@ elseif menu.game == "pf" then --!SECTION
 			if client.char.alive and menu:GetVal("Rage", "Aimbot", "Enabled") then
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					
-					local playerlist = Players:GetPlayers()
+					if ragebot:LogicAllowed() then
+						local playerlist = Players:GetPlayers()
 					
-					if not client then return end
-					local priority_list = {}
-					for k, PlayerName in pairs(menu.priority) do
-						if Players:FindFirstChild(PlayerName) then
-							table.insert(priority_list, game.Players[PlayerName])
+						if not client then return end
+						local priority_list = {}
+						for k, PlayerName in pairs(menu.priority) do
+							if Players:FindFirstChild(PlayerName) then
+								table.insert(priority_list, game.Players[PlayerName])
+							end
 						end
+						local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
+						if not targetPart and not menu:GetVal("Rage", "Aimbot", "Target Only Priority Players") then
+							targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+						end
+						ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
 					end
-					local targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
-					if not targetPart and not menu:GetVal("Rage", "Aimbot", "Target Only Priority Players") then
-						targetPart, targetPlayer, fov, firepos = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
-					end
-					ragebot:AimAtTarget(targetPart, targetPlayer, firepos)
 				else
 					self.target = nil
 				end
