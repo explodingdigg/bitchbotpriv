@@ -4548,7 +4548,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	local function FlyHack()
 		if menu:GetVal("Misc", "Movement", "Fly") then
 			local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
-			if rootpart == nil then return end
+			
 			if menu:GetVal("Misc", "Movement", "Fly Method") == 2 then
 				for lI, lV in pairs(LOCAL_PLAYER.Character:GetDescendants()) do
 					if lV:IsA("BasePart") then
@@ -4777,9 +4777,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	
 	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
 		
-		pcall(SpeedHack())
-		pcall(FlyHack())
-		pcall(Aimbot())
+		pcall(SpeedHack)
+		pcall(FlyHack)
+		pcall(Aimbot)
 		
 		if menu.open then
 			if menu.tabnames[menu.activetab] == "Settings" then
