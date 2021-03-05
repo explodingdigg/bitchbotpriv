@@ -8077,7 +8077,7 @@ elseif menu.game == "pf" then --!SECTION
 						for k, bullet in pairs(args[2].bullets) do
 							if shitting_my_pants == false then
 								local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed * 25)
-								local new_angle = angle.Unit * client.logic.currentgun.data.bulletspeed * 25
+								local new_angle = angle.Unit * 25
 								bullet[1] = {unit = new_angle}
 								-- BULLET SPEED CHEAT ^
 								time = bullet_time
