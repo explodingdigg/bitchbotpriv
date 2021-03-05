@@ -1001,6 +1001,12 @@ do
 		Draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, {87, 32, 123, 255}, tab)
 		table.insert(menu.clrs.dark, tab[#tab])
 		Draw:MenuOutlinedRect(true, x + 2, y + 4, width - 3, 1, {20, 20, 20, 255}, tab)
+
+		for i = 0, 7 do
+			Draw:MenuFilledRect(true, x + 2, y + 5 + (i * 2),  width - 4, 2, {45, 45, 45, 255}, tab)
+			tab[#tab].Color = ColorRange(i, {[1] = {start = 0, color = RGB(45, 45, 45)}, [2] = {start = 7, color = RGB(35, 35, 35)}})
+		end
+
 		Draw:MenuBigText(name, true, false, x + 6, y + 5, tab)
 	end
 	
@@ -1029,10 +1035,17 @@ do
 		local length = 2
 		local selected_pos = {}
 		local click_pos = {}
+		local nametext = {}
 		for i, v in ipairs(names) do
 
 			Draw:MenuBigText(v, true, false, x + 4 + length, y + 5, tab)
-			
+			if i == 1 then
+				tab[#tab].Color = RGB(255, 255, 255)
+			else
+				tab[#tab].Color = RGB(170, 170, 170)
+			end
+			table.insert(nametext, tab[#tab])
+
 			Draw:MenuFilledRect(true, x + length + tab[#tab].TextBounds.X + 8, y + 5, 2, 16, {20, 20, 20, 255}, tab)
 			table.insert(selected_pos, {pos = x + length, length = tab[#tab - 1].TextBounds.X + 8})
 			table.insert(click_pos, {x = x + length, y = y + 5, width = tab[#tab - 1].TextBounds.X + 8, height = 18, name = v, num = i})
@@ -1046,7 +1059,7 @@ do
 			v.drawn.Size = Vector2.new(selected_pos[settab].length, 2)
 		end
 
-		return {bar = selected, barpos = selected_pos, click_pos = click_pos}
+		return {bar = selected, barpos = selected_pos, click_pos = click_pos, nametext = nametext}
 
 		--Draw:MenuBigText(str, true, false, x + 6, y + 5, tab)
 	end
@@ -1689,7 +1702,9 @@ function menu.Initialize(menutable)
 		for k, v in pairs(tabs) do
 			if k == slot then
 				v[1].Visible = false
+				v[3].Color = RGB(255, 255, 255)
 			else
+				v[3].Color = RGB(170, 170, 170)
 				v[1].Visible = true
 			end
 		end
@@ -2591,7 +2606,8 @@ function menu.Initialize(menutable)
 				end
 				for i = 1, end_ - start - 1 do
 					local tt = string.split(lines[i + start], "|")
-					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]][5] ~= nil then
+						print(tostring(menu.options[tt[1]][tt[2]][tt[3]][5]))
 						if tt[4] == "nil" then
 							menu.options[tt[1]][tt[2]][tt[3]][5][1] = nil
 						else
@@ -2890,6 +2906,7 @@ function menu.Initialize(menutable)
 									else
 										v1.vals[_k] = false
 									end
+
 									--print(_k, _v)
 								end
 	
@@ -2898,6 +2915,15 @@ function menu.Initialize(menutable)
 									menu.postable[_v.postable][2] = selected_pos[settab].pos
 									_v.drawn.Size = Vector2.new(selected_pos[settab].length, 2)
 								end
+
+								for i, v in pairs(v1.drawn.nametext) do
+									if i == v2.num then
+										v.Color = RGB(255, 255, 255)
+									else
+										v.Color = RGB(170, 170, 170)
+									end
+								end
+
 								
 								menu:set_menu_visibility(true)
 								setActiveTab(menu.activetab)
@@ -3303,7 +3329,7 @@ function menu.Initialize(menutable)
 		-- nah that would suck fk u (comment made on 3/4/2021 3:35 pm est by bitch)
 		for button, time in next, buttonsInQue do
 			if tick() - time < doubleclickDelay then
-				button[4].text.Color = menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color", true)
+				button[4].text.Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 				button[4].text.Text = "Confirm?"
 			else
 				button[4].text.Color = Color3.new(1,1,1)
@@ -5796,7 +5822,7 @@ elseif menu.game == "pf" then --!SECTION
 			"I am very good at debating 🗣️🧑‍⚖️ ",
 			"I hit more head than you do 🏆", -- end
 			"I win more hvh than you do 🏆", -- end yes this is actually how im going to fix this stupid shit
-			"I am more victorious than you are🏆",
+			"I am more victorious than you are 🏆",
 			"Due to my agility, I am better than you at basketball, and all of your favorite sports or any sport for that matter (I will probably break your ankles in basketball by pure accident) ",
 			"WE THE BEST CHEATS 🔥🔥🔥🔥 ",
 			"Phantom Force Hack Unlook Gun And Aimbot ",
@@ -6079,9 +6105,11 @@ elseif menu.game == "pf" then --!SECTION
 	local last_chat = os.time()
 
 	CreateThread(function()
+		if not menu then return end
 		repeat wait() until menu.fading -- this is fucking bad
 		while true do
 			local current_time = os.time()  
+			if not menu then return end
 			local speed = menu:GetVal("Misc", "Extra", "Chat Spam Delay")
 			if current_time % speed == 0 and current_time ~= last_chat then
 				local cs = menu:GetVal("Misc", "Extra", "Chat Spam")
@@ -10310,7 +10338,6 @@ elseif menu.game == "pf" then --!SECTION
 			name = "Visuals",
 			content = {
 				{
-					--ANCHOR workin ova here
 					name = {"Enemy ESP", "Team ESP", "Local"},
 					multi = true,
 					autopos = "left",
@@ -11503,6 +11530,7 @@ do
 	Draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, wm.height, {0, 0, 0, 255}, wm.rect)
 	Draw:OutlinedText(fulltext, 2, false, wm.pos.x + 5, wm.pos.y + 3, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
 end
+
 --ANCHOR watermak
 for k, v in pairs(menu.watermark.rect) do
 	v.Visible = true
