@@ -4273,58 +4273,51 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					}
 				},
 				{
-					name = {"Cheat Settings", "Extra"},
-					multi = true,
+					name = "Cheat Settings",
 					x = menu.columns.left,
 					y = 400,
 					width = menu.columns.width,
 					height = 182,
-					[1] = {
-						content = {
-							{
-								type = "toggle",
-								name = "Menu Accent",
-								value = false,
-								extra = {
-									type = "single colorpicker",
-									name = "Accent Color",
-									color = {127, 72, 163}
-								}
-							},
-							{
-								type = "toggle",
-								name = "Watermark",
-								value = true,
-							},
-							{
-								type = "toggle",
-								name = "Custom Menu Name",
-								value = MenuName and true or false,
-							},
-							{
-								type = "textbox",
-								name = "MenuName",
-								text = MenuName or "Bitch Bot"
+					content = {
+						{
+							type = "toggle",
+							name = "Menu Accent",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Accent Color",
+								color = {127, 72, 163}
 							}
-						}
-					},
-					[2] = {
-						content = {
-							{
-								type = "button",
-								name = "Set Clipboard Game ID",
-							},
-							{
-								type = "button",
-								name = "Unload Cheat",
-								doubleclick = true,
-							},
-							{
-								type = "toggle",
-								name = "Allow Unsafe Features",
-								value = false,
-							},
-						}
+						},
+						{
+							type = "toggle",
+							name = "Watermark",
+							value = true,
+						},
+						{
+							type = "toggle",
+							name = "Custom Menu Name",
+							value = MenuName and true or false,
+						},
+						{
+							type = "textbox",
+							name = "MenuName",
+							text = MenuName or "Bitch Bot"
+						},
+						{
+							type = "button",
+							name = "Set Clipboard Game ID",
+						},
+						{
+							type = "button",
+							name = "Unload Cheat",
+							doubleclick = true,
+						},
+						{
+							type = "toggle",
+							name = "Allow Unsafe Features",
+							value = false,
+						},
 					}
 				},
 				{
@@ -4784,9 +4777,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	
 	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
 		
-		SpeedHack()
-		FlyHack()
-		Aimbot()
+		pcall(SpeedHack())
+		pcall(FlyHack())
+		pcall(Aimbot())
 		
 		if menu.open then
 			if menu.tabnames[menu.activetab] == "Settings" then
