@@ -9361,6 +9361,8 @@ elseif menu.game == "pf" then --!SECTION
 							textbox[4].Color = RGB(menu.mc[3], menu.mc[2], menu.mc[1])
 						end
 					end
+					
+					return Enum.ContextActionResult.Sink
 				end
 			end
 
