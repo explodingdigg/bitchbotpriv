@@ -129,6 +129,7 @@ do
 					for i, drawing in pairs(self.drawings) do
 						drawing.Transparency = fade/255
 						
+						
 						if type(i) == "number" then
 							drawing.Position = Vector2.new(locRect.x + 1, locRect.y + i)
 							drawing.Size = Vector2.new(locRect.w - 2, 1)
@@ -143,10 +144,6 @@ do
 							drawing.Transparency = t < 0.4 and 0.4 or t
 						elseif i == "line" then
 							drawing.Position = Vector2.new(locRect.x+1, locRect.y+1)
-							local color = (menu and menu.GetVal) and customcolor or menu:GetVal("Settings", "Menu Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Menu Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
-							if drawing.Color ~= color then
-								drawing.Color = color
-							end
 						end
 						
 					end
@@ -177,7 +174,7 @@ do
 			local c = 0.28-i/80
 			Note.drawings[i] = Rectangle(200, 1, true, Color3.new(c,c,c))
 		end
-		local color = (menu and menu.GetVal) and customcolor or menu:GetVal("Settings", "Menu Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Menu Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
+		local color = (menu and menu.GetVal) and customcolor or menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
 		
 		Note.drawings.text = Text(t)
 		if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
@@ -214,7 +211,7 @@ end
 
 menu = { -- this is for menu stuffs n shi
 	w = 500,
-	h = 650,
+	h = 600,
 	x = 200,
 	y = 300,
 	columns = {
@@ -247,10 +244,8 @@ menu = { -- this is for menu stuffs n shi
 	spectating = false,
 	stat_menu = false,
 	load_time = 0,
-	backspaceheld = false,
-	backspacetime = -1,
-	backspaceflags = 0,
-	selectall = false,
+	log_multi = nil,
+	mgrouptabz = {},
 	modkeys = {
 		alt = {
 			direction = nil
@@ -799,8 +794,7 @@ do
 			end
 		end
 	end
-	--TODO rename all the functions to be CamelCased and
-	--put all related funcs into tables
+
 	function Draw:OutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
 		local temptable = Drawing.new("Square")
 		temptable.Visible = visible
@@ -953,21 +947,38 @@ do
 	function Draw:MenuOutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
 		Draw:OutlinedRect(visible, pos_x + menu.x, pos_y + menu.y, width, height, clr, tablename)
 		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
+
+		if menu.log_multi ~= nil then
+			table.insert(menu.mgrouptabz[menu.log_multi[1]][menu.log_multi[2]], tablename[#tablename])
+		end
 	end
 	
 	function Draw:MenuFilledRect(visible, pos_x, pos_y, width, height, clr, tablename)
 		Draw:FilledRect(visible, pos_x + menu.x, pos_y + menu.y, width, height, clr, tablename)
 		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
+
+		if menu.log_multi ~= nil then
+			table.insert(menu.mgrouptabz[menu.log_multi[1]][menu.log_multi[2]], tablename[#tablename])
+		end
 	end
 	
 	function Draw:MenuImage(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
 		Draw:Image(visible, imagedata, pos_x + menu.x, pos_y + menu.y, width, height, transparency, tablename)
 		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
+
+		if menu.log_multi ~= nil then
+			table.insert(menu.mgrouptabz[menu.log_multi[1]][menu.log_multi[2]], tablename[#tablename])
+		end
 	end
 	
 	function Draw:MenuBigText(text, visible, centered, pos_x, pos_y, tablename)
 		local text = Draw:OutlinedText(text, 2, visible, pos_x + menu.x, pos_y + menu.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
 		table.insert(menu.postable, {tablename[#tablename], pos_x, pos_y})
+
+		if menu.log_multi ~= nil then
+			table.insert(menu.mgrouptabz[menu.log_multi[1]][menu.log_multi[2]], tablename[#tablename])
+		end
+
 		return text
 	end
 	
@@ -983,7 +994,53 @@ do
 		Draw:MenuBigText(name, true, false, x + 6, y + 5, tab)
 	end
 	
-	
+	function Draw:CoolMultiBox(names, x, y, width, height, tab)
+		Draw:MenuOutlinedRect(true, x, y, width, height, {0, 0, 0, 255}, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, width - 2, height - 2, {20, 20, 20, 255}, tab)
+		Draw:MenuOutlinedRect(true, x + 2, y + 2, width - 3, 1, {127, 72, 163, 255}, tab)
+		table.insert(menu.clrs.norm, tab[#tab])
+		Draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, {87, 32, 123, 255}, tab)
+		table.insert(menu.clrs.dark, tab[#tab])
+		Draw:MenuOutlinedRect(true, x + 2, y + 4, width - 3, 1, {20, 20, 20, 255}, tab)
+
+		--{35, 35, 35, 255}
+
+		Draw:MenuFilledRect(true, x + 2, y + 5, width - 4, 18, {30, 30, 30, 255}, tab)
+		Draw:MenuFilledRect(true, x + 2, y + 21, width - 4, 2, {20, 20, 20, 255}, tab)
+
+
+		local selected = {}
+		for i = 0, 8 do
+			Draw:MenuFilledRect(true, x + 2, y + 5 + (i * 2),  width - 159, 2, {45, 45, 45, 255}, tab)
+			tab[#tab].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 8, color = RGB(35, 35, 35)}})
+			table.insert(selected, {postable = #menu.postable, drawn = tab[#tab]})
+		end
+
+		local length = 2
+		local selected_pos = {}
+		local click_pos = {}
+		for i, v in ipairs(names) do
+
+			Draw:MenuBigText(v, true, false, x + 4 + length, y + 5, tab)
+			
+			Draw:MenuFilledRect(true, x + length + tab[#tab].TextBounds.X + 8, y + 5, 2, 16, {20, 20, 20, 255}, tab)
+			table.insert(selected_pos, {pos = x + length, length = tab[#tab - 1].TextBounds.X + 8})
+			table.insert(click_pos, {x = x + length, y = y + 5, width = tab[#tab - 1].TextBounds.X + 8, height = 18, name = v, num = i})
+			length += tab[#tab - 1].TextBounds.X + 10
+
+		end
+
+		local settab = 1
+		for k, v in pairs(selected) do
+			menu.postable[v.postable][2] = selected_pos[settab].pos
+			v.drawn.Size = Vector2.new(selected_pos[settab].length, 2)
+		end
+
+		return {bar = selected, barpos = selected_pos, click_pos = click_pos}
+
+		--Draw:MenuBigText(str, true, false, x + 6, y + 5, tab)
+	end
+
 	
 	function Draw:Toggle(name, value, unsafe, x, y, tab)
 		Draw:MenuOutlinedRect(true, x, y, 12, 12, {30, 30, 30, 255}, tab)
@@ -1348,6 +1405,8 @@ function menu.Initialize(menutable)
 	end
 	
 	local tabs = {} -- i like tabby catz 🐱🐱🐱
+
+	menu.multigroups = {}
 	
 	for k, v in pairs(menutable) do
 		Draw:MenuFilledRect(true, 10 + ((k - 1) * ((menu.w - 20)/#menutable)), 27, ((menu.w - 20)/#menutable), 32, {30, 30, 30, 255}, bbmenu)
@@ -1357,6 +1416,8 @@ function menu.Initialize(menutable)
 		table.insert(menu.tabnames, v.name)
 		
 		menu.options[v.name] = {}
+		menu.multigroups[v.name] = {}
+		menu.mgrouptabz[v.name] = {}
 		
 		local y_offies = {left = 66, right = 66}
 		if v.content ~= nil then
@@ -1372,144 +1433,208 @@ function menu.Initialize(menutable)
 					end
 				end
 				
+				local groups = {}
+
+				if v1.multi then 
+					groups = v1.name
+				else
+					table.insert(groups, v1.name)
+				end
+
 				local y_pos = 24
-				
-				menu.options[v.name][v1.name] = {}
-				if v1.content ~= nil then
+
+				for g_ind, g_name in ipairs(groups) do
 					
-					for k2, v2 in pairs(v1.content) do
-						if v2.type == "toggle" then
-							menu.options[v.name][v1.name][v2.name] = {}
-							local unsafe = false
-							if v2.unsafe then
-								unsafe = true
-							end
-							menu.options[v.name][v1.name][v2.name][4] = Draw:Toggle(v2.name, v2.value, unsafe, v1.x + 8, v1.y + y_pos, tabz[k])
-							menu.options[v.name][v1.name][v2.name][1] = v2.value
-							menu.options[v.name][v1.name][v2.name][2] = v2.type
-							menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1}
-							menu.options[v.name][v1.name][v2.name][6] = unsafe
-							if v2.extra ~= nil then
-								if v2.extra.type == "keybind" then
-									menu.options[v.name][v1.name][v2.name][5] = {}
-									menu.options[v.name][v1.name][v2.name][5][4] = Draw:Keybind(v2.extra.key, v1.x + v1.width - 52, y_pos + v1.y - 2, tabz[k])
-									menu.options[v.name][v1.name][v2.name][5][1] = v2.extra.key
-									menu.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
-									menu.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 52, y_pos + v1.y - 2}
-									menu.options[v.name][v1.name][v2.name][5][5] = false
-								elseif v2.extra.type == "single colorpicker" then
-									menu.options[v.name][v1.name][v2.name][5] = {}
-									menu.options[v.name][v1.name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
-									menu.options[v.name][v1.name][v2.name][5][1] = v2.extra.color
-									menu.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
-									menu.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 38, y_pos + v1.y - 1}
-									menu.options[v.name][v1.name][v2.name][5][5] = false
-									menu.options[v.name][v1.name][v2.name][5][6] = v2.extra.name
-								elseif v2.extra.type == "double colorpicker" then
-									menu.options[v.name][v1.name][v2.name][5] = {}
-									menu.options[v.name][v1.name][v2.name][5][1] = {}
-									menu.options[v.name][v1.name][v2.name][5][1][1] = {}
-									menu.options[v.name][v1.name][v2.name][5][1][2] = {}
-									menu.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
-									for i = 1, 2 do
-										menu.options[v.name][v1.name][v2.name][5][1][i][4] = Draw:ColorPicker(v2.extra.color[i], v1.x + v1.width - 38 - ((i - 1) * 34), y_pos + v1.y - 1, tabz[k])
-										menu.options[v.name][v1.name][v2.name][5][1][i][1] = v2.extra.color[i]
-										menu.options[v.name][v1.name][v2.name][5][1][i][3] = {v1.x + v1.width - 38 - ((i - 1) * 34), y_pos + v1.y - 1}
-										menu.options[v.name][v1.name][v2.name][5][1][i][5] = false
-										menu.options[v.name][v1.name][v2.name][5][1][i][6] = v2.extra.name[i]
+					menu.options[v.name][g_name] = {}
+					if v1.multi then
+						menu.mgrouptabz[v.name][g_name] = {}
+						menu.log_multi = {v.name, g_name}
+					end
+
+					local content = nil
+					if v1.multi then
+						y_pos = 28
+						content = v1[g_ind].content	
+					else
+						y_pos = 24
+						content = v1.content
+					end
+
+					if content ~= nil then
+						for k2, v2 in pairs(content) do
+							if v2.type == "toggle" then
+								
+
+								menu.options[v.name][g_name][v2.name] = {}
+								local unsafe = false
+								if v2.unsafe then
+									unsafe = true
+								end
+								menu.options[v.name][g_name][v2.name][4] = Draw:Toggle(v2.name, v2.value, unsafe, v1.x + 8, v1.y + y_pos, tabz[k])
+								menu.options[v.name][g_name][v2.name][1] = v2.value
+								menu.options[v.name][g_name][v2.name][2] = v2.type
+								menu.options[v.name][g_name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1}
+								menu.options[v.name][g_name][v2.name][6] = unsafe
+								if v2.extra ~= nil then
+									if v2.extra.type == "keybind" then
+										menu.options[v.name][g_name][v2.name][5] = {}
+										menu.options[v.name][g_name][v2.name][5][4] = Draw:Keybind(v2.extra.key, v1.x + v1.width - 52, y_pos + v1.y - 2, tabz[k])
+										menu.options[v.name][g_name][v2.name][5][1] = v2.extra.key
+										menu.options[v.name][g_name][v2.name][5][2] = v2.extra.type
+										menu.options[v.name][g_name][v2.name][5][3] = {v1.x + v1.width - 52, y_pos + v1.y - 2}
+										menu.options[v.name][g_name][v2.name][5][5] = false
+									elseif v2.extra.type == "single colorpicker" then
+										menu.options[v.name][g_name][v2.name][5] = {}
+										menu.options[v.name][g_name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
+										menu.options[v.name][g_name][v2.name][5][1] = v2.extra.color
+										menu.options[v.name][g_name][v2.name][5][2] = v2.extra.type
+										menu.options[v.name][g_name][v2.name][5][3] = {v1.x + v1.width - 38, y_pos + v1.y - 1}
+										menu.options[v.name][g_name][v2.name][5][5] = false
+										menu.options[v.name][g_name][v2.name][5][6] = v2.extra.name
+									elseif v2.extra.type == "double colorpicker" then
+										menu.options[v.name][g_name][v2.name][5] = {}
+										menu.options[v.name][g_name][v2.name][5][1] = {}
+										menu.options[v.name][g_name][v2.name][5][1][1] = {}
+										menu.options[v.name][g_name][v2.name][5][1][2] = {}
+										menu.options[v.name][g_name][v2.name][5][2] = v2.extra.type
+										for i = 1, 2 do
+											menu.options[v.name][g_name][v2.name][5][1][i][4] = Draw:ColorPicker(v2.extra.color[i], v1.x + v1.width - 38 - ((i - 1) * 34), y_pos + v1.y - 1, tabz[k])
+											menu.options[v.name][g_name][v2.name][5][1][i][1] = v2.extra.color[i]
+											menu.options[v.name][g_name][v2.name][5][1][i][3] = {v1.x + v1.width - 38 - ((i - 1) * 34), y_pos + v1.y - 1}
+											menu.options[v.name][g_name][v2.name][5][1][i][5] = false
+											menu.options[v.name][g_name][v2.name][5][1][i][6] = v2.extra.name[i]
+										end
 									end
 								end
-							end
-							y_pos += 18
-						elseif v2.type == "slider" then
-							menu.options[v.name][v1.name][v2.name] = {}
-							menu.options[v.name][v1.name][v2.name][4] = Draw:Slider(v2.name, v2.stradd, v2.value, v2.minvalue, v2.maxvalue, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
-							menu.options[v.name][v1.name][v2.name][1] = v2.value
-							menu.options[v.name][v1.name][v2.name][2] = v2.type
-							menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-							menu.options[v.name][v1.name][v2.name][5] = false
-							menu.options[v.name][v1.name][v2.name][6] = {v2.minvalue, v2.maxvalue}
-							menu.options[v.name][v1.name][v2.name][7] = {v1.x + 7 + v1.width - 38, v1.y + y_pos - 1}
-							menu.options[v.name][v1.name][v2.name].round = v2.rounded == nil and true or v2.rounded
-							menu.options[v.name][v1.name][v2.name].stepsize = v2.stepsize
-							menu.options[v.name][v1.name][v2.name].custom = v2.custom or {}
-							
-							y_pos += 30
-						elseif v2.type == "dropbox" then
-							menu.options[v.name][v1.name][v2.name] = {}
-							menu.options[v.name][v1.name][v2.name][1] = v2.value
-							menu.options[v.name][v1.name][v2.name][2] = v2.type
-							menu.options[v.name][v1.name][v2.name][5] = false
-							menu.options[v.name][v1.name][v2.name][6] = v2.values
-							
-							if v2.x == nil then
-								menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-								menu.options[v.name][v1.name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+								y_pos += 18
+							elseif v2.type == "slider" then
+								menu.options[v.name][g_name][v2.name] = {}
+								menu.options[v.name][g_name][v2.name][4] = Draw:Slider(v2.name, v2.stradd, v2.value, v2.minvalue, v2.maxvalue, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+								menu.options[v.name][g_name][v2.name][1] = v2.value
+								menu.options[v.name][g_name][v2.name][2] = v2.type
+								menu.options[v.name][g_name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+								menu.options[v.name][g_name][v2.name][5] = false
+								menu.options[v.name][g_name][v2.name][6] = {v2.minvalue, v2.maxvalue}
+								menu.options[v.name][g_name][v2.name][7] = {v1.x + 7 + v1.width - 38, v1.y + y_pos - 1}
+								menu.options[v.name][g_name][v2.name].round = v2.rounded == nil and true or v2.rounded
+								menu.options[v.name][g_name][v2.name].stepsize = v2.stepsize
+								menu.options[v.name][g_name][v2.name].custom = v2.custom or {}
+								
+								y_pos += 30
+							elseif v2.type == "dropbox" then
+								menu.options[v.name][g_name][v2.name] = {}
+								menu.options[v.name][g_name][v2.name][1] = v2.value
+								menu.options[v.name][g_name][v2.name][2] = v2.type
+								menu.options[v.name][g_name][v2.name][5] = false
+								menu.options[v.name][g_name][v2.name][6] = v2.values
+								
+								if v2.x == nil then
+									menu.options[v.name][g_name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+									menu.options[v.name][g_name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+									y_pos += 40
+								else
+									menu.options[v.name][g_name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
+									menu.options[v.name][g_name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v2.x + 8, v2.y, v2.w, tabz[k])
+								end
+							elseif v2.type == "combobox" then
+								menu.options[v.name][g_name][v2.name] = {}
+								menu.options[v.name][g_name][v2.name][4] = Draw:Combobox(v2.name, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+								menu.options[v.name][g_name][v2.name][1] = v2.values
+								menu.options[v.name][g_name][v2.name][2] = v2.type
+								menu.options[v.name][g_name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+								menu.options[v.name][g_name][v2.name][5] = false
 								y_pos += 40
-							else
-								menu.options[v.name][v1.name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
-								menu.options[v.name][v1.name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v2.x + 8, v2.y, v2.w, tabz[k])
-							end
-						elseif v2.type == "combobox" then
-							menu.options[v.name][v1.name][v2.name] = {}
-							menu.options[v.name][v1.name][v2.name][4] = Draw:Combobox(v2.name, v2.values, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
-							menu.options[v.name][v1.name][v2.name][1] = v2.values
-							menu.options[v.name][v1.name][v2.name][2] = v2.type
-							menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-							menu.options[v.name][v1.name][v2.name][5] = false
-							y_pos += 40
-						elseif v2.type == "button" then
-							menu.options[v.name][v1.name][v2.name] = {}
-							menu.options[v.name][v1.name][v2.name][1] = false
-							menu.options[v.name][v1.name][v2.name][2] = v2.type
-							menu.options[v.name][v1.name][v2.name].name = v2.name
-							menu.options[v.name][v1.name][v2.name].groupbox = v1.name
-							menu.options[v.name][v1.name][v2.name].tab = v.name -- why is it all v, v1, v2 so ugly
-							menu.options[v.name][v1.name][v2.name].doubleclick = v2.doubleclick
-							
-							if v2.x == nil then
-								menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-								menu.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+							elseif v2.type == "button" then
+								menu.options[v.name][g_name][v2.name] = {}
+								menu.options[v.name][g_name][v2.name][1] = false
+								menu.options[v.name][g_name][v2.name][2] = v2.type
+								menu.options[v.name][g_name][v2.name].name = v2.name
+								menu.options[v.name][g_name][v2.name].groupbox = g_name
+								menu.options[v.name][g_name][v2.name].tab = v.name -- why is it all v, v1, v2 so ugly
+								menu.options[v.name][g_name][v2.name].doubleclick = v2.doubleclick
+								
+								if v2.x == nil then
+									menu.options[v.name][g_name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+									menu.options[v.name][g_name][v2.name][4] = Draw:Button(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+									y_pos += 28
+								else
+									menu.options[v.name][g_name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
+									menu.options[v.name][g_name][v2.name][4] = Draw:Button(v2.name, v2.x + 8, v2.y, v2.w, tabz[k])
+								end
+							elseif v2.type == "textbox" then
+								menu.options[v.name][g_name][v2.name] = {}
+								menu.options[v.name][g_name][v2.name][4] = Draw:TextBox(v2.name, v2.text, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+								menu.options[v.name][g_name][v2.name][1] = v2.text
+								menu.options[v.name][g_name][v2.name][2] = v2.type
+								menu.options[v.name][g_name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
+								menu.options[v.name][g_name][v2.name][5] = false
 								y_pos += 28
-							else
-								menu.options[v.name][v1.name][v2.name][3] = {v2.x + 7, v2.y - 1, v2.w}
-								menu.options[v.name][v1.name][v2.name][4] = Draw:Button(v2.name, v2.x + 8, v2.y, v2.w, tabz[k])
+							elseif v2.type == "list" then
+								menu.options[v.name][g_name][v2.name] = {}
+								menu.options[v.name][g_name][v2.name][4] = Draw:List(v2.multiname, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
+								menu.options[v.name][g_name][v2.name][1] = nil
+								menu.options[v.name][g_name][v2.name][2] = v2.type
+								menu.options[v.name][g_name][v2.name][3] = 1
+								menu.options[v.name][g_name][v2.name][5] = {}
+								menu.options[v.name][g_name][v2.name][6] = v2.size
+								menu.options[v.name][g_name][v2.name][7] = v2.colums
+								menu.options[v.name][g_name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
+								y_pos += 22 + (22 * v2.size)
+							elseif v2.type == "image" then
+								menu.options[v.name][g_name][v2.name] = {}
+								menu.options[v.name][g_name][v2.name][1] = Draw:ImageWithText(v2.size, nil, v2.text, v1.x + 8, v1.y + y_pos, tabz[k])
+								menu.options[v.name][g_name][v2.name][2] = v2.type
 							end
-						elseif v2.type == "textbox" then
-							menu.options[v.name][v1.name][v2.name] = {}
-							menu.options[v.name][v1.name][v2.name][4] = Draw:TextBox(v2.name, v2.text, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
-							menu.options[v.name][v1.name][v2.name][1] = v2.text
-							menu.options[v.name][v1.name][v2.name][2] = v2.type
-							menu.options[v.name][v1.name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
-							menu.options[v.name][v1.name][v2.name][5] = false
-							y_pos += 28
-						elseif v2.type == "list" then
-							menu.options[v.name][v1.name][v2.name] = {}
-							menu.options[v.name][v1.name][v2.name][4] = Draw:List(v2.multiname, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
-							menu.options[v.name][v1.name][v2.name][1] = nil
-							menu.options[v.name][v1.name][v2.name][2] = v2.type
-							menu.options[v.name][v1.name][v2.name][3] = 1
-							menu.options[v.name][v1.name][v2.name][5] = {}
-							menu.options[v.name][v1.name][v2.name][6] = v2.size
-							menu.options[v.name][v1.name][v2.name][7] = v2.colums
-							menu.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
-							y_pos += 22 + (22 * v2.size)
-						elseif v2.type == "image" then
-							menu.options[v.name][v1.name][v2.name] = {}
-							menu.options[v.name][v1.name][v2.name][1] = Draw:ImageWithText(v2.size, nil, v2.text, v1.x + 8, v1.y + y_pos, tabz[k])
-							menu.options[v.name][v1.name][v2.name][2] = v2.type
 						end
 					end
+
+					menu.log_multi = nil
+					
 				end
+
 				y_pos += 2
-				if v1.autopos == nil then
-					Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, v1.height, tabz[k])
+
+				if v1.multi == nil then
+					if v1.autopos == nil then
+						
+						Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, v1.height, tabz[k])
+					else
+						if v1.autofill then
+							y_pos = (menu.h - 17) - (v1.y)
+						elseif v1.size ~= nil then
+							y_pos = v1.size
+						end
+						print(v1.name, tostring(y_pos))
+						Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, y_pos, tabz[k])
+						y_offies[v1.autopos] += y_pos + 6
+					end
 				else
 					if v1.autofill then
 						y_pos = (menu.h - 17) - (v1.y)
+						y_offies[v1.autopos] += y_pos + 6
+					elseif v1.size ~= nil then
+						y_pos = v1.size
+						y_offies[v1.autopos] += y_pos + 6
 					end
-					Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, y_pos, tabz[k])
-					y_offies[v1.autopos] += y_pos + 6
+
+					local drawn
+
+					if v1.autopos == nil then
+						drawn = Draw:CoolMultiBox(v1.name, v1.x, v1.y, v1.width, v1.height, tabz[k])
+					else
+						drawn = Draw:CoolMultiBox(v1.name, v1.x, v1.y, v1.width, y_pos, tabz[k])
+					end
+
+					local group_vals = {}
+
+					for _i, _v in ipairs(v1.name) do
+						if _i == 1 then
+							group_vals[_v] = true
+						else
+							group_vals[_v] = false
+						end
+					end
+					table.insert(menu.multigroups[v.name], {vals = group_vals, drawn = drawn})
 				end
 			end
 		end
@@ -1567,6 +1692,19 @@ function menu.Initialize(menutable)
 			else
 				for k1, v1 in pairs(v) do
 					v1.Visible = false
+				end
+			end
+		end
+
+
+		for k, v in pairs(menu.multigroups) do
+			if menu.tabnames[menu.activetab] == k then
+				for k1, v1 in pairs(v) do
+					for k2, v2 in pairs(v1.vals) do
+						for k3, v3 in pairs(menu.mgrouptabz[k][k2]) do
+							v3.Visible = v2
+						end
+					end
 				end
 			end
 		end
@@ -2060,29 +2198,26 @@ function menu.Initialize(menutable)
 							end
 						elseif v2[2] == "textbox" then
 							if v2[5] then
-								if not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftControl) then
-									if table.find(textBoxLetters, KeyEnumToName(key.KeyCode)) and string.len(v2[1]) <= 28 then
-										--print(tostring(INPUT_SERVICE:IsModifierKeyDown()))
-										if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-											v2[1] = v2[1].. string.upper(KeyEnumToName(key.KeyCode))
-										else
-											v2[1] = v2[1].. string.lower(KeyEnumToName(key.KeyCode))
-										end
-									elseif KeyEnumToName(key.KeyCode) == "Space" then
-										v2[1] = v2[1].. " "
-									elseif KeyEnumToName(key.KeyCode) == "-" then
-										if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-											v2[1] = v2[1].. "_"
-										else
-											v2[1] = v2[1].. "-"
-										end
-									elseif key.KeyCode.Name == "Period" then
-										v2[1] = v2[1] .. "."
-									elseif KeyEnumToName(key.KeyCode) == "Back" and v2[1] ~= "" then
-										v2[1] = string.sub(v2[1], 0, #(v2[1]) - 1)
+								if table.find(textBoxLetters, KeyEnumToName(key.KeyCode)) and string.len(v2[1]) <= 28 then
+									if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+										v2[1] = v2[1].. string.upper(KeyEnumToName(key.KeyCode))
+									else
+										v2[1] = v2[1].. string.lower(KeyEnumToName(key.KeyCode))
 									end
-									v2[4].Text = v2[1] .. "|"
+								elseif KeyEnumToName(key.KeyCode) == "Space" then
+									v2[1] = v2[1].. " "
+								elseif KeyEnumToName(key.KeyCode) == "-" then
+									if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+										v2[1] = v2[1].. "_"
+									else
+										v2[1] = v2[1].. "-"
+									end
+								elseif key.KeyCode.Name == "Period" then
+									v2[1] = v2[1] .. "."
+								elseif KeyEnumToName(key.KeyCode) == "Back" and v2[1] ~= "" then
+									v2[1] = string.sub(v2[1], 0, #(v2[1]) - 1)
 								end
+								v2[4].Text = v2[1] .. "|"
 							end
 						end
 						
@@ -2173,11 +2308,11 @@ function menu.Initialize(menutable)
 			end
 		end
 		ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
-		if bp == menu.options["Settings"]["Extra"]["Unload Cheat"] then
+		if bp == menu.options["Settings"]["Cheat Settings"]["Unload Cheat"] then
 			menu.fading = true
 			wait(0.3)
 			menu:unload()
-		elseif bp == menu.options["Settings"]["Extra"]["Set Clipboard Game ID"] then
+		elseif bp == menu.options["Settings"]["Cheat Settings"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
 		elseif bp == menu.options["Settings"]["Configuration"]["Save Config"] then
 			
@@ -2590,15 +2725,12 @@ function menu.Initialize(menutable)
 		end
 	end
 	
-	local function mousebutton1downfunc()
+	local function mousebutton1downfunc() --ANCHOR menu mouse down func
 		menu.dropbox_open = nil
-		if menu.selectall then
-			if menu.textboxopen then
-				menu.textboxopen[4].Color = RGB(unpack(menu.mc))	
-			end
-			menu.selectall = false
-		end
 		menu.textboxopen = false
+		
+		
+
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
@@ -2727,212 +2859,279 @@ function menu.Initialize(menutable)
 				menu.copied_clr = oldcolor.Color
 			end
 		else
+			for k, v in pairs(menu.multigroups) do
+				if menu.tabnames[menu.activetab] == k then
+					for k1, v1 in pairs(v) do
+	
+						local c_pos = v1.drawn.click_pos
+						--local selected = v1.drawn.bar
+						local selected_pos = v1.drawn.barpos
+	
+						for k2, v2 in pairs(v1.drawn.click_pos) do
+							if menu:MouseInMenu(v2.x, v2.y, v2.width, v2.height) then
+	
+								for _k, _v in pairs(v1.vals) do
+									--print(_k, _v)
+									if _k == v2.name then
+										v1.vals[_k] = true
+									else
+										v1.vals[_k] = false
+									end
+									--print(_k, _v)
+								end
+	
+								local settab = v2.num
+								for _k, _v in pairs(v1.drawn.bar) do
+									menu.postable[_v.postable][2] = selected_pos[settab].pos
+									_v.drawn.Size = Vector2.new(selected_pos[settab].length, 2)
+								end
+								
+								menu:set_menu_visibility(true)
+								setActiveTab(menu.activetab)
+								menu:SetMenuPos(menu.x, menu.y)
+							end
+						end
+					end
+				end
+			end
 			for k, v in pairs(menu.options) do
 				if menu.tabnames[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
-						for k2, v2 in pairs(v1) do
-							if v2[2] == "toggle" and not menu.dropbox_open then
-								if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
-									if v2[6] then
-										if menu:GetVal("Settings", "Extra", "Allow Unsafe Features") and v2[1] == false then
-											v2[1] = true
-										else
-											v2[1] = false
-										end
-									else
-										v2[1] = not v2[1]
-									end
-									if not v2[1] then
-										for i = 0, 3 do
-											v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
-										end
-									else
-										for i = 0, 3 do
-											v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])}, [2] = {start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)}})
-										end
-									end
-									TogglePressed:Fire(k1, k2, v2)
-								end
-								if v2[5] ~= nil then
-									if v2[5][2] == "keybind" then
-										if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 44, 16) then
-											v2[5][4][2].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
-											v2[5][5] = true
-										end
-									elseif v2[5][2] == "single colorpicker" then
-										if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 28, 14) then
-											v2[5][5] = true
-											menu.colorpicker_open = v2[5]
-											menu.colorpicker_open = v2[5]
-											if v2[5][1][4] ~= nil then
-												set_colorpicker(true, v2[5][1], v2[5], true, v2[5][6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
-											else
-												set_colorpicker(true, v2[5][1], v2[5], false, v2[5][6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
-											end
-										end
-									elseif v2[5][2] == "double colorpicker" then
-										for k3, v3 in pairs(v2[5][1]) do
-											if menu:MouseInMenu(v3[3][1], v3[3][2], 28, 14) then
-												v3[5] = true
-												menu.colorpicker_open = v3
-												menu.colorpicker_open = v3
-												if v3[1][4] ~= nil then
-													set_colorpicker(true, v3[1], v3, true, v3[6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
-												else
-													set_colorpicker(true, v3[1], v3, false, v3[6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
-												end
-											end
+						local pass = true
+						for k3, v3 in pairs(menu.multigroups) do
+							if k == k3 then
+								for k4, v4 in pairs(v3) do
+									for k5, v5 in pairs(v4.vals) do
+										if k1 == k5 then
+											pass = v5
 										end
 									end
 								end
-							elseif v2[2] == "slider" and not menu.dropbox_open then
-								if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
-									local stepval = 1
-									if v2.stepsize then 
-										stepval = v2.stepsize
-									end
-									if menu:modkeydown("shift", "left") then
-										stepval = 0.1
-									end
-									if menu:MouseInMenu(v2[7][1], v2[7][2], 11, 13) then
-										v2[1] -= stepval
-									elseif menu:MouseInMenu(v2[7][1] + 11, v2[7][2], 11, 13) then
-										v2[1] += stepval
-									end
-									
-									if v2[1] < v2[6][1] then
-										v2[1] = v2[6][1]
-									elseif v2[1] > v2[6][2] then
-										v2[1] = v2[6][2]
-									end
-									
-									v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
-									
-									for i = 1, 4 do
-										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
-									end
-									
-								elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
-									v2[5] = true
-								end
-							elseif v2[2] == "dropbox" then
-								if menu.dropbox_open then
-									if v2 ~= menu.dropbox_open then
-										continue
-									end
-								end
-								if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 36) then
-									if not v2[5] then
-										set_dropboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
-										v2[5] = true
-									else
-										set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
-										v2[5] = false
-									end
-								elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5] then
-									for i = 1, #v2[6] do
-										if menu:MouseInMenu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 21), v2[3][3], 21) then
-											v2[4][1].Text = v2[6][i]
-											v2[1] = i
-											set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
-											v2[5] = false
-										end
-									end
-									
-									if v2 == menu.options["Settings"]["Configuration"]["Configs"] then
-										local textbox = menu.options["Settings"]["Configuration"]["ConfigName"]
-										local relconfigs = GetConfigs()
-										textbox[1] = relconfigs[menu.options["Settings"]["Configuration"]["Configs"][1]]
-										textbox[4].Text = textbox[1]
-									end
-								end
-							elseif v2[2] == "combobox" then
-								if menu.dropbox_open then
-									if v2 ~= menu.dropbox_open then
-										continue
-									end
-								end
-								if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 36) then
-									if not v2[5] then
-										set_comboboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
-										v2[5] = true
-									else
-										set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
-										v2[5] = false
-									end
-								elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) and v2[5] then
-									for i = 1, #v2[1] do
-										if menu:MouseInMenu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 22), v2[3][3], 23) then
-											v2[1][i][2] = not v2[1][i][2]
-											local textthing = ""
-											for k, v in pairs(v2[1]) do
-												if v[2] then
-													if textthing == "" then
-														textthing = v[1]
-													else
-														textthing = textthing.. ", ".. v[1]
+							end
+						end
+
+						if pass then
+							for k2, v2 in pairs(v1) do --ANCHOR more menu bs
+
+							--[[
+								if visible then
+									for k, v in pairs(menu.multigroups) do
+										if menu.tabnames[menu.activetab] == k then
+											for k1, v1 in pairs(v) do
+												for k2, v2 in pairs(v1.vals) do	
+													for k3, v3 in pairs(menu.mgrouptabz[k][k2]) do
+														v3.Visible = v2
 													end
 												end
 											end
-											textthing = textthing ~= "" and textthing or "None"
-											if string.len(textthing) > 25 then
-												textthing = string_cut(textthing, 25)
+										end
+									end
+								end
+							]]
+							
+								if v2[2] == "toggle" and not menu.dropbox_open then
+									if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
+										if v2[6] then
+											if menu:GetVal("Settings",  "Cheat Settings", "Allow Unsafe Features") and v2[1] == false then
+												v2[1] = true
+											else
+												v2[1] = false
 											end
-											v2[4][1].Text = textthing
-											set_comboboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
+										else
+											v2[1] = not v2[1]
+										end
+										if not v2[1] then
+											for i = 0, 3 do
+												v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
+											end
+										else
+											for i = 0, 3 do
+												v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])}, [2] = {start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)}})
+											end
+										end
+										TogglePressed:Fire(k1, k2, v2)
+									end
+									if v2[5] ~= nil then
+										if v2[5][2] == "keybind" then
+											if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 44, 16) then
+												v2[5][4][2].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
+												v2[5][5] = true
+											end
+										elseif v2[5][2] == "single colorpicker" then
+											if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 28, 14) then
+												v2[5][5] = true
+												menu.colorpicker_open = v2[5]
+												menu.colorpicker_open = v2[5]
+												if v2[5][1][4] ~= nil then
+													set_colorpicker(true, v2[5][1], v2[5], true, v2[5][6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
+												else
+													set_colorpicker(true, v2[5][1], v2[5], false, v2[5][6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
+												end
+											end
+										elseif v2[5][2] == "double colorpicker" then
+											for k3, v3 in pairs(v2[5][1]) do
+												if menu:MouseInMenu(v3[3][1], v3[3][2], 28, 14) then
+													v3[5] = true
+													menu.colorpicker_open = v3
+													menu.colorpicker_open = v3
+													if v3[1][4] ~= nil then
+														set_colorpicker(true, v3[1], v3, true, v3[6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
+													else
+														set_colorpicker(true, v3[1], v3, false, v3[6], LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
+													end
+												end
+											end
 										end
 									end
-								end
-							elseif v2[2] == "button" and not menu.dropbox_open then
-								if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 22) then
-									if not v2[1] then
-										buttonpressed(v2)
-										if k2 == "Unload Cheat" then return end
-										for i = 0, 8 do
-											v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(35, 35, 35)}, [2] = {start = 8, color = RGB(50, 50, 50)}})
+								elseif v2[2] == "slider" and not menu.dropbox_open then
+									if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
+										local stepval = 1
+										if v2.stepsize then 
+											stepval = v2.stepsize
 										end
-										v2[1] = true
-									end
-								end
-							elseif v2[2] == "textbox" and not menu.dropbox_open then
-								if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 22) then
-									if not v2[5] then
-										menu.textboxopen = v2
+										if menu:modkeydown("shift", "left") then
+											stepval = 0.1
+										end
+										if menu:MouseInMenu(v2[7][1], v2[7][2], 11, 13) then
+											v2[1] -= stepval
+										elseif menu:MouseInMenu(v2[7][1] + 11, v2[7][2], 11, 13) then
+											v2[1] += stepval
+										end
 										
-										v2[4].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
+										if v2[1] < v2[6][1] then
+											v2[1] = v2[6][1]
+										elseif v2[1] > v2[6][2] then
+											v2[1] = v2[6][2]
+										end
+										
+										v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
+										
+										for i = 1, 4 do
+											v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
+										end
+										
+									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
 										v2[5] = true
 									end
-									
-								end
-							elseif v2[2] == "list" then
-								--[[
-								menu.options[v.name][v1.name][v2.name] = {}
-								menu.options[v.name][v1.name][v2.name][4] = Draw:List(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
-								menu.options[v.name][v1.name][v2.name][1] = nil
-								menu.options[v.name][v1.name][v2.name][2] = v2.type
-								menu.options[v.name][v1.name][v2.name][3] = 1
-								menu.options[v.name][v1.name][v2.name][5] = {}
-								menu.options[v.name][v1.name][v2.name][6] = v2.size
-								menu.options[v.name][v1.name][v2.name][7] = v2.colums
-								menu.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
-								]]--
-								if #v2[5] > v2[6] then
-									for i = 1, v2[6] do
-										if menu:MouseInMenu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
-											if v2[1] == tostring(v2[5][i + v2[3] - 1][1][1]) then
-												v2[1] = nil
-											else
-												v2[1] = tostring(v2[5][i + v2[3] - 1][1][1])
+								elseif v2[2] == "dropbox" then
+									if menu.dropbox_open then
+										if v2 ~= menu.dropbox_open then
+											continue
+										end
+									end
+									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 36) then
+										if not v2[5] then
+											set_dropboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
+											v2[5] = true
+										else
+											set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
+											v2[5] = false
+										end
+									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5] then
+										for i = 1, #v2[6] do
+											if menu:MouseInMenu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 21), v2[3][3], 21) then
+												v2[4][1].Text = v2[6][i]
+												v2[1] = i
+												set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
+												v2[5] = false
+											end
+										end
+										
+										if v2 == menu.options["Settings"]["Configuration"]["Configs"] then
+											local textbox = menu.options["Settings"]["Configuration"]["ConfigName"]
+											local relconfigs = GetConfigs()
+											textbox[1] = relconfigs[menu.options["Settings"]["Configuration"]["Configs"][1]]
+											textbox[4].Text = textbox[1]
+										end
+									end
+								elseif v2[2] == "combobox" then
+									if menu.dropbox_open then
+										if v2 ~= menu.dropbox_open then
+											continue
+										end
+									end
+									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 36) then
+										if not v2[5] then
+											set_comboboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
+											v2[5] = true
+										else
+											set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
+											v2[5] = false
+										end
+									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) and v2[5] then
+										for i = 1, #v2[1] do
+											if menu:MouseInMenu(v2[3][1], v2[3][2] + 36 + ((i - 1) * 22), v2[3][3], 23) then
+												v2[1][i][2] = not v2[1][i][2]
+												local textthing = ""
+												for k, v in pairs(v2[1]) do
+													if v[2] then
+														if textthing == "" then
+															textthing = v[1]
+														else
+															textthing = textthing.. ", ".. v[1]
+														end
+													end
+												end
+												textthing = textthing ~= "" and textthing or "None"
+												if string.len(textthing) > 25 then
+													textthing = string_cut(textthing, 25)
+												end
+												v2[4][1].Text = textthing
+												set_comboboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
 											end
 										end
 									end
-								else
-									for i = 1, #v2[5] do
-										if menu:MouseInMenu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
-											if v2[1] == tostring(v2[5][i + v2[3] - 1][1][1]) then
-												v2[1] = nil
-											else
-												v2[1] = tostring(v2[5][i + v2[3] - 1][1][1])
+								elseif v2[2] == "button" and not menu.dropbox_open then
+									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 22) then
+										if not v2[1] then
+											buttonpressed(v2)
+											if k2 == "Unload Cheat" then return end
+											for i = 0, 8 do
+												v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(35, 35, 35)}, [2] = {start = 8, color = RGB(50, 50, 50)}})
+											end
+											v2[1] = true
+										end
+									end
+								elseif v2[2] == "textbox" and not menu.dropbox_open then
+									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 22) then
+										if not v2[5] then
+											menu.textboxopen = v2
+											
+											v2[4].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
+											v2[5] = true
+										end
+										
+									end
+								elseif v2[2] == "list" then
+									--[[
+									menu.options[v.name][v1.name][v2.name] = {}
+									menu.options[v.name][v1.name][v2.name][4] = Draw:List(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
+									menu.options[v.name][v1.name][v2.name][1] = nil
+									menu.options[v.name][v1.name][v2.name][2] = v2.type
+									menu.options[v.name][v1.name][v2.name][3] = 1
+									menu.options[v.name][v1.name][v2.name][5] = {}
+									menu.options[v.name][v1.name][v2.name][6] = v2.size
+									menu.options[v.name][v1.name][v2.name][7] = v2.colums
+									menu.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
+									]]--
+									if #v2[5] > v2[6] then
+										for i = 1, v2[6] do
+											if menu:MouseInMenu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
+												if v2[1] == tostring(v2[5][i + v2[3] - 1][1][1]) then
+													v2[1] = nil
+												else
+													v2[1] = tostring(v2[5][i + v2[3] - 1][1][1])
+												end
+											end
+										end
+									else
+										for i = 1, #v2[5] do
+											if menu:MouseInMenu(v2[8][1], v2[8][2] + (i * 22) - 5, v2[8][3], 22) then
+												if v2[1] == tostring(v2[5][i + v2[3] - 1][1][1]) then
+													v2[1] = nil
+												else
+													v2[1] = tostring(v2[5][i + v2[3] - 1][1][1])
+												end
 											end
 										end
 									end
@@ -2948,7 +3147,7 @@ function menu.Initialize(menutable)
 				for k2, v2 in pairs(v1) do
 					if v2[2] == "toggle" then
 						if v2[6] then
-							if not menu:GetVal("Settings", "Extra", "Allow Unsafe Features") then
+							if not menu:GetVal("Settings",  "Cheat Settings", "Allow Unsafe Features") then
 								v2[1] = false
 								for i = 0, 3 do
 									v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
@@ -2960,15 +3159,15 @@ function menu.Initialize(menutable)
 			end
 		end
 		if menu.open then
-			if menu.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
-				local clr = menu.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
+			if menu.options["Settings"]["Cheat Settings"]["Menu Accent"][1] then
+				local clr = menu.options["Settings"]["Cheat Settings"]["Menu Accent"][5][1]
 				menu.mc = {clr[1], clr[2], clr[3]}
 			else
 				menu.mc = {127, 72, 163}
 			end
 			menu:set_menu_clr(menu.mc[1], menu.mc[2], menu.mc[3])
 			
-			local wme = menu:GetVal("Settings", "Menu Settings", "Watermark")
+			local wme = menu:GetVal("Settings", "Cheat Settings", "Watermark")
 			for k, v in pairs(menu.watermark.rect) do
 				v.Visible = wme
 			end
@@ -3062,38 +3261,40 @@ function menu.Initialize(menutable)
 		for k, v in pairs(tabz[menu.activetab]) do
 			v.Visible = visible
 		end
+
+		if visible then
+			for k, v in pairs(menu.multigroups) do
+				if menu.tabnames[menu.activetab] == k then
+					for k1, v1 in pairs(v) do
+						for k2, v2 in pairs(v1.vals) do	
+							for k3, v3 in pairs(menu.mgrouptabz[k][k2]) do
+								v3.Visible = v2
+							end
+						end
+					end
+				end
+			end
+		end
 	end
 	
 	menu:set_menu_transparency(0)
 	menu:set_menu_visibility(false)
 	menu.open = false
-	local function renderSteppedMenu(fdt)
+	local function renderSteppedMenu()
 		SCREEN_SIZE = Camera.ViewportSize
 		-- i pasted the old menu working ingame shit from the old source nate pls fix ty
 		-- this is the really shitty alive check that we've been using since day one
 		-- removed it :DDD
 		-- im keepin all of our comments they're fun to look at
 		-- i wish it showed comment dates that would be cool
+		-- nah that would suck fk u (comment made on 3/4/2021 3:35 pm est by bitch)
 		for button, time in next, buttonsInQue do
 			if tick() - time < doubleclickDelay then
-				button[4].text.Color = menu:GetVal("Settings", "Menu Settings", "Menu Accent", "color", true)
+				button[4].text.Color = menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color", true)
 				button[4].text.Text = "Confirm?"
 			else
 				button[4].text.Color = Color3.new(1,1,1)
 				button[4].text.Text = button.name
-			end
-		end
-		if menu.open then
-			if menu.backspaceheld then
-				local dt = tick() - menu.backspacetime
-				if dt > 0.4 then
-					menu.backspaceflags += 1
-					if menu.backspaceflags % 5 == 0 then
-						local textbox = menu.textboxopen
-						textbox[1] = string.sub(textbox[1], 0, #(textbox[1]) - 1)
-						textbox[4].Text = textbox[1] .. "|"
-					end
-				end
 			end
 		end
 		if menu.fading then
@@ -3132,105 +3333,120 @@ function menu.Initialize(menutable)
 			for k, v in pairs(menu.options) do
 				if menu.tabnames[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
-						for k2, v2 in pairs(v1) do
-							if v2[2] == "slider" then
-								if v2[5] then
-									--ANCHOR rounding in sliders
-									local new_val = (v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - menu.x - v2[3][1])/v2[3][3])
-									v2[1] = (v2.round and math.floor(new_val) or math.floor(new_val * 10) / 10) + v2[6][1]
-									if v2[1] < v2[6][1] then
-										v2[1] = v2[6][1]
-									elseif v2[1] > v2[6][2] then
-										v2[1] = v2[6][2]
-									end
-									v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
-									for i = 1, 4 do
-										v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
-									end
-									set_plusminus(1, v2[7][1], v2[7][2])
-								else
-									if not menu.dropbox_open then
-										if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
-											if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
-												
-												if menu:MouseInMenu(v2[7][1], v2[7][2], 11, 13) then
-													
-													set_plusminus(2, v2[7][1], v2[7][2])
-													
-												elseif menu:MouseInMenu(v2[7][1] + 11, v2[7][2], 11, 13) then
-													
-													set_plusminus(3, v2[7][1], v2[7][2])
-													
-												end
-												
-											else
-												
-												set_plusminus(1, v2[7][1], v2[7][2])
-												
-											end
-											
+						local pass = true
+						for k3, v3 in pairs(menu.multigroups) do
+							if k == k3 then
+								for k4, v4 in pairs(v3) do
+									for k5, v5 in pairs(v4.vals) do
+										if k1 == k5 then
+											pass = v5
 										end
 									end
 								end
-							elseif v2[2] == "list" then
-								for k3, v3 in pairs(v2[4].liststuff) do
-									for i, v4 in ipairs(v3) do
-										for i1, v5 in ipairs(v4) do
-											v5.Visible = false
-										end
-									end
-								end
-								for i = 1, v2[6] do
-									if v2[5][i + v2[3] - 1] ~= nil then
-										for i1 = 1, v2[7] do
-											v2[4].liststuff.words[i][i1].Text = v2[5][i + v2[3] - 1][i1][1]
-											v2[4].liststuff.words[i][i1].Visible = true
-											
-											if v2[5][i + v2[3] - 1][i1][1] == v2[1] and i1 == 1 then
-												
-												if menu.options["Settings"]["Menu Settings"]["Menu Accent"][1] then
-													local clr = menu.options["Settings"]["Menu Settings"]["Menu Accent"][5][1]
-													v2[4].liststuff.words[i][i1].Color = RGB(clr[1], clr[2], clr[3])
-												else
-													v2[4].liststuff.words[i][i1].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
-												end
-											else
-												v2[4].liststuff.words[i][i1].Color = v2[5][i + v2[3] - 1][i1][2]
-											end
-										end
-										for k3, v3 in pairs(v2[4].liststuff.rows[i]) do
-											v3.Visible = true
-										end
-									elseif v2[3] > 1 then
+							end
+						end
+
+						if pass then
+							for k2, v2 in pairs(v1) do
+								if v2[2] == "slider" then
+									if v2[5] then
 										
-										v2[3] -= 1
-									end
-								end
-								if v2[3] == 1 then
-									for k3, v3 in pairs(v2[4].uparrow) do
-										if v3.Visible then
-											v3.Visible = false
+										local new_val = (v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - menu.x - v2[3][1])/v2[3][3])
+										v2[1] = (v2.round and math.floor(new_val) or math.floor(new_val * 10) / 10) + v2[6][1]
+										if v2[1] < v2[6][1] then
+											v2[1] = v2[6][1]
+										elseif v2[1] > v2[6][2] then
+											v2[1] = v2[6][2]
+										end
+										v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
+										for i = 1, 4 do
+											v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
+										end
+										set_plusminus(1, v2[7][1], v2[7][2])
+									else
+										if not menu.dropbox_open then
+											if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
+												if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
+													
+													if menu:MouseInMenu(v2[7][1], v2[7][2], 11, 13) then
+														
+														set_plusminus(2, v2[7][1], v2[7][2])
+														
+													elseif menu:MouseInMenu(v2[7][1] + 11, v2[7][2], 11, 13) then
+														
+														set_plusminus(3, v2[7][1], v2[7][2])
+														
+													end
+													
+												else
+													
+													set_plusminus(1, v2[7][1], v2[7][2])
+													
+												end
+												
+											end
 										end
 									end
-								else
-									for k3, v3 in pairs(v2[4].uparrow) do
-										if not v3.Visible then
-											v3.Visible = true
-											menu:SetMenuPos(menu.x, menu.y)
+								elseif v2[2] == "list" then
+									for k3, v3 in pairs(v2[4].liststuff) do
+										for i, v4 in ipairs(v3) do
+											for i1, v5 in ipairs(v4) do
+												v5.Visible = false
+											end
 										end
 									end
-								end
-								if v2[5][v2[3] + v2[6]] == nil then
-									for k3, v3 in pairs(v2[4].downarrow) do
-										if v3.Visible then
-											v3.Visible = false
+									for i = 1, v2[6] do
+										if v2[5][i + v2[3] - 1] ~= nil then
+											for i1 = 1, v2[7] do
+												v2[4].liststuff.words[i][i1].Text = v2[5][i + v2[3] - 1][i1][1]
+												v2[4].liststuff.words[i][i1].Visible = true
+												
+												if v2[5][i + v2[3] - 1][i1][1] == v2[1] and i1 == 1 then
+													
+													if menu.options["Settings"]["Cheat Settings"]["Menu Accent"][1] then
+														local clr = menu.options["Settings"]["Cheat Settings"]["Menu Accent"][5][1]
+														v2[4].liststuff.words[i][i1].Color = RGB(clr[1], clr[2], clr[3])
+													else
+														v2[4].liststuff.words[i][i1].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
+													end
+												else
+													v2[4].liststuff.words[i][i1].Color = v2[5][i + v2[3] - 1][i1][2]
+												end
+											end
+											for k3, v3 in pairs(v2[4].liststuff.rows[i]) do
+												v3.Visible = true
+											end
+										elseif v2[3] > 1 then
+											
+											v2[3] -= 1
 										end
 									end
-								else
-									for k3, v3 in pairs(v2[4].downarrow) do
-										if not v3.Visible then
-											v3.Visible = true
-											menu:SetMenuPos(menu.x, menu.y)
+									if v2[3] == 1 then
+										for k3, v3 in pairs(v2[4].uparrow) do
+											if v3.Visible then
+												v3.Visible = false
+											end
+										end
+									else
+										for k3, v3 in pairs(v2[4].uparrow) do
+											if not v3.Visible then
+												v3.Visible = true
+												menu:SetMenuPos(menu.x, menu.y)
+											end
+										end
+									end
+									if v2[5][v2[3] + v2[6]] == nil then
+										for k3, v3 in pairs(v2[4].downarrow) do
+											if v3.Visible then
+												v3.Visible = false
+											end
+										end
+									else
+										for k3, v3 in pairs(v2[4].downarrow) do
+											if not v3.Visible then
+												v3.Visible = true
+												menu:SetMenuPos(menu.x, menu.y)
+											end
 										end
 									end
 								end
@@ -3338,10 +3554,10 @@ function menu.Initialize(menutable)
 
 		if menu.open then
 			if menu.tabnames[menu.activetab] == "Settings" then
-				if menu:GetVal("Settings", "Menu Settings", "Custom Menu Name") then
-					bbmenu[27].Text = menu.options["Settings"]["Menu Settings"]["MenuName"][1]
+				if menu:GetVal("Settings", "Cheat Settings", "Custom Menu Name") then
+					bbmenu[27].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1]
 
-					menu.watermark.text[1].Text = menu.options["Settings"]["Menu Settings"]["MenuName"][1].. menu.watermark.textString
+					menu.watermark.text[1].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1].. menu.watermark.textString
 
 					for i, v in ipairs(menu.watermark.rect) do
 						v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
@@ -3403,6 +3619,7 @@ function menu.Initialize(menutable)
 	menu.connections.renderstepped = game.RunService.RenderStepped:Connect(function()
 		renderSteppedMenu()
 	end)
+
 	function menu:unload()
 		getgenv().v2 = nil
 		self.unloaded = true
@@ -4004,60 +4221,58 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					}
 				},
 				{
-					name = "Menu Settings",
+					name = {"Cheat Settings", "Extra"},
+					multi = true,
 					x = menu.columns.left,
 					y = 400,
 					width = menu.columns.width,
-					height = 108,
-					content = {
-						{
-							type = "toggle",
-							name = "Menu Accent",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Accent Color",
-								color = {127, 72, 163}
+					height = 182,
+					[1] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Menu Accent",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Accent Color",
+									color = {127, 72, 163}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Watermark",
+								value = true,
+							},
+							{
+								type = "toggle",
+								name = "Custom Menu Name",
+								value = MenuName and true or false,
+							},
+							{
+								type = "textbox",
+								name = "MenuName",
+								text = MenuName or "Bitch Bot"
 							}
-						},
-						{
-							type = "toggle",
-							name = "Watermark",
-							value = true,
-						},
-						{
-							type = "toggle",
-							name = "Custom Menu Name",
-							value = MenuName and true or false,
-						},
-						{
-							type = "textbox",
-							name = "MenuName",
-							text = MenuName or "Bitch Bot"
 						}
-					}
-				},
-				{
-					name = "Extra",
-					x = menu.columns.left,
-					y = 514,
-					width = menu.columns.width,
-					height = 119,
-					content = {
-						{
-							type = "button",
-							name = "Set Clipboard Game ID",
-						},
-						{
-							type = "button",
-							name = "Unload Cheat",
-							doubleclick = true,
-						},
-						{
-							type = "toggle",
-							name = "Allow Unsafe Features",
-							value = false,
-						},
+					},
+					[2] = {
+						content = {
+							{
+								type = "button",
+								name = "Set Clipboard Game ID",
+							},
+							{
+								type = "button",
+								name = "Unload Cheat",
+								doubleclick = true,
+							},
+							{
+								type = "toggle",
+								name = "Allow Unsafe Features",
+								value = false,
+							},
+						}
 					}
 				},
 				{
@@ -4065,7 +4280,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					x = menu.columns.right,
 					y = 400,
 					width = menu.columns.width,
-					height = 233,
+					height = 182,
 					content = {
 						{
 							type = "textbox",
@@ -4742,7 +4957,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	end)
 	
 elseif menu.game == "pf" then --!SECTION
-	menu.activetab = 6
+	menu.activetab = 5
 	menu.annoylist = table.create(game.Players.MaxPlayers - 1)
 
 	local sphereHitbox = Instance.new("Part", workspace)
@@ -4927,8 +5142,6 @@ elseif menu.game == "pf" then --!SECTION
 				client.gunbob = v
 			elseif getinfo(v).name == "gunsway" then
 				client.gunsway = v
-			elseif getinfo(v).name == "getupdater" then
-				client.getupdater = v
 			end
 			for k1, v1 in pairs(debug.getupvalues(v)) do
 				if type(v1) == "table" then
@@ -4999,24 +5212,6 @@ elseif menu.game == "pf" then --!SECTION
 
 	local fakelagpos = Vector3.new()
 	local fakelagtime = 0
-
-	for _, ply in next, Players:GetPlayers() do
-		local updater = client.getupdater(ply)
-		if updater then
-			local step = updater.step
-			updater.step = function(what, what1)
-				if not menu then
-					return step(what, what1)
-				else
-					if menu:GetVal("Rage", "Aimbot", "Enabled") or keybindtoggles.thirdperson or keybindtoggles.superaa then
-						return step(3, what1)
-					else
-						return step(what, what1)
-					end
-				end
-			end
-		end
-	end
 
 	setrawmetatable(client.roundsystem, {
 		__index = function(self, val)
@@ -5413,33 +5608,6 @@ elseif menu.game == "pf" then --!SECTION
 	
 	local CUR_GUNS = game:GetService("ReplicatedStorage").GunModules
 
-	local loadplayer = client.loadplayer
-
-	local function loadplayerhook(player)
-		local newupdater = loadplayer(player)
-		local step = newupdater.step
-		newupdater.step = function(what, what1)
-			if not menu then
-				return step(what, what1)
-			else
-				if menu:GetVal("Rage", "Aimbot", "Enabled") or keybindtoggles.thirdperson or keybindtoggles.superaa then
-					return step(3, what1)
-				else
-					return step(what, what1)
-				end
-			end
-		end
-		return newupdater
-	end
-
-	local loadplayeridx = table.find(getupvalues(client.getupdater), loadplayer)
-
-	if loadplayeridx then
-		setupvalue(client.getupdater, loadplayeridx, loadplayerhook)
-	else
-		warn("Did not seem to find loadplayer in getupdater.")
-	end
-
 	
 	local selectedPlayer = nil
 	
@@ -5743,17 +5911,17 @@ elseif menu.game == "pf" then --!SECTION
 				local ivTransparency
 				
 				if Player.Team ~= Players.LocalPlayer.Team then
-					enabled = menu:GetVal("ESP", "Enemy ESP", "Chams")
-					col = menu:GetVal("ESP", "Enemy ESP", "Chams", "color2", true)
-					vTransparency = 1 - menu:GetVal("ESP", "Enemy ESP", "Chams", "color2")[4]/255
-					xqz = menu:GetVal("ESP", "Enemy ESP", "Chams", "color1", true)
-					ivTransparency = 1 - menu:GetVal("ESP", "Enemy ESP", "Chams", "color1")[4]/255
+					enabled = menu:GetVal("Visuals", "Enemy ESP", "Chams")
+					col = menu:GetVal("Visuals", "Enemy ESP", "Chams", "color2", true)
+					vTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", "color2")[4]/255
+					xqz = menu:GetVal("Visuals", "Enemy ESP", "Chams", "color1", true)
+					ivTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", "color1")[4]/255
 				else
-					enabled = menu:GetVal("ESP", "Team ESP", "Chams")
-					col = menu:GetVal("ESP", "Team ESP", "Chams", "color2", true)
-					vTransparency = 1 - menu:GetVal("ESP", "Team ESP", "Chams", "color2")[4]/255
-					xqz = menu:GetVal("ESP", "Team ESP", "Chams", "color1", true)
-					ivTransparency = 1 - menu:GetVal("ESP", "Team ESP", "Chams", "color1")[4]/255
+					enabled = menu:GetVal("Visuals", "Team ESP", "Chams")
+					col = menu:GetVal("Visuals", "Team ESP", "Chams", "color2", true)
+					vTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", "color2")[4]/255
+					xqz = menu:GetVal("Visuals", "Team ESP", "Chams", "color1", true)
+					ivTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", "color1")[4]/255
 				end
 				
 				
@@ -5805,14 +5973,14 @@ elseif menu.game == "pf" then --!SECTION
 						else
 							for i = 0, 1 do
 								local adorn = i == 0 and Part.c88 or Part.c99
-								if menu:GetVal("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
-									xqz = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color", true)
+								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
+									xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
 									col = bColor:Mult(xqz, 0.6)
-								elseif menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
-									xqz = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color", true)
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
+									xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
 									col = bColor:Mult(xqz, 0.6)
-								elseif menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
-									xqz = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
+									xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
 									col = bColor:Mult(xqz, 0.6)
 								end
 								adorn.Color3 = i == 0 and col or xqz
@@ -5879,8 +6047,8 @@ elseif menu.game == "pf" then --!SECTION
 			if client.char.alive then
 				if self == workspace.Camera then
 					if id == "CFrame" then
-						if not keybindtoggles.superaa and menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then
-							local dist = menu:GetVal("Visuals", "Local Visuals", "Third Person Distance") / 10
+						if not keybindtoggles.superaa and menu:GetVal("Visuals", "Local", "Third Person") and keybindtoggles.thirdperson then
+							local dist = menu:GetVal("Visuals", "Local", "Third Person Distance") / 10
 							local params = RaycastParams.new()
 							params.FilterType = Enum.RaycastFilterType.Blacklist
 							params.FilterDescendantsInstances = {Camera, workspace.Ignore, workspace.Players}
@@ -5909,55 +6077,8 @@ elseif menu.game == "pf" then --!SECTION
 						end
 
 						if keybindtoggles.superaa then
-							-- Vector3.new(math.sin(tick() * 7) * 200, 50, math.cos(tick() * 7) * 100)
-							client.superaastart = CFrame.new(client.superaastart.p)
-							
-							local tv = Vector3.new()
-							local cf = client.cam.basecframe
-							local rightVector = cf.RightVector
-							local lv = cf.lookVector
-							if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
-								tv += lv
-							end
-							if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
-								tv -= lv
-							end
-							if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-								tv -= rightVector
-							end
-							if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-								tv += rightVector
-							end
-							if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
-								tv += Vector3.new(0, 1, 0)
-							end
-							if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-								tv -= Vector3.new(0, 1, 0)
-							end
-							
-							local shouldAdd = tv.Unit.x == tv.Unit.x
-							local hitwall = false
-							if shouldAdd then
-								local unit = tv.Unit
-								unit *= 0.01
-								local nextpos = client.superaastart + unit * menu:GetVal("Misc", "Movement", "Fly Speed")
-								local delta = nextpos.p - client.superaastart.p
-								local raycastResult = workspace:Raycast(client.superaastart.p, delta, mapRaycast)
-								if raycastResult then
-									warn("HITTING A WALL")
-									hitwall = true
-									local hitpos = raycastResult.Position
-									local normal = raycastResult.Normal
-									local newpos = hitpos + 0.01 * normal
-									client.superaastart = CFrame.new(newpos)
-								end
-								if not hitwall then
-									client.superaastart += unit * menu:GetVal("Misc", "Movement", "Fly Speed")
-								end
-							end
-
-							local supervector = Vector3.new((os.time() * 850) % 6000, 50, math.cos(os.time() * 5) * 6900)
-							local uber = client.superaastart.p + supervector
+							local uber = client.superaastart.p + Vector3.new(math.sin(tick() * 7) * 200, 50, math.cos(tick() * 7) * 100)
+							local retarded = CFrame.new()
 							oldNewIndex(self, id, client.superaastart)
 							oldNewIndex(self, "Position", uber)
 							oldNewIndex(self, "Velocity", Vector3.new(0, 0, 0))
@@ -6838,7 +6959,7 @@ elseif menu.game == "pf" then --!SECTION
 			beam.LightEmission = 1
 			beam.LightInfluence = 1
 			beam.Enabled = true
-			beam.Color = ColorSequence.new(menu:GetVal("ESP", "Dropped ESP", "Grenade ESP", "color2", true))
+			beam.Color = ColorSequence.new(menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color2", true))
 			beam.Attachment0 = origin_att
 			beam.Attachment1 = ending_att
 			beam.Width0 = 0.2
@@ -6910,9 +7031,9 @@ elseif menu.game == "pf" then --!SECTION
 								--local rot = client.cframe.fromaxisangle(t * frame.rotv) * frame.rot0
 								lastrealpos = pos
 								
-								if menu:GetVal("ESP", "Dropped ESP", "Grenade ESP") then
-									local c1 = menu:GetVal("ESP", "Dropped ESP", "Grenade ESP", "color1", true)
-									local c2 = menu:GetVal("ESP", "Dropped ESP", "Grenade ESP", "color2", true)
+								if menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP") then
+									local c1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color1", true)
+									local c2 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color2", true)
 									local colorz = {c1, c2}
 									if nextpos then
 										--local mag = (nextpos - pos).magnitude
@@ -6931,7 +7052,7 @@ elseif menu.game == "pf" then --!SECTION
 							end
 						end
 						
-						if menu:GetVal("ESP", "Dropped ESP", "Nade Warning") then
+						if menu:GetVal("Visuals", "Dropped ESP", "Nade Warning") then
 							local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
 							if curtick < btick then
 								table.insert(menu.activenades, {
@@ -7643,11 +7764,6 @@ elseif menu.game == "pf" then --!SECTION
 				if args[1] == "spawn" then
 					misc:ApplyGunMods()
 				end
-				if args[1] == "repupdate" then
-					if args[2] ~= args[2] or args[2].Unit.X ~= args[2].Unit.X then
-						return
-					end
-				end
 				if args[1] == "chatted" then
 					local message = args[2]
 					local commandLocation = string.find(message, "\\")
@@ -8221,7 +8337,6 @@ elseif menu.game == "pf" then --!SECTION
 					
 					local thebarrel = gun.barrel
 					--debug.profilebegin("Legitbot Triggerbot")
-					warn("logic", "currentgun", "data", "bulletspeed", gun.data.bulletspeed)
 					local bulletspeed = gun.data.bulletspeed
 					local isaiming = gun:isaiming()
 					local zoomval = menu:GetVal("Legit", "Trigger Bot", "Aim Percentage") / 100
@@ -8421,14 +8536,14 @@ elseif menu.game == "pf" then --!SECTION
 			-- end)
 			local cam = Camera.CFrame
 			
-			local priority_color = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color", true)
-			local priority_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color")[4]/255
+			local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
+			local priority_trans = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color")[4]/255
 			
-			local friend_color = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color", true)
-			local friend_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color")[4]/255
+			local friend_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
+			local friend_trans = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color")[4]/255
 			
-			local target_color = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
-			local target_trans = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
+			local target_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
+			local target_trans = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
 			
 			for Index, Player in next, Players:GetPlayers() do
 				
@@ -8439,7 +8554,7 @@ elseif menu.game == "pf" then --!SECTION
 				
 				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 				
-				if not menu:GetVal("ESP", GroupBox, "Enabled") then continue end
+				if not menu:GetVal("Visuals", GroupBox, "Enabled") then continue end
 				
 				Player.Character = parts.rootpart.Parent
 				
@@ -8469,24 +8584,24 @@ elseif menu.game == "pf" then --!SECTION
 				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 				local health = math.ceil(client.hud:getplayerhealth(Player))
 				local spoty = 0
-				local boxtransparency = menu:GetVal("ESP", GroupBox, "Box", "color")[4] / 255
+				local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", "color")[4] / 255
 				
 				local distance = math.floor((parts.rootpart.Position - client.cam.cframe.p).Magnitude/5)
 				
 				
 				if (topIsRendered or bottomIsRendered) then
-					if menu.options["ESP"][GroupBox]["Name"][1] then
+					if menu.options["Visuals"][GroupBox]["Name"][1] then
 						
 						--debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
 						
 						local name = tostring(Player.Name)
-						if menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+						if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
 							name = string.lower(name)
-						elseif menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+						elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
 							name = string.upper(name)
 						end
 						
-						allesp.text.name[Index].Text = string_cut(name, menu:GetVal("ESP", "ESP Settings", "Max Text Length"))
+						allesp.text.name[Index].Text = string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
 						allesp.text.name[Index].Visible = true
 						allesp.text.name[Index].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
 						
@@ -8494,7 +8609,7 @@ elseif menu.game == "pf" then --!SECTION
 						
 					end
 					
-					if menu.options["ESP"][GroupBox]["Box"][1] then
+					if menu.options["Visuals"][GroupBox]["Box"][1] then
 						--debug.profilebegin("renderVisuals Player ESP Render Box " .. Player.Name)
 						for i = -1, 1 do
 							local box = allesp.box[i+2][Index]
@@ -8513,12 +8628,12 @@ elseif menu.game == "pf" then --!SECTION
 					end
 					
 					
-					if menu.options["ESP"][GroupBox]["Health Bar"][1] then
+					if menu.options["Visuals"][GroupBox]["Health Bar"][1] then
 						
 						--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. Player.Name)
 						
 						local ySizeBar = -math.floor(boxSize.y * health / 100)
-						if menu.options["ESP"][GroupBox]["Health Number"][1] and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+						if menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1] then
 							local hptext = allesp.hp.text[Index]
 							hptext.Visible = true
 							hptext.Text = tostring(health)
@@ -8528,8 +8643,8 @@ elseif menu.game == "pf" then --!SECTION
 							-- math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y, boxSize.y - tb.y )
 							hptext.Position = boxPosition + Vector2.new(-tb.x - 7, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -4, boxSize.y - 10))
 							--hptext.Position = Vector2.new(boxPosition.x - 7 - tb.x, boxPosition.y + math.clamp(boxSize.y + ySizeBar - 8, -4, boxSize.y - 10))
-							hptext.Color = menu:GetVal("ESP", GroupBox, "Health Number", "color", true)
-							hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4] / 255
+							hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", "color", true)
+							hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 
 							--[[
 							if menu:GetVal("Visuals", "Player ESP", "Health Number") then
@@ -8551,13 +8666,13 @@ elseif menu.game == "pf" then --!SECTION
 						allesp.hp.inner[Index].Size = Vector2.new(2, ySizeBar)
 						
 						allesp.hp.inner[Index].Color = ColorRange(health, {
-							[1] = {start = 0, color = menu:GetVal("ESP", GroupBox, "Health Bar", "color1", true)},
-							[2] = {start = 100, color = menu:GetVal("ESP", GroupBox, "Health Bar", "color2", true)}
+							[1] = {start = 0, color = menu:GetVal("Visuals", GroupBox, "Health Bar", "color1", true)},
+							[2] = {start = 100, color = menu:GetVal("Visuals", GroupBox, "Health Bar", "color2", true)}
 						})
 						
 						--debug.profileend("renderVisuals Player ESP Render Health Bar " .. Player.Name)
 						
-					elseif menu.options["ESP"][GroupBox]["Health Number"][1] and health <= menu.options["ESP"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+					elseif menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1] then
 						--debug.profilebegin("renderVisuals Player ESP Render Health Number " .. Player.Name)
 						
 						local hptext = allesp.hp.text[Index]
@@ -8568,30 +8683,30 @@ elseif menu.game == "pf" then --!SECTION
 						local tb = hptext.TextBounds
 						
 						hptext.Position = boxPosition + Vector2.new(-tb.x - 2, - 4)
-						hptext.Color = menu:GetVal("ESP", GroupBox, "Health Number", "color", true)
-						hptext.Transparency = menu.options["ESP"][GroupBox]["Health Number"][5][1][4]/255
+						hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", "color", true)
+						hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4]/255
 						
 						--debug.profileend("renderVisuals Player ESP Render Health Number " .. Player.Name)
 					end
 					
 					
-					if menu.options["ESP"][GroupBox]["Held Weapon"][1] then
+					if menu.options["Visuals"][GroupBox]["Held Weapon"][1] then
 						
 						--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
 						
 						local charWeapon = _3pweps[Player]
 						local wepname = charWeapon and charWeapon or "???"
 						
-						if menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 1 then
+						if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
 							wepname = string.lower(wepname)
-						elseif menu.options["ESP"]["ESP Settings"]["Text Case"][1] == 3 then
+						elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
 							wepname = string.upper(wepname)
 						end
 						
 						local weptext = allesp.text.weapon[Index]
 						
 						spoty += 12
-						weptext.Text = string_cut(wepname, menu:GetVal("ESP", "ESP Settings", "Max Text Length"))
+						weptext.Text = string_cut(wepname, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
 						weptext.Visible = true
 						weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
 						
@@ -8599,7 +8714,7 @@ elseif menu.game == "pf" then --!SECTION
 						
 					end
 					
-					if menu.options["ESP"][GroupBox]["Distance"][1] then
+					if menu.options["Visuals"][GroupBox]["Distance"][1] then
 						
 						--debug.profilebegin("renderVisuals Player ESP Render Distance " .. Player.Name)
 						
@@ -8613,7 +8728,7 @@ elseif menu.game == "pf" then --!SECTION
 						
 					end
 					
-					if menu.options["ESP"][GroupBox]["Skeleton"][1] then
+					if menu.options["Visuals"][GroupBox]["Skeleton"][1] then
 						
 						--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. Player.Name)
 						
@@ -8631,7 +8746,7 @@ elseif menu.game == "pf" then --!SECTION
 					end
 					--da colourz !!! :D 🔥🔥🔥🔥
 					
-					if menu:GetVal("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
+					if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
 						
 						
 						allesp.text.name[Index].Color = priority_color
@@ -8652,7 +8767,7 @@ elseif menu.game == "pf" then --!SECTION
 						end
 						
 						
-					elseif menu:GetVal("ESP", "ESP Settings", "Highlight Friends") and table.find(menu.friends, Player.Name) then
+					elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, Player.Name) then
 						
 						allesp.text.name[Index].Color = friend_color
 						allesp.text.name[Index].Transparency = friend_trans
@@ -8670,7 +8785,7 @@ elseif menu.game == "pf" then --!SECTION
 							line.Color = friend_color
 							line.Transparency = friend_trans
 						end
-					elseif menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target)  then
+					elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target)  then
 						
 						allesp.text.name[Index].Color = target_color
 						allesp.text.name[Index].Transparency = target_trans
@@ -8691,36 +8806,36 @@ elseif menu.game == "pf" then --!SECTION
 					else
 						
 						
-						allesp.text.name[Index].Color = menu:GetVal("ESP", GroupBox, "Name", "color", true) -- RGB(menu.options["ESP"][GroupBox]["Name"][5][1][1], menu.options["ESP"][GroupBox]["Name"][5][1][2], menu.options["ESP"][GroupBox]["Name"][5][1][3])
-						allesp.text.name[Index].Transparency = menu:GetVal("ESP", GroupBox, "Name", "color")[4]/255
+						allesp.text.name[Index].Color = menu:GetVal("Visuals", GroupBox, "Name", "color", true) -- RGB(menu.options["Visuals"][GroupBox]["Name"][5][1][1], menu.options["Visuals"][GroupBox]["Name"][5][1][2], menu.options["Visuals"][GroupBox]["Name"][5][1][3])
+						allesp.text.name[Index].Transparency = menu:GetVal("Visuals", GroupBox, "Name", "color")[4]/255
 						
-						allesp.box[2][Index].Color = menu:GetVal("ESP", GroupBox, "Box", "color", true)
+						allesp.box[2][Index].Color = menu:GetVal("Visuals", GroupBox, "Box", "color", true)
 						
-						allesp.text.weapon[Index].Color = menu:GetVal("ESP", GroupBox, "Held Weapon", "color", true)
-						allesp.text.weapon[Index].Transparency = menu:GetVal("ESP", GroupBox, "Held Weapon", "color")[4]/255
+						allesp.text.weapon[Index].Color = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color", true)
+						allesp.text.weapon[Index].Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color")[4]/255
 						
-						allesp.text.distance[Index].Color = menu:GetVal("ESP", GroupBox, "Distance", "color", true)
-						allesp.text.distance[Index].Transparency = menu:GetVal("ESP", GroupBox, "Distance", "color")[4]/255
+						allesp.text.distance[Index].Color = menu:GetVal("Visuals", GroupBox, "Distance", "color", true)
+						allesp.text.distance[Index].Transparency = menu:GetVal("Visuals", GroupBox, "Distance", "color")[4]/255
 						
 						for k2, v2 in ipairs(skelparts) do
 							local line = allesp.skel[k2][Index]
-							line.Color = menu:GetVal("ESP", GroupBox, "Skeleton", "color", true)
-							line.Transparency = menu:GetVal("ESP", GroupBox, "Skeleton", "color")[4]/255
+							line.Color = menu:GetVal("Visuals", GroupBox, "Skeleton", "color", true)
+							line.Transparency = menu:GetVal("Visuals", GroupBox, "Skeleton", "color")[4]/255
 						end
 					end
 					
-				elseif GroupBox == "Enemy ESP" and menu:GetVal("ESP", "Enemy ESP", "Out of View") then
+				elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View") then
 					--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. Player.Name)
-					local color = menu:GetVal("ESP", "Enemy ESP", "Out of View", "color", true)
+					local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color", true)
 					local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
-					if menu:GetVal("ESP", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
-						color = menu:GetVal("ESP", "ESP Settings", "Highlight Priority", "color", true)
+					if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
+						color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
 						color2 = bColor:Mult(color, 0.6)
-					elseif menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
-						color = menu:GetVal("ESP", "ESP Settings", "Highlight Friends", "color", true)
+					elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
+						color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
 						color2 = bColor:Mult(color, 0.6)
-					elseif menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
-						color = menu:GetVal("ESP", "ESP Settings", "Highlight Aimbot Target", "color", true)
+					elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
+						color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
 						color2 = bColor:Mult(color, 0.6)
 					end
 					for i = 1, 2 do
@@ -8734,19 +8849,19 @@ elseif menu.game == "pf" then --!SECTION
 						local direction = math.atan2(-relativePos.y, relativePos.x)
 						
 						local distance = relativePos.Magnitude
-						local arrow_size = menu:GetVal("ESP", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
+						local arrow_size = menu:GetVal("Visuals", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
 						arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
 						
 						direction = Vector2.new(math.cos(direction), math.sin(direction))
 						
-						local pos = (direction * SCREEN_SIZE.y * menu:GetVal("ESP", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
+						local pos = (direction * SCREEN_SIZE.y * menu:GetVal("Visuals", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
 						
 						Tri.PointA = pos
 						Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
 						Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
 						
 						Tri.Color = i == 1 and color or color2
-						Tri.Transparency = menu:GetVal("ESP", "Enemy ESP", "Out of View", "color")[4] / 255
+						Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color")[4] / 255
 					end
 					--debug.profileend("renderVisuals Player ESP Render Out of View " .. Player.Name)
 				end
@@ -8754,7 +8869,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			
 			--ANCHOR weapon esp
-			if menu:GetVal("ESP", "Dropped ESP", "Weapon Name") or menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo") then
+			if menu:GetVal("Visuals", "Dropped ESP", "Weapon Name") or menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
 				--debug.profilebegin("renderVisuals Dropped ESP")
 				local gunnum = 0
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
@@ -8781,17 +8896,17 @@ elseif menu.game == "pf" then --!SECTION
 									gunclearness = 1 - (1 * closedist/30)
 								end
 								
-								if menu:GetVal("ESP", "Dropped ESP", "Weapon Name") then
+								if menu:GetVal("Visuals", "Dropped ESP", "Weapon Name") then
 									wepesp.name[gunnum].Text = v.Gun.Value
-									wepesp.name[gunnum].Color = menu:GetVal("ESP", "Dropped ESP", "Weapon Name", "color", true)
-									wepesp.name[gunnum].Transparency = menu:GetVal("ESP", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
+									wepesp.name[gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color", true)
+									wepesp.name[gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
 									wepesp.name[gunnum].Visible = true
 									wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
 								end
-								if menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo") then
+								if menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
 									wepesp.ammo[gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
-									wepesp.ammo[gunnum].Color = menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo", "color", true)
-									wepesp.ammo[gunnum].Transparency = menu:GetVal("ESP", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
+									wepesp.ammo[gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color", true)
+									wepesp.ammo[gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
 									wepesp.ammo[gunnum].Visible = true
 									wepesp.ammo[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
 								end
@@ -8803,11 +8918,11 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			
 			--debug.profilebegin("renderVisuals Dropped ESP Nade Warning")
-			if menu:GetVal("ESP", "Dropped ESP", "Nade Warning") then
+			if menu:GetVal("Visuals", "Dropped ESP", "Nade Warning") then
 				local nadenum = 0
 				local health = client.char:gethealth()
-				local color1 = menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color", true)
-				local color2 = RGB(menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color")[1] - 20, menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color")[2] - 20, menu:GetVal("ESP", "Dropped ESP", "Nade Warning", "color")[3] - 20)
+				local color1 = menu:GetVal("Visuals", "Dropped ESP", "Nade Warning", "color", true)
+				local color2 = RGB(menu:GetVal("Visuals", "Dropped ESP", "Nade Warning", "color")[1] - 20, menu:GetVal("Visuals", "Dropped ESP", "Nade Warning", "color")[2] - 20, menu:GetVal("Visuals", "Dropped ESP", "Nade Warning", "color")[3] - 20)
 				for index, nade in pairs(menu.activenades) do
 					local headpos = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Head.Position or Vector3.new()
 					local nade_dist = (nade.blowupat - headpos).Magnitude
@@ -8923,24 +9038,24 @@ elseif menu.game == "pf" then --!SECTION
 			CreateThread(function() -- hand chams and such
 				if not client then return end
 				local vm = workspace.Camera:GetChildren()
-				if menu:GetVal("Visuals", "Local Visuals", "Arm Chams") then
+				if menu:GetVal("Visuals", "Local", "Arm Chams") then
 					
-					local material = menu:GetVal("Visuals", "Local Visuals", "Arm Material")
+					local material = menu:GetVal("Visuals", "Local", "Arm Material")
 					
 					for k, v in pairs(vm) do
 						if v.Name == "Left Arm" or v.Name == "Right Arm" then
 							for k1, v1 in pairs(v:GetChildren()) do
-								v1.Color = menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color2", true)
+								v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color2", true)
 								if not client.fakecharacter then
-									v1.Transparency = 1 + (menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color2")[4]/-255)
+									v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
 								else
 									v1.Transparency = 1
 								end
 								v1.Material = mats[material]
 								if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
-									v1.Color = menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color1", true)
+									v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
 									if not client.fakecharacter then
-										v1.Transparency = 1 + (menu:GetVal("Visuals", "Local Visuals", "Arm Chams", "color1")[4]/-255)
+										v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color1")[4]/-255)
 									else
 										v1.Transparency = 1
 									end
@@ -8955,18 +9070,18 @@ elseif menu.game == "pf" then --!SECTION
 						end
 					end
 				end
-				if menu:GetVal("Visuals", "Local Visuals", "Weapon Chams") then
+				if menu:GetVal("Visuals", "Local", "Weapon Chams") then
 					for k, v in pairs(vm) do
 						if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
 							for k1, v1 in pairs(v:GetChildren()) do
 								
-								v1.Color = menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color1", true)
+								v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
 								
 								if v1.Transparency ~= 1 then
-									v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+									v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
 								end
 								
-								if menu:GetVal("Visuals", "Local Visuals", "Remove Weapon Skin") then
+								if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") then
 									for i2, v2 in pairs(v1:GetChildren()) do
 										if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
 											v2:Destroy()
@@ -8974,7 +9089,7 @@ elseif menu.game == "pf" then --!SECTION
 									end
 								end
 								
-								local mat = mats[menu:GetVal("Visuals", "Local Visuals", "Weapon Material")]
+								local mat = mats[menu:GetVal("Visuals", "Local", "Weapon Material")]
 								v1.Material = mat
 								
 								if v1:IsA("UnionOperation") then
@@ -8986,15 +9101,15 @@ elseif menu.game == "pf" then --!SECTION
 								end
 								
 								if v1.Name == "LaserLight" then
-									local transparency = 1+(menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
-									v1.Color = menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
+									local transparency = 1+(menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4]/-255)
+									v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
 									v1.Transparency = (transparency / 2) + 0.5
 									v1.Material = "ForceField"
 									
 								elseif v1.Name == "SightMark" then
 									if v1:FindFirstChild("SurfaceGui") then
-										local color = menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2", true)
-										local transparency = 1+(menu:GetVal("Visuals", "Local Visuals", "Weapon Chams", "color2")[4]/-255)
+										local color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
+										local transparency = 1+(menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4]/-255)
 										v1.SurfaceGui.Border.Scope.ImageColor3 = color
 										v1.SurfaceGui.Border.Scope.ImageTransparency = transparency
 										if v1.SurfaceGui:FindFirstChild("Margins") then
@@ -9085,49 +9200,12 @@ elseif menu.game == "pf" then --!SECTION
 
 	local function keycheck(actionName, inputState, inputObject)
 		if actionName == "BB Keycheck" then
-
-			if menu.open then
-				if menu.textboxopen then
-					if inputObject.KeyCode == Enum.KeyCode.Backspace then
-						if menu.selectall then
-							menu.textboxopen[1] = ""
-							menu.textboxopen[4].Text = "|"
-							menu.textboxopen[4].Color = RGB(unpack(menu.mc))
-							menu.selectall = false
-						end
-						local on = inputState == Enum.UserInputState.Begin
-						menu.backspaceheld = on
-						menu.backspacetime = on and tick() or -1
-						if not on then 
-							menu.backspaceflags = 0
-						end
-					end
-
-					if inputObject.KeyCode ~= Enum.KeyCode.A 
-					and (not inputObject.KeyCode.Name:match("^Left") and not inputObject.KeyCode.Name:match("^Right"))
-					and inputObject.KeyCode ~= Enum.KeyCode.Delete then
-						if menu.selectall then
-							menu.textboxopen[4].Color = RGB(unpack(menu.mc))
-							menu.selectall = false
-						end
-					end
-
-					if inputObject.KeyCode == Enum.KeyCode.A then
-						if inputState == Enum.UserInputState.Begin and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftControl) then
-							menu.selectall = true
-							local textbox = menu.textboxopen
-							textbox[4].Color = RGB(menu.mc[3], menu.mc[2], menu.mc[1])
-						end
-					end
-				end
-			end
-
 			if menu.game == "pf" then
 				if inputState == Enum.UserInputState.Begin then
 					------------------------------------------
 					------------"TOGGLES AND SHIT"------------
 					------------------------------------------
-					if menu:GetVal("Visuals", "Local Visuals", "Third Person") and inputObject.KeyCode == menu:GetVal("Visuals", "Local Visuals", "Third Person", "keybind") then
+					if menu:GetVal("Visuals", "Local", "Third Person") and inputObject.KeyCode == menu:GetVal("Visuals", "Local", "Third Person", "keybind") then
 						keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 						return Enum.ContextActionResult.Sink
 					end
@@ -9435,7 +9513,7 @@ elseif menu.game == "pf" then --!SECTION
 		
 		--debug.profileend()
 		
-		if menu:GetVal("Visuals", "Local Visuals", "Third Person") and keybindtoggles.thirdperson then -- do third person model
+		if menu:GetVal("Visuals", "Local", "Third Person") and keybindtoggles.thirdperson then -- do third person model
 			if client.char.alive then
 				--debug.profilebegin("Third Person")
 				if not client.fakecharacter then
@@ -9483,11 +9561,11 @@ elseif menu.game == "pf" then --!SECTION
 						local fakeupdater = client.fakeupdater
 						fakeupdater.step(3, true)
 						
-						local lchams = menu:GetVal("Visuals", "Local Visuals", "Local Player Chams")
+						local lchams = menu:GetVal("Visuals", "Local", "Local Player Chams")
 						if lchams then
-							local lchamscolor = menu:GetVal("Visuals", "Local Visuals", "Local Player Chams", "color", true)
+							local lchamscolor = menu:GetVal("Visuals", "Local", "Local Player Chams", "color", true)
 							
-							local lchamsmat = mats[menu:GetVal("Visuals", "Local Visuals", "Local Player Material")]
+							local lchamsmat = mats[menu:GetVal("Visuals", "Local", "Local Player Material")]
 							
 							local curchildren = client.fake3pchar:GetChildren()
 							
@@ -10050,216 +10128,295 @@ elseif menu.game == "pf" then --!SECTION
 			}
 		},
 		{
-			name = "ESP",
+			name = "Visuals",
 			content = {
 				{
-					name = "Enemy ESP",
+					--ANCHOR workin ova here
+					name = {"Enemy ESP", "Team ESP", "Local"},
+					multi = true,
 					autopos = "left",
-					content = {
-						{
-							type = "toggle",
-							name = "Enabled",
-							value = true
-						},
-						{
-							type = "toggle",
-							name = "Name",
-							value = true,
-							extra = {
-								type = "single colorpicker",
-								name = "Enemy Name",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Box",
-							value = true,
-							extra = {
-								type = "single colorpicker",
-								name = "Enemy Box",
-								color = {255, 0, 0, 130}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Health Bar",
-							value = true,
-							extra = {
-								type = "double colorpicker",
-								name = {"Enemy Low Health", "Enemy Max Health"},
-								color = {{255, 0, 0}, {0, 255, 0}}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Health Number",
-							value = true,
-							extra = {
-								type = "single colorpicker",
-								name = "Enemy Health Number",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Held Weapon",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Enemy Held Weapon",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Distance",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Enemy Distance",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Chams",
-							value = true,
-							extra = {
-								type = "double colorpicker",
-								name = {"Visible Enemy Chams", "Invisible Enemy Chams"},
-								color = {{255, 0, 0, 200}, {100, 0, 0, 100}}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Skeleton",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Enemy skeleton",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Out of View",
-							value = true,
-							extra = {
-								type = "single colorpicker",
-								name = "Arrow Color",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "slider",
-							name = "Arrow Distance",
-							value = 50,
-							minvalue = 10,
-							maxvalue = 100,
-							stradd = "%",
-						},
-						{
-							type = "toggle",
-							name = "Dynamic Arrow Size",
-							value = true
-						},
-					}
-				},
-				{
-					name = "Team ESP",
-					autopos = "right",
-					content = {
-						{
-							type = "toggle",
-							name = "Enabled",
-							value = true
-						},
-						{
-							type = "toggle",
-							name = "Name",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Team Name",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Box",
-							value = true,
-							extra = {
-								type = "single colorpicker",
-								name = "Team Box",
-								color = {0, 255, 0, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Health Bar",
-							value = false,
-							extra = {
-								type = "double colorpicker",
-								name = {"Team Low Health", "Team Max Health"},
-								color = {{255, 0, 0}, {0, 255, 0}}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Health Number",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Team Health Number",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Held Weapon",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Team Held Weapon",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Distance",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Team Distance",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Chams",
-							value = false,
-							extra = {
-								type = "double colorpicker",
-								name = {"Visible Team Chams", "Invisible Team Chams"},
-								color = {{0, 255, 0, 200}, {0, 100, 0, 100}}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Skeleton",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Team skeleton",
-								color = {255, 255, 255, 255}
-							}
-						},
+					size = 270, --254
+
+					[1] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = true
+							},
+							{
+								type = "toggle",
+								name = "Name",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Name",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Box",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Box",
+									color = {255, 0, 0, 130}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Health Bar",
+								value = true,
+								extra = {
+									type = "double colorpicker",
+									name = {"Enemy Low Health", "Enemy Max Health"},
+									color = {{255, 0, 0}, {0, 255, 0}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Health Number",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Health Number",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Held Weapon",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Held Weapon",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Distance",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy Distance",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Chams",
+								value = true,
+								extra = {
+									type = "double colorpicker",
+									name = {"Visible Enemy Chams", "Invisible Enemy Chams"},
+									color = {{255, 0, 0, 200}, {100, 0, 0, 100}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Skeleton",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Enemy skeleton",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Out of View",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Arrow Color",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "slider",
+								name = "Arrow Distance",
+								value = 50,
+								minvalue = 10,
+								maxvalue = 100,
+								stradd = "%",
+							},
+							{
+								type = "toggle",
+								name = "Dynamic Arrow Size",
+								value = true
+							},
+						}
+					},
+					[2] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = true
+							},
+							{
+								type = "toggle",
+								name = "Name",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Name",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Box",
+								value = true,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Box",
+									color = {0, 255, 0, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Health Bar",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Team Low Health", "Team Max Health"},
+									color = {{255, 0, 0}, {0, 255, 0}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Health Number",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Health Number",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Held Weapon",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Held Weapon",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Distance",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team Distance",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Chams",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Visible Team Chams", "Invisible Team Chams"},
+									color = {{0, 255, 0, 200}, {0, 100, 0, 100}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Skeleton",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Team skeleton",
+									color = {255, 255, 255, 255}
+								}
+							},
+						}
+					},
+					[3] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Arm Chams",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Sleeve Color", "Hand Color"},
+									color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
+								}
+							},
+							{
+								type = "dropbox",
+								name = "Arm Material",
+								value = 1,
+								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
+							{
+								type = "toggle",
+								name = "Weapon Chams",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Weapon Color", "Lazer Color"},
+									color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
+								}
+							},
+							{
+								type = "dropbox",
+								name = "Weapon Material",
+								value = 1,
+								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
+							{
+								type = "toggle",
+								name = "Remove Weapon Skin",
+								value = false,
+							},
+							{
+								type = "toggle",
+								name = "Third Person",
+								value = false,
+								extra = {
+									type = "keybind",
+									key = nil
+								}
+							},
+							{
+								type = "slider",
+								name = "Third Person Distance",
+								value = 60,
+								minvalue = 1,
+								maxvalue = 150,
+							},
+							{
+								type = "toggle",
+								name = "Local Player Chams",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Local Player Chams",
+									color = {255, 255, 255, 255}
+								}
+							},
+							{
+								type = "dropbox",
+								name = "Local Player Material",
+								value = 1,
+								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
+							
+						}
+
 					}
 				},
 				{
 					name = "ESP Settings",
-					autopos = "right",
+					autopos = "left",
 					autofill = true,
 					content = {
 						{
@@ -10313,135 +10470,6 @@ elseif menu.game == "pf" then --!SECTION
 								name = "Priority Players",
 								color = {255, 210, 0, 255}
 							}
-						},
-						
-					}
-				},
-				{
-					name = "Dropped ESP",
-					autopos = "left",
-					autofill = true,
-					content = {
-						{
-							type = "toggle",
-							name = "Weapon Name",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Weapon Name",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Weapon Ammo",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Weapon Ammo",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Nade Warning",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Slider Color",
-								color = {68, 92, 227},
-							}
-						},
-						{
-							type = "toggle",
-							name = "Grenade ESP",
-							value = false,
-							extra = {
-								type = "double colorpicker",
-								name = {"Inner Color", "Outer Color"},
-								color = {{195, 163, 255}, {123, 69, 224}},
-							}
-						},
-					}
-				},
-			}
-		},
-		{
-			name = "Visuals",
-			content = {
-				{
-					name = "Local Visuals",
-					autopos = "left",
-					autofill = false,
-					content = {
-						{
-							type = "toggle",
-							name = "Arm Chams",
-							value = false,
-							extra = {
-								type = "double colorpicker",
-								name = {"Sleeve Color", "Hand Color"},
-								color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
-							}
-						},
-						{
-							type = "dropbox",
-							name = "Arm Material",
-							value = 1,
-							values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
-						},
-						{
-							type = "toggle",
-							name = "Weapon Chams",
-							value = false,
-							extra = {
-								type = "double colorpicker",
-								name = {"Weapon Color", "Lazer Color"},
-								color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
-							}
-						},
-						{
-							type = "dropbox",
-							name = "Weapon Material",
-							value = 1,
-							values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
-						},
-						{
-							type = "toggle",
-							name = "Remove Weapon Skin",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "Third Person",
-							value = false,
-							extra = {
-								type = "keybind",
-								key = nil
-							}
-						},
-						{
-							type = "slider",
-							name = "Third Person Distance",
-							value = 60,
-							minvalue = 1,
-							maxvalue = 150,
-						},
-						{
-							type = "toggle",
-							name = "Local Player Chams",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Local Player Chams",
-								color = {255, 255, 255, 255}
-							}
-						},
-						{
-							type = "dropbox",
-							name = "Local Player Material",
-							value = 1,
-							values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
 						},
 						
 					}
@@ -10509,96 +10537,143 @@ elseif menu.game == "pf" then --!SECTION
 					}
 				},
 				{
-					name = "World Visuals",
-					autopos = "left",
-					autofill = true,
-					content = {
-						{
-							type = "toggle",
-							name = "Ambience",
-							value = false,
-							extra = {
-								type = "double colorpicker",
-								name = {"Inside Ambience", "Outside Ambience"},
-								color = {{255, 255, 255}, {255, 255, 255}}
-							}
-						},
-						{
-							type = "toggle",
-							name = "Force Time",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Custom Time",
-							value = 0,
-							minvalue = 0,
-							maxvalue = 24,
-							rounded = false
-						},
-						{
-							type = "toggle",
-							name = "Custom Saturation",
-							value = false,
-							extra = {
-								type = "single colorpicker",
-								name = "Saturation Tint",
-								color = {255, 255, 255}
-							}
-						},
-						{
-							type = "slider",
-							name = "Saturation Density",
-							value = 0,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%",
-						},
+					name = {"World Visuals", "Misc Visuals"},
+					multi = true,
+					autopos = "right",
+					size = 144,
+					[1] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Ambience",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Inside Ambience", "Outside Ambience"},
+									color = {{255, 255, 255}, {255, 255, 255}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Force Time",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Custom Time",
+								value = 0,
+								minvalue = 0,
+								maxvalue = 24,
+								rounded = false
+							},
+							{
+								type = "toggle",
+								name = "Custom Saturation",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Saturation Tint",
+									color = {255, 255, 255}
+								}
+							},
+							{
+								type = "slider",
+								name = "Saturation Density",
+								value = 0,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%",
+							},
+						}
+					},
+					[2] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Crosshair Color",
+								value = false,
+								extra = {
+									type = "double colorpicker",
+									name = {"Inline", "Outline"},
+									color = {{127, 72, 163}, {25, 25, 25}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Ragdoll Chams",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Ragdoll Chams",
+									color = {255, 255, 255, 255}
+								},
+							},
+							{
+								type = "dropbox",
+								name = "Ragdoll Material",
+								value = 1,
+								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
+							{
+								type = "toggle",
+								name = "Bullet Tracers",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Bullet Tracers",
+									color = {255, 255, 255, 255}
+								},
+							},
+						}
 					}
 				},
 				{
-					name = "Misc Visuals",
+					name = "Dropped ESP",
 					autopos = "right",
 					autofill = true,
 					content = {
 						{
 							type = "toggle",
-							name = "Crosshair Color",
+							name = "Weapon Name",
 							value = false,
 							extra = {
-								type = "double colorpicker",
-								name = {"Inline", "Outline"},
-								color = {{127, 72, 163}, {25, 25, 25}}
+								type = "single colorpicker",
+								name = "Weapon Name",
+								color = {255, 255, 255, 255}
 							}
 						},
 						{
 							type = "toggle",
-							name = "Ragdoll Chams",
+							name = "Weapon Ammo",
 							value = false,
 							extra = {
 								type = "single colorpicker",
-								name = "Ragdoll Chams",
+								name = "Weapon Ammo",
 								color = {255, 255, 255, 255}
-							},
-						},
-						{
-							type = "dropbox",
-							name = "Ragdoll Material",
-							value = 1,
-							values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							}
 						},
 						{
 							type = "toggle",
-							name = "Bullet Tracers",
+							name = "Nade Warning",
 							value = false,
 							extra = {
 								type = "single colorpicker",
-								name = "Bullet Tracers",
-								color = {255, 255, 255, 255}
-							},
+								name = "Slider Color",
+								color = {68, 92, 227},
+							}
+						},
+						{
+							type = "toggle",
+							name = "Grenade ESP",
+							value = false,
+							extra = {
+								type = "double colorpicker",
+								name = {"Inner Color", "Outer Color"},
+								color = {{195, 163, 255}, {123, 69, 224}},
+							}
 						},
 					}
-				}
+				},
 			}
 		},
 		{
@@ -10690,144 +10765,8 @@ elseif menu.game == "pf" then --!SECTION
 					},
 				},
 				{
-					name = "Extra",
-					autopos = "right",
-					content = {
-						{
-							type = "toggle",
-							name = "Suppress Only",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "Auto Vote",
-							value = false
-						},
-						{
-							type = "dropbox",
-							name = "Vote Friends",
-							value = 1,
-							values = {"Off", "Yes", "No"}
-						},
-						{
-							type = "dropbox",
-							name = "Vote Priority",
-							value = 1,
-							values = {"Off", "Yes", "No"}
-						},
-						{
-							type = "dropbox",
-							name = "Default Vote",
-							value = 1,
-							values = {"Off", "Yes", "No"}
-						},
-						{
-							type = "toggle",
-							name = "Kill Sound",
-							value = false
-						},
-						{
-							type = "textbox",
-							name = "killsoundid",
-							text = "6229978482"
-						},
-						{
-							type = "dropbox",
-							name = "Chat Spam",
-							value = 1,
-							values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Deluxe", "Youtube Title", "Custom", "Custom Combination"}
-						},
-						{
-							type = "toggle",
-							name = "Chat Spam Repeat",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Chat Spam Delay",
-							minvalue = 1,
-							maxvalue = 10,
-							value = 5,
-							stradd = " seconds"
-						},
-						{
-							type = "toggle",
-							name = "Auto Martyrdom",
-							value = false
-						},
-					}
-				},
-				{
-					name = "Exploits",
-					autopos = "left",
-					autofill = true,
-					content = {
-						{
-							type = "toggle",
-							name = "Invisibility",
-							extra = {
-								type = "keybind"
-							}
-						},
-						{
-							type = "toggle",
-							name = "Super Invisibility",
-							value = false,
-							extra = {
-								type = "keybind"
-							}
-						},
-						{
-							type = "button",
-							name = "Crash Server",
-							doubleclick = true,
-						},
-						{
-							type = "toggle",
-							name = "Rapid Kill",
-							value = false,
-							extra = {
-								type = "keybind"
-							}
-						},
-						{
-							type = "toggle",
-							name = "Grenade Teleport",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "Freeze Players",
-							value = false,
-							extra = {
-								type = "keybind"
-							},
-							unsafe = true
-						},
-						{
-							type = "toggle",
-							name = "Vertical Floor Clip",
-							value = false,
-							extra = {
-								type = "keybind"
-							}
-						},
-						{
-							type = "toggle",
-							name = "Fake Equip",
-							value = false
-						},
-						{
-							type = "dropbox",
-							name = "Fake Slot",
-							values = {"Primary", "Secondary", "Melee"},
-							value = 1
-						}
-					}
-				},
-				{
 					name = "Weapon Modifications",
-					autopos = "right",
+					autopos = "left",
 					autofill = true,
 					content = {
 						{
@@ -10887,6 +10826,143 @@ elseif menu.game == "pf" then --!SECTION
 						}
 					},
 				},
+				{
+					name = {"Extra", "Exploits"} ,
+					multi = true,
+					autopos = "right",
+					autofill = true,
+					[1] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Suppress Only",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Auto Vote",
+								value = false
+							},
+							{
+								type = "dropbox",
+								name = "Vote Friends",
+								value = 1,
+								values = {"Off", "Yes", "No"}
+							},
+							{
+								type = "dropbox",
+								name = "Vote Priority",
+								value = 1,
+								values = {"Off", "Yes", "No"}
+							},
+							{
+								type = "dropbox",
+								name = "Default Vote",
+								value = 1,
+								values = {"Off", "Yes", "No"}
+							},
+							{
+								type = "toggle",
+								name = "Kill Sound",
+								value = false
+							},
+							{
+								type = "textbox",
+								name = "killsoundid",
+								text = "6229978482"
+							},
+							{
+								type = "dropbox",
+								name = "Chat Spam",
+								value = 1,
+								values = {"Off", "Original", "t0nymode", "Chinese Propaganda", "Emojis", "Deluxe", "Youtube Title", "Custom", "Custom Combination"}
+							},
+							{
+								type = "toggle",
+								name = "Chat Spam Repeat",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Chat Spam Delay",
+								minvalue = 1,
+								maxvalue = 10,
+								value = 5,
+								stradd = " seconds"
+							},
+							{
+								type = "toggle",
+								name = "Auto Martyrdom",
+								value = false
+							},
+						}
+					},
+					[2] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Invisibility",
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Super Invisibility",
+								value = false,
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "button",
+								name = "Crash Server",
+								doubleclick = true,
+							},
+							{
+								type = "toggle",
+								name = "Rapid Kill",
+								value = false,
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Grenade Teleport",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Freeze Players",
+								value = false,
+								extra = {
+									type = "keybind"
+								},
+								unsafe = true
+							},
+							{
+								type = "toggle",
+								name = "Vertical Floor Clip",
+								value = false,
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Fake Equip",
+								value = false
+							},
+							{
+								type = "dropbox",
+								name = "Fake Slot",
+								values = {"Primary", "Secondary", "Melee"},
+								value = 1
+							}
+						}
+					}
+				},	
 			}
 		},
 		{
@@ -10939,11 +11015,11 @@ elseif menu.game == "pf" then --!SECTION
 					}
 				},
 				{
-					name = "Menu Settings",
+					name = "Cheat Settings",
 					x = menu.columns.left,
 					y = 400,
 					width = menu.columns.width,
-					height = 108,
+					height = 182,
 					content = {
 						{
 							type = "toggle",
@@ -10969,16 +11045,7 @@ elseif menu.game == "pf" then --!SECTION
 							type = "textbox",
 							name = "MenuName",
 							text = MenuName or "Bitch Bot"
-						}
-					}
-				},
-				{
-					name = "Extra",
-					x = menu.columns.left,
-					y = 514,
-					width = menu.columns.width,
-					height = 119,
-					content = {
+						},
 						{
 							type = "button",
 							name = "Set Clipboard Game ID",
@@ -11000,7 +11067,7 @@ elseif menu.game == "pf" then --!SECTION
 					x = menu.columns.right,
 					y = 400,
 					width = menu.columns.width,
-					height = 233,
+					height = 182,
 					content = {
 						{
 							type = "textbox",
