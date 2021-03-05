@@ -5220,8 +5220,13 @@ elseif menu.game == "pf" then --!SECTION
 				local oldtask = rawget(v, "task")
 				rawset(v, "task", function(...)
 					oldtask(...)
-					local newCF = (ragebot.silentVector and menu:GetVal("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE") and CFrame.lookAt(ragebot.firepos + (ragebot.firepos - client.cam.basecframe.p), ragebot.targetpart.Position) or nil
-					client.cam.shakecframe = newCF and newCF or client.cam.cframe
+					if not client.superaastart then
+						if ragebot.silentVector and menu:GetVal("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then
+							client.cam.shakecframe = CFrame.lookAt(ragebot.firepos + (ragebot.firepos - client.cam.basecframe.p), ragebot.targetpart.Position)
+						end
+					else
+						client.cam.shakecframe = client.superaastart
+					end
 					return
 				end)
 			end
@@ -5937,7 +5942,7 @@ elseif menu.game == "pf" then --!SECTION
 		end
 	end
 	
-	local invisibility = function()
+	--[[ local invisibility = function()
 		if client.invismodel then
 			client.invismodel:Destroy()
 			client.invismodel = nil
@@ -5970,10 +5975,10 @@ elseif menu.game == "pf" then --!SECTION
 		-- come bak
 		root.Velocity = Vector3.new()
 		client.net.send = oldsend
-	end
+	end ]]
 	
 	
-	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK
+	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK -- fuk json
 		for k, Player in pairs(Players:GetPlayers()) do
 			if Player == LOCAL_PLAYER then continue end -- doing this for now, i'll have to change the way the third person model will end up working
 			local Body = client.replication.getbodyparts(Player)
@@ -6138,6 +6143,7 @@ elseif menu.game == "pf" then --!SECTION
 						if keybindtoggles.superaa then
 							local angles = val - val.p
 							local newcf = client.superaastart * angles
+							client.superaastart = newcf
 							return oldNewIndex(self, id, newcf)
 						end
 					end
@@ -6145,7 +6151,7 @@ elseif menu.game == "pf" then --!SECTION
 				
 				if self == client.char.rootpart then
 					if id == "CFrame" then
-						if not keybindtoggles.superaa and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
+						if not keybindtoggles.superaa and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
 							local offset = Vector3.new(0, client.fakeoffset, 0)
 							self.Position = val.p - offset
 							self.Position = val.p + offset
@@ -6191,7 +6197,7 @@ elseif menu.game == "pf" then --!SECTION
 									hitwall = true
 									local hitpos = raycastResult.Position
 									local normal = raycastResult.Normal
-									local newpos = hitpos + 0.01 * normal
+									local newpos = hitpos + 0.08 * normal
 									client.superaastart = CFrame.new(newpos)
 								end
 								if not hitwall then
@@ -8019,7 +8025,7 @@ elseif menu.game == "pf" then --!SECTION
 						-- duct tape fix or whatever the fuck its called for this its stupid
 						args[2].camerapos = client.lastrepupdate -- attempt to make dumping happen less
 						args[2].firepos = ragebot.firepos
-						if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then
+						if shitting_my_pants == false and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then
 							args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
 						end
 						local cachedtimedata = {}
@@ -8167,7 +8173,7 @@ elseif menu.game == "pf" then --!SECTION
 					end
 				end
 				client.lastrepupdate = args[2]
-				if shitting_my_pants == false and menu:GetVal("Rage", "Anti Aim", "Noclip") and keybindtoggles.fakebody then
+				if shitting_my_pants == false and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then
 					if not client.fakeoffset then client.fakeoffset = 18 end
 					
 					local nextinc = client.fakeoffset + 9
@@ -9361,7 +9367,7 @@ elseif menu.game == "pf" then --!SECTION
 							textbox[4].Color = RGB(menu.mc[3], menu.mc[2], menu.mc[1])
 						end
 					end
-					
+
 					return Enum.ContextActionResult.Sink
 				end
 			end
@@ -9379,10 +9385,10 @@ elseif menu.game == "pf" then --!SECTION
 						keybindtoggles.freestand = not keybindtoggles.freestand
 						return Enum.ContextActionResult.Sink
 					end
-					if menu:GetVal("Rage", "Anti Aim", "SUPER ANTI AIM (TEMPORARY NAME OBVIOUSLY)") and inputObject.KeyCode == menu:GetVal("Rage", "Anti Aim", "SUPER ANTI AIM (TEMPORARY NAME OBVIOUSLY)", "keybind") then
+					if menu:GetVal("Misc", "Exploits", "Fake Position") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Fake Position", "keybind") then
 						keybindtoggles.superaa = not keybindtoggles.superaa
 						if keybindtoggles.superaa then
-							client.superaastart = client.char.rootpart.CFrame
+							client.superaastart = client.char.head.CFrame
 						else
 							client.superaastart = nil
 						end
@@ -9400,7 +9406,7 @@ elseif menu.game == "pf" then --!SECTION
 						wait()
 						return Enum.ContextActionResult.Sink
 					end
-					if menu:GetVal("Rage", "Anti Aim", "Noclip") and inputObject.KeyCode == menu:GetVal("Rage", "Anti Aim", "Noclip", "keybind") and client.char.alive then
+					if menu:GetVal("Misc", "Exploits", "Noclip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Noclip", "keybind") and client.char.alive then
 						local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
 						
 						local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
@@ -9523,14 +9529,14 @@ elseif menu.game == "pf" then --!SECTION
 						return Enum.ContextActionResult.Sink
 					end
 
-					if menu:GetVal("Misc", "Exploits", "Super Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind") then
+					--[[ if menu:GetVal("Misc", "Exploits", "Super Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind") then
 						CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
 						for i = 1, 50 do
 							local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
 							send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
 						end
 						return Enum.ContextActionResult.Sink
-					end
+					end ]] -- idk if this will even work anymore after the replication fixes
 				end
 
 				if menu:GetVal("Rage", "Extra", "Fake Lag") and menu:GetVal("Rage", "Extra", "Manual Choke")
@@ -9707,7 +9713,7 @@ elseif menu.game == "pf" then --!SECTION
 		
 		--debug.profileend()
 		
-		if menu:GetVal("Visuals", "Local", "Third Person") and keybindtoggles.thirdperson then -- do third person model
+		if menu:GetVal("Visuals", "Local", "Third Person") and not keybindtoggles.superaa and keybindtoggles.thirdperson then -- do third person model
 			if client.char.alive then
 				--debug.profilebegin("Third Person")
 				if not client.fakecharacter then
@@ -9773,8 +9779,8 @@ elseif menu.game == "pf" then --!SECTION
 						end
 						
 						if menu:GetVal("Rage", "Anti Aim", "Enabled") then
-							local angles = "angles" -- TODO SOMEONE FIGURE OUT WHY REMOVING THIS LINE MAKES RAGEBOT.ANGLES NIL???????????????????
-							fakeupdater.setlookangles(ragebot.angles)
+							-- IM STUIPD........
+							fakeupdater.setlookangles(ragebot.angles or Vector3.new())
 							fakeupdater.setstance(ragebot.stance)
 							fakeupdater.setsprint(ragebot.sprint)
 						else
@@ -10123,7 +10129,7 @@ elseif menu.game == "pf" then --!SECTION
 					name = "Hack vs. Hack",
 					autopos = "right",
 					content = {
-						{
+						--[[{
 							type = "toggle",
 							name = "Extend Penetration",
 							value = false
@@ -10135,7 +10141,7 @@ elseif menu.game == "pf" then --!SECTION
 							minvalue = 1,
 							maxvalue = 20,
 							stradd = " studs"
-						}, -- fuck u json
+						}, -- fuck u json]]
 						{
 							type = "toggle",
 							name = "Autowall Resolver",
@@ -10148,14 +10154,14 @@ elseif menu.game == "pf" then --!SECTION
 							value = 2,
 							values = {"Cubic", "Axis Shifting", "Random", "Teleport", "Axis + Hitbox Shifting"}
 						},
-						{
+						--[[{
 							type = "slider",
 							name = "Autowall Resolver Step",
 							value = 50,
 							minvalue = 5,
 							maxvalue = 100,
 							stradd = " studs"
-						},
+						},]]
 						{
 							type = "toggle",
 							name = "Force Player Stances",
@@ -10253,10 +10259,7 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Enabled",
-							value = false,
-							extra = {
-								type = "keybind"
-							},
+							value = false
 						},
 						{
 							type = "dropbox",
@@ -10298,24 +10301,6 @@ elseif menu.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Tilt Neck",
 							value = false
-						},
-						{
-							type = "toggle",
-							name = "Noclip",
-							value = false,
-							extra = {
-								type = "keybind",
-								key = nil
-							},
-							unsafe = true
-						},
-						{
-							type = "toggle",
-							name = "SUPER ANTI AIM (TEMPORARY NAME OBVIOUSLY)",
-							value = false,
-							extra = {
-								type = "keybind"
-							}
 						}
 					}
 				},
@@ -11021,7 +11006,7 @@ elseif menu.game == "pf" then --!SECTION
 					},
 				},
 				{
-					name = {"Extra", "Exploits"} ,
+					name = {"Extra", "Exploits"},
 					multi = true,
 					autopos = "right",
 					autofill = true,
@@ -11093,7 +11078,7 @@ elseif menu.game == "pf" then --!SECTION
 					},
 					[2] = {
 						content = {
-							{
+							--[[{
 								type = "toggle",
 								name = "Invisibility",
 								extra = {
@@ -11107,7 +11092,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "keybind"
 								}
-							},
+							},]]
 							{
 								type = "button",
 								name = "Crash Server",
@@ -11153,6 +11138,24 @@ elseif menu.game == "pf" then --!SECTION
 								name = "Fake Slot",
 								values = {"Primary", "Secondary", "Melee"},
 								value = 1
+							},
+							{
+								type = "toggle",
+								name = "Noclip",
+								value = false,
+								extra = {
+									type = "keybind",
+									key = nil
+								},
+								unsafe = true
+							},
+							{
+								type = "toggle",
+								name = "Fake Position",
+								value = false,
+								extra = {
+									type = "keybind"
+								}
 							}
 						}
 					}
