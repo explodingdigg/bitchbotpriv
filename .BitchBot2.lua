@@ -8351,8 +8351,11 @@ elseif menu.game == "pf" then --!SECTION
 						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 						if targetPart and closest < fov then
 							legitbot.silentVector = legitbot:SilentAimAtTarget(targetPart)
-						else
+						elseif client.logic.currentgun and client.logic.currentgun.barrel then
 							legitbot.silentVector = nil
+							local barrel = client.logic.currentgun.barrel
+							local trigger = barrel.Parent.Trigger
+							barrel.Orientation = trigger.Orientation
 						end
 					end
 					--debug.profileend("Legitbot Main")
@@ -8406,15 +8409,7 @@ elseif menu.game == "pf" then --!SECTION
 				if not client.logic.currentgun or not client.logic.currentgun.barrel then
 					return
 				end
-				if client.logic.currentgun.type == "SHOTGUN" then
-					
-					-- local oldOrientation = client.logic.currentgun.barrel.Orientation
-					-- local dir = (targetPart.Position - client.logic.currentgun.barrel.Position)
-					-- local y, x = client.vectorutil.toanglesyx(dir)
-					-- local vec = Vector3.new(y, x)
-					-- client.logic.currentgun.barrel.Orientation = vec
-					return 
-				end
+			
 				if client.logic.currentgun.type == "KNIFE" then return end
 				
 				if math.random(0, 100) > menu:GetVal("Legit", "Bullet Redirection", "Hit Chance") then return end
@@ -8431,6 +8426,12 @@ elseif menu.game == "pf" then --!SECTION
 				dir += offset * offsetMult
 				
 				--debug.profileend("Legitbot SilentAimAtTarget")
+				if client.logic.currentgun.type == "SHOTGUN" then
+					local x, y, z = CFrame.lookAt(Vector3.new(), dir.Unit):ToOrientation()
+					client.logic.currentgun.barrel.Orientation = Vector3.new(math.deg(x), math.deg(y), math.deg(z))
+					client.logic.currentgun.aimsightdata[1].sightpart.Orientation = Vector3.new(math.deg(x), math.deg(y), math.deg(z))
+					return 
+				end
 				return dir.Unit
 			end
 			
