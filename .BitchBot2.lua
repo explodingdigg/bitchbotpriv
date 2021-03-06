@@ -1116,7 +1116,7 @@ do
 		return temptable
 	end
 	
-	function Draw:Slider(name, stradd, value, minvalue, maxvalue, x, y, length, tab)
+	function Draw:Slider(name, stradd, value, minvalue, maxvalue, customvals, rounded, x, y, length, tab)
 		Draw:MenuBigText(name, true, false, x, y - 3, tab)
 		
 		for i = 0, 3 do
@@ -1133,10 +1133,19 @@ do
 		Draw:MenuOutlinedRect(true, x, y + 12, length, 12, {30, 30, 30, 255}, tab)
 		Draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 10, {0, 0, 0, 255}, tab)
 		
+		local textstr = ""
+
 		if stradd == nil then
 			stradd = ""
 		end
-		Draw:MenuBigText(tostring(value).. stradd, true, true, x + (length * 0.5) , y + 11 , tab)
+
+		if rounded == false and value == math.floor(value) then
+			textstr = tostring(value)..".0".. stradd
+		else
+			textstr = tostring(value).. stradd
+		end
+		
+		Draw:MenuBigText(customvals[value] or textstr, true, true, x + (length * 0.5) , y + 11 , tab)
 		table.insert(temptable, tab[#tab])
 		table.insert(temptable, stradd)
 		return temptable
@@ -1532,7 +1541,7 @@ function menu.Initialize(menutable)
 								y_pos += 18
 							elseif v2.type == "slider" then
 								menu.options[v.name][g_name][v2.name] = {}
-								menu.options[v.name][g_name][v2.name][4] = Draw:Slider(v2.name, v2.stradd, v2.value, v2.minvalue, v2.maxvalue, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
+								menu.options[v.name][g_name][v2.name][4] = Draw:Slider(v2.name, v2.stradd, v2.value, v2.minvalue, v2.maxvalue, v2.custom or {}, v2.rounded, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
 								menu.options[v.name][g_name][v2.name][1] = v2.value
 								menu.options[v.name][g_name][v2.name][2] = v2.type
 								menu.options[v.name][g_name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
@@ -1627,7 +1636,6 @@ function menu.Initialize(menutable)
 						elseif v1.size ~= nil then
 							y_pos = v1.size
 						end
-						print(v1.name, tostring(y_pos))
 						Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, y_pos, tabz[k])
 						y_offies[v1.autopos] += y_pos + 6
 					end
@@ -2325,8 +2333,409 @@ function menu.Initialize(menutable)
 	local menuElementTypes = {"toggle", "slider", "dropbox", "textbox"}
 	local doubleclickDelay = 1
 	local buttonsInQue = {}
-	local function buttonpressed(bp)
+
+	local function SaveCurSettings()
+		local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
+			
+		for k, v in next, menuElementTypes do
+			figgy = figgy.. v.. "s {\n"
+			for k1, v1 in pairs(menu.options) do
+				for k2, v2 in pairs(v1) do
+					for k3, v3 in pairs(v2) do
+						
+						if v3[2] == tostring(v) and k3 ~= "Configs" and k3 ~= "Player Status" and k3 ~= "ConfigName" then
+							figgy = figgy..k1.. "|".. k2.."|".. k3.."|"..tostring(v3[1]).. "\n"
+						end
+					end
+				end
+			end
+			figgy = figgy.."}\n"
+		end
+		figgy = figgy.."comboboxes {\n"
+		for k, v in pairs(menu.options) do
+			for k1, v1 in pairs(v) do
+				for k2, v2 in pairs(v1) do
+					if v2[2] == "combobox" then
+						local boolz = ""
+						for k3, v3 in pairs(v2[1]) do
+							boolz = boolz.. tostring(v3[2]).. ", "
+						end
+						figgy = figgy..k.."|"..k1.."|"..k2.."|"..boolz.."\n"
+					end
+				end
+			end
+		end
+		figgy = figgy.."}\n"
+		figgy = figgy.."keybinds {\n"
+		for k, v in pairs(menu.options) do
+			for k1, v1 in pairs(v) do
+				for k2, v2 in pairs(v1) do
+					if v2[2] == "toggle" then
+						if v2[5] ~= nil then
+							if v2[5][2] == "keybind" then
+								if v2[5][1] == nil then
+									figgy = figgy..k.."|"..k1.."|"..k2.."|nil\n"
+								else
+									figgy = figgy..k.."|"..k1.."|"..k2.."|"..tostring(v2[5][1].Value).."\n"
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		figgy = figgy.."}\n"
+		figgy = figgy.."colorpickers {\n"
+		for k, v in pairs(menu.options) do
+			for k1, v1 in pairs(v) do
+				for k2, v2 in pairs(v1) do
+					if v2[2] == "toggle" then
+						if v2[5] ~= nil then
+							if v2[5][2] == "single colorpicker" then
+								local clrz = ""
+								for k3, v3 in pairs(v2[5][1]) do
+									clrz = clrz.. tostring(v3).. ", "
+								end
+								figgy = figgy..k.."|"..k1.."|"..k2.."|"..clrz.."\n"
+							end
+						end
+					end
+				end
+			end
+		end
+		figgy = figgy.."}\n"
+		figgy = figgy.."double colorpickers {\n"
+		for k, v in pairs(menu.options) do
+			for k1, v1 in pairs(v) do
+				for k2, v2 in pairs(v1) do
+					if v2[2] == "toggle" then
+						if v2[5] ~= nil then
+							if v2[5][2] == "double colorpicker" then
+								local clrz1 = ""
+								for k3, v3 in pairs(v2[5][1][1][1]) do
+									clrz1 = clrz1.. tostring(v3).. ", "
+								end
+								local clrz2 = ""
+								for k3, v3 in pairs(v2[5][1][2][1]) do
+									clrz2 = clrz2.. tostring(v3).. ", "
+								end
+								figgy = figgy..k.."|"..k1.."|"..k2.."|"..clrz1.."|"..clrz2.."\n"
+							end
+						end
+					end
+				end
+			end
+		end
+		figgy = figgy.."}\n"
+
+		return figgy
+	end
+
+	local function LoadConfig(loadedcfg)
+		local lines = {}
+
+		for s in loadedcfg:gmatch("[^\r\n]+") do
+			table.insert(lines, s)
+		end
 		
+		if lines[1] == "BitchBot v2" then
+			local start = nil
+			for i, v in next, lines do
+				if v == "toggles {" then
+					start = i
+					break
+				end
+			end
+			local end_ = nil
+			for i, v in next, lines do
+				if i > start and v == "}" then
+					end_ = i
+					break
+				end
+			end
+			for i = 1, end_ - start - 1 do
+				local tt = string.split(lines[i + start], "|")
+				
+				if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					if tt[4] == "true" then
+						menu.options[tt[1]][tt[2]][tt[3]][1] = true
+					else
+						menu.options[tt[1]][tt[2]][tt[3]][1] = false
+					end
+				end
+			end
+			
+			local start = nil
+			for i, v in next, lines do
+				if v == "sliders {" then
+					start = i
+					break
+				end
+			end
+			local end_ = nil
+			for i, v in next, lines do
+				if i > start and v == "}" then
+					end_ = i
+					break
+				end
+			end
+			for i = 1, end_ - start - 1 do
+				local tt = string.split(lines[i + start], "|")
+				if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					menu.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
+				end
+			end
+			
+			local start = nil
+			for i, v in next, lines do
+				if v == "dropboxs {" then
+					start = i
+					break
+				end
+			end
+			local end_ = nil
+			for i, v in next, lines do
+				if i > start and v == "}" then
+					end_ = i
+					break
+				end
+			end
+			for i = 1, end_ - start - 1 do
+				local tt = string.split(lines[i + start], "|")
+				
+
+				if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					local num = tonumber(tt[4])
+					if num > #menu.options[tt[1]][tt[2]][tt[3]][6] then
+						num = #menu.options[tt[1]][tt[2]][tt[3]][6]
+					elseif num < 0 then
+						num = 1
+					end
+					menu.options[tt[1]][tt[2]][tt[3]][1] = num
+				end
+			end
+			
+			local start = nil
+			for i, v in next, lines do
+				if v == "textboxs {" then
+					start = i
+					break
+				end
+			end
+			if start ~= nil then
+				local end_ = nil
+				for i, v in next, lines do
+					if i > start and v == "}" then
+						end_ = i
+						break
+					end
+				end
+				for i = 1, end_ - start - 1 do
+					local tt = string.split(lines[i + start], "|")
+					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+						menu.options[tt[1]][tt[2]][tt[3]][1] = tostring(tt[4])
+					end
+				end
+			end
+
+			local start = nil
+			for i, v in next, lines do
+				if v == "comboboxes {" then
+					start = i
+					break
+				end
+			end
+			local end_ = nil
+			for i, v in next, lines do
+				if i > start and v == "}" then
+					end_ = i
+					break
+				end
+			end
+			for i = 1, end_ - start - 1 do
+				local tt = string.split(lines[i + start], "|")
+				if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					
+					local subs = string.split(tt[4], ",")
+					
+					for i, v in ipairs(subs) do
+						local opt = string.gsub(v, " ", "")
+						if opt == "true" then
+							menu.options[tt[1]][tt[2]][tt[3]][1][i][2] = true
+						else
+							menu.options[tt[1]][tt[2]][tt[3]][1][i][2] = false
+						end
+						if i == #subs - 1 then break end
+					end
+				end
+			end
+			
+			local start = nil
+			for i, v in next, lines do
+				if v == "keybinds {" then
+					start = i
+					break
+				end
+			end
+			local end_ = nil
+			for i, v in next, lines do
+				if i > start and v == "}" then
+					end_ = i
+					break
+				end
+			end
+			for i = 1, end_ - start - 1 do
+				local tt = string.split(lines[i + start], "|")
+				if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]][5] ~= nil then
+					if tt[4] == "nil" then
+						menu.options[tt[1]][tt[2]][tt[3]][5][1] = nil
+					else
+						menu.options[tt[1]][tt[2]][tt[3]][5][1] = keyz[tonumber(tt[4])]
+					end
+				end
+			end
+			
+			local start = nil
+			for i, v in next, lines do
+				if v == "colorpickers {" then
+					start = i
+					break
+				end
+			end
+			local end_ = nil
+			for i, v in next, lines do
+				if i > start and v == "}" then
+					end_ = i
+					break
+				end
+			end
+			for i = 1, end_ - start - 1 do
+				local tt = string.split(lines[i + start], "|")
+				if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					local subs = string.split(tt[4], ",")
+					
+					for i, v in ipairs(subs) do
+						if menu.options[tt[1]][tt[2]][tt[3]][5][1][i] == nil then
+							break
+						end
+						local opt = string.gsub(v, " ", "")
+						menu.options[tt[1]][tt[2]][tt[3]][5][1][i] = tonumber(opt)
+						if i == #subs - 1 then break end
+					end
+				end
+			end
+			
+			local start = nil
+			for i, v in next, lines do
+				if v == "double colorpickers {" then
+					start = i
+					break
+				end
+			end
+			local end_ = nil
+			for i, v in next, lines do
+				if i > start and v == "}" then
+					end_ = i
+					break
+				end
+			end
+			for i = 1, end_ - start - 1 do
+				local tt = string.split(lines[i + start], "|")
+				if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
+					
+					local subs = {string.split(tt[4], ","), string.split(tt[5], ",")}
+					
+					for i, v in ipairs(subs) do
+						for i1, v1 in ipairs(v) do
+							if menu.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] == nil then
+								break
+							end
+							local opt = string.gsub(v1, " ", "")
+							menu.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] = tonumber(opt)
+							if i1 == #v - 1 then break end
+						end
+					end
+				end
+			end
+			
+			for k, v in pairs(menu.options) do
+				for k1, v1 in pairs(v) do
+					for k2, v2 in pairs(v1) do
+						if v2[2] == "toggle" then
+							if not v2[1] then
+								for i = 0, 3 do
+									v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
+								end
+							else
+								for i = 0, 3 do
+									v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])}, [2] = {start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)}})
+								end
+							end
+							if v2[5] ~= nil then
+								if v2[5][2] == "keybind" then
+									
+									v2[5][4][2].Color = RGB(30, 30, 30)
+									v2[5][4][1].Text = KeyEnumToName(v2[5][1])
+								elseif v2[5][2] == "single colorpicker" then
+									v2[5][4][1].Color = RGB(v2[5][1][1], v2[5][1][2], v2[5][1][3])
+									for i = 2, 3 do
+										v2[5][4][i].Color = RGB(v2[5][1][1] - 40, v2[5][1][2] - 40, v2[5][1][3] - 40)
+									end
+								elseif v2[5][2] == "double colorpicker" then
+									for i, v3 in ipairs(v2[5][1]) do
+
+										v3[4][1].Color = RGB(v3[1][1], v3[1][2], v3[1][3])
+										for i1 = 2, 3 do
+											v3[4][i1].Color = RGB(v3[1][1] - 40, v3[1][2] - 40, v3[1][3] - 40)
+										end
+									end
+								end
+							end
+						elseif v2[2] == "slider" then
+							if v2[1] < v2[6][1] then
+								v2[1] = v2[6][1]
+							elseif v2[1] > v2[6][2] then
+								v2[1] = v2[6][2]
+							end
+							
+
+							v2[4][5].Text = v2.custom[v2[1]] or v2[1] == math.floor(v2[1]) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
+							--v2[4][5].Text = tostring(v2[1]).. v2[4][6]
+							
+							for i = 1, 4 do
+								v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
+							end
+						elseif v2[2] == "dropbox" then
+							if v2[6][v2[1]] == nil then
+								v2[1] = 1
+							end
+							v2[4][1].Text = v2[6][v2[1]]
+						elseif v2[2] == "combobox" then
+							local textthing = ""
+							for k3, v3 in pairs(v2[1]) do
+								if v3[2] then
+									if textthing == "" then
+										textthing = v3[1]
+									else
+										textthing = textthing.. ", ".. v3[1]
+									end
+								end
+							end
+							textthing = textthing ~= "" and textthing or "None"
+							if string.len(textthing) > 25 then
+								textthing = string_cut(textthing, 25)
+							end
+							v2[4][1].Text = textthing
+						elseif v2[2] == "textbox" then
+							v2[4].Text = v2[1]
+						end
+					end
+				end
+			end
+		end
+	end
+
+	local function buttonpressed(bp)
 		if bp.doubleclick then
 			if buttonsInQue[bp] and tick() - buttonsInQue[bp] < doubleclickDelay then
 				buttonsInQue[bp] = 0
@@ -2344,98 +2753,7 @@ function menu.Initialize(menutable)
 			setclipboard(game.JobId)
 		elseif bp == menu.options["Settings"]["Configuration"]["Save Config"] then
 			
-			local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
-			
-			for k, v in next, menuElementTypes do
-				figgy = figgy.. v.. "s {\n"
-				for k1, v1 in pairs(menu.options) do
-					for k2, v2 in pairs(v1) do
-						for k3, v3 in pairs(v2) do
-							
-							if v3[2] == tostring(v) and k3 ~= "Configs" and k3 ~= "Player Status" and k3 ~= "ConfigName" then
-								figgy = figgy..k1.. "|".. k2.."|".. k3.."|"..tostring(v3[1]).. "\n"
-							end
-						end
-					end
-				end
-				figgy = figgy.."}\n"
-			end
-			figgy = figgy.."comboboxes {\n"
-			for k, v in pairs(menu.options) do
-				for k1, v1 in pairs(v) do
-					for k2, v2 in pairs(v1) do
-						if v2[2] == "combobox" then
-							local boolz = ""
-							for k3, v3 in pairs(v2[1]) do
-								boolz = boolz.. tostring(v3[2]).. ", "
-							end
-							figgy = figgy..k.."|"..k1.."|"..k2.."|"..boolz.."\n"
-						end
-					end
-				end
-			end
-			figgy = figgy.."}\n"
-			figgy = figgy.."keybinds {\n"
-			for k, v in pairs(menu.options) do
-				for k1, v1 in pairs(v) do
-					for k2, v2 in pairs(v1) do
-						if v2[2] == "toggle" then
-							if v2[5] ~= nil then
-								if v2[5][2] == "keybind" then
-									if v2[5][1] == nil then
-										figgy = figgy..k.."|"..k1.."|"..k2.."|nil\n"
-									else
-										figgy = figgy..k.."|"..k1.."|"..k2.."|"..tostring(v2[5][1].Value).."\n"
-									end
-								end
-							end
-						end
-					end
-				end
-			end
-			figgy = figgy.."}\n"
-			figgy = figgy.."colorpickers {\n"
-			for k, v in pairs(menu.options) do
-				for k1, v1 in pairs(v) do
-					for k2, v2 in pairs(v1) do
-						if v2[2] == "toggle" then
-							if v2[5] ~= nil then
-								if v2[5][2] == "single colorpicker" then
-									local clrz = ""
-									for k3, v3 in pairs(v2[5][1]) do
-										clrz = clrz.. tostring(v3).. ", "
-									end
-									figgy = figgy..k.."|"..k1.."|"..k2.."|"..clrz.."\n"
-								end
-							end
-						end
-					end
-				end
-			end
-			figgy = figgy.."}\n"
-			figgy = figgy.."double colorpickers {\n"
-			for k, v in pairs(menu.options) do
-				for k1, v1 in pairs(v) do
-					for k2, v2 in pairs(v1) do
-						if v2[2] == "toggle" then
-							if v2[5] ~= nil then
-								if v2[5][2] == "double colorpicker" then
-									local clrz1 = ""
-									for k3, v3 in pairs(v2[5][1][1][1]) do
-										clrz1 = clrz1.. tostring(v3).. ", "
-									end
-									local clrz2 = ""
-									for k3, v3 in pairs(v2[5][1][2][1]) do
-										clrz2 = clrz2.. tostring(v3).. ", "
-									end
-									figgy = figgy..k.."|"..k1.."|"..k2.."|"..clrz1.."|"..clrz2.."\n"
-								end
-							end
-						end
-					end
-				end
-			end
-			figgy = figgy.."}\n"
+			local figgy = SaveCurSettings()
 			writefile("bitchbot/"..menu.game.. "/".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb", figgy)
 			CreateNotification("Saved \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 			UpdateConfigs()
@@ -2453,304 +2771,16 @@ function menu.Initialize(menutable)
 				CreateNotification("\"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\" is not a valid config.")
 				return
 			end
+
+			local curcfg = SaveCurSettings()
 			local loadedcfg = readfile(configname)
-			
-			local lines = {}
-			for s in loadedcfg:gmatch("[^\r\n]+") do
-				table.insert(lines, s)
+
+			if pcall(function() LoadConfig(loadedcfg) end) then
+				CreateNotification("Loaded \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
+			else
+				LoadConfig(curcfg)
+				CreateNotification("There was an issue loading \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"")
 			end
-			
-			if lines[1] == "BitchBot v2" then
-				local start = nil
-				for i, v in next, lines do
-					if v == "toggles {" then
-						start = i
-						break
-					end
-				end
-				local end_ = nil
-				for i, v in next, lines do
-					if i > start and v == "}" then
-						end_ = i
-						break
-					end
-				end
-				for i = 1, end_ - start - 1 do
-					local tt = string.split(lines[i + start], "|")
-					
-					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
-						if tt[4] == "true" then
-							menu.options[tt[1]][tt[2]][tt[3]][1] = true
-						else
-							menu.options[tt[1]][tt[2]][tt[3]][1] = false
-						end
-					end
-				end
-				
-				local start = nil
-				for i, v in next, lines do
-					if v == "sliders {" then
-						start = i
-						break
-					end
-				end
-				local end_ = nil
-				for i, v in next, lines do
-					if i > start and v == "}" then
-						end_ = i
-						break
-					end
-				end
-				for i = 1, end_ - start - 1 do
-					local tt = string.split(lines[i + start], "|")
-					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
-						menu.options[tt[1]][tt[2]][tt[3]][1] = tonumber(tt[4])
-					end
-				end
-				
-				local start = nil
-				for i, v in next, lines do
-					if v == "dropboxs {" then
-						start = i
-						break
-					end
-				end
-				local end_ = nil
-				for i, v in next, lines do
-					if i > start and v == "}" then
-						end_ = i
-						break
-					end
-				end
-				for i = 1, end_ - start - 1 do
-					local tt = string.split(lines[i + start], "|")
-					
-
-					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
-						local num = tonumber(tt[4])
-						if num > #menu.options[tt[1]][tt[2]][tt[3]][6] then
-							num = #menu.options[tt[1]][tt[2]][tt[3]][6]
-						end
-						menu.options[tt[1]][tt[2]][tt[3]][1] = num
-					end
-				end
-				
-				local start = nil
-				for i, v in next, lines do
-					if v == "textboxs {" then
-						start = i
-						break
-					end
-				end
-				if start ~= nil then
-					local end_ = nil
-					for i, v in next, lines do
-						if i > start and v == "}" then
-							end_ = i
-							break
-						end
-					end
-					for i = 1, end_ - start - 1 do
-						local tt = string.split(lines[i + start], "|")
-						if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
-							menu.options[tt[1]][tt[2]][tt[3]][1] = tostring(tt[4])
-						end
-					end
-				end
-
-				local start = nil
-				for i, v in next, lines do
-					if v == "comboboxes {" then
-						start = i
-						break
-					end
-				end
-				local end_ = nil
-				for i, v in next, lines do
-					if i > start and v == "}" then
-						end_ = i
-						break
-					end
-				end
-				for i = 1, end_ - start - 1 do
-					local tt = string.split(lines[i + start], "|")
-					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
-						
-						local subs = string.split(tt[4], ",")
-						
-						for i, v in ipairs(subs) do
-							local opt = string.gsub(v, " ", "")
-							if opt == "true" then
-								menu.options[tt[1]][tt[2]][tt[3]][1][i][2] = true
-							else
-								menu.options[tt[1]][tt[2]][tt[3]][1][i][2] = false
-							end
-							if i == #subs - 1 then break end
-						end
-					end
-				end
-				
-				local start = nil
-				for i, v in next, lines do
-					if v == "keybinds {" then
-						start = i
-						break
-					end
-				end
-				local end_ = nil
-				for i, v in next, lines do
-					if i > start and v == "}" then
-						end_ = i
-						break
-					end
-				end
-				for i = 1, end_ - start - 1 do
-					local tt = string.split(lines[i + start], "|")
-					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]][5] ~= nil then
-						print(tostring(menu.options[tt[1]][tt[2]][tt[3]][5]))
-						if tt[4] == "nil" then
-							menu.options[tt[1]][tt[2]][tt[3]][5][1] = nil
-						else
-							menu.options[tt[1]][tt[2]][tt[3]][5][1] = keyz[tonumber(tt[4])]
-						end
-					end
-				end
-				
-				local start = nil
-				for i, v in next, lines do
-					if v == "colorpickers {" then
-						start = i
-						break
-					end
-				end
-				local end_ = nil
-				for i, v in next, lines do
-					if i > start and v == "}" then
-						end_ = i
-						break
-					end
-				end
-				for i = 1, end_ - start - 1 do
-					local tt = string.split(lines[i + start], "|")
-					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
-						local subs = string.split(tt[4], ",")
-						
-						for i, v in ipairs(subs) do
-							if menu.options[tt[1]][tt[2]][tt[3]][5][1][i] == nil then
-								break
-							end
-							local opt = string.gsub(v, " ", "")
-							menu.options[tt[1]][tt[2]][tt[3]][5][1][i] = tonumber(opt)
-							if i == #subs - 1 then break end
-						end
-					end
-				end
-				
-				local start = nil
-				for i, v in next, lines do
-					if v == "double colorpickers {" then
-						start = i
-						break
-					end
-				end
-				local end_ = nil
-				for i, v in next, lines do
-					if i > start and v == "}" then
-						end_ = i
-						break
-					end
-				end
-				for i = 1, end_ - start - 1 do
-					local tt = string.split(lines[i + start], "|")
-					if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil then
-						
-						local subs = {string.split(tt[4], ","), string.split(tt[5], ",")}
-						
-						for i, v in ipairs(subs) do
-							for i1, v1 in ipairs(v) do
-								if menu.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] == nil then
-									break
-								end
-								local opt = string.gsub(v1, " ", "")
-								menu.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] = tonumber(opt)
-								if i1 == #v - 1 then break end
-							end
-						end
-					end
-				end
-				
-				for k, v in pairs(menu.options) do
-					for k1, v1 in pairs(v) do
-						for k2, v2 in pairs(v1) do
-							if v2[2] == "toggle" then
-								if not v2[1] then
-									for i = 0, 3 do
-										v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(50, 50, 50)}, [2] = {start = 3, color = RGB(30, 30, 30)}})
-									end
-								else
-									for i = 0, 3 do
-										v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])}, [2] = {start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)}})
-									end
-								end
-								if v2[5] ~= nil then
-									if v2[5][2] == "keybind" then
-										
-										v2[5][4][2].Color = RGB(30, 30, 30)
-										v2[5][4][1].Text = KeyEnumToName(v2[5][1])
-									elseif v2[5][2] == "single colorpicker" then
-										v2[5][4][1].Color = RGB(v2[5][1][1], v2[5][1][2], v2[5][1][3])
-										for i = 2, 3 do
-											v2[5][4][i].Color = RGB(v2[5][1][1] - 40, v2[5][1][2] - 40, v2[5][1][3] - 40)
-										end
-									elseif v2[5][2] == "double colorpicker" then
-										for i, v3 in ipairs(v2[5][1]) do
-
-											v3[4][1].Color = RGB(v3[1][1], v3[1][2], v3[1][3])
-											for i1 = 2, 3 do
-												v3[4][i1].Color = RGB(v3[1][1] - 40, v3[1][2] - 40, v3[1][3] - 40)
-											end
-										end
-									end
-								end
-							elseif v2[2] == "slider" then
-								if v2[1] < v2[6][1] then
-									v2[1] = v2[6][1]
-								elseif v2[1] > v2[6][2] then
-									v2[1] = v2[6][2]
-								end
-								
-								v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
-								--v2[4][5].Text = tostring(v2[1]).. v2[4][6]
-								
-								for i = 1, 4 do
-									v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
-								end
-							elseif v2[2] == "dropbox" then
-								v2[4][1].Text = v2[6][v2[1]]
-							elseif v2[2] == "combobox" then
-								local textthing = ""
-								for k3, v3 in pairs(v2[1]) do
-									if v3[2] then
-										if textthing == "" then
-											textthing = v3[1]
-										else
-											textthing = textthing.. ", ".. v3[1]
-										end
-									end
-								end
-								textthing = textthing ~= "" and textthing or "None"
-								if string.len(textthing) > 25 then
-									textthing = string_cut(textthing, 25)
-								end
-								v2[4][1].Text = textthing
-							elseif v2[2] == "textbox" then
-								v2[4].Text = v2[1]
-							end
-						end
-					end
-				end
-			end
-			CreateNotification("Loaded \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 		end
 	end
 	
@@ -3043,7 +3073,7 @@ function menu.Initialize(menutable)
 											v2[1] = v2[6][2]
 										end
 										
-										v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
+										v2[4][5].Text = v2.custom[v2[1]] or v2[1] == math.floor(v2[1]) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
 										
 										for i = 1, 4 do
 											v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
@@ -3418,7 +3448,7 @@ function menu.Initialize(menutable)
 										elseif v2[1] > v2[6][2] then
 											v2[1] = v2[6][2]
 										end
-										v2[4][5].Text = v2.custom[v2[1]] or tostring(v2[1]) .. v2[4][6]
+										v2[4][5].Text = v2.custom[v2[1]] or v2[1] == math.floor(v2[1]) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
 										for i = 1, 4 do
 											v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 										end
@@ -5605,7 +5635,6 @@ elseif menu.game == "pf" then --!SECTION
 					if type(garbage) == "table" then
 						if rawget(garbage, "task") and rawget(garbage, "name") == "camera" then
 							local tempupvs = getupvalues(rawget(garbage, "task"))
-							print("COOL")
 							for _, upvalue in next, tempupvs do
 								if type(upvalue) == "function" and islclosure(upvalue) and not is_synapse_function(upvalue) then
 									rawset(garbage, "task", upvalue)
@@ -10025,10 +10054,9 @@ elseif menu.game == "pf" then --!SECTION
 							type = "slider",
 							name = "Aimbot FOV",
 							value = 20,
-							minvalue = 0.1,
+							minvalue = 0,
 							maxvalue = 180,
 							stradd = "°",
-							rounded = false
 						},
 						{
 							type = "slider",
