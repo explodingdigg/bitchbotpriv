@@ -1458,7 +1458,7 @@ function menu.Initialize(menutable)
 				
 				local groups = {}
 
-				if v1.multi then 
+				if type(v1.name) == "table" then 
 					groups = v1.name
 				else
 					table.insert(groups, v1.name)
@@ -1469,13 +1469,13 @@ function menu.Initialize(menutable)
 				for g_ind, g_name in ipairs(groups) do
 					
 					menu.options[v.name][g_name] = {}
-					if v1.multi then
+					if type(v1.name) == "table" then
 						menu.mgrouptabz[v.name][g_name] = {}
 						menu.log_multi = {v.name, g_name}
 					end
 
 					local content = nil
-					if v1.multi then
+					if type(v1.name) == "table" then
 						y_pos = 28
 						content = v1[g_ind].content	
 					else
@@ -1617,7 +1617,7 @@ function menu.Initialize(menutable)
 
 				y_pos += 2
 
-				if v1.multi == nil then
+				if type(v1.name) ~= "table" then
 					if v1.autopos == nil then
 						
 						Draw:CoolBox(v1.name, v1.x, v1.y, v1.width, v1.height, tabz[k])
@@ -7102,8 +7102,8 @@ elseif menu.game == "pf" then --!SECTION
 			local prioritizedpart = menu:GetVal("Rage", "Aimbot", "Hitscan Priority")
 			
 			ragebot:Stance()
-			if menu:GetVal("Rage", "Extra", "Fake Lag") and not menu:GetVal("Rage", "Extra", "Manual Choke") then
-				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > menu:GetVal("Rage", "Extra", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.alive then
+			if menu:GetVal("Rage", "Fake Lag", "Enabled") and not menu:GetVal("Rage", "Fake Lag", "Manual Choke") then
+				if (not fakelagpos or not fakelagtime) or ((client.cam.cframe.p - fakelagpos).Magnitude > menu:GetVal("Rage", "Fake Lag", "Fake Lag Distance") or tick() - fakelagtime > 1) or not client.char.alive then
 					fakelagtime = tick()
 					fakelagpos = client.cam.cframe.p
 					NETWORK:SetOutgoingKBPSLimit(0)
@@ -7111,7 +7111,7 @@ elseif menu.game == "pf" then --!SECTION
 						--CreateNotification("Choking")
 					end
 				else
-					NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Extra", "Fake Lag Amount"))
+					NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Fake Lag", "Fake Lag Amount"))
 				end
 			end
 			
@@ -9701,13 +9701,13 @@ elseif menu.game == "pf" then --!SECTION
 					end ]] -- idk if this will even work anymore after the replication fixes
 				end
 
-				if menu:GetVal("Rage", "Extra", "Fake Lag") and menu:GetVal("Rage", "Extra", "Manual Choke")
+				if menu:GetVal("Rage", "Fake Lag", "Enabled") and menu:GetVal("Rage", "Fake Lag", "Manual Choke")
 				and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") then
 					keybindtoggles.fakelag = keyflag
 					if not keyflag then
 						NETWORK:SetOutgoingKBPSLimit(0)
 					else
-						NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Extra", "Fake Lag Amount"))
+						NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Fake Lag", "Fake Lag Amount"))
 					end
 					return Enum.ContextActionResult.Sink
 				end
@@ -10390,39 +10390,6 @@ elseif menu.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Fake Lag",
-							value = false
-						},
-						{
-							type = "slider",
-							name = "Fake Lag Amount",
-							value = 1,
-							minvalue = 1,
-							maxvalue = 1000,
-							stradd = " kbps"
-						},
-						{
-							type = "slider",
-							name = "Fake Lag Distance",
-							value = 1,
-							minvalue = 1,
-							maxvalue = 40,
-							stradd = " studs"
-						},
-						{
-							type = "toggle",
-							name = "Manual Choke",
-							extra = {
-								type = "keybind"
-							}
-						},
-						{
-							type = "toggle",
-							name = "Release Packets on Shoot",
-							value = false
-						},
-						{
-							type = "toggle",
 							name = "Teleport Up",
 							value = false,
 							extra = {
@@ -10432,55 +10399,94 @@ elseif menu.game == "pf" then --!SECTION
 					},
 				},
 				{
-					name = "Anti Aim",
+					name = {"Anti Aim", "Fake Lag"},
 					autopos = "right",
 					autofill = true,
-					content = {
-						{
-							type = "toggle",
-							name = "Enabled",
-							value = false
-						},
-						{
-							type = "dropbox",
-							name = "Pitch",
-							value = 4,
-							values = {"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch"}
-						},
-						{
-							type = "dropbox",
-							name = "Yaw",
-							value = 2,
-							values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"}
-						},
-						{
-							type = "slider",
-							name = "Spin Rate",
-							value = 10,
-							minvalue = -100,
-							maxvalue = 100,
-							stradd = "°/s"
-						},
-						{
-							type = "dropbox",
-							name = "Force Stance",
-							value = 4,
-							values = {"Off", "Stand", "Crouch", "Prone"}
-						},
-						{
-							type = "toggle",
-							name = "Hide in Floor",
-							value = true,
-						},
-						{
-							type = "toggle",
-							name = "Lower Arms",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "Tilt Neck",
-							value = false
+					[1] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = false
+							},
+							{
+								type = "dropbox",
+								name = "Pitch",
+								value = 4,
+								values = {"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch"}
+							},
+							{
+								type = "dropbox",
+								name = "Yaw",
+								value = 2,
+								values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"}
+							},
+							{
+								type = "slider",
+								name = "Spin Rate",
+								value = 10,
+								minvalue = -100,
+								maxvalue = 100,
+								stradd = "°/s"
+							},
+							{
+								type = "dropbox",
+								name = "Force Stance",
+								value = 4,
+								values = {"Off", "Stand", "Crouch", "Prone"}
+							},
+							{
+								type = "toggle",
+								name = "Hide in Floor",
+								value = true,
+							},
+							{
+								type = "toggle",
+								name = "Lower Arms",
+								value = false,
+							},
+							{
+								type = "toggle",
+								name = "Tilt Neck",
+								value = false
+							}
+						}
+					},
+					[2] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Fake Lag Amount",
+								value = 1,
+								minvalue = 1,
+								maxvalue = 1000,
+								stradd = " kbps"
+							},
+							{
+								type = "slider",
+								name = "Fake Lag Distance",
+								value = 1,
+								minvalue = 1,
+								maxvalue = 40,
+								stradd = " studs"
+							},
+							{
+								type = "toggle",
+								name = "Manual Choke",
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Release Packets on Shoot",
+								value = false
+							},
 						}
 					}
 				},
@@ -10491,10 +10497,8 @@ elseif menu.game == "pf" then --!SECTION
 			content = {
 				{
 					name = {"Enemy ESP", "Team ESP", "Local"},
-					multi = true,
 					autopos = "left",
 					size = 270, --254
-
 					[1] = {
 						content = {
 							{
@@ -10896,7 +10900,7 @@ elseif menu.game == "pf" then --!SECTION
 				},
 				{
 					name = {"World Visuals", "Misc Visuals"},
-					multi = true,
+					
 					autopos = "right",
 					size = 144,
 					[1] = {
@@ -11186,7 +11190,6 @@ elseif menu.game == "pf" then --!SECTION
 				},
 				{
 					name = {"Extra", "Exploits"},
-					multi = true,
 					autopos = "right",
 					autofill = true,
 					[1] = {
