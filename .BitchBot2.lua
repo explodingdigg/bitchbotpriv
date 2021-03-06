@@ -8222,7 +8222,7 @@ elseif menu.game == "pf" then --!SECTION
 							end
 						end
 						
-						if menu:GetVal("Rage", "Extra", "Release Packets on Shoot") then
+						if menu:GetVal("Rage", "Fake Lag", "Release Packets on Shoot") then
 							keybindtoggles.fakelag = false
 							syn.set_thread_identity(1) -- might lag...... idk probably not
 							NETWORK:SetOutgoingKBPSLimit(0)
