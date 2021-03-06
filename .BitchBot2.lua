@@ -8407,11 +8407,12 @@ elseif menu.game == "pf" then --!SECTION
 					return
 				end
 				if client.logic.currentgun.type == "SHOTGUN" then
-					local oldOrientation = client.logic.currentgun.barrel.Orientation
-					local dir = (targetPart.Position - client.logic.currentgun.barrel.Position)
-					local y, x = client.vectorutil.toanglesyx(dir)
-					local vec = Vector3.new(y, x)
-					client.logic.currentgun.barrel.Orientation = vec
+					
+					-- local oldOrientation = client.logic.currentgun.barrel.Orientation
+					-- local dir = (targetPart.Position - client.logic.currentgun.barrel.Position)
+					-- local y, x = client.vectorutil.toanglesyx(dir)
+					-- local vec = Vector3.new(y, x)
+					-- client.logic.currentgun.barrel.Orientation = vec
 					return 
 				end
 				if client.logic.currentgun.type == "KNIFE" then return end
