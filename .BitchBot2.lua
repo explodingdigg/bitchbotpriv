@@ -2338,7 +2338,7 @@ function menu.Initialize(menutable)
 		ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
 		if bp == menu.options["Settings"]["Cheat Settings"]["Unload Cheat"] then
 			menu.fading = true
-			wait(0.3)
+			wait()
 			menu:unload()
 		elseif bp == menu.options["Settings"]["Cheat Settings"]["Set Clipboard Game ID"] then
 			setclipboard(game.JobId)
@@ -5210,74 +5210,77 @@ elseif menu.game == "pf" then --!SECTION
 	client.loadedguns = {}
 	
 	local raycastutil
-	
-	for k, v in pairs(getgc(true)) do
-		if type(v) == "function" then
-			if getinfo(v).name == "bulletcheck" then
-				client.bulletcheck = v
-			elseif getinfo(v).name == "trajectory" then
-				client.trajectory = v
-			elseif getinfo(v).name == "call" then
-				client.call = v
-			elseif getinfo(v).name == "loadplayer" then
-				client.loadplayer = v
-			elseif getinfo(v).name == "rankcalculator" then
-				client.rankcalculator = v
-			elseif getinfo(v).name == "gunbob" then
-				client.gunbob = v
-			elseif getinfo(v).name == "gunsway" then
-				client.gunsway = v
-			elseif getinfo(v).name == "getupdater" then
-				client.getupdater = v
-			end
-			for k1, v1 in pairs(debug.getupvalues(v)) do
-				if type(v1) == "table" then
-					if rawget(v1, "send") then
-						client.net = v1
-					elseif rawget(v1, "gammo") then
-						client.logic = v1
-					elseif rawget(v1, "setbasewalkspeed") then
-						client.char = v1
-					elseif rawget(v1, "basecframe") then
-						client.cam = v1
-					elseif rawget(v1, "votestep") then
-						client.hud = v1
-					elseif rawget(v1, "getbodyparts") then
-						client.replication = v1
-					elseif rawget(v1, "play") then
-						client.sound = v1
-					elseif rawget(v1, "checkkillzone") then
-						client.roundsystem = v1
-					end
-				end
-			end
+	local gc = getgc(true)
+
+    for i = 1, #gc do
+        local garbage = gc[i]
+
+        local garbagetype = type(garbage)
+
+        if garbagetype == "function" then
+            local name = getinfo(garbage).name
+			if name == "bulletcheck" then
+				client.bulletcheck = garbage
+			elseif name == "trajectory" then
+				client.trajectory = garbage
+			elseif name == "call" then
+				client.call = garbage
+			elseif name == "loadplayer" then
+				client.loadplayer = garbage
+			elseif name == "rankcalculator" then
+				client.rankcalculator = garbage
+			elseif name == "gunbob" then
+				client.gunbob = garbage
+			elseif name == "gunsway" then
+				client.gunsway = garbage
+			elseif name == "getupdater" then
+				client.getupdater = garbage
+            elseif name == "updateplayernames" then
+                client.updateplayernames = garbage
+            end
 		end
 		
-		if type(v) == "table" then
-			if rawget(v, "deploy") then
-				client.menu = v
-				local olddeploy = v.deploy
-			elseif rawget(v, "new") and rawget(v, "step") and rawget(v, "reset") then
-				client.particle = v
-			elseif rawget(v, "unlocks") then
-				client.dirtyplayerdata = v
-			elseif rawget(v, "toanglesyx") then
-				client.vectorutil = v
-			elseif rawget(v, "IsVIP") then
-				client.instancetype = v
-			elseif rawget(v, "timehit") then
-				client.physics = v
-			elseif rawget(v, "raycastSingleExit") then
-				raycastutil = v
-			elseif rawget(v, "bulletLifeTime") then
-				client.publicsettings = v
-			elseif rawget(v, "player") and rawget(v, "reset") then
-				client.animation = v
+		if garbagetype == "table" then
+			if rawget(garbage, "deploy") then
+				client.menu = garbage
+				local olddeploy = garbage.deploy
+            elseif rawget(garbage, "send") then
+                client.net = garbage
+            elseif rawget(garbage, "gammo") then
+                client.logic = garbage
+            elseif rawget(garbage, "setbasewalkspeed") then
+                client.char = garbage
+            elseif rawget(garbage, "basecframe") then
+                client.cam = garbage
+            elseif rawget(garbage, "votestep") then
+                client.hud = garbage
+            elseif rawget(garbage, "getbodyparts") then
+                client.replication = garbage
+            elseif rawget(garbage, "play") then
+                client.sound = garbage
+            elseif rawget(garbage, "checkkillzone") then
+                client.roundsystem = garbage
+			elseif rawget(garbage, "new") and rawget(garbage, "step") and rawget(garbage, "reset") then
+				client.particle = garbage
+			elseif rawget(garbage, "unlocks") then
+				client.dirtyplayerdata = garbage
+			elseif rawget(garbage, "toanglesyx") then
+				client.vectorutil = garbage
+			elseif rawget(garbage, "IsVIP") then
+				client.instancetype = garbage
+			elseif rawget(garbage, "timehit") then
+				client.physics = garbage
+			elseif rawget(garbage, "raycastSingleExit") then
+				raycastutil = garbage
+			elseif rawget(garbage, "bulletLifeTime") then
+				client.publicsettings = garbage
+			elseif rawget(garbage, "player") and rawget(garbage, "reset") then
+				client.animation = garbage
 				client.animation.oldplayer = client.animation.player
 				client.animation.oldreset = client.animation.reset
-			elseif rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
-				local oldtask = rawget(v, "task")
-				rawset(v, "task", function(...)
+			elseif rawget(garbage, "task") and rawget(garbage, "dependencies") and rawget(garbage, "name") == "camera" then
+				local oldtask = rawget(garbage, "task")
+				rawset(garbage, "task", function(...)
 					oldtask(...)
 					if not client.superaastart then
 						if ragebot.silentVector and menu:GetVal("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then
@@ -5290,7 +5293,9 @@ elseif menu.game == "pf" then --!SECTION
 				end)
 			end
 		end
-	end
+    end
+
+    gc = nil
 	
 	local function animhook(...)
 		return function(...) end
@@ -5553,52 +5558,11 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 		
-		for k,v in next, getgc(true) do
-			if type(v) == "table" then
-				if rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
-					for k1, v1 in next, getupvalues(rawget(v, "task")) do
-						if type(v1) == "function" and islclosure(v1) and not is_synapse_function(v1) then
-							v.task = v1
-						end
-					end
-					break
-				end
-			end
-		end
-		
-		if client.char.alive then
-			for id, gun in next, client.loadedguns do
-				for k,v in next, gun do
-					
-					if type(v) == "function" then
-						
-						local upvs = getupvalues(v)
-						
-						for k1, v1 in next, upvs do
-							
-							if type(v1) == "function" and is_synapse_function(v1) then
-								
-								for k2, v2 in next, getupvalues(v1) do
-									
-									if type(v2) == "function" and islclosure(v2) and not is_synapse_function(v2) then
-										
-										setupvalue(v, k1, v2)
-										
-									end
-								end
-							end
-						end
-					end
-				end
-			end
-		end
-		
 		local spring = require(game.ReplicatedFirst.SharedModules.Utilities.Math.spring)
 		spring.__index = client.springindex
 
 		client.fake_upvs = nil
-		DeepRestoreTableFunctions(client)
-		
+
 		local gunstore = game.ReplicatedStorage.GunModules
 		gunstore:Destroy()
 		game.ReplicatedStorage:FindFirstChild(client.acchash).Name = "GunModules" -- HACK DETECTED.
@@ -5611,33 +5575,126 @@ elseif menu.game == "pf" then --!SECTION
 		lighting.Brightness = defaults.Brightness.Value
 		
 		workspace.Ignore.DeadBody:ClearAllChildren()
+
+		CreateThread(function()
+			local gc = getgc(true)
+
+			for i = 1, #gc do
+				local garbage = gc[i]
+	
+				if type(v) == "table" then
+					if rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
+						for k1, v1 in next, getupvalues(rawget(v, "task")) do
+							if type(v1) == "function" and islclosure(v1) and not is_synapse_function(v1) then
+								v.task = v1
+							end
+						end
+						break
+					end
+				end
+			end
+		end)
+
+		MultiThreadList({
+			function()
+				local gc = getgc(true)
+	
+				for i = 1, #gc do
+					local garbage = gc[i]
 		
-		for k,v in next, client do
-			client[k] = nil
-		end
-		
-		for k,v in next, ragebot do
-			ragebot[k] = nil
-		end
-		
-		for k,v in next, legitbot do
-			legitbot[k] = nil
-		end
-		
-		for k,v in next, misc do
-			misc[k] = nil
-		end
-		
-		for k,v in next, camera do
-			camera[k] = nil
-		end
-		
-		client = nil
-		ragebot = nil
-		legitbot = nil
-		misc = nil
-		camera = nil
-		DeepRestoreTableFunctions = nil
+					if type(garbage) == "table" then
+						if rawget(garbage, "task") and rawget(garbage, "name") == "camera" then
+							local tempupvs = getupvalues(rawget(garbage, "task"))
+							print("COOL")
+							for _, upvalue in next, tempupvs do
+								if type(upvalue) == "function" and islclosure(upvalue) and not is_synapse_function(upvalue) then
+									rawset(garbage, "task", upvalue)
+									warn("sick")
+									gc = nil
+									return
+								end
+							end
+						end
+					end
+				end
+
+				gc = nil
+			end,
+			function()
+				if client.char.alive then
+					local size = #client.loadedguns
+
+					if size > 0 then -- sometimes exploits/glitches may be used,.
+						for i = 1, size do
+							local gun = client.loadedguns[i]
+
+							for _,v in next, gun do
+								if type(v) == "function" then
+									local upvs = getupvalues(v)
+									for k1, v1 in next, upvs do
+										if type(v1) == "function" and is_synapse_function(v1) then
+											for k2, v2 in next, getupvalues(v1) do
+												if type(v2) == "function" and islclosure(v2) and not is_synapse_function(v2) then
+													setupvalue(v, k1, v2)
+												end
+											end
+										end
+									end
+								end
+							end
+						end
+					else
+						for id, gun in pairs(client.loadedguns) do
+							for _,v in next, gun do
+								if type(v) == "function" then
+									local upvs = getupvalues(v)
+									for k1, v1 in next, upvs do
+										if type(v1) == "function" and is_synapse_function(v1) then
+											for k2, v2 in next, getupvalues(v1) do
+												if type(v2) == "function" and islclosure(v2) and not is_synapse_function(v2) then
+													setupvalue(v, k1, v2)
+												end
+											end
+										end
+									end
+								end
+							end
+						end
+					end
+
+				end
+			end,
+			function()
+				DeepRestoreTableFunctions(client)
+
+				for k,v in next, client do
+					client[k] = nil
+				end
+				
+				for k,v in next, ragebot do
+					ragebot[k] = nil
+				end
+				
+				for k,v in next, legitbot do
+					legitbot[k] = nil
+				end
+				
+				for k,v in next, misc do
+					misc[k] = nil
+				end
+				
+				for k,v in next, camera do
+					camera[k] = nil
+				end
+				
+				client = nil
+				ragebot = nil
+				legitbot = nil
+				misc = nil
+				camera = nil
+				DeepRestoreTableFunctions = nil
+			end
+		})
 	end
 	
 	local charcontainer = game.ReplicatedStorage.Character.Bodies
@@ -6460,15 +6517,14 @@ elseif menu.game == "pf" then --!SECTION
 
 		local bulletcheckresolution = 0.03333333333333333
 		
-		function ragebot.bulletcheck(origin, dest, velocity, acceleration, bulletspeed, whitelist) -- reversed
+		function ragebot.bulletcheck(origin, dest, velocity, acceleration, penetration, whitelist) -- reversed
 			local ignorelist = { workspace.Terrain, workspace.Players, workspace.Ignore, workspace.CurrentCamera }
 			local bullettime = 0
 			local exited = false
 			local penetrated = true
 			local step_pos = origin
-			local s = bulletspeed
+			local penetration = penetration
 			local maxtime = timehit(step_pos, velocity, acceleration, dest)
-			--local bulletintersection
 			if not (not isdirtyfloat(maxtime)) or bulletLifeTime < maxtime or maxtime == 0 then
 				return false
 			end
@@ -6496,11 +6552,11 @@ elseif menu.game == "pf" then --!SECTION
 						step_pos = intersection + 0.01 * normalized
 						velocity = velocity + diff * acceleration
 						bullettime = bullettime + diff
-						if not (dist < s) then
+						if not (dist < penetration) then
 							penetrated = false
 							break
 						end
-						s = s - dist
+						penetration = penetration - dist
 						table.insert(ignorelist, hit)
 						exited = true
 					else
@@ -6519,33 +6575,26 @@ elseif menu.game == "pf" then --!SECTION
 		end
 
 		function ragebot:bulletcheck_legacy(origin, destination, penetration, whitelist)
-			--[[local maxtime = timehit(origin, velocity, GRAVITY, dest) might need this later to fix some potential bugs due to 0/0 or math.huge rootpart shit
-			if not (not isdirtyfloat(maxtime)) or bulletLifeTime < maxtime or maxtime == 0 then
-				return false
-			end]]
-			
-			local dir = destination - origin
-			local size = dir.Magnitude
-			if size < 4.58 then
+			local dir = (destination - origin)
+			if dot(dir, dir) < 0 then
 				return true
 			end
-			local hit, enter, norm = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, dir), client.roundsystem.raycastwhitelist)
-
+		
+			local hit, enter = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, dir), client.roundsystem.raycastwhitelist)
+		
 			if hit then
 				local unit = dir.Unit
 				local maxextent = hit.Size.Magnitude * unit
-				local _, exit, exitnorm = workspace:FindPartOnRayWithWhitelist(Ray.new(enter + maxextent, -maxextent), client.roundsystem.raycastwhitelist)
-				local difftodest = destination - exit
-				local destdist = dot(unit, difftodest)
-				if destdist < 4.58 then
-					return true
-				end
+				local _, exit = workspace:FindPartOnRayWithWhitelist(Ray.new(enter + maxextent, -maxextent), {hit})
 				local diff = exit - enter
 				local dist = dot(unit, diff)
+				if dist < 0 then 
+					return true 
+				end
 				local pass = not hit.CanCollide or hit.Name == "Window" or hit.Transparency == 1
 				local exited = false
 		
-				local newpos = exit + 0.01 * unit
+				local newpos = enter + 0.01 * unit
 		
 				if not pass then
 					if dist < penetration then
@@ -6562,7 +6611,8 @@ elseif menu.game == "pf" then --!SECTION
 		end
 		
 		function ragebot:CanPenetrate(origin, target, penetration, whitelist)
-			if not menu:GetVal("Rage", "Aimbot", "Legacy Autowall") then
+			local autowallchoice = menu:GetVal("Rage", "Aimbot", "Auto Wall")
+			if autowallchoice ~= 1 and autowallchoice == 2 then
 				local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed * 25)
 				local z = d.Unit * client.logic.currentgun.data.bulletspeed * 25 -- bullet speed cheat
 				-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
@@ -6650,7 +6700,7 @@ elseif menu.game == "pf" then --!SECTION
 										else
 											continue
 										end
-									elseif autowall then
+									elseif autowall ~= 1 then
 										--debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
 										local directionVector = camera:GetTrajectory(bone.Position, camposv3)
 										-- ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
@@ -9690,10 +9740,6 @@ elseif menu.game == "pf" then --!SECTION
 				client.fakeoffset = 18
 			end
 		end
-
-		if menu.open then
-			bulletcheckresolution = menu:GetVal("Rage", "Aimbot", "Autowall FPS (Non-Legacy)") / 1000
-		end
 		--debug.profileend("Noclip Cheat check")
 		
 		--debug.profilebegin("BB Rendering")
@@ -9770,6 +9816,10 @@ elseif menu.game == "pf" then --!SECTION
 				end
 			end
 		end
+
+		if menu.open then
+			bulletcheckresolution = menu:GetVal("Rage", "Aimbot", "Autowall FPS (Standard)") / 1000
+		end
 		
 		--debug.profilebegin("BB No Gun Bob or Sway")
 		
@@ -9798,10 +9848,15 @@ elseif menu.game == "pf" then --!SECTION
 							if type(stuff[6]) == "userdata" then
 								setrawmetatable(lol, {
 									__newindex = function(t, p, v)
-										if p == "a" then -- this might also break the recoil since idk if they might change this back to like p or v or whatever the fuck idk dick sukkin god
-											local recoil_scale = menu:GetVal("Misc", "Weapon Modifications", "Recoil Scale") / 100
-											return newindex(t, p, v * recoil_scale)
+										if menu then
+											if p == "a" then -- this might also break the recoil since idk if they might change this back to like p or v or whatever the fuck idk dick sukkin god
+												local recoil_scale = menu:GetVal("Misc", "Weapon Modifications", "Recoil Scale") / 100
+												return newindex(t, p, v * recoil_scale)
+											else
+												return newindex(t, p, v)
+											end
 										else
+											setrawmetatable(lol, mt)
 											return newindex(t, p, v)
 										end
 									end
@@ -10209,18 +10264,14 @@ elseif menu.game == "pf" then --!SECTION
 							custom = {[181] = "Ignored"}
 						},
 						{
-							type = "toggle",
+							type = "dropbox",
 							name = "Auto Wall",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "Legacy Autowall",
-							value = false
+							value = 1,
+							values = {"Off", "Standard", "Legacy"}
 						},
 						{
 							type = "slider",
-							name = "Autowall FPS (Non-Legacy)",
+							name = "Autowall FPS (Standard)",
 							value = 30,
 							minvalue = 10,
 							maxvalue = 30,
