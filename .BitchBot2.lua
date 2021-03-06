@@ -6457,6 +6457,8 @@ elseif menu.game == "pf" then --!SECTION
 		end
 		
 		local dot = Vector3.new().Dot
+
+		local bulletcheckresolution = 0.03333333333333333
 		
 		function ragebot.bulletcheck(origin, dest, velocity, acceleration, bulletspeed, whitelist) -- reversed
 			local ignorelist = { workspace.Terrain, workspace.Players, workspace.Ignore, workspace.CurrentCamera }
@@ -6472,8 +6474,8 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			while bullettime < maxtime do
 				local dt = maxtime - bullettime
-				if dt > 0.03333333333333333 then
-					dt = 0.03333333333333333
+				if dt > bulletcheckresolution then
+					dt = bulletcheckresolution
 				end
 				local bulletvelocity = dt * velocity + dt * dt / 2 * acceleration
 				local enter = raycastutil.raycast(step_pos, bulletvelocity, ignorelist, ignorecheck, true)
@@ -6515,12 +6517,59 @@ elseif menu.game == "pf" then --!SECTION
 			
 			return penetrated, exited, step_pos
 		end
+
+		function ragebot:bulletcheck_legacy(origin, destination, penetration, whitelist)
+			--[[local maxtime = timehit(origin, velocity, GRAVITY, dest) might need this later to fix some potential bugs due to 0/0 or math.huge rootpart shit
+			if not (not isdirtyfloat(maxtime)) or bulletLifeTime < maxtime or maxtime == 0 then
+				return false
+			end]]
+			
+			local dir = destination - origin
+			local size = dir.Magnitude
+			if size < 4.58 then
+				return true
+			end
+			local hit, enter, norm = workspace:FindPartOnRayWithWhitelist(Ray.new(origin, dir), client.roundsystem.raycastwhitelist)
+
+			if hit then
+				local unit = dir.Unit
+				local maxextent = hit.Size.Magnitude * unit
+				local _, exit, exitnorm = workspace:FindPartOnRayWithWhitelist(Ray.new(enter + maxextent, -maxextent), client.roundsystem.raycastwhitelist)
+				local difftodest = destination - exit
+				local destdist = dot(unit, difftodest)
+				if destdist < 4.58 then
+					return true
+				end
+				local diff = exit - enter
+				local dist = dot(unit, diff)
+				local pass = not hit.CanCollide or hit.Name == "Window" or hit.Transparency == 1
+				local exited = false
 		
-		function ragebot:CanPenetrateFast(origin, target, penetration, whitelist)
-			local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed * 25)
-			local z = d.Unit * client.logic.currentgun.data.bulletspeed * 25 -- bullet speed cheat
-			-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
-			return ragebot.bulletcheck(origin, target.Position, z, GRAVITY, penetration, whitelist)
+				local newpos = exit + 0.01 * unit
+		
+				if not pass then
+					if dist < penetration then
+						penetration = penetration - dist
+					else
+						return false
+					end
+				end
+		
+				return ragebot:bulletcheck_legacy(newpos, destination, penetration, whitelist)
+			else
+				return true
+			end
+		end
+		
+		function ragebot:CanPenetrate(origin, target, penetration, whitelist)
+			if not menu:GetVal("Rage", "Aimbot", "Legacy Autowall") then
+				local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed * 25)
+				local z = d.Unit * client.logic.currentgun.data.bulletspeed * 25 -- bullet speed cheat
+				-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
+				return ragebot.bulletcheck(origin, target.Position, z, GRAVITY, penetration, whitelist)
+			else
+				return ragebot:bulletcheck_legacy(origin, target.Position, penetration, whitelist)
+			end
 		end
 		
 		function ragebot:AimAtTarget(part, target, origin)
@@ -6605,9 +6654,9 @@ elseif menu.game == "pf" then --!SECTION
 										--debug.profilebegin("BB Ragebot Penetration Check " .. player.Name)
 										local directionVector = camera:GetTrajectory(bone.Position, camposv3)
 										-- ragebot:CanPenetrate(LOCAL_PLAYER, player, directionVector, bone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
-										-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
+										-- ragebot:CanPenetrate(origin, target, velocity, penetration)
 										if not directionVector then continue end
-										if ragebot:CanPenetrateFast(camposv3, bone, client.logic.currentgun.data.penetrationdepth) then
+										if ragebot:CanPenetrate(camposv3, bone, client.logic.currentgun.data.penetrationdepth) then
 											cpart = bone
 											theplayer = player
 											firepos = camposv3
@@ -6650,7 +6699,7 @@ elseif menu.game == "pf" then --!SECTION
 											elseif resolvertype == 4 then -- teleport
 												--debug.profilebegin("BB Ragebot Teleport Resolver")
 												local up = camposreal + Vector3.new(0, 18, 0)
-												local pen = ragebot:CanPenetrateFast(up, bone, client.logic.currentgun.data.penetrationdepth)
+												local pen = ragebot:CanPenetrate(up, bone, client.logic.currentgun.data.penetrationdepth)
 												--debug.profileend("BB Ragebot Teleport Resolver") -- fuck
 												if pen then
 													ragebot.firepos = up
@@ -6704,7 +6753,7 @@ elseif menu.game == "pf" then --!SECTION
 													[sphereHitbox] = true
 												}
 												
-												local penetrated, exited, intersectionpos = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth)
+												local penetrated, exited, intersectionpos = ragebot:CanPenetrate(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth)
 												if penetrated then
 													ragebot.firepos = camposv3
 													cpart = bone
@@ -6732,7 +6781,7 @@ elseif menu.game == "pf" then --!SECTION
 														end
 														
 														-- dick sucking god.
-														local penetrated, exited, newintersection = ragebot:CanPenetrateFast(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
+														local penetrated, exited, newintersection = ragebot:CanPenetrate(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
 														
 														--warn(penetrated, intersectionPoint)
 														
@@ -6740,7 +6789,7 @@ elseif menu.game == "pf" then --!SECTION
 															ragebot.firepos = camposv3
 															cpart = bone
 															theplayer = player
-															ragebot.intersection = newintersection
+															ragebot.intersection = newTargetPosition
 															firepos = camposv3
 														else
 															--warn("no standardized autowall hit")
@@ -6882,9 +6931,9 @@ elseif menu.game == "pf" then --!SECTION
 			local dapointz = ragebot:GetCubicMultipoints(origin, studs or 18*2)
 			
 			local pos
-			-- ragebot:CanPenetrateFast(origin, target, velocity, penetration)
+			-- ragebot:CanPenetrate(origin, target, velocity, penetration)
 			for i, point in pairs(dapointz.corner) do
-				local penetrated = ragebot:CanPenetrateFast(point, selectedpart, client.logic.currentgun.data.penetrationdepth)
+				local penetrated = ragebot:CanPenetrate(point, selectedpart, client.logic.currentgun.data.penetrationdepth)
 				
 				if penetrated then
 					pos = point
@@ -6897,7 +6946,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			
 			for i, point in pairs(dapointz.inside) do
-				local penetrated = ragebot:CanPenetrateFast(point, selectedpart, client.logic.currentgun.data.penetrationdepth)
+				local penetrated = ragebot:CanPenetrate(point, selectedpart, client.logic.currentgun.data.penetrationdepth)
 				
 				if penetrated then
 					pos = point
@@ -6938,7 +6987,7 @@ elseif menu.game == "pf" then --!SECTION
 			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
 			for i = 1, max_step do
 				position = position * CFrame.new(0, step, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
 				end
@@ -6948,7 +6997,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			for i = 1, max_step do
 				position = position * CFrame.new(0, -step, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
 				end
@@ -6958,7 +7007,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			for i = 1, max_step do
 				position = position * CFrame.new(0, 0, step)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
 				end
@@ -6968,7 +7017,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			for i = 1, max_step do
 				position = position * CFrame.new(0, 0, -step)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
 				end
@@ -6978,7 +7027,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			for i = 1, max_step do
 				position = position * CFrame.new(step, 0, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
 				end
@@ -6988,7 +7037,7 @@ elseif menu.game == "pf" then --!SECTION
 			
 			for i = 1, max_step do
 				position = position * CFrame.new(-step, 0, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrateFast(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
 				end
@@ -9640,6 +9689,10 @@ elseif menu.game == "pf" then --!SECTION
 				client.fakeoffset = 18
 			end
 		end
+
+		if menu.open then
+			bulletcheckresolution = menu:GetVal("Rage", "Aimbot", "Autowall FPS (Non-Legacy)") / 1000
+		end
 		--debug.profileend("Noclip Cheat check")
 		
 		--debug.profilebegin("BB Rendering")
@@ -10158,6 +10211,19 @@ elseif menu.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Auto Wall",
 							value = false
+						},
+						{
+							type = "toggle",
+							name = "Legacy Autowall",
+							value = false
+						},
+						{
+							type = "slider",
+							name = "Autowall FPS (Non-Legacy)",
+							value = 30,
+							minvalue = 10,
+							maxvalue = 30,
+							stradd = "fps",
 						},
 						{
 							type = "toggle",
