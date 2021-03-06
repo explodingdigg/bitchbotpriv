@@ -2692,6 +2692,8 @@ function menu.Initialize(menutable)
 								end
 							end
 						elseif v2[2] == "slider" then
+							
+
 							if v2[1] < v2[6][1] then
 								v2[1] = v2[6][1]
 							elseif v2[1] > v2[6][2] then
@@ -8914,18 +8916,34 @@ elseif menu.game == "pf" then --!SECTION
 				
 				
 				if (topIsRendered or bottomIsRendered) then
-					if menu.options["Visuals"][GroupBox]["Name"][1] then
+					local nameon = menu.options["Visuals"][GroupBox]["Name"][1]
+					local rankon = menu.options["Visuals"][GroupBox]["Rank"][1]
+					if nameon or rankon then
+
 						
 						--debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
+						local namestring = ""
 						
-						local name = tostring(Player.Name)
-						if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
-							name = string.lower(name)
-						elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
-							name = string.upper(name)
+						if rankon then 
+							local playerdata = teamdata[1]:FindFirstChild(Player.Name) or teamdata[2]:FindFirstChild(Player.Name)
+							namestring = "[".. playerdata.Rank.Text.. "]"
+						end
+						if nameon then
+							local name = tostring(Player.Name)
+							if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
+								name = string.lower(name)
+							elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
+								name = string.upper(name)
+							end
+
+							if rankon then
+								namestring = namestring.. " ".. string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
+							else
+								namestring = string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
+							end
 						end
 						
-						allesp.text.name[Index].Text = string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
+						allesp.text.name[Index].Text = namestring
 						allesp.text.name[Index].Visible = true
 						allesp.text.name[Index].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
 						
@@ -10526,7 +10544,7 @@ elseif menu.game == "pf" then --!SECTION
 				{
 					name = {"Enemy ESP", "Team ESP", "Local"},
 					autopos = "left",
-					size = 270, --254
+					size = 276,
 					[1] = {
 						content = {
 							{
@@ -10543,6 +10561,11 @@ elseif menu.game == "pf" then --!SECTION
 									name = "Enemy Name",
 									color = {255, 255, 255, 255}
 								}
+							},
+							{
+								type = "toggle",
+								name = "Rank",
+								value = false
 							},
 							{
 								type = "toggle",
@@ -10655,6 +10678,11 @@ elseif menu.game == "pf" then --!SECTION
 									name = "Team Name",
 									color = {255, 255, 255, 255}
 								}
+							},
+							{
+								type = "toggle",
+								name = "Rank",
+								value = false
 							},
 							{
 								type = "toggle",
