@@ -3352,7 +3352,15 @@ function menu.Initialize(menutable)
 				end
 			end
 		end
-		
+		if menu.game == "uni" then
+			if menu.open then
+				INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
+			else
+				if INPUT_SERVICE.MouseBehavior ~= menu.mousebehavior then
+					INPUT_SERVICE.MouseBehavior = menu.mousebehavior
+				end
+			end
+		end
 		if menu.open or menu.fading then
 			menu:set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
 			set_plusminus(0, 20, 20)
@@ -3797,6 +3805,38 @@ end)
 
 if menu.game == "uni" then --SECTION UNIVERSAL
 	menu.activetab = 4
+
+	menu.mousebehavior = Enum.MouseBehavior.Default
+
+	local mt = getrawmetatable(game)
+		
+	local newindex = mt.__newindex
+	--[[local index = mt.__index
+	local namecall = mt.__namecall]]
+	
+	setreadonly(mt, false)
+	
+	mt.__newindex = newcclosure(function(t, p, v)
+		if not checkcaller() then
+			if t == INPUT_SERVICE then
+				if p == "MouseBehavior" then
+					menu.mousebehavior = v
+					if menu.open then
+						newindex(t, p, Enum.MouseBehavior.Default)
+						return
+					end
+				end
+			end
+		end
+
+		return newindex(t, p, v)
+	end)
+
+	menu.oldmt = {
+		__newindex = newindex,
+	}
+	
+	setreadonly(mt, true)
 
 	local allesp = {
 		headdotoutline = {},
@@ -5839,7 +5879,7 @@ elseif menu.game == "pf" then --!SECTION
 			"nodus client slime castle crashers minecraft dupeing hack wizardhax xronize grief ... Tlcharger minecraft crack Oggi spiegheremo come creare un ip grabber!",
 			"Off synonyme syls midge, smiled at mashup 2 mixed in key free download procom, ... Okay, love order and chaos online gameplayer hack amber forcen ahdistus",
 			"ˢᵗᵃʸ ᵐᵃᵈ ˢᵗᵃʸ ᵇᵇᵒᵗˡᵉˢˢ $ ",
-			"bbot does not relent "
+			"bbot does not relent ",
 		}
 	}
 	--local
