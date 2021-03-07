@@ -10559,7 +10559,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Enemy Name",
-									color = {255, 255, 255, 255}
+									color = {255, 255, 255, 200}
 								}
 							},
 							{
@@ -10574,7 +10574,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Enemy Box",
-									color = {255, 0, 0, 130}
+									color = {255, 0, 0, 150}
 								}
 							},
 							{
@@ -10600,11 +10600,11 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								type = "toggle",
 								name = "Held Weapon",
-								value = false,
+								value = true,
 								extra = {
 									type = "single colorpicker",
 									name = "Enemy Held Weapon",
-									color = {255, 255, 255, 255}
+									color = {255, 255, 255, 200}
 								}
 							},
 							{
@@ -10614,7 +10614,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Enemy Distance",
-									color = {255, 255, 255, 255}
+									color = {255, 255, 255, 200}
 								}
 							},
 							{
@@ -10634,7 +10634,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Enemy skeleton",
-									color = {255, 255, 255, 255}
+									color = {255, 255, 255, 120}
 								}
 							},
 							{
@@ -10667,7 +10667,7 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								type = "toggle",
 								name = "Enabled",
-								value = true
+								value = false
 							},
 							{
 								type = "toggle",
@@ -10676,7 +10676,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Team Name",
-									color = {255, 255, 255, 255}
+									color = {255, 255, 255, 200}
 								}
 							},
 							{
@@ -10687,11 +10687,11 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								type = "toggle",
 								name = "Box",
-								value = true,
+								value = false,
 								extra = {
 									type = "single colorpicker",
 									name = "Team Box",
-									color = {0, 255, 0, 255}
+									color = {0, 255, 0, 150}
 								}
 							},
 							{
@@ -10721,7 +10721,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Team Held Weapon",
-									color = {255, 255, 255, 255}
+									color = {255, 255, 255, 200}
 								}
 							},
 							{
@@ -10731,7 +10731,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Team Distance",
-									color = {255, 255, 255, 255}
+									color = {255, 255, 255, 200}
 								}
 							},
 							{
@@ -10751,7 +10751,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Team skeleton",
-									color = {255, 255, 255, 255}
+									color = {255, 255, 255, 120}
 								}
 							},
 						}
@@ -10818,7 +10818,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Local Player Chams",
-									color = {255, 255, 255, 255}
+									color = {106, 136, 213, 255}
 								}
 							},
 							{
@@ -10968,7 +10968,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "double colorpicker",
 									name = {"Inside Ambience", "Outside Ambience"},
-									color = {{255, 255, 255}, {255, 255, 255}}
+									color = {{117, 76, 236}, {117, 76, 236}}
 								}
 							},
 							{
@@ -11023,7 +11023,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Ragdoll Chams",
-									color = {255, 255, 255, 255}
+									color = {106, 136, 213, 255}
 								},
 							},
 							{
@@ -11039,7 +11039,7 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "single colorpicker",
 									name = "Bullet Tracers",
-									color = {255, 255, 255, 255}
+									color = {201, 69, 54}
 								},
 							},
 						}
@@ -11057,7 +11057,7 @@ elseif menu.game == "pf" then --!SECTION
 							extra = {
 								type = "single colorpicker",
 								name = "Weapon Name",
-								color = {255, 255, 255, 255}
+								color = {255, 255, 255, 150}
 							}
 						},
 						{
@@ -11067,7 +11067,7 @@ elseif menu.game == "pf" then --!SECTION
 							extra = {
 								type = "single colorpicker",
 								name = "Weapon Ammo",
-								color = {255, 255, 255, 255}
+								color = {61, 168, 235, 150}
 							}
 						},
 						{
@@ -11369,7 +11369,8 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								type = "toggle",
 								name = "Fake Equip",
-								value = false
+								value = false,
+								unsafe = true
 							},
 							{
 								type = "dropbox",
@@ -11393,7 +11394,8 @@ elseif menu.game == "pf" then --!SECTION
 								value = false,
 								extra = {
 									type = "keybind"
-								}
+								},
+								unsafe = true,
 							}
 						}
 					}
