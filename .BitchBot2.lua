@@ -4799,6 +4799,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			if menu.open then
 				if menu.tickbase_manip_added == false and menu:GetVal("Misc", "Exploits", "Enable Tick Manipulation") then
 					shared.tick_ref = hookfunc(tick, function()
+						if checkcaller() then
+							return shared.tick_ref()
+						end
 						if not menu then
 							return shared.tick_ref()
 						elseif menu:GetVal("Misc", "Exploits", "Enable Tick Manipulation") and menu:GetVal("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Misc", "Exploits", "Shift Tick Base", "keybind")) then
