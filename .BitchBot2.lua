@@ -6355,6 +6355,9 @@ elseif menu.game == "pf" then --!SECTION
 		
 		
 		mt.__newindex = newcclosure(function(self, id, val)
+			if checkcaller() then
+				return oldNewIndex(self, id, val)
+			end
 			if client.char.alive then
 				if self == workspace.Camera then
 					if id == "CFrame" then
@@ -6428,7 +6431,7 @@ elseif menu.game == "pf" then --!SECTION
 									hitwall = true
 									local hitpos = raycastResult.Position
 									local normal = raycastResult.Normal
-									local newpos = hitpos + 0.08 * normal
+									local newpos = hitpos + 0.1 * normal
 									client.superaastart = CFrame.new(newpos)
 								end
 								if not hitwall then
@@ -9676,11 +9679,14 @@ elseif menu.game == "pf" then --!SECTION
 						keybindtoggles.freestand = not keybindtoggles.freestand
 						return Enum.ContextActionResult.Sink
 					end
-					if menu:GetVal("Misc", "Exploits", "Fake Position") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Fake Position", "keybind") then
+					if menu:GetVal("Misc", "Exploits", "Fake Position") and client.char.alive and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Fake Position", "keybind") then
 						keybindtoggles.superaa = not keybindtoggles.superaa
 						if keybindtoggles.superaa then
+							client.char.rootpart.CustomPhysicalProperties = PhysicalProperties.new(1000, 1000, 0, 1000, 1000)
+							CreateNotification("Fake Position has been enabled!")
 							client.superaastart = client.char.head.CFrame
 						else
+							client.char.rootpart.CustomPhysicalProperties = nil
 							client.superaastart = nil
 						end
 						return Enum.ContextActionResult.Sink
@@ -9867,6 +9873,12 @@ elseif menu.game == "pf" then --!SECTION
 				keybindtoggles.fakebody = false
 				CreateNotification("Noclip automatically disabled due to death")
 				client.fakeoffset = 18
+			end
+
+			if keybindtoggles.superaa then
+				keybindtoggles.superaa = false
+				client.superaastart = nil
+				CreateNotification("Fake position automatically disabled due to death")
 			end
 		end
 		--debug.profileend("Noclip Cheat check")
