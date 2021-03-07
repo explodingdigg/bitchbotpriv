@@ -2701,7 +2701,7 @@ function menu.Initialize(menutable)
 							end
 							
 
-							v2[4][5].Text = v2.custom[v2[1]] or v2[1] == math.floor(v2[1]) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
+							v2[4][5].Text = v2.custom[v2[1]] or (v2[1] == math.floor(v2[1]) and v2.round == false) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
 							--v2[4][5].Text = tostring(v2[1]).. v2[4][6]
 							
 							for i = 1, 4 do
@@ -3075,7 +3075,7 @@ function menu.Initialize(menutable)
 											v2[1] = v2[6][2]
 										end
 										
-										v2[4][5].Text = v2.custom[v2[1]] or v2[1] == math.floor(v2[1]) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
+										v2[4][5].Text = v2.custom[v2[1]] or (v2[1] == math.floor(v2[1]) and v2.round == false) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
 										
 										for i = 1, 4 do
 											v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
@@ -3450,7 +3450,7 @@ function menu.Initialize(menutable)
 										elseif v2[1] > v2[6][2] then
 											v2[1] = v2[6][2]
 										end
-										v2[4][5].Text = v2.custom[v2[1]] or v2[1] == math.floor(v2[1]) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
+										v2[4][5].Text = v2.custom[v2[1]] or (v2[1] == math.floor(v2[1]) and v2.round == false) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
 										for i = 1, 4 do
 											v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 										end
