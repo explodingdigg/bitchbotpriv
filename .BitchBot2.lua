@@ -9687,6 +9687,7 @@ elseif menu.game == "pf" then --!SECTION
 							client.superaastart = client.char.head.CFrame
 						else
 							client.char.rootpart.CustomPhysicalProperties = nil
+							client.char.rootpart.CFrame = client.superaastart
 							client.superaastart = nil
 						end
 						return Enum.ContextActionResult.Sink
