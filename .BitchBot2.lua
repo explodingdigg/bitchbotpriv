@@ -5234,7 +5234,7 @@ elseif menu.game == "pf" then --!SECTION
 	local client = {}
 	local legitbot = {}
 	local misc = {}
-	local ragebot = {}
+	local ragebot = {flip = false}
 	local camera = {}
 	
 	ragebot.nextRagebotShot = -1
@@ -9817,6 +9817,11 @@ elseif menu.game == "pf" then --!SECTION
 				ragebot:MainLoop()
 			end
 			--debug.profileend("BB Ragebot (Non Performance)")
+		else
+			ragebot.flip = not ragebot.flip
+			if ragebot.flip then
+				ragebot:MainLoop()
+			end
 		end
 
 		if menu.spectating and not client.cam:isspectating() then
@@ -9842,11 +9847,11 @@ elseif menu.game == "pf" then --!SECTION
 			renderChams()
 			
 			
-			if menu:GetVal("Rage", "Extra", "Performance Mode") then
+			--[[if menu:GetVal("Rage", "Extra", "Performance Mode") then
 				do--ragebot
 					ragebot:MainLoop()
 				end
-			end
+			end]]
 		end
 	end)
 
