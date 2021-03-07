@@ -305,12 +305,31 @@ function CreateThread(func, ...) -- improved... yay.
 end
 
 function MultiThreadList(obj, ...)
-	for i, v in pairs(obj) do
-		CreateThread(v, ...)
+	local n = #obj
+	if n > 0 then
+		for i = 1, n do
+			local t = obj[i]
+			if type(t) == "table" then
+				local d = #t
+				assert(d ~= 0, "table inserted was not an array or was empty")
+				assert(d < 3, ("invalid number of arguments (%d)"):format(d))
+				local thetype = type(t[1])
+				assert(thetype == "function", ("invalid argument #1: expected 'function', got '%s'"):format(tostring(thetype)))
+
+				CreateThread(t[1], unpack(t[2]))
+			else
+				CreateThread(t, ...)
+			end
+		end
+	else
+		for i, v in pairs(obj) do
+			CreateThread(v, ...)
+		end
 	end
 end
 
-local DeepRestoreTableFunctions
+local DeepRestoreTableFunctions, DeepCleanupTable
+
 DeepRestoreTableFunctions = function(tbl)
 	for k, v in next, tbl do
 		if type(v) == "function" and is_synapse_function(v) then
@@ -325,6 +344,36 @@ DeepRestoreTableFunctions = function(tbl)
 			DeepRestoreTableFunctions(v)
 		end
 	end
+end
+
+DeepCleanupTable = function(tbl)
+	local numTable = #tbl
+	local isTableArray = numTable > 0
+	if isTableArray then
+		for i = 1, numTable do
+			local entry = tbl[i]
+			local entryType = type(entry)
+
+			if entryType == "table" then
+				DeepCleanupTable(tbl)
+			end
+
+			tbl[i] = nil
+			entry = nil
+			entryType = nil
+		end
+	else
+		for k, v in next, tbl do
+			if type(v) == "table" then
+				DeepCleanupTable(tbl)
+			end
+		end
+
+		tbl[k] = nil
+	end
+
+	numTable = nil
+	isTableArray = nil
 end
 
 local event = {}
@@ -423,33 +472,43 @@ do
 	while Loopy_Image_Checky() do
 		wait(0)
 	end
-	
 end
-
-loadstart = tick()
 
 if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459 then -- they sometimes open 5281922586
 	menu.game = "pf"
 	do
-		for _,v in pairs(getgc()) do
-			if type(v) == 'function' then
-				for _,u in pairs(debug.getupvalues(v)) do
-					if type(u) == 'table'and rawget(u, 'send') then
-						net = u
+		local net
+		
+		repeat
+			local gc = getgc(true)
+		
+			for i = 1, #gc do
+				local garbage = gc[i]
+	
+				local garbagetype = type(garbage)
+	
+				if garbagetype == "table" then
+					net = rawget(garbage, "fetch")
+					if net then
+						break
 					end
 				end
 			end
-		end
-		
-		repeat
-			game.RunService.Heartbeat:Wait()
-		until net and not net.add
+
+			gc = nil
+			game.RunService.RenderStepped:Wait()
+		until net
+
+		net = nil
+
 		local annoyingFuckingMusic = workspace:FindFirstChild"memes"
 		if annoyingFuckingMusic then
 			annoyingFuckingMusic:Destroy()
 		end
 	end -- wait for framwork to load
 end
+
+loadstart = tick()
 
 -- nate i miss u D:
 
@@ -511,7 +570,9 @@ local function UnpackRelations()
 			tb[#tb + 1] = k
 		end
 		
-		for _, data in next, tb do
+		for i = 1, #tb do
+			local data = tb[i]
+
 			local cellname = data:match("%a+")
 			if final[cellname] then
 				for k,v in data:gmatch "%d+[^,}]" do
@@ -528,6 +589,9 @@ local function UnpackRelations()
 		end
 	end
 	
+	if not menu then
+		repeat game.RunService.Heartbeat:Wait() until menu
+	end
 	menu.friends = final.friends
 	menu.priority = final.priority
 end
@@ -619,7 +683,7 @@ local function IsKeybindDown(tab, group, name, on_nil)
 end
 
 
-Lerp = function(delta, from, to)
+local Lerp = function(delta, from, to) -- wtf why were these globals thats so exploitable!
 	if (delta > 1) then
 		return to
 	end
@@ -629,7 +693,7 @@ Lerp = function(delta, from, to)
 	return from + ( to - from ) * delta
 end
 
-ColorRange = function(value, ranges) -- ty tony for dis function u a homie
+local ColorRange = function(value, ranges) -- ty tony for dis function u a homie
 	if value <= ranges[1].start then return ranges[1].color end
 	if value >= ranges[#ranges].start then return ranges[#ranges].color end
 	
@@ -5640,7 +5704,6 @@ elseif menu.game == "pf" then --!SECTION
 							for _, upvalue in next, tempupvs do
 								if type(upvalue) == "function" and islclosure(upvalue) and not is_synapse_function(upvalue) then
 									rawset(garbage, "task", upvalue)
-									warn("sick")
 									gc = nil
 									return
 								end
@@ -5698,7 +5761,7 @@ elseif menu.game == "pf" then --!SECTION
 			function()
 				DeepRestoreTableFunctions(client)
 
-				for k,v in next, client do
+				--[[ for k,v in next, client do
 					client[k] = nil
 				end
 				
@@ -5716,7 +5779,13 @@ elseif menu.game == "pf" then --!SECTION
 				
 				for k,v in next, camera do
 					camera[k] = nil
-				end
+				end ]]
+
+				DeepCleanupTable(client)
+				DeepCleanupTable(ragebot)
+				DeepCleanupTable(legitbot)
+				DeepCleanupTable(misc)
+				DeepCleanupTable(camera)
 				
 				client = nil
 				ragebot = nil
@@ -5724,7 +5793,8 @@ elseif menu.game == "pf" then --!SECTION
 				misc = nil
 				camera = nil
 				DeepRestoreTableFunctions = nil
-			end
+			end,
+			{DeepCleanupTable, {allesp}}
 		})
 	end
 	
@@ -5827,14 +5897,26 @@ elseif menu.game == "pf" then --!SECTION
 		return newupdater
 	end
 
-	local loadplayeridx = table.find(getupvalues(client.getupdater), loadplayer)
+	CreateThread(function()
+		local loadplayeridx = table.find(getupvalues(client.getupdater), loadplayer)
 
-	if loadplayeridx then
-		setupvalue(client.getupdater, loadplayeridx, loadplayerhook)
-	else
-		warn("Did not seem to find loadplayer in getupdater.")
-	end
+		if not loadplayeridx then
+			for k,v in next, getupvalues(client.getupdater) do
+				if type(v) == "function" then
+					if v == loadplayer or getinfo(v).name == "loadplayer" then
+						loadplayeridx = k
+						break
+					end
+				end
+			end
 
+			if loadplayeridx then
+				setupvalue(client.getupdater, loadplayeridx, loadplayerhook)
+			else
+				warn("Unable to find loadplayer in getupdater")
+			end
+		end
+	end)
 	
 	local selectedPlayer = nil
 	
