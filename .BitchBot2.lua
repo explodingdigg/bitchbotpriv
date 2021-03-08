@@ -1571,6 +1571,7 @@ function menu.Initialize(menutable)
 								menu.options[v.name][g_name][v2.name][2] = v2.type
 								menu.options[v.name][g_name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1}
 								menu.options[v.name][g_name][v2.name][6] = unsafe
+								menu.options[v.name][g_name][v2.name].tooltip = v2.tooltip or nil
 								if v2.extra ~= nil then
 									if v2.extra.type == "keybind" then
 										menu.options[v.name][g_name][v2.name][5] = {}
@@ -1851,6 +1852,7 @@ function menu.Initialize(menutable)
 	
 	set_plusminus(0, 20, 20)
 	
+	--DROP BOX THINGY
 	local dropboxthingy = {}
 	local dropboxtexty = {}
 	
@@ -1926,6 +1928,7 @@ function menu.Initialize(menutable)
 	
 	set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 	
+	--COLOR PICKER
 	local cp = {
 		x = 400,
 		y = 40,
@@ -2131,6 +2134,70 @@ function menu.Initialize(menutable)
 	
 	set_colorpicker(false, {255, 0, 0}, nil, false, "", 0, 0)
 	
+	--TOOL TIP
+	local tooltip = {
+		x = 0,
+		y = 0,
+		active = false,
+		text = "This does this and that i guess\npooping 24/7",
+		drawings = {},
+		postable = {},
+
+	}
+
+	local function ttOutline(visible, pos_x, pos_y, width, height, clr, tablename)
+		Draw:OutlinedRect(visible, pos_x + tooltip.x, pos_y + tooltip.y, width, height, clr, tablename)
+		table.insert(tooltip.postable, {tablename[#tablename], pos_x, pos_y})
+	end
+	
+	local function ttRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		Draw:FilledRect(visible, pos_x + tooltip.x, pos_y + tooltip.y, width, height, clr, tablename)
+		table.insert(tooltip.postable, {tablename[#tablename], pos_x, pos_y})
+	end
+	
+	local function ttText(text, visible, centered, pos_x, pos_y, tablename)
+		Draw:OutlinedText(text, 2, visible, pos_x + tooltip.x, pos_y + tooltip.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
+		table.insert(tooltip.postable, {tablename[#tablename], pos_x, pos_y})
+	end
+	
+	ttRect(false, tooltip.x + 1, tooltip.y + 1, 1, 28, {menu.mc[1], menu.mc[2], menu.mc[3], 255}, tooltip.drawings)
+	ttRect(false, tooltip.x + 2, tooltip.y + 1, 1, 28, {menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40, 255}, tooltip.drawings)
+	ttOutline(false, tooltip.x, tooltip.y, 4, 30, {20, 20, 20, 255}, tooltip.drawings)
+	ttRect(false, tooltip.x + 4, tooltip.y, 100, 30, {40, 40, 40, 255}, tooltip.drawings)
+	ttOutline(false, tooltip.x - 1, tooltip.y - 1, 102, 32, {0, 0, 0, 255}, tooltip.drawings)
+	ttOutline(false, tooltip.x + 3, tooltip.y, 102, 30, {20, 20, 20, 255}, tooltip.drawings)
+	ttText(tooltip.text, false, false, tooltip.x + 7, tooltip.y + 1, tooltip.drawings)
+
+	local function set_tooltip(x, y, text, visible)
+		for k, v in ipairs(tooltip.drawings) do
+			v.Visible = visible
+		end
+
+		tooltip.active = visible
+		if visible then
+			tooltip.drawings[7].Text = text
+
+			for k, v in pairs(tooltip.postable) do
+				v[1].Position = Vector2.new(x + v[2], y + v[3])
+			end
+			tooltip.drawings[1].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
+			tooltip.drawings[2].Color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)
+
+
+			local tb = tooltip.drawings[7].TextBounds
+			
+			tooltip.drawings[1].Size = Vector2.new(1, tb.Y + 3)
+			tooltip.drawings[2].Size = Vector2.new(1, tb.Y + 3)
+			tooltip.drawings[3].Size = Vector2.new(4, tb.Y + 5)
+			tooltip.drawings[4].Size = Vector2.new(tb.X + 6, tb.Y + 5)
+			tooltip.drawings[5].Size = Vector2.new(tb.X + 12, tb.Y + 7)
+			tooltip.drawings[6].Size = Vector2.new(tb.X + 7, tb.Y + 5)
+		end
+	end
+
+	set_tooltip(500, 500, "This does this and that i guess\npooping 24/7\ntest test test HI q", false)
+
+	-- mouse shiz
 	local bbmouse = {}
 	local mousie = {
 		x = 100,
@@ -2241,7 +2308,7 @@ function menu.Initialize(menutable)
 				end
 				set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 				menu.colorpicker_open = nil
-				menu.colorpicker_open = nil
+				set_tooltip(0, 0, "fart", false)
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 				
 			end
@@ -2336,6 +2403,15 @@ function menu.Initialize(menutable)
 			end
 		end
 	end
+
+	function menu:MouseInArea(x, y, width, height)
+		if LOCAL_MOUSE.x > x and LOCAL_MOUSE.x < x + width and LOCAL_MOUSE.y > 36 + y and LOCAL_MOUSE.y < 36 + y + height then
+			return true
+		else
+			return false
+		end
+	end
+	
 	
 	function menu:MouseInMenu(x, y, width, height)
 		if LOCAL_MOUSE.x > menu.x + x and LOCAL_MOUSE.x < menu.x + x + width and LOCAL_MOUSE.y > menu.y - 36 + y and LOCAL_MOUSE.y < menu.y - 36 + y + height then
@@ -2850,12 +2926,52 @@ function menu.Initialize(menutable)
 		end
 	end
 	
+	local function mousebutton2downfunc()
+		if tooltip.active then
+			set_tooltip(0, 0, "poop", false)
+		else
+			if not menu.dropbox_open or menu.textboxopen or menu.colorpicker_open then
+				for k, v in pairs(menu.options) do
+					if menu.tabnames[menu.activetab] == k then
+						for k1, v1 in pairs(v) do
+							local pass = true
+							for k3, v3 in pairs(menu.multigroups) do
+								if k == k3 then
+									for k4, v4 in pairs(v3) do
+										for k5, v5 in pairs(v4.vals) do
+											if k1 == k5 then
+												pass = v5
+											end
+										end
+									end
+								end
+							end
+
+							if pass then
+								for k2, v2 in pairs(v1) do		
+									if v2[2] == "toggle" then
+										if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
+											if v2.tooltip ~= nil then
+												set_tooltip(menu.x + v2[3][1], menu.y + v2[3][2] + 18, v2.tooltip, true) 
+											end
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+
 	local function mousebutton1downfunc() --ANCHOR menu mouse down func
 		menu.dropbox_open = nil
 		menu.textboxopen = false
 		
 		
-
+		set_tooltip(0, 0, "poop", false)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
@@ -2920,6 +3036,7 @@ function menu.Initialize(menutable)
 				menu.activetab = i
 				setActiveTab(menu.activetab)
 				menu:SetMenuPos(menu.x, menu.y)
+				set_tooltip(0, 0, "poop", false)
 			end
 		end
 		if menu.colorpicker_open then
@@ -2950,15 +3067,7 @@ function menu.Initialize(menutable)
 			elseif menu:MouseInColorPicker(10, 189, 160, 14) and cp.alpha then
 				cp.dragging_b = true
 			end
-			
-			--[[
-			menu.options[v.name][v1.name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
-			menu.options[v.name][v1.name][v2.name][5][1] = v2.extra.color
-			menu.options[v.name][v1.name][v2.name][5][2] = v2.extra.type
-			menu.options[v.name][v1.name][v2.name][5][3] = {v1.x + v1.width - 38, y_pos + v1.y - 1}
-			menu.options[v.name][v1.name][v2.name][5][5] = false
-			menu.options[v.name][v1.name][v2.name][5][6] = v2.extra.name
-			]]
+
 			if menu:MouseInColorPicker(197, 37, 75, 20) then
 				menu.copied_clr = newcolor.Color
 			elseif menu:MouseInColorPicker(197, 57, 75, 20) then
@@ -3046,24 +3155,7 @@ function menu.Initialize(menutable)
 						end
 
 						if pass then
-							for k2, v2 in pairs(v1) do --ANCHOR more menu bs
-
-							--[[
-								if visible then
-									for k, v in pairs(menu.multigroups) do
-										if menu.tabnames[menu.activetab] == k then
-											for k1, v1 in pairs(v) do
-												for k2, v2 in pairs(v1.vals) do	
-													for k3, v3 in pairs(menu.mgrouptabz[k][k2]) do
-														v3.Visible = v2
-													end
-												end
-											end
-										end
-									end
-								end
-							]]
-							
+							for k2, v2 in pairs(v1) do --ANCHOR more menu bs			
 								if v2[2] == "toggle" and not menu.dropbox_open then
 									if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
 										if v2[6] then
@@ -3691,7 +3783,12 @@ function menu.Initialize(menutable)
 			if menu.open and not menu.fading then
 				mousebutton1downfunc()
 			end
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+			if menu.open and not menu.fading then
+				mousebutton2downfunc()
+			end
 		end
+
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			if input.KeyCode.Name:match("Shift") then
 				local kcn = input.KeyCode.Name
@@ -10159,7 +10256,7 @@ elseif menu.game == "pf" then --!SECTION
 	end)
 
 	menu.Initialize({
-		{
+		{ --ANCHOR stuffs 
 			name = "Legit",
 			content = {
 				{
@@ -10169,7 +10266,7 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Enabled",
-							value = true
+							value = true,
 						},
 						{
 							type = "slider",
