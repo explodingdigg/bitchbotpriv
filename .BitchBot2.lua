@@ -5418,7 +5418,7 @@ elseif menu.game == "pf" then --!SECTION
 					return step(what, what1)
 				else
 					if menu:GetVal("Rage", "Aimbot", "Enabled") or keybindtoggles.thirdperson or keybindtoggles.superaa then
-						return step(3, what1)
+						return step(3, true)
 					else
 						return step(what, what1)
 					end
@@ -5890,7 +5890,7 @@ elseif menu.game == "pf" then --!SECTION
 					return step(what, what1)
 				else
 					if menu:GetVal("Rage", "Aimbot", "Enabled") or keybindtoggles.thirdperson or keybindtoggles.superaa then
-						return step(3, what1)
+						return step(3, true)
 					else
 						return step(what, what1)
 					end
