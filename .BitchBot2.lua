@@ -9707,6 +9707,30 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 	end)
+
+	menu.connections.dropweaponadded = workspace.Ignore.GunDrop.ChildAdded:Connect(function(newchild)
+		if menu:GetVal("Visuals", "Dropped ESP", "Dropped Weapon Chams") then
+			newchild:WaitForChild("Slot1")
+			local children = newchild:GetChildren()
+			
+			for i = 1, #children do
+				local curvalue = children[i]
+
+				if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" and curvalue.ClassName == "Part" then
+
+					curvalue.Color = menu:GetVal("Visuals", "Dropped ESP", "Dropped Weapon Chams", "color", true)
+					local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
+					local mesh = curvalue:FindFirstChild("Mesh")
+
+					if mesh then
+						mesh.VertexColor = vertexcolor
+					end
+					local texture = curvalue:FindFirstChild("Texture")
+					if texture then texture:Destroy() end 
+				end
+			end
+		end
+	end)
 	
 	local chat_game = LOCAL_PLAYER.PlayerGui.ChatGame
 	local chat_box = chat_game:FindFirstChild("TextBox")
@@ -11271,6 +11295,16 @@ elseif menu.game == "pf" then --!SECTION
 								type = "single colorpicker",
 								name = "Weapon Ammo",
 								color = {61, 168, 235, 150}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Dropped Weapon Chams",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Dropped Weapon Color",
+								color = {3, 252, 161, 150}
 							}
 						},
 						{
