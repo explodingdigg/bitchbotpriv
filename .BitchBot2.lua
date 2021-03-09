@@ -4971,26 +4971,26 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				
 				game.RunService.Stepped:wait()
 				if not menu then return end
-				local crosshairvis = menu:GetVal("Visuals", "Misc", "Custom Crosshair")
+				local crosshairvis = menu:GetVal("Visuals", "Misc Visuals", "Custom Crosshair")
 				for k, v in pairs(menu.crosshair) do
 					v[1].Visible = crosshairvis
 					v[2].Visible = crosshairvis
 				end
-				if menu:GetVal("Visuals", "Misc", "Draw Aimbot FOV") and menu:GetVal("Aimbot", "Aimbot", "Enabled") then
+				if menu:GetVal("Visuals", "Misc Visuals", "Draw Aimbot FOV") and menu:GetVal("Aimbot", "Aimbot", "Enabled") then
 					menu.fovcircle[1].Visible = true
 					menu.fovcircle[2].Visible = true
 					
-					menu.fovcircle[2].Color = menu:GetVal("Visuals", "Misc", "Draw Aimbot FOV", "color", true)
-					local transparency = menu:GetVal("Visuals", "Misc", "Draw Aimbot FOV", "color")[4]
+					menu.fovcircle[2].Color = menu:GetVal("Visuals", "Misc Visuals", "Draw Aimbot FOV", "color", true)
+					local transparency = menu:GetVal("Visuals", "Misc Visuals", "Draw Aimbot FOV", "color")[4]
 					menu.fovcircle[1].Transparency = (transparency - 40) /255
 					menu.fovcircle[2].Transparency = transparency/255
 				else
 					menu.fovcircle[1].Visible = false
 					menu.fovcircle[2].Visible = false
 				end
-				if menu:GetVal("Visuals", "Misc", "Custom Crosshair") then
-					local size = menu:GetVal("Visuals", "Misc", "Crosshair Size")
-					local color = menu:GetVal("Visuals", "Misc", "Custom Crosshair", "color", true)
+				if menu:GetVal("Visuals", "Misc Visuals", "Custom Crosshair") then
+					local size = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Size")
+					local color = menu:GetVal("Visuals", "Misc Visuals", "Custom Crosshair", "color", true)
 					menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
 					menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
 					
@@ -5025,9 +5025,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 		
-		if menu:GetVal("Visuals", "Misc", "Custom Crosshair") then
-			local size = menu:GetVal("Visuals", "Misc", "Crosshair Size")
-			if menu:GetVal("Visuals", "Misc", "Crosshair Position") == 1 then
+		if menu:GetVal("Visuals", "Misc Visuals", "Custom Crosshair") then
+			local size = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Size")
+			if menu:GetVal("Visuals", "Misc Visuals", "Crosshair Position") == 1 then
 				menu.crosshair.inner[1].Position = Vector2.new(SCREEN_SIZE.x/2 - size, SCREEN_SIZE.y/2)
 				menu.crosshair.inner[2].Position = Vector2.new(SCREEN_SIZE.x/2, SCREEN_SIZE.y/2 - size)
 				
@@ -5047,7 +5047,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			Camera.FieldOfView = menu:GetVal("Visuals", "Local Visuals", "Camera FOV")
 		end
 		
-		if menu:GetVal("Visuals", "Misc", "Draw Aimbot FOV") and menu:GetVal("Aimbot", "Aimbot", "Enabled") then
+		if menu:GetVal("Visuals", "Misc Visuals", "Draw Aimbot FOV") and menu:GetVal("Aimbot", "Aimbot", "Enabled") then
 			menu.fovcircle[1].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
 			menu.fovcircle[2].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
 			
@@ -7556,7 +7556,7 @@ elseif menu.game == "pf" then --!SECTION
 							end
 						end
 						
-						if menu:GetVal("Visuals", "Dropped ESP", "Nade Warning") then
+						if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
 							local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
 							if curtick < btick then
 								table.insert(menu.activenades, {
@@ -7898,7 +7898,7 @@ elseif menu.game == "pf" then --!SECTION
 				NumberSequenceKeypoint.new(0, 0),
 				NumberSequenceKeypoint.new(1, 1)
 			}
-			beam.Color = ColorSequence.new(menu:GetVal("Visuals", "Misc", "Bullet Tracers", "color", true), Color3.new(0, 0, 0))
+			beam.Color = ColorSequence.new(menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers", "color", true), Color3.new(0, 0, 0))
 			beam.Attachment0 = origin_att
 			beam.Attachment1 = ending_att
 			debris:AddItem(beam, 3)
@@ -8448,40 +8448,31 @@ elseif menu.game == "pf" then --!SECTION
 						send(self, unpack(args))
 						
 						for k, bullet in pairs(args[2].bullets) do
-							local origin = args[2].firepos
-							local attach_origin = Instance.new("Attachment", workspace.Terrain)
-							attach_origin.Position = origin
-							local ending = origin + bullet[1].unit.Unit * 300
-							local attach_ending = Instance.new("Attachment", workspace.Terrain)
-							attach_ending.Position = ending
-							local beam = misc:CreateBeam(attach_origin, attach_ending)
-							beam.Parent = workspace
-							
-							local hitinfo = {
-								ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
-							}
-							--send(self, 'bullethit', unpack(hitinfo))
-							--[[if not client.instancetype.IsBanland() then
-							delay(cachedtimedata[k], function()
-								send(self, 'bullethit', unpack(hitinfo))
-							end)
-						else
+							if menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers") then
+								local origin = args[2].firepos
+								local attach_origin = Instance.new("Attachment", workspace.Terrain)
+								attach_origin.Position = origin
+								local ending = origin + bullet[1].unit.Unit * 300
+								local attach_ending = Instance.new("Attachment", workspace.Terrain)
+								attach_ending.Position = ending
+								local beam = misc:CreateBeam(attach_origin, attach_ending)
+								beam.Parent = workspace
+								
+								local hitinfo = {
+									ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
+								}
+							end
+							client.hud:firehitmarker(ragebot.targetpart.Name == "Head")
+							client.sound.PlaySound("hitmarker", nil, 1, 1.5)
 							send(self, 'bullethit', unpack(hitinfo))
-						end]]
-						client.hud:firehitmarker(ragebot.targetpart.Name == "Head")
-						client.sound.PlaySound("hitmarker", nil, 1, 1.5)
-						send(self, 'bullethit', unpack(hitinfo))
-					end
+						end
 					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
 						local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
 						send(self, "equip", slot)
 					end
-					-- for k, bullet in pairs(info.bullets) do
-					-- 	send(gamenet, "bullethit", rageTarget, rageHitPos, rageHitbox, bullet[2])
-					-- end
 					return
 				else
-					if menu:GetVal("Visuals", "Misc", "Bullet Tracers") then
+					if menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers") then
 						for k, bullet in next, args[2].bullets do
 							local origin = args[2].firepos
 							local attach_origin = Instance.new("Attachment", workspace.Terrain)
@@ -8977,9 +8968,9 @@ elseif menu.game == "pf" then --!SECTION
 						outline = frame.BorderColor3
 					} 
 				end -- MEOW -core 2021
-				local inline = menu:GetVal("Visuals", "Misc", "Crosshair Color", "color1", true)
-				local outline = menu:GetVal("Visuals", "Misc", "Crosshair Color", "color2", true)
-				local enabled = menu:GetVal("Visuals", "Misc", "Crosshair Color")
+				local inline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color1", true)
+				local outline = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color", "color2", true)
+				local enabled = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Color")
 				frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
 				frame.BorderColor3 = enabled and outline or crosshairColors.outline
 				--debug.profileend()
@@ -8987,19 +8978,19 @@ elseif menu.game == "pf" then --!SECTION
 		end -- fun end!
 		--------------------------------------world funnies
 		--debug.profilebegin("renderVisuals World")
-		if menu.options["Visuals"]["World"]["Force Time"][1] then
-			game.Lighting.ClockTime = menu.options["Visuals"]["World"]["Custom Time"][1] 
+		if menu.options["Visuals"]["World Visuals"]["Force Time"][1] then
+			game.Lighting.ClockTime = menu.options["Visuals"]["World Visuals"]["Custom Time"][1] 
 		end
-		if menu.options["Visuals"]["World"]["Ambience"][1] then
-			game.Lighting.Ambient = RGB(menu.options["Visuals"]["World"]["Ambience"][5][1][1][1][1], menu.options["Visuals"]["World"]["Ambience"][5][1][1][1][2], menu.options["Visuals"]["World"]["Ambience"][5][1][1][1][3])
-			game.Lighting.OutdoorAmbient = RGB(menu.options["Visuals"]["World"]["Ambience"][5][1][2][1][1], menu.options["Visuals"]["World"]["Ambience"][5][1][2][1][2], menu.options["Visuals"]["World"]["Ambience"][5][1][2][1][3])
+		if menu.options["Visuals"]["World Visuals"]["Ambience"][1] then
+			game.Lighting.Ambient = RGB(menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][1], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][2], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][1][1][3])
+			game.Lighting.OutdoorAmbient = RGB(menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][1], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][2], menu.options["Visuals"]["World Visuals"]["Ambience"][5][1][2][1][3])
 		else
 			game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
 			game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
 		end
-		if menu.options["Visuals"]["World"]["Custom Saturation"][1] then
-			game.Lighting.MapSaturation.TintColor = RGB(menu.options["Visuals"]["World"]["Custom Saturation"][5][1][1], menu.options["Visuals"]["World"]["Custom Saturation"][5][1][2], menu.options["Visuals"]["World"]["Custom Saturation"][5][1][3])
-			game.Lighting.MapSaturation.Saturation = menu.options["Visuals"]["World"]["Saturation Density"][1]/50
+		if menu.options["Visuals"]["World Visuals"]["Custom Saturation"][1] then
+			game.Lighting.MapSaturation.TintColor = RGB(menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][1], menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][2], menu.options["Visuals"]["World Visuals"]["Custom Saturation"][5][1][3])
+			game.Lighting.MapSaturation.Saturation = menu.options["Visuals"]["World Visuals"]["Saturation Density"][1]/50
 		else
 			game.Lighting.MapSaturation.TintColor = RGB(170,170,170)
 			game.Lighting.MapSaturation.Saturation = -0.25
@@ -9222,7 +9213,7 @@ elseif menu.game == "pf" then --!SECTION
 						--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
 						
 						local charWeapon = _3pweps[Player]
-						local wepname = charWeapon and charWeapon or "???"
+						local wepname = charWeapon and charWeapon or "?"
 						
 						if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
 							wepname = string.lower(wepname)
@@ -9444,12 +9435,12 @@ elseif menu.game == "pf" then --!SECTION
 				--debug.profileend("renderVisuals Dropped ESP")
 			end
 			
-			--debug.profilebegin("renderVisuals Dropped ESP Nade Warning")
-			if menu:GetVal("Visuals", "Dropped ESP", "Nade Warning") then
+			--debug.profilebegin("renderVisuals Dropped ESP Grenade Warning")
+			if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
 				local nadenum = 0
 				local health = client.char:gethealth()
-				local color1 = menu:GetVal("Visuals", "Dropped ESP", "Nade Warning", "color", true)
-				local color2 = RGB(menu:GetVal("Visuals", "Dropped ESP", "Nade Warning", "color")[1] - 20, menu:GetVal("Visuals", "Dropped ESP", "Nade Warning", "color")[2] - 20, menu:GetVal("Visuals", "Dropped ESP", "Nade Warning", "color")[3] - 20)
+				local color1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color", true)
+				local color2 = RGB(menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[1] - 20, menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[2] - 20, menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[3] - 20)
 				for index, nade in pairs(menu.activenades) do
 					local headpos = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Head.Position or Vector3.new()
 					local nade_dist = (nade.blowupat - headpos).Magnitude
@@ -9558,7 +9549,7 @@ elseif menu.game == "pf" then --!SECTION
 				
 			end
 			
-			--debug.profileend("renderVisuals Dropped ESP Nade Warning")
+			--debug.profileend("renderVisuals Dropped ESP Grenade Warning")
 			
 			--debug.profilebegin("renderVisuals Local Visuals")
 			
@@ -9691,19 +9682,19 @@ elseif menu.game == "pf" then --!SECTION
 	end
 	
 	menu.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild)
-		if menu:GetVal("Visuals", "Misc", "Ragdoll Chams") then
+		if menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams") then
 			local children = newchild:GetChildren()
 			for i = 1, #children do
 				local curvalue = children[i]
 				if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" then
 					
-					local matname = menu:GetVal("Visuals", "Misc", "Ragdoll Material")
+					local matname = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Material")
 					
 					matname = mats[matname]
 					
 					curvalue.Material = Enum.Material[matname]
 					
-					curvalue.Color = menu:GetVal("Visuals", "Misc", "Ragdoll Chams", "color", true)
+					curvalue.Color = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
 					local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
 					local mesh = curvalue:FindFirstChild("Mesh")
 					if mesh then
@@ -11142,11 +11133,6 @@ elseif menu.game == "pf" then --!SECTION
 							value = false
 						},
 						{
-							type = "toggle",
-							name = "Unrestrict Angles",
-							value = false
-						},
-						{
 							type = "slider",
 							name = "Camera Recoil Reduction",
 							value = 10,
@@ -11158,7 +11144,12 @@ elseif menu.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Show Sliding",
 							value = false
-						}
+						},
+						{
+							type = "toggle",
+							name = "Unrestrict Angles",
+							value = false
+						},
 					}
 				},
 				{
@@ -11279,7 +11270,7 @@ elseif menu.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Nade Warning",
+							name = "Grenade Warning",
 							value = false,
 							extra = {
 								type = "single colorpicker",
