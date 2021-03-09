@@ -2142,7 +2142,6 @@ function menu.Initialize(menutable)
 		text = "This does this and that i guess\npooping 24/7",
 		drawings = {},
 		postable = {},
-
 	}
 
 	local function ttOutline(visible, pos_x, pos_y, width, height, clr, tablename)
@@ -8032,11 +8031,11 @@ elseif menu.game == "pf" then --!SECTION
 						return 0
 					end
 				end
-				if t == client.char.slidespring then
+				--[[ if t == client.char.slidespring then
 					if k == "p" and menu:GetVal("Visuals", "Camera Visuals", "Show Sliding") then 
 						return 0
 					end
-				end
+				end ]]
 				return result
 			end)
 		end
@@ -8457,11 +8456,10 @@ elseif menu.game == "pf" then --!SECTION
 								attach_ending.Position = ending
 								local beam = misc:CreateBeam(attach_origin, attach_ending)
 								beam.Parent = workspace
-								
-								local hitinfo = {
-									ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
-								}
 							end
+							local hitinfo = {
+								ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
+							}
 							client.hud:firehitmarker(ragebot.targetpart.Name == "Head")
 							client.sound.PlaySound("hitmarker", nil, 1, 1.5)
 							send(self, 'bullethit', unpack(hitinfo))
@@ -9980,8 +9978,8 @@ elseif menu.game == "pf" then --!SECTION
 			renderVisuals()
 			if menu.open then
 				setconstant(client.cam.step, 11, menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
-				client.cam.minangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Angles") and -999 or -math.pi/2
-				client.cam.maxangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Angles") and 999 or math.pi/2
+				client.cam.minangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Pitch") and -999 or -math.pi/2
+				client.cam.maxangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Pitch") and 999 or math.pi/2
 			end
 		end
 		--debug.profileend("BB Rendering")
@@ -10646,7 +10644,8 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								type = "toggle",
 								name = "Enabled",
-								value = false
+								value = false,
+								tooltip = "When this is enabled, your server-side yaw, pitch and stance are set to the values in this tab."
 							},
 							{
 								type = "dropbox",
@@ -10678,16 +10677,19 @@ elseif menu.game == "pf" then --!SECTION
 								type = "toggle",
 								name = "Hide in Floor",
 								value = true,
+								tooltip = "Shifts your body slightly under the ground\nso as to hide it when Force Stance is set to Prone."
 							},
 							{
 								type = "toggle",
 								name = "Lower Arms",
 								value = false,
+								tooltip = "Lowers your arms on the server."
 							},
 							{
 								type = "toggle",
 								name = "Tilt Neck",
-								value = false
+								value = false,
+								tooltip = "Forces the replicated aiming state so that it appears as though your head is tilted."
 							}
 						}
 					},
@@ -10987,6 +10989,7 @@ elseif menu.game == "pf" then --!SECTION
 								type = "toggle",
 								name = "Remove Weapon Skin",
 								value = false,
+								tooltip = "If a loaded weapon has a skin, it will remove it."
 							},
 							{
 								type = "toggle",
@@ -11012,7 +11015,8 @@ elseif menu.game == "pf" then --!SECTION
 									type = "single colorpicker",
 									name = "Local Player Chams",
 									color = {106, 136, 213, 255}
-								}
+								},
+								tooltip = "Changes the color and material of the local third person body when it is on."
 							},
 							{
 								type = "dropbox",
@@ -11121,16 +11125,19 @@ elseif menu.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "No Visual Suppression",
 							value = false,
+							tooltip = "Removes the suppression of enemies' bullets."
 						},
 						{
 							type = "toggle",
 							name = "No Gun Bob or Sway",
-							value = false
+							value = false,
+							tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving your mouse."
 						},
 						{
 							type = "toggle",
 							name = "Reduce Camera Recoil",
-							value = false
+							value = false,
+							tooltip = "Reduces camera recoil by X%. Does not affect visible weapon recoil or kick."
 						},
 						{
 							type = "slider",
@@ -11142,13 +11149,9 @@ elseif menu.game == "pf" then --!SECTION
 						},
 						{
 							type = "toggle",
-							name = "Show Sliding",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "Unrestrict Angles",
-							value = false
+							name = "Unrestrict Pitch",
+							value = false,
+							tooltip = "When turned on, the camera pitch will be unrestricted\nallowing you to move your mouse up or down infinitely."
 						},
 					}
 				},
@@ -11167,12 +11170,14 @@ elseif menu.game == "pf" then --!SECTION
 									type = "double colorpicker",
 									name = {"Inside Ambience", "Outside Ambience"},
 									color = {{117, 76, 236}, {117, 76, 236}}
-								}
+								},
+								tooltip = "Changes the map's ambient colors to the user defined colors."
 							},
 							{
 								type = "toggle",
 								name = "Force Time",
-								value = false
+								value = false,
+								tooltip = "Forces the time to the time set by the user below."
 							},
 							{
 								type = "slider",
@@ -11190,7 +11195,8 @@ elseif menu.game == "pf" then --!SECTION
 									type = "single colorpicker",
 									name = "Saturation Tint",
 									color = {255, 255, 255}
-								}
+								},
+								tooltip = "Adds custom saturation the image of the game."
 							},
 							{
 								type = "slider",
@@ -11256,7 +11262,8 @@ elseif menu.game == "pf" then --!SECTION
 								type = "single colorpicker",
 								name = "Weapon Name",
 								color = {255, 255, 255, 150}
-							}
+							},
+							tooltip = "Displays dropped weapons as you get closer to them."
 						},
 						{
 							type = "toggle",
@@ -11276,7 +11283,8 @@ elseif menu.game == "pf" then --!SECTION
 								type = "single colorpicker",
 								name = "Slider Color",
 								color = {68, 92, 227},
-							}
+							},
+							tooltip = "Displays where grenades that will deal\ndamage to you will land and the damage they will deal."
 						},
 						{
 							type = "toggle",
@@ -11286,7 +11294,8 @@ elseif menu.game == "pf" then --!SECTION
 								type = "double colorpicker",
 								name = {"Inner Color", "Outer Color"},
 								color = {{195, 163, 255}, {123, 69, 224}},
-							}
+							},
+							tooltip = "Displays the full path of any grenade that will deal damage to you is thrown."
 						},
 					}
 				},
@@ -11320,7 +11329,8 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Auto Jump",
-							value = false
+							value = false,
+							tooltip = "When you hold the spacebar, it will automatically jump repeatedly, ignoring jump delay."
 						},
 						{
 							type = "toggle",
@@ -11352,12 +11362,14 @@ elseif menu.game == "pf" then --!SECTION
 							value = false,
 							extra = {
 								type = "keybind"
-							}
+							},
+							tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed Hack."
 						},
 						{
 							type = "toggle",
 							name = "Gravity Shift",
-							value = false
+							value = false,
+							tooltip = "Shifts movement gravity by X%. (Does not affect bullet acceleration.)"
 						},
 						{
 							type = "slider",
@@ -11376,7 +11388,8 @@ elseif menu.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Ignore Round Freeze",
 							value = false,
-							unsafe = true
+							unsafe = true,
+							tooltip = "Allows you to move around during the start and end of rounds."
 						}
 					},
 				},
@@ -11388,7 +11401,8 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Enabled",
-							value = false
+							value = false,
+							tooltip = "Allows Bitch Bot to modify weapons."
 						},
 						{
 							type = "slider",
@@ -11396,7 +11410,8 @@ elseif menu.game == "pf" then --!SECTION
 							value = 150,
 							minvalue = 50,
 							maxvalue = 500,
-							stradd = "%"
+							stradd = "%",
+							tooltip = "Scales all weapons' firerate by X%.\n100% = Normal firerate"
 						},
 						{
 							type = "slider",
@@ -11405,31 +11420,35 @@ elseif menu.game == "pf" then --!SECTION
 							minvalue = 0,
 							maxvalue = 100,
 							stradd = "%",
+							tooltip = "Scales all weapons' recoil by X%.\n0% = No recoil | 50% = Halved recoil"
 						},
 						{
 							type = "toggle",
 							name = "Remove Animations",
-							value = true
+							value = true,
+							tooltip = "Removes all animations from any gun.\nThis will also completely remove the equipping animations."
 						},
 						{
 							type = "toggle",
 							name = "Instant Equip",
-							value = true
+							value = true,
 						},
 						{
 							type = "toggle",
 							name = "Fully Automatic",
-							value = true
+							value = true,
 						},
 						{
 							type = "toggle",
 							name = "Run and Gun",
-							value = false
+							value = false,
+							tooltip = "Makes it so that your weapon does not\nsway due to mouse movement, or turns over while sprinting."
 						},
 						{
 							type = "toggle",
 							name = "Edit Bullet Speed",
-							value = false
+							value = false,
+							tooltip = "When this is on, your bullet speed will be\nmodified to have X studs/s no matter what weapon you have equipped."
 						},
 						{
 							type = "slider",
@@ -11451,12 +11470,14 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								type = "toggle",
 								name = "Suppress Only",
-								value = false
+								value = false,
+								tooltip = "When turned on, bullets do not deal damage."
 							},
 							{
 								type = "toggle",
 								name = "Auto Vote",
-								value = false
+								value = false,
+								tooltip = "When votekicks are started, Bitch Bot will automatically choose\nwhat choice to make depending on the options below."
 							},
 							{
 								type = "dropbox",
@@ -11484,7 +11505,8 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								type = "textbox",
 								name = "killsoundid",
-								text = "6229978482"
+								text = "6229978482",
+								tooltip = "The Roblox sound ID or file inside of synapse\n workspace to play when Kill Sound is on."
 							},
 							{
 								type = "dropbox",
@@ -11508,7 +11530,8 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								type = "toggle",
 								name = "Auto Martyrdom",
-								value = false
+								value = false,
+								tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position. If Grenade Teleport is on, it will place the grenade at the enemy."
 							},
 						}
 					},
@@ -11533,6 +11556,7 @@ elseif menu.game == "pf" then --!SECTION
 								type = "button",
 								name = "Crash Server",
 								doubleclick = true,
+								tooltip = "Attempts to overwhelm the server so that users are kicked for internet connection problems.\nRoblox may detect strange activity and automatically\nkick you for it before the server can crash."
 							},
 							{
 								type = "toggle",
@@ -11540,12 +11564,14 @@ elseif menu.game == "pf" then --!SECTION
 								value = false,
 								extra = {
 									type = "keybind"
-								}
+								},
+								tooltip = "Throws 3 grenades instantly on random enemies."
 							},
 							{
 								type = "toggle",
 								name = "Grenade Teleport",
-								value = false
+								value = false,
+								tooltip = "Sets any spawned grenades' position to the nearest enemy to your cursor and instantly explodes."
 							},
 							{
 								type = "toggle",
@@ -11554,7 +11580,8 @@ elseif menu.game == "pf" then --!SECTION
 								extra = {
 									type = "keybind"
 								},
-								unsafe = true
+								unsafe = true,
+								tooltip = "When this is on, when you shoot it will freeze all players that are spawned for 1.5 seconds."
 							},
 							{
 								type = "toggle",
@@ -11562,7 +11589,8 @@ elseif menu.game == "pf" then --!SECTION
 								value = false,
 								extra = {
 									type = "keybind"
-								}
+								},
+								tooltip = "Teleports you 19 studs under the ground. Must be over glass or non-collidable parts to work. (Use alt key to go up)"
 							},
 							{
 								type = "toggle",
@@ -11584,7 +11612,8 @@ elseif menu.game == "pf" then --!SECTION
 									type = "keybind",
 									key = nil
 								},
-								unsafe = true
+								unsafe = true,
+								tooltip = "Allows you to noclip through most parts of the map. Must be over glass or non-collidable parts to work."
 							},
 							{
 								type = "toggle",
@@ -11594,6 +11623,7 @@ elseif menu.game == "pf" then --!SECTION
 									type = "keybind"
 								},
 								unsafe = true,
+								tooltip = "Fakes your server-side position. Works best when stationary, and allows you to be unhittable."
 							}
 						}
 					}
