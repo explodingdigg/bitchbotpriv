@@ -9684,12 +9684,10 @@ elseif menu.game == "pf" then --!SECTION
 			local children = newchild:GetChildren()
 			for i = 1, #children do
 				local curvalue = children[i]
+
 				if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" then
-					
-					local matname = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Material")
-					
-					matname = mats[matname]
-					
+					matname = mats[menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Material")]
+							
 					curvalue.Material = Enum.Material[matname]
 					
 					curvalue.Color = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
@@ -9697,19 +9695,19 @@ elseif menu.game == "pf" then --!SECTION
 					local mesh = curvalue:FindFirstChild("Mesh")
 					if mesh then
 						mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
+						-- DA BABY????? WTF
 					end
-					
+
 					if curvalue:IsA("Pants") then curvalue:Destroy() end
-					
-					if matname ~= "ForceField" then
-						local pant = curvalue:FindFirstChild("Pant")
-						if mesh then mesh:Destroy() end
-						if pant then pant:Destroy() end
-					end
+
+					local pant = curvalue:FindFirstChild("Pant")
+					if pant then pant:Destroy() end		
+					if mesh then mesh:Destroy() end
 				end
 			end
 		end
 	end)
+	
 	local chat_game = LOCAL_PLAYER.PlayerGui.ChatGame
 	local chat_box = chat_game:FindFirstChild("TextBox")
 	local oldpos = nil
