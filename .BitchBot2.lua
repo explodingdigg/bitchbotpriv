@@ -8658,8 +8658,12 @@ elseif menu.game == "pf" then --!SECTION
 						elseif client.logic.currentgun and client.logic.currentgun.barrel then
 							legitbot.silentVector = nil
 							local barrel = client.logic.currentgun.barrel
-							local trigger = barrel.Parent.Trigger
-							barrel.Orientation = trigger.Orientation
+							if barrel and barrel.Parent then
+								local trigger = barrel.Parent.Trigger
+								if trigger then
+									barrel.Orientation = trigger.Orientation
+								end
+							end
 						end
 					end
 					--debug.profileend("Legitbot Main")
