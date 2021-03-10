@@ -380,9 +380,9 @@ local event = {}
 
 local allevent = {}
 
-function event.new(eventname, eventtable, requirename) -- fyi you can put in a table of choice to make the table you want an "event" pretty cool its like doing & in c lol!
+function event.new(eventname, eventtable) -- fyi you can put in a table of choice to make the table you want an "event" pretty cool its like doing & in c lol!
 	if eventname then
-		assert(allevent[eventname] ~= nil, ("the event '%s' already exists in the event table"):format(eventname))
+		assert(allevent[eventname] == nil, ("the event '%s' already exists in the event table"):format(eventname))
 	end
 	local newevent = eventtable or {}
 	local funcs = {}
@@ -664,10 +664,14 @@ local INPUT_SERVICE = game:GetService("UserInputService")
 local CACHED_VEC3 = Vector3.new()
 local Camera = workspace.CurrentCamera
 local SCREEN_SIZE = Camera.ViewportSize
-local ButtonPressed = Instance.new("BindableEvent")
-local TogglePressed = Instance.new("BindableEvent")
+--[[ local ButtonPressed = Instance.new("BindableEvent")
+local TogglePressed = Instance.new("BindableEvent") ]]
+
+local ButtonPressed = event.new("bb_buttonpressed")
+local TogglePressed = event.new("bb_togglepressed")
+
 --local PATHFINDING = game:GetService("PathfindingService")
-local GRAVITY = Vector3.new(0,-192.6, 0)
+local GRAVITY = Vector3.new(0, -192.6, 0)
 
 menu.x = math.floor((SCREEN_SIZE.x/2) - (menu.w/2))
 menu.y = math.floor((SCREEN_SIZE.y/2) - (menu.h/2))
@@ -2885,7 +2889,8 @@ function menu.Initialize(menutable)
 				return
 			end
 		end
-		ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
+		FireEvent("bb_buttonpressed", bp.tab, bp.groupbox, bp.name)
+		--ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
 		if bp == menu.options["Settings"]["Cheat Settings"]["Unload Cheat"] then
 			menu.fading = true
 			wait()
@@ -3175,7 +3180,8 @@ function menu.Initialize(menutable)
 												v2[4][i + 1].Color = ColorRange(i, {[1] = {start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])}, [2] = {start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)}})
 											end
 										end
-										TogglePressed:Fire(k1, k2, v2)
+										--TogglePressed:Fire(k1, k2, v2)
+										FireEvent("bb_togglepressed", k1, k2, v2)
 									end
 									if v2[5] ~= nil then
 										if v2[5][2] == "keybind" then
@@ -3869,14 +3875,22 @@ function menu.Initialize(menutable)
 	end)
 	
 	menu.connections.renderstepped = game.RunService.RenderStepped:Connect(function()
+		if menu.unloaded then
+			return
+		end
 		renderSteppedMenu()
 	end)
 
 	function menu:unload()
 		getgenv().v2 = nil
 		self.unloaded = true
-		for k, v in pairs(self.connections) do
-			v:Disconnect()
+		for k,conn in next, self.connections do
+			if not getrawmetatable(conn) then
+				conn()
+			else
+				conn:Disconnect()
+			end
+			self.connections[k] = nil
 		end
 
 		game:service("ContextActionService"):UnbindAction("BB Keycheck")
@@ -3910,16 +3924,6 @@ function menu.Initialize(menutable)
 		menu = nil
 		Draw = nil
 		self.unloaded = true
-	end
-end
-
-local function GetPTlayerHumanoid(player)
-	local character = player.Character
-	
-	if character then
-		return character:FindFirstChildOfClass("Humanoid")
-	else
-		return nil
 	end
 end
 
@@ -8039,7 +8043,7 @@ elseif menu.game == "pf" then --!SECTION
 				return result
 			end)
 		end
-		menu.connections.button_pressed_pf = ButtonPressed.Event:Connect(function(tab, gb, name)
+		menu.connections.button_pressed_pf = ButtonPressed:connect(function(tab, gb, name)
 			if name == "Crash Server" then
 				while wait() do
 					for i = 1, 50 do
@@ -8102,7 +8106,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end)
 		
-		menu.connections.toggle_pressed_pf = TogglePressed.Event:Connect(function(tab, name, gb)
+		menu.connections.toggle_pressed_pf = TogglePressed:connect(function(tab, name, gb)
 			if name == "Enabled" and tab == "Weapon Modifications" then
 				client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldplayer
 				client.animation.reset = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldreset
