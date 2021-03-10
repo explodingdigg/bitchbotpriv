@@ -2916,7 +2916,7 @@ function menu.Initialize(menutable)
 			local curcfg = SaveCurSettings()
 			local loadedcfg = readfile(configname)
 
-			if pcall(function() LoadConfig(loadedcfg) end) then
+			if pcall(LoadConfig, loadedcfg) then
 				CreateNotification("Loaded \"".. menu.options["Settings"]["Configuration"]["ConfigName"][1].. ".bb\"!")
 			else
 				LoadConfig(curcfg)
