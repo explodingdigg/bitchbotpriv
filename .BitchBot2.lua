@@ -20,6 +20,15 @@ end
 function map(X, A, B, C, D)
 	return (X-A)/(B-A) * (D-C) + C
 end
+
+local newColor3 = Color3.new
+local newCFrame = CFrame.new
+local newVector3 = Vector3.new
+local newVector2 = Vector2.new
+local newInstance = Instance.new
+local getrawmetatable = getrawmetatable
+local setrawmetatable = setrawmetatable
+
 do
 	local notes = {}
 	local function DrawingObject(t, col)
@@ -40,8 +49,8 @@ do
 		
 		s.Filled = fill
 		s.Thickness = 1
-		s.Position = Vector2.new()
-		s.Size = Vector2.new(sizex, sizey)
+		s.Position = newVector2()
+		s.Size = newVector2(sizex, sizey)
 		
 		return s
 		
@@ -49,13 +58,13 @@ do
 	
 	local function Text(text)
 		
-		local s = DrawingObject("Text", Color3.new(1,1,1))
+		local s = DrawingObject("Text", newColor3(1,1,1))
 		
 		s.Text = text
 		s.Size = 13
 		s.Center = false
 		s.Outline = true
-		s.Position = Vector2.new()
+		s.Position = newVector2()
 		s.Font = 2
 		
 		return s
@@ -80,14 +89,14 @@ do
 			
 			enabled = true,
 			
-			targetPos = Vector2.new(50, 33),
+			targetPos = newVector2(50, 33),
 			
-			size = Vector2.new(200, width),
+			size = newVector2(200, width),
 			
 			
 			drawings = {
-				outline = Rectangle(202, width + 2, false, Color3.new(0,0,0)),
-				fade = Rectangle(202, width + 2, false, Color3.new(0,0,0)),
+				outline = Rectangle(202, width + 2, false, newColor3(0,0,0)),
+				fade = Rectangle(202, width + 2, false, newColor3(0,0,0)),
 			},
 			
 			Remove = function(self, d)
@@ -111,7 +120,7 @@ do
 				end
 				local size = self.size
 				
-				local tpos = Vector2.new(pos.x - size.x / time - map(alpha, 0, 255, size.x, 0), pos.y + insety)
+				local tpos = newVector2(pos.x - size.x / time - map(alpha, 0, 255, size.x, 0), pos.y + insety)
 				self.pos = tpos
 				
 				local locRect = {
@@ -131,19 +140,19 @@ do
 						
 						
 						if type(i) == "number" then
-							drawing.Position = Vector2.new(locRect.x + 1, locRect.y + i)
-							drawing.Size = Vector2.new(locRect.w - 2, 1)
+							drawing.Position = newVector2(locRect.x + 1, locRect.y + i)
+							drawing.Size = newVector2(locRect.w - 2, 1)
 						elseif i == "text" then
-							drawing.Position = tpos + Vector2.new(6,2)
+							drawing.Position = tpos + newVector2(6,2)
 						elseif i == "outline" then
-							drawing.Position = Vector2.new(locRect.x, locRect.y)
-							drawing.Size = Vector2.new(locRect.w, locRect.h)
+							drawing.Position = newVector2(locRect.x, locRect.y)
+							drawing.Size = newVector2(locRect.w, locRect.h)
 						elseif i == "fade" then
-							drawing.Position = Vector2.new(locRect.x-1, locRect.y-1)
+							drawing.Position = newVector2(locRect.x-1, locRect.y-1)
 							local t = (200-fade)/255/3
 							drawing.Transparency = t < 0.4 and 0.4 or t
 						elseif i == "line" then
-							drawing.Position = Vector2.new(locRect.x+1, locRect.y+1)
+							drawing.Position = newVector2(locRect.x+1, locRect.y+1)
 							if menu then
 								local color = customcolor or (menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163))
 								if drawing.Color ~= color then
@@ -178,13 +187,13 @@ do
 		
 		for i = 1, Note.size.y - 2 do
 			local c = 0.28-i/80
-			Note.drawings[i] = Rectangle(200, 1, true, Color3.new(c,c,c))
+			Note.drawings[i] = Rectangle(200, 1, true, newColor3(c,c,c))
 		end
 		local color = (menu and menu.GetVal) and customcolor or menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
 		
 		Note.drawings.text = Text(t)
 		if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
-			Note.size = Vector2.new(Note.drawings.text.TextBounds.x + 7, Note.size.y)
+			Note.size = newVector2(Note.drawings.text.TextBounds.x + 7, Note.size.y)
 		end
 		Note.drawings.line = Rectangle(1, Note.size.y - 2, true, color)
 		
@@ -376,11 +385,12 @@ DeepCleanupTable = function(tbl)
 	isTableArray = nil
 end
 
+
 local event = {}
 
 local allevent = {}
 
-function event.new(eventname, eventtable) -- fyi you can put in a table of choice to make the table you want an "event" pretty cool its like doing & in c lol!
+function event.new(eventname, eventtable, requirename) -- fyi you can put in a table of choice to make the table you want an "event" pretty cool its like doing & in c lol!
 	if eventname then
 		assert(allevent[eventname] == nil, ("the event '%s' already exists in the event table"):format(eventname))
 	end
@@ -472,7 +482,9 @@ do
 	while Loopy_Image_Checky() do
 		wait(0)
 	end
+	
 end
+
 
 if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459 then -- they sometimes open 5281922586
 	menu.game = "pf"
@@ -661,17 +673,17 @@ local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
 local TEAMS = game:GetService("Teams")
 local INPUT_SERVICE = game:GetService("UserInputService")
 --local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
-local CACHED_VEC3 = Vector3.new()
+local CACHED_VEC3 = newVector3()
 local Camera = workspace.CurrentCamera
 local SCREEN_SIZE = Camera.ViewportSize
---[[ local ButtonPressed = Instance.new("BindableEvent")
-local TogglePressed = Instance.new("BindableEvent") ]]
+--[[ local ButtonPressed = newInstance("BindableEvent")
+local TogglePressed = newInstance("BindableEvent") ]]
 
 local ButtonPressed = event.new("bb_buttonpressed")
 local TogglePressed = event.new("bb_togglepressed")
 
 --local PATHFINDING = game:GetService("PathfindingService")
-local GRAVITY = Vector3.new(0, -192.6, 0)
+local GRAVITY = newVector3(0, -192.6, 0)
 
 menu.x = math.floor((SCREEN_SIZE.x/2) - (menu.w/2))
 menu.y = math.floor((SCREEN_SIZE.y/2) - (menu.h/2))
@@ -711,7 +723,7 @@ local ColorRange = function(value, ranges) -- ty tony for dis function u a homie
 	local minColor = ranges[selected]
 	local maxColor = ranges[selected + 1]
 	local lerpValue = (value - minColor.start) / (maxColor.start - minColor.start)
-	return Color3.new(Lerp( lerpValue, minColor.color.r, maxColor.color.r ), Lerp( lerpValue, minColor.color.g, maxColor.color.g ), Lerp( lerpValue, minColor.color.b, maxColor.color.b ))
+	return newColor3(Lerp( lerpValue, minColor.color.r, maxColor.color.r ), Lerp( lerpValue, minColor.color.g, maxColor.color.g ), Lerp( lerpValue, minColor.color.b, maxColor.color.b ))
 end
 
 
@@ -726,16 +738,16 @@ do -- vector functions
 		local x = (cos * vec.x) - (sin * vec.y)
 		local y = (sin * vec.x) + (cos * vec.y)
 		
-		return Vector2.new(x, y).Unit * Vec.Magnitude
+		return newVector2(x, y).Unit * Vec.Magnitude
 	end
 end
 local bColor = {}
 do -- color functions
 	function bColor:Mult(col, mult)
-		return Color3.new(col.R*mult,col.G*mult,col.B*mult)
+		return newColor3(col.R*mult,col.G*mult,col.B*mult)
 	end
 	function bColor:Add(col, num)
-		return Color3.new(col.R+num,col.G+num,col.B+num)
+		return newColor3(col.R+num,col.G+num,col.B+num)
 	end
 	
 end
@@ -868,6 +880,7 @@ do
 	function Draw:UnRender()
 		for k, v in pairs(allrender) do
 			for k1, v1 in pairs(v) do
+				--warn(k1, v1)
 				v1:Remove()
 			end
 		end
@@ -876,8 +889,8 @@ do
 	function Draw:OutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
 		local temptable = Drawing.new("Square")
 		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, height)
+		temptable.Position = newVector2(pos_x, pos_y)
+		temptable.Size = newVector2(width, height)
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		temptable.Filled = false
 		temptable.Thickness = 0
@@ -891,8 +904,8 @@ do
 	function Draw:FilledRect(visible, pos_x, pos_y, width, height, clr, tablename)
 		local temptable = Drawing.new("Square")
 		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, height)
+		temptable.Position = newVector2(pos_x, pos_y)
+		temptable.Size = newVector2(width, height)
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		temptable.Filled = true
 		temptable.Thickness = 0
@@ -907,8 +920,8 @@ do
 		temptable = Drawing.new("Line")
 		temptable.Visible = visible
 		temptable.Thickness = thickness
-		temptable.From = Vector2.new(start_x, start_y)
-		temptable.To = Vector2.new(end_x, end_y)
+		temptable.From = newVector2(start_x, start_y)
+		temptable.To = newVector2(end_x, end_y)
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		temptable.Transparency = clr[4] / 255
 		table.insert(tablename, temptable)
@@ -920,8 +933,8 @@ do
 	function Draw:Image(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
 		local temptable = Drawing.new("Image")
 		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, height)
+		temptable.Position = newVector2(pos_x, pos_y)
+		temptable.Size = newVector2(width, height)
 		temptable.Transparency = transparency
 		temptable.Data = imagedata or placeholderImage
 		table.insert(tablename, temptable)
@@ -934,7 +947,7 @@ do
 		local temptable = Drawing.new("Text")
 		temptable.Text = text
 		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Position = newVector2(pos_x, pos_y)
 		temptable.Size = size
 		temptable.Center = centered
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
@@ -951,7 +964,7 @@ do
 		local temptable = Drawing.new("Text")
 		temptable.Text = text
 		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Position = newVector2(pos_x, pos_y)
 		temptable.Size = size
 		temptable.Center = centered
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
@@ -976,9 +989,9 @@ do
 		temptable.Color = RGB(clr[1], clr[2], clr[3])
 		temptable.Thickness = 4.1
 		if pa and pb and pc then
-			temptable.PointA = Vector2.new(pa[1], pa[2])
-			temptable.PointB = Vector2.new(pb[1], pb[2])
-			temptable.PointC = Vector2.new(pc[1], pc[2])
+			temptable.PointA = newVector2(pa[1], pa[2])
+			temptable.PointB = newVector2(pb[1], pb[2])
+			temptable.PointC = newVector2(pc[1], pc[2])
 		end
 		temptable.Filled = filled
 		table.insert(tablename, temptable)
@@ -989,7 +1002,7 @@ do
 	
 	function Draw:Circle(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
 		local temptable = Drawing.new("Circle")
-		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Position = newVector2(pos_x, pos_y)
 		temptable.Visible = visible
 		temptable.Radius = size
 		temptable.Thickness = thickness
@@ -1005,7 +1018,7 @@ do
 	
 	function Draw:FilledCircle(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
 		local temptable = Drawing.new("Circle")
-		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Position = newVector2(pos_x, pos_y)
 		temptable.Visible = visible
 		temptable.Radius = size
 		temptable.Thickness = thickness
@@ -1124,7 +1137,7 @@ do
 		local settab = 1
 		for k, v in pairs(selected) do
 			menu.postable[v.postable][2] = selected_pos[settab].pos
-			v.drawn.Size = Vector2.new(selected_pos[settab].length, 2)
+			v.drawn.Size = newVector2(selected_pos[settab].length, 2)
 		end
 
 		return {bar = selected, barpos = selected_pos, click_pos = click_pos, nametext = nametext}
@@ -1772,7 +1785,7 @@ function menu.Initialize(menutable)
 	local barguy = {bbmenu[#bbmenu], menu.postable[#menu.postable]}
 	
 	local function setActiveTab(slot)
-		barguy[1].Position = Vector2.new((menu.x + 11 + (((((menu.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2), menu.y + 58)
+		barguy[1].Position = newVector2((menu.x + 11 + (((((menu.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2), menu.y + 58)
 		barguy[2][2] = (11 + (((((menu.w - 20)/#menutable) - 2)) * (slot - 1))) + ((slot - 1) * 2)
 		barguy[2][3] = 58
 		
@@ -1829,8 +1842,8 @@ function menu.Initialize(menutable)
 		end
 		
 		if value ~= 0 then
-			plusminus[1].Position = Vector2.new(x + 3 + menu.x, y - 5 + menu.y)
-			plusminus[2].Position = Vector2.new(x + 13 + menu.x, y - 1 + menu.y)
+			plusminus[1].Position = newVector2(x + 3 + menu.x, y - 5 + menu.y)
+			plusminus[2].Position = newVector2(x + 13 + menu.x, y - 1 + menu.y)
 			
 			if value == 1 then
 				
@@ -1873,17 +1886,17 @@ function menu.Initialize(menutable)
 			v.Visible = visible
 		end
 		
-		dropboxthingy[1].Position = Vector2.new(x, y)
-		dropboxthingy[2].Position = Vector2.new(x + 1, y + 1)
-		dropboxthingy[3].Position = Vector2.new(x + 2, y + 22)
+		dropboxthingy[1].Position = newVector2(x, y)
+		dropboxthingy[2].Position = newVector2(x + 1, y + 1)
+		dropboxthingy[3].Position = newVector2(x + 2, y + 22)
 		
-		dropboxthingy[1].Size = Vector2.new(length, 21 * (#values + 1) + 3)
-		dropboxthingy[2].Size = Vector2.new(length - 2, (21 * (#values + 1)) + 1)
-		dropboxthingy[3].Size = Vector2.new(length - 4, (21 * #values) + 1 - 1)
+		dropboxthingy[1].Size = newVector2(length, 21 * (#values + 1) + 3)
+		dropboxthingy[2].Size = newVector2(length - 2, (21 * (#values + 1)) + 1)
+		dropboxthingy[3].Size = newVector2(length - 4, (21 * #values) + 1 - 1)
 		
 		if visible then
 			for i = 1, #values do
-				dropboxtexty[i].Position = Vector2.new(x + 6, y + 26 + ((i - 1) * 21) )
+				dropboxtexty[i].Position = newVector2(x + 6, y + 26 + ((i - 1) * 21) )
 				dropboxtexty[i].Visible = true
 				dropboxtexty[i].Text = values[i]
 				if i == value then
@@ -1904,17 +1917,17 @@ function menu.Initialize(menutable)
 			v.Visible = visible
 		end
 		
-		dropboxthingy[1].Position = Vector2.new(x, y)
-		dropboxthingy[2].Position = Vector2.new(x + 1, y + 1)
-		dropboxthingy[3].Position = Vector2.new(x + 2, y + 22)
+		dropboxthingy[1].Position = newVector2(x, y)
+		dropboxthingy[2].Position = newVector2(x + 1, y + 1)
+		dropboxthingy[3].Position = newVector2(x + 2, y + 22)
 		
-		dropboxthingy[1].Size = Vector2.new(length, 22 * (#values + 1) - 1)
-		dropboxthingy[2].Size = Vector2.new(length - 2, (22 * (#values + 1)) - 3)
-		dropboxthingy[3].Size = Vector2.new(length - 4, (22 * #values) - 3)
+		dropboxthingy[1].Size = newVector2(length, 22 * (#values + 1) - 1)
+		dropboxthingy[2].Size = newVector2(length - 2, (22 * (#values + 1)) - 3)
+		dropboxthingy[3].Size = newVector2(length - 4, (22 * #values) - 3)
 		
 		if visible then
 			for i = 1, #values do
-				dropboxtexty[i].Position = Vector2.new(x + 6, y + 26 + ((i - 1) * 21) )
+				dropboxtexty[i].Position = newVector2(x + 6, y + 26 + ((i - 1) * 21) )
 				dropboxtexty[i].Visible = true
 				dropboxtexty[i].Text = values[i][1]
 				if values[i][2] then
@@ -2071,18 +2084,18 @@ function menu.Initialize(menutable)
 	table.insert(dragbar_m, cp.drawings[#cp.drawings])
 	
 	local function set_dragbar_r(x, y)
-		dragbar_r[1].Position = Vector2.new(x, y)
-		dragbar_r[2].Position = Vector2.new(x + 1, y + 1)
+		dragbar_r[1].Position = newVector2(x, y)
+		dragbar_r[2].Position = newVector2(x + 1, y + 1)
 	end
 	
 	local function set_dragbar_b(x, y)
-		dragbar_b[1].Position = Vector2.new(x, y)
-		dragbar_b[2].Position = Vector2.new(x + 1, y + 1)
+		dragbar_b[1].Position = newVector2(x, y)
+		dragbar_b[2].Position = newVector2(x + 1, y + 1)
 	end
 	
 	local function set_dragbar_m(x, y)
-		dragbar_m[1].Position = Vector2.new(x, y)
-		dragbar_m[2].Position = Vector2.new(x + 1, y + 1)
+		dragbar_m[1].Position = newVector2(x, y)
+		dragbar_m[2].Position = newVector2(x + 1, y + 1)
 	end
 	
 	local function set_colorpicker(visible, color, value, alpha, text, x, y)
@@ -2094,7 +2107,7 @@ function menu.Initialize(menutable)
 			cp.x = x
 			cp.y = y
 			for k, v in pairs(cp.postable) do
-				v[1].Position = Vector2.new(x + v[2], y + v[3])
+				v[1].Position = newVector2(x + v[2], y + v[3])
 			end
 			
 			local tempclr = RGB(color[1], color[2], color[3])
@@ -2114,9 +2127,9 @@ function menu.Initialize(menutable)
 				end
 				cp.h = 191
 				for i = 1, 2 do
-					cp.drawings[i].Size = Vector2.new(cp.w, cp.h)
+					cp.drawings[i].Size = newVector2(cp.w, cp.h)
 				end
-				cp.drawings[3].Size = Vector2.new(cp.w - 2, cp.h - 2)
+				cp.drawings[3].Size = newVector2(cp.w - 2, cp.h - 2)
 			else
 				cp.hsv.a = color[4]
 				cp.alpha = true
@@ -2124,13 +2137,13 @@ function menu.Initialize(menutable)
 				set_oldcolor(color[1], color[2], color[3], color[4])
 				cp.h = 211
 				for i = 1, 2 do
-					cp.drawings[i].Size = Vector2.new(cp.w, cp.h)
+					cp.drawings[i].Size = newVector2(cp.w, cp.h)
 				end
-				cp.drawings[3].Size = Vector2.new(cp.w - 2, cp.h - 2)
+				cp.drawings[3].Size = newVector2(cp.w - 2, cp.h - 2)
 				set_dragbar_b(cp.x + 12 + math.floor(156 * (color[4]/255)), cp.y + 188)
 			end
 			
-			applytext.Position = Vector2.new(235 + cp.x, cp.y + cp.h - 23)
+			applytext.Position = newVector2(235 + cp.x, cp.y + cp.h - 23)
 			maincolor.Color = Color3.fromHSV(h, 1, 1)
 			cp.drawings[7].Text = text
 		end
@@ -2181,7 +2194,7 @@ function menu.Initialize(menutable)
 			tooltip.drawings[7].Text = text
 
 			for k, v in pairs(tooltip.postable) do
-				v[1].Position = Vector2.new(x + v[2], y + v[3])
+				v[1].Position = newVector2(x + v[2], y + v[3])
 			end
 			tooltip.drawings[1].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 			tooltip.drawings[2].Color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)
@@ -2189,12 +2202,12 @@ function menu.Initialize(menutable)
 
 			local tb = tooltip.drawings[7].TextBounds
 			
-			tooltip.drawings[1].Size = Vector2.new(1, tb.Y + 3)
-			tooltip.drawings[2].Size = Vector2.new(1, tb.Y + 3)
-			tooltip.drawings[3].Size = Vector2.new(4, tb.Y + 5)
-			tooltip.drawings[4].Size = Vector2.new(tb.X + 6, tb.Y + 5)
-			tooltip.drawings[5].Size = Vector2.new(tb.X + 12, tb.Y + 7)
-			tooltip.drawings[6].Size = Vector2.new(tb.X + 7, tb.Y + 5)
+			tooltip.drawings[1].Size = newVector2(1, tb.Y + 3)
+			tooltip.drawings[2].Size = newVector2(1, tb.Y + 3)
+			tooltip.drawings[3].Size = newVector2(4, tb.Y + 5)
+			tooltip.drawings[4].Size = newVector2(tb.X + 6, tb.Y + 5)
+			tooltip.drawings[5].Size = newVector2(tb.X + 12, tb.Y + 7)
+			tooltip.drawings[6].Size = newVector2(tb.X + 7, tb.Y + 5)
 		end
 	end
 
@@ -2212,9 +2225,9 @@ function menu.Initialize(menutable)
 	
 	function menu:set_mouse_pos(x, y)
 		for k, v in pairs(bbmouse) do
-			v.PointA = Vector2.new(x, y + 36)
-			v.PointB = Vector2.new(x, y + 36 + 15)
-			v.PointC = Vector2.new(x + 10, y + 46)
+			v.PointA = newVector2(x, y + 36)
+			v.PointB = newVector2(x, y + 36 + 15)
+			v.PointC = newVector2(x + 10, y + 46)
 		end
 	end
 	
@@ -2402,7 +2415,7 @@ function menu.Initialize(menutable)
 	function menu:SetMenuPos(x, y)
 		for k, v in pairs(menu.postable) do
 			if v[1].Visible then
-				v[1].Position = Vector2.new(x + v[2], y + v[3])
+				v[1].Position = newVector2(x + v[2], y + v[3])
 			end
 		end
 	end
@@ -2848,7 +2861,7 @@ function menu.Initialize(menutable)
 							--v2[4][5].Text = tostring(v2[1]).. v2[4][6]
 							
 							for i = 1, 4 do
-								v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
+								v2[4][i].Size = newVector2((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 							end
 						elseif v2[2] == "dropbox" then
 							if v2[6][v2[1]] == nil then
@@ -3122,7 +3135,7 @@ function menu.Initialize(menutable)
 								local settab = v2.num
 								for _k, _v in pairs(v1.drawn.bar) do
 									menu.postable[_v.postable][2] = selected_pos[settab].pos
-									_v.drawn.Size = Vector2.new(selected_pos[settab].length, 2)
+									_v.drawn.Size = newVector2(selected_pos[settab].length, 2)
 								end
 
 								for i, v in pairs(v1.drawn.nametext) do
@@ -3239,7 +3252,7 @@ function menu.Initialize(menutable)
 										v2[4][5].Text = v2.custom[v2[1]] or (v2[1] == math.floor(v2[1]) and v2.round == false) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
 										
 										for i = 1, 4 do
-											v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
+											v2[4][i].Size = newVector2((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 										end
 										
 									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
@@ -3525,7 +3538,7 @@ function menu.Initialize(menutable)
 				button[4].text.Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 				button[4].text.Text = "Confirm?"
 			else
-				button[4].text.Color = Color3.new(1,1,1)
+				button[4].text.Color = newColor3(1,1,1)
 				button[4].text.Text = button.name
 			end
 		end
@@ -3613,7 +3626,7 @@ function menu.Initialize(menutable)
 										end
 										v2[4][5].Text = v2.custom[v2[1]] or (v2[1] == math.floor(v2[1]) and v2.round == false) and tostring(v2[1])..".0" .. v2[4][6] or tostring(v2[1]) .. v2[4][6]
 										for i = 1, 4 do
-											v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
+											v2[4][i].Size = newVector2((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 										end
 										set_plusminus(1, v2[7][1], v2[7][2])
 									else
@@ -3818,7 +3831,7 @@ function menu.Initialize(menutable)
 					menu.watermark.text[1].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1].. menu.watermark.textString
 
 					for i, v in ipairs(menu.watermark.rect) do
-						v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
+						v.Size = newVector2((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
 					end
 				else 
 					if bbmenu[27].Text ~= "Bitch Bot" then
@@ -3829,7 +3842,7 @@ function menu.Initialize(menutable)
 						menu.watermark.text[1].Text = "Bitch Bot".. menu.watermark.textString
 
 						for i, v in ipairs(menu.watermark.rect) do
-							v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
+							v.Size = newVector2((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
 						end
 					end
 				end
@@ -3963,23 +3976,23 @@ menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
 
 		local numstr = tostring(biggestnum)
 		graphs.incoming.sides[2].Text = numstr
-		graphs.incoming.sides[2].Position = Vector2.new(graphs.incoming.pos.x - ((#numstr + 1)* 7) , graphs.incoming.pos.y - 7)
+		graphs.incoming.sides[2].Position = newVector2(graphs.incoming.pos.x - ((#numstr + 1)* 7) , graphs.incoming.pos.y - 7)
 			
 
 		for i = 1, 20 do
 			local line = graphs.incoming.graph[i]
 			
-			line.From = Vector2.new(((i - 1) * 11) + graphs.incoming.pos.x, graphs.incoming.pos.y + 80 - math.floor(networkin.incoming[i] / biggestnum * 80))
+			line.From = newVector2(((i - 1) * 11) + graphs.incoming.pos.x, graphs.incoming.pos.y + 80 - math.floor(networkin.incoming[i] / biggestnum * 80))
 
-			line.To = Vector2.new((i * 11) + graphs.incoming.pos.x ,  graphs.incoming.pos.y + 80 - math.floor(networkin.incoming[i + 1] / biggestnum * 80))
+			line.To = newVector2((i * 11) + graphs.incoming.pos.x ,  graphs.incoming.pos.y + 80 - math.floor(networkin.incoming[i + 1] / biggestnum * 80))
 		end
 
 		local avgbar_h = average(networkin.incoming)
 
-		graphs.incoming.graph[21].From = Vector2.new(graphs.incoming.pos.x + 1, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
-		graphs.incoming.graph[21].To = Vector2.new(graphs.incoming.pos.x + 220, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
+		graphs.incoming.graph[21].From = newVector2(graphs.incoming.pos.x + 1, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
+		graphs.incoming.graph[21].To = newVector2(graphs.incoming.pos.x + 220, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
 
-		graphs.incoming.graph[22].Position = Vector2.new(graphs.incoming.pos.x + 222, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80) - 8)
+		graphs.incoming.graph[22].Position = newVector2(graphs.incoming.pos.x + 222, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80) - 8)
 		graphs.incoming.graph[22].Text = "avg: ".. tostring(round(avgbar_h, 2))
 
 		graphs.incoming.sides[1].Text = "incoming kbps: ".. tostring(round(networkin.incoming[21], 2))
@@ -3994,23 +4007,23 @@ menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
 		
 		local numstr = tostring(biggestnum)
 		graphs.outgoing.sides[2].Text = numstr
-		graphs.outgoing.sides[2].Position = Vector2.new(graphs.outgoing.pos.x - ((#numstr + 1)* 7) , graphs.outgoing.pos.y - 7)
+		graphs.outgoing.sides[2].Position = newVector2(graphs.outgoing.pos.x - ((#numstr + 1)* 7) , graphs.outgoing.pos.y - 7)
 		
 
 		for i = 1, 20 do
 			local line = graphs.outgoing.graph[i]
 			
-			line.From = Vector2.new(((i - 1) * 11) + graphs.outgoing.pos.x, graphs.outgoing.pos.y + 80 - math.floor(networkin.outgoing[i] / biggestnum * 80))
+			line.From = newVector2(((i - 1) * 11) + graphs.outgoing.pos.x, graphs.outgoing.pos.y + 80 - math.floor(networkin.outgoing[i] / biggestnum * 80))
 
-			line.To = Vector2.new((i * 11) + graphs.outgoing.pos.x ,  graphs.outgoing.pos.y + 80 - math.floor(networkin.outgoing[i + 1] / biggestnum * 80))
+			line.To = newVector2((i * 11) + graphs.outgoing.pos.x ,  graphs.outgoing.pos.y + 80 - math.floor(networkin.outgoing[i + 1] / biggestnum * 80))
 		end
 
 		local avgbar_h = average(networkin.outgoing)
 
-		graphs.outgoing.graph[21].From = Vector2.new(graphs.outgoing.pos.x + 1, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
-		graphs.outgoing.graph[21].To = Vector2.new(graphs.outgoing.pos.x + 220, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
+		graphs.outgoing.graph[21].From = newVector2(graphs.outgoing.pos.x + 1, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
+		graphs.outgoing.graph[21].To = newVector2(graphs.outgoing.pos.x + 220, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
 
-		graphs.outgoing.graph[22].Position = Vector2.new(graphs.outgoing.pos.x + 222, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80) - 8)
+		graphs.outgoing.graph[22].Position = newVector2(graphs.outgoing.pos.x + 222, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80) - 8)
 		graphs.outgoing.graph[22].Text = "avg: ".. tostring(round(avgbar_h, 2))
 
 		graphs.outgoing.sides[1].Text = "outgoing kbps: ".. tostring(round(networkin.outgoing[21], 2))
@@ -4751,25 +4764,25 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				
 				if rootpart ~= nil then
 					
-					local travel = Vector3.new()
+					local travel = newVector3()
 					local looking = Workspace.CurrentCamera.CFrame.lookVector
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
-						travel += Vector3.new(looking.x,0,looking.Z)
+						travel += newVector3(looking.x,0,looking.Z)
 					end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S) then
-						travel -= Vector3.new(looking.x,0,looking.Z)
+						travel -= newVector3(looking.x,0,looking.Z)
 					end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-						travel += Vector3.new(-looking.Z, 0, looking.x)
+						travel += newVector3(-looking.Z, 0, looking.x)
 					end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-						travel += Vector3.new(looking.Z, 0, -looking.x)
+						travel += newVector3(looking.Z, 0, -looking.x)
 					end
 					
 					travel = travel.Unit
 					
 					
-					local newDir = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.Z * speed)
+					local newDir = newVector3(travel.x * speed, rootpart.Velocity.y, travel.Z * speed)
 					
 					if travel.Unit.x == travel.Unit.x then
 						rootpart.Velocity = newDir
@@ -4797,24 +4810,24 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				
 				local speed = menu:GetVal("Misc", "Movement", "Fly Speed")
 				
-				local travel = Vector3.new()
+				local travel = newVector3()
 				local looking = workspace.CurrentCamera.CFrame.lookVector --getting camera looking vector
 				
 				do
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W)         then travel += looking                               end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.S)         then travel -= looking                               end
-					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D)         then travel += Vector3.new(-looking.Z, 0, looking.x) end
-					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A)         then travel += Vector3.new(looking.Z, 0, -looking.x) end
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D)         then travel += newVector3(-looking.Z, 0, looking.x) end
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A)         then travel += newVector3(looking.Z, 0, -looking.x) end
 					
-					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space)     then travel += Vector3.new(0, 1, 0)                  end
-					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then travel -= Vector3.new(0, 1, 0)                  end
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space)     then travel += newVector3(0, 1, 0)                  end
+					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then travel -= newVector3(0, 1, 0)                  end
 				end
 				
 				if travel.Unit.x == travel.Unit.x then
 					rootpart.Anchored = false
 					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
 				else
-					rootpart.Velocity = Vector3.new(0, 0, 0)
+					rootpart.Velocity = newVector3(0, 0, 0)
 					rootpart.Anchored = true
 				end
 				
@@ -4832,7 +4845,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			local organizedPlayers = {}
 			local fovType = menu:GetVal("Aimbot", "Aimbot", "FOV Calculation")
 			local fov = menu:GetVal("Aimbot", "Aimbot", "Aimbot FOV")
-			local mousePos = Vector3.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36, 0)
+			local mousePos = newVector3(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36, 0)
 			for i, v in ipairs(Players:GetPlayers()) do
 				if v == LOCAL_PLAYER then
 					continue
@@ -4884,7 +4897,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						if INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
 							mousemoveabs(pos.x, pos.y) --TODO NATE FIX THIS AIMBOT MAKE IT HEAT AND MAKE IT SORT BY FOV
 						else
-							Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
+							Camera.CFrame = newCFrame(Camera.CFrame.Position, head.Position)
 						end
 						return
 					end
@@ -4994,15 +5007,15 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				if menu:GetVal("Visuals", "Misc Visuals", "Custom Crosshair") then
 					local size = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Size")
 					local color = menu:GetVal("Visuals", "Misc Visuals", "Custom Crosshair", "color", true)
-					menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
-					menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
+					menu.crosshair.inner[1].Size = newVector2(size * 2 + 1, 1)
+					menu.crosshair.inner[2].Size = newVector2(1, size * 2 + 1)
 					
 					menu.crosshair.inner[1].Color = color
 					menu.crosshair.inner[2].Color = color
 					
 					
-					menu.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
-					menu.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
+					menu.crosshair.outline[1].Size = newVector2(size * 2 + 3, 3)
+					menu.crosshair.outline[2].Size = newVector2(3, size * 2 + 3)
 				end
 				menu:SetVisualsColor()
 			end
@@ -5031,18 +5044,18 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		if menu:GetVal("Visuals", "Misc Visuals", "Custom Crosshair") then
 			local size = menu:GetVal("Visuals", "Misc Visuals", "Crosshair Size")
 			if menu:GetVal("Visuals", "Misc Visuals", "Crosshair Position") == 1 then
-				menu.crosshair.inner[1].Position = Vector2.new(SCREEN_SIZE.x/2 - size, SCREEN_SIZE.y/2)
-				menu.crosshair.inner[2].Position = Vector2.new(SCREEN_SIZE.x/2, SCREEN_SIZE.y/2 - size)
+				menu.crosshair.inner[1].Position = newVector2(SCREEN_SIZE.x/2 - size, SCREEN_SIZE.y/2)
+				menu.crosshair.inner[2].Position = newVector2(SCREEN_SIZE.x/2, SCREEN_SIZE.y/2 - size)
 				
-				menu.crosshair.outline[1].Position = Vector2.new(SCREEN_SIZE.x/2 - size - 1, SCREEN_SIZE.y/2 - 1)
-				menu.crosshair.outline[2].Position = Vector2.new(SCREEN_SIZE.x/2 - 1, SCREEN_SIZE.y/2 - 1 - size)
+				menu.crosshair.outline[1].Position = newVector2(SCREEN_SIZE.x/2 - size - 1, SCREEN_SIZE.y/2 - 1)
+				menu.crosshair.outline[2].Position = newVector2(SCREEN_SIZE.x/2 - 1, SCREEN_SIZE.y/2 - 1 - size)
 			else
 				-- INPUT_SERVICE.MouseIconEnabled = false
-				menu.crosshair.inner[1].Position = Vector2.new(LOCAL_MOUSE.x - size, LOCAL_MOUSE.y + 36)
-				menu.crosshair.inner[2].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36 - size)
+				menu.crosshair.inner[1].Position = newVector2(LOCAL_MOUSE.x - size, LOCAL_MOUSE.y + 36)
+				menu.crosshair.inner[2].Position = newVector2(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36 - size)
 				
-				menu.crosshair.outline[1].Position = Vector2.new(LOCAL_MOUSE.x - size - 1, LOCAL_MOUSE.y + 35)
-				menu.crosshair.outline[2].Position = Vector2.new(LOCAL_MOUSE.x - 1, LOCAL_MOUSE.y + 35 - size)
+				menu.crosshair.outline[1].Position = newVector2(LOCAL_MOUSE.x - size - 1, LOCAL_MOUSE.y + 35)
+				menu.crosshair.outline[2].Position = newVector2(LOCAL_MOUSE.x - 1, LOCAL_MOUSE.y + 35 - size)
 			end
 		end
 		
@@ -5051,8 +5064,8 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		end
 		
 		if menu:GetVal("Visuals", "Misc Visuals", "Draw Aimbot FOV") and menu:GetVal("Aimbot", "Aimbot", "Enabled") then
-			menu.fovcircle[1].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
-			menu.fovcircle[2].Position = Vector2.new(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
+			menu.fovcircle[1].Position = newVector2(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
+			menu.fovcircle[2].Position = newVector2(LOCAL_MOUSE.x, LOCAL_MOUSE.y + 36)
 			
 			local aimfov = menu:GetVal("Aimbot", "Aimbot", "Aimbot FOV")
 			if menu:GetVal("Aimbot", "Aimbot", "FOV Calculation") == 2 then
@@ -5125,51 +5138,51 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 				
 				if top_isrendered or bottom_isrendered then
-					local boxtop = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - sizeX * 0.5), math.floor(math.min(top.y, bottom.y)))
+					local boxtop = newVector2(math.floor(top.x * 0.5 + bottom.x * 0.5 - sizeX * 0.5), math.floor(math.min(top.y, bottom.y)))
 					local boxsize = {w = sizeX, h =  sizeY}
 					
 					if menu:GetVal("Visuals", "Player ESP", "Head Dot") then
 						local head = v.Character:FindFirstChild("Head")
 						if head then
 							local headpos = head.Position
-							local headdotpos = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y, headpos.z))
-							local headdotpos_b = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y - 0.3, headpos.z))
+							local headdotpos = workspace.CurrentCamera:WorldToViewportPoint(newVector3(headpos.x, headpos.y, headpos.z))
+							local headdotpos_b = workspace.CurrentCamera:WorldToViewportPoint(newVector3(headpos.x, headpos.y - 0.3, headpos.z))
 							local difference = headdotpos_b.y - headdotpos.y
 							allesp.headdot[i].Visible = true
-							allesp.headdot[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
+							allesp.headdot[i].Position = newVector2(headdotpos.x, headdotpos.y - difference)
 							allesp.headdot[i].Radius = difference * 2
 							
 							allesp.headdotoutline[i].Visible = true
-							allesp.headdotoutline[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
+							allesp.headdotoutline[i].Position = newVector2(headdotpos.x, headdotpos.y - difference)
 							allesp.headdotoutline[i].Radius = difference * 2
 						end
 					end
 					if menu:GetVal("Visuals", "Player ESP", "Box") then
-						allesp.outerbox[i].Position = Vector2.new(boxtop.x - 1, boxtop.y - 1)
-						allesp.outerbox[i].Size = Vector2.new(boxsize.w + 2, boxsize.h + 2)
+						allesp.outerbox[i].Position = newVector2(boxtop.x - 1, boxtop.y - 1)
+						allesp.outerbox[i].Size = newVector2(boxsize.w + 2, boxsize.h + 2)
 						allesp.outerbox[i].Visible = true
 						
-						allesp.innerbox[i].Position = Vector2.new(boxtop.x + 1, boxtop.y + 1)
-						allesp.innerbox[i].Size = Vector2.new(boxsize.w - 2, boxsize.h - 2)
+						allesp.innerbox[i].Position = newVector2(boxtop.x + 1, boxtop.y + 1)
+						allesp.innerbox[i].Size = newVector2(boxsize.w - 2, boxsize.h - 2)
 						allesp.innerbox[i].Visible = true
 						
-						allesp.box[i].Position = Vector2.new(boxtop.x, boxtop.y)
-						allesp.box[i].Size = Vector2.new(boxsize.w, boxsize.h)
+						allesp.box[i].Position = newVector2(boxtop.x, boxtop.y)
+						allesp.box[i].Size = newVector2(boxsize.w, boxsize.h)
 						allesp.box[i].Visible = true
 					end
 					if humanoid then
 						local health = math.ceil(humanoid.Health)
 						local maxhealth = humanoid.MaxHealth
 						if menu:GetVal("Visuals", "Player ESP", "Health Bar") then
-							allesp.healthouter[i].Position = Vector2.new(boxtop.x - 6, boxtop.y - 1)
-							allesp.healthouter[i].Size = Vector2.new(4, boxsize.h + 2)
+							allesp.healthouter[i].Position = newVector2(boxtop.x - 6, boxtop.y - 1)
+							allesp.healthouter[i].Size = newVector2(4, boxsize.h + 2)
 							allesp.healthouter[i].Visible = true
 							
 							
 							local ySizeBar = -math.floor(boxsize.h * health / maxhealth)
 							
-							allesp.healthinner[i].Position = Vector2.new(boxtop.x - 5, boxtop.y + boxsize.h)
-							allesp.healthinner[i].Size = Vector2.new(2, ySizeBar)
+							allesp.healthinner[i].Position = newVector2(boxtop.x - 5, boxtop.y + boxsize.h)
+							allesp.healthinner[i].Size = newVector2(2, ySizeBar)
 							allesp.healthinner[i].Visible = true
 							allesp.healthinner[i].Color = ColorRange(health, {
 								[1] = {start = 0, color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color1", true)},
@@ -5179,19 +5192,19 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							if menu:GetVal("Visuals", "Player ESP", "Health Number") then
 								allesp.hptext[i].Text = tostring(health)
 								local textsize = allesp.hptext[i].TextBounds
-								allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + math.clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
+								allesp.hptext[i].Position = newVector2(boxtop.x - 7 - textsize.x, boxtop.y + math.clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
 								allesp.hptext[i].Visible = true
 							end
 							
 						elseif menu:GetVal("Visuals", "Player ESP", "Health Number") then
 							allesp.hptext[i].Text = tostring(health)
 							local textsize = allesp.hptext[i].TextBounds
-							allesp.hptext[i].Position = Vector2.new(boxtop.x - 2 - textsize.x, boxtop.y - 4)
+							allesp.hptext[i].Position = newVector2(boxtop.x - 2 - textsize.x, boxtop.y - 4)
 							allesp.hptext[i].Visible = true
 						end
 					end
 					if menu:GetVal("Visuals", "Player ESP", "Name") then
-						local name_pos = Vector2.new(math.floor(boxtop.x + boxsize.w*0.5), math.floor(boxtop.y - 15))
+						local name_pos = newVector2(math.floor(boxtop.x + boxsize.w*0.5), math.floor(boxtop.y - 15))
 						allesp.name[i].Text = v.Name
 						allesp.name[i].Position = name_pos
 						allesp.name[i].Visible = true
@@ -5211,13 +5224,13 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 								allesp.team[i].Color = v.TeamColor.Color
 							end
 						end
-						local team_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h)
+						local team_pos = newVector2(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h)
 						allesp.team[i].Position = team_pos
 						allesp.team[i].Visible = true
 						y_spot += 14
 					end
 					if menu:GetVal("Visuals", "Player ESP", "Distance") then
-						local dist_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
+						local dist_pos = newVector2(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
 						allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(rootpart) / 5)).. "m"
 						allesp.distance[i].Position = dist_pos
 						allesp.distance[i].Visible = true
@@ -5244,13 +5257,13 @@ elseif menu.game == "pf" then --!SECTION
 	menu.activetab = 5
 	menu.annoylist = table.create(game.Players.MaxPlayers - 1)
 
-	local sphereHitbox = Instance.new("Part", workspace)
+	local sphereHitbox = newInstance("Part", workspace)
 	sphereHitbox.Name = "abcdefg"
 	local diameter
 	do
 		diameter = 11 -- up to 12 works
-		sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
-		sphereHitbox.Position = Vector3.new()
+		sphereHitbox.Size = newVector3(diameter, diameter, diameter)
+		sphereHitbox.Position = newVector3()
 		sphereHitbox.Shape = Enum.PartType.Ball
 		sphereHitbox.Transparency = 1
 		sphereHitbox.Anchored = true
@@ -5308,94 +5321,114 @@ elseif menu.game == "pf" then --!SECTION
 	--SECTION PF BEGIN
 	
 	local allesp = {
-		skel = {
+		[1] = { -- skel
 			[1] = {},
 			[2] = {},
 			[3] = {},
 			[4] = {},
 			[5] = {},
 		},
-		box = {[1] = {}, [2] = {}, [3] = {}},
-		hp = {
-			outer = {},
-			inner = {},
-			text = {}
+		[2] = {[1] = {}, [2] = {}, [3] = {}}, -- box
+		[3] = { -- hp
+			[1] = {},
+			[2] = {},
+			[3] = {}
 		},
-		text = {
-			name = {},
-			weapon = {},
-			distance = {}
+		[4] = { -- text
+			[1] = {},
+			[2] = {},
+			[3] = {}
 		},
-		arrows = {
+		[5] = { -- arrows
 			[1] = {},
 			[2] = {},
 		},
-		watermark = {},
+		[6] = {}, -- watermark
+		[7] = { -- wepesp
+			[1] = {}, -- name
+			[2] = {} -- ammo
+		},
+		[8] = { -- nade esp
+			[1] = {}, --outer_c 
+			[2] = {}, --inner_c
+			[3] = {}, --distance
+			[4] = {}, --text
+			[5] = {}, -- bar_outer
+			[6] = {}, -- bar_inner
+			[7] = {}, -- bar_moving_1
+			[8] = {} -- bar_moving_2
+		}
 	}
+
+    local allespnum = #allesp
+
+	local wepesp = allesp[7]
+
+    local wepespnum = #wepesp
 	
-	local wepesp = {
-		name = {},
-		ammo = {}
-	}
-	
-	local nadeesp = {
-		outer_c = {},
-		inner_c = {},
-		distance = {},
-		text = {},
-		bar_outer = {},
-		bar_inner = {},
-		bar_moving_1 = {},
-		bar_moving_2 = {}
-	}
+	local nade_esp = allesp[8]
+
+    local nade_espnum = #nade_esp
 	
 	for i = 1, 50 do
-		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.name)
-		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp.ammo)
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[1])
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[2])
 	end
 	
 	for i = 1, 20 do
-		Draw:FilledCircle(false, 60, 60, 32, 1, 20, {20, 20, 20, 215}, nadeesp.outer_c)
-		Draw:Circle(false, 60, 60, 30, 1, 20, {50, 50, 50, 255}, nadeesp.inner_c)
-		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, nadeesp.distance)
-		Draw:Image(false, BBOT_IMAGES[6], 20, 20, 23, 30, 1, nadeesp.text)
-		--Draw:OutlinedText("NADE", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, nadeesp.text)
+		Draw:FilledCircle(false, 60, 60, 32, 1, 20, {20, 20, 20, 215}, nade_esp[1])
+		Draw:Circle(false, 60, 60, 30, 1, 20, {50, 50, 50, 255}, nade_esp[2])
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, nade_esp[3])
+		Draw:Image(false, BBOT_IMAGES[6], 20, 20, 23, 30, 1, nade_esp[4])
+		--Draw:OutlinedText("NADE", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, nade_esp[4])
 		
-		Draw:OutlinedRect(false, 20, 20, 32, 6, {50, 50, 50, 255}, nadeesp.bar_outer)
-		Draw:FilledRect(false, 20, 20, 30, 4, {30, 30, 30, 255}, nadeesp.bar_inner)
+		Draw:OutlinedRect(false, 20, 20, 32, 6, {50, 50, 50, 255}, nade_esp[5])
+		Draw:FilledRect(false, 20, 20, 30, 4, {30, 30, 30, 255}, nade_esp[6])
 		
-		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nadeesp.bar_moving_1)
-		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nadeesp.bar_moving_2)
+		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nade_esp[7])
+		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, nade_esp[8])
 	end
 
 	for i = 1, 35 do
 		for i_ = 1, 2 do
-			Draw:Triangle(false, i_ == 1, nil, nil, nil, {255}, allesp.arrows[i_])
+			Draw:Triangle(false, i_ == 1, nil, nil, nil, {255}, allesp[5][i_])
 		end
-		for i_, v in ipairs(allesp.skel) do
-			Draw:Line(false, 1, 30, 30, 50, 50, {255, 255, 255, 255}, v)
-		end
-		for i_, v in pairs(allesp.box) do
-			Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, v)
-		end
-		
-		Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 210}, allesp.hp.outer)
-		Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 255}, allesp.hp.inner)
-		Draw:OutlinedText("", 1, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, allesp.hp.text)
-		
-		for i_, v in pairs(allesp.text) do
-			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, v)
-		end
+
+        local skel = allesp[1]
+        local box = allesp[2]
+        local hp = allesp[3]
+        local text = allesp[4]
+        local arrows = allesp[5]
+        local watermark = allesp[6]
+
+        for i = 1, #skel do
+            local drawobj = skel[i]
+            Draw:Line(false, 1, 30, 30, 50, 50, {255, 255, 255, 255}, drawobj)
+        end
+
+        for i = 1, #box do
+            local drawobj = box[i]
+            Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, drawobj)
+        end
+
+        Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 210}, hp[1])
+        Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 255}, hp[2])
+        Draw:OutlinedText("", 1, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, hp[3])
+
+        for i = 1, #text do
+            local drawobj = text[i]
+            Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, drawobj)
+        end
 	end
 	
 	local bodysize = {
-		["Head"] = Vector3.new(2, 1, 1),
-		["Torso"] = Vector3.new(2, 2, 1),
-		["HumanoidRootPart"] = Vector3.new(0.2, 0.2, 0.2),
-		["Left Arm"] = Vector3.new(1, 2, 1),
-		["Right Arm"] = Vector3.new(1, 2, 1),
-		["Left Leg"] = Vector3.new(1, 2, 1),
-		["Right Leg"] = Vector3.new(1, 2, 1)
+		["Head"] = newVector3(2, 1, 1),
+		["Torso"] = newVector3(2, 2, 1),
+		["HumanoidRootPart"] = newVector3(0.2, 0.2, 0.2),
+		["Left Arm"] = newVector3(1, 2, 1),
+		["Right Arm"] = newVector3(1, 2, 1),
+		["Left Leg"] = newVector3(1, 2, 1),
+		["Right Leg"] = newVector3(1, 2, 1)
 	}
 	
 	local client = {}
@@ -5409,6 +5442,7 @@ elseif menu.game == "pf" then --!SECTION
 	client.loadedguns = {}
 	
 	local raycastutil
+
 	local gc = getgc(true)
 
     for i = 1, #gc do
@@ -5496,6 +5530,7 @@ elseif menu.game == "pf" then --!SECTION
 
     gc = nil
 	
+
 	local function animhook(...)
 		return function(...) end
 	end
@@ -5506,7 +5541,7 @@ elseif menu.game == "pf" then --!SECTION
 
 	client.lastlock = false -- fucking dumb
 
-	local fakelagpos = Vector3.new()
+	local fakelagpos = newVector3()
 	local fakelagtime = 0
 
 	for _, ply in next, Players:GetPlayers() do
@@ -5527,9 +5562,13 @@ elseif menu.game == "pf" then --!SECTION
 		end
 	end
 
+	client.nametagupdaters_cache = {}
+    client.nametagupdaters = getupvalue(client.updateplayernames, 1)
+    client.playernametags = getupvalue(client.updateplayernames, 2)
+
 	setrawmetatable(client.roundsystem, {
 		__index = function(self, val)
-			if not menu then
+			if not menu or not client then
 				setrawmetatable(self, nil)
 				return false
 			end
@@ -5717,7 +5756,6 @@ elseif menu.game == "pf" then --!SECTION
 			CreateNotification("Custom Chatspam Updated")
 		end,
 		cmdlist = function(self)
-			client.bbconsole("k")
 			for cmdname, _ in next, self do
 				if cmdname ~= "cmdlist" then
 					local cmdinfo = CommandInfo[cmdname] or ""
@@ -5742,7 +5780,9 @@ elseif menu.game == "pf" then --!SECTION
 			if is_synapse_function(func) then
 				for k,v in next, getupvalues(func) do
 					if type(v) == "function" and islclosure(v) and not is_synapse_function(v) then
-						funcs[hash] = v
+						if getinfo(v).name ~= "send" then
+							funcs[hash] = v
+						end
 					end
 				end
 			end
@@ -5757,11 +5797,52 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 		
+		for k,v in next, getgc(true) do
+			if type(v) == "table" then
+				if rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
+					for k1, v1 in next, getupvalues(rawget(v, "task")) do
+						if type(v1) == "function" and islclosure(v1) and not is_synapse_function(v1) then
+							v.task = v1
+						end
+					end
+					break
+				end
+			end
+		end
+		
+		if client.char.alive then
+			for id, gun in next, client.loadedguns do
+				for k,v in next, gun do
+					
+					if type(v) == "function" then
+						
+						local upvs = getupvalues(v)
+						
+						for k1, v1 in next, upvs do
+							
+							if type(v1) == "function" and is_synapse_function(v1) then
+								
+								for k2, v2 in next, getupvalues(v1) do
+									
+									if type(v2) == "function" and islclosure(v2) and not is_synapse_function(v2) then
+										
+										setupvalue(v, k1, v2)
+										
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		
 		local spring = require(game.ReplicatedFirst.SharedModules.Utilities.Math.spring)
 		spring.__index = client.springindex
 
 		client.fake_upvs = nil
-
+		DeepRestoreTableFunctions(client)
+		
 		local gunstore = game.ReplicatedStorage.GunModules
 		gunstore:Destroy()
 		game.ReplicatedStorage:FindFirstChild(client.acchash).Name = "GunModules" -- HACK DETECTED.
@@ -5774,131 +5855,33 @@ elseif menu.game == "pf" then --!SECTION
 		lighting.Brightness = defaults.Brightness.Value
 		
 		workspace.Ignore.DeadBody:ClearAllChildren()
-
-		CreateThread(function()
-			local gc = getgc(true)
-
-			for i = 1, #gc do
-				local garbage = gc[i]
-	
-				if type(v) == "table" then
-					if rawget(v, "task") and rawget(v, "dependencies") and rawget(v, "name") == "camera" then
-						for k1, v1 in next, getupvalues(rawget(v, "task")) do
-							if type(v1) == "function" and islclosure(v1) and not is_synapse_function(v1) then
-								v.task = v1
-							end
-						end
-						break
-					end
-				end
-			end
-		end)
-
-		MultiThreadList({
-			function()
-				local gc = getgc(true)
-	
-				for i = 1, #gc do
-					local garbage = gc[i]
 		
-					if type(garbage) == "table" then
-						if rawget(garbage, "task") and rawget(garbage, "name") == "camera" then
-							local tempupvs = getupvalues(rawget(garbage, "task"))
-							for _, upvalue in next, tempupvs do
-								if type(upvalue) == "function" and islclosure(upvalue) and not is_synapse_function(upvalue) then
-									rawset(garbage, "task", upvalue)
-									gc = nil
-									return
-								end
-							end
-						end
-					end
-				end
-
-				gc = nil
-			end,
-			function()
-				if client.char.alive then
-					local size = #client.loadedguns
-
-					if size > 0 then -- sometimes exploits/glitches may be used,.
-						for i = 1, size do
-							local gun = client.loadedguns[i]
-
-							for _,v in next, gun do
-								if type(v) == "function" then
-									local upvs = getupvalues(v)
-									for k1, v1 in next, upvs do
-										if type(v1) == "function" and is_synapse_function(v1) then
-											for k2, v2 in next, getupvalues(v1) do
-												if type(v2) == "function" and islclosure(v2) and not is_synapse_function(v2) then
-													setupvalue(v, k1, v2)
-												end
-											end
-										end
-									end
-								end
-							end
-						end
-					else
-						for id, gun in pairs(client.loadedguns) do
-							for _,v in next, gun do
-								if type(v) == "function" then
-									local upvs = getupvalues(v)
-									for k1, v1 in next, upvs do
-										if type(v1) == "function" and is_synapse_function(v1) then
-											for k2, v2 in next, getupvalues(v1) do
-												if type(v2) == "function" and islclosure(v2) and not is_synapse_function(v2) then
-													setupvalue(v, k1, v2)
-												end
-											end
-										end
-									end
-								end
-							end
-						end
-					end
-
-				end
-			end,
-			function()
-				DeepRestoreTableFunctions(client)
-
-				--[[ for k,v in next, client do
-					client[k] = nil
-				end
-				
-				for k,v in next, ragebot do
-					ragebot[k] = nil
-				end
-				
-				for k,v in next, legitbot do
-					legitbot[k] = nil
-				end
-				
-				for k,v in next, misc do
-					misc[k] = nil
-				end
-				
-				for k,v in next, camera do
-					camera[k] = nil
-				end ]]
-
-				DeepCleanupTable(client)
-				DeepCleanupTable(ragebot)
-				DeepCleanupTable(legitbot)
-				DeepCleanupTable(misc)
-				DeepCleanupTable(camera)
-				
-				client = nil
-				ragebot = nil
-				legitbot = nil
-				misc = nil
-				camera = nil
-				DeepRestoreTableFunctions = nil
-			end,
-			{DeepCleanupTable, {allesp}}
-		})
+		for k,v in next, client do
+			client[k] = nil
+		end
+		
+		for k,v in next, ragebot do
+			ragebot[k] = nil
+		end
+		
+		for k,v in next, legitbot do
+			legitbot[k] = nil
+		end
+		
+		for k,v in next, misc do
+			misc[k] = nil
+		end
+		
+		for k,v in next, camera do
+			camera[k] = nil
+		end
+		
+		client = nil
+		ragebot = nil
+		legitbot = nil
+		misc = nil
+		camera = nil
+		DeepRestoreTableFunctions = nil
 	end
 	
 	local charcontainer = game.ReplicatedStorage.Character.Bodies
@@ -5912,15 +5895,15 @@ elseif menu.game == "pf" then --!SECTION
 		repupdates[player] = {}
 	end
 
-	local ncf = CFrame.new()
+	local ncf = newCFrame()
 	local vtos = ncf.VectorToObjectSpace
 
-	local left = Vector3.new(1, 0, 0)
-	local right = Vector3.new(-1, 0, 0)
-	local forward = Vector3.new(0, 0, 1)
-	local backward = Vector3.new(0, 0, -1)
-	local up = Vector3.new(0, 1, 0)
-	local down = Vector3.new(0, -1, 0)
+	local left = newVector3(1, 0, 0)
+	local right = newVector3(-1, 0, 0)
+	local forward = newVector3(0, 0, 1)
+	local backward = newVector3(0, 0, -1)
+	local up = newVector3(0, 1, 0)
+	local down = newVector3(0, -1, 0)
 	
 	local directiontable = {
 		left,
@@ -5939,17 +5922,17 @@ elseif menu.game == "pf" then --!SECTION
 	local uberpart = workspace:FindFirstChild("uber")
 
 	if not uberpart then
-		uberpart = Instance.new("Part", workspace)
+		uberpart = newInstance("Part", workspace)
 		uberpart.Name = "uber"
 		uberpart.Material = Enum.Material.Neon
 		uberpart.Anchored = true
 		uberpart.CanCollide = false
-		uberpart.Size = Vector3.new(1, 1, 1)
+		uberpart.Size = newVector3(1, 1, 1)
 	end
 	
 	client.localrank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
 	
-	client.fakeplayer = Instance.new("Player", Players) -- thank A_003 for this (third person body)🔥
+	client.fakeplayer = newInstance("Player", Players) -- thank A_003 for this (third person body)🔥
 	client.fakeplayer.Name = " "
 	client.fakeplayer.Team = LOCAL_PLAYER.Team
 	
@@ -6294,8 +6277,8 @@ elseif menu.game == "pf" then --!SECTION
 		local root = getChild(char, "HumanoidRootPart")
 		
 		local op = root.CFrame
-		root.Velocity = Vector3.new(0, 300, 0) -- this right here
-		root.CFrame += CFrame.new(0, math.huge, 0)
+		root.Velocity = newVector3(0, 300, 0) -- this right here
+		root.CFrame += newCFrame(0, math.huge, 0)
 		--yes
 		wait(0.2) -- (json)had to change this to 0.2 because apparently the interval for the first wait can't be more than this wtf
 		do
@@ -6305,7 +6288,7 @@ elseif menu.game == "pf" then --!SECTION
 		wait(0)
 		root.CFrame = op
 		-- come bak
-		root.Velocity = Vector3.new()
+		root.Velocity = newVector3()
 		client.net.send = oldsend
 	end ]]
 	
@@ -6355,20 +6338,20 @@ elseif menu.game == "pf" then --!SECTION
 								local box
 								
 								if Part.Name ~= "Head" then
-									box = Instance.new("BoxHandleAdornment", Part)
-									box.Size = Part.Size + Vector3.new(0.1, 0.1, 0.1)
+									box = newInstance("BoxHandleAdornment", Part)
+									box.Size = Part.Size + newVector3(0.1, 0.1, 0.1)
 									if i == 0 then
-										box.Size -= Vector3.new(0.25, 0.25, 0.25)
+										box.Size -= newVector3(0.25, 0.25, 0.25)
 									end
 								else
-									box = Instance.new("CylinderHandleAdornment", Part)
+									box = newInstance("CylinderHandleAdornment", Part)
 									box.Height = Part.Size.y + 0.3
 									box.Radius = Part.Size.x * 0.5 + 0.2
 									if i == 0 then
 										box.Height -= 0.2
 										box.Radius -= 0.2
 									end
-									box.CFrame = CFrame.new(CACHED_VEC3, Vector3.new(0,1,0))
+									box.CFrame = newCFrame(CACHED_VEC3, newVector3(0,1,0))
 								end
 								
 								box.Name = i == 0 and "c88" or "c99"
@@ -6471,10 +6454,10 @@ elseif menu.game == "pf" then --!SECTION
 							params.FilterDescendantsInstances = {Camera, workspace.Ignore, workspace.Players}
 							
 							local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
-							if hit and not hit.Instance.CanCollide then return oldNewIndex(self, id, val * CFrame.new(0, 0, dist)) end
+							if hit and not hit.Instance.CanCollide then return oldNewIndex(self, id, val * newCFrame(0, 0, dist)) end
 							local mag = hit and (hit.Position - val.p).Magnitude or nil
 							
-							val *= CFrame.new(0, 0, mag or dist)
+							val *= newCFrame(0, 0, mag or dist)
 						end
 
 						if keybindtoggles.superaa then
@@ -6489,16 +6472,16 @@ elseif menu.game == "pf" then --!SECTION
 				if self == client.char.rootpart then
 					if id == "CFrame" then
 						if not keybindtoggles.superaa and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
-							local offset = Vector3.new(0, client.fakeoffset, 0)
+							local offset = newVector3(0, client.fakeoffset, 0)
 							self.Position = val.p - offset
 							self.Position = val.p + offset
 						end
 
 						if keybindtoggles.superaa then
-							-- Vector3.new(math.sin(tick() * 7) * 200, 50, math.cos(tick() * 7) * 100)
-							client.superaastart = CFrame.new(client.superaastart.p)
+							-- newVector3(math.sin(tick() * 7) * 200, 50, math.cos(tick() * 7) * 100)
+							client.superaastart = newCFrame(client.superaastart.p)
 							
-							local tv = Vector3.new()
+							local tv = newVector3()
 							local cf = client.cam.basecframe
 							local rightVector = cf.RightVector
 							local lv = cf.lookVector
@@ -6515,10 +6498,10 @@ elseif menu.game == "pf" then --!SECTION
 								tv += rightVector
 							end
 							if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
-								tv += Vector3.new(0, 1, 0)
+								tv += newVector3(0, 1, 0)
 							end
 							if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-								tv -= Vector3.new(0, 1, 0)
+								tv -= newVector3(0, 1, 0)
 							end
 							
 							local shouldAdd = tv.Unit.x == tv.Unit.x
@@ -6535,18 +6518,18 @@ elseif menu.game == "pf" then --!SECTION
 									local hitpos = raycastResult.Position
 									local normal = raycastResult.Normal
 									local newpos = hitpos + 0.1 * normal
-									client.superaastart = CFrame.new(newpos)
+									client.superaastart = newCFrame(newpos)
 								end
 								if not hitwall then
 									client.superaastart += unit * menu:GetVal("Misc", "Movement", "Fly Speed")
 								end
 							end
 
-							local supervector = Vector3.new((os.time() * 850) % 6000, 50, math.cos(os.time() * 5) * 6900)
+							local supervector = newVector3((os.time() * 850) % 6000, 50, math.cos(os.time() * 5) * 6900)
 							local uber = client.superaastart.p + supervector
 							oldNewIndex(self, id, client.superaastart)
 							oldNewIndex(self, "Position", uber)
-							oldNewIndex(self, "Velocity", Vector3.new(0, 0, 0))
+							oldNewIndex(self, "Velocity", newVector3(0, 0, 0))
 							return
 						end
 					end
@@ -6607,8 +6590,8 @@ elseif menu.game == "pf" then --!SECTION
 		
 		function camera:GetFOV(Part, originPart)
 			originPart = originPart or workspace.Camera
-			local directional = CFrame.new(originPart.CFrame.Position, Part.Position)
-			local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
+			local directional = newCFrame(originPart.CFrame.Position, Part.Position)
+			local ang = newVector3(directional:ToOrientation()) - newVector3(originPart.CFrame:ToOrientation())
 			return math.deg(ang.Magnitude)
 		end
 
@@ -6669,9 +6652,9 @@ elseif menu.game == "pf" then --!SECTION
 		function camera:GetAnglesTo(Pos, useVector)
 			
 			
-			local pitch, yaw = CFrame.new(Camera.CFrame.Position, Pos):ToOrientation()
+			local pitch, yaw = newCFrame(Camera.CFrame.Position, Pos):ToOrientation()
 			if useVector then
-				return Vector3.new(pitch, yaw, 0)
+				return newVector3(pitch, yaw, 0)
 			else
 				return {["pitch"] = pitch, ["yaw"] = yaw}
 			end
@@ -6732,7 +6715,7 @@ elseif menu.game == "pf" then --!SECTION
 			return true
 		end
 		
-		local dot = Vector3.new().Dot
+		local dot = newVector3().Dot
 
 		local bulletcheckresolution = 0.03333333333333333
 		
@@ -6871,7 +6854,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 		
-		local rageHitboxSize = Vector3.new(11, 11, 11)
+		local rageHitboxSize = newVector3(11, 11, 11)
 		
 		function ragebot:GetTarget(hitboxPriority, hitscan, players)
 			if keybindtoggles.freeze then
@@ -6893,7 +6876,7 @@ elseif menu.game == "pf" then --!SECTION
 			--local campos = client.cam.basecframe
 			local zerocf = client.cam.basecframe - client.cam.basecframe.p
 			local campos = zerocf + client.lastrepupdate
-			local camposreal = keybindtoggles.fakebody and campos - Vector3.new(0, client.fakeoffset, 0) or campos
+			local camposreal = keybindtoggles.fakebody and campos - newVector3(0, client.fakeoffset, 0) or campos
 			local camposv3 = camposreal.p
 			local firepos
 
@@ -6967,7 +6950,7 @@ elseif menu.game == "pf" then --!SECTION
 												end
 											elseif resolvertype == 4 then -- teleport
 												--debug.profilebegin("BB Ragebot Teleport Resolver")
-												local up = camposreal + Vector3.new(0, 18, 0)
+												local up = camposreal + newVector3(0, 18, 0)
 												local pen = ragebot:CanPenetrate(up, bone, client.logic.currentgun.data.penetrationdepth)
 												--debug.profileend("BB Ragebot Teleport Resolver") -- fuck
 												if pen then
@@ -6993,9 +6976,9 @@ elseif menu.game == "pf" then --!SECTION
 												local localY = camposv3.Y
 												local localZ = camposv3.Z
 												
-												local extendX = Vector3.new(extendSize, 0, 0)
-												local extendY = Vector3.new(0, extendSize, 0)
-												local extendZ = Vector3.new(0, 0, extendSize)
+												local extendX = newVector3(extendSize, 0, 0)
+												local extendY = newVector3(0, extendSize, 0)
+												local extendZ = newVector3(0, 0, extendSize)
 												
 												local bestDirection =
 												boneY < localY and extendY or
@@ -7097,7 +7080,7 @@ elseif menu.game == "pf" then --!SECTION
 					local ignore = {LOCAL_PLAYER, Camera, workspace.Ignore, workspace.Players}
 					
 					local part1, ray_pos = workspace:FindPartOnRayWithIgnoreList(Ray.new(client.cam.cframe.p, target_direction), ignore)
-					local part2, ray_pos = workspace:FindPartOnRayWithIgnoreList(Ray.new(client.cam.cframe.p - Vector3.new(0,2,0), target_direction), ignore)
+					local part2, ray_pos = workspace:FindPartOnRayWithIgnoreList(Ray.new(client.cam.cframe.p - newVector3(0,2,0), target_direction), ignore)
 					
 					local ray_distance = (target_pos - ray_pos).Magnitude
 					
@@ -7154,7 +7137,7 @@ elseif menu.game == "pf" then --!SECTION
 			--send(client.net, "repupdate", cfc.p, client.cam.angles) -- Makes knife aura work with anti nade tp
 			if stab then send(client.net, "stab") end
 			local newhit = nil
-			newhit = {Name = target.part.Name, Position = Vector3.new(math.random(-2^12, 2^12))} -- fuckin hack
+			newhit = {Name = target.part.Name, Position = newVector3(math.random(-2^12, 2^12))} -- fuckin hack
 			send(client.net, "knifehit", target.player, tick(), newhit or target.part)
 		end
 		
@@ -7164,7 +7147,7 @@ elseif menu.game == "pf" then --!SECTION
 			local start = origin or client.cam.basecframe.p
 			local max_step = extent or 8
 			
-			start -= Vector3.new(max_step, -max_step, max_step) / 2
+			start -= newVector3(max_step, -max_step, max_step) / 2
 			
 			local pos = start
 			local half = max_step / 2
@@ -7177,11 +7160,11 @@ elseif menu.game == "pf" then --!SECTION
 						local isPositionCorner = x % max_step == 0 and y % max_step == 0 and z % max_step == 0
 						local isPositionInside = x % half == 0 and y % half == 0 and z % half == 0
 						if isPositionCorner then
-							pos = start + Vector3.new(x, y, z)
+							pos = start + newVector3(x, y, z)
 							
 							table.insert(points.corner, 1, pos)
 						elseif isPositionInside then
-							pos = start + Vector3.new(x, y, z)
+							pos = start + newVector3(x, y, z)
 							
 							table.insert(points.inside, 1, pos)
 						end
@@ -7234,7 +7217,7 @@ elseif menu.game == "pf" then --!SECTION
 		function ragebot:HitscanRandom(origin, bodypart)
 			local offset
 			if #hitpoints < 50 or math.random() < 0.2 then
-				offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit * 8
+				offset = newVector3(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit * 8
 			else
 				offset = hitpoints[math.random(#points)]
 			end
@@ -7255,7 +7238,7 @@ elseif menu.game == "pf" then --!SECTION
 			local position = origin
 			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
 			for i = 1, max_step do
-				position = position * CFrame.new(0, step, 0)
+				position = position * newCFrame(0, step, 0)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
@@ -7265,7 +7248,7 @@ elseif menu.game == "pf" then --!SECTION
 			position = origin
 			
 			for i = 1, max_step do
-				position = position * CFrame.new(0, -step, 0)
+				position = position * newCFrame(0, -step, 0)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
@@ -7275,7 +7258,7 @@ elseif menu.game == "pf" then --!SECTION
 			position = origin
 			
 			for i = 1, max_step do
-				position = position * CFrame.new(0, 0, step)
+				position = position * newCFrame(0, 0, step)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
@@ -7285,7 +7268,7 @@ elseif menu.game == "pf" then --!SECTION
 			position = origin
 			
 			for i = 1, max_step do
-				position = position * CFrame.new(0, 0, -step)
+				position = position * newCFrame(0, 0, -step)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
@@ -7295,7 +7278,7 @@ elseif menu.game == "pf" then --!SECTION
 			position = origin
 			
 			for i = 1, max_step do
-				position = position * CFrame.new(step, 0, 0)
+				position = position * newCFrame(step, 0, 0)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
@@ -7305,7 +7288,7 @@ elseif menu.game == "pf" then --!SECTION
 			position = origin
 			
 			for i = 1, max_step do
-				position = position * CFrame.new(-step, 0, 0)
+				position = position * newCFrame(-step, 0, 0)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
 					return position.p, bulletintersection
@@ -7338,7 +7321,7 @@ elseif menu.game == "pf" then --!SECTION
 				if menu:GetVal("Misc", "Movement", "Circle Strafe") and IsKeybindDown("Misc", "Movement", "Circle Strafe") then
 					local speedcheatspeed = menu:GetVal("Misc", "Movement", "Speed Factor")
 					local rootpart = client.char.rootpart
-					rootpart.Velocity = Vector3.new(math.sin(tick() * speedcheatspeed / 10) * speedcheatspeed, rootpart.Velocity.Y, math.cos(tick() * speedcheatspeed / 10) * speedcheatspeed)
+					rootpart.Velocity = newVector3(math.sin(tick() * speedcheatspeed / 10) * speedcheatspeed, rootpart.Velocity.Y, math.cos(tick() * speedcheatspeed / 10) * speedcheatspeed)
 				end
 			end
 			
@@ -7409,7 +7392,7 @@ elseif menu.game == "pf" then --!SECTION
 		local VirtualUser = game:GetService("VirtualUser")
 		menu.connections.local_player_id_connect = LOCAL_PLAYER.Idled:Connect(function()
 			VirtualUser:CaptureController()
-			VirtualUser:ClickButton2(Vector2.new())
+			VirtualUser:ClickButton2(newVector2())
 		end)
 		
 		local oldmag = client.cam.setmagnification
@@ -7438,10 +7421,10 @@ elseif menu.game == "pf" then --!SECTION
 		local clienteventfuncs = getupvalue(client.call, 1)
 		
 		local function create_outlined_square(pos, destroydelay, colordata)
-			local newpart = Instance.new("Part", workspace)
+			local newpart = newInstance("Part", workspace)
 			newpart.CanCollide = false
 			newpart.Anchored = true
-			newpart.Size = Vector3.new(0.35, 0.35, 0.35)
+			newpart.Size = newVector3(0.35, 0.35, 0.35)
 			newpart.Position = pos
 			newpart.Material = Enum.Material.Neon
 			newpart.Transparency = 0.85
@@ -7449,7 +7432,7 @@ elseif menu.game == "pf" then --!SECTION
 			local colors = colordata or {Color3.fromRGB(255, 255, 255), Color3.fromRGB(239, 62, 62)}
 			
 			for i = 1, 2 do
-				local box = Instance.new("BoxHandleAdornment", newpart)
+				local box = newInstance("BoxHandleAdornment", newpart)
 				box.AlwaysOnTop = true
 				box.Adornee = box.Parent
 				box.ZIndex = i == 1 and 5 or 1
@@ -7462,7 +7445,7 @@ elseif menu.game == "pf" then --!SECTION
 		end
 		
 		local function create_line(origin_att, ending_att, destroydelay) -- pasting this from the misc create beam but oh well im a faggot so yeah :troll:
-			local beam = Instance.new("Beam")
+			local beam = newInstance("Beam")
 			beam.LightEmission = 1
 			beam.LightInfluence = 1
 			beam.Enabled = true
@@ -7546,9 +7529,9 @@ elseif menu.game == "pf" then --!SECTION
 										--local mag = (nextpos - pos).magnitude
 										-- magnitude stuff wont work because the line will just end for no reason
 										create_outlined_square(pos, blowup, colorz)
-										local a1 = Instance.new("Attachment", workspace.Terrain)
+										local a1 = newInstance("Attachment", workspace.Terrain)
 										a1.Position = pos
-										local a2 = Instance.new("Attachment", workspace.Terrain)
+										local a2 = newInstance("Attachment", workspace.Terrain)
 										a2.Position = nextpos
 										
 										create_line(a1, a2, blowup, colorz)
@@ -7591,7 +7574,7 @@ elseif menu.game == "pf" then --!SECTION
 						for k,v in next, parts do
 							if v:IsA("Part") then
 								local formattedval = (menu:GetVal("Legit", "Aim Assist", "Enlarge Enemy Hitboxes") / 95) + 1
-								v.Size *= v.Name == "Head" and Vector3.new(formattedval, v.Size.y * (1 + formattedval / 100), formattedval) or formattedval -- hitbox expander
+								v.Size *= v.Name == "Head" and newVector3(formattedval, v.Size.y * (1 + formattedval / 100), formattedval) or formattedval -- hitbox expander
 							end
 						end
 					end
@@ -7681,14 +7664,14 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								frames = {
 									{
-										v0 = Vector3.new(),
+										v0 = newVector3(),
 										glassbreaks = {},
 										t0 = 0,
-										offset = Vector3.new(0/0, 0/0, 0/0),
-										rot0 = CFrame.new(),
-										a = Vector3.new(0, -80, 0),
+										offset = newVector3(0/0, 0/0, 0/0),
+										rot0 = newCFrame(),
+										a = newVector3(0, -80, 0),
 										p0 = client.lastrepupdate or client.char.head.Position,
-										rotv = Vector3.new()
+										rotv = newVector3()
 									}
 								},
 								time = tick(),
@@ -7706,26 +7689,26 @@ elseif menu.game == "pf" then --!SECTION
 								return func(...)
 							end
 							
-							fragargs[2].frames[1].a = Vector3.new(0/0)
+							fragargs[2].frames[1].a = newVector3(0/0)
 							fragargs[2].frames[2] = {
-								v0 = Vector3.new(0/0, 0/0, 0/0),
+								v0 = newVector3(0/0, 0/0, 0/0),
 								glassbreaks = {},
 								t0 = 0/0,
-								offset = Vector3.new(0/0, 0/0, 0/0),
-								rot0 = CFrame.new(0/0, 0/0, 0/0),
-								a = Vector3.new(0/0),
-								p0 = Vector3.new(0/0),
-								rotv = Vector3.new()
+								offset = newVector3(0/0, 0/0, 0/0),
+								rot0 = newCFrame(0/0, 0/0, 0/0),
+								a = newVector3(0/0),
+								p0 = newVector3(0/0),
+								rotv = newVector3()
 							}
 							fragargs[2].frames[3] = {
-								v0 = Vector3.new(),
+								v0 = newVector3(),
 								glassbreaks = {},
 								t0 = 0,
-								offset = Vector3.new(),
-								rot0 = CFrame.new(),
-								a = Vector3.new(),
-								p0 = killerbodyparts.rootpart.Position + Vector3.new(0, 2, 0),
-								rotv = Vector3.new()
+								offset = newVector3(),
+								rot0 = newCFrame(),
+								a = newVector3(),
+								p0 = killerbodyparts.rootpart.Position + newVector3(0, 2, 0),
+								rotv = newVector3()
 							}
 						end
 						CreateThread(function()
@@ -7743,7 +7726,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 			if found9 then
 				clienteventfuncs[hash] = function(bulletdata)
-					local vec = Vector3.new()
+					local vec = newVector3()
 					for k, bullet in next, bulletdata.bullets do
 						if typeof(bullet) ~= "Vector3" then
 							bulletdata.bullets[k][1] = vec
@@ -7846,7 +7829,7 @@ elseif menu.game == "pf" then --!SECTION
 		local partnames = { "head", "torso", "lleg", "rleg", "larm", "rarm" }
 		local partexpansionarray = { 0.75, 1.5, 1.5, 1.5, 1.5, 1.5 }
 
-		local nv = Vector3.new()
+		local nv = newVector3()
 		local dot = nv.Dot
 
 		local bodyarrayinfo = getupvalue(client.replication.thickcastplayers, 8)
@@ -7888,7 +7871,7 @@ elseif menu.game == "pf" then --!SECTION
 		end
 
 		function misc:CreateBeam(origin_att, ending_att)
-			local beam = Instance.new("Beam")
+			local beam = newInstance("Beam")
 			beam.Texture = "http://www.roblox.com/asset/?id=446111271"
 			beam.TextureMode = Enum.TextureMode.Wrap
 			beam.TextureSpeed = 8
@@ -7901,7 +7884,7 @@ elseif menu.game == "pf" then --!SECTION
 				NumberSequenceKeypoint.new(0, 0),
 				NumberSequenceKeypoint.new(1, 1)
 			}
-			beam.Color = ColorSequence.new(menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers", "color", true), Color3.new(0, 0, 0))
+			beam.Color = ColorSequence.new(menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers", "color", true), newColor3(0, 0, 0))
 			beam.Attachment0 = origin_att
 			beam.Attachment1 = ending_att
 			debris:AddItem(beam, 3)
@@ -8021,7 +8004,7 @@ elseif menu.game == "pf" then --!SECTION
 				local result = old_index(t, k)
 				if t == swingspring then
 					if k == "v" and menu:GetVal("Misc", "Weapon Modifications", "Run and Gun") then
-						return Vector3.new()
+						return newVector3()
 					end
 				end
 				if t == sprintspring then
@@ -8152,17 +8135,17 @@ elseif menu.game == "pf" then --!SECTION
 				end
 				
 				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
-					travel += Vector3.new(0,1,0)
+					travel += newVector3(0,1,0)
 				end
 				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-					travel -= Vector3.new(0,1,0)
+					travel -= newVector3(0,1,0)
 				end
 				
 				if travel.Unit.x == travel.Unit.x then
 					rootpart.Anchored = false
 					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
 				else
-					rootpart.Velocity = Vector3.new(0, 0, 0)
+					rootpart.Velocity = newVector3(0, 0, 0)
 					rootpart.Anchored = true
 				end
 				
@@ -8195,7 +8178,7 @@ elseif menu.game == "pf" then --!SECTION
 					travel -= rightVector
 				end
 				
-				travel = Vector2.new(travel.x, travel.Z).Unit
+				travel = newVector2(travel.x, travel.Z).Unit
 				
 				if travel.x == travel.x then
 					
@@ -8207,9 +8190,9 @@ elseif menu.game == "pf" then --!SECTION
 
 					if IsKeybindDown("Misc", "Movement", "Speed Hack", true) then
 						if type == 1 then
-							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
+							rootpart.Velocity = newVector3(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
 						else
-							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
+							rootpart.Velocity = newVector3(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
 						end
 					end
 				end
@@ -8331,34 +8314,34 @@ elseif menu.game == "pf" then --!SECTION
 							{
 								frames = {
 									{
-										v0 = Vector3.new(),
+										v0 = newVector3(),
 										glassbreaks = {},
 										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(0 / 0),
+										offset = newVector3(),
+										rot0 = newCFrame(),
+										a = newVector3(0 / 0),
 										p0 = client.lastrepupdate or client.char.head.Position,
-										rotv = Vector3.new()
+										rotv = newVector3()
 									},
 									{
-										v0 = Vector3.new(),
+										v0 = newVector3(),
 										glassbreaks = {},
 										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(0/0),
-										p0 = Vector3.new(0/0),
-										rotv = Vector3.new()
+										offset = newVector3(),
+										rot0 = newCFrame(),
+										a = newVector3(0/0),
+										p0 = newVector3(0/0),
+										rotv = newVector3()
 									},
 									{
-										v0 = Vector3.new(),
+										v0 = newVector3(),
 										glassbreaks = {},
 										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(),
-										p0 = part.Position + Vector3.new(0, 3, 0),
-										rotv = Vector3.new()
+										offset = newVector3(),
+										rot0 = newCFrame(),
+										a = newVector3(),
+										p0 = part.Position + newVector3(0, 3, 0),
+										rotv = newVector3()
 									}
 								},
 								time = tick(),
@@ -8395,7 +8378,7 @@ elseif menu.game == "pf" then --!SECTION
 					
 					if shitting_my_pants == false and keybindtoggles.freeze then
 						for k, bullet in pairs(args[2].bullets) do
-							bullet[1] = Vector2.new()
+							bullet[1] = newVector2()
 						end
 						return send(self, unpack(args))
 					end
@@ -8405,17 +8388,17 @@ elseif menu.game == "pf" then --!SECTION
 						args[2].camerapos = client.lastrepupdate -- attempt to make dumping happen less
 						args[2].firepos = ragebot.firepos
 						if shitting_my_pants == false and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then
-							args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
+							args[2].camerapos = client.cam.cframe.p - newVector3(0, client.fakeoffset, 0)
 						end
 						local cachedtimedata = {}
 						
-						local hitpoint = ragebot.intersection ~= nil and Vector3.new(ragebot.intersection.X, ragebot.intersection.Y, ragebot.intersection.Z) or ragebot.targetpart.Position -- fuckkkkkkkkk
+						local hitpoint = ragebot.intersection ~= nil and newVector3(ragebot.intersection.X, ragebot.intersection.Y, ragebot.intersection.Z) or ragebot.targetpart.Position -- fuckkkkkkkkk
 						-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
 						-- properly when you're using performance mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
 						
 						if menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
-							send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
-							send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
+							send(self, "repupdate", client.char.head.Position + newVector3(0, 18, 0), client.cam.angles)
+							send(self, "repupdate", client.char.head.Position + newVector3(0, 18, 0), client.cam.angles)
 							ragebot.needsTP = false
 						end
 						
@@ -8453,10 +8436,10 @@ elseif menu.game == "pf" then --!SECTION
 						for k, bullet in pairs(args[2].bullets) do
 							if menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers") then
 								local origin = args[2].firepos
-								local attach_origin = Instance.new("Attachment", workspace.Terrain)
+								local attach_origin = newInstance("Attachment", workspace.Terrain)
 								attach_origin.Position = origin
 								local ending = origin + bullet[1].unit.Unit * 300
-								local attach_ending = Instance.new("Attachment", workspace.Terrain)
+								local attach_ending = newInstance("Attachment", workspace.Terrain)
 								attach_ending.Position = ending
 								local beam = misc:CreateBeam(attach_origin, attach_ending)
 								beam.Parent = workspace
@@ -8477,10 +8460,10 @@ elseif menu.game == "pf" then --!SECTION
 					if menu:GetVal("Visuals", "Misc Visuals", "Bullet Tracers") then
 						for k, bullet in next, args[2].bullets do
 							local origin = args[2].firepos
-							local attach_origin = Instance.new("Attachment", workspace.Terrain)
+							local attach_origin = newInstance("Attachment", workspace.Terrain)
 							attach_origin.Position = origin
 							local ending = origin + (type(bullet[1]) == "table" and bullet[1].unit.Unit or bullet[1].Unit) * 300
-							local attach_ending = Instance.new("Attachment", workspace.Terrain)
+							local attach_ending = newInstance("Attachment", workspace.Terrain)
 							attach_ending.Position = ending
 							local beam = misc:CreateBeam(attach_origin, attach_ending)
 							beam.Parent = workspace
@@ -8593,7 +8576,7 @@ elseif menu.game == "pf" then --!SECTION
 					end
 					
 					-- yaw += jitter
-					local new_angles = Vector3.new(pitch, yaw, 0)
+					local new_angles = newVector3(pitch, yaw, 0)
 					args[3] = new_angles
 					ragebot.angles = new_angles
 				end
@@ -8618,7 +8601,7 @@ elseif menu.game == "pf" then --!SECTION
 				local x = client.cam.angles.x - coef * delta.y
 				x = x > client.cam.maxangle and client.cam.maxangle or x < client.cam.minangle and client.cam.minangle or x
 				local y = client.cam.angles.y - coef * delta.x
-				local newangles = Vector3.new(x, y, 0)
+				local newangles = newVector3(x, y, 0)
 				client.cam.delta = (newangles - client.cam.angles) / 0.016666666666666666
 				client.cam.angles = newangles
 			end
@@ -8689,22 +8672,22 @@ elseif menu.game == "pf" then --!SECTION
 					Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
 				end
 				local randMag = menu:GetVal("Legit", "Aim Assist", "Randomization") * 5
-				Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
+				Pos += newVector3(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
 				--TODO nate fix
 				
 				local gunpos2d = Camera:WorldToScreenPoint(client.logic.currentgun.aimsightdata[1].sightpart.Position)
 				
-				local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
+				local rcs = newVector2(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
 				if client.logic.currentgun
 				and client.logic.currentgun.type ~= "KNIFE"
 				and INPUT_SERVICE:IsMouseButtonPressed(1)
 				and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
 					local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
 					local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
+					local rcsdelta = newVector3(rcs.x * xo/100, rcs.y * yo/100, 0)
 					Pos += rcsdelta
 				end
-				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
+				local aimbotMovement = newVector2(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
 				
 				Move_Mouse(aimbotMovement)
 				--debug.profileend("Legitbot AimAtTarget")
@@ -8734,14 +8717,14 @@ elseif menu.game == "pf" then --!SECTION
 				dir = dir.Unit
 				
 				local offsetMult = map((menu:GetVal("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
-				local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
+				local offset = newVector3(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
 				dir += offset * offsetMult
 				
 				--debug.profileend("Legitbot SilentAimAtTarget")
 				if client.logic.currentgun.type == "SHOTGUN" then
-					local x, y, z = CFrame.lookAt(Vector3.new(), dir.Unit):ToOrientation()
-					client.logic.currentgun.barrel.Orientation = Vector3.new(math.deg(x), math.deg(y), math.deg(z))
-					client.logic.currentgun.aimsightdata[1].sightpart.Orientation = Vector3.new(math.deg(x), math.deg(y), math.deg(z))
+					local x, y, z = CFrame.lookAt(newVector3(), dir.Unit):ToOrientation()
+					client.logic.currentgun.barrel.Orientation = newVector3(math.deg(x), math.deg(y), math.deg(z))
+					client.logic.currentgun.aimsightdata[1].sightpart.Orientation = newVector3(math.deg(x), math.deg(y), math.deg(z))
 					return 
 				end
 				return dir.Unit
@@ -9005,32 +8988,18 @@ elseif menu.game == "pf" then --!SECTION
 		
 		--debug.profilebegin("renderVisuals Player ESP Reset")
 		-- TODO this reset may need to be improved to a large extent, it's taking up some time but idk if the frame times are becoming worse because of this
-		for k, v in pairs(allesp) do
-			for k1, v1 in pairs(v) do
-				if type(v1) ~= "table" then continue end
-				for k2, drawing in ipairs(v1) do
-					drawing.Visible = false
-				end
-			end
-		end
-		
-		for k, v in ipairs(allesp.skel) do
-			for k1, v1 in ipairs(v) do
-				v1.Visible = false
-			end
-		end
-		
-		for k, v in pairs(wepesp) do
-			for k1, v1 in pairs(v) do
-				v1.Visible = false
-			end
-		end
-		
-		for k, v in pairs(nadeesp) do
-			for k1, v1 in pairs(v) do
-				v1.Visible = false
-			end
-		end
+		for i = 1, allespnum do
+            local drawclass = allesp[i]
+
+            for j = 1, #drawclass do
+                local drawdata = drawclass[j]
+                if type(drawdata) == "table" and #drawdata > 0 then
+                    for k = 1, #drawdata do
+                        drawdata[k].Visible = false
+                    end
+                end
+            end
+        end
 		
 		--debug.profileend("renderVisuals Player ESP Reset")
 		
@@ -9042,7 +9011,7 @@ elseif menu.game == "pf" then --!SECTION
 			-- table.sort(players, function(p1, p2)
 			-- 	return table.find(menu.priority, p2.Name) ~= table.find(menu.priority, p1.Name) and table.find(menu.priority, p2.Name) == true and table.find(menu.priority, p1.Name) == false
 			-- end)
-			local cam = Camera.CFrame
+			local cam = client.cam.cframe
 			
 			local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
 			local priority_trans = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color")[4]/255
@@ -9053,344 +9022,329 @@ elseif menu.game == "pf" then --!SECTION
 			local target_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
 			local target_trans = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color")[4]/255
 			
-			for Index, Player in next, Players:GetPlayers() do
+            for curplayer = 1, #players do
+                local ply = players[curplayer]
+                
+                if client.hud:isplayeralive(ply) then
+                    local parts = client.replication.getbodyparts(ply)
 				
-				if not client.hud:isplayeralive(Player) then continue end
-				local parts = client.replication.getbodyparts(Player)
-				
-				if not parts then continue end
-				
-				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
-				
-				if not menu:GetVal("Visuals", GroupBox, "Enabled") then continue end
-				
-				Player.Character = parts.rootpart.Parent
-				
-				
-				local torso = parts.torso.CFrame
-				
-				--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. Player.Name)
-				
-				local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
-				local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
-				
-				local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
-				local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
-				
-				-- local minY = math.abs(bottom.y - top.y)
-				-- local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
-				-- local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
-				
-				-- local boxSize = Vector2.new(sizeX, sizeY)
-				local _width = math.floor(math.abs(top.x - bottom.x))
-				local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width/2))
-				local boxSize = Vector2.new(math.floor(math.max(_height/1.5, _width)), _height)
-				local boxPosition = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.y, bottom.y)))
-				
-				--debug.profileend("renderVisuals Player ESP Box Calculation " .. Player.Name)
-				
-				local GroupBox = Player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
-				local health = math.ceil(client.hud:getplayerhealth(Player))
-				local spoty = 0
-				local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", "color")[4] / 255
-				
-				local distance = math.floor((parts.rootpart.Position - client.cam.cframe.p).Magnitude/5)
-				
-				
-				if (topIsRendered or bottomIsRendered) then
-					local nameon = menu.options["Visuals"][GroupBox]["Name"][1]
-					local rankon = menu.options["Visuals"][GroupBox]["Rank"][1]
-					if nameon or rankon then
+                    if not parts then continue end
+                    
+                    local GroupBox = ply.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
+                    
+                    if not menu:GetVal("Visuals", GroupBox, "Enabled") then continue end
+                    
+                    ply.Character = parts.rootpart.Parent
+                    
+                    local torso = parts.torso.CFrame
+                    
+                    --debug.profilebegin("renderVisuals Player ESP Box Calculation " .. ply.Name)
+                    
+                    local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
+                    local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
+                    
+                    local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
+                    local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
+                    
+                    -- local minY = math.abs(bottom.y - top.y)
+                    -- local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
+                    -- local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
+                    
+                    -- local boxSize = newVector2(sizeX, sizeY)
+                    local _width = math.floor(math.abs(top.x - bottom.x))
+                    local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width/2))
+                    local boxSize = newVector2(math.floor(math.max(_height/1.5, _width)), _height)
+                    local boxPosition = newVector2(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), math.floor(math.min(top.y, bottom.y)))
+                    
+                    --debug.profileend("renderVisuals Player ESP Box Calculation " .. ply.Name)
+                    
+                    local GroupBox = ply.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
+                    local health = math.ceil(client.hud:getplayerhealth(ply))
+                    local spoty = 0
+                    local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", "color")[4] / 255
+                    
+                    local distance = math.floor((parts.rootpart.Position - client.cam.cframe.p).Magnitude/5)
+                    
+                    
+                    if (topIsRendered or bottomIsRendered) then
+                        if menu.options["Visuals"][GroupBox]["Name"][1] then
+                            
+                            --debug.profilebegin("renderVisuals Player ESP Render Name " .. ply.Name)
+                            
+                            local name = ply.Name
+                            if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
+                                name = string.lower(name)
+                            elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
+                                name = string.upper(name)
+                            end
+                            
+                            allesp[4][1][curplayer].Text = string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
+                            allesp[4][1][curplayer].Visible = true
+                            allesp[4][1][curplayer].Position = newVector2(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
+                            
+                            --debug.profileend("renderVisuals Player ESP Render Name " .. ply.Name)
+                            
+                        end
+                        
+                        if menu.options["Visuals"][GroupBox]["Box"][1] then
+                            --debug.profilebegin("renderVisuals Player ESP Render Box " .. ply.Name)
+                            for i = -1, 1 do
+                                local box = allesp[2][i+2][curplayer]
+                                box.Visible = true
+                                box.Position = boxPosition + newVector2(i, i)
+                                box.Size = boxSize - newVector2(i*2, i*2)
+                                box.Transparency = boxtransparency
+                                
+                                if i ~= 0 then
+                                    box.Color = RGB(20, 20, 20)
+                                end
+                                --box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+                                
+                            end
+                            --debug.profileend("renderVisuals Player ESP Render Box " .. ply.Name)
+                        end
+                        
+                        
+                        if menu.options["Visuals"][GroupBox]["Health Bar"][1] then
+                            
+                            --debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. ply.Name)
+                            
+                            local ySizeBar = -math.floor(boxSize.y * health / 100)
+                            if menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+                                local hptext = allesp[3][3][curplayer]
+                                hptext.Visible = true
+                                hptext.Text = tostring(health)
+                                
+                                local tb = hptext.TextBounds
+                                
+                                -- math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y, boxSize.y - tb.y )
+                                hptext.Position = boxPosition + newVector2(-tb.x - 7, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -4, boxSize.y - 10))
+                                --hptext.Position = newVector2(boxPosition.x - 7 - tb.x, boxPosition.y + math.clamp(boxSize.y + ySizeBar - 8, -4, boxSize.y - 10))
+                                hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", "color", true)
+                                hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 
-						
-						--debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
-						local namestring = ""
-						
-						if rankon then 
-							local playerdata = teamdata[1]:FindFirstChild(Player.Name) or teamdata[2]:FindFirstChild(Player.Name)
-							namestring = "[".. playerdata.Rank.Text.. "]"
-						end
-						if nameon then
-							local name = tostring(Player.Name)
-							if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
-								name = string.lower(name)
-							elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
-								name = string.upper(name)
-							end
-
-							if rankon then
-								namestring = namestring.. " ".. string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
-							else
-								namestring = string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
-							end
-						end
-						
-						allesp.text.name[Index].Text = namestring
-						allesp.text.name[Index].Visible = true
-						allesp.text.name[Index].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
-						
-						--debug.profileend("renderVisuals Player ESP Render Name " .. Player.Name)
-						
-					end
-					
-					if menu.options["Visuals"][GroupBox]["Box"][1] then
-						--debug.profilebegin("renderVisuals Player ESP Render Box " .. Player.Name)
-						for i = -1, 1 do
-							local box = allesp.box[i+2][Index]
-							box.Visible = true
-							box.Position = boxPosition + Vector2.new(i, i)
-							box.Size = boxSize - Vector2.new(i*2, i*2)
-							box.Transparency = boxtransparency
-							
-							if i ~= 0 then
-								box.Color = RGB(20, 20, 20)
-							end
-							--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
-							
-						end
-						--debug.profileend("renderVisuals Player ESP Render Box " .. Player.Name)
-					end
-					
-					
-					if menu.options["Visuals"][GroupBox]["Health Bar"][1] then
-						
-						--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. Player.Name)
-						
-						local ySizeBar = -math.floor(boxSize.y * health / 100)
-						if menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1] then
-							local hptext = allesp.hp.text[Index]
-							hptext.Visible = true
-							hptext.Text = tostring(health)
-							
-							local tb = hptext.TextBounds
-							
-							-- math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y, boxSize.y - tb.y )
-							hptext.Position = boxPosition + Vector2.new(-tb.x - 7, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -4, boxSize.y - 10))
-							--hptext.Position = Vector2.new(boxPosition.x - 7 - tb.x, boxPosition.y + math.clamp(boxSize.y + ySizeBar - 8, -4, boxSize.y - 10))
-							hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", "color", true)
-							hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
-
-							--[[
-							if menu:GetVal("Visuals", "Player ESP", "Health Number") then
-								allesp.hptext[i].Text = tostring(health)
-								local textsize = allesp.hptext[i].TextBounds
-								allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + math.clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
-								allesp.hptext[i].Visible = true
-							end
-							]]
-						end
-						
-						allesp.hp.outer[Index].Visible = true
-						allesp.hp.outer[Index].Position = Vector2.new(math.floor(boxPosition.x) - 6, math.floor(boxPosition.y) - 1)
-						allesp.hp.outer[Index].Size = Vector2.new(4, boxSize.y + 2)
-						
-						allesp.hp.inner[Index].Visible = true
-						allesp.hp.inner[Index].Position = Vector2.new(math.floor(boxPosition.x) - 5, math.floor(boxPosition.y + boxSize.y))
-						
-						allesp.hp.inner[Index].Size = Vector2.new(2, ySizeBar)
-						
-						allesp.hp.inner[Index].Color = ColorRange(health, {
-							[1] = {start = 0, color = menu:GetVal("Visuals", GroupBox, "Health Bar", "color1", true)},
-							[2] = {start = 100, color = menu:GetVal("Visuals", GroupBox, "Health Bar", "color2", true)}
-						})
-						
-						--debug.profileend("renderVisuals Player ESP Render Health Bar " .. Player.Name)
-						
-					elseif menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1] then
-						--debug.profilebegin("renderVisuals Player ESP Render Health Number " .. Player.Name)
-						
-						local hptext = allesp.hp.text[Index]
-						
-						hptext.Visible = true
-						hptext.Text = tostring(health)
-						
-						local tb = hptext.TextBounds
-						
-						hptext.Position = boxPosition + Vector2.new(-tb.x - 2, - 4)
-						hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", "color", true)
-						hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4]/255
-						
-						--debug.profileend("renderVisuals Player ESP Render Health Number " .. Player.Name)
-					end
-					
-					
-					if menu.options["Visuals"][GroupBox]["Held Weapon"][1] then
-						
-						--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
-						
-						local charWeapon = _3pweps[Player]
-						local wepname = charWeapon and charWeapon or "?"
-						
-						if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
-							wepname = string.lower(wepname)
-						elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
-							wepname = string.upper(wepname)
-						end
-						
-						local weptext = allesp.text.weapon[Index]
-						
-						spoty += 12
-						weptext.Text = string_cut(wepname, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
-						weptext.Visible = true
-						weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
-						
-						--debug.profileend("renderVisuals Player ESP Render Held Weapon " .. Player.Name)
-						
-					end
-					
-					if menu.options["Visuals"][GroupBox]["Distance"][1] then
-						
-						--debug.profilebegin("renderVisuals Player ESP Render Distance " .. Player.Name)
-						
-						local disttext = allesp.text.distance[Index]
-						
-						disttext.Text = tostring(distance).."m"
-						disttext.Visible = true
-						disttext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y + spoty)
-						
-						--debug.profileend("renderVisuals Player ESP Render Distance " .. Player.Name)
-						
-					end
-					
-					if menu.options["Visuals"][GroupBox]["Skeleton"][1] then
-						
-						--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. Player.Name)
-						
-						local torso = Camera:WorldToViewportPoint(Player.Character.Torso.Position)
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
-							
-							local posie = Camera:WorldToViewportPoint(Player.Character:FindFirstChild(v2).Position)
-							line.From = Vector2.new(posie.x, posie.y)
-							line.To = Vector2.new(torso.x, torso.y)
-							line.Visible = true
-							
-						end
-						--debug.profileend("renderVisuals Player ESP Render Skeleton" .. Player.Name)
-					end
-					--da colourz !!! :D 🔥🔥🔥🔥
-					
-					if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
-						
-						
-						allesp.text.name[Index].Color = priority_color
-						allesp.text.name[Index].Transparency = priority_trans
-						
-						allesp.box[2][Index].Color = priority_color
-						
-						allesp.text.weapon[Index].Color = priority_color
-						allesp.text.weapon[Index].Transparency = priority_trans
-						
-						allesp.text.distance[Index].Color = priority_color
-						allesp.text.distance[Index].Transparency = priority_trans
-						
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
-							line.Color = priority_color
-							line.Transparency = priority_trans
-						end
-						
-						
-					elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, Player.Name) then
-						
-						allesp.text.name[Index].Color = friend_color
-						allesp.text.name[Index].Transparency = friend_trans
-						
-						allesp.box[2][Index].Color = friend_color
-						
-						allesp.text.weapon[Index].Color = friend_color
-						allesp.text.weapon[Index].Transparency = friend_trans
-						
-						allesp.text.distance[Index].Color = friend_color
-						allesp.text.distance[Index].Transparency = friend_trans
-						
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
-							line.Color = friend_color
-							line.Transparency = friend_trans
-						end
-					elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target)  then
-						
-						allesp.text.name[Index].Color = target_color
-						allesp.text.name[Index].Transparency = target_trans
-						
-						allesp.box[2][Index].Color = target_color
-						
-						allesp.text.weapon[Index].Color = target_color
-						allesp.text.weapon[Index].Transparency = target_trans
-						
-						allesp.text.distance[Index].Color = target_color
-						allesp.text.distance[Index].Transparency = target_trans
-						
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
-							line.Color = target_color
-							line.Transparency = target_trans
-						end
-					else
-						
-						
-						allesp.text.name[Index].Color = menu:GetVal("Visuals", GroupBox, "Name", "color", true) -- RGB(menu.options["Visuals"][GroupBox]["Name"][5][1][1], menu.options["Visuals"][GroupBox]["Name"][5][1][2], menu.options["Visuals"][GroupBox]["Name"][5][1][3])
-						allesp.text.name[Index].Transparency = menu:GetVal("Visuals", GroupBox, "Name", "color")[4]/255
-						
-						allesp.box[2][Index].Color = menu:GetVal("Visuals", GroupBox, "Box", "color", true)
-						
-						allesp.text.weapon[Index].Color = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color", true)
-						allesp.text.weapon[Index].Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color")[4]/255
-						
-						allesp.text.distance[Index].Color = menu:GetVal("Visuals", GroupBox, "Distance", "color", true)
-						allesp.text.distance[Index].Transparency = menu:GetVal("Visuals", GroupBox, "Distance", "color")[4]/255
-						
-						for k2, v2 in ipairs(skelparts) do
-							local line = allesp.skel[k2][Index]
-							line.Color = menu:GetVal("Visuals", GroupBox, "Skeleton", "color", true)
-							line.Transparency = menu:GetVal("Visuals", GroupBox, "Skeleton", "color")[4]/255
-						end
-					end
-					
-				elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View") then
-					--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. Player.Name)
-					local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color", true)
-					local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
-					if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
-						color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
-						color2 = bColor:Mult(color, 0.6)
-					elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
-						color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
-						color2 = bColor:Mult(color, 0.6)
-					elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
-						color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
-						color2 = bColor:Mult(color, 0.6)
-					end
-					for i = 1, 2 do
-						local Tri = allesp.arrows[i][Index]
-						
-						local partCFrame = Player.Character.HumanoidRootPart.CFrame -- these HAVE to move now theres no way
-						
-						Tri.Visible = true
-						
-						local relativePos = Camera.CFrame:PointToObjectSpace(partCFrame.Position)
-						local direction = math.atan2(-relativePos.y, relativePos.x)
-						
-						local distance = relativePos.Magnitude
-						local arrow_size = menu:GetVal("Visuals", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
-						arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
-						
-						direction = Vector2.new(math.cos(direction), math.sin(direction))
-						
-						local pos = (direction * SCREEN_SIZE.y * menu:GetVal("Visuals", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
-						
-						Tri.PointA = pos
-						Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
-						Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
-						
-						Tri.Color = i == 1 and color or color2
-						Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color")[4] / 255
-					end
-					--debug.profileend("renderVisuals Player ESP Render Out of View " .. Player.Name)
-				end
-				
-			end
+                                --[[
+                                if menu:GetVal("Visuals", "Player ESP", "Health Number") then
+                                    allesp.hptext[i].Text = tostring(health)
+                                    local textsize = allesp.hptext[i].TextBounds
+                                    allesp.hptext[i].Position = newVector2(boxtop.x - 7 - textsize.x, boxtop.y + math.clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
+                                    allesp.hptext[i].Visible = true
+                                end
+                                ]]
+                            end
+                            
+                            allesp[3][1][curplayer].Visible = true
+                            allesp[3][1][curplayer].Position = newVector2(math.floor(boxPosition.x) - 6, math.floor(boxPosition.y) - 1)
+                            allesp[3][1][curplayer].Size = newVector2(4, boxSize.y + 2)
+                            
+                            allesp[3][2][curplayer].Visible = true
+                            allesp[3][2][curplayer].Position = newVector2(math.floor(boxPosition.x) - 5, math.floor(boxPosition.y + boxSize.y))
+                            
+                            allesp[3][2][curplayer].Size = newVector2(2, ySizeBar)
+                            
+                            allesp[3][2][curplayer].Color = ColorRange(health, {
+                                [1] = {start = 0, color = menu:GetVal("Visuals", GroupBox, "Health Bar", "color1", true)},
+                                [2] = {start = 100, color = menu:GetVal("Visuals", GroupBox, "Health Bar", "color2", true)}
+                            })
+                            
+                            --debug.profileend("renderVisuals Player ESP Render Health Bar " .. ply.Name)
+                            
+                        elseif menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1] then
+                            --debug.profilebegin("renderVisuals Player ESP Render Health Number " .. ply.Name)
+                            
+                            local hptext = allesp[3][3][curplayer]
+                            
+                            hptext.Visible = true
+                            hptext.Text = tostring(health)
+                            
+                            local tb = hptext.TextBounds
+                            
+                            hptext.Position = boxPosition + newVector2(-tb.x - 2, - 4)
+                            hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", "color", true)
+                            hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4]/255
+                            
+                            --debug.profileend("renderVisuals Player ESP Render Health Number " .. ply.Name)
+                        end
+                        
+                        
+                        if menu.options["Visuals"][GroupBox]["Held Weapon"][1] then
+                            
+                            --debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. ply.Name)
+                            
+                            local charWeapon = _3pweps[Player]
+                            local wepname = charWeapon and charWeapon or "???"
+                            
+                            if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
+                                wepname = string.lower(wepname)
+                            elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
+                                wepname = string.upper(wepname)
+                            end
+                            
+                            local weptext = allesp[4][2][curplayer]
+                            
+                            spoty += 12
+                            weptext.Text = string_cut(wepname, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
+                            weptext.Visible = true
+                            weptext.Position = newVector2(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
+                            
+                            --debug.profileend("renderVisuals Player ESP Render Held Weapon " .. ply.Name)
+                            
+                        end
+                        
+                        if menu.options["Visuals"][GroupBox]["Distance"][1] then
+                            
+                            --debug.profilebegin("renderVisuals Player ESP Render Distance " .. ply.Name)
+                            
+                            local disttext = allesp[4][3][curplayer]
+                            
+                            disttext.Text = tostring(distance).."m"
+                            disttext.Visible = true
+                            disttext.Position = newVector2(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y + spoty)
+                            
+                            --debug.profileend("renderVisuals Player ESP Render Distance " .. ply.Name)
+                            
+                        end
+                        
+                        if menu.options["Visuals"][GroupBox]["Skeleton"][1] then
+                            
+                            --debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. ply.Name)
+                            
+                            local torso = Camera:WorldToViewportPoint(ply.Character.Torso.Position)
+                            for k2, v2 in ipairs(skelparts) do
+                                local line = allesp[1][k2][curplayer]
+                                
+                                local posie = Camera:WorldToViewportPoint(ply.Character:FindFirstChild(v2).Position)
+                                line.From = newVector2(posie.x, posie.y)
+                                line.To = newVector2(torso.x, torso.y)
+                                line.Visible = true
+                                
+                            end
+                            --debug.profileend("renderVisuals Player ESP Render Skeleton" .. ply.Name)
+                        end
+                        --da colourz !!! :D 🔥🔥🔥🔥
+                        
+                        if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, ply.Name) then
+                            
+                            
+                            allesp[4][1][curplayer].Color = priority_color
+                            allesp[4][1][curplayer].Transparency = priority_trans
+                            
+                            allesp[2][2][curplayer].Color = priority_color
+                            
+                            allesp[4][2][curplayer].Color = priority_color
+                            allesp[4][2][curplayer].Transparency = priority_trans
+                            
+                            allesp[4][3][curplayer].Color = priority_color
+                            allesp[4][3][curplayer].Transparency = priority_trans
+                            
+                            for k2, v2 in ipairs(skelparts) do
+                                local line = allesp[1][k2][curplayer]
+                                line.Color = priority_color
+                                line.Transparency = priority_trans
+                            end
+                            
+                            
+                        elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, ply.Name) then
+                            
+                            allesp[4][1][curplayer].Color = friend_color
+                            allesp[4][1][curplayer].Transparency = friend_trans
+                            
+                            allesp[2][2][curplayer].Color = friend_color
+                            
+                            allesp[4][2][curplayer].Color = friend_color
+                            allesp[4][2][curplayer].Transparency = friend_trans
+                            
+                            allesp[4][3][curplayer].Color = friend_color
+                            allesp[4][3][curplayer].Transparency = friend_trans
+                            
+                            for k2, v2 in ipairs(skelparts) do
+                                local line = allesp[1][k2][curplayer]
+                                line.Color = friend_color
+                                line.Transparency = friend_trans
+                            end
+                        elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (ply == legitbot.target or ply == ragebot.target)  then
+                            
+                            allesp[4][1][curplayer].Color = target_color
+                            allesp[4][1][curplayer].Transparency = target_trans
+                            
+                            allesp[2][2][curplayer].Color = target_color
+                            
+                            allesp[4][2][curplayer].Color = target_color
+                            allesp[4][2][curplayer].Transparency = target_trans
+                            
+                            allesp[4][3][curplayer].Color = target_color
+                            allesp[4][3][curplayer].Transparency = target_trans
+                            
+                            for k2, v2 in ipairs(skelparts) do
+                                local line = allesp[1][k2][curplayer]
+                                line.Color = target_color
+                                line.Transparency = target_trans
+                            end
+                        else
+                            
+                            
+                            allesp[4][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Name", "color", true) -- RGB(menu.options["Visuals"][GroupBox]["Name"][5][1][1], menu.options["Visuals"][GroupBox]["Name"][5][1][2], menu.options["Visuals"][GroupBox]["Name"][5][1][3])
+                            allesp[4][1][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Name", "color")[4]/255
+                            
+                            allesp[2][2][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", "color", true)
+                            
+                            allesp[4][2][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color", true)
+                            allesp[4][2][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color")[4]/255
+                            
+                            allesp[4][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Distance", "color", true)
+                            allesp[4][3][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Distance", "color")[4]/255
+                            
+                            for k2, v2 in ipairs(skelparts) do
+                                local line = allesp[1][k2][curplayer]
+                                line.Color = menu:GetVal("Visuals", GroupBox, "Skeleton", "color", true)
+                                line.Transparency = menu:GetVal("Visuals", GroupBox, "Skeleton", "color")[4]/255
+                            end
+                        end
+                        
+                    elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View") then
+                        --debug.profilebegin("renderVisuals Player ESP Render Out of View " .. ply.Name)
+                        local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color", true)
+                        local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
+                        if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, ply.Name) then
+                            color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
+                            color2 = bColor:Mult(color, 0.6)
+                        elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, ply.Name) then
+                            color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
+                            color2 = bColor:Mult(color, 0.6)
+                        elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (ply == legitbot.target or ply == ragebot.target) then
+                            color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
+                            color2 = bColor:Mult(color, 0.6)
+                        end
+                        for i = 1, 2 do
+                            local Tri = allesp[5][i][curplayer]
+                            
+                            local rootpartpos = ply.Character.HumanoidRootPart.Position -- these HAVE to move now theres no way
+                            
+                            Tri.Visible = true
+                            
+                            local relativePos = client.cam.cframe:PointToObjectSpace(rootpartpos)
+                            local direction = math.atan2(-relativePos.y, relativePos.x)
+                            
+                            local distance = dot(relativePos.Unit, relativePos)
+                            local arrow_size = menu:GetVal("Visuals", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
+                            arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
+                            
+                            direction = newVector2(math.cos(direction), math.sin(direction))
+                            
+                            local pos = (direction * SCREEN_SIZE.y * menu:GetVal("Visuals", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
+                            
+                            Tri.PointA = pos
+                            Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
+                            Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
+                            
+                            Tri.Color = i == 1 and color or color2
+                            Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color")[4] / 255
+                        end
+                        --debug.profileend("renderVisuals Player ESP Render Out of View " .. ply.Name)
+                    end
+                    
+                end
+            end
 			
 			--ANCHOR weapon esp
 			if menu:GetVal("Visuals", "Dropped ESP", "Weapon Name") or menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
@@ -9425,14 +9379,14 @@ elseif menu.game == "pf" then --!SECTION
 									wepesp.name[gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color", true)
 									wepesp.name[gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
 									wepesp.name[gunnum].Visible = true
-									wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
+									wepesp.name[gunnum].Position = newVector2(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
 								end
 								if menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
 									wepesp.ammo[gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
 									wepesp.ammo[gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color", true)
 									wepesp.ammo[gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
 									wepesp.ammo[gunnum].Visible = true
-									wepesp.ammo[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
+									wepesp.ammo[gunnum].Position = newVector2(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
 								end
 							end
 						end
@@ -9443,18 +9397,19 @@ elseif menu.game == "pf" then --!SECTION
 			
 			--debug.profilebegin("renderVisuals Dropped ESP Grenade Warning")
 			if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
-				local nadenum = 0
 				local health = client.char:gethealth()
 				local color1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color", true)
 				local color2 = RGB(menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[1] - 20, menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[2] - 20, menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[3] - 20)
-				for index, nade in pairs(menu.activenades) do
-					local headpos = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Head.Position or Vector3.new()
-					local nade_dist = (nade.blowupat - headpos).Magnitude
+                for i = 1, #menu.activenades do
+                    local nade = menu.activenades[i]
+                    local headpos = client.char.alive and client.char.head.Position or newVector3()
+                    local delta = (nade.blowupat - headpos)
+					local nade_dist = dot(delta.Unit, delta)
 					local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
 					
 					if nade_dist <= 80 then
 						
-						local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
+						local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(newVector3(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
 						
 						if not nade_on_screen then
 							
@@ -9474,25 +9429,24 @@ elseif menu.game == "pf" then --!SECTION
 							end
 							local y = (slope * h_edge) + (SCREEN_SIZE.y / 2) - slope * (SCREEN_SIZE.x / 2)
 							if y > 0 and y < SCREEN_SIZE.y - 72 then
-								nadepos = Vector2.new(h_edge, y)
+								nadepos = newVector2(h_edge, y)
 							else
-								nadepos = Vector2.new((v_edge - SCREEN_SIZE.y / 2 + slope * (SCREEN_SIZE.x / 2))/slope, v_edge)
+								nadepos = newVector2((v_edge - SCREEN_SIZE.y / 2 + slope * (SCREEN_SIZE.x / 2))/slope, v_edge)
 							end
 							
 						end
-						nadenum += 1
 						--
-						nadeesp.outer_c[nadenum].Visible = true
-						nadeesp.outer_c[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
+						nade_esp[1][i].Visible = true
+						nade_esp[1][i].Position = newVector2(math.floor(nadepos.x), math.floor(nadepos.y + 36))
 						
-						nadeesp.inner_c[nadenum].Visible = true
-						nadeesp.inner_c[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
+						nade_esp[2][i].Visible = true
+						nade_esp[2][i].Position = newVector2(math.floor(nadepos.x), math.floor(nadepos.y + 36))
 						
-						nadeesp.text[nadenum].Visible = true
-						nadeesp.text[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 10, math.floor(nadepos.y + 10))
+						nade_esp[4][i].Visible = true
+						nade_esp[4][i].Position = newVector2(math.floor(nadepos.x) - 10, math.floor(nadepos.y + 10))
 						
-						nadeesp.distance[nadenum].Visible = true
-						nadeesp.distance[nadenum].Position = Vector2.new(math.floor(nadepos.x), math.floor(nadepos.y + 36))
+						nade_esp[3][i].Visible = true
+						nade_esp[3][i].Position = newVector2(math.floor(nadepos.x), math.floor(nadepos.y + 36))
 						
 						local d0 = 250 -- max damage
 						local d1 = 15 -- min damage
@@ -9508,35 +9462,35 @@ elseif menu.game == "pf" then --!SECTION
 						end
 						
 						local str = damage == 0 and "Safe" or damage >= health and "LETHAL" or string.format("-%d hp", damage)
-						nadeesp.distance[nadenum].Text = str
+						nade_esp[3][i].Text = str
 						
-						nadeesp.outer_c[nadenum].Color = ColorRange(damage, {
+						nade_esp[1][i].Color = ColorRange(damage, {
 							[1] = {start = 15, color = RGB(20, 20, 20)},
 							[2] = {start = health, color = RGB(150, 20, 20)}
 						})
 						
-						nadeesp.inner_c[nadenum].Color = ColorRange(damage, {
+						nade_esp[2][i].Color = ColorRange(damage, {
 							[1] = {start = 15, color = RGB(50, 50, 50)},
 							[2] = {start = health, color = RGB(220, 20, 20)}
 						})
 						
-						nadeesp.bar_outer[nadenum].Visible = true
-						nadeesp.bar_outer[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 16, math.floor(nadepos.y + 50))
+						nade_esp[5][i].Visible = true
+						nade_esp[5][i].Position = newVector2(math.floor(nadepos.x) - 16, math.floor(nadepos.y + 50))
 						
-						nadeesp.bar_inner[nadenum].Visible = true
-						nadeesp.bar_inner[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
+						nade_esp[6][i].Visible = true
+						nade_esp[6][i].Position = newVector2(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
 						
 						--print(nade.blowuptick - nade.start)
 						
-						nadeesp.bar_moving_1[nadenum].Visible = true
-						nadeesp.bar_moving_1[nadenum].Size = Vector2.new(30 * (1 - nade_percent), 2)
-						nadeesp.bar_moving_1[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
-						nadeesp.bar_moving_1[nadenum].Color = color1
+						nade_esp[7][i].Visible = true
+						nade_esp[7][i].Size = newVector2(30 * (1 - nade_percent), 2)
+						nade_esp[7][i].Position = newVector2(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 51))
+						nade_esp[7][i].Color = color1
 						
-						nadeesp.bar_moving_2[nadenum].Visible = true
-						nadeesp.bar_moving_2[nadenum].Size = Vector2.new(30 * (1 - nade_percent), 2)
-						nadeesp.bar_moving_2[nadenum].Position = Vector2.new(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 53))
-						nadeesp.bar_moving_2[nadenum].Color = color2
+						nade_esp[8][i].Visible = true
+						nade_esp[8][i].Size = newVector2(30 * (1 - nade_percent), 2)
+						nade_esp[8][i].Position = newVector2(math.floor(nadepos.x) - 15, math.floor(nadepos.y + 53))
+						nade_esp[8][i].Color = color2
 						
 						
 						local tranz = 1
@@ -9545,13 +9499,13 @@ elseif menu.game == "pf" then --!SECTION
 							tranz = 1 - (1 * closedist/30)
 						end
 						
-						for k, v in pairs(nadeesp) do
-							v[nadenum].Transparency = tranz
-						end
+                        for j = 1, #nade_esp do
+                            nade_esp[j].Transparency = tranz
+                        end
 						
 					end
 					
-				end
+                end
 				
 			end
 			
@@ -9699,7 +9653,7 @@ elseif menu.game == "pf" then --!SECTION
 					curvalue.Material = Enum.Material[matname]
 					
 					curvalue.Color = menu:GetVal("Visuals", "Misc Visuals", "Ragdoll Chams", "color", true)
-					local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
+					local vertexcolor = newVector3(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
 					local mesh = curvalue:FindFirstChild("Mesh")
 					if mesh then
 						mesh.VertexColor = vertexcolor -- color da texture baby  ! ! ! ! ! 👶👶
@@ -9727,7 +9681,7 @@ elseif menu.game == "pf" then --!SECTION
 				if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" and curvalue.ClassName == "Part" then
 
 					curvalue.Color = menu:GetVal("Visuals", "Dropped ESP", "Dropped Weapon Chams", "color", true)
-					local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
+					local vertexcolor = newVector3(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
 					local mesh = curvalue:FindFirstChild("Mesh")
 
 					if mesh then
@@ -9818,13 +9772,13 @@ elseif menu.game == "pf" then --!SECTION
 					if menu:GetVal("Rage", "Extra", "Teleport Up") and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Teleport Up", "keybind") and client.char.alive then
 						setfpscap(8)
 						wait()
-						client.char.rootpart.Position += Vector3.new(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
+						client.char.rootpart.Position += newVector3(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
 						setfpscap(300)
 						wait()
 						return Enum.ContextActionResult.Sink
 					end
 					if menu:GetVal("Misc", "Exploits", "Noclip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Noclip", "keybind") and client.char.alive then
-						local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
+						local ray = Ray.new(client.char.head.Position, newVector3(0, -90, 0) * 20)
 						
 						local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
 						
@@ -9840,12 +9794,12 @@ elseif menu.game == "pf" then --!SECTION
 					if shitting_my_pants == false then
 						if menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
 							local sign = not menu:modkeydown("alt", "left")
-							local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
+							local ray = Ray.new(client.char.head.Position, newVector3(0, sign and -90 or 90, 0) * 20)
 							
 							local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
 							
 							if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-								client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
+								client.char.rootpart.Position += newVector3(0, sign and -18 or 18, 0)
 								CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
 							else
 								CreateNotification("Unable to floor clip!")
@@ -9871,34 +9825,34 @@ elseif menu.game == "pf" then --!SECTION
 									{
 										frames = {
 											{
-												v0 = Vector3.new(),
+												v0 = newVector3(),
 												glassbreaks = {},
 												t0 = 0,
-												offset = Vector3.new(),
-												rot0 = CFrame.new(),
-												a = Vector3.new(0/0),
+												offset = newVector3(),
+												rot0 = newCFrame(),
+												a = newVector3(0/0),
 												p0 = client.lastrepupdate or client.char.head.Position,
-												rotv = Vector3.new()
+												rotv = newVector3()
 											},
 											{
-												v0 = Vector3.new(),
+												v0 = newVector3(),
 												glassbreaks = {},
 												t0 = 0,
-												offset = Vector3.new(),
-												rot0 = CFrame.new(),
-												a = Vector3.new(0/0),
-												p0 = Vector3.new(0/0),
-												rotv = Vector3.new()
+												offset = newVector3(),
+												rot0 = newCFrame(),
+												a = newVector3(0/0),
+												p0 = newVector3(0/0),
+												rotv = newVector3()
 											},
 											{
-												v0 = Vector3.new(),
+												v0 = newVector3(),
 												glassbreaks = {},
 												t0 = 0,
-												offset = Vector3.new(),
-												rot0 = CFrame.new(),
-												a = Vector3.new(),
-												p0 = chosenpos + Vector3.new(0, 3, 0),
-												rotv = Vector3.new()
+												offset = newVector3(),
+												rot0 = newCFrame(),
+												a = newVector3(),
+												p0 = chosenpos + newVector3(0, 3, 0),
+												rotv = newVector3()
 											}
 										},
 										time = tick(),
@@ -9928,7 +9882,7 @@ elseif menu.game == "pf" then --!SECTION
 					if menu:GetVal("Misc", "Movement", "Mouse Teleport") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Mouse Teleport", "keybind") then
 						local targetPos = LOCAL_MOUSE.Hit.p
 						local RP = LOCAL_PLAYER.Character.HumanoidRootPart
-						RP.CFrame = CFrame.new(targetPos + Vector3.new(0,7,0))
+						RP.CFrame = newCFrame(targetPos + newVector3(0,7,0))
 						return Enum.ContextActionResult.Sink
 					end
 				end
@@ -9950,7 +9904,7 @@ elseif menu.game == "pf" then --!SECTION
 						CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
 						for i = 1, 50 do
 							local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
-							send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
+							send(nil, "repupdate", client.cam.cframe.p, newVector3(num, num, num))
 						end
 						return Enum.ContextActionResult.Sink
 					end ]] -- idk if this will even work anymore after the replication fixes
@@ -10071,13 +10025,15 @@ elseif menu.game == "pf" then --!SECTION
 		end
 	end)
 
+	client.nextchamsupdate = tick()
+
 	menu.connections.heartbeat_pf = game.RunService.Heartbeat:Connect(function()
 
 		-- print("incoming: ", stats.DataReceiveKbps)
 		-- print("outgoing: ", stats.DataSendKbps)
-
+        local curTick = tick()
 		for index, nade in pairs(menu.activenades) do
-			local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
+			local nade_percent = (curTick - nade.start)/(nade.blowuptick - nade.start)
 			if nade_percent >= 1 then
 				if menu.activenades[index] == nade then
 					table.remove(menu.activenades, index)
@@ -10085,6 +10041,32 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 
+        if client.nextchamsupdate and curTick > client.nextchamsupdate then
+            client.nextchamsupdate = curTick + 0.8
+            CreateThread(renderChams)
+            local enemyesp = menu.options["Visuals"]["Enemy ESP"]["Enabled"][1]
+
+            for player, nametagupdater in pairs(client.nametagupdaters) do
+                if not client.nametagupdaters_cache[player] then
+                    if player.Team ~= LOCAL_PLAYER.Team then
+                        client.nametagupdaters_cache[player] = nametagupdater
+                    end
+                else
+                    if enemyesp then
+                        if client.nametagupdaters[player] == client.nametagupdaters_cache[player] then
+                            client.nametagupdaters[player] = function(...) end
+                            client.playernametags[player].Visible = false
+                        end
+                    else
+                        if client.nametagupdaters[player] ~= client.nametagupdaters_cache[player] then
+                            client.nametagupdaters[player] = client.nametagupdaters_cache[player]
+                            client.playernametags[player].Visible = true
+                        end
+                    end
+                end
+            end
+        end
+		
 		if menu.open then
 			bulletcheckresolution = menu:GetVal("Rage", "Aimbot", "Autowall FPS (Standard)") / 1000
 		end
@@ -10101,7 +10083,7 @@ elseif menu.game == "pf" then --!SECTION
 						if type(curv) == "function" and getinfo(curv).name:match("bob") then
 							gun.fucku = true
 							setupvalue(client.loadedguns[id].step, i, function(...)
-								return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or curv(...)
+								return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and newCFrame() or curv(...)
 							end)
 						end
 					end
@@ -10117,7 +10099,7 @@ elseif menu.game == "pf" then --!SECTION
 								setrawmetatable(lol, {
 									__newindex = function(t, p, v)
 										if menu then
-											if p == "a" then -- this might also break the recoil since idk if they might change this back to like p or v or whatever the fuck idk dick sukkin god
+											if p == "a" and menu:GetVal("Misc", "Weapon Modifications", "Enabled") then -- this might also break the recoil since idk if they might change this back to like p or v or whatever the fuck idk dick sukkin god
 												local recoil_scale = menu:GetVal("Misc", "Weapon Modifications", "Recoil Scale") / 100
 												return newindex(t, p, v * recoil_scale)
 											else
@@ -10143,7 +10125,7 @@ elseif menu.game == "pf" then --!SECTION
 					if type(curv) == "function" and getinfo(curv).name:match("bob") then
 						client.logic.currentgun.fucku = true
 						setupvalue(client.logic.currentgun.step, i, function(...)
-							return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or curv(...)
+							return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and newCFrame() or curv(...)
 						end)
 					end
 				end
@@ -10219,11 +10201,11 @@ elseif menu.game == "pf" then --!SECTION
 						
 						if menu:GetVal("Rage", "Anti Aim", "Enabled") then
 							-- IM STUIPD........
-							fakeupdater.setlookangles(ragebot.angles or Vector3.new())
+							fakeupdater.setlookangles(ragebot.angles or newVector3())
 							fakeupdater.setstance(ragebot.stance)
 							fakeupdater.setsprint(ragebot.sprint)
 						else
-							local silentangles = ragebot.silentVector and Vector3.new(CFrame.new(Vector3.new(), ragebot.silentVector):ToOrientation()) or nil
+							local silentangles = ragebot.silentVector and newVector3(newCFrame(newVector3(), ragebot.silentVector):ToOrientation()) or nil
 							fakeupdater.setlookangles(silentangles or client.cam.angles) -- TODO make this face silent aim vector at some point lol
 							fakeupdater.setstance(client.char.movementmode)
 							fakeupdater.setsprint(client.char:sprinting())
@@ -10252,7 +10234,7 @@ elseif menu.game == "pf" then --!SECTION
 							local rootpartpos = client.char.rootpart.Position
 							client.fake_upvs[4].p = rootpartpos
 							client.fake_upvs[4].t = rootpartpos
-							client.fake_upvs[4].v = Vector3.new()
+							client.fake_upvs[4].v = newVector3()
 						end
 					end
 				end
@@ -11995,7 +11977,7 @@ end
 do
 	local wm = menu.watermark
 	wm.textString = " | username | " .. os.date("%b. %d, %Y")
-	wm.pos = Vector2.new(50, 9)
+	wm.pos = newVector2(50, 9)
 	wm.text = {}
 	local fulltext = "Bitch Bot".. wm.textString 
 	wm.width = (#fulltext) * 7 + 10
