@@ -8637,10 +8637,10 @@ elseif menu.game == "pf" then --!SECTION
 						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 						if targetPart and closest < fov then
 							legitbot.silentVector = legitbot:SilentAimAtTarget(targetPart)
-						elseif client.logic.currentgun and client.logic.currentgun.barrel and client.logic.currentgun.type == "SHOTGUN" then
+						elseif client.logic.currentgun and client.logic.currentgun.barrel then
 							legitbot.silentVector = nil
 							local barrel = client.logic.currentgun.barrel
-							if barrel and barrel.Parent then
+							if client.logic.currentgun.type == "SHOTGUN" and barrel and barrel.Parent then
 								local trigger = barrel.Parent.Trigger
 								if trigger then
 									barrel.Orientation = trigger.Orientation
