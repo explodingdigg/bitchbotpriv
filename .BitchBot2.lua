@@ -8080,7 +8080,7 @@ elseif menu.game == "pf" then --!SECTION
 					client.cam:setspectate(selectedPlayer)
 					menu.spectating = selectedPlayer
 				else
-					if client.char.alive then
+					if client.char.alive then1
 						client.cam:setfirstpersoncam()
 					else
 						local lobby = workspace:FindFirstChild("MenuLobby")
@@ -8631,7 +8631,7 @@ elseif menu.game == "pf" then --!SECTION
 						if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
 							local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 							legitbot.target = player
-							local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") + 2
+							local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") * 5 + 2
 							if targetPart then
 								if closest < fov and closest > dzFov then
 									legitbot:AimAtTarget(targetPart, smoothing)
@@ -8655,6 +8655,7 @@ elseif menu.game == "pf" then --!SECTION
 								local trigger = barrel.Parent.Trigger
 								if trigger then
 									barrel.Orientation = trigger.Orientation
+									client.logic.currentgun.aimsightdata[1].sightpart.Orientation = trigger.Orientation
 								end
 							end
 						end
