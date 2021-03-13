@@ -515,6 +515,7 @@ loadstart = tick()
 
 -- im back
 local NETWORK = game:service("NetworkClient")
+local NETWORK_SETTINGS = settings().Network
 NETWORK:SetOutgoingKBPSLimit(0)
 
 setfpscap(300)
@@ -2212,9 +2213,9 @@ function menu.Initialize(menutable)
 		x = 100,
 		y = 240
 	}
-	Draw:Triangle(true, false, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {0, 0, 0, 255}, bbmouse)
 	Draw:Triangle(true, true, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {127, 72, 163, 255}, bbmouse)
 	table.insert(menu.clrs.norm, bbmouse[#bbmouse])
+	Draw:Triangle(true, false, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {0, 0, 0, 255}, bbmouse)
 	
 	function menu:set_mouse_pos(x, y)
 		for k = 1, #bbmouse do
@@ -5262,7 +5263,8 @@ elseif menu.game == "pf" then --!SECTION
 		crimwalk = false,
 		freeze = false,
 		freestand = false,
-		superaa = false
+		superaa = false,
+		lockplayers = false,
 	}
 	
 	menu.activenades = {}
@@ -6559,13 +6561,6 @@ local wepesp = allesp[7]
 	end
 	
 	do--ANCHOR camera function definitions.
-		function camera:GetGun()
-			for k, v in pairs(Camera:GetChildren()) do
-				if v.Name ~= "Right Arm" and v.Name ~= "Left Arm" then
-					return v
-				end
-			end
-		end
 		
 		function camera:SetArmsVisible(flag)
 			local larm, rarm = Camera:FindFirstChild("Left Arm"), Camera:FindFirstChild("Right Arm")
@@ -8219,11 +8214,15 @@ local wepesp = allesp[7]
 		
 		function misc:MainLoop()
 			if keybindtoggles.crash then return end
+			if IsKeybindDown("Misc", "Exploits", "Lock Player Positions") then
+				NETWORK_SETTINGS.IncomingReplicationLag = 9e9
+			else
+				NETWORK_SETTINGS.IncomingReplicationLag = 0
+			end
 			
-			
-			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
-			rootpart = client.fakebodyroot or rootpart
-			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
+			local rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
+			local rootpart = client.fakebodyroot or rootpart
+			local humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
 			if rootpart and humanoid then
 				if not CHAT_BOX.Active then
 					misc:SpeedHack()
@@ -8951,7 +8950,7 @@ local wepesp = allesp[7]
 				--debug.profilebegin("renderVisuals Char")
 				client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 				local crosshud = PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()
-				for i = 1, #crosshud in  do
+				for i = 1, #crosshud do
 					local frame = crosshud[i] 
 					if not crosshairColors then crosshairColors = {
 						inline = frame.BackgroundColor3,
@@ -9281,8 +9280,6 @@ local wepesp = allesp[7]
 										line.Transparency = target_alpha
 									end
 								else
-									
-									
 									allesp[4][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Name", "color", true) -- RGB(menu.options["Visuals"][GroupBox]["Name"][5][1][1], menu.options["Visuals"][GroupBox]["Name"][5][1][2], menu.options["Visuals"][GroupBox]["Name"][5][1][3])
 									allesp[4][1][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Name", "color")[4]/255
 									
@@ -9300,50 +9297,48 @@ local wepesp = allesp[7]
 										line.Transparency = menu:GetVal("Visuals", GroupBox, "Skeleton", "color")[4]/255
 									end
 								end
-								
-						  elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View") then
+							elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View") then
 								--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. ply.Name)
 								local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color", true)
 								local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
 								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, ply.Name) then
-									 color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
-									 color2 = bColor:Mult(color, 0.6)
+									color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
+									color2 = bColor:Mult(color, 0.6)
 								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, ply.Name) then
-									 color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
-									 color2 = bColor:Mult(color, 0.6)
+									color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
+									color2 = bColor:Mult(color, 0.6)
 								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (ply == legitbot.target or ply == ragebot.target) then
-									 color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
-									 color2 = bColor:Mult(color, 0.6)
+									color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
+									color2 = bColor:Mult(color, 0.6)
 								end
 								for i = 1, 2 do
-									 local Tri = allesp[5][i][curplayer]
-									 
-									 local rootpartpos = ply.Character.HumanoidRootPart.Position -- these HAVE to move now theres no way
-									 
-									 Tri.Visible = true
-									 
-									 local relativePos = client.cam.cframe:PointToObjectSpace(rootpartpos)
-									 local direction = math.atan2(-relativePos.y, relativePos.x)
-									 
-									 local distance = dot(relativePos.Unit, relativePos)
-									 local arrow_size = menu:GetVal("Visuals", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
-									 arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
-									 
-									 direction = Vector2.new(math.cos(direction), math.sin(direction))
-									 
-									 local pos = (direction * SCREEN_SIZE.y * menu:GetVal("Visuals", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
-									 
-									 Tri.PointA = pos
-									 Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
-									 Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
-									 
-									 Tri.Color = i == 1 and color or color2
-									 Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color")[4] / 255
+									local Tri = allesp[5][i][curplayer]
+									
+									local rootpartpos = ply.Character.HumanoidRootPart.Position -- these HAVE to move now theres no way
+									
+									Tri.Visible = true
+									
+									local relativePos = client.cam.cframe:PointToObjectSpace(rootpartpos)
+									local direction = math.atan2(-relativePos.y, relativePos.x)
+									
+									local distance = dot(relativePos.Unit, relativePos)
+									local arrow_size = menu:GetVal("Visuals", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
+									arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
+									
+									direction = Vector2.new(math.cos(direction), math.sin(direction))
+									
+									local pos = (direction * SCREEN_SIZE.y * menu:GetVal("Visuals", "Enemy ESP", "Arrow Distance")/200) + (SCREEN_SIZE * 0.5)
+									
+									Tri.PointA = pos
+									Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
+									Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
+									
+									Tri.Color = i == 1 and color or color2
+									Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color")[4] / 255
 								end
 								--debug.profileend("renderVisuals Player ESP Render Out of View " .. ply.Name)
-						  end
-						  
-					 end
+							end
+					end
 				end
 			
 			--ANCHOR weapon esp
@@ -9398,10 +9393,10 @@ local wepesp = allesp[7]
 				local health = client.char:gethealth()
 				local color1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color", true)
 				local color2 = RGB(menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[1] - 20, menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[2] - 20, menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[3] - 20)
-					 for i = 1, #menu.activenades do
-						  local nade = menu.activenades[i]
-						  local headpos = client.char.alive and client.char.head.Position or Vector3.new()
-						  local delta = (nade.blowupat - headpos)
+				for i = 1, #menu.activenades do
+					local nade = menu.activenades[i]
+					local headpos = client.char.alive and client.char.head.Position or Vector3.new()
+					local delta = (nade.blowupat - headpos)
 					local nade_dist = dot(delta.Unit, delta)
 					local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
 					
@@ -9498,13 +9493,12 @@ local wepesp = allesp[7]
 						end
 						
 								for j = 1, #nade_esp do
-									 nade_esp[j].Transparency = tranz
+									nade_esp[j].Transparency = tranz
 								end
 						
 					end
 					
-					 end
-				
+				end
 			end
 			
 			--debug.profileend("renderVisuals Dropped ESP Grenade Warning")
@@ -11619,7 +11613,7 @@ local wepesp = allesp[7]
 								type = "toggle",
 								name = "Grenade Teleport",
 								value = false,
-								tooltip = "Sets any spawned grenades' position to the nearest enemy to your cursor and instantly explodes."
+								tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes."
 							},
 							{
 								type = "toggle",
@@ -11672,6 +11666,15 @@ local wepesp = allesp[7]
 								},
 								unsafe = true,
 								tooltip = "Fakes your server-side position. Works best when stationary, and allows you to be unhittable."
+							},
+							{
+								type = "toggle",
+								name = "Lock Player Positions",
+								value = false,
+								extra = {
+									type = "keybind",
+								},
+								tooltip = "Locks all other players' positions."
 							}
 						}
 					}
