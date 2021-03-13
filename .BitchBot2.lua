@@ -2212,12 +2212,13 @@ function menu.Initialize(menutable)
 		x = 100,
 		y = 240
 	}
+	Draw:Triangle(true, false, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {0, 0, 0, 255}, bbmouse)
 	Draw:Triangle(true, true, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {127, 72, 163, 255}, bbmouse)
 	table.insert(menu.clrs.norm, bbmouse[#bbmouse])
-	Draw:Triangle(true, false, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {0, 0, 0, 255}, bbmouse)
 	
 	function menu:set_mouse_pos(x, y)
-		for k, v in pairs(bbmouse) do
+		for k = 1, #bbmouse do
+			local v = bbmouse[k]
 			v.PointA = Vector2.new(x, y + 36)
 			v.PointB = Vector2.new(x, y + 36 + 15)
 			v.PointC = Vector2.new(x + 10, y + 46)
@@ -2286,7 +2287,8 @@ function menu.Initialize(menutable)
 			cp.dragging_b = false
 			UpdateConfigs()
 			if menu.open and not menu.fading then
-				for k, v in pairs(menu.options) do
+				for k = 1, #menu.options do
+					local v = menu.options[k]
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
 							if v2[2] == "slider" and v2[5] then
@@ -2414,28 +2416,16 @@ function menu.Initialize(menutable)
 	end
 
 	function menu:MouseInArea(x, y, width, height)
-		if LOCAL_MOUSE.x > x and LOCAL_MOUSE.x < x + width and LOCAL_MOUSE.y > 36 + y and LOCAL_MOUSE.y < 36 + y + height then
-			return true
-		else
-			return false
-		end
+		return LOCAL_MOUSE.x > x and LOCAL_MOUSE.x < x + width and LOCAL_MOUSE.y > 36 + y and LOCAL_MOUSE.y < 36 + y + height
 	end
 	
 	
 	function menu:MouseInMenu(x, y, width, height)
-		if LOCAL_MOUSE.x > menu.x + x and LOCAL_MOUSE.x < menu.x + x + width and LOCAL_MOUSE.y > menu.y - 36 + y and LOCAL_MOUSE.y < menu.y - 36 + y + height then
-			return true
-		else
-			return false
-		end
+		return LOCAL_MOUSE.x > menu.x + x and LOCAL_MOUSE.x < menu.x + x + width and LOCAL_MOUSE.y > menu.y - 36 + y and LOCAL_MOUSE.y < menu.y - 36 + y + height
 	end
 	
 	function menu:MouseInColorPicker(x, y, width, height)
-		if LOCAL_MOUSE.x > cp.x + x and LOCAL_MOUSE.x < cp.x + x + width and LOCAL_MOUSE.y > cp.y - 36 + y and LOCAL_MOUSE.y < cp.y - 36 + y + height then
-			return true
-		else
-			return false
-		end
+		return LOCAL_MOUSE.x > cp.x + x and LOCAL_MOUSE.x < cp.x + x + width and LOCAL_MOUSE.y > cp.y - 36 + y and LOCAL_MOUSE.y < cp.y - 36 + y + height
 	end
 	
 	local keyz = {}
@@ -3436,9 +3426,6 @@ function menu.Initialize(menutable)
 		end
 	end
 	
-	
-	local dragging = false
-	local dontdrag = false
 	local clickspot_x, clickspot_y, original_menu_x, original_menu_y = 0, 0, 0, 0
 	
 	menu.connections.mwf = LOCAL_MOUSE.WheelForward:Connect(function()
@@ -3724,14 +3711,14 @@ function menu.Initialize(menutable)
 				end
 			end
 			
-			if ((LOCAL_MOUSE.x > menu.x and LOCAL_MOUSE.x < menu.x + menu.w and LOCAL_MOUSE.y > menu.y - 32 and LOCAL_MOUSE.y < menu.y - 11) or dragging) and not dontdrag then
+			if ((LOCAL_MOUSE.x > menu.x and LOCAL_MOUSE.x < menu.x + menu.w and LOCAL_MOUSE.y > menu.y - 32 and LOCAL_MOUSE.y < menu.y - 11) or menu.dragging) and not menu.dontdrag then
 				if menu.mousedown then
-					if dragging == false then
+					if not menu.dragging then
 						clickspot_x = LOCAL_MOUSE.x
 						clickspot_y = LOCAL_MOUSE.y - 36
 						original_menu_X = menu.x
 						original_menu_y = menu.y
-						dragging = true
+						menu.dragging = true
 					end
 					menu.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.x
 					menu.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.y - 36
@@ -3753,12 +3740,12 @@ function menu.Initialize(menutable)
 						menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
 					end
 				else
-					dragging = false
+					menu.dragging = false
 				end
 			elseif menu.mousedown then
-				dontdrag = true
+				menu.dontdrag = true
 			elseif not menu.mousedown then
-				dontdrag = false
+				menu.dontdrag = false
 			end
 			if menu.colorpicker_open then
 				if cp.dragging_m then
@@ -3791,9 +3778,7 @@ function menu.Initialize(menutable)
 				end
 			end
 		else
-			if dragging then
-				dragging = false
-			end
+			menu.dragging = false
 		end
 	end
 	
@@ -5026,7 +5011,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	
 	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
 		
-		pcall(SpeedHack)
+		pcall(SpeedHack) -- ?????
 		pcall(FlyHack)
 		pcall(Aimbot)
 		
@@ -5357,15 +5342,15 @@ elseif menu.game == "pf" then --!SECTION
 		}
 	}
 
-	 local allespnum = #allesp
+	local allespnum = #allesp
 
-	local wepesp = allesp[7]
+local wepesp = allesp[7]
 
-	 local wepespnum = #wepesp
-	
+	local wepespnum = #wepesp
+
 	local nade_esp = allesp[8]
 
-	 local nade_espnum = #nade_esp
+	local nade_espnum = #nade_esp
 	
 	for i = 1, 50 do
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[1])
@@ -5391,31 +5376,31 @@ elseif menu.game == "pf" then --!SECTION
 			Draw:Triangle(false, i_ == 1, nil, nil, nil, {255}, allesp[5][i_])
 		end
 
-		  local skel = allesp[1]
-		  local box = allesp[2]
-		  local hp = allesp[3]
-		  local text = allesp[4]
-		  local arrows = allesp[5]
-		  local watermark = allesp[6]
+		local skel = allesp[1]
+		local box = allesp[2]
+		local hp = allesp[3]
+		local text = allesp[4]
+		local arrows = allesp[5]
+		local watermark = allesp[6]
 
-		  for i = 1, #skel do
-				local drawobj = skel[i]
-				Draw:Line(false, 1, 30, 30, 50, 50, {255, 255, 255, 255}, drawobj)
-		  end
+		for i = 1, #skel do
+			local drawobj = skel[i]
+			Draw:Line(false, 1, 30, 30, 50, 50, {255, 255, 255, 255}, drawobj)
+		end
 
-		  for i = 1, #box do
-				local drawobj = box[i]
-				Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, drawobj)
-		  end
+		for i = 1, #box do
+			local drawobj = box[i]
+			Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, drawobj)
+		end
 
-		  Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 210}, hp[1])
-		  Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 255}, hp[2])
-		  Draw:OutlinedText("", 1, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, hp[3])
+		Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 210}, hp[1])
+		Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 255}, hp[2])
+		Draw:OutlinedText("", 1, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, hp[3])
 
-		  for i = 1, #text do
-				local drawobj = text[i]
-				Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, drawobj)
-		  end
+		for i = 1, #text do
+			local drawobj = text[i]
+			Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, drawobj)
+		end
 	end
 	
 	local bodysize = {
@@ -5442,12 +5427,12 @@ elseif menu.game == "pf" then --!SECTION
 
 	local gc = getgc(true)
 
-	 for i = 1, #gc do
-		  local garbage = gc[i]
+	for i = 1, #gc do
+		local garbage = gc[i]
 
-		  local garbagetype = type(garbage)
+		local garbagetype = type(garbage)
 
-		  if garbagetype == "function" then
+		if garbagetype == "function" then
 				local name = getinfo(garbage).name
 			if name == "bulletcheck" then
 				client.bulletcheck = garbage
@@ -5465,9 +5450,9 @@ elseif menu.game == "pf" then --!SECTION
 				client.gunsway = garbage
 			elseif name == "getupdater" then
 				client.getupdater = garbage
-				elseif name == "updateplayernames" then
-					 client.updateplayernames = garbage
-				end
+			elseif name == "updateplayernames" then
+				client.updateplayernames = garbage
+			end
 		end
 		
 		if garbagetype == "table" then
@@ -5475,21 +5460,21 @@ elseif menu.game == "pf" then --!SECTION
 				client.menu = garbage
 				local olddeploy = garbage.deploy
 				elseif rawget(garbage, "send") then
-					 client.net = garbage
+					client.net = garbage
 				elseif rawget(garbage, "gammo") then
-					 client.logic = garbage
+					client.logic = garbage
 				elseif rawget(garbage, "setbasewalkspeed") then
-					 client.char = garbage
+					client.char = garbage
 				elseif rawget(garbage, "basecframe") then
-					 client.cam = garbage
+					client.cam = garbage
 				elseif rawget(garbage, "votestep") then
-					 client.hud = garbage
+					client.hud = garbage
 				elseif rawget(garbage, "getbodyparts") then
-					 client.replication = garbage
+					client.replication = garbage
 				elseif rawget(garbage, "play") then
-					 client.sound = garbage
+					client.sound = garbage
 				elseif rawget(garbage, "checkkillzone") then
-					 client.roundsystem = garbage
+					client.roundsystem = garbage
 			elseif rawget(garbage, "new") and rawget(garbage, "step") and rawget(garbage, "reset") then
 				client.particle = garbage
 			elseif rawget(garbage, "unlocks") then
@@ -5523,9 +5508,9 @@ elseif menu.game == "pf" then --!SECTION
 				end)
 			end
 		end
-	 end
+	end
 
-	 gc = nil
+	gc = nil
 	
 
 	local function animhook(...)
@@ -5560,8 +5545,8 @@ elseif menu.game == "pf" then --!SECTION
 	end
 
 	client.nametagupdaters_cache = {}
-	 client.nametagupdaters = getupvalue(client.updateplayernames, 1)
-	 client.playernametags = getupvalue(client.updateplayernames, 2)
+	client.nametagupdaters = getupvalue(client.updateplayernames, 1)
+	client.playernametags = getupvalue(client.updateplayernames, 2)
 
 	setrawmetatable(client.roundsystem, {
 		__index = function(self, val)
@@ -6291,7 +6276,9 @@ elseif menu.game == "pf" then --!SECTION
 	
 	
 	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK -- fuk json
-		for k, Player in pairs(Players:GetPlayers()) do
+		local PlayerList = Players:GetPlayers()
+		for k = 1, #PlayerList do
+			local Player = PlayerList[k]
 			if Player == LOCAL_PLAYER then continue end -- doing this for now, i'll have to change the way the third person model will end up working
 			local Body = client.replication.getbodyparts(Player)
 			if Body then
@@ -6318,7 +6305,9 @@ elseif menu.game == "pf" then --!SECTION
 				
 				
 				Player.Character = Body.rootpart.Parent
-				for k1, Part in pairs(Player.Character:GetChildren()) do
+				local Parts = Player.Character:GetChildren()
+				for k1 = 1, #Parts do
+					Part = Parts[k1]
 					--debug.profilebegin("renderChams " .. Player.Name)
 					if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
 						
@@ -8367,20 +8356,23 @@ elseif menu.game == "pf" then --!SECTION
 					
 					if shitting_my_pants == false and menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
 						local new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
-						for k, bullet in pairs(args[2].bullets) do
+						for k = 1, #args[2].bullets do
+							local bullet = args[2].bullets[k]
 							local old_velocity = bullet[1]
 							bullet[1] = {unit = (old_velocity.Unit * new_speed) / client.logic.currentgun.data.bulletspeed}
 						end
 					end
 					
 					if legitbot.silentVector then
-						for k, bullet in pairs(args[2].bullets) do
+						for k = 1, #args[2].bullets do
+							local bullet = args[2].bullets[k]
 							bullet[1] = legitbot.silentVector
 						end
 					end
 					
 					if shitting_my_pants == false and keybindtoggles.freeze then
-						for k, bullet in pairs(args[2].bullets) do
+						for k = 1, #args[2].bullets do
+							local bullet = args[2].bullets[k]
 							bullet[1] = Vector2.new()
 						end
 						return send(self, unpack(args))
@@ -8411,7 +8403,8 @@ elseif menu.game == "pf" then --!SECTION
 							ragebot.repupdate = nil
 						end
 						local time
-						for k, bullet in pairs(args[2].bullets) do
+						for k = 1, #args[2].bullets do
+							local bullet = args[2].bullets[k]
 							if shitting_my_pants == false then
 								local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed * 25)
 								local new_angle = angle.Unit * 25
@@ -8436,7 +8429,8 @@ elseif menu.game == "pf" then --!SECTION
 						args[3] -= time
 						send(self, unpack(args))
 						
-						for k, bullet in pairs(args[2].bullets) do
+						for k = 1, #args[2].bullets do
+							local bullet = args[2].bullets[k]
 							if menu:GetVal("Visuals", "Misc", "Bullet Tracers") then
 								local origin = args[2].firepos
 								local attach_origin = Instance.new("Attachment", workspace.Terrain)
@@ -8461,7 +8455,8 @@ elseif menu.game == "pf" then --!SECTION
 					return
 				else
 					if menu:GetVal("Visuals", "Misc", "Bullet Tracers") then
-						for k, bullet in next, args[2].bullets do
+						for k = 1, #args[2].bullets do
+							local bullet = args[2].bullets[k]
 							local origin = args[2].firepos
 							local attach_origin = Instance.new("Attachment", workspace.Terrain)
 							attach_origin.Position = origin
@@ -8955,7 +8950,9 @@ elseif menu.game == "pf" then --!SECTION
 			if menu.open then
 				--debug.profilebegin("renderVisuals Char")
 				client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
-				for i, frame in pairs(PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()) do
+				local crosshud = PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()
+				for i = 1, #crosshud in  do
+					local frame = crosshud[i] 
 					if not crosshairColors then crosshairColors = {
 						inline = frame.BackgroundColor3,
 						outline = frame.BorderColor3
