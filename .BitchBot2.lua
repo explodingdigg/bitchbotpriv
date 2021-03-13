@@ -206,7 +206,8 @@ do
 			end
 		end
 		local length = #notes
-		for k, v in next, notes do
+		for k = 1, #notes do
+			local note = notes[k]
 			note:Update(k, length, dt)
 			if k <= math.ceil(length/10) or note.fading then
 				note:Fade(k, length, dt)
