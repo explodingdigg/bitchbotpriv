@@ -280,9 +280,8 @@ local function average(t)
 	return sum / #t
 end
 
-setreadonly(math, false)
 
-math.clamp = function(a, lowerNum, higher) -- DONT REMOVE this math.clamp is better then roblox's because it doesnt error when its not lower or heigher
+clamp = function(a, lowerNum, higher) -- DONT REMOVE this clamp is better then roblox's because it doesnt error when its not lower or heigher
 	if a > higher then
 		return higher
 	elseif a < lowerNum then
@@ -291,8 +290,6 @@ math.clamp = function(a, lowerNum, higher) -- DONT REMOVE this math.clamp is bet
 		return a
 	end
 end
-
-setreadonly(math, true)
 
 function menu:modkeydown(key, direction)
 	local keydata = self.modkeys[key]
@@ -3739,22 +3736,22 @@ function menu.Initialize(menutable)
 					menu.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.x
 					menu.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.y - 36
 					menu:SetMenuPos(menu.x, menu.y)
-					-- if menu.y < 0 then
-					-- 	menu.y = 0
-					-- 	menu:SetMenuPos(menu.x, 0)
-					-- end
-					-- if menu.x < 0 then
-					-- 	menu.x = 0
-					-- 	menu:SetMenuPos(0, menu.y)
-					-- end
-					-- if menu.x + menu.w > SCREEN_SIZE.x then
-					-- 	menu.x = SCREEN_SIZE.x - menu.w
-					-- 	menu:SetMenuPos(SCREEN_SIZE.x - menu.w, menu.y)
-					-- end
-					-- if menu.y > SCREEN_SIZE.y - 20 then
-					-- 	menu.y = SCREEN_SIZE.y - 20
-					-- 	menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
-					-- end
+					if menu.y < 0 then
+						menu.y = 0
+						menu:SetMenuPos(menu.x, 0)
+					end
+					if menu.x < -menu.w/4*3 then
+						menu.x = -menu.w/4*3
+						menu:SetMenuPos(-menu.w/4*3, menu.y)
+					end
+					if menu.x + menu.w/4 > SCREEN_SIZE.x then
+						menu.x = SCREEN_SIZE.x - menu.w/4
+						menu:SetMenuPos(SCREEN_SIZE.x - menu.w/4, menu.y)
+					end
+					if menu.y > SCREEN_SIZE.y - 20 then
+						menu.y = SCREEN_SIZE.y - 20
+						menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
+					end
 				else
 					dragging = false
 				end
@@ -3765,22 +3762,22 @@ function menu.Initialize(menutable)
 			end
 			if menu.colorpicker_open then
 				if cp.dragging_m then
-					set_dragbar_m(math.clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - 2, math.clamp(LOCAL_MOUSE.y + 36, cp.y + 25, cp.y + 180) - 2)
+					set_dragbar_m(clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - 2, clamp(LOCAL_MOUSE.y + 36, cp.y + 25, cp.y + 180) - 2)
 					
-					cp.hsv.s = (math.clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - cp.x - 12)/155
-					cp.hsv.v = 1 - ((math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
+					cp.hsv.s = (clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - cp.x - 12)/155
+					cp.hsv.v = 1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
 					newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 				elseif cp.dragging_r then
-					set_dragbar_r(cp.x + 175, math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178))
+					set_dragbar_r(cp.x + 175, clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178))
 					
-					maincolor.Color = Color3.fromHSV(1 - ((math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155), 1, 1)
+					maincolor.Color = Color3.fromHSV(1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155), 1, 1)
 					
-					cp.hsv.h = 1 - ((math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
+					cp.hsv.h = 1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23)/155)
 					newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 				elseif cp.dragging_b then
-					set_dragbar_b(math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ), cp.y + 188)
-					newcolor.Transparency = (math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158
-					cp.hsv.a = math.floor(((math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158) * 255)
+					set_dragbar_b(clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ), cp.y + 188)
+					newcolor.Transparency = (clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158
+					cp.hsv.a = math.floor(((clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168 ) - cp.x - 10)/158) * 255)
 				else
 					local setvisnew = menu:MouseInColorPicker(197, 37, 75, 40)
 					for i, v in ipairs(newcopy) do
@@ -5134,7 +5131,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 3) - cam.UpVector)
 				
 				local minY = math.abs(bottom.y - top.y)
-				local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
+				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
 				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 				
 				if top_isrendered or bottom_isrendered then
@@ -5192,7 +5189,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							if menu:GetVal("Visuals", "Player ESP", "Health Number") then
 								allesp.hptext[i].Text = tostring(health)
 								local textsize = allesp.hptext[i].TextBounds
-								allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + math.clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
+								allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
 								allesp.hptext[i].Visible = true
 							end
 							
@@ -8080,7 +8077,7 @@ elseif menu.game == "pf" then --!SECTION
 					client.cam:setspectate(selectedPlayer)
 					menu.spectating = selectedPlayer
 				else
-					if client.char.alive then1
+					if client.char.alive then
 						client.cam:setfirstpersoncam()
 					else
 						local lobby = workspace:FindFirstChild("MenuLobby")
@@ -9053,7 +9050,7 @@ elseif menu.game == "pf" then --!SECTION
 						local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 						
 						-- local minY = math.abs(bottom.y - top.y)
-						-- local sizeX = math.ceil(math.max(math.clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
+						-- local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
 						-- local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 						
 						-- local boxSize = Vector2.new(sizeX, sizeY)
@@ -9123,9 +9120,9 @@ elseif menu.game == "pf" then --!SECTION
 										
 										local tb = hptext.TextBounds
 										
-										-- math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y, boxSize.y - tb.y )
-										hptext.Position = boxPosition + Vector2.new(-tb.x - 7, math.clamp(ySizeBar + boxSize.y - tb.y * 0.5, -4, boxSize.y - 10))
-										--hptext.Position = Vector2.new(boxPosition.x - 7 - tb.x, boxPosition.y + math.clamp(boxSize.y + ySizeBar - 8, -4, boxSize.y - 10))
+										-- clamp(ySizeBar + boxSize.y - tb.y * 0.5, -tb.y, boxSize.y - tb.y )
+										hptext.Position = boxPosition + Vector2.new(-tb.x - 7, clamp(ySizeBar + boxSize.y - tb.y * 0.5, -4, boxSize.y - 10))
+										--hptext.Position = Vector2.new(boxPosition.x - 7 - tb.x, boxPosition.y + clamp(boxSize.y + ySizeBar - 8, -4, boxSize.y - 10))
 										hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", "color", true)
 										hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 
@@ -9133,7 +9130,7 @@ elseif menu.game == "pf" then --!SECTION
 										if menu:GetVal("Visuals", "Player ESP", "Health Number") then
 											allesp.hptext[i].Text = tostring(health)
 											local textsize = allesp.hptext[i].TextBounds
-											allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + math.clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
+											allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
 											allesp.hptext[i].Visible = true
 										end
 										]]
