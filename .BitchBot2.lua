@@ -212,6 +212,7 @@ do
 			if k <= math.ceil(length/10) or note.fading then
 				note:Fade(k, length, dt)
 			end
+
 		end
 	end)
 	--ANCHOR how to create notification
@@ -8222,9 +8223,9 @@ local wepesp = allesp[7]
 				NETWORK_SETTINGS.IncomingReplicationLag = 0
 			end
 			
-			local rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
-			local rootpart = client.fakebodyroot or rootpart
-			local humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
+			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.HumanoidRootPart
+			rootpart = client.fakebodyroot or rootpart
+			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
 			if rootpart and humanoid then
 				if not CHAT_BOX.Active then
 					misc:SpeedHack()
@@ -12007,7 +12008,7 @@ end
 
 do
 	local wm = menu.watermark
-	wm.textString = " | username | " .. os.date("%b. %d, %Y")
+	wm.textString = " | nata | " .. os.date("%b. %d, %Y")
 	wm.pos = Vector2.new(50, 9)
 	wm.text = {}
 	local fulltext = menu.options["Settings"]["Cheat Settings"]["MenuName"][1] .. wm.textString 
