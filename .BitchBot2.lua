@@ -197,7 +197,8 @@ do
 	renderStepped = game.RunService.RenderStepped:Connect(function(dt)
 		Camera = workspace.CurrentCamera
 		local smallest = math.huge
-		for k, v in pairs(notes) do
+		for k = 1, #notes do
+			local v = notes[k]
 			if v.enabled then
 				smallest = k < smallest and k or smallest
 			else
@@ -205,7 +206,7 @@ do
 			end
 		end
 		local length = #notes
-		for k, note in pairs(notes) do
+		for k, v in next, notes do
 			note:Update(k, length, dt)
 			if k <= math.ceil(length/10) or note.fading then
 				note:Fade(k, length, dt)
@@ -3816,7 +3817,7 @@ function menu.Initialize(menutable)
 				if menu:GetVal("Settings", "Cheat Settings", "Custom Menu Name") then
 					bbmenu[27].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1]
 
-					menu.watermark.text[1].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1].. menu.watermark.textString
+					menu.watermark.text[1].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1] .. menu.watermark.textString
 
 					for i, v in ipairs(menu.watermark.rect) do
 						v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
@@ -4325,7 +4326,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							extra = {
 								type = "single colorpicker",
 								name = "Aimbot Target",
-								color = {255, 0, 0, 255}
+								color = {255, 150, 0, 255}
 							}
 						},
 						{
@@ -7935,7 +7936,7 @@ local wepesp = allesp[7]
 				end
 				
 				if mods_enabled then
-					--[[do --firerate
+					do --firerate
 						if gun.variablefirerate then
 							for k, v in pairs(gun.firerate) do
 								v *= firerate_scale
@@ -7943,7 +7944,7 @@ local wepesp = allesp[7]
 						elseif gun.firerate then
 							gun.firerate *= firerate_scale
 						end
-					end]]
+					end
 					if fully_auto and gun.firemodes then
 						gun.firemodes = {true, 3, 1}
 					end
@@ -8622,7 +8623,7 @@ local wepesp = allesp[7]
 						if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
 							local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 							legitbot.target = player
-							local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") * 5 + 2
+							local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") * 5 + 10
 							if targetPart then
 								if closest < fov and closest > dzFov then
 									legitbot:AimAtTarget(targetPart, smoothing)
@@ -11823,10 +11824,10 @@ local wepesp = allesp[7]
 		local function updateplist()
 			if not menu then return end
 			local playerlistval = menu:GetVal("Settings", "Player List", "Players")
-			local players = {}
+			local players = table.create(Players.MaxPlayers)
 			
 			for i, team in pairs(TEAMS:GetTeams()) do
-				local sorted_players = {}
+				local sorted_players = table.create(#players)
 				for i1, player in pairs(team:GetPlayers()) do
 					table.insert(sorted_players, player.Name)
 				end
@@ -11835,7 +11836,7 @@ local wepesp = allesp[7]
 					table.insert(players, Players:FindFirstChild(player_name))
 				end
 			end
-			local templist = {}
+			local templist = table.create(#players)
 			for k, v in ipairs(players) do
 				local plyrname = {v.Name, RGB(255, 255, 255)}
 				local teamtext = {"None", RGB(255, 255, 255)}
@@ -12008,7 +12009,7 @@ do
 	wm.textString = " | username | " .. os.date("%b. %d, %Y")
 	wm.pos = Vector2.new(50, 9)
 	wm.text = {}
-	local fulltext = "Bitch Bot".. wm.textString 
+	local fulltext = menu.options["Settings"]["Cheat Settings"]["MenuName"][1] .. wm.textString 
 	wm.width = (#fulltext) * 7 + 10
 	wm.height = 19
 	wm.rect = {}
