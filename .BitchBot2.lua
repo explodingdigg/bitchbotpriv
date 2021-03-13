@@ -199,7 +199,7 @@ do
 		local smallest = math.huge
 		for k = 1, #notes do
 			local v = notes[k]
-			if v.enabled then
+			if v and v.enabled then
 				smallest = k < smallest and k or smallest
 			else
 				table.remove(notes, k)
@@ -1488,7 +1488,7 @@ function menu.Initialize(menutable)
 		end
 		Draw:MenuFilledRect(true, 2, 25, menu.w - 4, menu.h - 27, {35, 35, 35, 255}, bbmenu)
 		
-		Draw:MenuBigText("Bitch Bot", true, false, 6, 6, bbmenu)
+		Draw:MenuBigText(MenuName or "Bitch Bot", true, false, 6, 6, bbmenu)
 		
 		Draw:MenuOutlinedRect(true, 8, 22, menu.w - 16, menu.h - 30, {0, 0, 0, 255}, bbmenu)    -- all this shit does the 2nd gradent
 		Draw:MenuOutlinedRect(true, 9, 23, menu.w - 18, menu.h - 32, {20, 20, 20, 255}, bbmenu)
@@ -9372,18 +9372,18 @@ local wepesp = allesp[7]
 							end
 							
 							if menu:GetVal("Visuals", "Dropped ESP", "Weapon Name") then
-								wepesp.name[gunnum].Text = v.Gun.Value
-								wepesp.name[gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color", true)
-								wepesp.name[gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
-								wepesp.name[gunnum].Visible = true
-								wepesp.name[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
+								wepesp[1][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color", true)
+								wepesp[1][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
+								wepesp[1][gunnum].Text = v.Gun.Value
+								wepesp[1][gunnum].Visible = true
+								wepesp[1][gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
 							end
 							if menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
-								wepesp.ammo[gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
-								wepesp.ammo[gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color", true)
-								wepesp.ammo[gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
-								wepesp.ammo[gunnum].Visible = true
-								wepesp.ammo[gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
+								wepesp[2][gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
+								wepesp[2][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color", true)
+								wepesp[2][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
+								wepesp[2][gunnum].Visible = true
+								wepesp[2][gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
 							end
 						end
 					end
