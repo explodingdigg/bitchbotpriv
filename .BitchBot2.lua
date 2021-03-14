@@ -222,8 +222,8 @@ end
 menu = { -- this is for menu stuffs n shi
 	w = 500,
 	h = 600,
-	x = 200,
-	y = 300,
+	x = 0,
+	y = 0,
 	columns = {
 		width = 230,
 		left = 17,
@@ -267,7 +267,11 @@ menu = { -- this is for menu stuffs n shi
 		shift = {
 			direction = nil
 		}
-	}
+	},
+	modkeydown = function(useless_variable, key, direction)
+		local keydata = self.modkeys[key]
+		return keydata.direction and keydata.direction == direction or false
+	end
 }
 
 local function round(num, numDecimalPlaces)
@@ -284,7 +288,7 @@ local function average(t)
 end
 
 
-clamp = function(a, lowerNum, higher) -- DONT REMOVE this clamp is better then roblox's because it doesnt error when its not lower or heigher
+function clamp(a, lowerNum, higher) -- DONT REMOVE this clamp is better then roblox's because it doesnt error when its not lower or heigher
 	if a > higher then
 		return higher
 	elseif a < lowerNum then
@@ -292,11 +296,6 @@ clamp = function(a, lowerNum, higher) -- DONT REMOVE this clamp is better then r
 	else
 		return a
 	end
-end
-
-function menu:modkeydown(key, direction)
-	local keydata = self.modkeys[key]
-	return keydata.direction and keydata.direction == direction or false
 end
 
 function CreateThread(func, ...) -- improved... yay.
@@ -515,7 +514,6 @@ end
 loadstart = tick()
 
 -- nate i miss u D:
-
 -- im back
 local NETWORK = game:service("NetworkClient")
 local NETWORK_SETTINGS = settings().Network
@@ -2101,10 +2099,10 @@ function menu.Initialize(menutable)
 		end
 		
 		if visible then
-			cp.x = x
-			cp.y = y
+			cp.x = clamp(x, 0, SCREEN_SIZE.x-cp.w)
+			cp.y = clamp(y, 0, SCREEN_SIZE.y-cp.y)
 			for k, v in pairs(cp.postable) do
-				v[1].Position = Vector2.new(x + v[2], y + v[3])
+				v[1].Position = Vector2.new(cp.x + v[2], cp.y + v[3])
 			end
 			
 			local tempclr = RGB(color[1], color[2], color[3])
@@ -8148,7 +8146,7 @@ local wepesp = allesp[7]
 			
 			if keybindtoggles.flyhack then return end
 			local type = menu:GetVal("Misc", "Movement", "Speed Type")
-			if menu:GetVal("Misc", "Movement", "Speed Hack") then
+			if menu:GetVal("Misc", "Movement", "Speed") then
 				local speed = menu:GetVal("Misc", "Movement", "Speed Factor")
 				
 				local travel = CACHED_VEC3
@@ -8178,7 +8176,7 @@ local wepesp = allesp[7]
 						return
 					end
 
-					if IsKeybindDown("Misc", "Movement", "Speed Hack", true) then
+					if IsKeybindDown("Misc", "Movement", "Speed", true) then
 						if type == 1 then
 							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
 						else
@@ -10239,7 +10237,7 @@ local wepesp = allesp[7]
 			if client.fakecharacter then
 				client.fakecharacter = false
 				--client.replication.removecharacterhash(client.fakeplayer)
-				for k,v in next, client.fake3pchar:GetChildren() do
+				for k, v in next, client.fake3pchar:GetChildren() do
 					if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
 						v.Transparency = 1
 					end
@@ -10247,6 +10245,9 @@ local wepesp = allesp[7]
 						for k,v in next, v:GetChildren() do
 							v.Transparency = 1
 						end
+					end
+					if v:FindFirstChild("Face") then
+						v.Face:Destroy()
 					end
 				end
 			end
@@ -11379,13 +11380,12 @@ local wepesp = allesp[7]
 						},
 						{
 							type = "toggle",
-							name = "Speed Hack",
+							name = "Speed",
 							value = false,
 							unsafe = true,
 							extra = {
 								type = "keybind",
-								key = Enum.KeyCode.N
-							}
+							},
 						},
 						{
 							type = "dropbox",
@@ -11408,7 +11408,7 @@ local wepesp = allesp[7]
 							extra = {
 								type = "keybind"
 							},
-							tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed Hack."
+							tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed."
 						},
 						{
 							type = "toggle",
