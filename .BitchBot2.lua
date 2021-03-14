@@ -673,6 +673,7 @@ local TogglePressed = Instance.new("BindableEvent") ]]
 
 local ButtonPressed = event.new("bb_buttonpressed")
 local TogglePressed = event.new("bb_togglepressed")
+local MouseMoved = event.new("bb_mousemoved")
 
 --local PATHFINDING = game:GetService("PathfindingService")
 local GRAVITY = Vector3.new(0, -192.6, 0)
@@ -2217,14 +2218,16 @@ function menu.Initialize(menutable)
 	Draw:Triangle(true, true, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {127, 72, 163, 255}, bbmouse)
 	table.insert(menu.clrs.norm, bbmouse[#bbmouse])
 	Draw:Triangle(true, false, {mousie.x, mousie.y}, {mousie.x, mousie.y + 15}, {mousie.x + 10, mousie.y + 10}, {0, 0, 0, 255}, bbmouse)
-	
+	local lastMousePos = Vector2.new()
 	function menu:set_mouse_pos(x, y)
+		FireEvent("bb_mousemoved", lastMousePos ~= Vector2.new(x,y) )
 		for k = 1, #bbmouse do
 			local v = bbmouse[k]
 			v.PointA = Vector2.new(x, y + 36)
 			v.PointB = Vector2.new(x, y + 36 + 15)
 			v.PointC = Vector2.new(x + 10, y + 46)
 		end
+		lastMousePos = Vector2.new(x, y)
 	end
 	
 	function menu:set_menu_clr(r, g, b)
@@ -3508,6 +3511,11 @@ function menu.Initialize(menutable)
 	menu:set_menu_visibility(false)
 	menu.lastActive = true
 	menu.open = false
+	menu.windowactive = true
+	menu.connections.mousemoved = MouseMoved:connect(function(b)
+		menu.windowactive = iswindowactive() or b
+	end)
+
 	local function renderSteppedMenu(fdt)
 		if menu.unloaded then
 			return
@@ -3519,11 +3527,11 @@ function menu.Initialize(menutable)
 		-- im keepin all of our comments they're fun to look at
 		-- i wish it showed comment dates that would be cool
 		-- nah that would suck fk u (comment made on 3/4/2021 3:35 pm est by bitch)
-		local windowactive = iswindowactive()
-		if lastActive ~= windowactive then
-			setfpscap(windowactive and 999 or 15)
+		
+		if menu.lastActive ~= menu.windowactive then
+			setfpscap(menu.windowactive and 999 or 15)
 		end
-		lastActive = windowactive
+		menu.lastActive = menu.windowactive
 		for button, time in next, buttonsInQue do
 			if tick() - time < doubleclickDelay then
 				button[4].text.Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
@@ -7315,7 +7323,7 @@ local wepesp = allesp[7]
 				end
 			end
 			
-			if client.char.alive and menu:GetVal("Rage", "Aimbot", "Enabled") then
+			if client.char.alive and menu:GetVal("Rage", "Aimbot", "Enabled") and IsKeybindDown("Rage", "Aimbot", "Enabled", true) then
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					
 					if ragebot:LogicAllowed() then
@@ -8927,7 +8935,7 @@ local wepesp = allesp[7]
 			if not P.thirdperson then
 				if menu:GetVal("Legit", "Bullet Redirection", "Silent Aim") and legitbot.silentVector then
 					P.velocity = legitbot.silentVector.Unit * mag
-				elseif menu:GetVal("Rage", "Aimbot", "Enabled") and ragebot.silentVector then
+				elseif menu:GetVal("Rage", "Aimbot", "Enabled") and IsKeybindDown("Rage", "Aimbot", "Enabled", true) and ragebot.silentVector then
 					local oldpos = P.position
 					P.position = ragebot.firepos
 					P.velocity = ragebot.silentVector.Unit * mag
