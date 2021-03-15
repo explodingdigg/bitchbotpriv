@@ -218,16 +218,16 @@ do
 	--ANCHOR how to create notification
 	--CreateNotification("Loading...")
 end
-
+local menuWidth, menuHeight = 500, 600
 menu = { -- this is for menu stuffs n shi
-	w = 500,
-	h = 600,
+	w = menuWidth,
+	h = menuHeight,
 	x = 0,
 	y = 0,
 	columns = {
-		width = 230,
+		width = (menuWidth-40)/2,
 		left = 17,
-		right = 253
+		right = (menuWidth-20)/2+13,
 	},
 	activetab = 1,
 	open = true,
@@ -271,7 +271,8 @@ menu = { -- this is for menu stuffs n shi
 	modkeydown = function(useless_variable, key, direction)
 		local keydata = self.modkeys[key]
 		return keydata.direction and keydata.direction == direction or false
-	end
+	end,
+	keybinds = {}
 }
 
 local function round(num, numDecimalPlaces)
@@ -1299,11 +1300,11 @@ do
 		return temptable
 	end
 	
-	function Draw:List(name, x, y, length, maxamount, colums, tab)
+	function Draw:List(name, x, y, length, maxamount, columns, tab)
 		local temptable = {uparrow = {}, downarrow = {}, liststuff = {rows = {}, words = {}}}
 		
 		for i, v in ipairs(name) do
-			Draw:MenuBigText(v, true, false, (math.floor(length/colums) * i) - math.floor(length/colums) + 30, y - 3, tab)
+			Draw:MenuBigText(v, true, false, (math.floor(length/columns) * i) - math.floor(length/columns) + 30, y - 3, tab)
 		end
 		
 		Draw:MenuOutlinedRect(true, x, y + 12, length, 22 * maxamount + 4, {30, 30, 30, 255}, tab)
@@ -1337,17 +1338,17 @@ do
 				table.insert(temptable.liststuff.rows[i], tab[#tab])
 			end
 			
-			if colums ~= nil then
-				for i1 = 1, colums - 1 do
-					Draw:MenuOutlinedRect(true, x + math.floor(length/colums) * i1, (y + 13) + (22 * i) - 18 , 2, 16, {20, 20, 20, 255}, tab)
+			if columns ~= nil then
+				for i1 = 1, columns - 1 do
+					Draw:MenuOutlinedRect(true, x + math.floor(length/columns) * i1, (y + 13) + (22 * i) - 18 , 2, 16, {20, 20, 20, 255}, tab)
 					table.insert(temptable.liststuff.rows[i], tab[#tab])
 				end
 			end
 			
 			temptable.liststuff.words[i] = {}
-			if colums ~= nil then
-				for i1 = 1, colums do
-					Draw:MenuBigText("", true, false, (x + math.floor(length/colums) * i1) - math.floor(length/colums) + 5 , (y + 13) + (22 * i) - 16, tab)
+			if columns ~= nil then
+				for i1 = 1, columns do
+					Draw:MenuBigText("", true, false, (x + math.floor(length/columns) * i1) - math.floor(length/columns) + 5 , (y + 13) + (22 * i) - 16, tab)
 					table.insert(temptable.liststuff.words[i], tab[#tab])
 				end
 			else
@@ -1532,12 +1533,12 @@ function menu.Initialize(menutable)
 		if v.content ~= nil then
 			for k1, v1 in pairs(v.content) do
 				if v1.autopos ~= nil then
-					v1.width = 230
+					v1.width = menu.columns.width
 					if v1.autopos == "left" then
-						v1.x = 17
+						v1.x = menu.columns.left
 						v1.y = y_offies.left
 					elseif v1.autopos == "right" then
-						v1.x = 253
+						v1.x = menu.columns.right
 						v1.y = y_offies.right
 					end
 				end
@@ -1591,6 +1592,7 @@ function menu.Initialize(menutable)
 										menu.options[v.name][g_name][v2.name][5][4] = Draw:Keybind(v2.extra.key, v1.x + v1.width - 52, y_pos + v1.y - 2, tabz[k])
 										menu.options[v.name][g_name][v2.name][5][1] = v2.extra.key
 										menu.options[v.name][g_name][v2.name][5][2] = v2.extra.type
+										menu.keybinds[string.format("%s,%s,%s", v.name, g_name, v2.name)] = v2.extra.keybindtype
 										menu.options[v.name][g_name][v2.name][5][3] = {v1.x + v1.width - 52, y_pos + v1.y - 2}
 										menu.options[v.name][g_name][v2.name][5][5] = false
 									elseif v2.extra.type == "single colorpicker" then
@@ -1681,13 +1683,13 @@ function menu.Initialize(menutable)
 								y_pos += 28
 							elseif v2.type == "list" then
 								menu.options[v.name][g_name][v2.name] = {}
-								menu.options[v.name][g_name][v2.name][4] = Draw:List(v2.multiname, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
+								menu.options[v.name][g_name][v2.name][4] = Draw:List(v2.multiname, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.columns, tabz[k])
 								menu.options[v.name][g_name][v2.name][1] = nil
 								menu.options[v.name][g_name][v2.name][2] = v2.type
 								menu.options[v.name][g_name][v2.name][3] = 1
 								menu.options[v.name][g_name][v2.name][5] = {}
 								menu.options[v.name][g_name][v2.name][6] = v2.size
-								menu.options[v.name][g_name][v2.name][7] = v2.colums
+								menu.options[v.name][g_name][v2.name][7] = v2.columns
 								menu.options[v.name][g_name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
 								y_pos += 22 + (22 * v2.size)
 							elseif v2.type == "image" then
@@ -3338,13 +3340,13 @@ function menu.Initialize(menutable)
 								elseif v2[2] == "list" then
 									--[[
 									menu.options[v.name][v1.name][v2.name] = {}
-									menu.options[v.name][v1.name][v2.name][4] = Draw:List(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.colums, tabz[k])
+									menu.options[v.name][v1.name][v2.name][4] = Draw:List(v2.name, v1.x + 8, v1.y + y_pos, v1.width - 16, v2.size, v2.columns, tabz[k])
 									menu.options[v.name][v1.name][v2.name][1] = nil
 									menu.options[v.name][v1.name][v2.name][2] = v2.type
 									menu.options[v.name][v1.name][v2.name][3] = 1
 									menu.options[v.name][v1.name][v2.name][5] = {}
 									menu.options[v.name][v1.name][v2.name][6] = v2.size
-									menu.options[v.name][v1.name][v2.name][7] = v2.colums
+									menu.options[v.name][v1.name][v2.name][7] = v2.columns
 									menu.options[v.name][v1.name][v2.name][8] = {v1.x + 8, v1.y + y_pos, v1.width - 16}
 									]]--
 									if #v2[5] > v2[6] then
@@ -4486,7 +4488,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					name = "Player List",
 					x = menu.columns.left,
 					y = 66,
-					width = 466,
+					width = 0, -- this does nothing?
 					height = 328,
 					content = {
 						{
@@ -4494,7 +4496,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							name = "Players",
 							multiname = {"Name", "Team", "Status"},
 							size = 9,
-							colums = 3
+							columns = 3
 						},
 						{
 							type = "image",
@@ -11707,7 +11709,7 @@ local wepesp = allesp[7]
 							name = "Players",
 							multiname = {"Name", "Team", "Status"},
 							size = 9,
-							colums = 3
+							columns = 3
 						},
 						{
 							type = "image",
