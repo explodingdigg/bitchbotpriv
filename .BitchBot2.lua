@@ -280,6 +280,7 @@ local function round(num, numDecimalPlaces)
 	return math.floor(num * mult + 0.5) / mult
 end
 
+
 local function average(t)
 	local sum = 0
 		for _,v in pairs(t) do -- Get the sum of all numbers in t
@@ -4488,7 +4489,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					name = "Player List",
 					x = menu.columns.left,
 					y = 66,
-					width = 0, -- this does nothing?
+					width = menuWidth-34, -- this does nothing?
 					height = 328,
 					content = {
 						{
@@ -11701,7 +11702,7 @@ local wepesp = allesp[7]
 					name = "Player List",
 					x = menu.columns.left,
 					y = 66,
-					width = 466,
+					width = menuWidth-34,
 					height = 328,
 					content = {
 						{
