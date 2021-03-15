@@ -3592,8 +3592,8 @@ function menu.Initialize(menutable)
 				end
 			end
 		end
+		menu:set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
 		if menu.open or menu.fading then
-			menu:set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
 			set_plusminus(0, 20, 20)
 			for k, v in pairs(menu.options) do
 				if menu.tabnames[menu.activetab] == k then
