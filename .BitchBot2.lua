@@ -2103,8 +2103,8 @@ function menu.Initialize(menutable)
 		end
 		
 		if visible then
-			cp.x = clamp(x, 0, SCREEN_SIZE.x-cp.w)
-			cp.y = clamp(y, 0, SCREEN_SIZE.y-cp.y)
+			cp.x = clamp(x, 0, SCREEN_SIZE.x - cp.w)
+			cp.y = clamp(y, 0, SCREEN_SIZE.y - cp.h)
 			for k, v in pairs(cp.postable) do
 				v[1].Position = Vector2.new(cp.x + v[2], cp.y + v[3])
 			end
@@ -4281,6 +4281,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 								color = {255, 255, 255, 255}
 							}
 						},
+						
 						{
 							type = "dropbox",
 							name = "Crosshair Position",
@@ -5025,7 +5026,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
 		
 		pcall(SpeedHack) -- ?????
-		pcall(FlyHack)
+		print(pcall(FlyHack))
 		pcall(Aimbot)
 		
 		if menu.open then
@@ -5249,6 +5250,13 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	end)
 	
 elseif menu.game == "pf" then --!SECTION
+	menu.crosshair = {outline = {}, inner = {}}
+	for i, v in pairs(menu.crosshair) do
+		for i = 1, 2 do
+			Draw:FilledRect(false, 20, 20, 20, 20, {10, 10, 10, 215}, v)
+		end
+	end
+	
 	menu.activetab = 5
 	menu.annoylist = table.create(game.Players.MaxPlayers - 1)
 
@@ -6675,6 +6683,7 @@ local wepesp = allesp[7]
 	do--ANCHOR ragebot definitions
 		ragebot.sprint = true
 		ragebot.shooting = false
+		ragebot.spin = 0
 		do
 			local function GetPartTable(ply)
 				local tbl = {}
@@ -6721,7 +6730,7 @@ local wepesp = allesp[7]
 		local bulletcheckresolution = 0.03333333333333333
 		
 		function ragebot.bulletcheck(origin, dest, velocity, acceleration, penetration, whitelist) -- reversed
-			local ignorelist = { workspace.Terrain, workspace.Players, workspace.Ignore, workspace.CurrentCamera }
+			local ignorelist = {workspace.Terrain, workspace.Players, workspace.Ignore, workspace.CurrentCamera}
 			local bullettime = 0
 			local exited = false
 			local penetrated = true
@@ -9182,7 +9191,7 @@ local wepesp = allesp[7]
 									
 									--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. ply.Name)
 									
-									local charWeapon = _3pweps[Player]
+									local charWeapon = _3pweps[ply]
 									local wepname = charWeapon and charWeapon or "???"
 									
 									if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
@@ -9609,7 +9618,39 @@ local wepesp = allesp[7]
 					end
 				end
 			end
-			
+			if client.logic.currentgun and client.logic.currentgun.barrel then
+				local customCross = menu:GetVal("Visuals", "Misc", "Laser Pointer")
+				menu.crosshair.outline[1].Visible = customCross
+				menu.crosshair.outline[2].Visible = customCross
+				menu.crosshair.inner[1].Visible = customCross
+				menu.crosshair.inner[2].Visible = customCross
+				if not customCross then return end
+				local ignore = {workspace.Ignore, Camera}
+				local barrel = client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart or client.logic.currentgun.barrel
+				local hit, hitpos = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.Position, barrel.CFrame.LookVector * 100), ignore)
+				local size = 3
+				local color = menu:GetVal("Visuals", "Misc", "Laser Pointer", "color", true)
+				menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
+				menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
+				
+				menu.crosshair.inner[1].Color = color
+				menu.crosshair.inner[2].Color = color
+				
+				menu.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
+				menu.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
+				local hit2d = Camera:WorldToViewportPoint(hitpos)
+
+				menu.crosshair.inner[1].Position = Vector2.new(hit2d.x - size, hit2d.y)
+				menu.crosshair.inner[2].Position = Vector2.new(hit2d.x, hit2d.y - size)
+				
+				menu.crosshair.outline[1].Position = Vector2.new(hit2d.x - size - 1, hit2d.y - 1)
+				menu.crosshair.outline[2].Position = Vector2.new(hit2d.x - 1, hit2d.y - 1 - size)
+			else
+				menu.crosshair.outline[1].Visible = false
+				menu.crosshair.outline[2].Visible = false
+				menu.crosshair.inner[1].Visible = false
+				menu.crosshair.inner[2].Visible = false
+			end
 			
 			--debug.profileend("renderVisuals Local Visuals")
 			
@@ -10994,7 +11035,7 @@ local wepesp = allesp[7]
 								value = false,
 								extra = {
 									type = "double colorpicker",
-									name = {"Weapon Color", "Lazer Color"},
+									name = {"Weapon Color", "Laser Color"},
 									color = {{106, 136, 213, 255}, {181, 179, 253, 255}}
 								}
 							},
@@ -11237,6 +11278,16 @@ local wepesp = allesp[7]
 									type = "double colorpicker",
 									name = {"Inline", "Outline"},
 									color = {{127, 72, 163}, {25, 25, 25}}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Laser Pointer",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Crosshair Color",
+									color = {255, 255, 255, 255}
 								}
 							},
 							{
