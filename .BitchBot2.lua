@@ -268,7 +268,7 @@ menu = { -- this is for menu stuffs n shi
 			direction = nil
 		}
 	},
-	modkeydown = function(useless_variable, key, direction)
+	modkeydown = function(self, key, direction)
 		local keydata = self.modkeys[key]
 		return keydata.direction and keydata.direction == direction or false
 	end,
@@ -9628,7 +9628,7 @@ local wepesp = allesp[7]
 				local ignore = {workspace.Ignore, Camera}
 				local barrel = client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart or client.logic.currentgun.barrel
 				local hit, hitpos = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.Position, barrel.CFrame.LookVector * 100), ignore)
-				local size = 3
+				local size = 6
 				local color = menu:GetVal("Visuals", "Misc", "Laser Pointer", "color", true)
 				menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
 				menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
