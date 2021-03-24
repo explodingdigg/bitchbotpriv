@@ -9371,37 +9371,38 @@ local wepesp = allesp[7]
 					if v.Name == "Dropped" then
 						local gunpos = v.Slot1.Position
 						local gun_dist = (gunpos - client.cam.cframe.p).Magnitude
-						if gun_dist > 80 then return end
-						local hasgun = false
-						local gunpos2d, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(gunpos)
-						for k1, v1 in pairs(v:GetChildren()) do
-							if tostring(v1) == "Gun" then
-								hasgun = true
-								break
-							end
-						end
-						
-						if gun_on_screen and gunnum <= 50 and hasgun then
-							gunnum = gunnum + 1
-							local gunclearness = 1
-							if gun_dist >= 50 then
-								local closedist = gun_dist - 50
-								gunclearness = 1 - (1 * closedist/30)
+						if gun_dist < 80 then 
+							local hasgun = false
+							local gunpos2d, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(gunpos)
+							for k1, v1 in pairs(v:GetChildren()) do
+								if tostring(v1) == "Gun" then
+									hasgun = true
+									break
+								end
 							end
 							
-							if menu:GetVal("Visuals", "Dropped ESP", "Weapon Name") then
-								wepesp[1][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color", true)
-								wepesp[1][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
-								wepesp[1][gunnum].Text = v.Gun.Value
-								wepesp[1][gunnum].Visible = true
-								wepesp[1][gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
-							end
-							if menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
-								wepesp[2][gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
-								wepesp[2][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color", true)
-								wepesp[2][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
-								wepesp[2][gunnum].Visible = true
-								wepesp[2][gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
+							if gun_on_screen and gunnum <= 50 and hasgun then
+								gunnum = gunnum + 1
+								local gunclearness = 1
+								if gun_dist >= 50 then
+									local closedist = gun_dist - 50
+									gunclearness = 1 - (1 * closedist/30)
+								end
+								
+								if menu:GetVal("Visuals", "Dropped ESP", "Weapon Name") then
+									wepesp[1][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color", true)
+									wepesp[1][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
+									wepesp[1][gunnum].Text = v.Gun.Value
+									wepesp[1][gunnum].Visible = true
+									wepesp[1][gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
+								end
+								if menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
+									wepesp[2][gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
+									wepesp[2][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color", true)
+									wepesp[2][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
+									wepesp[2][gunnum].Visible = true
+									wepesp[2][gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
+								end
 							end
 						end
 					end
@@ -9513,9 +9514,9 @@ local wepesp = allesp[7]
 							tranz = 1 - (1 * closedist/30)
 						end
 						
-								for j = 1, #nade_esp do
-									nade_esp[j].Transparency = tranz
-								end
+						for j = 1, #nade_esp do
+							nade_esp[j].Transparency = tranz
+						end
 						
 					end
 					
@@ -9565,7 +9566,6 @@ local wepesp = allesp[7]
 				for k, v in pairs(vm) do
 					if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
 						for k1, v1 in pairs(v:GetChildren()) do
-							
 							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
 							
 							if v1.Transparency ~= 1 then
@@ -11286,7 +11286,7 @@ local wepesp = allesp[7]
 								value = false,
 								extra = {
 									type = "single colorpicker",
-									name = "Crosshair Color",
+									name = "Laser Pointer Color",
 									color = {255, 255, 255, 255}
 								}
 							},
