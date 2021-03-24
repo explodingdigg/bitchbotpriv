@@ -9087,23 +9087,36 @@ local wepesp = allesp[7]
 						
 						
 						if (topIsRendered or bottomIsRendered) then
-								if menu.options["Visuals"][GroupBox]["Name"][1] then
-									
-									--debug.profilebegin("renderVisuals Player ESP Render Name " .. ply.Name)
-									
-									local name = ply.Name
+							local nameon = menu.options["Visuals"][GroupBox]["Name"][1]
+							local rankon = menu.options["Visuals"][GroupBox]["Rank"][1]
+							if nameon or rankon then
+
+								
+								--debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
+								local namestring = ""
+								
+								if rankon then 
+									local playerdata = teamdata[1]:FindFirstChild(ply.Name) or teamdata[2]:FindFirstChild(ply.Name)
+									namestring = "[".. playerdata.Rank.Text.. "]"
+								end
+								if nameon then
+									local name = tostring(ply.Name)
 									if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
 										name = string.lower(name)
 									elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
 										name = string.upper(name)
 									end
-									
-									allesp[4][1][curplayer].Text = string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
-									allesp[4][1][curplayer].Visible = true
-									allesp[4][1][curplayer].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
-									
-									--debug.profileend("renderVisuals Player ESP Render Name " .. ply.Name)
-									
+
+									if rankon then
+										namestring = namestring.. " ".. string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
+									else
+										namestring = string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
+									end
+								end
+								
+								allesp[4][1][curplayer].Text = namestring
+								allesp[4][1][curplayer].Visible = true
+								allesp[4][1][curplayer].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
 							end
 							
 							if menu.options["Visuals"][GroupBox]["Box"][1] then
