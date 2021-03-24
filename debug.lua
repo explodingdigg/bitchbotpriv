@@ -1,4 +1,4 @@
 getgenv().BBOT = {
-    username = "bitch",
-    check = syn.crypt.derive("bitch", 32)
+    username = "dev",
+    check = syn.crypt.derive("dev", 32)
 }
