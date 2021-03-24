@@ -221,7 +221,7 @@ do
 end
 
 --validity check
-SX_CRASH = SX_CRASH or function()error('crash');end
+--SX_CRASH = SX_CRASH or function()error('crash');end
 
 if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
@@ -4706,7 +4706,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			
 			if textonly == nil then
 				plistinfo[2].Data = BBOT_IMAGES[5]
-				plistinfo[2].Data = game:HttpGet(Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100))
+				plistinfo[2].Data = game:HttpGet(string.format('https://www.roblox.com/headshot-thumbnail/image?userId=%s&width=100&height=100&format=png', player.UserId))
 			end
 		else
 			plistinfo[2].Data = BBOT_IMAGES[5]
@@ -5033,7 +5033,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()
 		
 		pcall(SpeedHack) -- ?????
-		print(pcall(FlyHack))
+		pcall(FlyHack)
 		pcall(Aimbot)
 		
 		if menu.open then
@@ -11985,7 +11985,8 @@ K/D: %d/%d
 				]], player.Name, tostring(playerhealth), playerrank, kills, deaths)
 				if textonly == nil then
 					plistinfo[2].Data = BBOT_IMAGES[5]
-					plistinfo[2].Data = game:HttpGet(Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100))
+
+					plistinfo[2].Data = game:HttpGet(string.format('https://www.roblox.com/headshot-thumbnail/image?userId=%s&width=100&height=100&format=png', player.UserId))
 				end
 			else
 				plistinfo[2].Data = BBOT_IMAGES[5]
