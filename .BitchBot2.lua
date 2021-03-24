@@ -64,6 +64,7 @@ do
 	end
 	
 	
+
 	function CreateNotification(t, customcolor) -- TODO i want some kind of prioritized message to the notification list, like a warning or something. warnings have icons too maybe? idk??
 		
 		local gap = 25
@@ -218,6 +219,10 @@ do
 	--ANCHOR how to create notification
 	--CreateNotification("Loading...")
 end
+
+--validity check
+if syn.crypt.derive(BBOT.username, 32) ~= BBOT.cehck then SX_CRASH() end
+
 local menuWidth, menuHeight = 500, 600
 menu = { -- this is for menu stuffs n shi
 	w = menuWidth,
@@ -12083,7 +12088,7 @@ end
 
 do
 	local wm = menu.watermark
-	wm.textString = " | nata | " .. os.date("%b. %d, %Y")
+	wm.textString = " | ".. BBOT.username .. " | " .. os.date("%b. %d, %Y")
 	wm.pos = Vector2.new(50, 9)
 	wm.text = {}
 	local fulltext = menu.options["Settings"]["Cheat Settings"]["MenuName"][1] .. wm.textString 
