@@ -221,7 +221,9 @@ do
 end
 
 --validity check
-if syn.crypt.derive(BBOT.username, 32) ~= BBOT.cehck then SX_CRASH() end
+SX_CRASH = SX_CRASH or function()error('crash');end
+
+if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
 local menuWidth, menuHeight = 500, 600
 menu = { -- this is for menu stuffs n shi
