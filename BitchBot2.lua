@@ -221,7 +221,7 @@ do
 end
 
 --validity check
---SX_CRASH = SX_CRASH or function()error('crash');end
+--SX_CRASH = SX_CRASH or function()error('crash');end -- this right here fucks up secure lua and 3ds doesnt wanna fix it
 
 if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
