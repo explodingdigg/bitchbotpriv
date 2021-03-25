@@ -9389,7 +9389,8 @@ local wepesp = allesp[7]
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
 					if not client then return end
 					if v.Name == "Dropped" then
-						local gunpos = v.Slot1.Position
+						local slot = v:WaitForChild("Slot1")
+						local gunpos = slot.Position
 						local gun_dist = (gunpos - client.cam.cframe.p).Magnitude
 						if gun_dist < 80 then 
 							local hasgun = false
