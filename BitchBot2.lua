@@ -221,7 +221,7 @@ do
 end
 
 --validity check
---SX_CRASH = SX_CRASH or function()error('crash');end -- this right here fucks up secure lua and 3ds doesnt wanna fix it
+
 
 if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
@@ -469,7 +469,7 @@ MultiThreadList({
 local loaded = {}
 do
 	local function Loopy_Image_Checky()
-		for i = 1, 5 do
+		for i = 1, 6 do
 			local v = BBOT_IMAGES[i]
 			if v == nil then
 				return true
