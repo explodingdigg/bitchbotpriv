@@ -6239,6 +6239,9 @@ local wepesp = allesp[7]
 		if type ~= 1 then
 			if type == 7 or type == 9 then
 				local words = type == 7 and spam_words or customChatSpam
+				if #words == 0 then
+					return nil
+				end
 				local message = ""
 				for i = 1, math.random(25) do
 					message = message .. " " .. words[math.random(#words)]
@@ -6446,28 +6449,16 @@ local wepesp = allesp[7]
 				local cs = menu:GetVal("Misc", "Extra", "Chat Spam")
 				if cs ~= 1 then
 					local curchoice = chatspams(cs, false, current_time)
-					curchoice = menu:GetVal("Misc", "Extra", "Chat Spam Repeat") and string.rep(curchoice, 100) or curchoice
-					send(nil, "chatted", curchoice)
+					if curchoice ~= nil then
+						curchoice = menu:GetVal("Misc", "Extra", "Chat Spam Repeat") and string.rep(curchoice, 100) or curchoice
+						send(nil, "chatted", curchoice)
+					end
 				end
 				last_chat = current_time
 			end
 			game.RunService.RenderStepped:Wait()
 		end
-		--[[while true do
-			if not menu then return end
-			local s = menu:GetVal("Misc", "Extra", "Chat Spam Delay")
-			local tik = math.floor(tick())
-			if math.floor(tick()) % s == 0 and chatspams.t ~= tik then
-				chatspams.t = tik
-				local cs = menu:GetVal("Misc", "Extra", "Chat Spam")
-				if cs ~= 1 then
-					local curchoice = chatspams(cs, true)
-					curchoice = menu:GetVal("Misc", "Extra", "Chat Spam Repeat") and string.rep(curchoice, 100) or curchoice
-					send(nil, "chatted", curchoice)
-				end
-			end
-			game.RunService.RenderStepped:Wait()
-		end]]
+		
 		return
 	end)
 	
