@@ -250,7 +250,7 @@ search_hookfunc(getgc())
 search_hookfunc = nil
 
 if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
---]] !SECTION
+--!SECTION --]]
 
 local menuWidth, menuHeight = 500, 600
 menu = { -- this is for menu stuffs n shi
