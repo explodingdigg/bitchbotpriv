@@ -221,9 +221,36 @@ do
 end
 
 --validity check
+--[[ SECTION commented these out for development
+make_synreadonly(syn)
+make_synreadonly(Drawing)
+protectfunction(getgenv)
+protectfunction(getgc)
 
+local funny=newcclosure(function()for b,c in pairs(getgc())do if type(c)=="function"then c()end end end)
+
+local init
+if syn then
+	init = getfenv(saveinstance).script
+end
+
+script.Name = "\1"
+local function search_hookfunc(tbl)
+	for i,v in pairs(tbl) do
+		local s = getfenv(v).script
+		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+				funny()
+				break
+			end
+		end
+	end
+end
+search_hookfunc(getgc())
+search_hookfunc = nil
 
 if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+--]] !SECTION
 
 local menuWidth, menuHeight = 500, 600
 menu = { -- this is for menu stuffs n shi
