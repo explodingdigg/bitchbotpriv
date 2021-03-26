@@ -9536,7 +9536,7 @@ local wepesp = allesp[7]
 						end
 						
 						for j = 1, #nade_esp do
-							nade_esp[j].Transparency = tranz
+							nade_esp[j][i].Transparency = tranz
 						end
 						
 					end
