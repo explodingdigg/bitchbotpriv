@@ -1,6 +1,5 @@
 make_synreadonly(syn)
 make_synreadonly(Drawing)
-protectfunction(Drawing.new)
 protectfunction(getgenv)
 protectfunction(getgc)
 local menu
