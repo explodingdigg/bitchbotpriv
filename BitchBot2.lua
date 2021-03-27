@@ -558,7 +558,7 @@ local NETWORK = game:service("NetworkClient")
 local NETWORK_SETTINGS = settings().Network
 NETWORK:SetOutgoingKBPSLimit(0)
 
-setfpscap(maxfps or 300)
+setfpscap(maxfps or 144)
 
 if not isfolder("bitchbot") then
 	makefolder("bitchbot")
@@ -3569,7 +3569,7 @@ function menu.Initialize(menutable)
 		-- nah that would suck fk u (comment made on 3/4/2021 3:35 pm est by bitch)
 		
 		if menu.lastActive ~= menu.windowactive then
-			setfpscap(menu.windowactive and (maxfps or 300) or 15)
+			setfpscap(menu.windowactive and (maxfps or 144) or 15)
 		end
 		menu.lastActive = menu.windowactive
 		for button, time in next, buttonsInQue do
@@ -7544,9 +7544,9 @@ local wepesp = allesp[7]
 			oldmenufov(...)
 		end
 		local magspeed = 1
-		client.cam.magspring.s = nil
-		local mt = {__index = function(self, i) if i == "s" then return magspeed end end, __newindex = function(self, i, v) if i == "s" then magspeed = v end end}
-		setrawmetatable(client.cam.magspring, mt)
+		client.cam.magspring.s = 1
+		-- local mt = {__index = function(self, i) if i == "s" then return magspeed or 1 end end, __newindex = function(self, i, v) if i == "s" then magspeed = v end end}
+		-- setrawmetatable(client.cam.magspring, mt)
 		client.cam.setmagnification = function(self, m)
 			local lnm = math.log(m)
 			if menu and not menu.open and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then return end
@@ -10014,7 +10014,7 @@ local wepesp = allesp[7]
 					setfpscap(8)
 					wait()
 					client.char.rootpart.Position += Vector3.new(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
-					setfpscap(maxfps or 300)
+					setfpscap(maxfps or 144)
 					wait()
 					return Enum.ContextActionResult.Sink
 				end
@@ -10035,15 +10035,22 @@ local wepesp = allesp[7]
 				if shitting_my_pants == false then
 					if menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
 						local sign = not menu:modkeydown("alt", "left")
-						local ray = Ray.new(client.char.head.Position, Vector3.new(0, sign and -90 or 90, 0) * 20)
+						local forward = menu:modkeydown("shift", "left")
+						local ray = Ray.new(client.char.head.Position, forward and Camera.CFrame.LookVector * 20 or Vector3.new(0, sign and -90 or 90, 0) * 20)
 						
 						local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
 						
-						if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-							client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
-							CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
+						if hit ~= nil and (hit.CanCollide == false or hit.Name == "Window") then
+							if forward then 
+								client.char.rootpart.Position += Camera.CFrame.LookVector * 18
+								CreateNotification("Clipped forward!")
+							else
+								client.char.rootpart.Position += Vector3.new(0, sign and -18 or 18, 0)
+								CreateNotification("Clipped " .. (sign and "down" or "up") .. "!")
+							end
 						else
-							CreateNotification("Unable to floor clip!")
+							CreateNotification("Hit " .. (hit and (hit.Name .. tostring(hit.Material)) or "nothing") .. ".") 
+							CreateNotification("Unable to " .. (forward and "forward" or "floor") .. " clip!")
 						end
 						return Enum.ContextActionResult.Sink
 					end
@@ -10176,8 +10183,8 @@ local wepesp = allesp[7]
 			renderVisuals()
 			if menu.open then
 				setconstant(client.cam.step, 11, menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
-				client.cam.minangle = menu:GetVal("Misc", "Extra", "Unrestrict Angles") and -999 or -math.pi/2 + 0.001
-				client.cam.maxangle = menu:GetVal("Misc", "Extra", "Unrestrict Angles") and 999 or math.pi/2 - 0.001
+				client.cam.minangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and -999 or -math.pi/2 + 0.001
+				client.cam.maxangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and 999 or math.pi/2 - 0.001
 			end
 		end
 		--debug.profileend("BB Rendering")
@@ -11854,10 +11861,10 @@ local wepesp = allesp[7]
 							},
 							{
 								type = "toggle",
-								name = "Unrestrict Angles",
+								name = "Unrestrict Pitch",
 								value = false,
 								unsafe = true,
-								tooltip = "When turned on, the camera pitch will be unrestricted\nallowing you to move your mouse up or down infinitely."
+								tooltip = "When turned on, the camera pitch will be unrestricted,\nallowing you to move your mouse up or down infinitely."
 							},
 						}
 					},
@@ -11916,7 +11923,7 @@ local wepesp = allesp[7]
 								extra = {
 									type = "keybind"
 								},
-								tooltip = "Teleports you 19 studs under the ground. Must be over glass or non-collidable parts to work. (Use alt key to go up)"
+								tooltip = "Teleports you 19 studs under the ground. Must be over glass or non-collidable parts to work. \Hold Alt to go up, and Shift to go forwards."
 							},
 							{
 								type = "toggle",
