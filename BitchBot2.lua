@@ -6084,6 +6084,7 @@ local wepesp = allesp[7]
 	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
 	
 	local shooties = {}
+	local aimies = {}
 	
 	local OLD_GUNS = game:GetService("ReplicatedStorage").GunModules:Clone()
 	OLD_GUNS.Name = tostring(math.random(1e5, 9e5))
@@ -6369,6 +6370,13 @@ local wepesp = allesp[7]
 						if menu.open and not (ragebot.target and menu:GetVal("Rage", "Aimbot", "Auto Shoot")) then return end
 					end
 					shootgun(...)
+				end
+			end
+			local aimgun = client.logic.currentgun.setaim
+			if not aimies[client.logic.currentgun.shoot] then
+				client.logic.currentgun.setaim = function(...)
+					if menu and menu.open then return end
+					aimgun(...)
 				end
 			end
 			shooties[client.logic.currentgun.shoot] = true
@@ -7525,13 +7533,23 @@ local wepesp = allesp[7]
 		local oldmag = client.cam.setmagnification
 		local oldmenufov = client.cam.changemenufov
 		client.cam.changemenufov = function(...)
-			if menu.open then return end
+			if menu and menu.open then return end
 			oldmenufov(...)
+		end
+		client.cam.setmagnification = function(self, m)
+			local lnm = math.log(m)
+			if menu and not menu.open and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then return end
+			self.magspring.p = lnm
+			self.magspring.t = lnm
+			self.magspring.v = 0
+		end
+		client.cam.setmagnificationspeed = function(self, s)
+			self.magspring.s = s
 		end
 		
 		local shake = client.cam.shake
 		client.cam.shake = function(self, magnitude)
-			if menu:GetVal("Visuals", "Camera Visuals", "Reduce Camera Recoil") then
+			if menu and menu:GetVal("Visuals", "Camera Visuals", "Reduce Camera Recoil") then
 				local scale = 1 - menu:GetVal("Visuals", "Camera Visuals", "Camera Recoil Reduction") * 0.01
 				magnitude *= scale
 			end
@@ -7540,7 +7558,7 @@ local wepesp = allesp[7]
 		
 		local suppress = client.cam.suppress
 		client.cam.suppress = function(...)
-			if menu:GetVal("Visuals", "Camera Visuals", "No Visual Suppression") then return end
+			if menu and menu:GetVal("Visuals", "Camera Visuals", "No Visual Suppression") then return end
 			return suppress(...)
 		end
 		
@@ -8810,7 +8828,8 @@ local wepesp = allesp[7]
 				Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
 				--TODO nate fix
 				
-				local gunpos2d = Camera:WorldToScreenPoint(client.logic.currentgun.aimsightdata[1].sightpart.Position)
+				local sight = client.logic.currentgun.aimsightdata[1].sightpart
+				local gunpos2d = Camera:WorldToScreenPoint(sight.Position)
 				
 				local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
 				if client.logic.currentgun
@@ -8819,7 +8838,7 @@ local wepesp = allesp[7]
 				and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
 					local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
 					local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0)
+					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * client.zoommodspring.p
 					Pos += rcsdelta
 				end
 				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
@@ -9141,6 +9160,40 @@ local wepesp = allesp[7]
 		
 		----------
 		--debug.profilebegin("renderVisuals Main")
+		if client.logic.currentgun and client.logic.currentgun.barrel and client.char.alive then
+			local customCross = menu:GetVal("Visuals", "Misc", "Laser Pointer")
+			menu.crosshair.outline[1].Visible = customCross
+			menu.crosshair.outline[2].Visible = customCross
+			menu.crosshair.inner[1].Visible = customCross
+			menu.crosshair.inner[2].Visible = customCross
+			if not customCross then return end
+			local ignore = {workspace.Ignore, Camera}
+			local barrel = client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart or client.logic.currentgun.barrel
+			local hit, hitpos = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.Position, barrel.CFrame.LookVector * 100), ignore)
+			local size = 6
+			local color = menu:GetVal("Visuals", "Misc", "Laser Pointer", "color", true)
+			menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
+			menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
+			
+			menu.crosshair.inner[1].Color = color
+			menu.crosshair.inner[2].Color = color
+			
+			menu.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
+			menu.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
+			local hit2d = Camera:WorldToViewportPoint(hitpos)
+
+			menu.crosshair.inner[1].Position = Vector2.new(hit2d.x - size, hit2d.y)
+			menu.crosshair.inner[2].Position = Vector2.new(hit2d.x, hit2d.y - size)
+			
+			menu.crosshair.outline[1].Position = Vector2.new(hit2d.x - size - 1, hit2d.y - 1)
+			menu.crosshair.outline[2].Position = Vector2.new(hit2d.x - 1, hit2d.y - 1 - size)
+		else
+			menu.crosshair.outline[1].Visible = false
+			menu.crosshair.outline[2].Visible = false
+			menu.crosshair.inner[1].Visible = false
+			menu.crosshair.inner[2].Visible = false
+		end
+
 		if client.cam.type ~= "menu" then
 			
 			local players = Players:GetPlayers()
@@ -9824,39 +9877,7 @@ local wepesp = allesp[7]
 				end
 			end
 
-			if client.logic.currentgun and client.logic.currentgun.barrel and client.char.alive then
-				local customCross = menu:GetVal("Visuals", "Misc", "Laser Pointer")
-				menu.crosshair.outline[1].Visible = customCross
-				menu.crosshair.outline[2].Visible = customCross
-				menu.crosshair.inner[1].Visible = customCross
-				menu.crosshair.inner[2].Visible = customCross
-				if not customCross then return end
-				local ignore = {workspace.Ignore, Camera}
-				local barrel = client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart or client.logic.currentgun.barrel
-				local hit, hitpos = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.Position, barrel.CFrame.LookVector * 100), ignore)
-				local size = 6
-				local color = menu:GetVal("Visuals", "Misc", "Laser Pointer", "color", true)
-				menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
-				menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
-				
-				menu.crosshair.inner[1].Color = color
-				menu.crosshair.inner[2].Color = color
-				
-				menu.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
-				menu.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
-				local hit2d = Camera:WorldToViewportPoint(hitpos)
-
-				menu.crosshair.inner[1].Position = Vector2.new(hit2d.x - size, hit2d.y)
-				menu.crosshair.inner[2].Position = Vector2.new(hit2d.x, hit2d.y - size)
-				
-				menu.crosshair.outline[1].Position = Vector2.new(hit2d.x - size - 1, hit2d.y - 1)
-				menu.crosshair.outline[2].Position = Vector2.new(hit2d.x - 1, hit2d.y - 1 - size)
-			else
-				menu.crosshair.outline[1].Visible = false
-				menu.crosshair.outline[2].Visible = false
-				menu.crosshair.inner[1].Visible = false
-				menu.crosshair.inner[2].Visible = false
-			end
+			
 			
 			--debug.profileend("renderVisuals Local Visuals")
 			
