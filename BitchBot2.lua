@@ -5111,7 +5111,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	-- end
 
 	local function unikeycheck(actionName, inputState, inputObject)
-		if actionName == "BB PF check" then
+		if actionName == "BB UNI check" then
 			if inputState == Enum.UserInputState.Begin then
 				if menu:GetVal("Misc", "Movement", "Fly") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
 					cachedValues.FlyToggle = not cachedValues.FlyToggle
