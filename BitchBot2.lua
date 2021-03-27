@@ -9053,7 +9053,7 @@ local wepesp = allesp[7]
 		local newpart = client.particle.new
 		client.particle.new = function(P)
 			local new_speed
-			
+			if menu:GetVal("Misc", "Exploits", "Freeze Players") and IsKeybindDown("Misc", "Exploits", "Freeze Players") then return end
 			if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
 				new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
 			end
