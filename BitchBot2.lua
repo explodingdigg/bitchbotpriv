@@ -6084,7 +6084,6 @@ local wepesp = allesp[7]
 	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
 	
 	local shooties = {}
-	local aimies = {}
 	
 	local OLD_GUNS = game:GetService("ReplicatedStorage").GunModules:Clone()
 	OLD_GUNS.Name = tostring(math.random(1e5, 9e5))
@@ -6373,7 +6372,7 @@ local wepesp = allesp[7]
 				end
 			end
 			local aimgun = client.logic.currentgun.setaim
-			if not aimies[client.logic.currentgun.shoot] then
+			if not shooties[client.logic.currentgun.shoot] then
 				client.logic.currentgun.setaim = function(...)
 					if menu and menu.open then return end
 					aimgun(...)
