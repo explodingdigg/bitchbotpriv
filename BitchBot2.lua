@@ -1,3 +1,4 @@
+if not BBOT then BBOT = {username = 'DEMVOLPE'} end
 local menu
 assert(getgenv().v2 == nil)
 getgenv().v2 = true
@@ -5478,7 +5479,8 @@ elseif menu.game == "pf" then --!SECTION
 			[6] = {}, -- bar_inner
 			[7] = {}, -- bar_moving_1
 			[8] = {} -- bar_moving_2
-		}
+		},
+		[9] = {} -- fov circles
 	}
 
 	local allespnum = #allesp
@@ -5495,7 +5497,9 @@ local wepesp = allesp[7]
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[1])
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[2])
 	end
-	
+	for i = 1, 4 do
+		Draw:Circle(false, 0, 0, 0, 1, 32, {0,0,0,0}, allesp[9])
+	end
 	for i = 1, 20 do
 		Draw:FilledCircle(false, 60, 60, 32, 1, 20, {20, 20, 20, 215}, nade_esp[1])
 		Draw:Circle(false, 60, 60, 30, 1, 20, {50, 50, 50, 255}, nade_esp[2])
@@ -9490,7 +9494,8 @@ local wepesp = allesp[7]
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
 					if not client then return end
 					if v.Name == "Dropped" then
-						local slot = v:WaitForChild("Slot1", 1)
+						local slot = v:FindFirstChild("Slot1")
+						if not slot then continue end
 						local gunpos = slot.Position
 						local gun_dist = (gunpos - client.cam.cframe.p).Magnitude
 						if gun_dist < 80 then 
@@ -9531,7 +9536,59 @@ local wepesp = allesp[7]
 				end
 				--debug.profileend("renderVisuals Dropped ESP")
 			end
-			
+			local fovcircles = allesp[9]
+			local circle = fovcircles[1]
+			if menu:GetVal("Visuals", "FOV", "Aim Assist") then
+				local col = menu:GetVal("Visuals", "FOV", "Aim Assist", "color", true)
+				local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist", "color")[4] / 255
+				circle.Color = col
+				circle.Transparency = transparency
+				circle.Transparency = transparency
+				circle.Radius = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
+				circle.Visible = true
+				circle.Position = SCREEN_SIZE / 2
+			else
+				circle.Visible = false
+			end
+			local circle = fovcircles[2]
+			if menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone") then
+				local col = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", "color", true)
+				local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", "color")[4] / 255
+				circle.Color = col
+				circle.Transparency = transparency
+				circle.Radius = menu:GetVal("Legit", "Aim Assist", "Deadzone FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
+				circle.Position = SCREEN_SIZE / 2
+				circle.Visible = true
+			else
+				circle.Visible = false
+			end
+			local circle = fovcircles[3]
+			if menu:GetVal("Visuals", "FOV", "Bullet Redirection") then
+				local col = menu:GetVal("Visuals", "FOV", "Bullet Redirection", "color", true)
+				local transparency = menu:GetVal("Visuals", "FOV", "Bullet Redirection", "color")[4] / 255
+				circle.Color = col
+				circle.Transparency = transparency
+				circle.Transparency = transparency
+				circle.Radius = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
+				circle.Position = SCREEN_SIZE / 2
+				circle.Visible = true
+			else
+				circle.Visible = false
+			end
+			local circle = fovcircles[4]
+			if menu:GetVal("Visuals", "FOV", "Ragebot") then
+				local col = menu:GetVal("Visuals", "FOV", "Ragebot", "color", true)
+				local transparency = menu:GetVal("Visuals", "FOV", "Ragebot", "color")[4] / 255
+				circle.Color = col
+				circle.Transparency = transparency
+				circle.Transparency = transparency
+				circle.Position = SCREEN_SIZE / 2
+				circle.Radius = menu:GetVal("Rage", "Aimbot", "Aimbot FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
+				circle.Visible = true
+			else
+				circle.Visible = false
+			end
+
 			--debug.profilebegin("renderVisuals Dropped ESP Grenade Warning")
 			if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
 				local health = client.char:gethealth()
@@ -11270,7 +11327,7 @@ local wepesp = allesp[7]
 					}
 				},
 				{
-					name = {"World", "Misc", "Fog"},
+					name = {"World", "Misc", "Fog", "FOV"},
 					
 					autopos = "right",
 					size = 144,
@@ -11397,6 +11454,50 @@ local wepesp = allesp[7]
 								value = 1000,
 								minvalue = 100, 
 								maxvalue = 10000
+							}
+						}
+					},
+					[4] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Aim Assist",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Aim Assist FOV",
+									color =  {127, 72, 163, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Aim Assist Deadzone",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Deadzone FOV",
+									color = {50, 50, 50, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Bullet Redirection",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Bullet Redirection FOV",
+									color =  {163, 72, 127, 255}
+								}
+							},
+							{
+								type = "toggle",
+								name = "Ragebot",
+								value = false,
+								extra = {
+									type = "single colorpicker",
+									name = "Ragebot FOV",
+									color = {255, 210, 0, 255}
+								}
 							}
 						}
 					},
