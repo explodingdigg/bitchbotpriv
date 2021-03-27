@@ -221,13 +221,12 @@ do
 end
 
 --validity check
---[[ SECTION commented these out for development
+--SECTION commented these out for development 
+--[[
 make_synreadonly(syn)
 make_synreadonly(Drawing)
 protectfunction(getgenv)
 protectfunction(getgc)
-
-local funny=newcclosure(function()for b,c in pairs(getgc())do if type(c)=="function"then c()end end end)
 
 local init
 if syn then
@@ -240,7 +239,8 @@ local function search_hookfunc(tbl)
 		local s = getfenv(v).script
 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
-				funny()
+				writefile("poop.text", "did the funny") 
+				SX_CRASH()
 				break
 			end
 		end
@@ -9490,7 +9490,7 @@ local wepesp = allesp[7]
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
 					if not client then return end
 					if v.Name == "Dropped" then
-						local slot = v:WaitForChild("Slot1")
+						local slot = v:WaitForChild("Slot1", 1)
 						local gunpos = slot.Position
 						local gun_dist = (gunpos - client.cam.cframe.p).Magnitude
 						if gun_dist < 80 then 
