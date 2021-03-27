@@ -1,56 +1,78 @@
 local mp = { -- this is for menu stuffs n shi
-	w = 350,
-	h = 300,
-	x = 200,
-	y = 300,
-	activetab = 1, -- do not change this value please its not made to be fucked with sorry
-	open = false,
-	fadestart = 0,
-	fading = false,
-	mousedown = false,
-	postable = {},
-	options = {},
-	clrs = {
-		norm = {},
-		dark = {},
-		togz = {}
-	},
-	mc = {127, 72, 163},
-	unloaded = false,
-	autoload = false,
-	connections = {},
-	tabnum2str = {} -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
+    w = 350,
+    h = 300,
+    x = 200,
+    y = 300,
+    activetab = 1, -- do not change this value please its not made to be fucked with sorry
+    open = false,
+    fadestart = 0,
+    fading = false,
+    mousedown = false,
+    postable = {},
+    options = {},
+    clrs = {
+        norm = {},
+        dark = {},
+        togz = {}
+    },
+    mc = {127, 72, 163},
+    unloaded = false,
+    autoload = false,
+    connections = {},
+    tabnum2str = {} -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
 }
 
 
 mp.dir = "uni"
 
-function CreateThread(func) 
-   local thread = coroutine.create(func)
-   coroutine.resume(thread)
-   return thread
+function CreateThread(func)
+    local thread = coroutine.create(func)
+    coroutine.resume(thread)
+    return thread
 end
 
 function MultiThreadList(obj)
-	for i, v in pairs(obj) do
-		CreateThread(v)
-	end
+    for i, v in pairs(obj) do
+        CreateThread(v)
+    end
+end
+
+
+local imgurl = "https://i.imgur.com/4AwgJLw.png"
+
+if game.PlaceId == 292439477 then
+    imgurl = "https://i.imgur.com/efyiyuX.png"
 end
 
 
 local BBOT_IMAGES = {}
 MultiThreadList({
-	function() BBOT_IMAGES[1] = game:HttpGet("https://i.imgur.com/9NMuFcQ.png") end,
-	function() BBOT_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png") end,
-	function() BBOT_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png") end,
-	function() BBOT_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end,
-	function() BBOT_IMAGES[5] = game:HttpGet("https://i.imgur.com/OZUR3EY.png") end,
-	function() BBOT_IMAGES[6] = game:HttpGet("https://i.imgur.com/4AwgJLw.png") end
+    function() BBOT_IMAGES[1] = game:HttpGet("https://i.imgur.com/9NMuFcQ.png") end,
+    function() BBOT_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png") end,
+    function() BBOT_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png") end,
+    function() BBOT_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png") end,
+    function() BBOT_IMAGES[5] = game:HttpGet("https://i.imgur.com/OZUR3EY.png") end,
+    function() BBOT_IMAGES[6] = game:HttpGet(imgurl) end
 })
 
 -- MULTITHREAD DAT LOADING SO FAST!!!!
-while #BBOT_IMAGES ~= 6 do
-	wait(1)
+local loaded = {}
+do
+	local function Loopy_Image_Checky()
+		for i = 1, 6 do
+			local v = BBOT_IMAGES[i]
+			if v == nil then
+				return true
+			elseif not loaded[i] then
+				loaded[i] = true
+			end
+		end
+		return false
+	end
+	while Loopy_Image_Checky() do
+		wait(0)
+	end
+	
 end
 
 -- nate i miss u D:
@@ -60,15 +82,15 @@ end
 game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge)
 
 if not isfolder("bitchbot") then
-	makefolder("bitchbot")
+    makefolder("bitchbot")
 end
 
 if not isfolder("bitchbot/pf") then
-	makefolder("bitchbot/".. mp.dir)
+    makefolder("bitchbot/".. mp.dir)
 end
 
 if not isfile("bitchbot/settings.bb") then
-	writefile("bitchbot/settings.bb", "")
+    writefile("bitchbot/settings.bb", "")
 end
 
 local Players = game:GetService("Players")
@@ -81,148 +103,135 @@ local Camera = workspace.CurrentCamera
 local SCREEN_SIZE = Camera.ViewportSize
 
 mp.x = math.floor((SCREEN_SIZE.X/2) - (mp.w/2))
-mp.y = math.floor((SCREEN_SIZE.Y/2) - (mp.h/2)) 
+mp.y = math.floor((SCREEN_SIZE.Y/2) - (mp.h/2))
 
-do -- table shitz
-	setreadonly(table, false)
 
-	table.contains = function(table, element)
-		for _, value in pairs(table) do
-			if value == element then
-				return true
-			end
-		end
-		return false
-	end
+    contains = function(table, element)
+        for _, value in pairs(table) do
+            if value == element then
+                return true
+            end
+        end
+        return false
+    end
 
-	setreadonly(table, true)
-end
 
-do -- math stuffz
-	setreadonly(math, false)
 
-	math.map = function(X, A, B, C, D)
-		return (X-A)/(B-A) * (D-C) + C
-	end
+    mathlerp = function(delta, from, to)
+        if (delta > 1) then
+            return to
+        end
+        if (delta < 0) then
+            return from
+        end
+        return from + ( to - from ) * delta
+    end
 
-	math.Lerp = function(delta, from, to)
-		if (delta > 1) then
-			return to
-		end
-		if (delta < 0) then
-			return from
-		end
-		return from + ( to - from ) * delta
-	end
+    colorrange = function(value, ranges) -- ty tony for dis function u a homie
+        if value <= ranges[1].start then return ranges[1].color end
+        if value >= ranges[#ranges].start then return ranges[#ranges].color end
 
-	math.ColorRange = function(value, ranges) -- ty tony for dis function u a homie
-		if value <= ranges[1].start then return ranges[1].color end
-		if value >= ranges[#ranges].start then return ranges[#ranges].color end
-
-		local selected = #ranges
-		for i = 1, #ranges - 1 do
-			if value < ranges[i + 1].start then
-				selected = i
-				break
-			end
-		end
-		local minColor = ranges[selected]
-		local maxColor = ranges[selected + 1]
-		local lerpValue = (value - minColor.start) / (maxColor.start - minColor.start)
-		return Color3.new(math.Lerp( lerpValue, minColor.color.r, maxColor.color.r ), math.Lerp( lerpValue, minColor.color.g, maxColor.color.g ), math.Lerp( lerpValue, minColor.color.b, maxColor.color.b ))
-	end
-
-	setreadonly(math, true)
-end
+        local selected = #ranges
+        for i = 1, #ranges - 1 do
+            if value < ranges[i + 1].start then
+                selected = i
+                break
+            end
+        end
+        local minColor = ranges[selected]
+        local maxColor = ranges[selected + 1]
+        local lerpValue = (value - minColor.start) / (maxColor.start - minColor.start)
+        return Color3.new(mathlerp( lerpValue, minColor.color.r, maxColor.color.r ), mathlerp( lerpValue, minColor.color.g, maxColor.color.g ), mathlerp( lerpValue, minColor.color.b, maxColor.color.b ))
+    end
 
 do -- metatable additions strings and such
 
-	local strMt = getrawmetatable("")
+    local strMt = getrawmetatable("")
 
-	strMt.__add = function(s1, s2)
-		return s1 .. s2
-	end
-	strMt.__mul = function(s1, num)
-		return string.rep(s1, num)
-	end
-	strMt.__unm = function(s1)
-		return string.reverse(s1)
-	end
-	strMt.__div = function(s1, num)
-		return num == 0 and s1 or string.sub(s1, 1, num)
-	end
-	strMt.__sub = function(s1, num)
-		return string.sub(s1, 1, #s1-num)
-	end
+    strMt.__add = function(s1, s2)
+        return s1 .. s2
+    end
+    strMt.__mul = function(s1, num)
+        return string.rep(s1, num)
+    end
+    strMt.__unm = function(s1)
+        return string.reverse(s1)
+    end
+    strMt.__div = function(s1, num)
+        return num == 0 and s1 or string.sub(s1, 1, num)
+    end
+    strMt.__sub = function(s1, num)
+        return string.sub(s1, 1, #s1-num)
+    end
 
 end
 
 local keynamereturn = {
-	One    = "1",
-	Two    = "2",
-	Three  = "3",
-	Four   = "4",
-	Five   = "5",
-	Six    = "6",
-	Seven  = "7",
-	Eight  = "8",
-	Nine   = "9",
-	Zero   = "0",
-	LeftBracket = "[",
-	RightBracket = "]",
-	Semicolon = ":",
-	BackSlash = "\\",
-	Slash = "/",
-	Minus = "-",
-	Equals = "=",
-	Return = "Enter",
-	Backquote = "`",
-	CapsLock = "Caps",
-	LeftShift = "LShift",
-	RightShift = "RShift",
-	LeftControl = "LCtrl",
-	RightControl = "RCtrl",
-	LeftAlt = "LAlt",
-	RightAlt = "RAlt",
-	Backspace = "Back",
-	Plus = "+",
-	Multiply = "x",
-	PageUp = "PgUp",
-	PageDown = "PgDown",
-	Delete = "Del",
-	Insert = "Ins",
-	NumLock = "NumL",
-	Comma = ",",
-	Period = "."
+    One    = "1",
+    Two    = "2",
+    Three  = "3",
+    Four   = "4",
+    Five   = "5",
+    Six    = "6",
+    Seven  = "7",
+    Eight  = "8",
+    Nine   = "9",
+    Zero   = "0",
+    LeftBracket = "[",
+    RightBracket = "]",
+    Semicolon = ":",
+    BackSlash = "\\",
+    Slash = "/",
+    Minus = "-",
+    Equals = "=",
+    Return = "Enter",
+    Backquote = "`",
+    CapsLock = "Caps",
+    LeftShift = "LShift",
+    RightShift = "RShift",
+    LeftControl = "LCtrl",
+    RightControl = "RCtrl",
+    LeftAlt = "LAlt",
+    RightAlt = "RAlt",
+    Backspace = "Back",
+    Plus = "+",
+    Multiply = "x",
+    PageUp = "PgUp",
+    PageDown = "PgDown",
+    Delete = "Del",
+    Insert = "Ins",
+    NumLock = "NumL",
+    Comma = ",",
+    Period = "."
 }
 local function keyenum2name(key) -- did this all in a function cuz why not
-	if key == nil then
-		return "None"
-	end
-	local _key = tostring(key).. "."
-	local _key = _key:gsub("%.", ",")
-	local keyname = nil
-	local looptime = 0
-	for w in _key:gmatch("(.-),") do
-		looptime = looptime + 1
-		if looptime == 3 then
-			keyname = w
-		end
-	end
-	if string.match(keyname, "Keypad") then
-		keyname = string.gsub(keyname, "Keypad", "")
-	end
+    if key == nil then
+        return "None"
+    end
+    local _key = tostring(key).. "."
+    local _key = _key:gsub("%.", ",")
+    local keyname = nil
+    local looptime = 0
+    for w in _key:gmatch("(.-),") do
+        looptime = looptime + 1
+        if looptime == 3 then
+            keyname = w
+        end
+    end
+    if string.match(keyname, "Keypad") then
+        keyname = string.gsub(keyname, "Keypad", "")
+    end
 
-	if keyname == "Unknown" or key.Value == 27 then
-		return "None"
-	end
+    if keyname == "Unknown" or key.Value == 27 then
+        return "None"
+    end
 
-	for k, v in pairs(keynamereturn) do
-		if keynamereturn[keyname] then
-			return keynamereturn[keyname]
-		end
-	end
-	return keyname
+    for k, v in pairs(keynamereturn) do
+        if keynamereturn[keyname] then
+            return keynamereturn[keyname]
+        end
+    end
+    return keyname
 end
 
 local allrender = {}
@@ -230,142 +239,142 @@ local allrender = {}
 local RGB = Color3.fromRGB
 local Draw = {}
 do
-	function Draw:UnRender()
-		for k, v in pairs(allrender) do
-			for k1, v1 in pairs(v) do
-				v1:Remove()
-			end
-		end
-	end
+    function Draw:UnRender()
+        for k, v in pairs(allrender) do
+            for k1, v1 in pairs(v) do
+                v1:Remove()
+            end
+        end
+    end
 
 
-	function Draw:OutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		local temptable = Drawing.new("Square")
-		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, hieght)
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
-		temptable.Filled = false
-		temptable.Thickness = 0
-		temptable.Transparency = clr[4] / 255
-		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
-			table.insert(allrender, tablename)
-		end
-	end
+    function Draw:OutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
+        local temptable = Drawing.new("Square")
+        temptable.Visible = visible
+        temptable.Position = Vector2.new(pos_x, pos_y)
+        temptable.Size = Vector2.new(width, hieght)
+        temptable.Color = RGB(clr[1], clr[2], clr[3])
+        temptable.Filled = false
+        temptable.Thickness = 0
+        temptable.Transparency = clr[4] / 255
+        table.insert(tablename, temptable)
+        if not contains(allrender, tablename) then
+            table.insert(allrender, tablename)
+        end
+    end
 
-	function Draw:FilledRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		local temptable = Drawing.new("Square")
-		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, hieght)
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
-		temptable.Filled = true
-		temptable.Thickness = 0
-		temptable.Transparency = clr[4] / 255
-		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
-			table.insert(allrender, tablename)
-		end
-	end
+    function Draw:FilledRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
+        local temptable = Drawing.new("Square")
+        temptable.Visible = visible
+        temptable.Position = Vector2.new(pos_x, pos_y)
+        temptable.Size = Vector2.new(width, hieght)
+        temptable.Color = RGB(clr[1], clr[2], clr[3])
+        temptable.Filled = true
+        temptable.Thickness = 0
+        temptable.Transparency = clr[4] / 255
+        table.insert(tablename, temptable)
+        if not contains(allrender, tablename) then
+            table.insert(allrender, tablename)
+        end
+    end
 
-	function Draw:Line(visible, thickness, start_x, start_y, end_x, end_y, clr, tablename)
-		temptable = Drawing.new("Line")
-		temptable.Visible = visible
-		temptable.Thickness = thickness
-		temptable.From = Vector2.new(start_x, start_y)
-		temptable.To = Vector2.new(end_x, end_y)
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
-		temptable.Transparency = clr[4] / 255
-		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
-			table.insert(allrender, tablename)
-		end
-	end
+    function Draw:Line(visible, thickness, start_x, start_y, end_x, end_y, clr, tablename)
+        temptable = Drawing.new("Line")
+        temptable.Visible = visible
+        temptable.Thickness = thickness
+        temptable.From = Vector2.new(start_x, start_y)
+        temptable.To = Vector2.new(end_x, end_y)
+        temptable.Color = RGB(clr[1], clr[2], clr[3])
+        temptable.Transparency = clr[4] / 255
+        table.insert(tablename, temptable)
+        if not contains(allrender, tablename) then
+            table.insert(allrender, tablename)
+        end
+    end
 
-	function Draw:Image(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
-		local temptable = Drawing.new("Image")
-		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = Vector2.new(width, hieght)
-		temptable.Transparency = transparency
-		temptable.Data = imagedata
-		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
-			table.insert(allrender, tablename)
-		end
-	end
+    function Draw:Image(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
+        local temptable = Drawing.new("Image")
+        temptable.Visible = visible
+        temptable.Position = Vector2.new(pos_x, pos_y)
+        temptable.Size = Vector2.new(width, hieght)
+        temptable.Transparency = transparency
+        temptable.Data = imagedata
+        table.insert(tablename, temptable)
+        if not contains(allrender, tablename) then
+            table.insert(allrender, tablename)
+        end
+    end
 
-	function Draw:Text(text, font, visible, pos_x, pos_y, size, centered, clr, tablename)
-		local temptable = Drawing.new("Text")
-		temptable.Text = text
-		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = size
-		temptable.Center = centered
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
-		temptable.Transparency = clr[4] / 255
-		temptable.Outline = false
-		temptable.Font = font
-		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
-			table.insert(allrender, tablename)
-		end
-	end
+    function Draw:Text(text, font, visible, pos_x, pos_y, size, centered, clr, tablename)
+        local temptable = Drawing.new("Text")
+        temptable.Text = text
+        temptable.Visible = visible
+        temptable.Position = Vector2.new(pos_x, pos_y)
+        temptable.Size = size
+        temptable.Center = centered
+        temptable.Color = RGB(clr[1], clr[2], clr[3])
+        temptable.Transparency = clr[4] / 255
+        temptable.Outline = false
+        temptable.Font = font
+        table.insert(tablename, temptable)
+        if not contains(allrender, tablename) then
+            table.insert(allrender, tablename)
+        end
+    end
 
-	function Draw:OutlinedText(text, font, visible, pos_x, pos_y, size, centered, clr, clr2, tablename)
-		local temptable = Drawing.new("Text")
-		temptable.Text = text
-		temptable.Visible = visible
-		temptable.Position = Vector2.new(pos_x, pos_y)
-		temptable.Size = size
-		temptable.Center = centered
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
-		temptable.Transparency = clr[4] / 255
-		temptable.Outline = true
-		temptable.OutlineColor = RGB(clr2[1], clr2[2], clr2[3])
-		temptable.Font = font
-		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
-			table.insert(allrender, tablename)
-		end
-	end
+    function Draw:OutlinedText(text, font, visible, pos_x, pos_y, size, centered, clr, clr2, tablename)
+        local temptable = Drawing.new("Text")
+        temptable.Text = text
+        temptable.Visible = visible
+        temptable.Position = Vector2.new(pos_x, pos_y)
+        temptable.Size = size
+        temptable.Center = centered
+        temptable.Color = RGB(clr[1], clr[2], clr[3])
+        temptable.Transparency = clr[4] / 255
+        temptable.Outline = true
+        temptable.OutlineColor = RGB(clr2[1], clr2[2], clr2[3])
+        temptable.Font = font
+        table.insert(tablename, temptable)
+        if not contains(allrender, tablename) then
+            table.insert(allrender, tablename)
+        end
+    end
 
-	function Draw:Triangle(visible, filled, pa, pb, pc, clr, tablename)
-		local temptable = Drawing.new("Triangle")
-		temptable.Visible = visible
-		temptable.Transparency = clr[4]
-		temptable.Color = RGB(clr[1], clr[2], clr[3])
-		temptable.Thickness = 4.1
-		temptable.PointA = Vector2.new(pa[1], pa[2])
-		temptable.PointB = Vector2.new(pb[1], pb[2])
-		temptable.PointC = Vector2.new(pc[1], pc[2])
-		temptable.Filled = filled
-		table.insert(tablename, temptable)
-		if not table.contains(allrender, tablename) then
-			table.insert(allrender, tablename)
-		end
-	end
+    function Draw:Triangle(visible, filled, pa, pb, pc, clr, tablename)
+        local temptable = Drawing.new("Triangle")
+        temptable.Visible = visible
+        temptable.Transparency = clr[4]
+        temptable.Color = RGB(clr[1], clr[2], clr[3])
+        temptable.Thickness = 4.1
+        temptable.PointA = Vector2.new(pa[1], pa[2])
+        temptable.PointB = Vector2.new(pb[1], pb[2])
+        temptable.PointC = Vector2.new(pc[1], pc[2])
+        temptable.Filled = filled
+        table.insert(tablename, temptable)
+        if not contains(allrender, tablename) then
+            table.insert(allrender, tablename)
+        end
+    end
 
-	function Draw:MenuOutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		Draw:OutlinedRect(visible, pos_x + mp.x, pos_y + mp.y, width, hieght, clr, tablename)
-		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
-	end
+    function Draw:MenuOutlinedRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
+        Draw:OutlinedRect(visible, pos_x + mp.x, pos_y + mp.y, width, hieght, clr, tablename)
+        table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+    end
 
-	function Draw:MenuFilledRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
-		Draw:FilledRect(visible, pos_x + mp.x, pos_y + mp.y, width, hieght, clr, tablename)
-		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
-	end
+    function Draw:MenuFilledRect(visible, pos_x, pos_y, width, hieght, clr, tablename)
+        Draw:FilledRect(visible, pos_x + mp.x, pos_y + mp.y, width, hieght, clr, tablename)
+        table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+    end
 
-	function Draw:MenuImage(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
-		Draw:Image(visible, imagedata, pos_x + mp.x, pos_y + mp.y, width, hieght, transparency, tablename)
-		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
-	end
+    function Draw:MenuImage(visible, imagedata, pos_x, pos_y, width, hieght, transparency, tablename)
+        Draw:Image(visible, imagedata, pos_x + mp.x, pos_y + mp.y, width, hieght, transparency, tablename)
+        table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+    end
 
-	function Draw:MenuBigText(text, visible, centered, pos_x, pos_y, tablename)
-		Draw:OutlinedText(text, 2, visible, pos_x + mp.x, pos_y + mp.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
-		table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
-	end
+    function Draw:MenuBigText(text, visible, centered, pos_x, pos_y, tablename)
+        Draw:OutlinedText(text, 2, visible, pos_x + mp.x, pos_y + mp.y, 13, centered, {255, 255, 255, 255}, {0, 0, 0}, tablename)
+        table.insert(mp.postable, {tablename[#tablename], pos_x, pos_y})
+    end
 end
 
 function mp.BBMenuInit(menutable)
