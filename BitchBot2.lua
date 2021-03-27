@@ -558,7 +558,7 @@ local NETWORK = game:service("NetworkClient")
 local NETWORK_SETTINGS = settings().Network
 NETWORK:SetOutgoingKBPSLimit(0)
 
-setfpscap(300)
+setfpscap(maxfps)
 
 if not isfolder("bitchbot") then
 	makefolder("bitchbot")
@@ -3569,7 +3569,7 @@ function menu.Initialize(menutable)
 		-- nah that would suck fk u (comment made on 3/4/2021 3:35 pm est by bitch)
 		
 		if menu.lastActive ~= menu.windowactive then
-			setfpscap(menu.windowactive and 999 or 15)
+			setfpscap(menu.windowactive and (maxfps or 300) or 15)
 		end
 		menu.lastActive = menu.windowactive
 		for button, time in next, buttonsInQue do
@@ -5885,6 +5885,14 @@ local wepesp = allesp[7]
 			end
 			CreateNotification("Custom Chatspam Updated")
 		end,
+		setfpscap = function(num)
+			if num < 10 then
+				CreateNotification("Can't set max FPS below 10, setting to 10.")
+				getgenv().maxfps = 10
+			else
+				getgenv().maxfps = num
+			end
+		end,
 		cmdlist = function(self)
 			for cmdname, _ in next, self do
 				if cmdname ~= "cmdlist" then
@@ -6146,13 +6154,13 @@ local wepesp = allesp[7]
 		["lastchoice"] = 0,
 		[1] = nil,
 		[2] = {
-			"㭁ITCH BOT ON TOP ",
+			"日工TCH 日OT ON TOP ",
 			"BBOT ON TOP 🔥🔥🔥🔥",
-			"b个tchbot on top i think ",
+			"日工tch 日ot top i think ",
 			"bbot > all ",
-			"㭁ITCH BOT > ALL🧠 ",
+			"日工卞亡廾 BOT > ALL🧠 ",
 			"WHAT SCRIPT IS THAT???? BBOT! ",
-			"b㐃tch bot ",
+			"日工tch 日ot",
 		},
 		[3] = {
 			"but doctor prognosis: OWNED ",
@@ -6255,7 +6263,7 @@ local wepesp = allesp[7]
 			"he has access to HACK SERVER AND CHANGE WEIGHTS!!!!! STOOOOOOP 😡😒😒😡😡😡😡😡",
 			"\"cmon dude don't use that\" you asked for it LOL ",
 			"ima just quit mid hvh 🚶‍♀️ ",
-			"BABY 👶👶👶👶🤱🤱🤱🤱🤱",
+			"BABY 😭",
 			"BOO HOO 😢😢😭😭😭 STOP CRYING D∪MBASS",
 			"BOO HOO 😢😢😭😭😭 STOP CRYING ",
 			"🤏",
@@ -9159,13 +9167,11 @@ local wepesp = allesp[7]
 		
 		----------
 		--debug.profilebegin("renderVisuals Main")
-		if client.logic.currentgun and client.logic.currentgun.barrel and client.char.alive then
-			local customCross = menu:GetVal("Visuals", "Misc", "Laser Pointer")
-			menu.crosshair.outline[1].Visible = customCross
-			menu.crosshair.outline[2].Visible = customCross
-			menu.crosshair.inner[1].Visible = customCross
-			menu.crosshair.inner[2].Visible = customCross
-			if not customCross then return end
+		if client.logic.currentgun and client.logic.currentgun.barrel and client.char.alive and menu:GetVal("Visuals", "Misc", "Laser Pointer") then
+			menu.crosshair.outline[1].Visible = true
+			menu.crosshair.outline[2].Visible = true
+			menu.crosshair.inner[1].Visible = true
+			menu.crosshair.inner[2].Visible = true
 			local ignore = {workspace.Ignore, Camera}
 			local barrel = client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart or client.logic.currentgun.barrel
 			local hit, hitpos = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.Position, barrel.CFrame.LookVector * 100), ignore)
@@ -10004,7 +10010,7 @@ local wepesp = allesp[7]
 					setfpscap(8)
 					wait()
 					client.char.rootpart.Position += Vector3.new(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
-					setfpscap(300)
+					setfpscap(maxfps or 300)
 					wait()
 					return Enum.ContextActionResult.Sink
 				end

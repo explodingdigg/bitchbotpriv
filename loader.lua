@@ -1069,6 +1069,7 @@ function mp.BBMenuInit(menutable)
 		if bp == mp.options["Main"]["Options"]["Load"] then
 			if mp:getval("Settings", "Configuration", "Custom FPS Cap") then
 				setfpscap(mp:getval("Settings", "Configuration", "FPS Cap"))
+				getgenv().maxfps = mp:getval("Settings", "Configuration", "FPS Cap")
 			end
 			mp.loadbuttonpressed = true
 			mp.loadbuttontick = tick()
