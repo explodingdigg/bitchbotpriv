@@ -9944,7 +9944,7 @@ local wepesp = allesp[7]
 
 	menu.connections.dropweaponadded = workspace.Ignore.GunDrop.ChildAdded:Connect(function(newchild)
 		if menu:GetVal("Visuals", "Dropped ESP", "Dropped Weapon Chams") then
-			newchild:WaitForChild("Slot1")
+			newchild:WaitForChild("Slot1", 1)
 			local children = newchild:GetChildren()
 			
 			for i = 1, #children do
