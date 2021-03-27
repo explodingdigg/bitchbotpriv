@@ -8281,7 +8281,7 @@ local wepesp = allesp[7]
 		function misc:SpeedHack()
 			
 			if keybindtoggles.flyhack then return end
-			local type = menu:GetVal("Misc", "Movement", "Speed Type")
+			local speedtype = menu:GetVal("Misc", "Movement", "Speed Type")
 			if menu:GetVal("Misc", "Movement", "Speed") then
 				local speed = menu:GetVal("Misc", "Movement", "Speed Factor")
 				
@@ -8306,14 +8306,14 @@ local wepesp = allesp[7]
 				
 				if travel.x == travel.x then
 					
-					if type == 2 and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall or not humanoid.Jump then
+					if speedtype == 2 and (humanoid:GetState() ~= Enum.HumanoidStateType.Freefall or not humanoid.Jump) then
 						return
-					elseif type == 3 and not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
+					elseif speedtype == 3 and not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
 						return
 					end
 
 					if IsKeybindDown("Misc", "Movement", "Speed", true) then
-						if type == 1 then
+						if speedtype == 1 then
 							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
 						else
 							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
