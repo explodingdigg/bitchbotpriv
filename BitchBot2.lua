@@ -558,7 +558,7 @@ local NETWORK = game:service("NetworkClient")
 local NETWORK_SETTINGS = settings().Network
 NETWORK:SetOutgoingKBPSLimit(0)
 
-setfpscap(maxfps)
+setfpscap(maxfps or 300)
 
 if not isfolder("bitchbot") then
 	makefolder("bitchbot")
@@ -7543,6 +7543,10 @@ local wepesp = allesp[7]
 			if menu and menu.open then return end
 			oldmenufov(...)
 		end
+		local magspeed = 1
+		client.cam.magspring.s = nil
+		local mt = {__index = function(self, i) if i == "s" then return magspeed end end, __newindex = function(self, i, v) if i == "s" then magspeed = v end end}
+		setrawmetatable(client.cam.magspring, mt)
 		client.cam.setmagnification = function(self, m)
 			local lnm = math.log(m)
 			if menu and not menu.open and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then return end
@@ -9109,9 +9113,9 @@ local wepesp = allesp[7]
 		--ADS Fov hook
 		local crosshairColors
 		local function renderVisuals()
+			client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 			if menu.open then
 				--debug.profilebegin("renderVisuals Char")
-				client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 				local crosshud = PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()
 				for i = 1, #crosshud do
 					local frame = crosshud[i] 
@@ -10172,8 +10176,8 @@ local wepesp = allesp[7]
 			renderVisuals()
 			if menu.open then
 				setconstant(client.cam.step, 11, menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
-				client.cam.minangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Pitch") and -999 or -math.pi/2 + 0.001
-				client.cam.maxangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Pitch") and 999 or math.pi/2 - 0.001
+				client.cam.minangle = menu:GetVal("Misc", "Extra", "Unrestrict Angles") and -999 or -math.pi/2 + 0.001
+				client.cam.maxangle = menu:GetVal("Misc", "Extra", "Unrestrict Angles") and 999 or math.pi/2 - 0.001
 			end
 		end
 		--debug.profileend("BB Rendering")
@@ -11372,12 +11376,6 @@ local wepesp = allesp[7]
 							maxvalue = 100,
 							stradd = "%"
 						},
-						{
-							type = "toggle",
-							name = "Unrestrict Pitch",
-							value = false,
-							tooltip = "When turned on, the camera pitch will be unrestricted\nallowing you to move your mouse up or down infinitely."
-						},
 					}
 				},
 				{
@@ -11853,6 +11851,13 @@ local wepesp = allesp[7]
 								name = "Auto Martyrdom",
 								value = false,
 								tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position. If Grenade Teleport is on, it will place the grenade at the enemy."
+							},
+							{
+								type = "toggle",
+								name = "Unrestrict Angles",
+								value = false,
+								unsafe = true,
+								tooltip = "When turned on, the camera pitch will be unrestricted\nallowing you to move your mouse up or down infinitely."
 							},
 						}
 					},
