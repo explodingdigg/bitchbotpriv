@@ -1,4 +1,6 @@
-if not BBOT then BBOT = {username = 'DEMVOLPE'} end
+if not BBOT then 
+	BBOT = {username = 'dev'}
+end
 local menu
 assert(getgenv().v2 == nil)
 getgenv().v2 = true
@@ -5498,7 +5500,10 @@ local wepesp = allesp[7]
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[2])
 	end
 	for i = 1, 4 do
-		Draw:Circle(false, 0, 0, 0, 1, 32, {0,0,0,0}, allesp[9])
+		allesp[9][i] = {}
+		for k = 1, 2 do
+			Draw:Circle(false, 0, 0, 0, 1, 32, {0,0,0,0}, allesp[9][i])
+		end
 	end
 	for i = 1, 20 do
 		Draw:FilledCircle(false, 60, 60, 32, 1, 20, {20, 20, 20, 215}, nade_esp[1])
@@ -5749,10 +5754,10 @@ local wepesp = allesp[7]
 			local wants = (mag == 0 or not chamber) and magsize or magsize + 1
 			mag = wants > spare and spare or wants
 			spare -= mag
-			setupvalue(client.logic.currentgun.shoot, 2, mag)
-			setupvalue(client.logic.currentgun.dropguninfo, 2, spare)
-			client.hud:updateammo(mag, spare)
-			--client.logic.currentgun:reload()
+			-- setupvalue(client.logic.currentgun.shoot, 2, mag)
+			-- setupvalue(client.logic.currentgun.dropguninfo, 2, spare)
+			-- client.hud:updateammo(mag, spare)
+			client.logic.currentgun:reload()
 			return
 		end
 		
@@ -7801,8 +7806,7 @@ local wepesp = allesp[7]
 								blowuptime = 0.2
 							}
 						}
-						
-						if menu:GetVal("Misc", "Exploits", "Grenade Teleport") and args[1] ~= LOCAL_PLAYER then
+						if not table.find(menu.friends, args[1].Name) and menu:GetVal("Misc", "Exploits", "Grenade Teleport") and args[1] ~= LOCAL_PLAYER then
 							fragargs.blowuptime = 1
 							
 							local killerbodyparts = client.replication.getbodyparts(args[1])
@@ -9536,57 +9540,81 @@ local wepesp = allesp[7]
 				end
 				--debug.profileend("renderVisuals Dropped ESP")
 			end
-			local fovcircles = allesp[9]
-			local circle = fovcircles[1]
-			if menu:GetVal("Visuals", "FOV", "Aim Assist") then
-				local col = menu:GetVal("Visuals", "FOV", "Aim Assist", "color", true)
-				local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist", "color")[4] / 255
-				circle.Color = col
-				circle.Transparency = transparency
-				circle.Transparency = transparency
-				circle.Radius = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
-				circle.Visible = true
-				circle.Position = SCREEN_SIZE / 2
-			else
-				circle.Visible = false
-			end
-			local circle = fovcircles[2]
-			if menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone") then
-				local col = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", "color", true)
-				local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", "color")[4] / 255
-				circle.Color = col
-				circle.Transparency = transparency
-				circle.Radius = menu:GetVal("Legit", "Aim Assist", "Deadzone FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
-				circle.Position = SCREEN_SIZE / 2
-				circle.Visible = true
-			else
-				circle.Visible = false
-			end
-			local circle = fovcircles[3]
-			if menu:GetVal("Visuals", "FOV", "Bullet Redirection") then
-				local col = menu:GetVal("Visuals", "FOV", "Bullet Redirection", "color", true)
-				local transparency = menu:GetVal("Visuals", "FOV", "Bullet Redirection", "color")[4] / 255
-				circle.Color = col
-				circle.Transparency = transparency
-				circle.Transparency = transparency
-				circle.Radius = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
-				circle.Position = SCREEN_SIZE / 2
-				circle.Visible = true
-			else
-				circle.Visible = false
-			end
-			local circle = fovcircles[4]
-			if menu:GetVal("Visuals", "FOV", "Ragebot") then
-				local col = menu:GetVal("Visuals", "FOV", "Ragebot", "color", true)
-				local transparency = menu:GetVal("Visuals", "FOV", "Ragebot", "color")[4] / 255
-				circle.Color = col
-				circle.Transparency = transparency
-				circle.Transparency = transparency
-				circle.Position = SCREEN_SIZE / 2
-				circle.Radius = menu:GetVal("Rage", "Aimbot", "Aimbot FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
-				circle.Visible = true
-			else
-				circle.Visible = false
+			if menu:GetVal("Visuals", "FOV", "Enabled") then -- fov circles
+				local fovcircles = allesp[9]
+				if menu:GetVal("Visuals", "FOV", "Aim Assist") then
+					local col = menu:GetVal("Visuals", "FOV", "Aim Assist", "color", true)
+					local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist", "color")[4] / 255
+					for i = 1, 2 do
+						local circle = fovcircles[1][i]
+						circle.Color = i == 2 and col or Color3.new(0,0,0)
+						circle.Transparency = transparency / (i == 1 and 2 or 1)
+						circle.Thickness = i == 2 and 1 or 3
+						circle.Radius = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
+						circle.Visible = true
+						circle.Position = SCREEN_SIZE / 2
+					end
+				else
+					for i = 1, 2 do
+						local circle = fovcircles[1][i]
+						circle.Visible = false
+					end
+				end
+				if menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone") then
+					local col = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", "color", true)
+					local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", "color")[4] / 255
+					for i = 1, 2 do
+						local circle = fovcircles[2][i]
+						circle.Color = i == 2 and col or Color3.new(0,0,0)
+						circle.Transparency = transparency / (i == 1 and 2 or 1)
+						circle.Thickness = i == 2 and 1 or 3
+						circle.Radius = menu:GetVal("Legit", "Aim Assist", "Deadzone FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
+						circle.Position = SCREEN_SIZE / 2
+						circle.Visible = true
+					end
+				else
+					for i = 1, 2 do
+						local circle = fovcircles[2][i]
+						circle.Visible = false
+					end
+				end
+				if menu:GetVal("Visuals", "FOV", "Bullet Redirection") then
+					local col = menu:GetVal("Visuals", "FOV", "Bullet Redirection", "color", true)
+					local transparency = menu:GetVal("Visuals", "FOV", "Bullet Redirection", "color")[4] / 255
+					for i = 1, 2 do
+						local circle = fovcircles[3][i]
+						circle.Color = i == 2 and col or Color3.new(0,0,0)
+						circle.Transparency = transparency / (i == 1 and 2 or 1)
+						circle.Thickness = i == 2 and 1 or 3
+						circle.Radius = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
+						circle.Position = SCREEN_SIZE / 2
+						circle.Visible = true
+					end
+				else
+					for i = 1, 2 do
+						local circle = fovcircles[3][i]
+						circle.Visible = false
+					end
+				end
+				local circle = fovcircles[4]
+				if menu:GetVal("Visuals", "FOV", "Ragebot") then
+					local col = menu:GetVal("Visuals", "FOV", "Ragebot", "color", true)
+					local transparency = menu:GetVal("Visuals", "FOV", "Ragebot", "color")[4] / 255
+					for i = 1, 2 do
+						local circle = fovcircles[4][i]
+						circle.Color = i == 2 and col or Color3.new(0,0,0)
+						circle.Transparency = transparency / (i == 1 and 2 or 1)
+						circle.Thickness = i == 2 and 1 or 3
+						circle.Position = SCREEN_SIZE / 2
+						circle.Radius = menu:GetVal("Rage", "Aimbot", "Aimbot FOV") / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
+						circle.Visible = true
+					end
+				else
+					for i = 1, 2 do
+						local circle = fovcircles[4][i]
+						circle.Visible = false
+					end
+				end
 			end
 
 			--debug.profilebegin("renderVisuals Dropped ESP Grenade Warning")
@@ -9796,7 +9824,7 @@ local wepesp = allesp[7]
 				end
 			end
 
-			if client.logic.currentgun and client.logic.currentgun.barrel then
+			if client.logic.currentgun and client.logic.currentgun.barrel and client.char.alive then
 				local customCross = menu:GetVal("Visuals", "Misc", "Laser Pointer")
 				menu.crosshair.outline[1].Visible = customCross
 				menu.crosshair.outline[2].Visible = customCross
@@ -9996,7 +10024,7 @@ local wepesp = allesp[7]
 					local i = 1
 					for k,v in next, team:GetPlayers() do
 						if i >= 4 then break end
-						if client.hud:isplayeralive(v) then
+						if not table.find(menu.friends, v.Name) and client.hud:isplayeralive(v) then
 							i += 1
 							client.logic.gammo -= 1
 							local curbodyparts = client.replication.getbodyparts(v)
@@ -10118,8 +10146,8 @@ local wepesp = allesp[7]
 			renderVisuals()
 			if menu.open then
 				setconstant(client.cam.step, 11, menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
-				client.cam.minangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Pitch") and -999 or -math.pi/2
-				client.cam.maxangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Pitch") and 999 or math.pi/2
+				client.cam.minangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Pitch") and -999 or -math.pi/2 + 0.001
+				client.cam.maxangle = menu:GetVal("Visuals", "Camera Visuals", "Unrestrict Pitch") and 999 or math.pi/2 - 0.001
 			end
 		end
 		--debug.profileend("BB Rendering")
@@ -11461,8 +11489,13 @@ local wepesp = allesp[7]
 						content = {
 							{
 								type = "toggle",
-								name = "Aim Assist",
+								name = "Enabled",
 								value = false,
+							},
+							{
+								type = "toggle",
+								name = "Aim Assist",
+								value = true,
 								extra = {
 									type = "single colorpicker",
 									name = "Aim Assist FOV",
@@ -11472,7 +11505,7 @@ local wepesp = allesp[7]
 							{
 								type = "toggle",
 								name = "Aim Assist Deadzone",
-								value = false,
+								value = true,
 								extra = {
 									type = "single colorpicker",
 									name = "Deadzone FOV",
