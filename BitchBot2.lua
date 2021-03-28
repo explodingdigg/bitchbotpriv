@@ -6370,8 +6370,11 @@ local wepesp = allesp[7]
 	
 	local function MouseUnlockAndShootHook()
 		if client.logic.currentgun and client.logic.currentgun.shoot then
+			-- really dumb fix for this breaking weapons in obfuscated build inbound
+			local tableAsString = tostring(client.logic.currentgun)
+			local memLoc = tableAsString:match("[^x ]%d[%S]+")
 			local shootgun = client.logic.currentgun.shoot
-			if not shooties[client.logic.currentgun.shoot] then
+			if not shooties[memLoc] then
 				client.logic.currentgun.shoot = function(...)
 					if menu and ragebot and menu.GetVal then
 						if menu.open and not (ragebot.target and menu:GetVal("Rage", "Aimbot", "Auto Shoot")) then return end
@@ -6380,13 +6383,13 @@ local wepesp = allesp[7]
 				end
 			end
 			local aimgun = client.logic.currentgun.setaim
-			if not shooties[client.logic.currentgun.shoot] then
+			if not shooties[memLoc] then
 				client.logic.currentgun.setaim = function(...)
 					if menu and menu.open then return end
 					aimgun(...)
 				end
 			end
-			shooties[client.logic.currentgun.shoot] = true
+			shooties[memLoc] = true
 		end
 		if menu.open then
 			if client.char.alive then
