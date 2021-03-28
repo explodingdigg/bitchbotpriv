@@ -5759,6 +5759,7 @@ local wepesp = allesp[7]
 		local chamber = client.logic.currentgun.data.chamber
 		local reloading = getupvalue(client.logic.currentgun.shoot, 4)
 		local spare = getupvalue(client.logic.currentgun.dropguninfo, 2)
+		local magsize = client.logic.currentgun.data.magsize
 		--[[local yieldtoanimation = getupvalue(client.logic.currentgun.playanimation, 3)
 		local animating = getupvalue(client.logic.currentgun.playanimation, 5)
 		if yieldtoanimation then
