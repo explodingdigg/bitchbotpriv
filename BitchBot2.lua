@@ -5607,22 +5607,24 @@ local wepesp = allesp[7]
 			if rawget(garbage, "deploy") then
 				client.menu = garbage
 				local olddeploy = garbage.deploy
-				elseif rawget(garbage, "send") then
-					client.net = garbage
-				elseif rawget(garbage, "gammo") then
-					client.logic = garbage
-				elseif rawget(garbage, "setbasewalkspeed") then
-					client.char = garbage
-				elseif rawget(garbage, "basecframe") then
-					client.cam = garbage
-				elseif rawget(garbage, "votestep") then
-					client.hud = garbage
-				elseif rawget(garbage, "getbodyparts") then
-					client.replication = garbage
-				elseif rawget(garbage, "play") then
-					client.sound = garbage
-				elseif rawget(garbage, "checkkillzone") then
-					client.roundsystem = garbage
+			elseif rawget(garbage, "send") then
+				client.net = garbage
+			elseif rawget(garbage, "gammo") then
+				client.logic = garbage
+			elseif rawget(garbage, "setbasewalkspeed") then
+				client.char = garbage
+			elseif rawget(garbage, "basecframe") then
+				client.cam = garbage
+			elseif rawget(garbage, "votestep") then
+				client.hud = garbage
+			elseif rawget(garbage, "getbodyparts") then
+				client.replication = garbage
+			elseif rawget(garbage, "play") then
+				client.sound = garbage
+			elseif rawget(garbage, "controller") then
+				client.input = garbage
+			elseif rawget(garbage, "checkkillzone") then
+				client.roundsystem = garbage
 			elseif rawget(garbage, "new") and rawget(garbage, "step") and rawget(garbage, "reset") then
 				client.particle = garbage
 			elseif rawget(garbage, "unlocks") then
@@ -5663,6 +5665,24 @@ local wepesp = allesp[7]
 
 	local function animhook(...)
 		return function(...) end
+	end
+	
+	local mousestuff = rawget(client.input, "mouse")
+	if mousestuff then
+		for eventname, event in next, mousestuff do
+			if eventname:match("^onbutton") then
+				for func in next, mousestuff[eventname]._funcs do
+					local thefunction = func
+					mousestuff[eventname]._funcs[func] = nil
+					local function detoured(...)
+						if menu and menu.open then return end
+						thefunction(...)
+					end
+					mousestuff[eventname]._funcs[detoured] = true
+					break
+				end
+			end
+		end
 	end
 
 	client.loadedguns = getupvalue(client.char.unloadguns, 2) -- i hope this works
@@ -6091,8 +6111,6 @@ local wepesp = allesp[7]
 	local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
 	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
 	
-	local shooties = {}
-	
 	local OLD_GUNS = game:GetService("ReplicatedStorage").GunModules:Clone()
 	OLD_GUNS.Name = tostring(math.random(1e5, 9e5))
 	client.acchash = OLD_GUNS.Name
@@ -6368,37 +6386,7 @@ local wepesp = allesp[7]
 	
 	local skelparts = {"Head", "Right Arm", "Right Leg", "Left Leg", "Left Arm"}
 	
-	local function MouseUnlockAndShootHook()
-		if client.logic.currentgun and client.logic.currentgun.shoot then
-			-- really dumb fix for this breaking weapons in obfuscated build inbound
-			local tableAsString = tostring(client.logic.currentgun)
-			local memLoc = tableAsString:match("[^x ]%d[%S]+")
-			local shootgun = client.logic.currentgun.shoot
-			if not shooties[memLoc] then
-				client.logic.currentgun.shoot = function(...)
-					if menu and ragebot and menu.GetVal then
-						if not (menu.open and not (ragebot.target and menu:GetVal("Rage", "Aimbot", "Auto Shoot"))) then
-							shootgun(...)
-						end
-					else
-						shootgun(...)
-					end
-				end
-			end
-			local aimgun = client.logic.currentgun.setaim
-			if not shooties[memLoc] then
-				client.logic.currentgun.setaim = function(...)
-					if menu then
-						if not menu.open then
-							aimgun(...)
-						end
-					else
-						aimgun(...)
-					end
-				end
-			end
-			shooties[memLoc] = true
-		end
+	local function MouseUnlockHook()
 		if menu.open then
 			if client.char.alive then
 				INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
@@ -8427,6 +8415,9 @@ local wepesp = allesp[7]
 						return
 					end
 				end
+				if args[1] == "debug" and args[1] == "flaguser" then
+					return
+				end
 				if args[1] == "chatted" then
 					local message = args[2]
 					local commandLocation = string.find(message, "\\")
@@ -10171,7 +10162,7 @@ local wepesp = allesp[7]
 	end) ]]
 	
 	menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
-		MouseUnlockAndShootHook()
+		MouseUnlockHook()
 		--debug.profilebegin("Main BB Loop")
 		--debug.profilebegin("Noclip Cheat check")
 		if not client.char.alive then
