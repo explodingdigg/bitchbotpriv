@@ -6377,16 +6377,24 @@ local wepesp = allesp[7]
 			if not shooties[memLoc] then
 				client.logic.currentgun.shoot = function(...)
 					if menu and ragebot and menu.GetVal then
-						if menu.open and not (ragebot.target and menu:GetVal("Rage", "Aimbot", "Auto Shoot")) then return end
+						if not (menu.open and not (ragebot.target and menu:GetVal("Rage", "Aimbot", "Auto Shoot"))) then
+							shootgun(...)
+						end
+					else
+						shootgun(...)
 					end
-					shootgun(...)
 				end
 			end
 			local aimgun = client.logic.currentgun.setaim
 			if not shooties[memLoc] then
 				client.logic.currentgun.setaim = function(...)
-					if menu and menu.open then return end
-					aimgun(...)
+					if menu then
+						if not menu.open then
+							aimgun(...)
+						end
+					else
+						aimgun(...)
+					end
 				end
 			end
 			shooties[memLoc] = true
