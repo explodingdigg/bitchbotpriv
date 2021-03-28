@@ -8182,33 +8182,31 @@ local wepesp = allesp[7]
 		menu.connections.button_pressed_pf = ButtonPressed:connect(function(tab, gb, name)
 			if name == "Crash Server" then
 				while wait() do
-					for i = 1, 50 do
-						local tid = 846964998 ^ math.random(-100, 100)
-						
-						client.net:send("changecamo", "Recon", "Secondary", "GLOCK 17", "Slot1", {
-							BrickProperties = {
-								Color = {
-									r = math.random(0, 255),
-									g = math.random(0, 255),
-									b = math.random(0, 255),
+					for i = 0, 10 do
+						client.net.send('changecamo', 'Recon', 'Secondary', 'GLOCK 17', 'Slot1', {
+							['BrickProperties'] = {
+								['Color'] = {
+										['r'] = math.random(0, 255),
+										['g'] = math.random(0, 255),
+										['b'] = math.random(0, 255),
 								},
-								BrickColor = "Black",
-								Reflectance = math.random(0, 100),
+								['BrickColor'] = 'Black',
+								['Reflectance'] = math.random(0, 100),
 							},
-							TextureProperties = {
-								Color = {
-									r = math.random(0, 255),
-									g = math.random(0, 255),
-									b = math.random(0, 255),
+							['TextureProperties'] = {
+								['Color'] = {
+										['r'] = math.random(0, 255),
+										['g'] = math.random(0, 255),
+										['b'] = math.random(0, 255),
 								},
-								OffsetStudsU = math.random(0, 4),
-								OffsetStudsV = math.random(0, 4),
-								StudsPerTileU = math.random(0, 4),
-								StudsPerTileV = math.random(0, 4),
-								TextureId = tid
+								['OffsetStudsU'] = math.random(0, 4),
+								['OffsetStudsV'] = math.random(0, 4),
+								['StudsPerTileU'] = math.random(0, 4),
+								['StudsPerTileV'] = math.random(0, 4),
+								['TextureId'] = 846964998
 							},
-							Name = "",
-							TextureId = tid
+							['Name'] = '',
+							['TextureId'] = 846964998
 						})
 					end
 				end
@@ -8785,7 +8783,7 @@ local wepesp = allesp[7]
 						local sFov = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV")
 						local dzFov = menu:GetVal("Legit", "Aim Assist", "Deadzone FOV")
 						
-						local hitboxPriority = menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or "torso"
+						local hitboxPriority = menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 2 and "torso" or "closey :)"  
 						local hitscan = misc:GetParts(menu:GetVal("Legit", "Aim Assist", "Hitboxes"))
 						
 						if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
@@ -8852,7 +8850,8 @@ local wepesp = allesp[7]
 				and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
 					local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
 					local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * client.zoommodspring.p
+					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * client.cam.shakespring.p 
+					table.foreach(client.cam.shakespring, print)
 					Pos += rcsdelta
 				end
 				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
@@ -9264,7 +9263,7 @@ local wepesp = allesp[7]
 						local spoty = 0
 						local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", "color")[4] / 255
 						
-						local distance = math.floor((parts.rootpart.Position - client.cam.cframe.p).Magnitude/5)
+						local distance = math.floor((parts.rootpart.Position - Camera.CFrame.Position).Magnitude/5)
 						
 						
 						if (topIsRendered or bottomIsRendered) then
@@ -9533,7 +9532,7 @@ local wepesp = allesp[7]
 									
 									Tri.Visible = true
 									
-									local relativePos = client.cam.cframe:PointToObjectSpace(rootpartpos)
+									local relativePos = Camera.CFrame:PointToObjectSpace(rootpartpos)
 									local direction = math.atan2(-relativePos.y, relativePos.x)
 									
 									local distance = dot(relativePos.Unit, relativePos)
@@ -9802,25 +9801,35 @@ local wepesp = allesp[7]
 			-- hand chams and such
 			if not client then return end
 			local vm = workspace.Camera:GetChildren()
-			if menu:GetVal("Visuals", "Local", "Arm Chams") then
-				local material = menu:GetVal("Visuals", "Local", "Arm Material")
-				for k, v in pairs(vm) do
-					if v.Name == "Left Arm" or v.Name == "Right Arm" then
-						for k1, v1 in pairs(v:GetChildren()) do
+			local armcham = menu:GetVal("Visuals", "Local", "Arm Chams")
+			
+			local material = menu:GetVal("Visuals", "Local", "Arm Material")
+			for k, v in pairs(vm) do
+				if v.Name == "Left Arm" or v.Name == "Right Arm" then
+					for k1, v1 in pairs(v:GetChildren()) do
+						if armcham then
 							v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color2", true)
-							if not client.fakecharacter then
-								v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
-							else
-								v1.Transparency = 1
-							end
-							v1.Material = mats[material]
-							if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
+						end
+						if not client.fakecharacter and armcham then
+							v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
+						elseif client.fakecharacter then
+							v1.Transparency = 1
+						else
+							v1.Transparency = 0
+						end
+						v1.Material = mats[material]
+						if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
+							if armcham then
 								v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
-								if not client.fakecharacter then
-									v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color1")[4]/-255)
-								else
-									v1.Transparency = 1
-								end
+							end
+							if not client.fakecharacter and armcham then
+								v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
+							elseif client.fakecharacter then
+								v1.Transparency = 1
+							else
+								v1.Transparency = 0
+							end
+							if armcham then
 								if v1.TextureID and tostring(material) ~= "ForceField" then
 									v1.TextureID = ""
 								else
@@ -9832,62 +9841,70 @@ local wepesp = allesp[7]
 					end
 				end
 			end
-			if menu:GetVal("Visuals", "Local", "Weapon Chams") then
-				for k, v in pairs(vm) do
-					if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
-						for k1, v1 in pairs(v:GetChildren()) do
+			local wepcham = menu:GetVal("Visuals", "Local", "Weapon Chams") 
+			
+			for k, v in pairs(vm) do
+				if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
+					for k1, v1 in pairs(v:GetChildren()) do
+						if wepcham then
 							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
-							
-							if v1.Transparency ~= 1 then
-								v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
-							end
-							
-							if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") then
-								for i2, v2 in pairs(v1:GetChildren()) do
-									if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
-										v2:Destroy()
-									end
+						end
+						if wepcham and not client.fakecharacter then
+							v1.Transparency = client.logic.currentgun.transparencydata[v1] or 1 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+						elseif client.fakecharacter then
+							v1.Transparency = 1
+						else
+							v1.Transparency = client.logic.currentgun.transparencydata[v1]
+						end
+						
+						if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") and wepcham then
+							for i2, v2 in pairs(v1:GetChildren()) do
+								if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
+									v2:Destroy()
 								end
 							end
-							
-							local mat = mats[menu:GetVal("Visuals", "Local", "Weapon Material")]
+						end
+						
+						local mat = mats[menu:GetVal("Visuals", "Local", "Weapon Material")]
+						if wepcham then
 							v1.Material = mat
+						end
+						
+						if v1:IsA("UnionOperation") and wepcham then
+							v1.UsePartColor = true
+						end
+						
+						if v1.ClassName == "MeshPart" and wepcham then
+							v1.TextureID = mat == "ForceField" and "rbxassetid://5843010904" or ""
+						end
+						
+						if v1.Name == "LaserLight" and wepcham then
+							local transparency = 1+(menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4]/-255)
+							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
+							v1.Transparency = (transparency / 2) + 0.5
+							v1.Material = "ForceField"
 							
-							if v1:IsA("UnionOperation") then
-								v1.UsePartColor = true
-							end
-							
-							if v1.ClassName == "MeshPart" then
-								v1.TextureID = mat == "ForceField" and "rbxassetid://5843010904" or ""
-							end
-							
-							if v1.Name == "LaserLight" then
+						elseif v1.Name == "SightMark" and wepcham then
+							if v1:FindFirstChild("SurfaceGui") then
+								local color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
 								local transparency = 1+(menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4]/-255)
-								v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
-								v1.Transparency = (transparency / 2) + 0.5
-								v1.Material = "ForceField"
-								
-							elseif v1.Name == "SightMark" then
-								if v1:FindFirstChild("SurfaceGui") then
-									local color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
-									local transparency = 1+(menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4]/-255)
-									v1.SurfaceGui.Border.Scope.ImageColor3 = color
-									v1.SurfaceGui.Border.Scope.ImageTransparency = transparency
-									if v1.SurfaceGui:FindFirstChild("Margins") then
-										v1.SurfaceGui.Margins.BackgroundColor3 = color
-										v1.SurfaceGui.Margins.ImageColor3 = color
-										v1.SurfaceGui.Margins.ImageTransparency = (transparency/5) + 0.7
-									elseif v1.SurfaceGui:FindFirstChild("Border") then
-										v1.SurfaceGui.Border.BackgroundColor3 = color
-										v1.SurfaceGui.Border.ImageColor3 = color
-										v1.SurfaceGui.Border.ImageTransparency = 1
-									end
+								v1.SurfaceGui.Border.Scope.ImageColor3 = color
+								v1.SurfaceGui.Border.Scope.ImageTransparency = transparency
+								if v1.SurfaceGui:FindFirstChild("Margins") then
+									v1.SurfaceGui.Margins.BackgroundColor3 = color
+									v1.SurfaceGui.Margins.ImageColor3 = color
+									v1.SurfaceGui.Margins.ImageTransparency = (transparency/5) + 0.7
+								elseif v1.SurfaceGui:FindFirstChild("Border") then
+									v1.SurfaceGui.Border.BackgroundColor3 = color
+									v1.SurfaceGui.Border.ImageColor3 = color
+									v1.SurfaceGui.Border.ImageTransparency = 1
 								end
 							end
 						end
 					end
 				end
 			end
+			
 
 			
 			
@@ -10186,8 +10203,8 @@ local wepesp = allesp[7]
 			renderVisuals()
 			if menu.open then
 				setconstant(client.cam.step, 11, menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
-				client.cam.minangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and -999 or -math.pi/2 + 0.001
-				client.cam.maxangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and 999 or math.pi/2 - 0.001
+				client.cam.minangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and -999 or -math.pi/2 + 0.005
+				client.cam.maxangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and 999 or math.pi/2 - 0.005
 			end
 		end
 		--debug.profileend("BB Rendering")
@@ -10409,7 +10426,8 @@ local wepesp = allesp[7]
 						local lchams = menu:GetVal("Visuals", "Local", "Local Player Chams")
 						if lchams then
 							local lchamscolor = menu:GetVal("Visuals", "Local", "Local Player Chams", "color", true)
-							
+							local lchamstransparency = menu:GetVal("Visuals", "Local", "Local Player Chams", "color")[4]/255
+
 							local lchamsmat = mats[menu:GetVal("Visuals", "Local", "Local Player Material")]
 							
 							local curchildren = client.fake3pchar:GetChildren()
@@ -10437,14 +10455,15 @@ local wepesp = allesp[7]
 						if client.logic.currentgun then
 							if client.logic.currentgun.type ~= "KNIFE" then
 								local bool = client.logic.currentgun:isaiming()
+								local transparency = 1+menu:GetVal("Visuals", "Local", "Local Player Chams", "color")[4]/-255
 								fakeupdater.setaim(bool)
 								for k,v in next, client.fake3pchar:GetChildren() do -- this is probably going to cause a 1 fps drop or some shit lmao
 									if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-										v.Transparency = bool and 0.6 or 0
+										v.Transparency = bool and transparency/2 or transparency
 									end
 									if v:IsA("Model") then
 										for k,v in next, v:GetChildren() do
-											v.Transparency = bool and 0.6 or 0
+											v.Transparency = bool and transparency/2 or transparency
 										end
 									end
 								end
@@ -10542,7 +10561,7 @@ local wepesp = allesp[7]
 							type = "dropbox",
 							name = "Hitscan Priority",
 							value = 1,
-							values = {"Head", "Body"}
+							values = {"Head", "Body", "Closest"}
 						},
 						{
 							type = "combobox",
@@ -11836,6 +11855,14 @@ local wepesp = allesp[7]
 								name = "killsoundid",
 								text = "6229978482",
 								tooltip = "The Roblox sound ID or file inside of synapse\n workspace to play when Kill Sound is on."
+							},
+							{
+								type = "slider",
+								name = "Kill Sound Volume",
+								value = 100,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%",
 							},
 							{
 								type = "dropbox",
