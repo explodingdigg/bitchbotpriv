@@ -8883,7 +8883,7 @@ elseif menu.game == "pf" then --!SECTION
 				local Pos, visCheck
 				
 				if menu:GetVal("Legit", "Aim Assist", "Adjust for Bullet Drop") then
-					Pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position + targetPart.Velocity, Camera.CFrame.Position))
+					Pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position, Camera.CFrame.Position))
 				else
 					Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
 				end
@@ -9860,24 +9860,32 @@ elseif menu.game == "pf" then --!SECTION
 						if armcham then
 							v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color2", true)
 						end
-						if not client.fakecharacter and armcham then
-							v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
-						elseif client.fakecharacter then
-							v1.Transparency = 1
-						else
-							v1.Transparency = 0
+						if v1.Transparency ~= 1 then
+							if armcham then
+								if not client.fakecharacter then
+									v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
+								else
+									v1.Transparency = 0.999999
+								end
+							else
+								v1.Transparency = 0
+							end
 						end
 						v1.Material = mats[material]
 						if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
 							if armcham then
 								v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
 							end
-							if not client.fakecharacter and armcham then
-								v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
-							elseif client.fakecharacter then
-								v1.Transparency = 1
-							else
-								v1.Transparency = 0
+							if v1.Transparency ~= 1 then
+								if armcham then
+									if not client.fakecharacter then
+										v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color1")[4]/-255)
+									else
+										v1.Transparency = 0.999999
+									end
+								else
+									v1.Transparency = 0
+								end
 							end
 							if armcham then
 								if v1.TextureID and tostring(material) ~= "ForceField" then
