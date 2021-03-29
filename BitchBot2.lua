@@ -20,7 +20,8 @@ if isfile("bitchbot/chatspam.txt") then
 		table.insert(customChatSpam, s)
 	end
 end
-function map(X, A, B, C, D)
+
+local function map(X, A, B, C, D)
 	return (X-A)/(B-A) * (D-C) + C
 end
 
@@ -6038,8 +6039,8 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 		
-		local spring = require(game.ReplicatedFirst.SharedModules.Utilities.Math.spring)
-		spring.__index = client.springindex
+		-- NOTE unhook springs here
+		client:UnhookSprings()
 
 		client.fake_upvs = nil
 		DeepRestoreTableFunctions(client)
@@ -8193,14 +8194,66 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end
 		do 
-			local spring = require(game.ReplicatedFirst.SharedModules.Utilities.Math.spring)
-			local old_index = spring.__index
-			local swingspring = debug.getupvalue(client.char.step, 21)
+			client.springhooks = {}
+			function client:UnhookSprings()
+				for i = 1, #client.springhooks do
+					local hook = client.springhooks[i]
+					setrawmetatable(hook.spring, hook.meta)
+				end
+				table.clear(client.springhooks)
+			end
+			function client:HookSpring(spring, newMetatable)
+				if #client.springhooks > 0 then
+					for i = 1, #client.springhooks do
+						local hook = client.springhooks[i]
+						if hook.spring == spring then
+							warn("Error, tried to hook spring twice")
+							return
+						end
+					end
+				end
+				local originalMetatable = getrawmetatable(spring)
+				assert(originalMetatable, "Invalid argument given for 'spring'")
+				client.springhooks[#client.springhooks + 1] = {
+					spring = spring,
+					meta = originalMetatable
+				}
+				for metafunc, func in next, originalMetatable do
+					if not newMetatable[metafunc] then
+						newMetatable[metafunc] = originalMetatable[metafunc]
+					else
+						local userFunc = newMetatable[metafunc]
+						newMetatable[metafunc] = function(t, p)
+							return userFunc(t, p, originalMetatable)
+						end
+					end
+				end
+				setrawmetatable(spring, newMetatable)
+			end
+			local swingspring = debug.getupvalue(client.char.step, 15)
 			local sprintspring = debug.getupvalue(client.char.setsprint, 10)
 			local zoommodspring = debug.getupvalue(client.char.step, 1) -- sex.
 			client.zoommodspring = zoommodspring -- fuck
 			
-			client.springindex = old_index
+			client:HookSpring(swingspring, {
+				__index = function(t, p, oldSpring)
+					if p == "v" and menu:GetVal("Misc", "Weapon Modifications", "Run and Gun") then
+						return Vector3.new()
+					end
+					return oldSpring.__index(t, p)
+				end
+			})
+
+			client:HookSpring(sprintspring, {
+				__index = function(t, p, oldSpring)
+					if p == "p" and menu:GetVal("Misc", "Weapon Modifications", "Run and Gun") then
+						return 0
+					end
+					return oldSpring.__index(t, p)
+				end
+			})
+
+			--[[ client.springindex = old_index
 			
 			spring.__index = newcclosure(function(t, k)
 				local result = old_index(t, k)
@@ -8220,13 +8273,8 @@ elseif menu.game == "pf" then --!SECTION
 						return 0
 					end
 				end
-				--[[ if t == client.char.slidespring then
-					if k == "p" and menu:GetVal("Visuals", "Camera Visuals", "Show Sliding") then 
-						return 0
-					end
-				end ]]
 				return result
-			end)
+			end) ]]
 		end
 		menu.connections.button_pressed_pf = ButtonPressed:connect(function(tab, gb, name)
 			if name == "Crash Server" then
@@ -8291,14 +8339,63 @@ elseif menu.game == "pf" then --!SECTION
 			end
 		end)
 		
-		menu.connections.toggle_pressed_pf = TogglePressed:connect(function(tab, name, gb)
+		menu.connections.toggle_pressed_pf = TogglePressed:connect(function(tab, name, class)
 			if name == "Enabled" and tab == "Weapon Modifications" then
-				client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldplayer
-				client.animation.reset = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldreset
+				client.animation.player = (class[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldplayer
+				client.animation.reset = (class[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldreset
 			end
 			if name == "Remove Animations" then
-				client.animation.player = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
-				client.animation.reset = (gb[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldreset
+				client.animation.player = (class[1] and menu:GetVal("Misc", "Weapon Modifications", "Enabled")) and animhook or client.animation.oldplayer
+				client.animation.reset = (class[1] and menu:GetVal("Misc", "Weapon Modifications", "Remove Animations")) and animhook or client.animation.oldreset
+			end
+			if name == "Arm Chams" then -- TODO try to return the arms and weapon back to their original  colors and everything and shit
+				if not class[1] then
+					local vm = workspace.CurrentCamera:GetChildren()
+					for i = 1, #vm do
+						local model = vm[i]
+						if model.Name:match(".*Arm$") then
+							local children = model:GetChildren()
+							for j = 1, #children do
+								local part = children[j]
+								--part.Color = originalArmColor
+								if part.Transparency ~= 1 then
+									part.Transparency = 0
+								end
+								--part.Material = mats[armmaterial]
+								if part.ClassName == "MeshPart" or part.Name == "Sleeve" then
+									--part.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
+									if part.Transparency ~= 1 then
+										part.Transparency = 0
+									end
+								end
+							end
+						end
+					end
+				end
+			elseif name == "Weapon Chams" then
+				if not class[1] then
+					local vm = workspace.CurrentCamera:GetChildren()
+					for i = 1, #vm do
+						local model = vm[i]
+						if not model.Name:match(".*Arm$") and not model.Name:match(".*FRAG$") then
+							local children = model:GetChildren()
+							for j = 1, #children do
+								local part = children[j]
+								--part.Color = originalWeaponColor
+								if part.Transparency ~= 1 then
+									part.Transparency = 0
+								end
+								--part.Material = mats[Weaponmaterial]
+								if part.ClassName == "MeshPart" or part.Name == "Sleeve" then
+									--part.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
+									if part.Transparency ~= 1 then
+										part.Transparency = 0
+									end
+								end
+							end
+						end
+					end
+				end
 			end
 		end)
 		
@@ -8497,8 +8594,8 @@ elseif menu.game == "pf" then --!SECTION
 				if args[1] == "bullethit" or args[1] == "knifehit" then
 					if table.find(menu.friends, args[2].Name) then return end
 				end
-				if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
-				if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
+				if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
+				if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
 				if args[1] == "falldamage" and menu:GetVal("Misc", "Movement", "Prevent Fall Damage") then return end
 				if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
 					local closest = math.huge
@@ -9854,154 +9951,129 @@ elseif menu.game == "pf" then --!SECTION
 			if not client then return end
 			local vm = workspace.Camera:GetChildren()
 			local armcham = menu:GetVal("Visuals", "Local", "Arm Chams")
-			
-			local armmaterial = menu:GetVal("Visuals", "Local", "Arm Material")
-			for k, v in pairs(vm) do
-				if v.Name == "Left Arm" or v.Name == "Right Arm" then
-					for k1, v1 in pairs(v:GetChildren()) do
-						if armcham then
-							v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color2", true)
-						end
-						if v1.Transparency ~= 1 then
-							if armcham then
-								if not client.fakecharacter then
-									v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
-								else
-									v1.Transparency = 0.999999
-								end
+			local wepcham = menu:GetVal("Visuals", "Local", "Weapon Chams") 
+			-- i optimized this a shit ton
+			for i = 1, #vm do
+				local model = vm[i]
+				if model.Name:match(".*Arm$") and armcham then
+					local armmaterial = menu:GetVal("Visuals", "Local", "Arm Material")
+					local children = model:GetChildren()
+					for j = 1, #children do
+						local part = children[j]
+						part.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color2", true)
+						if part.Transparency ~= 1 then
+							if not client.fakecharacter then
+								part.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
 							else
-								v1.Transparency = 0
+								part.Transparency = 0.999999
 							end
 						end
-						v1.Material = mats[armmaterial]
-						if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
-							if armcham then
-								v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
-							end
-							if v1.Transparency ~= 1 then
-								if armcham then
-									if not client.fakecharacter then
-										v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color1")[4]/-255)
-									else
-										v1.Transparency = 0.999999
-									end
+						part.Material = mats[armmaterial]
+						if part.ClassName == "MeshPart" or part.Name == "Sleeve" then
+							part.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
+							if part.Transparency ~= 1 then
+								if not client.fakecharacter then
+									part.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color1")[4]/-255)
 								else
-									v1.Transparency = 0
+									part.Transparency = 0.999999
 								end
 							end
-							if armcham then
-								if v1.TextureID and tostring(material) ~= "ForceField" then
-									v1.TextureID = ""
-								else
-									v1.TextureID = "rbxassetid://2163189692"
-								end
-								v1:ClearAllChildren()
-							end
+							part:ClearAllChildren()
 						end
 					end
-				end
-			end
-			local wepcham = menu:GetVal("Visuals", "Local", "Weapon Chams") 
-			
-			for k, v in pairs(vm) do
-				if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
-					for k1, v1 in pairs(v:GetChildren()) do
-						if wepcham then
-							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
-						end
-						if v1.Transparency ~= 1 then
-							if wepcham then
-								if not client.fakecharacter then
-									v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
-								else
-									v1.Transparency = 0.999999
-								end
+				elseif not model.Name:match(".*Arm$") and not model.Name:match(".*FRAG$") and wepcham then
+					local children = model:GetChildren()
+					for j = 1, #children do
+						local part = children[j]
+						part.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
+						if part.Transparency ~= 1 then
+							if not client.fakecharacter then
+								part.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
 							else
-								v1.Transparency = client.logic.currentgun.transparencydata and client.logic.currentgun.transparencydata[v1] or 0
+								part.Transparency = 0.999999
 							end
+							-- part.Transparency = client.logic.currentgun.transparencydata and client.logic.currentgun.transparencydata[part] or 0
 						end
-						-- if v1.Transparency ~= 1 then
-						-- 	v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
-						-- end
-						if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") and wepcham then
-							for i2, v2 in pairs(v1:GetChildren()) do
+						if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") then
+							part:ClearAllChildren()
+							--[[ for i2, v2 in pairs(part:GetChildren()) do
 								if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
 									v2:Destroy()
 								end
-							end
+							end ]]
 						end
 						
 						local mat = mats[menu:GetVal("Visuals", "Local", "Weapon Material")]
-						if wepcham then
-							v1.Material = mat
+						part.Material = mat
+						
+						if part:IsA("UnionOperation") then
+							part.UsePartColor = true
 						end
 						
-						if v1:IsA("UnionOperation") and wepcham then
-							v1.UsePartColor = true
+						if part.ClassName == "MeshPart" then
+							local flag = mat == "ForceField" and menu:GetVal("Visuals", "Local", "Animate Ghost Material")
+							part.TextureID = flag and "rbxassetid://5843010904" or ""
 						end
 						
-						if v1.ClassName == "MeshPart" and wepcham then
-							v1.TextureID = mat == "ForceField" and "rbxassetid://5843010904" or ""
-						end
-						
-						if v1.Name == "LaserLight" and wepcham then
+						if part.Name == "LaserLight" then
 							local transparency = 1+(menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4]/-255)
-							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
-							v1.Transparency = (transparency / 2) + 0.5
-							v1.Material = "ForceField"
-							
-						elseif v1.Name == "SightMark" and wepcham then
-							if v1:FindFirstChild("SurfaceGui") then
+							part.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
+							part.Transparency = (transparency / 2) + 0.5
+							part.Material = "ForceField"
+						elseif part.Name == "SightMark" then
+							local surfacegui = part:FindFirstChild("SurfaceGui")
+							if surfacegui then
+								local reticleBorder = surfacegui:FindFirstChild("Border")
+								local reticleMargins = surfacegui:FindFirstChild("Margins")
 								local color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
 								local transparency = 1+(menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4]/-255)
-								v1.SurfaceGui.Border.Scope.ImageColor3 = color
-								v1.SurfaceGui.Border.Scope.ImageTransparency = transparency
-								if v1.SurfaceGui:FindFirstChild("Margins") then
-									v1.SurfaceGui.Margins.BackgroundColor3 = color
-									v1.SurfaceGui.Margins.ImageColor3 = color
-									v1.SurfaceGui.Margins.ImageTransparency = (transparency/5) + 0.7
-								elseif v1.SurfaceGui:FindFirstChild("Border") then
-									v1.SurfaceGui.Border.BackgroundColor3 = color
-									v1.SurfaceGui.Border.ImageColor3 = color
-									v1.SurfaceGui.Border.ImageTransparency = 1
+								reticleBorder.Scope.ImageColor3 = color
+								reticleBorder.Scope.ImageTransparency = transparency
+								if reticleMargins then
+									reticleMargins.BackgroundColor3 = color
+									reticleMargins.ImageColor3 = color
+									reticleMargins.ImageTransparency = (transparency/5) + 0.7
+								elseif reticleBorder then
+									reticleBorder.BackgroundColor3 = color
+									reticleBorder.ImageColor3 = color
+									reticleBorder.ImageTransparency = 1
 								end
 							end
 						end
 					end
 				end
 			end
-			
-
-			
-			
 			--debug.profileend("renderVisuals Local Visuals")
-			
-			
 		end
 		--debug.profileend("renderVisuals Main")
 		--debug.profilebegin("renderVisuals No Scope")
 		do -- no scope pasted from v1 lol
-			local gui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
-			local frame = gui.MainGui:FindFirstChild("ScopeFrame")
+			local gui = LOCAL_PLAYER.PlayerGui
+			local frame = gui.MainGui.ScopeFrame
 			if menu:GetVal("Visuals", "Camera Visuals", "No Scope Border") and frame then
-				if frame:FindFirstChild("SightRear") then
-					for k,v in pairs(frame.SightRear:GetChildren()) do
-						if v.ClassName == "Frame" then
-							v.Visible = false
+				local sightRear = frame:FindFirstChild("SightRear")
+				if sightRear then
+					local children = sightRear:GetChildren()
+					for i = 1, #children do
+						local thing = children[i]
+						if thing.ClassName == "Frame" then
+							thing.Visible = false
 						end
 					end
 					frame.SightFront.Visible = false
-					frame.SightRear.ImageTransparency = 1
+					sightRear.ImageTransparency = 1
 				end
 			elseif frame then
-				if frame:FindFirstChild("SightRear") then
-					for k,v in pairs(frame.SightRear:GetChildren()) do
-						if v.ClassName == "Frame" then
-							v.Visible = true
+				if sightRear then
+					local children = sightRear:GetChildren()
+					for i = 1, #children do
+						local thing = children[i]
+						if thing.ClassName == "Frame" then
+							thing.Visible = true
 						end
 					end
 					frame.SightFront.Visible = true
-					frame.SightRear.ImageTransparency = 0
+					sightRear.ImageTransparency = 0
 				end
 			end
 		end
@@ -11308,6 +11380,12 @@ elseif menu.game == "pf" then --!SECTION
 								name = "Weapon Material",
 								value = 1,
 								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
+							{
+								type = "toggle",
+								name = "Animate Ghost Material",
+								value = false,
+								tooltip = "Toggles whether or not the 'Ghost' material will be animated or not."
 							},
 							{
 								type = "toggle",
