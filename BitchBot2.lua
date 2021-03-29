@@ -9049,10 +9049,18 @@ elseif menu.game == "pf" then --!SECTION
 				if math.random(0, 100) > menu:GetVal("Legit", "Bullet Redirection", "Hit Chance") then return end
 				
 				if not client.logic.currentgun.barrel then return end
-				local origin = client.logic.currentgun.barrel.Position
+				local origin = client.logic.currentgun.isaiming() and client:GetToggledSight(client.logic.currentgun) or client.logic.currentgun.barrel.Position
 				
 				local target = targetPart.Position
-				local dir = camera:GetTrajectory(target, origin) - origin
+				local dir, bulletTravelTime = client.trajectory(client.cam.cframe.p, GRAVITY, target, client.logic.currentgun.data.bulletspeed)
+				if menu:GetVal("Legit", "Aim Assist", "Target Prediction") then
+					local playerHit = client.replication.getplayerhit(targetPart)
+					local rootpart = client.replication.getbodyparts(playerHit).rootpart
+					local velocity = rootpart.Velocity
+					local finalVelocity = velocity * bulletTravelTime
+					target += finalVelocity
+					dir = client.trajectory(client.cam.cframe.p, GRAVITY, target, client.logic.currentgun.data.bulletspeed)
+				end
 				dir = dir.Unit
 				
 				local offsetMult = map((menu:GetVal("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
