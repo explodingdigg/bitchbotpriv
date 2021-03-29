@@ -8372,6 +8372,7 @@ elseif menu.game == "pf" then --!SECTION
 									if part.Transparency ~= 1 then
 										part.Transparency = 0
 									end
+									
 								end
 							end
 						end
@@ -10005,6 +10006,11 @@ elseif menu.game == "pf" then --!SECTION
 								else
 									part.Transparency = 0.999999
 								end
+							end
+							if part.TextureID and tostring(mats[armmaterial]) ~= "ForceField" then
+								part.TextureID = ""
+							else
+								part.TextureID = menu:GetVal("Visuals", "Local", "Animate Ghost Material") and "rbxassetid://2163189692" or ""
 							end
 							part:ClearAllChildren()
 						end
