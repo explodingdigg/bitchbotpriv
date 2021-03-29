@@ -8567,9 +8567,6 @@ elseif menu.game == "pf" then --!SECTION
 						return
 					end
 				end
-				if args[1] == "debug" and args[1] == "flaguser" then
-					return
-				end
 				if args[1] == "chatted" then
 					local message = args[2]
 					local commandLocation = string.find(message, "\\")
