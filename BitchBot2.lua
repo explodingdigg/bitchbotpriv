@@ -10680,7 +10680,7 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "dropbox",
 							name = "Smoothing Type",
-							value = 1,
+							value = 2,
 							values = {"Exponential", "Linear"}
 						},
 						{
