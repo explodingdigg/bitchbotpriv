@@ -667,13 +667,13 @@ local function WriteRelations()
 		end
 		
 		if userid then
-			str = str .. tostring(userid) .. ","
+			str ..= tostring(userid) .. ","
 		else
-			str = str .. tostring(playerobj.UserId) .. ","
+			str ..= tostring(playerobj.UserId) .. ","
 		end
 	end
 	
-	str = str .. "}{priority:"
+	str ..= "}{priority:"
 	
 	for k,v in next, menu.priority do
 		local playerobj
@@ -689,13 +689,13 @@ local function WriteRelations()
 		end
 		
 		if userid then
-			str = str .. tostring(userid) .. ","
+			str ..= tostring(userid) .. ","
 		else
-			str = str .. tostring(playerobj.UserId) .. ","
+			str ..= tostring(playerobj.UserId) .. ","
 		end
 	end
 	
-	str = str .. "}}"
+	str ..= "}}"
 	
 	writefile("bitchbot/relations.bb", str)
 end
@@ -1348,7 +1348,7 @@ do
 				if textthing == "" then
 					textthing = v[1]
 				else
-					textthing = textthing.. ", ".. v[1]
+					textthing ..= ", ".. v[1]
 				end
 			end
 		end
@@ -2468,17 +2468,17 @@ function menu.Initialize(menutable)
 										if table.find(textBoxLetters, KeyEnumToName(key.KeyCode)) then
 											--print(tostring(INPUT_SERVICE:IsModifierKeyDown()))
 											if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-												v2[1] = v2[1].. string.upper(KeyEnumToName(key.KeyCode))
+												v2[1] ..= string.upper(KeyEnumToName(key.KeyCode))
 											else
-												v2[1] = v2[1].. string.lower(KeyEnumToName(key.KeyCode))
+												v2[1] ..= string.lower(KeyEnumToName(key.KeyCode))
 											end
 										elseif KeyEnumToName(key.KeyCode) == "Space" then
-											v2[1] = v2[1].. " "
+											v2[1] ..= " "
 										elseif keymodifiernames[KeyEnumToName(key.KeyCode)] ~= nil then
 											if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-												v2[1] = v2[1].. KeyModifierToName(KeyEnumToName(key.KeyCode), v2[6])
+												v2[1] ..= KeyModifierToName(KeyEnumToName(key.KeyCode), v2[6])
 											else
-												v2[1] = v2[1].. KeyEnumToName(key.KeyCode)
+												v2[1] ..= KeyEnumToName(key.KeyCode)
 											end
 
 										elseif KeyEnumToName(key.KeyCode) == "Back" and v2[1] ~= "" then
@@ -2568,13 +2568,13 @@ function menu.Initialize(menutable)
 		local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
 			
 		for k, v in next, menuElementTypes do
-			figgy = figgy.. v.. "s {\n"
+			figgy ..= v.. "s {\n"
 			for k1, v1 in pairs(menu.options) do
 				for k2, v2 in pairs(v1) do
 					for k3, v3 in pairs(v2) do
 						
 						if v3[2] == tostring(v) and k3 ~= "Configs" and k3 ~= "Player Status" and k3 ~= "ConfigName" then
-							figgy = figgy..k1.. "|".. k2.."|".. k3.."|"..tostring(v3[1]).. "\n"
+							figgy ..= k1 .. "|" .. k2 .."|" .. k3 .. "|" .. tostring(v3[1]) .. "\n"
 						end
 					end
 				end
@@ -9008,9 +9008,9 @@ elseif menu.game == "pf" then --!SECTION
 					Move_Mouse(aimbotMovement/smoothing)
 				else
 					local unitMovement = aimbotMovement.Unit
-					local newMovement = aimbotMovement.Magnitude > unitMovement.Magnitude and unitMovement or aimbotMovement
+					local newMovement = aimbotMovement.Magnitude > unitMovement.Magnitude and unitMovement or aimbotMovement / 5
 					
-					Move_Mouse(newMovement * 100 / smoothing)
+					Move_Mouse(newMovement / smoothing * 0.01)
 				end
 				--debug.profileend("Legitbot AimAtTarget")
 				
@@ -9443,7 +9443,7 @@ elseif menu.game == "pf" then --!SECTION
 									end
 
 									if rankon then
-										namestring = namestring.. " ".. string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
+										namestring ..= " ".. string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
 									else
 										namestring = string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
 									end
