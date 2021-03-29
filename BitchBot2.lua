@@ -788,17 +788,6 @@ function string_cut(s1, num)
 end
 
 local textBoxLetters = {
-	"1",
-	"2",
-	"3",
-	"4",
-	"5",
-	"6",
-	"7",
-	"8",
-	"9",
-	"0",
-	
 	"A",
 	"B",
 	"C",
@@ -870,6 +859,31 @@ local colemak = {
 	S = "R", D = "S", F = "T", G = "D", J = "N", K = "E", L = "I", [";"] = "O",
 	N = "K",
 }
+
+local keymodifiernames = {
+	["`"] = "~",
+	["1"] = "!",
+	["2"] = "@",
+	["3"] = "#",
+	["4"] = "$",
+	["5"] = "%",
+	["6"] = "^",
+	["7"] = "&",
+	["8"] = "*",
+	["9"] = "(",
+	["0"] = ")",
+	["-"] = "_",
+	["="] = "+",
+	["["] = "{",
+	["]"] = "}",
+	["\\"] = "|",
+	[";"] = ":",
+	["'"] = "\"",
+	[","] = "<",
+	["."] = ".",
+	["/"] = "?"
+}
+
 local function KeyEnumToName(key) -- did this all in a function cuz why not
 	if key == nil then
 		return "None"
@@ -900,6 +914,34 @@ local function KeyEnumToName(key) -- did this all in a function cuz why not
 		return colemak[keyname] or keyname
 	else
 		return keyname
+	end
+end
+
+local invalidfilekeys = {
+	["\\"] = true,
+	["/"] = true,
+	[":"] = true,
+	["*"] = true,
+	["?"] = true,
+	["\""] = true,
+	["<"] = true,
+	[">"] = true,
+	["|"] = true
+}
+
+local function KeyModifierToName(key, filename)
+	if keymodifiernames[key] ~= nil then
+		if filename then
+			if invalidfilekeys[keymodifiernames[key]] then
+				return ""
+			else
+				return keymodifiernames[key]
+			end
+		else
+			return keymodifiernames[key]
+		end
+	else
+		return ""
 	end
 end
 
@@ -1718,6 +1760,7 @@ function menu.Initialize(menutable)
 								menu.options[v.name][g_name][v2.name][2] = v2.type
 								menu.options[v.name][g_name][v2.name][3] = {v1.x + 7, v1.y + y_pos - 1, v1.width - 16}
 								menu.options[v.name][g_name][v2.name][5] = false
+								menu.options[v.name][g_name][v2.name][6] = v2.file and true or false
 								y_pos += 28
 							elseif v2.type == "list" then
 								menu.options[v.name][g_name][v2.name] = {}
@@ -2416,28 +2459,29 @@ function menu.Initialize(menutable)
 									v2[5][5] = false
 								end
 							end
-						elseif v2[2] == "textbox" then
+						elseif v2[2] == "textbox" then --ANCHOR TEXTBOXES
 							if v2[5] then
 								if not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftControl) then
-									if table.find(textBoxLetters, KeyEnumToName(key.KeyCode)) and string.len(v2[1]) <= 28 then
-										--print(tostring(INPUT_SERVICE:IsModifierKeyDown()))
-										if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-											v2[1] = v2[1].. string.upper(KeyEnumToName(key.KeyCode))
-										else
-											v2[1] = v2[1].. string.lower(KeyEnumToName(key.KeyCode))
+									if string.len(v2[1]) <= 28 then
+										if table.find(textBoxLetters, KeyEnumToName(key.KeyCode)) then
+											--print(tostring(INPUT_SERVICE:IsModifierKeyDown()))
+											if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+												v2[1] = v2[1].. string.upper(KeyEnumToName(key.KeyCode))
+											else
+												v2[1] = v2[1].. string.lower(KeyEnumToName(key.KeyCode))
+											end
+										elseif KeyEnumToName(key.KeyCode) == "Space" then
+											v2[1] = v2[1].. " "
+										elseif keymodifiernames[KeyEnumToName(key.KeyCode)] ~= nil then
+											if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
+												v2[1] = v2[1].. KeyModifierToName(KeyEnumToName(key.KeyCode), v2[6])
+											else
+												v2[1] = v2[1].. KeyEnumToName(key.KeyCode)
+											end
+
+										elseif KeyEnumToName(key.KeyCode) == "Back" and v2[1] ~= "" then
+											v2[1] = string.sub(v2[1], 0, #(v2[1]) - 1)
 										end
-									elseif KeyEnumToName(key.KeyCode) == "Space" then
-										v2[1] = v2[1].. " "
-									elseif KeyEnumToName(key.KeyCode) == "-" then
-										if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
-											v2[1] = v2[1].. "_"
-										else
-											v2[1] = v2[1].. "-"
-										end
-									elseif key.KeyCode.Name == "Period" then
-										v2[1] = v2[1] .. "."
-									elseif KeyEnumToName(key.KeyCode) == "Back" and v2[1] ~= "" then
-										v2[1] = string.sub(v2[1], 0, #(v2[1]) - 1)
 									end
 									v2[4].Text = v2[1] .. "|"
 								end
@@ -4663,6 +4707,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						{
 							type = "textbox",
 							name = "ConfigName",
+							file = true,
 							text = ""
 						},
 						{
@@ -12110,6 +12155,7 @@ local wepesp = allesp[7]
 						{
 							type = "textbox",
 							name = "ConfigName",
+							file = true,
 							text = ""
 						},
 						{
