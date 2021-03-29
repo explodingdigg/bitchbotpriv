@@ -8899,10 +8899,12 @@ elseif menu.game == "pf" then --!SECTION
 				and client.logic.currentgun.type ~= "KNIFE"
 				and INPUT_SERVICE:IsMouseButtonPressed(1)
 				and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
-					local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
-					local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * (client.cam.shakespring.p.Magnitude + client.zoommodspring.p)
-					Pos += rcsdelta
+					if client.logic.currentgun.data.blackscope and isPlayerAiming or client.logic.currentgun.data.blackscope then
+						local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
+						local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
+						local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * (client.cam.shakespring.p.Magnitude + client.zoommodspring.p^8)
+						Pos += rcsdelta
+					end
 				end
 				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
 				
@@ -9853,7 +9855,7 @@ elseif menu.game == "pf" then --!SECTION
 			local vm = workspace.Camera:GetChildren()
 			local armcham = menu:GetVal("Visuals", "Local", "Arm Chams")
 			
-			local material = menu:GetVal("Visuals", "Local", "Arm Material")
+			local armmaterial = menu:GetVal("Visuals", "Local", "Arm Material")
 			for k, v in pairs(vm) do
 				if v.Name == "Left Arm" or v.Name == "Right Arm" then
 					for k1, v1 in pairs(v:GetChildren()) do
@@ -9871,7 +9873,7 @@ elseif menu.game == "pf" then --!SECTION
 								v1.Transparency = 0
 							end
 						end
-						v1.Material = mats[material]
+						v1.Material = mats[armmaterial]
 						if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
 							if armcham then
 								v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
