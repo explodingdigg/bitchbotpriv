@@ -9899,8 +9899,8 @@ elseif menu.game == "pf" then --!SECTION
 						if wepcham then
 							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
 						end
-						if wepcham and not client.fakecharacter and client.logic.currentgun.transparencydata[v1] ~= 1 and v1.Transparency ~= 1 then
-							v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
+						if wepcham and not client.fakecharacter and v1.Transparency ~= 1 then
+							v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
 						elseif client.fakecharacter then
 							v1.Transparency = 0.999999
 						elseif v1.Transparency ~= 1 then
@@ -10255,8 +10255,8 @@ elseif menu.game == "pf" then --!SECTION
 			renderVisuals()
 			if menu.open then
 				setconstant(client.cam.step, 11, menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
-				client.cam.minangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and -999 or -math.pi/2 + 0.005
-				client.cam.maxangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and 999 or math.pi/2 - 0.005
+				client.cam.minangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and -999 or -math.pi/2 + 0.01
+				client.cam.maxangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and 999 or math.pi/2 - 0.01
 			end
 		end
 		--debug.profileend("BB Rendering")
