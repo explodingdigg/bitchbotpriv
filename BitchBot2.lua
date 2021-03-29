@@ -9907,7 +9907,7 @@ elseif menu.game == "pf" then --!SECTION
 									v1.Transparency = 0.999999
 								end
 							else
-								v1.Transparency = client.logic.currentgun.transparencydata[v1] or 0
+								v1.Transparency = client.logic.currentgun.transparencydata and client.logic.currentgun.transparencydata[v1] or 0
 							end
 						end
 						-- if v1.Transparency ~= 1 then
