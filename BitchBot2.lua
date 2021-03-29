@@ -7787,7 +7787,7 @@ local wepesp = allesp[7]
 								end
 							end
 
-							client.sound.PlaySoundId(soundid, 5.0, 1.0, workspace, nil, 0, 0.03)
+							client.sound.PlaySoundId(soundid, menu:GetVal("Misc", "Extra", "Kill Sound Volume") / 10, 1.0, workspace, nil, 0, 0.03)
 						end
 					end
 					
@@ -8850,8 +8850,7 @@ local wepesp = allesp[7]
 				and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
 					local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
 					local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * client.cam.shakespring.p 
-					table.foreach(client.cam.shakespring, print)
+					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * (client.cam.shakespring.p + client.zoommodspring.p)
 					Pos += rcsdelta
 				end
 				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
@@ -11859,7 +11858,7 @@ local wepesp = allesp[7]
 							{
 								type = "slider",
 								name = "Kill Sound Volume",
-								value = 100,
+								value = 20,
 								minvalue = 0,
 								maxvalue = 100,
 								stradd = "%",
