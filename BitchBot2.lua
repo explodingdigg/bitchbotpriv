@@ -5710,6 +5710,11 @@ elseif menu.game == "pf" then --!SECTION
 		return function(...) end
 	end
 	
+	function client:GetToggledSight(weapon)
+		local updateaimstatus = getupvalue(weapon.toggleattachment, 3)
+		return getupvalue(updateaimstatus, 1)
+	end
+
 	local mousestuff = rawget(client.input, "mouse")
 	if mousestuff then
 		for eventname, event in next, mousestuff do
@@ -8961,7 +8966,7 @@ elseif menu.game == "pf" then --!SECTION
 								local trigger = barrel.Parent.Trigger
 								if trigger then
 									barrel.Orientation = trigger.Orientation
-									client.logic.currentgun.aimsightdata[1].sightpart.Orientation = trigger.Orientation
+									client:GetToggledSight(client.logic.currentgun).sightpart.Orientation = trigger.Orientation
 								end
 							end
 						end
@@ -8980,15 +8985,27 @@ elseif menu.game == "pf" then --!SECTION
 				local Pos, visCheck
 				
 				if menu:GetVal("Legit", "Aim Assist", "Adjust for Bullet Drop") then
-					Pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position, Camera.CFrame.Position))
+					local bulletVelocity, bulletTravelTime = client.trajectory(client.cam.cframe.p, GRAVITY, targetPart.Position, client.logic.currentgun.data.bulletspeed)
+					local finalPosition
+					if menu:GetVal("Legit", "Aim Assist", "Target Prediction") then
+						local playerHit = client.replication.getplayerhit(targetPart)
+						local rootpart = client.replication.getbodyparts(playerHit).rootpart
+						local velocity = rootpart.Velocity
+						local finalVelocity = velocity * bulletTravelTime
+						finalPosition = targetPart.Position + finalVelocity
+						bulletVelocity, bulletTravelTime = client.trajectory(client.cam.cframe.p, GRAVITY, finalPosition, client.logic.currentgun.data.bulletspeed)
+					else
+						finalPosition = targetPart.Position
+					end
+					Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position + bulletVelocity)
+					--Pos, visCheck = Camera:WorldToScreenPoint(camera:GetTrajectory(targetPart.Position, Camera.CFrame.Position))
 				else
 					Pos, visCheck = Camera:WorldToScreenPoint(targetPart.Position)
 				end
 				local randMag = menu:GetVal("Legit", "Aim Assist", "Randomization") * 5
 				Pos += Vector3.new(math.noise(time()*0.1, 0.1) * randMag, math.noise(time()*0.1, 200) * randMag, 0)
-				--TODO nate fix
 				
-				local sight = client.logic.currentgun.aimsightdata[1].sightpart
+				local sight = client:GetToggledSight(client.logic.currentgun).sightpart
 				local gunpos2d = Camera:WorldToScreenPoint(sight.Position)
 				
 				local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
@@ -9046,7 +9063,7 @@ elseif menu.game == "pf" then --!SECTION
 				if client.logic.currentgun.type == "SHOTGUN" then
 					local x, y, z = CFrame.lookAt(Vector3.new(), dir.Unit):ToOrientation()
 					client.logic.currentgun.barrel.Orientation = Vector3.new(math.deg(x), math.deg(y), math.deg(z))
-					client.logic.currentgun.aimsightdata[1].sightpart.Orientation = Vector3.new(math.deg(x), math.deg(y), math.deg(z))
+					client:GetToggledSight(client.logic.currentgun).sightpart.Orientation = Vector3.new(math.deg(x), math.deg(y), math.deg(z))
 					return 
 				end
 				return dir.Unit
@@ -9082,7 +9099,7 @@ elseif menu.game == "pf" then --!SECTION
 						new_closest = closest
 						for k, Bone in pairs(Parts) do
 							if Bone.ClassName == "Part" and hitscan[k] then
-								local fovToBone = camera:GetFOV(Bone, client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart)
+								local fovToBone = camera:GetFOV(Bone, client.logic.currentgun:isaiming() and client:GetToggledSight(client.logic.currentgun).sightpart)
 								if fovToBone < closest then
 									local validPart = isValidTarget(Bone, Player)
 									if validPart then
@@ -9334,7 +9351,7 @@ elseif menu.game == "pf" then --!SECTION
 			menu.crosshair.inner[1].Visible = true
 			menu.crosshair.inner[2].Visible = true
 			local ignore = {workspace.Ignore, Camera}
-			local barrel = client.logic.currentgun:isaiming() and client.logic.currentgun.aimsightdata[1].sightpart or client.logic.currentgun.barrel
+			local barrel = client.logic.currentgun:isaiming() and client:GetToggledSight(client.logic.currentgun).sightpart or client.logic.currentgun.barrel
 			local hit, hitpos = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.Position, barrel.CFrame.LookVector * 100), ignore)
 			local size = 6
 			local color = menu:GetVal("Visuals", "Misc", "Laser Pointer", "color", true)
@@ -10722,6 +10739,11 @@ elseif menu.game == "pf" then --!SECTION
 							type = "toggle",
 							name = "Adjust for Bullet Drop",
 							value = false
+						},
+						{
+							type = "toggle",
+							name = "Target Prediction",
+							value = false,
 						},
 						{
 							type = "slider",
