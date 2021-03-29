@@ -8994,9 +8994,9 @@ elseif menu.game == "pf" then --!SECTION
 				local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
 				if client.logic.currentgun
 				and client.logic.currentgun.type ~= "KNIFE"
-				and INPUT_SERVICE:IsMouseButtonPressed(1)
+				and INPUT_SERVICE:IsMouseButtonPressed(0)
 				and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
-					if client.logic.currentgun.data.blackscope and isPlayerAiming or client.logic.currentgun.data.blackscope then
+					if client.logic.currentgun.data.blackscope and isPlayerScoped or client.logic.currentgun.data.blackscope then
 						local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
 						local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
 						local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * (client.cam.shakespring.p.Magnitude + client.zoommodspring.p^8)
