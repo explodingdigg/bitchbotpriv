@@ -9010,7 +9010,7 @@ elseif menu.game == "pf" then --!SECTION
 					local unitMovement = aimbotMovement.Unit
 					local newMovement = aimbotMovement.Magnitude > unitMovement.Magnitude and unitMovement or aimbotMovement / 5
 					
-					Move_Mouse(newMovement / smoothing * 0.01)
+					Move_Mouse(newMovement / smoothing * 100)
 				end
 				--debug.profileend("Legitbot AimAtTarget")
 				
