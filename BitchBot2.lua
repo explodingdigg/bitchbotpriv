@@ -8182,31 +8182,33 @@ local wepesp = allesp[7]
 		menu.connections.button_pressed_pf = ButtonPressed:connect(function(tab, gb, name)
 			if name == "Crash Server" then
 				while wait() do
-					for i = 0, 10 do
-						client.net.send('changecamo', 'Recon', 'Secondary', 'GLOCK 17', 'Slot1', {
-							['BrickProperties'] = {
-								['Color'] = {
-										['r'] = math.random(0, 255),
-										['g'] = math.random(0, 255),
-										['b'] = math.random(0, 255),
+					for i = 1, 35 do
+						local tid = 846964998 ^ math.random(-100, 100)
+						
+						client.net:send("changecamo", "Recon", "Secondary", "GLOCK 17", "Slot1", {
+							BrickProperties = {
+								Color = {
+									r = math.random(0, 255),
+									g = math.random(0, 255),
+									b = math.random(0, 255),
 								},
-								['BrickColor'] = 'Black',
-								['Reflectance'] = math.random(0, 100),
+								BrickColor = "Black",
+								Reflectance = math.random(0, 100),
 							},
-							['TextureProperties'] = {
-								['Color'] = {
-										['r'] = math.random(0, 255),
-										['g'] = math.random(0, 255),
-										['b'] = math.random(0, 255),
+							TextureProperties = {
+								Color = {
+									r = math.random(0, 255),
+									g = math.random(0, 255),
+									b = math.random(0, 255),
 								},
-								['OffsetStudsU'] = math.random(0, 4),
-								['OffsetStudsV'] = math.random(0, 4),
-								['StudsPerTileU'] = math.random(0, 4),
-								['StudsPerTileV'] = math.random(0, 4),
-								['TextureId'] = 846964998
+								OffsetStudsU = math.random(0, 4),
+								OffsetStudsV = math.random(0, 4),
+								StudsPerTileU = math.random(0, 4),
+								StudsPerTileV = math.random(0, 4),
+								TextureId = tid
 							},
-							['Name'] = '',
-							['TextureId'] = 846964998
+							Name = "",
+							TextureId = tid
 						})
 					end
 				end
@@ -9848,12 +9850,12 @@ local wepesp = allesp[7]
 						if wepcham then
 							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
 						end
-						if wepcham and not client.fakecharacter then
-							v1.Transparency = client.logic.currentgun.transparencydata[v1] or 1 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+						if wepcham and not client.fakecharacter and client.logic.currentgun.transparencydata[v1] ~= 1 then
+							v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
 						elseif client.fakecharacter then
 							v1.Transparency = 1
 						else
-							v1.Transparency = client.logic.currentgun.transparencydata[v1]
+							v1.Transparency = client.logic.currentgun.transparencydata[v1] or 0
 						end
 						
 						if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") and wepcham then
