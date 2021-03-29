@@ -8901,7 +8901,7 @@ elseif menu.game == "pf" then --!SECTION
 				and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
 					local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
 					local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * (client.cam.shakespring.p:Magnitude() + client.zoommodspring.p)
+					local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * (client.cam.shakespring.p.Magnitude + client.zoommodspring.p)
 					Pos += rcsdelta
 				end
 				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
