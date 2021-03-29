@@ -10026,12 +10026,13 @@ elseif menu.game == "pf" then --!SECTION
 							-- part.Transparency = client.logic.currentgun.transparencydata and client.logic.currentgun.transparencydata[part] or 0
 						end
 						if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") then
-							part:ClearAllChildren()
-							--[[ for i2, v2 in pairs(part:GetChildren()) do
-								if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
-									v2:Destroy()
+							local wepchildren = part:GetChildren()
+							for k = 1, #wepchildren do
+								local wepchild = wepchildren[k]
+								if wepchild.ClassName == "Texture" or wepchild.ClassName == "Decal" then
+									wepchild:Destroy()
 								end
-							end ]]
+							end
 						end
 						
 						local mat = mats[menu:GetVal("Visuals", "Local", "Weapon Material")]
