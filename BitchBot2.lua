@@ -9899,12 +9899,16 @@ elseif menu.game == "pf" then --!SECTION
 						if wepcham then
 							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
 						end
-						if wepcham and not client.fakecharacter and v1.Transparency ~= 1 then
-							v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
-						elseif client.fakecharacter then
-							v1.Transparency = 0.999999
-						elseif v1.Transparency ~= 1 then
-							v1.Transparency = client.logic.currentgun.transparencydata[v1] or 0
+						if v1.Transparency ~= 1 then
+							if wepcham then
+								if not client.fakecharacter then
+									v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
+								else
+									v1.Transparency = 0.999999
+								end
+							else
+								v1.Transparency = client.logic.currentgun.transparencydata[v1] or 0
+							end
 						end
 						-- if v1.Transparency ~= 1 then
 						-- 	v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
