@@ -11178,7 +11178,7 @@ elseif menu.game == "pf" then --!SECTION
 				{
 					name = {"Enemy ESP", "Team ESP", "Local"},
 					autopos = "left",
-					size = 276,
+					size = 288,
 					[1] = {
 						content = {
 							{
@@ -11814,7 +11814,7 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Grenade Warning",
-							value = false,
+							value = true,
 							extra = {
 								type = "single colorpicker",
 								name = "Slider Color",
