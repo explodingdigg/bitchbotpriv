@@ -8843,7 +8843,7 @@ elseif menu.game == "pf" then --!SECTION
 							local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") * 5 + 10
 							if targetPart then
 								if closest < fov and closest > dzFov then
-									legitbot:AimAtTarget(targetPart, smoothing)
+									legitbot:AimAtTarget(targetPart, smoothing, menu:GetVal("Legit", "Aim Assist", "Smoothing Type"))
 								end
 							end
 						end
@@ -8875,7 +8875,7 @@ elseif menu.game == "pf" then --!SECTION
 				
 			end
 			
-			function legitbot:AimAtTarget(targetPart, smoothing)
+			function legitbot:AimAtTarget(targetPart, smoothing, smoothtype)
 				
 				--debug.profilebegin("Legitbot AimAtTarget")
 				if not targetPart then return end
@@ -8906,9 +8906,15 @@ elseif menu.game == "pf" then --!SECTION
 						Pos += rcsdelta
 					end
 				end
-				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y) / smoothing
-				
-				Move_Mouse(aimbotMovement)
+				local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, (Pos.y) - LOCAL_MOUSE.y)
+				if smoothtype == 1 then
+					Move_Mouse(aimbotMovement/smoothing)
+				else
+					local unitMovement = aimbotMovement.Unit
+					local newMovement = aimbotMovement.Magnitude > unitMovement.Magnitude and unitMovement or aimbotMovement
+					
+					Move_Mouse(newMovement * 100 / smoothing)
+				end
 				--debug.profileend("Legitbot AimAtTarget")
 				
 			end
@@ -10598,6 +10604,12 @@ elseif menu.game == "pf" then --!SECTION
 							minvalue = 0,
 							maxvalue = 100,
 							stradd = "%"
+						},
+						{
+							type = "dropbox",
+							name = "Smoothing Type",
+							value = 1,
+							values = {"Exponential", "Linear"}
 						},
 						{
 							type = "slider",
