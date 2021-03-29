@@ -9902,7 +9902,7 @@ elseif menu.game == "pf" then --!SECTION
 						if wepcham and not client.fakecharacter and client.logic.currentgun.transparencydata[v1] ~= 1 and v1.Transparency ~= 1 then
 							v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
 						elseif client.fakecharacter then
-							v1.Transparency = 1
+							v1.Transparency = 0.999999
 						elseif v1.Transparency ~= 1 then
 							v1.Transparency = client.logic.currentgun.transparencydata[v1] or 0
 						end
@@ -10511,11 +10511,11 @@ elseif menu.game == "pf" then --!SECTION
 								fakeupdater.setaim(bool)
 								for k,v in next, client.fake3pchar:GetChildren() do -- this is probably going to cause a 1 fps drop or some shit lmao
 									if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-										v.Transparency = bool and transparency/2 or transparency
+										v.Transparency = bool and map(transparency,0,1,0.5,1) or transparency
 									end
 									if v:IsA("Model") then
 										for k,v in next, v:GetChildren() do
-											v.Transparency = bool and transparency/2 or transparency
+											v.Transparency = bool and map(transparency,0,1,0.5,1)  or transparency
 										end
 									end
 								end
