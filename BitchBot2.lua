@@ -2366,6 +2366,7 @@ function menu.Initialize(menutable)
 	menu.textboxopen = nil
 	
 	local shooties = {}
+	local isPlayerScoped = false
 	
 	function InputBeganMenu(key)
 		
@@ -3194,14 +3195,11 @@ function menu.Initialize(menutable)
 							if menu:MouseInMenu(v2.x, v2.y, v2.width, v2.height) then
 	
 								for _k, _v in pairs(v1.vals) do
-									--print(_k, _v)
 									if _k == v2.name then
 										v1.vals[_k] = true
 									else
 										v1.vals[_k] = false
 									end
-
-									--print(_k, _v)
 								end
 	
 								local settab = v2.num
@@ -5062,7 +5060,6 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					updateplist()
 					
 					if selectedPlayer ~= nil then
-						--print(LOCAL_MOUSE.x - menu.x, LOCAL_MOUSE.y - menu.y)
 						if menu:MouseInMenu(28, 68, 448, 238) then
 							if table.find(menu.friends, selectedPlayer.Name) then
 								menu.options["Settings"]["Player List"]["Player Status"][1] = 2
@@ -5532,7 +5529,7 @@ elseif menu.game == "pf" then --!SECTION
 
 	local allespnum = #allesp
 
-local wepesp = allesp[7]
+	local wepesp = allesp[7]
 
 	local wepespnum = #wepesp
 
@@ -7617,7 +7614,14 @@ local wepesp = allesp[7]
 			if menu and menu:GetVal("Visuals", "Camera Visuals", "No Visual Suppression") then return end
 			return suppress(...)
 		end
-		
+
+		local setscope = client.hud.setscope
+
+		function client.hud:setscope(vis, nosway)
+			isPlayerScoped = vis
+			setscope(self, vis, nosway)
+		end
+
 		-- client event hooks! for grenade paths... and other shit (idk where to put this)
 		local clienteventfuncs = getupvalue(client.call, 1)
 		
@@ -9895,14 +9899,16 @@ local wepesp = allesp[7]
 						if wepcham then
 							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
 						end
-						if wepcham and not client.fakecharacter and client.logic.currentgun.transparencydata[v1] ~= 1 then
+						if wepcham and not client.fakecharacter and client.logic.currentgun.transparencydata[v1] ~= 1 and v1.Transparency ~= 1 then
 							v1.Transparency = 1 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
 						elseif client.fakecharacter then
 							v1.Transparency = 1
-						else
+						elseif v1.Transparency ~= 1 then
 							v1.Transparency = client.logic.currentgun.transparencydata[v1] or 0
 						end
-						
+						-- if v1.Transparency ~= 1 then
+						-- 	v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+						-- end
 						if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") and wepcham then
 							for i2, v2 in pairs(v1:GetChildren()) do
 								if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
@@ -12292,7 +12298,6 @@ K/D: %d/%d
 					updateplist()
 					
 					if selectedPlayer ~= nil then
-						--print(LOCAL_MOUSE.x - menu.x, LOCAL_MOUSE.y - menu.y)
 						if menu:MouseInMenu(28, 68, 448, 238) then
 							if table.find(menu.friends, selectedPlayer.Name) then
 								menu.options["Settings"]["Player List"]["Player Status"][1] = 2
