@@ -477,7 +477,7 @@ local function FireEvent(eventname, ...)
 	if allevent[eventname] then
 		return allevent[eventname].fire(...)
 	else
-		warn(("Event %s does not exist!"):format(eventname))
+		--warn(("Event %s does not exist!"):format(eventname))
 	end
 end
 
@@ -6204,7 +6204,7 @@ elseif menu.game == "pf" then --!SECTION
 			if loadplayeridx then
 				setupvalue(client.getupdater, loadplayeridx, loadplayerhook)
 			else
-				warn("Unable to find loadplayer in getupdater")
+				--warn("Unable to find loadplayer in getupdater")
 			end
 		end
 	end)
@@ -8212,7 +8212,7 @@ elseif menu.game == "pf" then --!SECTION
 					for i = 1, #client.springhooks do
 						local hook = client.springhooks[i]
 						if hook.spring == spring then
-							warn("Error, tried to hook spring twice")
+							--warn("Error, tried to hook spring twice")
 							return
 						end
 					end
@@ -8378,6 +8378,7 @@ elseif menu.game == "pf" then --!SECTION
 									if part.Transparency ~= 1 then
 										part.Transparency = 0
 									end
+									
 								end
 							end
 						end
@@ -8572,9 +8573,6 @@ elseif menu.game == "pf" then --!SECTION
 					if args[2] ~= args[2] or args[2].Unit.X ~= args[2].Unit.X then
 						return
 					end
-				end
-				if args[1] == "debug" and args[1] == "flaguser" then
-					return
 				end
 				if args[1] == "chatted" then
 					local message = args[2]
@@ -9056,10 +9054,18 @@ elseif menu.game == "pf" then --!SECTION
 				if math.random(0, 100) > menu:GetVal("Legit", "Bullet Redirection", "Hit Chance") then return end
 				
 				if not client.logic.currentgun.barrel then return end
-				local origin = client.logic.currentgun.barrel.Position
+				local origin = client.logic.currentgun.isaiming() and client:GetToggledSight(client.logic.currentgun) or client.logic.currentgun.barrel.Position
 				
 				local target = targetPart.Position
-				local dir = camera:GetTrajectory(target, origin) - origin
+				local dir, bulletTravelTime = client.trajectory(client.cam.cframe.p, GRAVITY, target, client.logic.currentgun.data.bulletspeed)
+				if menu:GetVal("Legit", "Aim Assist", "Target Prediction") then
+					local playerHit = client.replication.getplayerhit(targetPart)
+					local rootpart = client.replication.getbodyparts(playerHit).rootpart
+					local velocity = rootpart.Velocity
+					local finalVelocity = velocity * bulletTravelTime
+					target += finalVelocity
+					dir = client.trajectory(client.cam.cframe.p, GRAVITY, target, client.logic.currentgun.data.bulletspeed)
+				end
 				dir = dir.Unit
 				
 				local offsetMult = map((menu:GetVal("Legit", "Bullet Redirection", "Accuracy") / 100 * -1 + 1), 0, 1, 0, 0.3)
@@ -10008,6 +10014,11 @@ elseif menu.game == "pf" then --!SECTION
 									part.Transparency = 0.999999
 								end
 							end
+							if part.TextureID and tostring(mats[armmaterial]) ~= "ForceField" then
+								part.TextureID = ""
+							else
+								part.TextureID = menu:GetVal("Visuals", "Local", "Animate Ghost Material") and "rbxassetid://2163189692" or ""
+							end
 							part:ClearAllChildren()
 						end
 					end
@@ -10025,12 +10036,13 @@ elseif menu.game == "pf" then --!SECTION
 							-- part.Transparency = client.logic.currentgun.transparencydata and client.logic.currentgun.transparencydata[part] or 0
 						end
 						if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") then
-							part:ClearAllChildren()
-							--[[ for i2, v2 in pairs(part:GetChildren()) do
-								if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
-									v2:Destroy()
+							local wepchildren = part:GetChildren()
+							for k = 1, #wepchildren do
+								local wepchild = wepchildren[k]
+								if wepchild.ClassName == "Texture" or wepchild.ClassName == "Decal" then
+									wepchild:Destroy()
 								end
-							end ]]
+							end
 						end
 						
 						local mat = mats[menu:GetVal("Visuals", "Local", "Weapon Material")]
@@ -10327,7 +10339,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 
 			if menu:GetVal("Rage", "Fake Lag", "Enabled") and menu:GetVal("Rage", "Fake Lag", "Manual Choke")
-			and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") then
+			and inputObject.KeyCode == menu:GetVal("Rage", "Fake Lag", "Manual Choke", "keybind") then
 				keybindtoggles.fakelag = keyflag
 				if not keyflag then
 					NETWORK:SetOutgoingKBPSLimit(0)
@@ -11176,7 +11188,7 @@ elseif menu.game == "pf" then --!SECTION
 				{
 					name = {"Enemy ESP", "Team ESP", "Local"},
 					autopos = "left",
-					size = 276,
+					size = 288,
 					[1] = {
 						content = {
 							{
@@ -11812,7 +11824,7 @@ elseif menu.game == "pf" then --!SECTION
 						{
 							type = "toggle",
 							name = "Grenade Warning",
-							value = false,
+							value = true,
 							extra = {
 								type = "single colorpicker",
 								name = "Slider Color",
