@@ -10332,7 +10332,7 @@ elseif menu.game == "pf" then --!SECTION
 			end
 
 			if menu:GetVal("Rage", "Fake Lag", "Enabled") and menu:GetVal("Rage", "Fake Lag", "Manual Choke")
-			and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Manual Choke", "keybind") then
+			and inputObject.KeyCode == menu:GetVal("Rage", "Fake Lag", "Manual Choke", "keybind") then
 				keybindtoggles.fakelag = keyflag
 				if not keyflag then
 					NETWORK:SetOutgoingKBPSLimit(0)
