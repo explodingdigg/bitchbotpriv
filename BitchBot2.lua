@@ -477,7 +477,7 @@ local function FireEvent(eventname, ...)
 	if allevent[eventname] then
 		return allevent[eventname].fire(...)
 	else
-		warn(("Event %s does not exist!"):format(eventname))
+		--warn(("Event %s does not exist!"):format(eventname))
 	end
 end
 
@@ -6204,7 +6204,7 @@ elseif menu.game == "pf" then --!SECTION
 			if loadplayeridx then
 				setupvalue(client.getupdater, loadplayeridx, loadplayerhook)
 			else
-				warn("Unable to find loadplayer in getupdater")
+				--warn("Unable to find loadplayer in getupdater")
 			end
 		end
 	end)
@@ -8212,7 +8212,7 @@ elseif menu.game == "pf" then --!SECTION
 					for i = 1, #client.springhooks do
 						local hook = client.springhooks[i]
 						if hook.spring == spring then
-							warn("Error, tried to hook spring twice")
+							--warn("Error, tried to hook spring twice")
 							return
 						end
 					end
