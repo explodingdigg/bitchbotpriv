@@ -10555,6 +10555,10 @@ elseif menu.game == "pf" then --!SECTION
 		
 		--debug.profileend()
 		
+		if menu:GetVal("Misc","Extra","Rejoin") then
+			game:GetService('TeleportService'):Teleport(game.PlaceId, game.Players.LocalPlayer)
+		end
+
 		if menu:GetVal("Visuals", "Local", "Third Person") and not keybindtoggles.superaa and keybindtoggles.thirdperson then -- do third person model
 			if client.char.alive then
 				--debug.profilebegin("Third Person")
@@ -12113,6 +12117,13 @@ elseif menu.game == "pf" then --!SECTION
 								value = false,
 								unsafe = true,
 								tooltip = "When turned on, the camera pitch will be unrestricted,\nallowing you to move your mouse up or down infinitely."
+							},
+							{
+								type = "button",
+								name = "Rejoin",
+								value = false,
+								unsafe = false,
+								doubleclick = true,
 							},
 						}
 					},
