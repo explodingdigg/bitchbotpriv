@@ -8240,6 +8240,12 @@ elseif menu.game == "pf" then --!SECTION
 			local zoommodspring = debug.getupvalue(client.char.step, 1) -- sex.
 			client.zoommodspring = zoommodspring -- fuck
 			
+			local oldjump = client.char.jump
+			function client.char:jump(height)
+				height = menu and menu:GetVal("Misc", "Tweaks", "Jump Power") and (height * menu:GetVal("Misc", "Tweaks", "Jump Power Percentage") / 100)
+				return oldjump(self, height)
+			end
+
 			client:HookSpring(swingspring, {
 				__index = function(t, p, oldSpring)
 					if p == "v" and menu:GetVal("Misc", "Weapon Modifications", "Run and Gun") then
@@ -8518,8 +8524,8 @@ elseif menu.game == "pf" then --!SECTION
 		function misc:GravityShift()
 			
 			
-			if menu:GetVal("Misc", "Movement", "Gravity Shift") then
-				local scaling = menu:GetVal("Misc", "Movement", "Gravity Shift Percentage")
+			if menu:GetVal("Misc", "Tweaks", "Gravity Shift") then
+				local scaling = menu:GetVal("Misc", "Tweaks", "Gravity Shift Percentage")
 				local mappedGrav = map(scaling, -100, 100, -196.2, 196.2)
 				workspace.Gravity = 196.2 + mappedGrav
 			else
@@ -8601,7 +8607,7 @@ elseif menu.game == "pf" then --!SECTION
 				end
 				if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 				if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
-				if args[1] == "falldamage" and menu:GetVal("Misc", "Movement", "Prevent Fall Damage") then return end
+				if args[1] == "falldamage" and menu:GetVal("Misc", "Tweaks", "Prevent Fall Damage") then return end
 				if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
 					local closest = math.huge
 					local part
@@ -9037,6 +9043,7 @@ elseif menu.game == "pf" then --!SECTION
 			function legitbot:SilentAimAtTarget(targetPart)
 				--debug.profilebegin("Legitbot SilentAimAtTarget")
 				
+
 				if not targetPart or not targetPart.Position or not client.logic.currentgun then
 					return
 				end
@@ -11832,92 +11839,113 @@ elseif menu.game == "pf" then --!SECTION
 			name = "Misc",
 			content = {
 				{
-					name = "Movement",
+					name = {"Movement", "Tweaks"},
 					autopos = "left",
-					content = {
-						{
-							type = "toggle",
-							name = "Fly",
-							value = false,
-							unsafe = true,
-							extra = {
-								type = "keybind",
-								key = Enum.KeyCode.B
+					size = 250,
+					[1] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Fly",
+								value = false,
+								unsafe = true,
+								extra = {
+									type = "keybind",
+									key = Enum.KeyCode.B
+								}
+							},
+							{
+								type = "slider",
+								name = "Fly Speed",
+								value = 70,
+								minvalue = 1,
+								maxvalue = 200,
+								stradd = " stud/s"
+							},
+							{
+								type = "toggle",
+								name = "Auto Jump",
+								value = false,
+								tooltip = "When you hold the spacebar, it will automatically jump repeatedly, ignoring jump delay."
+							},
+							{
+								type = "toggle",
+								name = "Speed",
+								value = false,
+								unsafe = true,
+								extra = {
+									type = "keybind",
+								},
+							},
+							{
+								type = "dropbox",
+								name = "Speed Type",
+								value = 1,
+								values = {"Always", "In Air", "On Hop"}
+							},
+							{
+								type = "slider",
+								name = "Speed Factor",
+								value = 40,
+								minvalue = 1,
+								maxvalue = 200,
+								stradd = " stud/s"
+							},
+							{
+								type = "toggle",
+								name = "Circle Strafe",
+								value = false,
+								extra = {
+									type = "keybind"
+								},
+								tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed."
+							},
+							{
+								type = "toggle",
+								name = "Ignore Round Freeze",
+								value = false,
+								unsafe = true,
+								tooltip = "Allows you to move around during the start and end of rounds."
 							}
 						},
-						{
-							type = "slider",
-							name = "Fly Speed",
-							value = 70,
-							minvalue = 1,
-							maxvalue = 200,
-							stradd = " stud/s"
-						},
-						{
-							type = "toggle",
-							name = "Auto Jump",
-							value = false,
-							tooltip = "When you hold the spacebar, it will automatically jump repeatedly, ignoring jump delay."
-						},
-						{
-							type = "toggle",
-							name = "Speed",
-							value = false,
-							unsafe = true,
-							extra = {
-								type = "keybind",
-							},
-						},
-						{
-							type = "dropbox",
-							name = "Speed Type",
-							value = 1,
-							values = {"Always", "In Air", "On Hop"}
-						},
-						{
-							type = "slider",
-							name = "Speed Factor",
-							value = 40,
-							minvalue = 1,
-							maxvalue = 200,
-							stradd = " stud/s"
-						},
-						{
-							type = "toggle",
-							name = "Circle Strafe",
-							value = false,
-							extra = {
-								type = "keybind"
-							},
-							tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed."
-						},
-						{
-							type = "toggle",
-							name = "Gravity Shift",
-							value = false,
-							tooltip = "Shifts movement gravity by X%. (Does not affect bullet acceleration.)"
-						},
-						{
-							type = "slider",
-							name = "Gravity Shift Percentage",
-							value = -50,
-							minvalue = -300,
-							maxvalue = 300,
-							stradd = "%"
-						},
-						{
-							type = "toggle",
-							name = "Prevent Fall Damage",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "Ignore Round Freeze",
-							value = false,
-							unsafe = true,
-							tooltip = "Allows you to move around during the start and end of rounds."
-						}
 					},
+					[2] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Gravity Shift",
+								value = false,
+								tooltip = "Shifts movement gravity by X%. (Does not affect bullet acceleration.)"
+							},
+							{
+								type = "slider",
+								name = "Gravity Shift Percentage",
+								value = -50,
+								minvalue = -300,
+								maxvalue = 300,
+								stradd = "%"
+							},
+							{
+								type = "toggle",
+								name = "Jump Power",
+								value = false,
+								tooltip = "Shifts movement jump power by X%."
+							},
+							{
+								type = "slider",
+								name = "Jump Power Percentage",
+								value = 50,
+								minvalue = 0,
+								maxvalue = 500,
+								stradd = "%"
+							},
+							{
+								type = "toggle",
+								name = "Prevent Fall Damage",
+								value = false
+							},
+						}
+					}
 				},
 				{
 					name = "Weapon Modifications",
