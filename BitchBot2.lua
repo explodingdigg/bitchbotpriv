@@ -8289,6 +8289,7 @@ elseif menu.game == "pf" then --!SECTION
 		end
 		menu.connections.button_pressed_pf = ButtonPressed:connect(function(tab, gb, name)
 			if name == "Crash Server" then
+				CreateNotification("Attempting to crash server...")
 				while wait() do
 					for i = 1, 35 do
 						local tid = 846964998 ^ math.random(-100, 100)
@@ -8321,6 +8322,11 @@ elseif menu.game == "pf" then --!SECTION
 					end
 				end
 			end
+
+			if name == "Rejoin Game" then
+				game:GetService('TeleportService'):Teleport(game.PlaceId, game.Players.LocalPlayer)
+			end
+	
 			if name == "Votekick" then
 				local rank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
 				if not selectedPlayer then return end
@@ -10554,11 +10560,7 @@ elseif menu.game == "pf" then --!SECTION
 		end
 		
 		--debug.profileend()
-		
-		if menu:GetVal("Misc","Extra","Rejoin") then
-			game:GetService('TeleportService'):Teleport(game.PlaceId, game.Players.LocalPlayer)
-		end
-
+	
 		if menu:GetVal("Visuals", "Local", "Third Person") and not keybindtoggles.superaa and keybindtoggles.thirdperson then -- do third person model
 			if client.char.alive then
 				--debug.profilebegin("Third Person")
@@ -12120,7 +12122,7 @@ elseif menu.game == "pf" then --!SECTION
 							},
 							{
 								type = "button",
-								name = "Rejoin",
+								name = "Rejoin Game",
 								value = false,
 								unsafe = false,
 								doubleclick = true,
