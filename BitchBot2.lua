@@ -9126,7 +9126,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			local oldjump = client.char.jump
 			function client.char:jump(height)
-				height = menu and menu:GetVal("Misc", "Tweaks", "Jump Power") and (height * menu:GetVal("Misc", "Tweaks", "Jump Power Percentage") / 100)
+				height = (menu and menu:GetVal("Misc", "Tweaks", "Jump Power")) and (height * menu:GetVal("Misc", "Tweaks", "Jump Power Percentage") / 100) or height
 				return oldjump(self, height)
 			end
 
