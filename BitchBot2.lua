@@ -7027,7 +7027,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	debug.setupvalue(client.loadplayer, 1, client.fakeplayer)
 	client.loadplayer(LOCAL_PLAYER)
 	client.fakeupdater = client.getupdater(LOCAL_PLAYER)
-	print(client.getupdater(LOCAL_PLAYER))
 	debug.setupvalue(client.loadplayer, 1, LOCAL_PLAYER)
 
 	client.fakeplayer.Parent = nil
@@ -9778,8 +9777,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 					
 					-- yaw += jitter
-					local new_angles = Vector2.new(pitch, yaw)
-					args[3] = new_angles
+					local new_angles = Vector2.new(clamp(pitch, 1.47262156, -1.47262156), yaw)
+					-- args[3] = new_angles
 					ragebot.angles = new_angles
 				end
 			end
@@ -10871,7 +10870,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			-- i optimized this a shit ton
 			for i = 1, #vm do
 				local model = vm[i]
-				if model.Name:match(".*Arm$") and armcham then
+				if model.Name:match(".*Arm$") then
 					local armmaterial = menu:GetVal("Visuals", "Local", "Arm Material")
 					local children = model:GetChildren()
 					for j = 1, #children do
@@ -10909,7 +10908,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						part.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
 						if part.Transparency ~= 1 then
 							if not client.fakecharacter then
-								part.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
+								part.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) -- breh this shit is bad
 							else
 								part.Transparency = 0.999999
 							end
@@ -11259,8 +11258,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			renderVisuals()
 			if menu.open then
 				setconstant(client.cam.step, 11, menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5)
-				client.cam.minangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and -999 or -math.pi/2 + 0.01
-				client.cam.maxangle = menu:GetVal("Misc", "Extra", "Unrestrict Pitch") and 999 or math.pi/2 - 0.01
 			end
 		end
 		--debug.profileend("BB Rendering")
@@ -11452,22 +11449,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					localchar.HumanoidRootPart.Anchored = true
 					
 					local torso = localchar.Torso
-					client.fakeupdater.updatecharacter({
-						head = localchar.Head,
-						torso = torso,
-						neck = torso.Neck,
-						rsh = torso["Right Shoulder"],
-						lsh = torso["Left Shoulder"],
-						lhip = torso["Left Hip"],
-						rhip = torso["Right Hip"],
-						rarm = localchar["Right Arm"],
-						larm = localchar["Left Arm"],
-						rleg = localchar["Right Leg"],
-						lleg = localchar["Left Leg"],
-						rootpart = localchar.HumanoidRootPart,
-						rootjoint = localchar.HumanoidRootPart.RootJoint,
-						char = localchar
-					})
+					client.fakeupdater.updatecharacter(localchar)
 					
 					client.fakeupdater.setstance(client.char.movementmode)
 					
@@ -12982,13 +12964,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								name = "Auto Martyrdom",
 								value = false,
 								tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position. If Grenade Teleport is on, it will place the grenade at the enemy."
-							},
-							{
-								type = "toggle",
-								name = "Unrestrict Pitch",
-								value = false,
-								unsafe = true,
-								tooltip = "When turned on, the camera pitch will be unrestricted,\nallowing you to move your mouse up or down infinitely."
 							},
 							{
 								type = "button",
