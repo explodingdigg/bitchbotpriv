@@ -550,7 +550,7 @@ if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 528
 		end
 	end -- wait for framwork to load
 elseif game.PlaceId == 5898483760 or game.PlaceId == 5565011975 then
-	menu.game = "dust"
+	--menu.game = "dust"
 end
 
 loadstart = tick()
@@ -959,9 +959,11 @@ do
 			for k1, v1 in pairs(v) do
 				--warn(k1, v1)
 				-- ANCHOR WHAT THE FUCK IS GOING ON WITH THIS WHY IS THIS ERRORING BECAUSE OF NUMBER
-				--if type(v1) ~= "number" then
+				if v1 and type(v1) ~= 'number' and v1.__OBJECT_EXISTS then
 					v1:Remove()
-				--end
+				else
+					--rconsolewarn(tostring(k),tostring(v),tostring(k1),tostring(v1)) -- idfk why but this shit doesn't print anything out. might as well have it commented out though -nata april 1 21
+				end
 			end
 		end
 	end
@@ -6854,7 +6856,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	menu.pfunload = function(self)
 		for k,v in next, Players:GetPlayers() do
 			local bodyparts = client.replication.getbodyparts(v)
-			if bodyparts then
+			if bodyparts and bodyparts.head and bodyparts.head:FindFirstChild("HELMET") then -- idk just keep this here until the april fools shit goes away? -nata april1,21
 				bodyparts.head.HELMET.Slot1.Transparency = 0
 				bodyparts.head.HELMET.Slot2.Transparency = 0
 			end
@@ -6970,9 +6972,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		DeepRestoreTableFunctions = nil
 	end
 	
-	local charcontainer = game.ReplicatedStorage.Character.Bodies
-	local ghostchar = game.ReplicatedStorage.Character.Bodies.Ghost
-	local phantomchar = game.ReplicatedStorage.Character.Bodies.Phantom
+	local charcontainer = game.ReplicatedStorage.Character.BodyWIP
+	local ghostchar = charcontainer.Ghost
+	local phantomchar = charcontainer.Phantoms
 	
 	local repupdates = {}
 	
@@ -7023,7 +7025,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	client.fakeplayer.Team = LOCAL_PLAYER.Team
 	
 	debug.setupvalue(client.loadplayer, 1, client.fakeplayer)
-	client.fakeupdater = client.loadplayer(LOCAL_PLAYER)
+	client.loadplayer(LOCAL_PLAYER)
+	client.fakeupdater = client.getupdater(LOCAL_PLAYER)
+	print(client.getupdater(LOCAL_PLAYER))
 	debug.setupvalue(client.loadplayer, 1, LOCAL_PLAYER)
 
 	client.fakeplayer.Parent = nil
@@ -7371,9 +7375,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK -- fuk json
 		local PlayerList = Players:GetPlayers()
 		for k = 1, #PlayerList do
-			local Player = PlayerList[k]
-			if Player == LOCAL_PLAYER then continue end -- doing this for now, i'll have to change the way the third person model will end up working
-			local Body = client.replication.getbodyparts(Player)
+			local player = PlayerList[k]
+			if player == LOCAL_PLAYER then continue end -- doing this for now, i'll have to change the way the third person model will end up working
+			local Body = client.replication.getbodyparts(player)
 			if Body then
 				local enabled
 				local col
@@ -7382,7 +7386,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local xqz
 				local ivTransparency
 				
-				if Player.Team ~= Players.LocalPlayer.Team then
+				if player.Team ~= Players.LocalPlayer.Team then
 					enabled = menu:GetVal("Visuals", "Enemy ESP", "Chams")
 					col = menu:GetVal("Visuals", "Enemy ESP", "Chams", "color2", true)
 					vTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", "color2")[4]/255
@@ -7397,11 +7401,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 				
 				
-				Player.Character = Body.rootpart.Parent
-				local Parts = Player.Character:GetChildren()
+				player.Character = Body.rootpart.Parent
+				local Parts = player.Character:GetChildren()
 				for k1 = 1, #Parts do
 					Part = Parts[k1]
-					--debug.profilebegin("renderChams " .. Player.Name)
+					--debug.profilebegin("renderChams " .. player.Name)
 					if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
 						
 						local helmet = Part:FindFirstChild("HELMET")
@@ -7447,13 +7451,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						else
 							for i = 0, 1 do
 								local adorn = i == 0 and Part.c88 or Part.c99
-								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, Player.Name) then
+								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, player.Name) then
 									xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
 									col = bColor:Mult(xqz, 0.6)
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, Player.Name) then
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, player.Name) then
 									xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
 									col = bColor:Mult(xqz, 0.6)
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (Player == legitbot.target or Player == ragebot.target) then
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (player == legitbot.target or player == ragebot.target) then
 									xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
 									col = bColor:Mult(xqz, 0.6)
 								end
@@ -7463,7 +7467,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-					--debug.profileend("renderChams " .. Player.Name)
+					--debug.profileend("renderChams " .. player.Name)
 				end
 			end
 		end
@@ -7473,8 +7477,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	local last_chat = os.time()
 
 	CreateThread(function()
-		if not menu then return end
-		repeat wait() until menu.fading -- this is fucking bad
+		repeat wait() until menu and menu.fading -- this is fucking bad
 		while true do
 			local current_time = os.time()  
 			if not menu then return end
@@ -7884,8 +7887,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		function ragebot:CanPenetrate(origin, target, penetration, whitelist)
 			local autowallchoice = menu:GetVal("Rage", "Aimbot", "Auto Wall")
 			if autowallchoice ~= 1 and autowallchoice == 2 then
-				local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed * 25)
-				local z = d.Unit * client.logic.currentgun.data.bulletspeed * 25 -- bullet speed cheat
+				local d = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed)
+				local z = d.Unit * client.logic.currentgun.data.bulletspeed-- bullet speed cheat --PATCHED. :(
 				-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
 				return ragebot.bulletcheck(origin, target.Position, z, GRAVITY, penetration, whitelist)
 			else
@@ -8661,7 +8664,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if found3 then
 				clienteventfuncs[hash] = function(player, parts)
 					if player.Team ~= LOCAL_PLAYER.Team then
-						for k,v in next, parts do
+						for k,v in next, parts:GetChildren() do
 							if v:IsA("Part") then
 								local formattedval = (menu:GetVal("Legit", "Aim Assist", "Enlarge Enemy Hitboxes") / 95) + 1
 								v.Size *= v.Name == "Head" and Vector3.new(formattedval, v.Size.y * (1 + formattedval / 100), formattedval) or formattedval -- hitbox expander
@@ -8737,10 +8740,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			if found7 then
 				clienteventfuncs[hash] = function(player, newstance)
-					local ting = menu:GetVal("Rage", "Hack vs. Hack", "Force Player Stances")
-					local choice = menu:GetVal("Rage", "Hack vs. Hack", "Stance Choice")
-					choice = choice == 1 and "stand" or choice == 2 and "crouch" or "prone"
-					local chosenstance = ting and choice or newstance
+					local chosenstance = newstance
+					if menu and menu.GetVal then
+						local ting = menu:GetVal("Rage", "Hack vs. Hack", "Force Player Stances")
+						local choice = menu:GetVal("Rage", "Hack vs. Hack", "Stance Choice")
+						choice = choice == 1 and "stand" or choice == 2 and "crouch" or "prone"
+						chosenstance = ting and choice or newstance
+					end
 					return func(player, chosenstance)
 				end
 			end
@@ -8913,13 +8919,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		local tween = game:service("TweenService")
 		
 		client.closecast = require(game.ReplicatedFirst.SharedModules.Utilities.Geometry.CloseCast)
-		local partnames = { "head", "torso", "lleg", "rleg", "larm", "rarm" }
+		local partnames = {"head", "torso", "lleg", "rleg", "larm", "rarm"}
 		local partexpansionarray = { 0.75, 1.5, 1.5, 1.5, 1.5, 1.5 }
 
 		local nv = Vector3.new()
 		local dot = nv.Dot
 
-		local bodyarrayinfo = getupvalue(client.replication.thickcastplayers, 8)
+		local bodyarrayinfo = getupvalue(client.replication.thickcastplayers, 7)
 		local chartable = getupvalue(client.replication.getallparts, 1)
 		client.chartable = chartable
 
@@ -9562,15 +9568,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						send(self, "equip", client.logic.currentgun.id)
 					end
 					
-					if shitting_my_pants == false and menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
-						local new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
-						for k = 1, #args[2].bullets do
-							local bullet = args[2].bullets[k]
-							local old_velocity = bullet[1]
-							bullet[1] = {unit = (old_velocity.Unit * new_speed) / client.logic.currentgun.data.bulletspeed}
-						end
-					end
-					
 					if legitbot.silentVector then
 						for k = 1, #args[2].bullets do
 							local bullet = args[2].bullets[k]
@@ -9614,9 +9611,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						for k = 1, #args[2].bullets do
 							local bullet = args[2].bullets[k]
 							if shitting_my_pants == false then
-								local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed * 25)
-								local new_angle = angle.Unit * 25
-								bullet[1] = {unit = new_angle}
+								local angle, bullet_time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed)
+								bullet[1] = angle
 								-- BULLET SPEED CHEAT ^
 								time = bullet_time
 								--cachedtimedata[k] = bullet_time
@@ -9782,7 +9778,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 					
 					-- yaw += jitter
-					local new_angles = Vector3.new(pitch, yaw, 0)
+					local new_angles = Vector2.new(pitch, yaw)
 					args[3] = new_angles
 					ragebot.angles = new_angles
 				end
@@ -10155,7 +10151,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		local newpart = client.particle.new
 		client.particle.new = function(P)
 			local new_speed
-			if menu:GetVal("Misc", "Exploits", "Freeze Players") and IsKeybindDown("Misc", "Exploits", "Freeze Players") then return end
 			if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
 				new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
 			end
@@ -11208,10 +11203,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			
 			if shitting_my_pants == false then
-				if menu:GetVal("Misc", "Exploits", "Freeze Players") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Freeze Players", "keybind") then
-					keybindtoggles.freeze = keyflag
-					return Enum.ContextActionResult.Sink
-				end
 
 				--[[ if menu:GetVal("Misc", "Exploits", "Super Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind") then
 					CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
@@ -13045,16 +13036,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								name = "Grenade Teleport",
 								value = false,
 								tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes."
-							},
-							{
-								type = "toggle",
-								name = "Freeze Players",
-								value = false,
-								extra = {
-									type = "keybind"
-								},
-								unsafe = true,
-								tooltip = "When this is on, when you shoot it will freeze all players that are spawned for 1.5 seconds."
 							},
 							{
 								type = "toggle",
