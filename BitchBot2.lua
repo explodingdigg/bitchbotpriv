@@ -549,6 +549,8 @@ if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 528
 			annoyingFuckingMusic:Destroy()
 		end
 	end -- wait for framwork to load
+elseif game.PlaceId == 5898483760 or game.PlaceId == 5565011975 then
+	menu.game = "dust"
 end
 
 loadstart = tick()
@@ -957,9 +959,9 @@ do
 			for k1, v1 in pairs(v) do
 				--warn(k1, v1)
 				-- ANCHOR WHAT THE FUCK IS GOING ON WITH THIS WHY IS THIS ERRORING BECAUSE OF NUMBER
-				if type(v1) ~= "number" then
+				--if type(v1) ~= "number" then
 					v1:Remove()
-				end
+				--end
 			end
 		end
 	end
@@ -3972,6 +3974,9 @@ function menu.Initialize(menutable)
 	function menu:unload()
 		getgenv().v2 = nil
 		self.unloaded = true
+
+		
+
 		for k,conn in next, self.connections do
 			if not getrawmetatable(conn) then
 				conn()
@@ -3994,14 +3999,16 @@ function menu.Initialize(menutable)
 		
 		local oldmt = menu.oldmt
 		
-		if not oldmt then -- remember to store any "game" metatable hooks PLEASE PLEASE because this will ensure it replaces the meta so that it UNLOADS properly
-			rconsoleerr("fatal error: no old game meta found! (UNLOAD PROBABLY WON'T WORK AS EXPECTED)")
-		end
-		
-		for k,v in next, mt do
-			if oldmt[k] then
-				mt[k] = oldmt[k]
+		if oldmt then
+			for k,v in next, mt do
+				if oldmt[k] then
+					mt[k] = oldmt[k]
+				end
 			end
+		else
+			--TODO nate do this please
+			-- remember to store any "game" metatable hooks PLEASE PLEASE because this will ensure it replaces the meta so that it UNLOADS properly
+			--rconsoleerr("fatal error: no old game meta found! (UNLOAD PROBABLY WON'T WORK AS EXPECTED)")
 		end
 		
 		setreadonly(mt, true)
@@ -4010,13 +4017,13 @@ function menu.Initialize(menutable)
 			menu:pfunload()
 		end
 		
-		
-		CreateNotification = nil
 		Draw:UnRender()
+		CreateNotification = nil
 		allrender = nil
 		menu = nil
 		Draw = nil
 		self.unloaded = true
+
 	end
 end
 
@@ -5411,8 +5418,882 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	menu.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
 		updateplist()
 	end)
+	--!SECTION
+elseif menu.game == "dust" then --SECTION DUST BEGIN
+
+	local allesp = {
+		name = {},
+		outerbox = {},
+		box = {},
+		innerbox = {},
+
+		healthouter = {},
+		healthinner = {},
+
+		hptext = {},
+
+		item = {},
+
+		downed = {},
+
+		distance = {},
+	}
 	
-elseif menu.game == "pf" then --!SECTION
+	local maxplyrs = Players.MaxPlayers
+
+	for i = 1, maxplyrs do
+		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.outerbox)
+		Draw:OutlinedRect(false, 20, 20, 20, 20, {0, 0, 0, 220}, allesp.innerbox)
+		Draw:OutlinedRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.box)
+		
+		Draw:FilledRect(false, 20, 20, 4, 20, {10, 10, 10, 215}, allesp.healthouter)
+		Draw:FilledRect(false, 20, 20, 20, 20, {255, 255, 255, 255}, allesp.healthinner)
+		Draw:OutlinedText("", 1, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, allesp.hptext)
+
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.distance)
+
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.item)
+
+		Draw:OutlinedText("DOWNED", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.downed)
+
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp.name)
+		
+	end
+
+	local function GetPlayerHealth(player)
+		local humanoid = player.Character:FindFirstChild("Humanoid")
+		
+		local down, hp, maxhp = false, 30, 100
+
+		if humanoid.Health > 35 then
+			hp = math.ceil(humanoid.Health - 35)
+		else
+			down = true
+			maxhp = 35
+			hp = math.ceil(humanoid.Health)
+		end
+
+		return down, hp, maxhp
+	end
+
+	
+	menu.connections.esprenderloop = game.RunService.RenderStepped:Connect(function()
+
+		for k, v in pairs(allesp) do
+			for k1, v1 in ipairs(v) do
+				v1.Visible = false
+			end
+		end
+
+		if menu:GetVal("Visuals", "Player ESP", "Enabled") then
+			local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
+			local priority_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color")[4]/255
+
+			local friend_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
+			local friend_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color")[4]/255
+
+			for i, player in pairs(Players:GetPlayers()) do
+				if not player.Character or not player.Character.Humanoid or player == LOCAL_PLAYER then continue end
+				local humanoid = player.Character:FindFirstChild("Humanoid")
+	
+
+
+				local cam = Camera.CFrame
+
+				if player.Character:FindFirstChild("UpperTorso") == nil or player.Character:FindFirstChild("Head") == nil then continue end
+				local torso = player.Character.UpperTorso.CFrame
+				local head = player.Character.Head.CFrame
+				-- local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
+				-- local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
+				local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1.3) + cam.UpVector)
+				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 3) - cam.UpVector)
+				
+				local minY = math.abs(bottom.y - top.y)
+				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
+				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
+
+				local down, health, maxhealth = GetPlayerHealth(player)
+				
+				if top_isrendered or bottom_isrendered then
+					local boxtop = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - sizeX * 0.5), math.floor(math.min(top.y, bottom.y)))
+					local boxsize = {w = sizeX, h =  sizeY}
+					
+					if menu:GetVal("Visuals", "Player ESP", "Box") then
+						local boxtrans = menu:GetVal("Visuals", "Player ESP", "Box", "color")[4]
+
+						allesp.outerbox[i].Position = Vector2.new(boxtop.x - 1, boxtop.y - 1)
+						allesp.outerbox[i].Size = Vector2.new(boxsize.w + 2, boxsize.h + 2)
+						allesp.outerbox[i].Visible = true
+						allesp.outerbox[i].Transparency = (boxtrans - 40)/255
+
+						allesp.innerbox[i].Position = Vector2.new(boxtop.x + 1, boxtop.y + 1)
+						allesp.innerbox[i].Size = Vector2.new(boxsize.w - 2, boxsize.h - 2)
+						allesp.innerbox[i].Visible = true
+						allesp.innerbox[i].Transparency = (boxtrans - 40)/255
+						
+						allesp.box[i].Position = Vector2.new(boxtop.x, boxtop.y)
+						allesp.box[i].Size = Vector2.new(boxsize.w, boxsize.h)
+						allesp.box[i].Visible = true
+						allesp.box[i].Transparency = boxtrans/255
+
+
+					end
+				
+					if menu:GetVal("Visuals", "Player ESP", "Health Bar") then
+						allesp.healthouter[i].Position = Vector2.new(boxtop.x - 6, boxtop.y - 1)
+						allesp.healthouter[i].Size = Vector2.new(4, boxsize.h + 2)
+						allesp.healthouter[i].Visible = true
+						
+						
+						local ySizeBar = -math.floor(boxsize.h * health / maxhealth)
+						
+						allesp.healthinner[i].Position = Vector2.new(boxtop.x - 5, boxtop.y + boxsize.h)
+						allesp.healthinner[i].Size = Vector2.new(2, ySizeBar)
+						allesp.healthinner[i].Visible = true
+						allesp.healthinner[i].Color = ColorRange(health, {
+							[1] = {start = 0, color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color1", true)},
+							[2] = {start = 100, color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color2", true)}
+						})
+						
+						if menu:GetVal("Visuals", "Player ESP", "Health Number") then
+							allesp.hptext[i].Text = tostring(health)
+							local textsize = allesp.hptext[i].TextBounds
+							allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
+							allesp.hptext[i].Visible = true
+						end
+						
+					elseif menu:GetVal("Visuals", "Player ESP", "Health Number") then
+						allesp.hptext[i].Text = tostring(health)
+						local textsize = allesp.hptext[i].TextBounds
+						allesp.hptext[i].Position = Vector2.new(boxtop.x - 2 - textsize.x, boxtop.y - 4)
+						allesp.hptext[i].Visible = true
+					end
+					
+					local y_spot = 0
+					if menu:GetVal("Visuals", "Player ESP", "Name") then
+						local name_pos = Vector2.new(math.floor(boxtop.x + boxsize.w*0.5), math.floor(boxtop.y - 15))
+						allesp.name[i].Text = player.Name
+						allesp.name[i].Position = name_pos
+						allesp.name[i].Visible = true
+						y_spot += 14
+					end
+
+					if menu:GetVal("Visuals", "Player ESP", "Downed") and down then
+						local downed_pos = Vector2.new(math.floor(boxtop.x + boxsize.w*0.5), math.floor(boxtop.y - 15) - y_spot)
+						allesp.downed[i].Position = downed_pos
+						allesp.downed[i].Visible = true
+					end
+
+					local y_spot = 0
+					if menu:GetVal("Visuals", "Player ESP", "Held Item") then
+						local held_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h)
+						allesp.item[i].Text = "Held Item"
+						allesp.item[i].Position = held_pos
+						allesp.item[i].Visible = true
+						y_spot += 14
+					end
+					if menu:GetVal("Visuals", "Player ESP", "Distance") then
+						local dist_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
+						allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(torso.Position) / 5)).. "m"
+						allesp.distance[i].Position = dist_pos
+						allesp.distance[i].Visible = true
+					end
+
+					if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, player.Name) then
+												
+						allesp.name[i].Color = priority_color
+						allesp.name[i].Transparency = priority_alpha
+						
+						allesp.box[i].Color = priority_color
+						
+						allesp.item[i].Color = priority_color
+						allesp.item[i].Transparency = priority_alpha
+						
+						allesp.distance[i].Color = priority_color
+						allesp.distance[i].Transparency = priority_alpha
+						
+						allesp.downed[i].Color = priority_color
+						allesp.downed[i].Transparency = priority_alpha
+
+					elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, player.Name) then
+
+						allesp.name[i].Color = friend_color
+						allesp.name[i].Transparency = friend_alpha
+						
+						allesp.box[i].Color = friend_color
+						
+						allesp.item[i].Color = friend_color
+						allesp.item[i].Transparency = friend_alpha
+						
+						allesp.distance[i].Color = friend_color
+						allesp.distance[i].Transparency = friend_alpha
+
+						allesp.downed[i].Color = friend_color
+						allesp.downed[i].Transparency = friend_alpha
+
+					else
+						allesp.name[i].Color = menu:GetVal("Visuals", "Player ESP", "Name", "color", true)
+						allesp.name[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Name", "color")[4]/255
+						
+						allesp.box[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", "color", true)
+						
+						allesp.item[i].Color = menu:GetVal("Visuals", "Player ESP", "Held Item", "color", true)
+						allesp.item[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Held Item", "color")[4]/255
+						
+						allesp.distance[i].Color = menu:GetVal("Visuals", "Player ESP", "Distance", "color", true)
+						allesp.distance[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Distance", "color")[4]/255
+						
+						allesp.downed[i].Color = menu:GetVal("Visuals", "Player ESP", "Downed", "color", true)
+						allesp.downed[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Downed", "color")[4]/255
+					end
+				end
+			end
+		end
+	end)
+
+	menu.Initialize({
+		{
+			name = "Legit",
+			content = {
+
+			}
+		},
+		{
+			name = "Rage",
+			content = {
+
+			}	
+		},
+		{
+			name = "Visuals",
+			content = {
+				{
+					name = "Player ESP",
+					autopos = "left",
+					content = {
+						{
+							type = "toggle",
+							name = "Enabled",
+							value = true,
+						},
+						{
+							type = "toggle",
+							name = "Downed",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Player Downed Flag Color",
+								color = {252, 186, 3, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Name",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Player Name Color",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Box",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Player Box Color",
+								color = {255, 0, 0, 200}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Health Bar",
+							value = true,
+							extra = {
+								type = "double colorpicker",
+								name = {"Low Health", "Max Health"},
+								color = {{255, 0, 0}, {0, 255, 0}}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Health Number",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Player Health Number Color",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Held Item",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Player Held Item Color",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Distance",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Player Distance Color",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Chams",
+							value = true,
+							extra = {
+								type = "double colorpicker",
+								name = {"Visible Player Chams", "Invisible Player Chams"},
+								color = {{255, 0, 0, 200}, {100, 0, 0, 100}}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Skeleton",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Player Skeleton Color",
+								color = {255, 255, 255, 180}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Out of View",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Arrow Color",
+								color = {255, 255, 255, 255}
+							}
+						},
+						{
+							type = "slider",
+							name = "Arrow Distance",
+							value = 50,
+							minvalue = 10,
+							maxvalue = 100,
+							stradd = "%",
+						},
+						{
+							type = "toggle",
+							name = "Dynamic Arrow Size",
+							value = true
+						},
+					}
+				},
+				{
+					name = "ESP Settings",
+					autopos = "left",
+					autofill = true,
+					content = {
+						{
+							type = "slider",
+							name = "Max HP Visibility Cap",
+							value = 90,
+							minvalue = 50,
+							maxvalue = 100,
+							stradd = "hp"
+						},
+						{
+							type = "combobox",
+							name = "Ignore",
+							values = {{"Distance", false}, {"Down", false}, {"Party", false}},
+						},
+						{
+							type = "slider",
+							name = "Max Distance",
+							value = 100,
+							minvalue = 30,
+							maxvalue = 500,
+							stradd = "m"
+						},
+						{
+							type = "toggle",
+							name = "Highlight Aimbot Target",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Aimbot Target",
+								color = {255, 0, 0, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Highlight Friends",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Friended Players",
+								color = {0, 255, 255, 255}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Highlight Priority",
+							value = true,
+							extra = {
+								type = "single colorpicker",
+								name = "Priority Players",
+								color = {255, 210, 0, 255}
+							}
+						},
+					}
+				},
+				{
+					name = "Misc",
+					autopos = "right",
+					content = {
+						{
+							type = "toggle",
+							name = "Custom Crosshair",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Crosshair Color",
+								color = {255, 255, 255, 255}
+							}
+						},
+						
+						{
+							type = "dropbox",
+							name = "Crosshair Position",
+							value = 1,
+							values = {"Center Of Screen", "Mouse"}
+						},
+						{
+							type = "slider",
+							name = "Crosshair Size",
+							value = 10,
+							minvalue = 5,
+							maxvalue = 15,
+							stradd = "px"
+						},
+						{
+							type = "toggle",
+							name = "Draw Aimbot FOV",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Aimbot FOV Circle Color",
+								color = {255, 255, 255, 255}
+							}
+						}
+					}
+				},
+				{
+					name = "Local Visuals",
+					autopos = "right",
+					content = {
+						{
+							type = "toggle",
+							name = "Change FOV",
+							value = false,
+						},
+						{
+							type = "slider",
+							name = "Camera FOV",
+							value = 60,
+							minvalue = 60,
+							maxvalue = 120,
+							stradd = "°"
+						},
+					}
+				},
+				{
+					name = "Dropped Esp",
+					autopos = "right",
+					autofill = true,
+					content = {
+
+					}
+				},
+			}
+		},
+		{
+			name = "Misc",
+			content = {
+				{
+					name = "Movement",
+					autopos = "left",
+					autofill = true,
+					content = {
+						{
+							type = "toggle",
+							name = "Speed",
+							value = false
+						},
+						{
+							type = "slider",
+							name = "Speed Factor",
+							value = 40,
+							minvalue = 1,
+							maxvalue = 200,
+							stradd = " stud/s"
+						},
+						{
+							type = "dropbox",
+							name = "Speed Method",
+							value = 1,
+							values = {"Velocity", "Walk Speed"}
+						},
+						{
+							type = "toggle",
+							name = "Fly",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.B,
+							},
+						},
+						{
+							type = "dropbox",
+							name = "Fly Method",
+							value = 1,
+							values = {"Fly", "Noclip"}
+						},
+						{
+							type = "slider",
+							name = "Fly Speed",
+							value = 40,
+							minvalue = 1,
+							maxvalue = 200,
+							stradd = " stud/s",
+						},
+						{
+							type = "toggle",
+							name = "Mouse Teleport",
+							value = false,
+							extra = {
+								type = "keybind",
+								key = Enum.KeyCode.Q,
+							},
+						},
+					}
+				},
+			}
+		},
+		{
+			name = "Settings",
+			content = {
+				{
+					name = "Player List",
+					x = menu.columns.left,
+					y = 66,
+					width = menuWidth-34, -- this does nothing?
+					height = 328,
+					content = {
+						{
+							type = "list",
+							name = "Players",
+							multiname = {"Name", "Team", "Status"},
+							size = 9,
+							columns = 3
+						},
+						{
+							type = "image",
+							name = "Player Info",
+							text = "No Player Selected",
+							size = 72
+						},
+						{
+							type = "dropbox",
+							name = "Player Status",
+							x = 307,
+							y = 314,
+							w = 160,
+							value = 1,
+							values = {"None", "Friend", "Priority"}
+						}
+					}
+				},
+				{
+					name = "Cheat Settings",
+					x = menu.columns.left,
+					y = 400,
+					width = menu.columns.width,
+					height = 182,
+					content = {
+						{
+							type = "toggle",
+							name = "Menu Accent",
+							value = false,
+							extra = {
+								type = "single colorpicker",
+								name = "Accent Color",
+								color = {127, 72, 163}
+							}
+						},
+						{
+							type = "toggle",
+							name = "Watermark",
+							value = true,
+						},
+						{
+							type = "toggle",
+							name = "Custom Menu Name",
+							value = MenuName and true or false,
+						},
+						{
+							type = "textbox",
+							name = "MenuName",
+							text = MenuName or "Bitch Bot"
+						},
+						{
+							type = "button",
+							name = "Set Clipboard Game ID",
+						},
+						{
+							type = "button",
+							name = "Unload Cheat",
+							doubleclick = true,
+						},
+						{
+							type = "toggle",
+							name = "Allow Unsafe Features",
+							value = false,
+						},
+					}
+				},
+				{
+					name = "Configuration",
+					x = menu.columns.right,
+					y = 400,
+					width = menu.columns.width,
+					height = 182,
+					content = {
+						{
+							type = "textbox",
+							name = "ConfigName",
+							file = true,
+							text = ""
+						},
+						{
+							type = "dropbox",
+							name = "Configs",
+							value = 1,
+							values = GetConfigs()
+						},
+						{
+							type = "button",
+							name = "Load Config",
+							doubleclick = true,
+						},
+						{
+							type = "button",
+							name = "Save Config",
+							doubleclick = true,
+						},
+						{
+							type = "button",
+							name = "Delete Config",
+							doubleclick = true,
+						},
+					}
+				}
+			}
+		},
+	})
+
+	local selectedPlayer = nil
+	local plistinfo = menu.options["Settings"]["Player List"]["Player Info"][1]
+	local plist = menu.options["Settings"]["Player List"]["Players"]
+	local function updateplist()
+		if menu == nil then return end
+		local playerlistval = menu:GetVal("Settings", "Player List", "Players")
+		local playerz = {}
+		
+		for i, team in pairs(TEAMS:GetTeams()) do
+			local sorted_players = {}
+			for i1, player in pairs(team:GetPlayers()) do
+				table.insert(sorted_players, player.Name)
+			end
+			table.sort(sorted_players)
+			for i1, player_name in pairs(sorted_players) do
+				table.insert(playerz, Players:FindFirstChild(player_name))
+			end
+		end
+		
+		local sorted_players = {}
+		for i, player in pairs(Players:GetPlayers()) do
+			if player.Team == nil then
+				table.insert(sorted_players, player.Name)
+			end
+		end
+		table.sort(sorted_players)
+		for i, player_name in pairs(sorted_players) do
+			table.insert(playerz, Players:FindFirstChild(player_name))
+		end
+		sorted_players = nil
+		
+		local templist = {}
+		for k, v in pairs(playerz) do
+			local plyrname = {v.Name, RGB(255, 255, 255)}
+			local teamtext = {"None", RGB(255, 255, 255)}
+			local plyrstatus = {"None", RGB(255, 255, 255)}
+			if v.Team ~= nil then
+				teamtext[1] = v.Team.Name
+				teamtext[2] = v.TeamColor.Color
+			end
+			if v == LOCAL_PLAYER then
+				plyrstatus[1] = "Local Player"
+				plyrstatus[2] = RGB(66, 135, 245)
+			elseif table.find(menu.friends, v.Name) then
+				plyrstatus[1] = "Friend"
+				plyrstatus[2] = RGB(0, 255, 0)
+			elseif table.find(menu.priority, v.Name) then
+				plyrstatus[1] = "Priority"
+				plyrstatus[2] = RGB(255, 210, 0)
+			end
+			
+			table.insert(templist, {plyrname, teamtext, plyrstatus})
+		end
+		plist[5] = templist
+		if playerlistval ~= nil then
+			for i, v in ipairs(playerz) do
+				if v.Name == playerlistval then
+					selectedPlayer = v
+					break
+				end
+				if i == #playerz then
+					selectedPlayer = nil
+					menu.list.setval(plist, nil)
+				end
+			end
+		end
+		menu:SetMenuPos(menu.x, menu.y)
+	end
+	
+	local function setplistinfo(player, textonly)
+		if not menu then return end
+		if player ~= nil then
+
+			local playerhealth = "?"
+			local playerdown = "?"
+			if player.Character ~= nil then
+				local down, hp, maxhp = GetPlayerHealth(player)
+				
+				playerdown = tostring(down)
+
+				playerhealth = tostring(hp).. "/".. tostring(maxhp)
+			end
+			
+			plistinfo[1].Text = "Name: ".. player.Name.."\nDown: ".. playerdown .."\nHealth: ".. playerhealth
+			
+			if textonly == nil then
+				plistinfo[2].Data = BBOT_IMAGES[5]
+				plistinfo[2].Data = game:HttpGet(string.format('https://www.roblox.com/headshot-thumbnail/image?userId=%s&width=100&height=100&format=png', player.UserId))
+			end
+		else
+			plistinfo[2].Data = BBOT_IMAGES[5]
+			plistinfo[1].Text = "No Player Selected"
+		end
+	end
+	
+	
+	
+	menu.list.removeall(menu.options["Settings"]["Player List"]["Players"])
+	updateplist()
+	setplistinfo(nil)
+
+	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()	
+		if menu.open then
+			if menu.tabnames[menu.activetab] == "Settings" then
+				if plist[1] ~= nil then
+					setplistinfo(selectedPlayer, true)
+				end
+			end
+		end
+	end)
+
+	menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if menu.open then
+				
+				
+				if menu.tabnames[menu.activetab] == "Settings" and menu.open then
+					game.RunService.Stepped:wait()
+					
+					updateplist()
+					
+					if selectedPlayer ~= nil then
+						if menu:MouseInMenu(28, 68, 448, 238) then
+							if table.find(menu.friends, selectedPlayer.Name) then
+								menu.options["Settings"]["Player List"]["Player Status"][1] = 2
+								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Friend"
+							elseif table.find(menu.priority, selectedPlayer.Name) then
+								menu.options["Settings"]["Player List"]["Player Status"][1] = 3
+								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "Priority"
+							else
+								menu.options["Settings"]["Player List"]["Player Status"][1] = 1
+								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+							end
+						end
+						
+						
+						for k, table_ in pairs({menu.friends, menu.priority}) do
+							for index, plyrname in pairs(table_) do
+								if selectedPlayer.Name == plyrname then
+									table.remove(table_, index)
+								end
+							end
+						end
+						if menu:GetVal("Settings", "Player List", "Player Status") == 2 then
+							if not table.find(menu.friends, selectedPlayer.Name) then
+								table.insert(menu.friends, selectedPlayer.Name)
+								WriteRelations()
+							end
+						elseif menu:GetVal("Settings", "Player List", "Player Status") == 3 then
+							if not table.find(menu.priority, selectedPlayer.Name) then
+								table.insert(menu.priority, selectedPlayer.Name)
+								WriteRelations()
+							end
+						end
+					else
+						menu.options["Settings"]["Player List"]["Player Status"][1] = 1
+						menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
+					end
+					
+					updateplist()
+					
+					if plist[1] ~= nil then
+						if oldslectedplyr ~= selectedPlayer then
+							setplistinfo(selectedPlayer)
+							oldslectedplyr = selectedPlayer
+						end
+					else
+						setplistinfo(nil)
+					end
+					
+					
+				end
+			end
+		end
+	end)
+
+	menu.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
+		updateplist()
+		if plist[1] ~= nil then
+			setplistinfo(selectedPlayer)
+		else
+			setplistinfo(nil)
+		end
+	end)
+	
+	menu.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
+		updateplist()
+	end)
+	--!SECTION
+elseif menu.game == "pf" then --SECTION PF BEGIN
 	menu.crosshair = {outline = {}, inner = {}}
 	for i, v in pairs(menu.crosshair) do
 		for i = 1, 2 do
@@ -5484,8 +6365,6 @@ elseif menu.game == "pf" then --!SECTION
 			shitting_my_pants = count > 0
 		end
 	end)
-	
-	--SECTION PF BEGIN
 	
 	local allesp = {
 		[1] = { -- skel
