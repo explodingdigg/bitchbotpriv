@@ -550,7 +550,7 @@ if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 528
 		end
 	end -- wait for framwork to load
 elseif game.PlaceId == 5898483760 or game.PlaceId == 5565011975 then
-	--menu.game = "dust"
+	menu.game = "dust"
 end
 
 loadstart = tick()
@@ -5481,13 +5481,17 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 	
 	menu.connections.esprenderloop = game.RunService.RenderStepped:Connect(function()
 
+
 		for k, v in pairs(allesp) do
 			for k1, v1 in ipairs(v) do
 				v1.Visible = false
 			end
 		end
 
+
 		if menu:GetVal("Visuals", "Player ESP", "Enabled") then
+			local checks = menu:GetVal("Visuals", "ESP Settings", "Ignore")
+
 			local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
 			local priority_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color")[4]/255
 
@@ -5495,16 +5499,24 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 			local friend_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color")[4]/255
 
 			for i, player in pairs(Players:GetPlayers()) do
-				if not player.Character or not player.Character.Humanoid or player == LOCAL_PLAYER then continue end
+				if not player.Character or player == LOCAL_PLAYER then continue end
 				local humanoid = player.Character:FindFirstChild("Humanoid")
+				if humanoid == nil then continue end
 	
+				local down, health, maxhealth = GetPlayerHealth(player)
+				if health <= 0 and down then continue end
 
+				if checks[2] and down then continue end
 
 				local cam = Camera.CFrame
 
 				if player.Character:FindFirstChild("UpperTorso") == nil or player.Character:FindFirstChild("Head") == nil then continue end
 				local torso = player.Character.UpperTorso.CFrame
 				local head = player.Character.Head.CFrame
+
+				local plyr_distance = math.ceil(LOCAL_PLAYER:DistanceFromCharacter(torso.Position) / 5)
+
+				if checks[1] and plyr_distance > menu:GetVal("Visuals", "ESP Settings", "Max Distance") then continue end
 				-- local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
 				-- local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
 				local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1.3) + cam.UpVector)
@@ -5514,7 +5526,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
 				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 
-				local down, health, maxhealth = GetPlayerHealth(player)
+				
 				
 				if top_isrendered or bottom_isrendered then
 					local boxtop = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - sizeX * 0.5), math.floor(math.min(top.y, bottom.y)))
@@ -5554,10 +5566,10 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 						allesp.healthinner[i].Visible = true
 						allesp.healthinner[i].Color = ColorRange(health, {
 							[1] = {start = 0, color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color1", true)},
-							[2] = {start = 100, color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color2", true)}
+							[2] = {start = maxhealth, color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color2", true)}
 						})
 						
-						if menu:GetVal("Visuals", "Player ESP", "Health Number") then
+						if menu:GetVal("Visuals", "Player ESP", "Health Number") and health <= menu:GetVal("Visuals", "ESP Settings", "Max HP Visibility Cap") then
 							allesp.hptext[i].Text = tostring(health)
 							local textsize = allesp.hptext[i].TextBounds
 							allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
@@ -5596,7 +5608,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					end
 					if menu:GetVal("Visuals", "Player ESP", "Distance") then
 						local dist_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
-						allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(torso.Position) / 5)).. "m"
+						allesp.distance[i].Text = tostring(plyr_distance).. "m"
 						allesp.distance[i].Position = dist_pos
 						allesp.distance[i].Visible = true
 					end
@@ -9126,7 +9138,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			local oldjump = client.char.jump
 			function client.char:jump(height)
-				height = (menu and menu:GetVal("Misc", "Tweaks", "Jump Power")) and (height * menu:GetVal("Misc", "Tweaks", "Jump Power Percentage") / 100) or height
+				height = menu and menu:GetVal("Misc", "Tweaks", "Jump Power") and (height * menu:GetVal("Misc", "Tweaks", "Jump Power Percentage") / 100)
 				return oldjump(self, height)
 			end
 
