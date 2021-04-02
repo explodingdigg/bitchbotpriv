@@ -5488,6 +5488,9 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 			end
 		end
 
+		if menu:GetVal("Visuals", "World Visuals", "Force Time") then
+			game.Lighting.ClockTime = menu:GetVal("Visuals", "World Visuals", "Custom Time") 
+		end
 
 		if menu:GetVal("Visuals", "Player ESP", "Enabled") then
 			local checks = menu:GetVal("Visuals", "ESP Settings", "Ignore")
@@ -5905,21 +5908,21 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					}
 				},
 				{
-					name = "Local Visuals",
+					name = "World Visuals",
 					autopos = "right",
 					content = {
 						{
 							type = "toggle",
-							name = "Change FOV",
+							name = "Force Time",
 							value = false,
 						},
 						{
 							type = "slider",
-							name = "Camera FOV",
-							value = 60,
-							minvalue = 60,
-							maxvalue = 120,
-							stradd = "°"
+							name = "Custom Time",
+							value = 0,
+							minvalue = 0,
+							maxvalue = 24,
+							rounded = false
 						},
 					}
 				},
