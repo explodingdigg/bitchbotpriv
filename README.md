@@ -1,2 +1,2 @@
 # Bitch Bot
-made by nate, json, bitch, and classy code with <3
+made by nate, json, and bitch with <3
