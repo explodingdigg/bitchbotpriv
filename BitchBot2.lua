@@ -550,7 +550,7 @@ if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 528
 		end
 	end -- wait for framwork to load
 elseif game.PlaceId == 5898483760 or game.PlaceId == 5565011975 then
-	menu.game = "dust"
+	--menu.game = "dust"
 end
 
 loadstart = tick()
@@ -5481,17 +5481,13 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 	
 	menu.connections.esprenderloop = game.RunService.RenderStepped:Connect(function()
 
-
 		for k, v in pairs(allesp) do
 			for k1, v1 in ipairs(v) do
 				v1.Visible = false
 			end
 		end
 
-
 		if menu:GetVal("Visuals", "Player ESP", "Enabled") then
-			local checks = menu:GetVal("Visuals", "ESP Settings", "Ignore")
-
 			local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
 			local priority_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color")[4]/255
 
@@ -5499,24 +5495,16 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 			local friend_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color")[4]/255
 
 			for i, player in pairs(Players:GetPlayers()) do
-				if not player.Character or player == LOCAL_PLAYER then continue end
+				if not player.Character or not player.Character.Humanoid or player == LOCAL_PLAYER then continue end
 				local humanoid = player.Character:FindFirstChild("Humanoid")
-				if humanoid == nil then continue end
 	
-				local down, health, maxhealth = GetPlayerHealth(player)
-				if health <= 0 and down then continue end
 
-				if checks[2] and down then continue end
 
 				local cam = Camera.CFrame
 
 				if player.Character:FindFirstChild("UpperTorso") == nil or player.Character:FindFirstChild("Head") == nil then continue end
 				local torso = player.Character.UpperTorso.CFrame
 				local head = player.Character.Head.CFrame
-
-				local plyr_distance = math.ceil(LOCAL_PLAYER:DistanceFromCharacter(torso.Position) / 5)
-
-				if checks[1] and plyr_distance > menu:GetVal("Visuals", "ESP Settings", "Max Distance") then continue end
 				-- local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
 				-- local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
 				local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1.3) + cam.UpVector)
@@ -5526,7 +5514,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
 				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 
-				
+				local down, health, maxhealth = GetPlayerHealth(player)
 				
 				if top_isrendered or bottom_isrendered then
 					local boxtop = Vector2.new(math.floor(top.x * 0.5 + bottom.x * 0.5 - sizeX * 0.5), math.floor(math.min(top.y, bottom.y)))
@@ -5566,10 +5554,10 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 						allesp.healthinner[i].Visible = true
 						allesp.healthinner[i].Color = ColorRange(health, {
 							[1] = {start = 0, color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color1", true)},
-							[2] = {start = maxhealth, color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color2", true)}
+							[2] = {start = 100, color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color2", true)}
 						})
 						
-						if menu:GetVal("Visuals", "Player ESP", "Health Number") and health <= menu:GetVal("Visuals", "ESP Settings", "Max HP Visibility Cap") then
+						if menu:GetVal("Visuals", "Player ESP", "Health Number") then
 							allesp.hptext[i].Text = tostring(health)
 							local textsize = allesp.hptext[i].TextBounds
 							allesp.hptext[i].Position = Vector2.new(boxtop.x - 7 - textsize.x, boxtop.y + clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10))
@@ -5608,7 +5596,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					end
 					if menu:GetVal("Visuals", "Player ESP", "Distance") then
 						local dist_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
-						allesp.distance[i].Text = tostring(plyr_distance).. "m"
+						allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(torso.Position) / 5)).. "m"
 						allesp.distance[i].Position = dist_pos
 						allesp.distance[i].Visible = true
 					end
@@ -7044,7 +7032,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	client.fakeplayer.Parent = nil
 	do
 		local updatervalues = getupvalues(client.fakeupdater.step)
-		
 		--[[updatervalues[11].s = 7
 		updatervalues[15].s = 100]]
 		client.fake_upvs = updatervalues
@@ -7550,11 +7537,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				elseif self == client.char.rootpart then
 					if id == "CFrame" then
-						if not keybindtoggles.superaa and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
-							local offset = Vector3.new(0, client.fakeoffset, 0)
-							self.Position = val.p - offset
-							self.Position = val.p + offset
-						end
+						-- if not keybindtoggles.superaa and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then -- yes this works i dont know why and im not assed to do this a different way but this is retarrded enough
+						-- 	local offset = Vector3.new(0, client.fakeoffset, 0)
+						-- 	self.Position = val.p - offset
+						-- 	self.Position = val.p + offset
+						-- end
 
 						if keybindtoggles.superaa then
 							-- Vector3.new(math.sin(tick() * 7) * 200, 50, math.cos(tick() * 7) * 100)
@@ -9138,7 +9125,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			local oldjump = client.char.jump
 			function client.char:jump(height)
-				height = menu and menu:GetVal("Misc", "Tweaks", "Jump Power") and (height * menu:GetVal("Misc", "Tweaks", "Jump Power Percentage") / 100)
+				height = (menu and menu:GetVal("Misc", "Tweaks", "Jump Power")) and (height * menu:GetVal("Misc", "Tweaks", "Jump Power Percentage") / 100) or height
 				return oldjump(self, height)
 			end
 
@@ -9598,9 +9585,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						-- duct tape fix or whatever the fuck its called for this its stupid
 						args[2].camerapos = client.lastrepupdate -- attempt to make dumping happen less
 						args[2].firepos = ragebot.firepos
-						if shitting_my_pants == false and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then
-							args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
-						end
+						-- if shitting_my_pants == false and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then
+						-- 	args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
+						-- end
 						local cachedtimedata = {}
 						
 						local hitpoint = ragebot.intersection ~= nil and Vector3.new(ragebot.intersection.X, ragebot.intersection.Y, ragebot.intersection.Z) or ragebot.targetpart.Position -- fuckkkkkkkkk
@@ -9738,12 +9725,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 				client.lastrepupdate = args[2]
-				if shitting_my_pants == false and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then
-					if not client.fakeoffset then client.fakeoffset = 18 end
+				-- if shitting_my_pants == false and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then
+				-- 	if not client.fakeoffset then client.fakeoffset = 18 end
 					
-					local nextinc = client.fakeoffset + 9
-					client.fakeoffset = nextinc <= 48 and nextinc or client.fakeoffset
-				end
+				-- 	local nextinc = client.fakeoffset + 9
+				-- 	client.fakeoffset = nextinc <= 48 and nextinc or client.fakeoffset
+				-- end
 				if menu:GetVal("Rage", "Anti Aim", "Enabled") then
 					--args[2] = ragebot:AntiNade(args[2])
 					stutterFrames += 1
@@ -10162,9 +10149,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		local newpart = client.particle.new
 		client.particle.new = function(P)
 			local new_speed
-			if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
-				new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
-			end
+			-- if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
+			-- 	new_speed = menu:GetVal("Misc", "Weapon Modifications", "Bullet Speed")
+			-- end
 			
 			local mag = new_speed or P.velocity.Magnitude
 			
@@ -10878,98 +10865,128 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if not client then return end
 			local vm = workspace.Camera:GetChildren()
 			local armcham = menu:GetVal("Visuals", "Local", "Arm Chams")
-			local wepcham = menu:GetVal("Visuals", "Local", "Weapon Chams") 
-			-- i optimized this a shit ton
-			for i = 1, #vm do
-				local model = vm[i]
-				if model.Name:match(".*Arm$") then
-					local armmaterial = menu:GetVal("Visuals", "Local", "Arm Material")
-					local children = model:GetChildren()
-					for j = 1, #children do
-						local part = children[j]
-						part.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color2", true)
-						if part.Transparency ~= 1 then
-							if not client.fakecharacter then
-								part.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
-							else
-								part.Transparency = 0.999999
-							end
+			local armmaterial = menu:GetVal("Visuals", "Local", "Arm Material")
+
+			for k, v in pairs(vm) do
+				if v.Name == "Left Arm" or v.Name == "Right Arm" then
+					for k1, v1 in pairs(v:GetChildren()) do
+						if armcham then
+							v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color2", true)
 						end
-						part.Material = mats[armmaterial]
-						if part.ClassName == "MeshPart" or part.Name == "Sleeve" then
-							part.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
-							if part.Transparency ~= 1 then
+						if v1.Transparency ~= 1 then
+							if armcham then
 								if not client.fakecharacter then
-									part.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color1")[4]/-255)
+									v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4]/-255)
 								else
-									part.Transparency = 0.999999
+									v1.Transparency = 0.999999
+								end
+							else
+								if not client.fakecharacter then
+									v1.Transparency = 0
+								else
+									v1.Transparency = 0.999999
 								end
 							end
-							if part.TextureID and tostring(mats[armmaterial]) ~= "ForceField" then
-								part.TextureID = ""
-							else
-								part.TextureID = menu:GetVal("Visuals", "Local", "Animate Ghost Material") and "rbxassetid://2163189692" or ""
+						end
+						v1.Material = mats[armmaterial]
+						if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
+							if armcham then
+								v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
 							end
-							part:ClearAllChildren()
+							if v1.Transparency ~= 1 then
+								if armcham then
+									if not client.fakecharacter then
+										v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Arm Chams", "color1")[4]/-255)
+									else
+										v1.Transparency = 0.999999
+									end
+								else
+									if not client.fakecharacter then
+										v1.Transparency = 0
+									else
+										v1.Transparency = 0.999999
+									end
+								end
+							end
+							if armcham then
+								if v1.TextureID and tostring(material) ~= "ForceField" then
+									v1.TextureID = ""
+								else
+									v1.TextureID = "rbxassetid://2163189692"
+								end
+								v1:ClearAllChildren()
+							end
 						end
 					end
-				elseif not model.Name:match(".*Arm$") and not model.Name:match(".*FRAG$") and wepcham then
-					local children = model:GetChildren()
-					for j = 1, #children do
-						local part = children[j]
-						part.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
-						if part.Transparency ~= 1 then
-							if not client.fakecharacter then
-								part.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) -- breh this shit is bad
-							else
-								part.Transparency = 0.999999
-							end
-							-- part.Transparency = client.logic.currentgun.transparencydata and client.logic.currentgun.transparencydata[part] or 0
+				end
+			end
+			local wepcham = menu:GetVal("Visuals", "Local", "Weapon Chams") 
+			
+			for k, v in pairs(vm) do
+				if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
+					for k1, v1 in pairs(v:GetChildren()) do
+						if wepcham then
+							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
 						end
-						if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") then
-							local wepchildren = part:GetChildren()
-							for k = 1, #wepchildren do
-								local wepchild = wepchildren[k]
-								if wepchild.ClassName == "Texture" or wepchild.ClassName == "Decal" then
-									wepchild:Destroy()
+						if v1.Transparency ~= 1 then
+							if wepcham then
+								if not client.fakecharacter then
+									v1.Transparency = 0.999999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255)
+								else
+									v1.Transparency = 0.999999
+								end
+							else
+								if not client.fakecharacter then
+									v1.Transparency = client.logic.currentgun.transparencydata and client.logic.currentgun.transparencydata[v1] or 0
+								else
+									v1.Transparency = 0.999999
+								end
+							end
+						end
+						-- if v1.Transparency ~= 1 then
+						-- 	v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+						-- end
+						if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") and wepcham then
+							for i2, v2 in pairs(v1:GetChildren()) do
+								if v2.ClassName == "Texture" or v2.ClassName == "Decal" then
+									v2:Destroy()
 								end
 							end
 						end
 						
 						local mat = mats[menu:GetVal("Visuals", "Local", "Weapon Material")]
-						part.Material = mat
-						
-						if part:IsA("UnionOperation") then
-							part.UsePartColor = true
+						if wepcham then
+							v1.Material = mat
 						end
 						
-						if part.ClassName == "MeshPart" then
-							local flag = mat == "ForceField" and menu:GetVal("Visuals", "Local", "Animate Ghost Material")
-							part.TextureID = flag and "rbxassetid://5843010904" or ""
+						if v1:IsA("UnionOperation") and wepcham then
+							v1.UsePartColor = true
 						end
 						
-						if part.Name == "LaserLight" then
+						if v1.ClassName == "MeshPart" and wepcham then
+							v1.TextureID = mat == "ForceField" and "rbxassetid://5843010904" or ""
+						end
+						
+						if v1.Name == "LaserLight" and wepcham then
 							local transparency = 1+(menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4]/-255)
-							part.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
-							part.Transparency = (transparency / 2) + 0.5
-							part.Material = "ForceField"
-						elseif part.Name == "SightMark" then
-							local surfacegui = part:FindFirstChild("SurfaceGui")
-							if surfacegui then
-								local reticleBorder = surfacegui:FindFirstChild("Border")
-								local reticleMargins = surfacegui:FindFirstChild("Margins")
+							v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
+							v1.Transparency = (transparency / 2) + 0.5
+							v1.Material = "ForceField"
+							
+						elseif v1.Name == "SightMark" and wepcham then
+							if v1:FindFirstChild("SurfaceGui") then
 								local color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
 								local transparency = 1+(menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4]/-255)
-								reticleBorder.Scope.ImageColor3 = color
-								reticleBorder.Scope.ImageTransparency = transparency
-								if reticleMargins then
-									reticleMargins.BackgroundColor3 = color
-									reticleMargins.ImageColor3 = color
-									reticleMargins.ImageTransparency = (transparency/5) + 0.7
-								elseif reticleBorder then
-									reticleBorder.BackgroundColor3 = color
-									reticleBorder.ImageColor3 = color
-									reticleBorder.ImageTransparency = 1
+								v1.SurfaceGui.Border.Scope.ImageColor3 = color
+								v1.SurfaceGui.Border.Scope.ImageTransparency = transparency
+								if v1.SurfaceGui:FindFirstChild("Margins") then
+									v1.SurfaceGui.Margins.BackgroundColor3 = color
+									v1.SurfaceGui.Margins.ImageColor3 = color
+									v1.SurfaceGui.Margins.ImageTransparency = (transparency/5) + 0.7
+								elseif v1.SurfaceGui:FindFirstChild("Border") then
+									v1.SurfaceGui.Border.BackgroundColor3 = color
+									v1.SurfaceGui.Border.ImageColor3 = color
+									v1.SurfaceGui.Border.ImageTransparency = 1
 								end
 							end
 						end
@@ -11084,19 +11101,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					keybindtoggles.freestand = not keybindtoggles.freestand
 					return Enum.ContextActionResult.Sink
 				end
-				if menu:GetVal("Misc", "Exploits", "Fake Position") and client.char.alive and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Fake Position", "keybind") then
-					keybindtoggles.superaa = not keybindtoggles.superaa
-					if keybindtoggles.superaa then
-						client.char.rootpart.CustomPhysicalProperties = PhysicalProperties.new(1000, 1000, 0, 1000, 1000)
-						CreateNotification("Fake Position has been enabled!")
-						client.superaastart = client.char.head.CFrame
-					else
-						client.char.rootpart.CustomPhysicalProperties = nil
-						client.char.rootpart.CFrame = client.superaastart
-						client.superaastart = nil
-					end
-					return Enum.ContextActionResult.Sink
-				end
+				-- if menu:GetVal("Misc", "Exploits", "Fake Position") and client.char.alive and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Fake Position", "keybind") then
+				-- 	keybindtoggles.superaa = not keybindtoggles.superaa
+				-- 	if keybindtoggles.superaa then
+				-- 		client.char.rootpart.CustomPhysicalProperties = PhysicalProperties.new(1000, 1000, 0, 1000, 1000)
+				-- 		CreateNotification("Fake Position has been enabled!")
+				-- 		client.superaastart = client.char.head.CFrame
+				-- 	else
+				-- 		client.char.rootpart.CustomPhysicalProperties = nil
+				-- 		client.char.rootpart.CFrame = client.superaastart
+				-- 		client.superaastart = nil
+				-- 	end
+				-- 	return Enum.ContextActionResult.Sink
+				-- end
 				if menu:GetVal("Misc", "Movement", "Fly") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
 					keybindtoggles.flyhack = not keybindtoggles.flyhack
 					return Enum.ContextActionResult.Sink
@@ -11109,25 +11126,25 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					wait()
 					return Enum.ContextActionResult.Sink
 				end
-				if menu:GetVal("Misc", "Exploits", "Noclip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Noclip", "keybind") and client.char.alive then
-					local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
+				-- if menu:GetVal("Misc", "Exploits", "Noclip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Noclip", "keybind") and client.char.alive then
+				-- 	local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
 					
-					local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
+				-- 	local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
 					
-					if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
-						CreateNotification("Attempting to enable noclip... (you may die)")
-						keybindtoggles.fakebody = not keybindtoggles.fakebody
-						client.fakeoffset = 18
-					else
-						CreateNotification("Unable to noclip. Do this as soon as you spawn or over glass. (be as close to ground as possible for best results)")
-					end
-					return Enum.ContextActionResult.Sink
-				end
+				-- 	if hit ~= nil and (not hit.CanCollide) or hit.Name == "Window" then
+				-- 		CreateNotification("Attempting to enable noclip... (you may die)")
+				-- 		keybindtoggles.fakebody = not keybindtoggles.fakebody
+				-- 		client.fakeoffset = 18
+				-- 	else
+				-- 		CreateNotification("Unable to noclip. Do this as soon as you spawn or over glass. (be as close to ground as possible for best results)")
+				-- 	end
+				-- 	return Enum.ContextActionResult.Sink
+				-- end
 				if shitting_my_pants == false then
 					if menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive then
 						local sign = not menu:modkeydown("alt", "left")
 						local forward = menu:modkeydown("shift", "left")
-						local ray = Ray.new(client.char.head.Position, forward and Camera.CFrame.LookVector * 20 or Vector3.new(0, sign and -90 or 90, 0) * 20)
+						local ray = Ray.new(client.cam.cframe.Position, forward and Camera.CFrame.LookVector * 20 or Vector3.new(0, sign and -90 or 90, 0) * 20)
 						
 						local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
 						
@@ -11251,17 +11268,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		--debug.profilebegin("Main BB Loop")
 		--debug.profilebegin("Noclip Cheat check")
 		if not client.char.alive then
-			if keybindtoggles.fakebody then
-				keybindtoggles.fakebody = false
-				CreateNotification("Noclip automatically disabled due to death")
-				client.fakeoffset = 18
-			end
+			-- if keybindtoggles.fakebody then
+			-- 	keybindtoggles.fakebody = false
+			-- 	CreateNotification("Noclip automatically disabled due to death")
+			-- 	client.fakeoffset = 18
+			-- end
 
-			if keybindtoggles.superaa then
-				keybindtoggles.superaa = false
-				client.superaastart = nil
-				CreateNotification("Fake position automatically disabled due to death")
-			end
+			-- if keybindtoggles.superaa then
+			-- 	keybindtoggles.superaa = false
+			-- 	client.superaastart = nil
+			-- 	CreateNotification("Fake position automatically disabled due to death")
+			-- end
 		end
 		--debug.profileend("Noclip Cheat check")
 		
@@ -11468,6 +11485,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local guntoequip = client.logic.currentgun.type == "KNIFE" and client.loadedguns[1].name or client.logic.currentgun.name -- POOP
 					client.fakeupdater.equip(require(game:service("ReplicatedStorage").GunModules[guntoequip]), game:service("ReplicatedStorage").ExternalModels[guntoequip]:Clone())
 					client.fake3pchar = localchar
+					if LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Torso and LOCAL_PLAYER.Character.Torso:FindFirstChild("Pant") then
+						LOCAL_PLAYER.Character.Torso.Pant:Destroy()
+					end
 				else
 					if not keybindtoggles.fakelag then
 						local fakeupdater = client.fakeupdater
@@ -11524,10 +11544,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						
 						if client.char.rootpart then
 							client.fakerootpart.CFrame = client.char.rootpart.CFrame
-							local rootpartpos = client.char.rootpart.Position
-							client.fake_upvs[4].p = rootpartpos
-							client.fake_upvs[4].t = rootpartpos
-							client.fake_upvs[4].v = Vector3.new()
 						end
 					end
 				end
@@ -11548,6 +11564,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 					if v:FindFirstChild("Face") then
 						v.Face:Destroy()
+					end
+					if v:FindFirstChild("Mesh") then
+						v.Mesh:Destroy()
 					end
 				end
 			end
@@ -12880,21 +12899,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							value = false,
 							tooltip = "Makes it so that your weapon does not\nsway due to mouse movement, or turns over while sprinting."
 						},
-						{
-							type = "toggle",
-							name = "Edit Bullet Speed",
-							value = false,
-							tooltip = "When this is on, your bullet speed will be\nmodified to have X studs/s no matter what weapon you have equipped."
-						},
-						{
-							type = "slider",
-							name = "Bullet Speed",
-							value = 6000,
-							minvalue = 80,
-							maxvalue = 200000,
-							stradd = " studs",
-							stepsize = 100
-						}
 					},
 				},
 				{
@@ -13045,27 +13049,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								values = {"Primary", "Secondary", "Melee"},
 								value = 1
 							},
-							{
-								type = "toggle",
-								name = "Noclip",
-								value = false,
-								extra = {
-									type = "keybind",
-									key = nil
-								},
-								unsafe = true,
-								tooltip = "Allows you to noclip through most parts of the map. Must be over glass or non-collidable parts to work."
-							},
-							{
-								type = "toggle",
-								name = "Fake Position",
-								value = false,
-								extra = {
-									type = "keybind"
-								},
-								unsafe = true,
-								tooltip = "Fakes your server-side position. Works best when stationary, and allows you to be unhittable."
-							},
+							-- {
+							-- 	type = "toggle",
+							-- 	name = "Noclip",
+							-- 	value = false,
+							-- 	extra = {
+							-- 		type = "keybind",
+							-- 		key = nil
+							-- 	},
+							-- 	unsafe = true,
+							-- 	tooltip = "Allows you to noclip through most parts of the map. Must be over glass or non-collidable parts to work."
+							-- },
+							-- {
+							-- 	type = "toggle",
+							-- 	name = "Fake Position",
+							-- 	value = false,
+							-- 	extra = {
+							-- 		type = "keybind"
+							-- 	},
+							-- 	unsafe = true,
+							-- 	tooltip = "Fakes your server-side position. Works best when stationary, and allows you to be unhittable."
+							-- },
 							{
 								type = "toggle",
 								name = "Lock Player Positions",
