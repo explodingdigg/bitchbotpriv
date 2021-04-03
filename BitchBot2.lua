@@ -3955,6 +3955,7 @@ function menu.Initialize(menutable)
 	end)
 	
 	menu.connections.inputended = INPUT_SERVICE.InputEnded:Connect(function(input)
+		
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			menu.mousedown = false
 			if menu.open and not menu.fading then
@@ -6296,6 +6297,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 			end
 		end
 	end)
+	
 
 	menu.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
 		updateplist()
@@ -7973,6 +7975,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
+						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10 then -- fake body resolver
+							usedhitscan = {
+								rootpart = true -- because all other parts cannot be hit, only rootpart can be
+							}
+							-- this definitely needs a lot more work because i believe sometimes it just aims at the wrong area... don't know why
+						end
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and usedhitscan[k] then
 								local fovToBone = camera:GetFOV(bone)
@@ -8142,6 +8150,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 					end
 				end
+			end
+			if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and mp:getval("Misc", "Exploits", "Disable Crimwalk on Shot") then
+				keybindtoggles.crimwalk = false
 			end
 			--debug.profileend("BB Ragebot GetTarget")
 			
@@ -9715,6 +9726,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					args[2] = slot
 				end
 			elseif args[1] == "repupdate" then
+				if keybindtoggles.crimwalk then return end
 				uberpart.Transparency = keybindtoggles.freestand and 0 or 1
 				if keybindtoggles.freestand then
 					for i = 1, #directiontable do
@@ -11108,6 +11120,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				------------------------------------------
 				------------"TOGGLES AND SHIT"------------
 				------------------------------------------
+				if menu:GetVal("Misc", "Exploits", "Crimwalk") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
+					keybindtoggles.crimwalk = true
+					return Enum.ContextActionResult.Sink
+				end
+				
+				
 				if menu:GetVal("Visuals", "Local", "Third Person") and inputObject.KeyCode == menu:GetVal("Visuals", "Local", "Third Person", "keybind") then
 					keybindtoggles.thirdperson = not keybindtoggles.thirdperson
 					return Enum.ContextActionResult.Sink
@@ -11243,7 +11261,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			------------"HELD KEY ACTION"------------
 			-----------------------------------------
 			local keyflag = inputState == Enum.UserInputState.Begin
-			
+			if keyflag and keybindtoggles.crimwalk and input.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") then
+				keybindtoggles.crimwalk = false
+				return Enum.ContextActionResult.Sink
+			end
 			
 			if shitting_my_pants == false then
 
@@ -13042,6 +13063,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								name = "Grenade Teleport",
 								value = false,
 								tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes."
+							},
+							{
+								type = "toggle",
+								name = "Crimwalk",
+								value = false,
+								extra = {
+									type = "keybind"
+								}
+							},
+							{
+								type = "toggle",
+								name = "Disable Crimwalk on Shot",
+								value = false
 							},
 							{
 								type = "toggle",
