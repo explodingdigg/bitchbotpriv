@@ -5487,6 +5487,10 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 			end
 		end
 
+		if menu:GetVal("Visuals", "World Visuals", "Force Time") then
+			game.Lighting.ClockTime = menu:GetVal("Visuals", "World Visuals", "Custom Time") 
+		end
+
 		if menu:GetVal("Visuals", "Player ESP", "Enabled") then
 			local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
 			local priority_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color")[4]/255
@@ -5589,7 +5593,18 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					local y_spot = 0
 					if menu:GetVal("Visuals", "Player ESP", "Held Item") then
 						local held_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h)
-						allesp.item[i].Text = "Held Item"
+
+						local heldwep = "Nothing"
+						for k, v in pairs(player.Character:GetChildren()) do
+							if v.ClassName == "Model" then
+								if v:FindFirstChild("Handle") ~= nil then
+									heldwep = v.Name
+									break
+								end
+							end
+
+						end
+						allesp.item[i].Text = heldwep
 						allesp.item[i].Position = held_pos
 						allesp.item[i].Visible = true
 						y_spot += 14
@@ -5893,21 +5908,21 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					}
 				},
 				{
-					name = "Local Visuals",
+					name = "World Visuals",
 					autopos = "right",
 					content = {
 						{
 							type = "toggle",
-							name = "Change FOV",
+							name = "Force Time",
 							value = false,
 						},
 						{
 							type = "slider",
-							name = "Camera FOV",
-							value = 60,
-							minvalue = 60,
-							maxvalue = 120,
-							stradd = "°"
+							name = "Custom Time",
+							value = 0,
+							minvalue = 0,
+							maxvalue = 24,
+							rounded = false
 						},
 					}
 				},
