@@ -5604,7 +5604,18 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					local y_spot = 0
 					if menu:GetVal("Visuals", "Player ESP", "Held Item") then
 						local held_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h)
-						allesp.item[i].Text = "Held Item"
+
+						local heldwep = "Nothing"
+						for k, v in pairs(player.Character:GetChildren()) do
+							if v.ClassName == "Model" then
+								if v:FindFirstChild("Handle") ~= nil then
+									heldwep = v.Name
+									break
+								end
+							end
+
+						end
+						allesp.item[i].Text = heldwep
 						allesp.item[i].Position = held_pos
 						allesp.item[i].Visible = true
 						y_spot += 14
