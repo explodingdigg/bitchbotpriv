@@ -6784,7 +6784,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				self.predictedDamageDealt[target] = 0
 			end
 			self.predictedDamageDealt[target] += damageDealt
-			self.predictedDamageDealtRemovals[target] = tick() + misc:GetPing()
+			self.predictedDamageDealtRemovals[target] = tick() + misc:GetLatency()
 		end
 	end
 
@@ -9806,8 +9806,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 		end
 		local PingStat = game:service"Stats".PerformanceStats.Ping
-		function misc:GetPing()
-			return PingStat:GetValue()
+		function misc:GetLatency()
+			return PingStat:GetValue() / 1000
 		end
 		
 		function misc:MainLoop()
