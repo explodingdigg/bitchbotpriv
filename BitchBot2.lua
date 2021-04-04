@@ -8031,15 +8031,64 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 													if menu.priority[player.Name] then break end
 												end
 											elseif resolvertype == 3 then -- random
-												--debug.profilebegin("BB Ragebot Random Resolver")
-												local resolvedPosition = ragebot:HitscanRandom(camposv3, player, bone)
-												--debug.profileend("BB Ragebot Random Resolver")
-												if resolvedPosition then
-													ragebot.firepos = resolvedPosition
+												local pullVector = Vector3.new(math.random(-1, 1), math.random(-1, 1), math.random(-1, 1)).Unit * 4.5833333333333
+
+												local newTargetPosition = bone.Position - pullVector
+												
+												
+												sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
+												
+												if sphereHitbox.Size ~= rageHitboxSize then
+													sphereHitbox.Size = rageHitboxSize
+												end
+												
+												--local penetrated = ragebot:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
+												local wl = {
+													[sphereHitbox] = true
+												}
+												
+												local penetrated, exited, intersectionpos = ragebot:CanPenetrate(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth)
+												if penetrated then
+													ragebot.firepos = camposv3
 													cpart = bone
 													theplayer = player
-													firepos = resolvedPosition
-													if menu.priority[player.Name] then break end
+													ragebot.intersection = newTargetPosition
+													firepos = camposv3
+													--warn("penetrated normally")
+												else
+													-- ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
+													local resolvedPosition, bulletintersection = ragebot:HitscanOnAxes(camposreal, player, sphereHitbox, 1, 9)
+													if resolvedPosition then
+														ragebot.firepos = resolvedPosition
+														cpart = bone
+														theplayer = player
+														ragebot.intersection = newTargetPosition
+														firepos = resolvedPosition
+														if menu.priority[player.Name] then break end
+													else
+														--warn("no axes")
+														-- --local _, intersection = workspace:FindPartOnRayWithWhitelist(Ray.new(args[1].firepos, (part.Position - args[1].firepos) * 3000), {sphereHitbox})
+														sphereHitbox.Position = bone.Position
+														
+														if sphereHitbox.Size ~= rageHitboxSize then
+															sphereHitbox.Size = rageHitboxSize
+														end
+														
+														-- dick sucking god.
+														local penetrated, exited, newintersection = ragebot:CanPenetrate(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
+														
+														--warn(penetrated, intersectionPoint)
+														
+														if penetrated then
+															ragebot.firepos = camposv3
+															cpart = bone
+															theplayer = player
+															ragebot.intersection = newTargetPosition
+															firepos = camposv3
+														else
+															--warn("no standardized autowall hit")
+														end
+													end
 												end
 											elseif resolvertype == 4 then -- teleport
 												--debug.profilebegin("BB Ragebot Teleport Resolver")
@@ -8309,17 +8358,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			return nil
 		end
 		
-		local hitpoints = {}
-		function ragebot:HitscanRandom(origin, bodypart)
-			local offset
-			if #hitpoints < 50 or math.random() < 0.2 then
-				offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit * 8
-			else
-				offset = hitpoints[math.random(#points)]
-			end
+		function ragebot:HitscanSmart(origin, bodypart)
+			local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit * 8
 			local position = origin + offset
 			if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
-				table.insert(hitpoints, offset)
 				return position
 			end
 		end
@@ -11120,11 +11162,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				------------------------------------------
 				------------"TOGGLES AND SHIT"------------
 				------------------------------------------
-				if menu:GetVal("Misc", "Exploits", "Crimwalk") and input.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
+				if menu:GetVal("Misc", "Exploits", "Crimwalk") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
 					keybindtoggles.crimwalk = true
 					return Enum.ContextActionResult.Sink
 				end
-				
 				
 				if menu:GetVal("Visuals", "Local", "Third Person") and inputObject.KeyCode == menu:GetVal("Visuals", "Local", "Third Person", "keybind") then
 					keybindtoggles.thirdperson = not keybindtoggles.thirdperson
@@ -11261,7 +11302,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			------------"HELD KEY ACTION"------------
 			-----------------------------------------
 			local keyflag = inputState == Enum.UserInputState.Begin
-			if keyflag and keybindtoggles.crimwalk and input.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") then
+			if keyflag and keybindtoggles.crimwalk and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") then
 				keybindtoggles.crimwalk = false
 				return Enum.ContextActionResult.Sink
 			end
