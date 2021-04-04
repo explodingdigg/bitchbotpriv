@@ -10680,9 +10680,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						ply.Character = parts.rootpart.Parent
 						
 						local torso = parts.torso.CFrame
+						local position = torso.Position
 						local rootpart = parts.rootpart.CFrame
-					
-						local position = rootpart.Position
+						if (rootpart.p - torso.p).Magnitude > 20 then
+							position = rootpart.Position
+						end
 						
 						--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. ply.Name)
 						
