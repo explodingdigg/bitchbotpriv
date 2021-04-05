@@ -3064,42 +3064,42 @@ function menu.Initialize(menutable)
 	end
 	
 	local function mousebutton2downfunc()
-		if tooltip.active then
-			set_tooltip(0, 0, "poop", false)
-		else
-			if not menu.dropbox_open or menu.textboxopen or menu.colorpicker_open then
-				for k, v in pairs(menu.options) do
-					if menu.tabnames[menu.activetab] == k then
-						for k1, v1 in pairs(v) do
-							local pass = true
-							for k3, v3 in pairs(menu.multigroups) do
-								if k == k3 then
-									for k4, v4 in pairs(v3) do
-										for k5, v5 in pairs(v4.vals) do
-											if k1 == k5 then
-												pass = v5
-											end
-										end
-									end
-								end
-							end
+		-- if tooltip.active then
+		-- 	set_tooltip(0, 0, "poop", false)
+		-- else
+		-- 	if not menu.dropbox_open or menu.textboxopen or menu.colorpicker_open then
+		-- 		for k, v in pairs(menu.options) do
+		-- 			if menu.tabnames[menu.activetab] == k then
+		-- 				for k1, v1 in pairs(v) do
+		-- 					local pass = true
+		-- 					for k3, v3 in pairs(menu.multigroups) do
+		-- 						if k == k3 then
+		-- 							for k4, v4 in pairs(v3) do
+		-- 								for k5, v5 in pairs(v4.vals) do
+		-- 									if k1 == k5 then
+		-- 										pass = v5
+		-- 									end
+		-- 								end
+		-- 							end
+		-- 						end
+		-- 					end
 
-							if pass then
-								for k2, v2 in pairs(v1) do		
-									if v2[2] == "toggle" then
-										if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
-											if v2.tooltip ~= nil then
-												set_tooltip(menu.x + v2[3][1], menu.y + v2[3][2] + 18, v2.tooltip, true) 
-											end
-										end
-									end
-								end
-							end
-						end
-					end
-				end
-			end
-		end
+		-- 					if pass then
+		-- 						for k2, v2 in pairs(v1) do		
+		-- 							if v2[2] == "toggle" then
+		-- 								if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
+		-- 									if v2.tooltip ~= nil then
+		-- 										set_tooltip(menu.x + v2[3][1], menu.y + v2[3][2] + 18, v2.tooltip, true) 
+		-- 									end
+		-- 								end
+		-- 							end
+		-- 						end
+		-- 					end
+		-- 				end
+		-- 			end
+		-- 		end
+		-- 	end
+		-- end
 	end
 
 
@@ -3107,8 +3107,6 @@ function menu.Initialize(menutable)
 		menu.dropbox_open = nil
 		menu.textboxopen = false
 		
-		
-		set_tooltip(0, 0, "poop", false)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
@@ -3724,6 +3722,7 @@ function menu.Initialize(menutable)
 		menu:set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
 		if menu.open or menu.fading then
 			set_plusminus(0, 20, 20)
+			set_tooltip(0, 0, "poop", false) 
 			for k, v in pairs(menu.options) do
 				if menu.tabnames[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
@@ -3739,10 +3738,17 @@ function menu.Initialize(menutable)
 								end
 							end
 						end
+						
 
 						if pass then
 							for k2, v2 in pairs(v1) do
-								if v2[2] == "slider" then
+								if v2[2] == "toggle" then
+									if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
+										if v2.tooltip ~= nil then
+											set_tooltip(menu.x + v2[3][1], menu.y + v2[3][2] + 18, v2.tooltip, true) 
+										end
+									end
+								elseif v2[2] == "slider" then
 									if v2[5] then
 										
 										local new_val = (v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - menu.x - v2[3][1])/v2[3][3])
