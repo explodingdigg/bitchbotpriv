@@ -258,33 +258,33 @@ end
 --validity check
 --SECTION commented these out for development 
 
-make_synreadonly(syn)
-make_synreadonly(Drawing)
-protectfunction(getgenv)
-protectfunction(getgc)
+-- make_synreadonly(syn)
+-- make_synreadonly(Drawing)
+-- protectfunction(getgenv)
+-- protectfunction(getgc)
 
-local init
-if syn then
-	init = getfenv(saveinstance).script
-end
+-- local init
+-- if syn then
+-- 	init = getfenv(saveinstance).script
+-- end
 
-script.Name = "\1"
-local function search_hookfunc(tbl)
-	for i,v in pairs(tbl) do
-		local s = getfenv(v).script
-		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
-			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
-				writefile("poop.text", "did the funny") 
-				SX_CRASH()
-				break
-			end
-		end
-	end
-end
-search_hookfunc(getgc())
-search_hookfunc = nil
+-- script.Name = "\1"
+-- local function search_hookfunc(tbl)
+-- 	for i,v in pairs(tbl) do
+-- 		local s = getfenv(v).script
+-- 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+-- 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+-- 				writefile("poop.text", "did the funny") 
+-- 				SX_CRASH()
+-- 				break
+-- 			end
+-- 		end
+-- 	end
+-- end
+-- search_hookfunc(getgc())
+-- search_hookfunc = nil
 
-if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+-- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 --!SECTION 
 
 local menuWidth, menuHeight = 500, 600
@@ -9843,6 +9843,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		do--ANCHOR send hook
 			client.net.send = function(self, ...)
 				local args = {...}
+				if menu:GetVal("Misc", "Exploits", "Skin Changer") and args[1] == "changecamo" then
+					local tid = menu:GetVal("Misc", "Exploits", "skinchangerTexture")
+					args[6].TextureProperties.TextureId = tid == "" and nil or tid
+					args[6].TextureProperties.Transparency = 1 - menu:GetVal("Misc", "Exploits", "Skin Changer", "color")[4]/255
+					args[6].TextureProperties.StudsPerTileU = menu:GetVal("Misc", "Exploits", "Scale X") / 100
+					args[6].TextureProperties.StudsPerTileV = menu:GetVal("Misc", "Exploits", "Scale Y") / 100
+					args[6].BrickProperties.BrickColor = menu:GetVal("Misc", "Exploits", "Skin Changer", "color", true)
+					args[6].BrickProperties.Material = mats[menu:GetVal("Misc", "Exploits", "Skin Material")]
+				end
 				if args[1] == "spawn" then
 					misc:ApplyGunMods()
 				end
@@ -13509,22 +13518,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								values = {"Primary", "Secondary", "Melee"},
 								value = 1
 							},
-							{
-								type = "toggle",
-								name = "Skin Changer",
-								value = false,
-								tooltip = "While this is enabled, all custom skins will apply with this texture ID, and these settings."
-							},
-							{
-								type = "slider",
-								name = "Scale X",
-								value = false,
-							},
-							{
-								type = "toggle",
-								name = "Scale Y",
-								value = false,
-							} 
+							
 							-- {
 							-- 	type = "toggle",
 							-- 	name = "Noclip",
@@ -13554,7 +13548,45 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = "keybind",
 								},
 								tooltip = "Locks all other players' positions."
-							}
+							},
+							{
+								type = "toggle",
+								name = "Skin Changer",
+								value = false,
+								tooltip = "While this is enabled, all custom skins will apply with the custom settings below.",
+								extra = {
+									type = "single colorpicker",
+									name = "Weapon Skin Color",
+									color = {127, 72, 163, 255}
+								}
+							},
+							{
+								type = "textbox",
+								name = "skinchangerTexture",
+								text = "6156783684"
+							},
+							{
+								type = "slider",
+								name = "Scale X",
+								value = 10,
+								minvalue = 1,
+								maxvalue = 500,
+								stradd = "%"
+							},
+							{
+								type = "slider",
+								name = "Scale Y",
+								value = 10,
+								minvalue = 1,
+								maxvalue = 500,
+								stradd = "%"
+							},
+							{
+								type = "dropbox",
+								name = "Skin Material",
+								value = 1,
+								values = {"Plastic", "Ghost", "Neon", "Foil", "Glass"}
+							},
 						}
 					}
 				},	
