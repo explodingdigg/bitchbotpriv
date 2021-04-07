@@ -19,14 +19,14 @@ local function GetLatency()
 	return PingStat:GetValue() / 1000
 end
 placeholderImage = syn.crypt.base64.decode(placeholderImage)
-if not isfile("bitchbot/chatspam.txt") then --idk help the user out lol, prevent stupid errors
+if not isfile("bitchbot/chatspam.txt") then --idk help the user out lol, prevent stupid errors --well it would kinda ig
 	writefile("bitchbot/chatspam.txt", [[
 WSUP FOOL
 GET OWNED KID
 BBOAT ON TOP
 I LOVE BBOT YEAH
 PLACEHOLDER TEXT 
-PLACEHOLDER TEXT
+dear bbot user, edit your chat spam
 	]])
 end
 
@@ -37,14 +37,14 @@ GET OWNED [name]
 [name] just died to my [weapon] everybody laugh
 [name] got owned roflsauce
 PLACEHOLDER TEXT 
-PLACEHOLDER TEXT
+dear bbot user, edit your kill say
 	]])
 end
 
 do
 	local customtxt = readfile("bitchbot/chatspam.txt")
 	for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
-		table.insert(customChatSpam, s)
+		table.insert(customChatSpam, s)    -- I'm care
 	end
 	customtxt = readfile("bitchbot/killsay.txt")
 	for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
@@ -2618,12 +2618,14 @@ function menu.Initialize(menutable)
 	function menu:GetVal(tab, groupbox, name, ...)
 		local args = {...}
 		
+		local option = menu.options[tab][groupbox][name]
+
 		if args[1] == nil then
-			if menu.options[tab][groupbox][name][2] ~= "combobox" then
-				return menu.options[tab][groupbox][name][1]
+			if option[2] ~= "combobox" then
+				return option[1]
 			else
 				local temptable = {}
-				for k, v in ipairs(menu.options[tab][groupbox][name][1]) do
+				for k, v in ipairs(option[1]) do
 					table.insert(temptable, v[2])
 				end
 				return temptable
@@ -2631,23 +2633,32 @@ function menu.Initialize(menutable)
 		else
 			if args[1] == "keybind" or args[1] == "color" then
 				if args[2] then
-					return RGB(menu.options[tab][groupbox][name][5][1][1], menu.options[tab][groupbox][name][5][1][2], menu.options[tab][groupbox][name][5][1][3])
+					return RGB(option[5][1][1], option[5][1][2], option[5][1][3])
 				else
-					return menu.options[tab][groupbox][name][5][1]
+					return option[5][1]
 				end
 			elseif args[1] == "color1" then
 				if args[2] then
-					return RGB(menu.options[tab][groupbox][name][5][1][1][1][1], menu.options[tab][groupbox][name][5][1][1][1][2], menu.options[tab][groupbox][name][5][1][1][1][3])
+					return RGB(option[5][1][1][1][1], option[5][1][1][1][2], option[5][1][1][1][3])
 				else
-					return menu.options[tab][groupbox][name][5][1][1][1]
+					return option[5][1][1][1]
 				end
 			elseif args[1] == "color2" then
 				if args[2] then
-					return RGB(menu.options[tab][groupbox][name][5][1][2][1][1], menu.options[tab][groupbox][name][5][1][2][1][2], menu.options[tab][groupbox][name][5][1][2][1][3])
+					return RGB(option[5][1][2][1][1], option[5][1][2][1][2], option[5][1][2][1][3])
 				else
-					return menu.options[tab][groupbox][name][5][1][2][1]
+					return option[5][1][2][1]
 				end
 			end
+		end
+	end
+
+	function menu:GetKey(tab, groupbox, name)
+		local option = menu.options[tab][groupbox][name][5]
+		if option.toggletype ~= 0 then
+			return option.active
+		else
+			return option[1]
 		end
 	end
 	
@@ -3134,7 +3145,7 @@ function menu.Initialize(menutable)
 								if v2[5] ~= nil then
 									if v2[5][2] == "keybind" then
 										if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 44, 16) then
-											if menu.keybind_open ~= v2 then
+											if menu.keybind_open ~= v2 and v2[5].toggletype ~= 0 then
 												menu.keybind_open = v2
 												set_modeselect(true, v2[5][3][1] + menu.x , v2[5][3][2] + 16 + menu.y, v2[5].toggletype)
 											else
