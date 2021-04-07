@@ -19,14 +19,14 @@ local function GetLatency()
 	return PingStat:GetValue() / 1000
 end
 placeholderImage = syn.crypt.base64.decode(placeholderImage)
-if not isfile("bitchbot/chatspam.txt") then --idk help the user out lol, prevent stupid errors
+if not isfile("bitchbot/chatspam.txt") then --idk help the user out lol, prevent stupid errors --well it would kinda ig
 	writefile("bitchbot/chatspam.txt", [[
 WSUP FOOL
 GET OWNED KID
 BBOAT ON TOP
 I LOVE BBOT YEAH
 PLACEHOLDER TEXT 
-PLACEHOLDER TEXT
+dear bbot user, edit your chat spam
 	]])
 end
 
@@ -37,14 +37,14 @@ GET OWNED [name]
 [name] just died to my [weapon] everybody laugh
 [name] got owned roflsauce
 PLACEHOLDER TEXT 
-PLACEHOLDER TEXT
+dear bbot user, edit your kill say
 	]])
 end
 
 do
 	local customtxt = readfile("bitchbot/chatspam.txt")
 	for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
-		table.insert(customChatSpam, s)
+		table.insert(customChatSpam, s)    -- I'm care
 	end
 	customtxt = readfile("bitchbot/killsay.txt")
 	for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
@@ -1708,9 +1708,11 @@ function menu.Initialize(menutable)
 										menu.options[v.name][g_name][v2.name][5][4] = Draw:Keybind(v2.extra.key, v1.x + v1.width - 52, y_pos + v1.y - 2, tabz[k])
 										menu.options[v.name][g_name][v2.name][5][1] = v2.extra.key
 										menu.options[v.name][g_name][v2.name][5][2] = v2.extra.type
-										menu.keybinds[string.format("%s,%s,%s", v.name, g_name, v2.name)] = v2.extra.keybindtype
 										menu.options[v.name][g_name][v2.name][5][3] = {v1.x + v1.width - 52, y_pos + v1.y - 2}
 										menu.options[v.name][g_name][v2.name][5][5] = false
+										menu.options[v.name][g_name][v2.name][5].toggletype = v2.extra.toggletype == nil and 1 or v2.extra.toggletype
+										menu.options[v.name][g_name][v2.name][5].relvalue = false
+										table.insert(menu.keybinds, {menu.options[v.name][g_name][v2.name], tostring(v2.name)})
 									elseif v2.extra.type == "single colorpicker" then
 										menu.options[v.name][g_name][v2.name][5] = {}
 										menu.options[v.name][g_name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
@@ -2059,6 +2061,45 @@ function menu.Initialize(menutable)
 	end
 	
 	set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
+
+	--MODE SELECT THING
+	local modeselect = {}
+
+	Draw:OutlinedRect(false, 20, 20, 100, 22, {20, 20, 20, 255}, modeselect)
+	Draw:OutlinedRect(false, 21, 21, 98, 20, {0, 0, 0, 255}, modeselect)
+	Draw:FilledRect(false, 22, 22, 96, 18, {45, 45, 45, 255}, modeselect)
+	
+	local modeselecttext = {"Hold", "Toggle", "Hold Off", "Always"}
+	for i = 1, 4 do
+		Draw:OutlinedText(modeselecttext[i], 2, false, 20, 20, 13, false, {255, 255, 255, 255}, {0, 0, 0}, modeselect)
+	end
+
+	local function set_modeselect(visible, x, y, value)
+		for k, v in pairs(modeselect) do
+			v.Visible = visible
+		end
+		
+		if visible then
+			modeselect[1].Position = Vector2.new(x, y)
+			modeselect[2].Position = Vector2.new(x + 1, y + 1)
+			modeselect[3].Position = Vector2.new(x + 2, y + 2)
+			
+			modeselect[1].Size = Vector2.new(70, 22 * 4 - 1)
+			modeselect[2].Size = Vector2.new(70 - 2, 22 * 4 - 3)
+			modeselect[3].Size = Vector2.new(70 - 4, 22 * 4 - 5)
+
+			for i = 1, 4 do
+				modeselect[i + 3].Position = Vector2.new(x + 6, y + 4 + ((i - 1) * 21) )
+				if value == i then
+					modeselect[i + 3].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
+				else
+					modeselect[i + 3].Color = RGB(255, 255, 255)
+				end
+			end
+		end
+	end
+
+	set_modeselect(false, 200, 400, 1)
 	
 	--COLOR PICKER
 	local cp = {
@@ -2394,6 +2435,8 @@ function menu.Initialize(menutable)
 		configthing[4][1].Text = configthing[6][configthing[1]]
 		
 	end
+
+	menu.keybind_open = nil
 	
 	menu.dropbox_open = nil
 	
@@ -2404,7 +2447,7 @@ function menu.Initialize(menutable)
 	local shooties = {}
 	local isPlayerScoped = false
 	
-	function InputBeganMenu(key)
+	function menu:InputBeganMenu(key) --ANCHOR menu input
 		
 		if key.KeyCode == Enum.KeyCode.Delete and not loadingthing.Visible then
 			cp.dragging_m = false
@@ -2453,6 +2496,9 @@ function menu.Initialize(menutable)
 						end
 					end
 				end
+				menu.keybind_open = nil
+				set_modeselect(false, 20, 20, 1)
+				menu.dropbox_open = nil
 				set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 				menu.colorpicker_open = nil
 				set_tooltip(0, 0, "fart", false)
@@ -2543,6 +2589,18 @@ function menu.Initialize(menutable)
 			end
 		end
 	end
+
+	function menu:InputBeganKeybinds(key)
+		for index, values in ipairs(menu.keybinds) do
+			local value = values[1]
+
+			if value[5].toggletype == 2 then
+				if key.KeyCode == value[5][1] then
+					value[5].relvalue = not value[5].relvalue
+				end
+			end
+		end
+	end
 	
 	function menu:SetMenuPos(x, y)
 		for k, v in pairs(menu.postable) do
@@ -2573,12 +2631,14 @@ function menu.Initialize(menutable)
 	function menu:GetVal(tab, groupbox, name, ...)
 		local args = {...}
 		
+		local option = menu.options[tab][groupbox][name]
+
 		if args[1] == nil then
-			if menu.options[tab][groupbox][name][2] ~= "combobox" then
-				return menu.options[tab][groupbox][name][1]
+			if option[2] ~= "combobox" then
+				return option[1]
 			else
 				local temptable = {}
-				for k, v in ipairs(menu.options[tab][groupbox][name][1]) do
+				for k, v in ipairs(option[1]) do
 					table.insert(temptable, v[2])
 				end
 				return temptable
@@ -2586,23 +2646,32 @@ function menu.Initialize(menutable)
 		else
 			if args[1] == "keybind" or args[1] == "color" then
 				if args[2] then
-					return RGB(menu.options[tab][groupbox][name][5][1][1], menu.options[tab][groupbox][name][5][1][2], menu.options[tab][groupbox][name][5][1][3])
+					return RGB(option[5][1][1], option[5][1][2], option[5][1][3])
 				else
-					return menu.options[tab][groupbox][name][5][1]
+					return option[5][1]
 				end
 			elseif args[1] == "color1" then
 				if args[2] then
-					return RGB(menu.options[tab][groupbox][name][5][1][1][1][1], menu.options[tab][groupbox][name][5][1][1][1][2], menu.options[tab][groupbox][name][5][1][1][1][3])
+					return RGB(option[5][1][1][1][1], option[5][1][1][1][2], option[5][1][1][1][3])
 				else
-					return menu.options[tab][groupbox][name][5][1][1][1]
+					return option[5][1][1][1]
 				end
 			elseif args[1] == "color2" then
 				if args[2] then
-					return RGB(menu.options[tab][groupbox][name][5][1][2][1][1], menu.options[tab][groupbox][name][5][1][2][1][2], menu.options[tab][groupbox][name][5][1][2][1][3])
+					return RGB(option[5][1][2][1][1], option[5][1][2][1][2], option[5][1][2][1][3])
 				else
-					return menu.options[tab][groupbox][name][5][1][2][1]
+					return option[5][1][2][1]
 				end
 			end
+		end
+	end
+
+	function menu:GetKey(tab, groupbox, name)
+		local option = menu.options[tab][groupbox][name][5]
+		if option.toggletype ~= 0 then
+			return option.relvalue
+		else
+			return option[1]
 		end
 	end
 	
@@ -3064,33 +3133,39 @@ function menu.Initialize(menutable)
 	end
 	
 	local function mousebutton2downfunc()
-		if tooltip.active then
-			set_tooltip(0, 0, "poop", false)
-		else
-			if not menu.dropbox_open or menu.textboxopen or menu.colorpicker_open then
-				for k, v in pairs(menu.options) do
-					if menu.tabnames[menu.activetab] == k then
-						for k1, v1 in pairs(v) do
-							local pass = true
-							for k3, v3 in pairs(menu.multigroups) do
-								if k == k3 then
-									for k4, v4 in pairs(v3) do
-										for k5, v5 in pairs(v4.vals) do
-											if k1 == k5 then
-												pass = v5
-											end
-										end
+		if menu.colorpicker_open or menu.dropbox_open then return end
+
+		for k, v in pairs(menu.options) do
+			if menu.tabnames[menu.activetab] == k then
+				for k1, v1 in pairs(v) do
+					local pass = true
+					for k3, v3 in pairs(menu.multigroups) do
+						if k == k3 then
+							for k4, v4 in pairs(v3) do
+								for k5, v5 in pairs(v4.vals) do
+									if k1 == k5 then
+										pass = v5
 									end
 								end
 							end
+						end
+					end
 
-							if pass then
-								for k2, v2 in pairs(v1) do		
-									if v2[2] == "toggle" then
-										if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
-											if v2.tooltip ~= nil then
-												set_tooltip(menu.x + v2[3][1], menu.y + v2[3][2] + 18, v2.tooltip, true) 
+					if pass then
+						for k2, v2 in pairs(v1) do --ANCHOR more menu bs			
+							if v2[2] == "toggle" then
+								
+								if v2[5] ~= nil then
+									if v2[5][2] == "keybind" then
+										if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 44, 16) then
+											if menu.keybind_open ~= v2 and v2[5].toggletype ~= 0 then
+												menu.keybind_open = v2
+												set_modeselect(true, v2[5][3][1] + menu.x , v2[5][3][2] + 16 + menu.y, v2[5].toggletype)
+											else
+												menu.keybind_open = nil
+												set_modeselect(false, 20, 20, 1)
 											end
+											
 										end
 									end
 								end
@@ -3106,9 +3181,24 @@ function menu.Initialize(menutable)
 	local function mousebutton1downfunc() --ANCHOR menu mouse down func
 		menu.dropbox_open = nil
 		menu.textboxopen = false
+
+		set_modeselect(false, 20, 20, 1)
+		if menu.keybind_open then
+			local key = menu.keybind_open
+			local foundkey = false
+			for i = 1, 4 do
+				if menu:MouseInMenu(key[5][3][1], key[5][3][2] + 16 + ((i - 1) * 21), 70, 21) then
+					foundkey = true
+					menu.keybind_open[5].toggletype = i
+					menu.keybind_open[5].relvalue = false
+				end
+			end
+			menu.keybind_open = nil
+			if foundkey then
+				return
+			end
+		end
 		
-		
-		set_tooltip(0, 0, "poop", false)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
@@ -3118,7 +3208,6 @@ function menu.Initialize(menutable)
 							v2[5] = false
 						else
 							menu.dropbox_open = v2
-							menu.dropbox_open = v2
 						end
 					end
 					if v2[2] == "combobox" and v2[5] then
@@ -3126,7 +3215,6 @@ function menu.Initialize(menutable)
 							set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 							v2[5] = false
 						else
-							menu.dropbox_open = v2
 							menu.dropbox_open = v2
 						end
 					end
@@ -3289,7 +3377,7 @@ function menu.Initialize(menutable)
 						end
 
 						if pass then
-							for k2, v2 in pairs(v1) do --ANCHOR more menu bs			
+							for k2, v2 in pairs(v1) do	
 								if v2[2] == "toggle" and not menu.dropbox_open then
 									if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
 										if v2[6] then
@@ -3385,9 +3473,11 @@ function menu.Initialize(menutable)
 										if not v2[5] then
 											set_dropboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
 											v2[5] = true
+											menu.dropbox_open = v2
 										else
 											set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 											v2[5] = false
+											menu.dropbox_open = nil
 										end
 									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5] then
 										for i = 1, #v2[6] do
@@ -3396,6 +3486,7 @@ function menu.Initialize(menutable)
 												v2[1] = i
 												set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 												v2[5] = false
+												menu.dropbox_open = nil
 											end
 										end
 										
@@ -3416,9 +3507,11 @@ function menu.Initialize(menutable)
 										if not v2[5] then
 											set_comboboxthingy(true, v2[3][1] + menu.x + 1, v2[3][2] + menu.y + 13, v2[3][3], v2[1], v2[6])
 											v2[5] = true
+											menu.dropbox_open = v2
 										else
 											set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 											v2[5] = false
+											menu.dropbox_open = nil
 										end
 									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) and v2[5] then
 										for i = 1, #v2[1] do
@@ -3724,6 +3817,7 @@ function menu.Initialize(menutable)
 		menu:set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
 		if menu.open or menu.fading then
 			set_plusminus(0, 20, 20)
+			set_tooltip(0, 0, "poop", false) 
 			for k, v in pairs(menu.options) do
 				if menu.tabnames[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
@@ -3739,10 +3833,19 @@ function menu.Initialize(menutable)
 								end
 							end
 						end
-
+						
 						if pass then
 							for k2, v2 in pairs(v1) do
-								if v2[2] == "slider" then
+								if v2[2] == "toggle" then
+								
+									if not menu.dropbox_open and not menu.colorpicker_open then
+										if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
+											if v2.tooltip ~= nil then
+												set_tooltip(menu.x + v2[3][1], menu.y + v2[3][2] + 18, v2.tooltip, true) 
+											end
+										end
+									end
+								elseif v2[2] == "slider" then
 									if v2[5] then
 										
 										local new_val = (v2[6][2] - v2[6][1]) * ((LOCAL_MOUSE.x - menu.x - v2[3][1])/v2[3][3])
@@ -3945,7 +4048,8 @@ function menu.Initialize(menutable)
 				menu.modkeys.alt.direction = direction:lower()
 			end
 		end
-		InputBeganMenu(input)
+		menu:InputBeganMenu(input)
+		menu:InputBeganKeybinds(input)
 
 		if menu == nil then return end
 
@@ -4077,8 +4181,31 @@ local Start = tick()
 local FrameUpdateTable = { }
 
 -- I STOLE THE FPS COUNTER FROM https://devforum.roblox.com/t/get-client-fps-trough-a-script/282631/14 😿😿😿😢😭
-menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
+menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --ANCHOR MENU HEARTBEAT
 	
+	for index, values in ipairs(menu.keybinds) do
+		local value = values[1]
+
+		if not value[1] then 
+			value[5].relvalue = false 
+			continue 
+		end
+
+		if value[5].toggletype == 4 then 
+
+			value[5].relvalue = true 
+
+		elseif value[5].toggletype == 1 then
+
+			value[5].relvalue = INPUT_SERVICE:IsKeyDown(value[5][1]) 
+
+		elseif value[5].toggletype == 3 then
+
+			value[5].relvalue = not INPUT_SERVICE:IsKeyDown(value[5][1]) 
+
+		end
+	end
+
 	if menu.stat_menu == false then return end
 
 	LastIteration = tick()
@@ -13218,6 +13345,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								unsafe = true,
 								extra = {
 									type = "keybind",
+									toggletype = 2
 								},
 							},
 							{
