@@ -1712,6 +1712,7 @@ function menu.Initialize(menutable)
 										menu.options[v.name][g_name][v2.name][5][5] = false
 										menu.options[v.name][g_name][v2.name][5].toggletype = v2.extra.toggletype == nil and 1 or v2.extra.toggletype
 										menu.options[v.name][g_name][v2.name][5].relvalue = false
+										table.insert(menu.keybinds, {menu.options[v.name][g_name][v2.name], tostring(v2.name)})
 									elseif v2.extra.type == "single colorpicker" then
 										menu.options[v.name][g_name][v2.name][5] = {}
 										menu.options[v.name][g_name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
@@ -2446,7 +2447,7 @@ function menu.Initialize(menutable)
 	local shooties = {}
 	local isPlayerScoped = false
 	
-	function InputBeganMenu(key)
+	function menu:InputBeganMenu(key) --ANCHOR menu input
 		
 		if key.KeyCode == Enum.KeyCode.Delete and not loadingthing.Visible then
 			cp.dragging_m = false
@@ -2588,6 +2589,18 @@ function menu.Initialize(menutable)
 			end
 		end
 	end
+
+	function menu:InputBeganKeybinds(key)
+		for index, values in ipairs(menu.keybinds) do
+			local value = values[1]
+
+			if value[5].toggletype == 2 then
+				if key.KeyCode == value[5][1] then
+					value[5].relvalue = not value[5].relvalue
+				end
+			end
+		end
+	end
 	
 	function menu:SetMenuPos(x, y)
 		for k, v in pairs(menu.postable) do
@@ -2656,7 +2669,7 @@ function menu.Initialize(menutable)
 	function menu:GetKey(tab, groupbox, name)
 		local option = menu.options[tab][groupbox][name][5]
 		if option.toggletype ~= 0 then
-			return option.active
+			return option.relvalue
 		else
 			return option[1]
 		end
@@ -3363,7 +3376,7 @@ function menu.Initialize(menutable)
 						end
 
 						if pass then
-							for k2, v2 in pairs(v1) do --ANCHOR more menu bs			
+							for k2, v2 in pairs(v1) do	
 								if v2[2] == "toggle" and not menu.dropbox_open then
 									if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
 										if v2[6] then
@@ -4034,7 +4047,8 @@ function menu.Initialize(menutable)
 				menu.modkeys.alt.direction = direction:lower()
 			end
 		end
-		InputBeganMenu(input)
+		menu:InputBeganMenu(input)
+		menu:InputBeganKeybinds(input)
 
 		if menu == nil then return end
 
@@ -4166,8 +4180,31 @@ local Start = tick()
 local FrameUpdateTable = { }
 
 -- I STOLE THE FPS COUNTER FROM https://devforum.roblox.com/t/get-client-fps-trough-a-script/282631/14 😿😿😿😢😭
-menu.connections.information_shit = game.RunService.Heartbeat:Connect(function()
+menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --ANCHOR MENU HEARTBEAT
 	
+	for index, values in ipairs(menu.keybinds) do
+		local value = values[1]
+
+		if not value[1] then 
+			value[5].relvalue = false 
+			continue 
+		end
+
+		if value[5].toggletype == 4 then 
+
+			value[5].relvalue = true 
+
+		elseif value[5].toggletype == 1 then
+
+			value[5].relvalue = INPUT_SERVICE:IsKeyDown(value[5][1]) 
+
+		elseif value[5].toggletype == 3 then
+
+			value[5].relvalue = not INPUT_SERVICE:IsKeyDown(value[5][1]) 
+
+		end
+	end
+
 	if menu.stat_menu == false then return end
 
 	LastIteration = tick()
@@ -11758,6 +11795,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	
 	menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		
+		
+
 		for index, time in next, ragebot.predictedDamageDealtRemovals do
 			if time and (tick() > time) then
 				print("reset time for", index.Name)
