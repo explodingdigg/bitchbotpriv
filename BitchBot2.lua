@@ -3190,6 +3190,7 @@ function menu.Initialize(menutable)
 				if menu:MouseInMenu(key[5][3][1], key[5][3][2] + 16 + ((i - 1) * 21), 70, 21) then
 					foundkey = true
 					menu.keybind_open[5].toggletype = i
+					menu.keybind_open[5].relvalue = false
 				end
 			end
 			menu.keybind_open = nil
@@ -11795,8 +11796,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	
 	menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
 		
-		
-
 		for index, time in next, ragebot.predictedDamageDealtRemovals do
 			if time and (tick() > time) then
 				print("reset time for", index.Name)
