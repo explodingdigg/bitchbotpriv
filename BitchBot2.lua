@@ -4076,80 +4076,79 @@ function menu.Initialize(menutable)
 	end
 	
 	menu.connections.inputstart = INPUT_SERVICE.InputBegan:Connect(function(input)
-		if not menu then return end
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			menu.mousedown = true
-			if menu.open and not menu.fading then
-				mousebutton1downfunc()
+		if menu then
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				menu.mousedown = true
+				if menu.open and not menu.fading then
+					mousebutton1downfunc()
+				end
+			elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+				if menu.open and not menu.fading then
+					mousebutton2downfunc()
+				end
 			end
-		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-			if menu.open and not menu.fading then
-				mousebutton2downfunc()
+
+			if input.UserInputType == Enum.UserInputType.Keyboard then
+				if input.KeyCode.Name:match("Shift") then
+					local kcn = input.KeyCode.Name
+					local direction = kcn:split("Shift")[1]
+					menu.modkeys.shift.direction = direction:lower()
+				end
+				if input.KeyCode.Name:match("Alt") then
+					local kcn = input.KeyCode.Name
+					local direction = kcn:split("Alt")[1]
+					menu.modkeys.alt.direction = direction:lower()
+				end
 			end
-		end
+			menu:InputBeganMenu(input)
+			menu:InputBeganKeybinds(input)
+			if menu.open then
+				if menu.tabnames[menu.activetab] == "Settings" then
+					if menu:GetVal("Settings", "Cheat Settings", "Custom Menu Name") then
+						bbmenu[27].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1]
 
-		if input.UserInputType == Enum.UserInputType.Keyboard then
-			if input.KeyCode.Name:match("Shift") then
-				local kcn = input.KeyCode.Name
-				local direction = kcn:split("Shift")[1]
-				menu.modkeys.shift.direction = direction:lower()
-			end
-			if input.KeyCode.Name:match("Alt") then
-				local kcn = input.KeyCode.Name
-				local direction = kcn:split("Alt")[1]
-				menu.modkeys.alt.direction = direction:lower()
-			end
-		end
-		menu:InputBeganMenu(input)
-		menu:InputBeganKeybinds(input)
-
-		if menu == nil then return end
-
-		if menu.open then
-			if menu.tabnames[menu.activetab] == "Settings" then
-				if menu:GetVal("Settings", "Cheat Settings", "Custom Menu Name") then
-					bbmenu[27].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1]
-
-					menu.watermark.text[1].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1] .. menu.watermark.textString
-
-					for i, v in ipairs(menu.watermark.rect) do
-						v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
-					end
-				else 
-					if bbmenu[27].Text ~= "Bitch Bot" then
-						bbmenu[27].Text = "Bitch Bot"
-					end
-
-					if menu.watermark.text[1].Text ~= "Bitch Bot".. menu.watermark.textString then
-						menu.watermark.text[1].Text = "Bitch Bot".. menu.watermark.textString
+						menu.watermark.text[1].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1] .. menu.watermark.textString
 
 						for i, v in ipairs(menu.watermark.rect) do
 							v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
 						end
-					end
-				end
-			end
-		end
+					else 
+						if bbmenu[27].Text ~= "Bitch Bot" then
+							bbmenu[27].Text = "Bitch Bot"
+						end
 
-		if input.KeyCode == Enum.KeyCode.Home then
-			menu.stat_menu = not menu.stat_menu
+						if menu.watermark.text[1].Text ~= "Bitch Bot".. menu.watermark.textString then
+							menu.watermark.text[1].Text = "Bitch Bot".. menu.watermark.textString
 
-			for k, v in pairs(graphs) do
-				if k ~= "other" then
-					for k1, v1 in pairs(v) do
-						if k1 ~= "pos" then
-							for k2, v2 in pairs(v1) do
-								v2.Visible = menu.stat_menu
+							for i, v in ipairs(menu.watermark.rect) do
+								v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
 							end
 						end
 					end
 				end
 			end
-
-			for k, v in pairs(graphs.other) do
-				v.Visible = menu.stat_menu
+			if input.KeyCode == Enum.KeyCode.Home then
+				menu.stat_menu = not menu.stat_menu
+	
+				for k, v in pairs(graphs) do
+					if k ~= "other" then
+						for k1, v1 in pairs(v) do
+							if k1 ~= "pos" then
+								for k2, v2 in pairs(v1) do
+									v2.Visible = menu.stat_menu
+								end
+							end
+						end
+					end
+				end
+	
+				for k, v in pairs(graphs.other) do
+					v.Visible = menu.stat_menu
+				end
 			end
 		end
+
+		
 	end)
 	
 	menu.connections.inputended = INPUT_SERVICE.InputEnded:Connect(function(input)
@@ -8189,7 +8188,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if self.firsttarget and not menu:GetVal("Rage", "Aimbot", "Target Only Priority Players") then -- idfk what to do i will just have this code run twice fuck making a function for this cus i will have to pass in a million vars or make a million locals
 				local player = self.firsttarget
 				local usedhitscan = hitscan -- should probably do this a different way
-				if self.predictedDamageDealt[player] and self.predictedDamageDealt[player] > menu:GetVal("Rage", "Settings", "Damage Prediction Limit")) then -- just gonna make this always on for first target so it takes potshots at them no matter what
+				if self.predictedDamageDealt[player] and self.predictedDamageDealt[player] > menu:GetVal("Rage", "Settings", "Damage Prediction Limit") then -- just gonna make this always on for first target so it takes potshots at them no matter what
 					if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER and not (table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends"))  then
 						local curbodyparts = client.replication.getbodyparts(player)
 						if curbodyparts and client.hud:isplayeralive(player) then
@@ -9040,7 +9039,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		-- setrawmetatable(client.cam.magspring, mt)
 		client.cam.setmagnification = function(self, m)
 			local lnm = math.log(m)
-			if menu and not menu.open and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then return end
+			if menu and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then return end
 			self.magspring.p = lnm
 			self.magspring.t = lnm
 			self.magspring.v = 0
