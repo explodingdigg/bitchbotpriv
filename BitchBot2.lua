@@ -2311,6 +2311,7 @@ function menu.Initialize(menutable)
 	local tooltip = {
 		x = 0,
 		y = 0,
+		time = 0,
 		active = false,
 		text = "This does this and that i guess\npooping 24/7",
 		drawings = {},
@@ -2339,35 +2340,50 @@ function menu.Initialize(menutable)
 	ttOutline(false, tooltip.x - 1, tooltip.y - 1, 102, 32, {0, 0, 0, 255}, tooltip.drawings)
 	ttOutline(false, tooltip.x + 3, tooltip.y, 102, 30, {20, 20, 20, 255}, tooltip.drawings)
 	ttText(tooltip.text, false, false, tooltip.x + 7, tooltip.y + 1, tooltip.drawings)
+	
+	local function set_tooltip(x, y, text, visible, dt)
+		dt = dt or 0
+		x = x or tooltip.x
+		y = y or tooltip.y
+		tooltip.x = x
+		tooltip.y = y
 
-	local function set_tooltip(x, y, text, visible)
+		if tooltip.time < 1 and visible then
+			if tooltip.time < -5 then tooltip.time = -5 end
+			tooltip.time += dt
+			if tooltip.time > 1 then
+				tooltip.time = 1
+			end
+		else
+			tooltip.time -= dt
+			if tooltip.time < -1 then tooltip.time = -1 end
+		end
 		for k, v in ipairs(tooltip.drawings) do
-			v.Visible = visible
+			v.Visible = tooltip.time > 0
 		end
 
 		tooltip.active = visible
-		if visible then
+		if text then
 			tooltip.drawings[7].Text = text
-
-			for k, v in pairs(tooltip.postable) do
-				v[1].Position = Vector2.new(x + v[2], y + v[3])
-			end
-			tooltip.drawings[1].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
-			tooltip.drawings[2].Color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)
-
-
-			local tb = tooltip.drawings[7].TextBounds
-			
-			tooltip.drawings[1].Size = Vector2.new(1, tb.Y + 3)
-			tooltip.drawings[2].Size = Vector2.new(1, tb.Y + 3)
-			tooltip.drawings[3].Size = Vector2.new(4, tb.Y + 5)
-			tooltip.drawings[4].Size = Vector2.new(tb.X + 6, tb.Y + 5)
-			tooltip.drawings[5].Size = Vector2.new(tb.X + 12, tb.Y + 7)
-			tooltip.drawings[6].Size = Vector2.new(tb.X + 7, tb.Y + 5)
 		end
+		for k, v in pairs(tooltip.postable) do
+			v[1].Position = Vector2.new(x + v[2], y + v[3])
+			v[1].Transparency = (1+tooltip.time)^3-1
+		end
+		tooltip.drawings[1].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
+		tooltip.drawings[2].Color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)
+
+		local tb = tooltip.drawings[7].TextBounds
+		
+		tooltip.drawings[1].Size = Vector2.new(1, tb.Y + 3)
+		tooltip.drawings[2].Size = Vector2.new(1, tb.Y + 3)
+		tooltip.drawings[3].Size = Vector2.new(4, tb.Y + 5)
+		tooltip.drawings[4].Size = Vector2.new(tb.X + 6, tb.Y + 5)
+		tooltip.drawings[5].Size = Vector2.new(tb.X + 12, tb.Y + 7)
+		tooltip.drawings[6].Size = Vector2.new(tb.X + 7, tb.Y + 5)
 	end
 
-	set_tooltip(500, 500, "This does this and that i guess\npooping 24/7\ntest test test HI q", false)
+	set_tooltip(500, 500, "", false)
 
 	-- mouse shiz
 	local bbmouse = {}
@@ -2501,7 +2517,7 @@ function menu.Initialize(menutable)
 				menu.dropbox_open = nil
 				set_dropboxthingy(false, 400, 200, 160, 1, {"HI q", "HI q", "HI q"})
 				menu.colorpicker_open = nil
-				set_tooltip(0, 0, "fart", false)
+				set_tooltip(nil, nil, nil, false)
 				set_colorpicker(false, {255, 0, 0}, nil, false, "hahaha", 400, 200)
 				
 			end
@@ -2595,7 +2611,7 @@ function menu.Initialize(menutable)
 			local value = values[1]
 
 			if value[5].toggletype == 2 then
-				if key.KeyCode == value[5][1] then
+				if value[5][1] and key.KeyCode == value[5][1] then
 					value[5].relvalue = not value[5].relvalue
 				end
 			end
@@ -2667,12 +2683,20 @@ function menu.Initialize(menutable)
 	end
 
 	function menu:GetKey(tab, groupbox, name)
-		local option = menu.options[tab][groupbox][name][5]
+		local option = self.options[tab][groupbox][name][5]
 		if option.toggletype ~= 0 then
 			return option.relvalue
 		else
 			return option[1]
 		end
+	end
+
+	function menu:SetKey(tab, groupbox, name, val)
+		val = val or false
+		local option = menu.options[tab][groupbox][name][5]
+		if option.toggletype ~= 0 then
+			option.relvalue = val
+		end 
 	end
 	
 	local menuElementTypes = {"toggle", "slider", "dropbox", "textbox"}
@@ -3261,7 +3285,7 @@ function menu.Initialize(menutable)
 				menu.activetab = i
 				setActiveTab(menu.activetab)
 				menu:SetMenuPos(menu.x, menu.y)
-				set_tooltip(0, 0, "poop", false)
+				set_tooltip(nil, nil, nil, false)
 			end
 		end
 		if menu.colorpicker_open then
@@ -3817,7 +3841,7 @@ function menu.Initialize(menutable)
 		menu:set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
 		if menu.open or menu.fading then
 			set_plusminus(0, 20, 20)
-			set_tooltip(0, 0, "poop", false) 
+			set_tooltip(nil, nil, nil, false, fdt) 
 			for k, v in pairs(menu.options) do
 				if menu.tabnames[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
@@ -3841,7 +3865,7 @@ function menu.Initialize(menutable)
 									if not menu.dropbox_open and not menu.colorpicker_open then
 										if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
 											if v2.tooltip ~= nil then
-												set_tooltip(menu.x + v2[3][1], menu.y + v2[3][2] + 18, v2.tooltip, true) 
+												set_tooltip(menu.x + v2[3][1], menu.y + v2[3][2] + 18, v2.tooltip, true, fdt * 2--[[this is stupid]]) 
 											end
 										end
 									end
@@ -4025,6 +4049,7 @@ function menu.Initialize(menutable)
 	end
 	
 	menu.connections.inputstart = INPUT_SERVICE.InputBegan:Connect(function(input)
+		if not menu then return end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			menu.mousedown = true
 			if menu.open and not menu.fading then
@@ -4190,19 +4215,21 @@ menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --
 			value[5].relvalue = false 
 			continue 
 		end
-
+		local key = value[5][1]
 		if value[5].toggletype == 4 then 
 
 			value[5].relvalue = true 
 
-		elseif value[5].toggletype == 1 then
+		elseif value[5].toggletype == 1 and key then
+			
+			value[5].relvalue = INPUT_SERVICE:IsKeyDown(key)
 
-			value[5].relvalue = INPUT_SERVICE:IsKeyDown(value[5][1]) 
+		elseif value[5].toggletype == 3 and key then
 
-		elseif value[5].toggletype == 3 then
+			value[5].relvalue = not INPUT_SERVICE:IsKeyDown(key)
 
-			value[5].relvalue = not INPUT_SERVICE:IsKeyDown(value[5][1]) 
-
+		else
+			value[5].relvalue = false
 		end
 	end
 
@@ -6491,7 +6518,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	
 	menu.activetab = 5
 	menu.annoylist = table.create(game.Players.MaxPlayers - 1)
-
+	local indicator = Instance.new("Part", workspace)
 	local sphereHitbox = Instance.new("Part", workspace)
 	sphereHitbox.Name = "abcdefg"
 	local diameter
@@ -6503,6 +6530,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		sphereHitbox.Transparency = 1
 		sphereHitbox.Anchored = true
 		sphereHitbox.CanCollide = false
+		indicator.Size = Vector3.new(diameter, diameter, diameter)
+		indicator.Position = Vector3.new()
+		indicator.Shape = Enum.PartType.Ball
+		indicator.Transparency = 0
+		indicator.Anchored = true
+		indicator.CanCollide = false
 	end
 	
 	local keybindtoggles = {
@@ -6710,6 +6743,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				client.getupdater = garbage
 			elseif name == "updateplayernames" then
 				client.updateplayernames = garbage
+			end
+			if getfenv(garbage).script then
+				if islclosure(garbage) and table.find(debug.getconstants(garbage), "Indicator") then
+					client.newgrenade = garbage
+				end
 			end
 		end
 		
@@ -8397,7 +8435,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
-						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 4 then -- fake body resolver
+						if math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 20 then -- fake body resolver
 							usedhitscan = {
 								rootpart = true -- because all other parts cannot be hit, only rootpart can be
 							}
@@ -8633,8 +8671,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 			end
-			if (cpart and theplayer and closest and firepos) and keybindtoggles.crimwalk and menu:GetVal("Misc", "Exploits", "Disable Crimwalk on Shot") then
-				keybindtoggles.crimwalk = false
+			if (cpart and theplayer and closest and firepos) and menu:GetKey("Misc", "Exploits", "Crimwalk") and menu:GetVal("Misc", "Exploits", "Disable Crimwalk on Shot") then
+				menu:SetKey("Misc", "Exploits", "Crimwalk") 
 				CreateNotification("Crimwalk disabled due to ragebot")
 			end
 			--debug.profileend("BB Ragebot GetTarget")
@@ -8799,7 +8837,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				return position
 			end
 		end
-		
+		local hitscanPoints = {0,0,0,0,0,0,0}
 		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
 			assert(bodypart, "hello")
 			
@@ -8809,10 +8847,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			assert(typeof(origin) == "CFrame", "what are you trying to do young man") -- end
 			local position = origin
 			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
+			-- for k, v in next, hitscanPoints do
+			-- 	print(k, v)
+			-- end
 			for i = 1, max_step do
 				position = position * CFrame.new(0, step, 0)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
+					hitscanPoints[1] += 1
 					return position.p, bulletintersection
 				end
 			end
@@ -8823,6 +8865,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				position = position * CFrame.new(0, -step, 0)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
+					hitscanPoints[2] += 1
 					return position.p, bulletintersection
 				end
 			end
@@ -8833,6 +8876,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				position = position * CFrame.new(0, 0, step)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
+					hitscanPoints[3] += 1
 					return position.p, bulletintersection
 				end
 			end
@@ -8843,6 +8887,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				position = position * CFrame.new(0, 0, -step)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
+					hitscanPoints[4] += 1
 					return position.p, bulletintersection
 				end
 			end
@@ -8853,6 +8898,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				position = position * CFrame.new(step, 0, 0)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
+					hitscanPoints[5] += 1
 					return position.p, bulletintersection
 				end
 			end
@@ -8863,7 +8909,21 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				position = position * CFrame.new(-step, 0, 0)
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
+					hitscanPoints[6] += 1
 					return position.p, bulletintersection
+				end
+			end
+			position = origin
+			
+			for i = 1, max_step do
+				local pull = (bodypart.Position - position.p).Unit * step
+				position = position.p + pull
+				local pen, exited, bulletintersection = ragebot:CanPenetrate(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+				indicator.Position = position
+				indicator.Size = Vector3.new(1,1,1)
+				if pen then
+					hitscanPoints[7] += 1
+					return position, bulletintersection
 				end
 			end
 			
@@ -9054,7 +9114,85 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			debris:AddItem(origin_att, destroydelay)
 			debris:AddItem(ending_att, destroydelay)
 		end
-		
+		if client.newgrenade then
+			local oldnewgrenade = client.newgrenade
+			client.newgrenade = function(thrower, gtype, gdata)
+				if menu and gdata.blowuptime > 0 and thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
+					local lastrealpos
+					
+					local frames = gdata.frames
+					local blowup, st = gdata.blowuptime, gdata.time
+					local inc = 0.016666666666666666
+					
+					local curtick = tick()
+					local dst = st - curtick
+					local realtime = curtick + dst * (st + blowup - curtick) / (blowup + dst)
+					local err = realtime - curtick
+					
+					local j = 1
+					
+					for dt = 0, blowup / inc do
+						local t = inc * dt
+						
+						do
+							local realtime = tick() + t
+							local time = realtime + dst * (st + blowup - realtime) / (blowup + dst)
+							
+							local rtnext = tick() + (inc * (dt + 1))
+							local next_time = rtnext + dst * (st + blowup - rtnext) / (blowup + dst)
+							
+							local frame = frames[j]
+							local nextframe = j + 1 <= #frames and frames[j + 1] or nil
+							
+							if nextframe and time > st + nextframe.t0 then
+								j += 1
+								frame = nextframe
+							end
+							
+							local t = time - (st + frame.t0)
+							local next_t = next_time - (st + frame.t0)
+							
+							local pos = frame.p0 + t * frame.v0 + t * t / 2 * frame.a + frame.offset
+							local nextpos = frame.p0 + next_t * frame.v0 + next_t * next_t / 2 * frame.a + frame.offset
+							--local rot = client.cframe.fromaxisangle(t * frame.rotv) * frame.rot0
+							lastrealpos = pos
+							
+							if menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP") then
+								local c1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color1", true)
+								local c2 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color2", true)
+								local colorz = {c1, c2}
+								if nextpos then
+									--local mag = (nextpos - pos).magnitude
+									-- magnitude stuff wont work because the line will just end for no reason
+									create_outlined_square(pos, blowup, colorz)
+									local a1 = Instance.new("Attachment", workspace.Terrain)
+									a1.Position = pos
+									local a2 = Instance.new("Attachment", workspace.Terrain)
+									a2.Position = nextpos
+									
+									create_line(a1, a2, blowup, colorz)
+								else
+									create_outlined_square(pos, blowup, colorz)
+								end
+							end
+						end
+					end
+					
+					if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
+						local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
+						if curtick < btick then
+							table.insert(menu.activenades, {
+								thrower = thrower.Name,
+								blowupat = lastrealpos,
+								blowuptick = btick, -- might need to be tested more
+								start = curtick
+							})
+						end
+					end
+				end
+				return oldnewgrenade(thrower, gtype, gdata)
+			end
+		end
 		for hash, func in next, clienteventfuncs do
 			local curconstants = getconstants(func)
 			local found = table.find(curconstants, "Frag")
@@ -9072,84 +9210,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local found12 = table.find(curconstants, "setlookangles")
 			local found13 = table.find(curconstants, "Msg")
 			local found14 = table.find(curconstants, "[Console]: ")
-			if found then
-				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
-					if gdata.blowuptime > 0 and thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
-						local lastrealpos
-						
-						local frames = gdata.frames
-						local blowup, st = gdata.blowuptime, gdata.time
-						local inc = 0.016666666666666666
-						
-						local curtick = tick()
-						local dst = st - curtick
-						local realtime = curtick + dst * (st + blowup - curtick) / (blowup + dst)
-						local err = realtime - curtick
-						
-						local j = 1
-						
-						for dt = 0, blowup / inc do
-							local t = inc * dt
-							
-							do
-								local realtime = tick() + t
-								local time = realtime + dst * (st + blowup - realtime) / (blowup + dst)
-								
-								local rtnext = tick() + (inc * (dt + 1))
-								local next_time = rtnext + dst * (st + blowup - rtnext) / (blowup + dst)
-								
-								local frame = frames[j]
-								local nextframe = j + 1 <= #frames and frames[j + 1] or nil
-								
-								if nextframe and time > st + nextframe.t0 then
-									j += 1
-									frame = nextframe
-								end
-								
-								local t = time - (st + frame.t0)
-								local next_t = next_time - (st + frame.t0)
-								
-								local pos = frame.p0 + t * frame.v0 + t * t / 2 * frame.a + frame.offset
-								local nextpos = frame.p0 + next_t * frame.v0 + next_t * next_t / 2 * frame.a + frame.offset
-								--local rot = client.cframe.fromaxisangle(t * frame.rotv) * frame.rot0
-								lastrealpos = pos
-								
-								if menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP") then
-									local c1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color1", true)
-									local c2 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color2", true)
-									local colorz = {c1, c2}
-									if nextpos then
-										--local mag = (nextpos - pos).magnitude
-										-- magnitude stuff wont work because the line will just end for no reason
-										create_outlined_square(pos, blowup, colorz)
-										local a1 = Instance.new("Attachment", workspace.Terrain)
-										a1.Position = pos
-										local a2 = Instance.new("Attachment", workspace.Terrain)
-										a2.Position = nextpos
-										
-										create_line(a1, a2, blowup, colorz)
-									else
-										create_outlined_square(pos, blowup, colorz)
-									end
-								end
-							end
-						end
-						
-						if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
-							local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
-							if curtick < btick then
-								table.insert(menu.activenades, {
-									thrower = thrower.Name,
-									blowupat = lastrealpos,
-									blowuptick = btick, -- might need to be tested more
-									start = curtick
-								})
-							end
-						end
-					end
-					return func(thrower, gtype, gdata, displaytrail)
-				end
-			end
+			
 			if found1 then
 				clienteventfuncs[hash] = function(charhash, bodyparts)
 					local modparts = bodyparts
@@ -10216,7 +10277,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					args[2] = slot
 				end
 			elseif args[1] == "repupdate" then
-				if keybindtoggles.crimwalk then return end
+				if menu:GetKey("Misc", "Exploits", "Crimwalk") then return end
 				uberpart.Transparency = keybindtoggles.freestand and 0 or 1
 				if keybindtoggles.freestand then
 					for i = 1, #directiontable do
@@ -11614,11 +11675,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				------------------------------------------
 				------------"TOGGLES AND SHIT"------------
 				------------------------------------------
-				if menu:GetVal("Misc", "Exploits", "Crimwalk") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") and not keybindtoggles.crimwalk then
-					keybindtoggles.crimwalk = true
-					CreateNotification("Crimwalk enabled")
-					return Enum.ContextActionResult.Sink
-				end
+				
 				
 				if menu:GetVal("Visuals", "Local", "Third Person") and inputObject.KeyCode == menu:GetVal("Visuals", "Local", "Third Person", "keybind") then
 					keybindtoggles.thirdperson = not keybindtoggles.thirdperson
@@ -11755,11 +11812,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			------------"HELD KEY ACTION"------------
 			-----------------------------------------
 			local keyflag = inputState == Enum.UserInputState.Begin
-			if keyflag and keybindtoggles.crimwalk and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Crimwalk", "keybind") then
-				keybindtoggles.crimwalk = false
-				CreateNotification("Crimwalk disabled")
-				return Enum.ContextActionResult.Sink
-			end
+			
 			
 			if shitting_my_pants == false then
 
