@@ -8188,7 +8188,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if self.firsttarget and not menu:GetVal("Rage", "Aimbot", "Target Only Priority Players") then -- idfk what to do i will just have this code run twice fuck making a function for this cus i will have to pass in a million vars or make a million locals
 				local player = self.firsttarget
 				local usedhitscan = hitscan -- should probably do this a different way
-				if self.predictedDamageDealt[player] and self.predictedDamageDealt[player] > menu:GetVal("Rage", "Settings", "Damage Prediction Limit") then -- just gonna make this always on for first target so it takes potshots at them no matter what
+				if self.predictedDamageDealt[player] and self.predictedDamageDealt[player] < menu:GetVal("Rage", "Settings", "Damage Prediction Limit") then -- just gonna make this always on for first target so it takes potshots at them no matter what
 					if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER and not (table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends"))  then
 						local curbodyparts = client.replication.getbodyparts(player)
 						if curbodyparts and client.hud:isplayeralive(player) then
@@ -9039,7 +9039,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		-- setrawmetatable(client.cam.magspring, mt)
 		client.cam.setmagnification = function(self, m)
 			local lnm = math.log(m)
-			if menu and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then return end
+			if menu and not menu.open and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then 
+				return
+			end
 			self.magspring.p = lnm
 			self.magspring.t = lnm
 			self.magspring.v = 0
