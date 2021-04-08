@@ -2606,13 +2606,39 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	function menu:InputBeganKeybinds(key)
-		for index, values in ipairs(menu.keybinds) do
-			local value = values[1]
-
-			if value[5].toggletype == 2 then
-				if value[5][1] and key.KeyCode == value[5][1] then
+	function menu:InputBeganKeybinds(key) -- this is super shit because once we add mouse we need to change all this shit to be the contextaction stuff 
+		for i = 1, #menu.keybinds do
+			local value = menu.keybinds[i].values[1]
+			if key.KeyCode == value[5][1] then
+				if value[5].toggletype == 2 then
 					value[5].relvalue = not value[5].relvalue
+				elseif value[5].toggletype == 4 then 
+					value[5].relvalue = true 
+				elseif value[5].toggletype == 1 then
+					value[5].relvalue = true
+				elseif value[5].toggletype == 3 then
+					value[5].relvalue = false
+				end
+			end
+		end
+	end
+
+	function menu:InputEndedKeybinds(key)
+		for i = 1, #menu.keybinds do
+			local value = menu.keybinds[i].values[1]
+			if key.KeyCode == value[5][1] then
+				if not value[1] then 
+					value[5].relvalue = false 
+					continue 
+				end
+				if value[5].toggletype == 4 then 
+					value[5].relvalue = true 
+				elseif value[5].toggletype == 1 then
+					value[5].relvalue = false
+				elseif value[5].toggletype == 3 then
+					value[5].relvalue = true
+				else
+					value[5].relvalue = false
 				end
 			end
 		end
@@ -4208,30 +4234,7 @@ local FrameUpdateTable = { }
 -- I STOLE THE FPS COUNTER FROM https://devforum.roblox.com/t/get-client-fps-trough-a-script/282631/14 😿😿😿😢😭
 menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --ANCHOR MENU HEARTBEAT
 	
-	for index, values in ipairs(menu.keybinds) do
-		local value = values[1]
-
-		if not value[1] then 
-			value[5].relvalue = false 
-			continue 
-		end
-		local key = value[5][1]
-		if value[5].toggletype == 4 then 
-
-			value[5].relvalue = true 
-
-		elseif value[5].toggletype == 1 and key then
-			
-			value[5].relvalue = INPUT_SERVICE:IsKeyDown(key)
-
-		elseif value[5].toggletype == 3 and key then
-
-			value[5].relvalue = not INPUT_SERVICE:IsKeyDown(key)
-
-		else
-			value[5].relvalue = false
-		end
-	end
+	
 
 	if menu.stat_menu == false then return end
 
@@ -6533,7 +6536,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		indicator.Size = Vector3.new(diameter, diameter, diameter)
 		indicator.Position = Vector3.new()
 		indicator.Shape = Enum.PartType.Ball
-		indicator.Transparency = 0
+		indicator.Transparency = 1
 		indicator.Anchored = true
 		indicator.CanCollide = false
 	end
