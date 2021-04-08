@@ -4154,6 +4154,7 @@ function menu.Initialize(menutable)
 	
 	menu.connections.inputended = INPUT_SERVICE.InputEnded:Connect(function(input)
 		
+		menu:InputEndedKeybinds(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			menu.mousedown = false
 			if menu.open and not menu.fading then
