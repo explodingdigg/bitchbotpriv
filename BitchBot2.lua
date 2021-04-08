@@ -2607,8 +2607,9 @@ function menu.Initialize(menutable)
 	end
 
 	function menu:InputBeganKeybinds(key) -- this is super shit because once we add mouse we need to change all this shit to be the contextaction stuff 
-		for i = 1, #menu.keybinds do
-			local value = menu.keybinds[i].values[1]
+		for i = 1, #self.keybinds do
+			--for i, v in next, self.keybinds do
+			local value = self.keybinds[i][1]
 			if key.KeyCode == value[5][1] then
 				if value[5].toggletype == 2 then
 					value[5].relvalue = not value[5].relvalue
@@ -2624,8 +2625,8 @@ function menu.Initialize(menutable)
 	end
 
 	function menu:InputEndedKeybinds(key)
-		for i = 1, #menu.keybinds do
-			local value = menu.keybinds[i].values[1]
+		for i = 1, #self.keybinds do
+			local value = self.keybinds[i][1]
 			if key.KeyCode == value[5][1] then
 				if not value[1] then 
 					value[5].relvalue = false 
@@ -6858,7 +6859,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if not menu then
 					return step(what, what1)
 				else
-					if menu:GetVal("Rage", "Aimbot", "Enabled") or keybindtoggles.thirdperson or keybindtoggles.superaa then
+					if menu:GetVal("Rage", "Aimbot", "Enabled") or menu:GetKey("Visuals", "Local", "Third Person") or keybindtoggles.superaa then
 						return step(3, true)
 					else
 						return step(what, what1)
@@ -7281,7 +7282,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if not menu then
 					return step(what, what1)
 				else
-					if menu:GetVal("Rage", "Aimbot", "Enabled") or keybindtoggles.thirdperson or keybindtoggles.superaa then
+					if menu:GetVal("Rage", "Aimbot", "Enabled") or menu:GetKey("Visuals", "Local", "Third Person") or keybindtoggles.superaa then
 						return step(3, true)
 					else
 						return step(what, what1)
@@ -7738,7 +7739,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if client.char.alive then
 				if self == workspace.Camera then
 					if id == "CFrame" then
-						if not keybindtoggles.superaa and menu:GetVal("Visuals", "Local", "Third Person") and keybindtoggles.thirdperson then
+						if not keybindtoggles.superaa and menu:GetVal("Visuals", "Local", "Third Person") and menu:GetKey("Visuals", "Local", "Third Person") then
 							local dist = menu:GetVal("Visuals", "Local", "Third Person Distance") / 10
 							local params = RaycastParams.new()
 							params.FilterType = Enum.RaycastFilterType.Blacklist
@@ -8162,9 +8163,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		
 		local rageHitboxSize = Vector3.new(11, 11, 11)
 		function ragebot:GetTarget(hitboxPriority, hitscan, players)
-			if keybindtoggles.freeze then
-				return nil
-			end
 			
 			ragebot.intersection = nil
 			
@@ -8714,7 +8712,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 		
 		function ragebot:KnifeBotMain()
-			if keybindtoggles.crash then return end
 			if not client.char.alive then return end
 			if not LOCAL_PLAYER.Character or not LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart") then return end
 			
@@ -9891,7 +9888,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		function misc:FlyHack()
 			
 			
-			if menu:GetVal("Misc", "Movement", "Fly") and keybindtoggles.flyhack then
+			if menu:GetVal("Misc", "Movement", "Fly") and menu:GetKey("Misc", "Movement", "Fly") then
 				local speed = menu:GetVal("Misc", "Movement", "Fly Speed")
 				
 				local travel = CACHED_VEC3
@@ -9927,14 +9924,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					rootpart.Anchored = true
 				end
 				
-			elseif not keybindtoggles.flyhack then
+			elseif not menu:GetKey("Misc", "Movement", "Fly") then
 				rootpart.Anchored = false
 			end
 		end
 		
 		function misc:SpeedHack()
 			
-			if keybindtoggles.flyhack then return end
+			if menu:GetKey("Misc", "Movement", "Fly") then return end
 			local speedtype = menu:GetVal("Misc", "Movement", "Speed Type")
 			if menu:GetVal("Misc", "Movement", "Speed") then
 				local speed = menu:GetVal("Misc", "Movement", "Speed Factor")
@@ -10005,7 +10002,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		
 		
 		function misc:MainLoop()
-			if keybindtoggles.crash then return end
 			if IsKeybindDown("Misc", "Exploits", "Lock Player Positions") then
 				NETWORK_SETTINGS.IncomingReplicationLag = 9e9
 			else
@@ -10022,7 +10018,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					misc:AutoJump()
 					misc:GravityShift()
 					--misc:RoundFreeze()
-				elseif keybindtoggles.flyhack then
+				elseif menu:GetKey("Misc", "Movement", "Fly") then
 					rootpart.Anchored = true
 				end
 			end
@@ -10161,13 +10157,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 					end
 					
-					if shitting_my_pants == false and keybindtoggles.freeze then
-						for k = 1, #args[2].bullets do
-							local bullet = args[2].bullets[k]
-							bullet[1] = Vector2.new()
-						end
-						return send(self, unpack(args))
-					end
 					
 					if ragebot.silentVector then
 						-- duct tape fix or whatever the fuck its called for this its stupid
@@ -10203,7 +10192,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 						
 						if menu:GetVal("Rage", "Fake Lag", "Release Packets on Shoot") then
-							keybindtoggles.fakelag = false
+							menu:SetKey("Rage", "Fake Lag", "Manual Choke")
 							syn.set_thread_identity(1) -- might lag...... idk probably not
 							NETWORK:SetOutgoingKBPSLimit(0)
 						end
@@ -10258,7 +10247,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			elseif args[1] == "stab" then
 				syn.set_thread_identity(1)
 				NETWORK:SetOutgoingKBPSLimit(0)
-				keybindtoggles.fakelag = false
+				menu:SetKey("Rage", "Fake Lag", "Manual Choke")
 				if menu:GetVal("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
 					if menu:GetVal("Rage", "Extra", "Knife Bot Type") == 1 then
 						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
@@ -10281,8 +10270,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 			elseif args[1] == "repupdate" then
 				if menu:GetKey("Misc", "Exploits", "Crimwalk") then return end
-				uberpart.Transparency = keybindtoggles.freestand and 0 or 1
-				if keybindtoggles.freestand then
+				uberpart.Transparency = menu:GetKey("Rage", "Hack vs. Hack", "Freestanding") and 0 or 1
+				if menu:GetKey("Rage", "Hack vs. Hack", "Freestanding") then
 					for i = 1, #directiontable do
 						--local direction = directiontable[i].Unit * 19
 						local cf = client.cam.basecframe
@@ -11680,14 +11669,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				------------------------------------------
 				
 				
-				if menu:GetVal("Visuals", "Local", "Third Person") and inputObject.KeyCode == menu:GetVal("Visuals", "Local", "Third Person", "keybind") then
-					keybindtoggles.thirdperson = not keybindtoggles.thirdperson
-					return Enum.ContextActionResult.Sink
-				end
-				if menu:GetVal("Rage", "Hack vs. Hack", "Freestanding") and inputObject.KeyCode == menu:GetVal("Rage", "Hack vs. Hack", "Freestanding", "keybind") then
-					keybindtoggles.freestand = not keybindtoggles.freestand
-					return Enum.ContextActionResult.Sink
-				end
 				-- if menu:GetVal("Misc", "Exploits", "Fake Position") and client.char.alive and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Fake Position", "keybind") then
 				-- 	keybindtoggles.superaa = not keybindtoggles.superaa
 				-- 	if keybindtoggles.superaa then
@@ -11701,10 +11682,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				-- 	end
 				-- 	return Enum.ContextActionResult.Sink
 				-- end
-				if menu:GetVal("Misc", "Movement", "Fly") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind") then
-					keybindtoggles.flyhack = not keybindtoggles.flyhack
-					return Enum.ContextActionResult.Sink
-				end
 				if menu:GetVal("Rage", "Extra", "Teleport Up") and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Teleport Up", "keybind") and client.char.alive then
 					setfpscap(8)
 					wait()
@@ -11829,16 +11806,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end ]] -- idk if this will even work anymore after the replication fixes
 			end
 
-			if menu:GetVal("Rage", "Fake Lag", "Enabled") and menu:GetVal("Rage", "Fake Lag", "Manual Choke")
-			and inputObject.KeyCode == menu:GetVal("Rage", "Fake Lag", "Manual Choke", "keybind") then
-				keybindtoggles.fakelag = keyflag
-				if not keyflag then
-					NETWORK:SetOutgoingKBPSLimit(0)
-				else
-					NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Fake Lag", "Fake Lag Amount"))
-				end
-				return Enum.ContextActionResult.Sink
-			end
+			
 
 			return Enum.ContextActionResult.Pass -- this will let any other keyboard action proceed
 		end
@@ -11874,6 +11842,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			-- 	client.superaastart = nil
 			-- 	CreateNotification("Fake position automatically disabled due to death")
 			-- end
+		end
+		if menu:GetVal("Rage", "Fake Lag", "Enabled") and menu:GetKey("Rage", "Fake Lag", "Manual Choke") then
+			if not menu:GetKey("Rage", "Fake Lag", "Manual Choke") then
+				NETWORK:SetOutgoingKBPSLimit(0)
+			else
+				NETWORK:SetOutgoingKBPSLimit(menu:GetVal("Rage", "Fake Lag", "Fake Lag Amount"))
+			end
 		end
 		--debug.profileend("Noclip Cheat check")
 		
@@ -12052,7 +12027,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		
 		--debug.profileend()
 	
-		if menu:GetVal("Visuals", "Local", "Third Person") and not keybindtoggles.superaa and keybindtoggles.thirdperson then -- do third person model
+		if menu:GetVal("Visuals", "Local", "Third Person") and not keybindtoggles.superaa and menu:GetKey("Visuals", "Local", "Third Person") then -- do third person model
 			if client.char.alive then
 				--debug.profilebegin("Third Person")
 				if not client.fakecharacter then
@@ -12084,7 +12059,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						LOCAL_PLAYER.Character.Torso.Pant:Destroy()
 					end
 				else
-					if not keybindtoggles.fakelag then
+					if not menu:GetKey("Rage", "Fake Lag", "Manual Choke") then
 						local fakeupdater = client.fakeupdater
 						fakeupdater.step(3, true)
 						
