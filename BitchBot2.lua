@@ -359,7 +359,7 @@ local function average(t)
 end
 
 
-function clamp(a, lowerNum, higher) -- DONT REMOVE this clamp is better then roblox's because it doesnt error when its not lower or heigher
+local function clamp(a, lowerNum, higher) -- DONT REMOVE this clamp is better then roblox's because it doesnt error when its not lower or heigher
 	if a > higher then
 		return higher
 	elseif a < lowerNum then
@@ -369,13 +369,13 @@ function clamp(a, lowerNum, higher) -- DONT REMOVE this clamp is better then rob
 	end
 end
 
-function CreateThread(func, ...) -- improved... yay.
+local function CreateThread(func, ...) -- improved... yay.
 	local thread = coroutine.create(func)
 	coroutine.resume(thread, ...)
 	return thread
 end
 
-function MultiThreadList(obj, ...)
+local function MultiThreadList(obj, ...)
 	local n = #obj
 	if n > 0 then
 		for i = 1, n do
@@ -452,7 +452,7 @@ local event = {}
 
 local allevent = {}
 
-function event.new(eventname, eventtable, requirename) -- fyi you can put in a table of choice to make the table you want an "event" pretty cool its like doing & in c lol!
+local function event.new(eventname, eventtable, requirename) -- fyi you can put in a table of choice to make the table you want an "event" pretty cool its like doing & in c lol!
 	if eventname then
 		assert(allevent[eventname] == nil, ("the event '%s' already exists in the event table"):format(eventname))
 	end
@@ -754,17 +754,6 @@ local GRAVITY = Vector3.new(0, -192.6, 0)
 menu.x = math.floor((SCREEN_SIZE.x/2) - (menu.w/2))
 menu.y = math.floor((SCREEN_SIZE.y/2) - (menu.h/2))
 
-local function IsKeybindDown(tab, group, name, on_nil)
-	local key = menu:GetVal(tab, group, name, "keybind")
-	if on_nil then
-		return key == nil or INPUT_SERVICE:IsKeyDown(key)
-	elseif key ~= nil then
-		return INPUT_SERVICE:IsKeyDown(key)
-	end
-	return false
-end
-
-
 local Lerp = function(delta, from, to) -- wtf why were these globals thats so exploitable!
 	if (delta > 1) then
 		return to
@@ -817,7 +806,7 @@ do -- color functions
 	end
 	
 end
-function string_cut(s1, num)
+local function string_cut(s1, num)
 	return num == 0 and s1 or string.sub(s1, 1, num)
 end
 
@@ -1587,7 +1576,7 @@ Draw:OutlinedText("loading...", 2, false, 35, infopos + 180, 13, false, {255, 25
 
 local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.x/16), math.floor(SCREEN_SIZE.y/16), 13, true, {255, 50, 200, 255}, {0, 0, 0})
 
-function menu.Initialize(menutable)
+local function menu.Initialize(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
 	do
 		Draw:MenuOutlinedRect(true, 0, 0, menu.w, menu.h, {0, 0, 0, 255}, bbmenu)  -- first gradent or whatever
@@ -8484,7 +8473,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if not client.char.alive then return end
 			if not LOCAL_PLAYER.Character or not LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart") then return end
 			
-			if menu:GetVal("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
+			if menu:GetVal("Rage", "Extra", "Knife Bot") and menu:GetKey("Rage", "Extra", "Knife Bot", true) then
 				local knifetype = menu:GetVal("Rage", "Extra", "Knife Bot Type")
 				if knifetype == 2 then
 					ragebot:KnifeAura()
@@ -8718,14 +8707,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			
 			if client.char.alive then
-				if menu:GetVal("Misc", "Movement", "Circle Strafe") and IsKeybindDown("Misc", "Movement", "Circle Strafe") then
+				if menu:GetVal("Misc", "Movement", "Circle Strafe") and menu:GetKey("Misc", "Movement", "Circle Strafe") then
 					local speedcheatspeed = menu:GetVal("Misc", "Movement", "Speed Factor")
 					local rootpart = client.char.rootpart
 					rootpart.Velocity = Vector3.new(math.sin(tick() * speedcheatspeed / 10) * speedcheatspeed, rootpart.Velocity.Y, math.cos(tick() * speedcheatspeed / 10) * speedcheatspeed)
 				end
 			end
 			
-			if client.char.alive and menu:GetVal("Rage", "Aimbot", "Enabled") and IsKeybindDown("Rage", "Aimbot", "Enabled", true) then
+			if client.char.alive and menu:GetVal("Rage", "Aimbot", "Enabled") and menu:GetKey("Rage", "Aimbot", "Enabled", true) then
 				if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then -- client.loogic.poop.falsified_directional_componenet = Vector8.new(math.huge) [don't fuck with us]
 					
 					if ragebot:LogicAllowed() then
@@ -9737,7 +9726,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						return
 					end
 
-					if IsKeybindDown("Misc", "Movement", "Speed", true) then
+					if menu:GetKey("Misc", "Movement", "Speed", true) then
 						if speedtype == 1 then
 							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
 						else
@@ -9801,7 +9790,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		
 		
 		function misc:MainLoop()
-			if IsKeybindDown("Misc", "Exploits", "Lock Player Positions") then
+			if menu:GetKey("Misc", "Exploits", "Lock Player Positions") then
 				NETWORK_SETTINGS.IncomingReplicationLag = 9e9
 			else
 				NETWORK_SETTINGS.IncomingReplicationLag = 0
@@ -10046,7 +10035,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				syn.set_thread_identity(1)
 				NETWORK:SetOutgoingKBPSLimit(0)
 				menu:SetKey("Rage", "Fake Lag", "Manual Choke")
-				if menu:GetVal("Rage", "Extra", "Knife Bot") and IsKeybindDown("Rage", "Extra", "Knife Bot", true) then
+				if menu:GetVal("Rage", "Extra", "Knife Bot") and menu:GetKey("Rage", "Extra", "Knife Bot", true) then
 					if menu:GetVal("Rage", "Extra", "Knife Bot Type") == 1 then
 						ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
 					end
@@ -10418,7 +10407,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			function legitbot:TriggerBot()
 				-- i swear to god the capital GetVal makes me do Menu:GetVal
-				if menu:GetVal("Legit", "Trigger Bot", "Enabled") and IsKeybindDown("Legit", "Trigger Bot", "Enabled", true) then
+				if menu:GetVal("Legit", "Trigger Bot", "Enabled") and menu:GetKey("Legit", "Trigger Bot", "Enabled", true) then
 					local parts = misc:GetParts(menu:GetVal("Legit", "Trigger Bot", "Trigger Bot Hitboxes"))
 					
 					local gun = client.logic.currentgun
@@ -10526,7 +10515,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if not P.thirdperson then
 				if menu:GetVal("Legit", "Bullet Redirection", "Silent Aim") and legitbot.silentVector then
 					P.velocity = legitbot.silentVector.Unit * mag
-				elseif menu:GetVal("Rage", "Aimbot", "Enabled") and IsKeybindDown("Rage", "Aimbot", "Enabled", true) and ragebot.silentVector then
+				elseif menu:GetVal("Rage", "Aimbot", "Enabled") and menu:GetKey("Rage", "Aimbot", "Enabled", true) and ragebot.silentVector then
 					local oldpos = P.position
 					P.position = ragebot.firepos
 					P.velocity = ragebot.silentVector.Unit * mag
