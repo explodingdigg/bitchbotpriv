@@ -4449,6 +4449,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							extra = {
 								type = "keybind",
 								key = Enum.KeyCode.J,
+								toggletype = 4,
 							},
 						},
 						{
@@ -6711,11 +6712,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		local garbagetype = type(garbage)
 
 		if garbagetype == "function" then
-				local name = getinfo(garbage).name
+			local name = getinfo(garbage).name
 			if name == "bulletcheck" then
 				client.bulletcheck = garbage
 			elseif name == "trajectory" then
 				client.trajectory = garbage
+			elseif name == "addplayer" then
+				client.addplayer = garbage
+				garbage = function(...)
+					-- print(...)
+					return client.addplayer(...)
+				end
 			elseif name == "call" then
 				client.call = garbage
 			elseif name == "loadplayer" then
@@ -8152,10 +8159,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				
 			end
 		end
-		local function FlyAtVec3(pos)
-			local root = LOCAL_PLAYER.Character.HumanoidRootPart 
-			root.Velocity = (pos - root.Position).Unit * menu:GetVal("Misc", "Movement", "Fly Speed")
-		end
 		local rageHitboxSize = Vector3.new(11, 11, 11)
 		local HITBOX_SHIFT_AMOUNT = 7
 		local lastHitboxPriority
@@ -8433,7 +8436,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			if (cpart and theplayer and closest and firepos) and menu:GetKey("Misc", "Exploits", "Crimwalk") and menu:GetVal("Misc", "Exploits", "Disable Crimwalk on Shot") then
 				menu:SetKey("Misc", "Exploits", "Crimwalk") 
-				CreateNotification("Crimwalk disabled due to self")
+				CreateNotification("Crimwalk disabled due to ragebot")
 			end
 			--debug.profileend("BB self GetTarget")
 			return cpart, theplayer, closest, firepos, head
@@ -9658,8 +9661,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local travel = CACHED_VEC3
 				local looking = Camera.CFrame.lookVector --getting camera looking vector
 				local rightVector = Camera.CFrame.RightVector
-				
-				
 				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
 					travel += looking
 				end
@@ -9672,14 +9673,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
 					travel -= rightVector
 				end
-				
 				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
 					travel += Vector3.new(0,1,0)
 				end
 				if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftShift) then
 					travel -= Vector3.new(0,1,0)
 				end
-				
 				if travel.Unit.x == travel.Unit.x then
 					rootpart.Anchored = false
 					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
@@ -9687,8 +9686,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					rootpart.Velocity = Vector3.new(0, 0, 0)
 					rootpart.Anchored = true
 				end
-				
-			elseif not menu:GetKey("Misc", "Movement", "Fly") then
+			end
+			if not menu:GetKey("Misc", "Movement", "Fly") or menu:GetKey("Rage", "Extra", "Auto Peek") then
 				rootpart.Anchored = false
 			end
 		end
@@ -9757,8 +9756,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end 
 				if self.autopeekposition and not workspace:Raycast(client.lastrepupdate, self.autopeekposition - client.lastrepupdate, mapRaycast) then
-
-					rootpart.Velocity = (self.autopeekposition - client.cam.cframe.p).Unit * menu:GetVal("Misc", "Movement", "Fly Speed")
+					local diff = (self.autopeekposition - client.cam.cframe.p)
+					if diff < 5 then 
+						self.autopeekposition = nil
+						return
+					end
+					rootpart.Velocity = diff.Unit * menu:GetVal("Misc", "Movement", "Fly Speed")
 				end
 			else
 				self.autopeekposition = nil
@@ -9809,7 +9812,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					misc:AutoPeek()
 					--misc:RoundFreeze()
 				elseif menu:GetKey("Misc", "Movement", "Fly") then
-					rootpart.Anchored = true
+					rootpart.Anchored = misc.autopeekposition and false or true
 				end
 			end
 			
@@ -12183,6 +12186,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							value = false,
 							extra = {
 								type = "keybind",
+								toggletype = 4,
 							},
 							unsafe = true
 						},
@@ -12828,6 +12832,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								color = {255, 210, 0, 255}
 							}
 						},
+						{
+							type = "slider",
+							name = "Max Player Text",
+							value = 0,
+							minvalue = 0,
+							maxvalue = 32,
+							custom = {[0] = "None"},
+						}
 						
 					}
 				},
@@ -13175,7 +13187,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								unsafe = true,
 								extra = {
 									type = "keybind",
-									toggletype = 2
+									toggletype = 4
 								},
 							},
 							{
@@ -13199,7 +13211,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								extra = {
 									type = "keybind"
 								},
-								tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed."
+								tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed Factor."
 							},
 							{
 								type = "toggle",
@@ -13378,7 +13390,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							{
 								type = "toggle",
 								name = "Chat Spam Repeat",
-								value = false
+								value = false,
+								tooltip = "Repeats the same Chat Spam message in chat."
 							},
 							{
 								type = "slider",
@@ -13431,7 +13444,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								name = "Rapid Kill",
 								value = false,
 								extra = {
-									type = "keybind"
+									type = "keybind",
+									toggletype = 0
 								},
 								tooltip = "Throws 3 grenades instantly on random enemies."
 							},
