@@ -2640,8 +2640,6 @@ function menu.Initialize(menutable)
 					value[5].relvalue = false
 				elseif value[5].toggletype == 3 then
 					value[5].relvalue = true
-				else
-					value[5].relvalue = false
 				end
 			end
 		end
