@@ -452,7 +452,7 @@ local event = {}
 
 local allevent = {}
 
-local function event.new(eventname, eventtable, requirename) -- fyi you can put in a table of choice to make the table you want an "event" pretty cool its like doing & in c lol!
+function event.new(eventname, eventtable, requirename) -- fyi you can put in a table of choice to make the table you want an "event" pretty cool its like doing & in c lol!
 	if eventname then
 		assert(allevent[eventname] == nil, ("the event '%s' already exists in the event table"):format(eventname))
 	end
@@ -1576,7 +1576,7 @@ Draw:OutlinedText("loading...", 2, false, 35, infopos + 180, 13, false, {255, 25
 
 local loadingthing = Draw:OutlinedText("Loading...", 2, true, math.floor(SCREEN_SIZE.x/16), math.floor(SCREEN_SIZE.y/16), 13, true, {255, 50, 200, 255}, {0, 0, 0})
 
-local function menu.Initialize(menutable)
+function menu.Initialize(menutable)
 	local bbmenu = {} -- this one is for the rendering n shi
 	do
 		Draw:MenuOutlinedRect(true, 0, 0, menu.w, menu.h, {0, 0, 0, 255}, bbmenu)  -- first gradent or whatever
@@ -6519,7 +6519,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		indicator.Size = Vector3.new(1,1,1)
 		indicator.Position = Vector3.new()
 		indicator.Shape = Enum.PartType.Ball
-		indicator.Transparency = 0
+		indicator.Transparency = 1
 		indicator.Anchored = true
 		indicator.CanCollide = false
 	end
@@ -6590,7 +6590,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		[4] = { -- text
 			[1] = {},
 			[2] = {},
-			[3] = {}
+			[3] = {},
+			[4] = {}
 		},
 		[5] = { -- arrows
 			[1] = {},
@@ -9756,7 +9757,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end 
 				if self.autopeekposition and not workspace:Raycast(client.lastrepupdate, self.autopeekposition - client.lastrepupdate, mapRaycast) then
-					indicator.Position = self.autopeekposition
+
 					rootpart.Velocity = (self.autopeekposition - client.cam.cframe.p).Unit * menu:GetVal("Misc", "Movement", "Fly Speed")
 				end
 			else
@@ -9830,6 +9831,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 				if args[1] == "spawn" then
 					misc:ApplyGunMods()
+				end
+				if args[1] == "logmessage" or args[1] == "debug" then
+					return
 				end
 				if args[1] == "repupdate" then
 					if args[2] ~= args[2] or args[2].Unit.X ~= args[2].Unit.X then
