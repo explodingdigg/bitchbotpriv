@@ -2608,18 +2608,19 @@ function menu.Initialize(menutable)
 
 	function menu:InputBeganKeybinds(key) -- this is super shit because once we add mouse we need to change all this shit to be the contextaction stuff 
 		for i = 1, #self.keybinds do
-			--for i, v in next, self.keybinds do
 			local value = self.keybinds[i][1]
 			if key.KeyCode == value[5][1] then
 				if value[5].toggletype == 2 then
 					value[5].relvalue = not value[5].relvalue
-				elseif value[5].toggletype == 4 then 
-					value[5].relvalue = true 
+					print(value[5].relvalue)
 				elseif value[5].toggletype == 1 then
 					value[5].relvalue = true
 				elseif value[5].toggletype == 3 then
 					value[5].relvalue = false
 				end
+			end
+			if value[5].toggletype == 4 then 
+				value[5].relvalue = true 
 			end
 		end
 	end
@@ -2628,18 +2629,10 @@ function menu.Initialize(menutable)
 		for i = 1, #self.keybinds do
 			local value = self.keybinds[i][1]
 			if key.KeyCode == value[5][1] then
-				if not value[1] then 
-					value[5].relvalue = false 
-					continue 
-				end
-				if value[5].toggletype == 4 then 
-					value[5].relvalue = true 
-				elseif value[5].toggletype == 1 then
+				if value[5].toggletype == 1 then
 					value[5].relvalue = false
 				elseif value[5].toggletype == 3 then
 					value[5].relvalue = true
-				else
-					value[5].relvalue = false
 				end
 			end
 		end
@@ -6957,6 +6950,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				self.predictedDamageDealt[target] = 0
 			end
 			self.predictedDamageDealt[target] += damageDealt
+			self.predictedShots[target] += dt and 2 or 1
 			self.predictedDamageDealtRemovals[target] = tick() + GetLatency() * menu:GetVal("Rage", "Settings", "Damage Prediction Time") / 100
 		end
 	end
@@ -7969,6 +7963,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		ragebot.shooting = false
 		ragebot.predictedDamageDealt = {}
 		ragebot.predictedDamageDealtRemovals = {}
+		ragebot.predictedMisses = {}
+		ragebot.predictedShots = {}
 		ragebot.firsttarget = nil
 		ragebot.spin = 0
 		do
@@ -8162,8 +8158,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 		
 		local rageHitboxSize = Vector3.new(11, 11, 11)
+		local HITBOX_SHIFT_AMOUNT = 10
+		local autopeekiterator = 5
 		function ragebot:GetTarget(hitboxPriority, hitscan, players)
 			
+			local dist = autopeekiterator % 20 + 10
+			autopeekiterator += 10
+
 			ragebot.intersection = nil
 			
 			--debug.profilebegin("BB Ragebot GetTarget")
@@ -8178,7 +8179,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local resolvertype = menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type")
 			--local campos = client.cam.basecframe
 			local zerocf = client.cam.basecframe - client.cam.basecframe.p
-			local campos = zerocf + client.lastrepupdate
+			local campos = origin or zerocf + client.lastrepupdate
 			local camposreal = keybindtoggles.fakebody and campos - Vector3.new(0, client.fakeoffset, 0) or campos
 			local camposv3 = camposreal.p
 			local firepos
@@ -8187,6 +8188,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local aimbotFov = menu:GetVal("Rage", "Aimbot", "Aimbot FOV")
 			if self.firsttarget and not menu:GetVal("Rage", "Aimbot", "Target Only Priority Players") then -- idfk what to do i will just have this code run twice fuck making a function for this cus i will have to pass in a million vars or make a million locals
 				local player = self.firsttarget
+				local misses = ragebot.predictedMisses[player]
 				local usedhitscan = hitscan -- should probably do this a different way
 				if self.predictedDamageDealt[player] and self.predictedDamageDealt[player] < menu:GetVal("Rage", "Settings", "Damage Prediction Limit") then -- just gonna make this always on for first target so it takes potshots at them no matter what
 					if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER and not (table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends"))  then
@@ -8252,7 +8254,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 														if menu.priority[player.Name] then break end
 													end
 												elseif resolvertype == 3 then -- random
-													local pullVector = Vector3.new(math.random(-1, 1), math.random(-1, 1), math.random(-1, 1)).Unit * 4.5833333333333
+													local pullVector = Vector3.new(math.random(-1, 1), math.random(-1, 1), math.random(-1, 1)).Unit * HITBOX_SHIFT_AMOUNT / misses
+
 
 													local newTargetPosition = bone.Position - pullVector
 													
@@ -8333,7 +8336,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 												elseif resolvertype == 5 then -- "combined"
 													-- basically combines fast axis shifting with offsetting the hitbox or just sending a raycast to the hitbox for the intersection point, really broken
 													
-													--[[ local extendSize = 4.5833333333333
+													--[[ local extendSize = HITBOX_SHIFT_AMOUNT
 													
 													local boneX = bone.Position.X
 													local boneY = bone.Position.Y
@@ -8355,7 +8358,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 													boneZ < localZ and extendZ or
 													boneZ > localZ and -extendZ or "wtf" ]]
 													
-													local pullVector = (bone.Position - camposv3).Unit * 4.5833333333333
+													local pullVector = (bone.Position - camposv3).Unit * HITBOX_SHIFT_AMOUNT / misses
 
 													local newTargetPosition = bone.Position - pullVector
 													
@@ -8433,6 +8436,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local usedhitscan = hitscan -- should probably do this a different way
 				if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then continue end
 				if menu:GetVal("Rage", "Settings", "Aimbot Damage Prediction") and self.predictedDamageDealt[player] and self.predictedDamageDealt[player] > menu:GetVal("Rage", "Settings", "Damage Prediction Limit") then continue end
+				local misses = ragebot.predictedMisses[player]
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
@@ -8496,7 +8500,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 													if menu.priority[player.Name] then break end
 												end
 											elseif resolvertype == 3 then -- random
-												local pullVector = Vector3.new(math.random(-1, 1), math.random(-1, 1), math.random(-1, 1)).Unit * 4.5833333333333
+												local pullVector = Vector3.new(math.random(-1, 1), math.random(-1, 1), math.random(-1, 1)).Unit * HITBOX_SHIFT_AMOUNT / misses
 
 												local newTargetPosition = bone.Position - pullVector
 												
@@ -8577,7 +8581,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											elseif resolvertype == 5 then -- "combined"
 												-- basically combines fast axis shifting with offsetting the hitbox or just sending a raycast to the hitbox for the intersection point, really broken
 												
-												--[[ local extendSize = 4.5833333333333
+												--[[ local extendSize = HITBOX_SHIFT_AMOUNT
 												
 												local boneX = bone.Position.X
 												local boneY = bone.Position.Y
@@ -8599,7 +8603,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 												boneZ < localZ and extendZ or
 												boneZ > localZ and -extendZ or "wtf" ]]
 												
-												local pullVector = (bone.Position - camposv3).Unit * 4.5833333333333
+												local pullVector = (bone.Position - camposv3).Unit * HITBOX_SHIFT_AMOUNT / misses
 
 												local newTargetPosition = bone.Position - pullVector
 												
@@ -8680,7 +8684,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			return cpart, theplayer, closest, firepos, head
 		end
-		
 		function ragebot:GetKnifeTargets()
 			
 			local results = {}
@@ -9312,6 +9315,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						ragebot.firsttarget = killer
 					end
 					ragebot.predictedDamageDealt[victim] = 0
+					ragebot.predictedMisses[victim] = 0
 					ragebot.predictedDamageDealtRemovals[victim] = nil
 					return func(killer, victim, dist, weapon, head)
 				end
@@ -11687,14 +11691,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				-- 	end
 				-- 	return Enum.ContextActionResult.Sink
 				-- end
-				if menu:GetVal("Rage", "Extra", "Teleport Up") and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Teleport Up", "keybind") and client.char.alive then
-					setfpscap(8)
-					wait()
-					client.char.rootpart.Position += Vector3.new(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
-					setfpscap(maxfps or 144)
-					wait()
-					return Enum.ContextActionResult.Sink
-				end
+				-- if menu:GetVal("Rage", "Extra", "Teleport Up") and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Teleport Up", "keybind") and client.char.alive then
+				-- 	setfpscap(8)
+				-- 	wait()
+				-- 	client.char.rootpart.Position += Vector3.new(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
+				-- 	setfpscap(maxfps or 144)
+				-- 	wait()
+				-- 	return Enum.ContextActionResult.Sink
+				-- end
 				-- if menu:GetVal("Misc", "Exploits", "Noclip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Noclip", "keybind") and client.char.alive then
 				-- 	local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
 					
@@ -11828,6 +11832,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		for index, time in next, ragebot.predictedDamageDealtRemovals do
 			if time and (tick() > time) then
 				ragebot.predictedDamageDealt[index] = 0
+				ragebot.predictedMisses[index] += ragebot.predictedShots[index]
+				ragebot.predictedShots[index] = 0
 				time = nil
 			end
 		end
@@ -12537,7 +12543,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							},
 							{
 								type = "toggle",
-								name = "Teleport Up",
+								name = "Auto Peek",
 								value = false,
 								extra = {
 									type = "keybind"
@@ -13357,7 +13363,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								unsafe = true,
 								extra = {
 									type = "keybind",
-									key = Enum.KeyCode.B
+									key = Enum.KeyCode.B,
+									toggletype = 2
 								}
 							},
 							{
