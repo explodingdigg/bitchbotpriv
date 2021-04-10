@@ -3023,7 +3023,7 @@ function menu.Initialize(menutable)
 					local subs = {string.split(tt[4], ","), string.split(tt[5], ",")}
 					
 					for i, v in ipairs(subs) do
-						for i1, v1 in ipairs(v) do
+						for i1, v1 in ipairs(v) do 
 							if menu.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] == nil then
 								break
 							end
@@ -4263,9 +4263,12 @@ menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --
 
 		graphs.incoming.graph[21].From = Vector2.new(graphs.incoming.pos.x + 1, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
 		graphs.incoming.graph[21].To = Vector2.new(graphs.incoming.pos.x + 220, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
-
+		graphs.incoming.graph[21].Color = RGB(unpack(menu.mc)) -- this is fucking stupid
+		graphs.incoming.graph[21].Thickness = 2
+		
 		graphs.incoming.graph[22].Position = Vector2.new(graphs.incoming.pos.x + 222, graphs.incoming.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80) - 8)
 		graphs.incoming.graph[22].Text = "avg: ".. tostring(round(avgbar_h, 2))
+		graphs.incoming.graph[22].Color = RGB(unpack(menu.mc)) -- this is fucking stupid
 
 		graphs.incoming.sides[1].Text = "incoming kbps: ".. tostring(round(networkin.incoming[21], 2))
 
@@ -4294,9 +4297,12 @@ menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --
 
 		graphs.outgoing.graph[21].From = Vector2.new(graphs.outgoing.pos.x + 1, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
 		graphs.outgoing.graph[21].To = Vector2.new(graphs.outgoing.pos.x + 220, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80))
+		graphs.outgoing.graph[21].Color = RGB(unpack(menu.mc)) -- this is fucking stupid
+		graphs.outgoing.graph[21].Thickness = 2
 
 		graphs.outgoing.graph[22].Position = Vector2.new(graphs.outgoing.pos.x + 222, graphs.outgoing.pos.y + 80 - math.floor(avgbar_h / biggestnum * 80) - 8)
 		graphs.outgoing.graph[22].Text = "avg: ".. tostring(round(avgbar_h, 2))
+		graphs.outgoing.graph[22].Color = RGB(unpack(menu.mc)) -- this is fucking stupid
 
 		graphs.outgoing.sides[1].Text = "outgoing kbps: ".. tostring(round(networkin.outgoing[21], 2))
 
@@ -7728,7 +7734,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		
 		
 		mt.__newindex = newcclosure(function(self, id, val)
-			if checkcaller() then
+			if checkcaller() or not menu then
 				return oldNewIndex(self, id, val)
 			end
 			if client.char.alive then
@@ -8156,11 +8162,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 				ragebot:shoot(scaledFirerate, target, damage)
 				misc.autopeekposition = nil
-				
 			end
 		end
 		local rageHitboxSize = Vector3.new(11, 11, 11)
-		local HITBOX_SHIFT_AMOUNT = 7
+		local HITBOX_SHIFT_AMOUNT = 4.5833333333333
 		local lastHitboxPriority
 		local lastHitscan
 		function ragebot:GetTarget(hitboxPriority, hitscan, players, origin)
@@ -8878,8 +8883,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			debris:AddItem(ending_att, destroydelay)
 		end
 		if client.newgrenade then
-			local oldnewgrenade = client.newgrenade
-			client.newgrenade = function(thrower, gtype, gdata)
+			local oldgrenade
+			oldnewgrenade = hookfunction(client.newgrenade, function(thrower, gtype, gdata)
 				if menu and gdata.blowuptime > 0 and thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
 					local lastrealpos
 					
@@ -8920,7 +8925,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							--local rot = client.cframe.fromaxisangle(t * frame.rotv) * frame.rot0
 							lastrealpos = pos
 							
-							if menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP") then
+							if menu and menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP") then
 								local c1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color1", true)
 								local c2 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color2", true)
 								local colorz = {c1, c2}
@@ -8940,8 +8945,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
+					print(lastrealpos)
 					
-					if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
+					if menu and menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
 						local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
 						if curtick < btick then
 							table.insert(menu.activenades, {
@@ -8950,11 +8956,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								blowuptick = btick, -- might need to be tested more
 								start = curtick
 							})
+						else
+							print"this is the problem"
 						end
 					end
 				end
 				return oldnewgrenade(thrower, gtype, gdata)
-			end
+			end)
 		end
 		for hash, func in next, clienteventfuncs do
 			local curconstants = getconstants(func)
@@ -9757,7 +9765,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end 
 				if self.autopeekposition and not workspace:Raycast(client.lastrepupdate, self.autopeekposition - client.lastrepupdate, mapRaycast) then
 					local diff = (self.autopeekposition - client.cam.cframe.p)
-					if diff < 5 then 
+					if diff.Magnitude < 5 then 
 						self.autopeekposition = nil
 						return
 					end
@@ -10989,8 +10997,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 			
 			--ANCHOR weapon esp
-			if menu:GetVal("Visuals", "Dropped ESP", "Weapon Name") or menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
-				--debug.profilebegin("renderVisuals Dropped ESP")
+			if menu:GetVal("Visuals", "Dropped ESP", "Weapon Names") or menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
+				--debug.profilebegin("renderVisuals Dropped 1ESP")
 				local gunnum = 0
 				for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
 					if not client then return end
@@ -11017,9 +11025,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									gunclearness = 1 - (1 * closedist/30)
 								end
 								
-								if menu:GetVal("Visuals", "Dropped ESP", "Weapon Name") then
-									wepesp[1][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color", true)
-									wepesp[1][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Name", "color")[4] * gunclearness /255
+								if menu:GetVal("Visuals", "Dropped ESP", "Weapon Names") then
+									if client.logic.currentgun and v.Gun.Value == client.logic.currentgun.data.name then
+										wepesp[1][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Names", "color1", true)
+										wepesp[1][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Names", "color1")[4] * gunclearness /255
+									else
+										wepesp[1][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Names", "color2", true)	
+										wepesp[1][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Names", "color2")[4] * gunclearness /255
+									end
 									wepesp[1][gunnum].Text = v.Gun.Value
 									wepesp[1][gunnum].Visible = true
 									wepesp[1][gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
@@ -11121,7 +11134,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local color2 = RGB(menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[1] - 20, menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[2] - 20, menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[3] - 20)
 				for i = 1, #menu.activenades do
 					local nade = menu.activenades[i]
-					local headpos = client.char.alive and client.char.head.Position or Vector3.new()
+					local headpos = client.char.alive and client.cam.cframe.p or Vector3.new()
 					local delta = (nade.blowupat - headpos)
 					local nade_dist = dot(delta.Unit, delta)
 					local nade_percent = (tick() - nade.start)/(nade.blowuptick - nade.start)
@@ -12367,9 +12380,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							{
 								type = "slider",
 								name = "Damage Prediction Time",
-								value = 100,
+								value = 200,
 								minvalue = 100,
-								maxvalue = 300,
+								maxvalue = 500,
 								stradd = "%",
 							},
 						}
@@ -13091,14 +13104,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					content = {
 						{
 							type = "toggle",
-							name = "Weapon Name",
+							name = "Weapon Names",
 							value = false,
 							extra = {
-								type = "single colorpicker",
-								name = "Weapon Name",
-								color = {255, 255, 255, 150}
+								type = "double colorpicker",
+								name = {"Highlighted Weapons", "Weapon Names"},
+								color = {{255, 125, 255, 255}, {255, 255, 255, 255}},
 							},
-							tooltip = "Displays dropped weapons as you get closer to them."
+							tooltip = "Displays dropped weapons as you get closer to them,\nHighlights the weapon you are holding in the second color."
 						},
 						{
 							type = "toggle",
