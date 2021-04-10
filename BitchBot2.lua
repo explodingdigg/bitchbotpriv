@@ -287,7 +287,7 @@ end
 -- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 --!SECTION 
 
-local menuWidth, menuHeight = 500, 600
+local menuWidth, menuHeight = 500, 600 
 menu = { -- this is for menu stuffs n shi
 	w = menuWidth,
 	h = menuHeight,
@@ -3771,6 +3771,7 @@ function menu.Initialize(menutable)
 	end)
 
 	local function renderSteppedMenu(fdt)
+		menu.dt = fdt
 		if menu.unloaded then
 			return
 		end
@@ -4210,25 +4211,19 @@ function menu.Initialize(menutable)
 	end
 end
 
-local LastIteration
-local Start = tick()
-local FrameUpdateTable = { }
+local avgfps = 100
 
 -- I STOLE THE FPS COUNTER FROM https://devforum.roblox.com/t/get-client-fps-trough-a-script/282631/14 😿😿😿😢😭
+-- fixed ur shitty fps counter
 menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --ANCHOR MENU HEARTBEAT
 	
 	
 
 	if menu.stat_menu == false then return end
+	local fps = 1 / (menu.dt or 1)
+	avgfps = (fps + avgfps * 49) / 50
+	local CurrentFPS = math.floor(avgfps)
 
-	LastIteration = tick()
-	for Index = #FrameUpdateTable, 1, -1 do
-		FrameUpdateTable[Index + 1] = (FrameUpdateTable[Index] >= LastIteration - 1) and FrameUpdateTable[Index] or nil
-	end
-	
-	FrameUpdateTable[1] = LastIteration
-	local CurrentFPS = (tick() - Start >= 1 and #FrameUpdateTable) or (#FrameUpdateTable / (tick() - Start))
-	CurrentFPS = math.floor(CurrentFPS)
 
 	if tick() > lasttick + 0.25 then
 		table.remove(networkin.incoming, 1)
@@ -6412,7 +6407,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 	updateplist()
 	setplistinfo(nil)
 
-	menu.connections.renderstepped2 = game.RunService.RenderStepped:Connect(function()	
+	menu.connections.renderstepp2 = game.RunService.RenderStepped:Connect(function()	
 		if menu.open then
 			if menu.tabnames[menu.activetab] == "Settings" then
 				if plist[1] ~= nil then
@@ -8252,7 +8247,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 												end
 											elseif resolvertype == 2 then -- axes fast
 												--debug.profilebegin("BB self Axis Shifting Resolver")
-												local resolvedPosition = self:HitscanOnAxes(camposreal, player, bone, 1, 9)
+												local resolvedPosition = self:HitscanOnAxes(camposreal, player, bone)
 												--debug.profileend("BB self Axis Shifting Resolver")
 												if resolvedPosition then
 													self.firepos = resolvedPosition
@@ -8290,7 +8285,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 													--warn("penetrated normally")
 												else
 													-- self:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
-													local resolvedPosition, bulletintersection = self:HitscanOnAxes(camposreal, player, sphereHitbox, 1, 9)
+													local resolvedPosition, bulletintersection = self:HitscanOnAxes(camposreal, player, sphereHitbox)
 													if resolvedPosition then
 														self.firepos = resolvedPosition
 														cpart = bone
@@ -8325,109 +8320,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 														end
 													end
 												end
-											elseif resolvertype == 4 then -- teleport
-												--debug.profilebegin("BB self Teleport Resolver")
-												local up = camposreal + Vector3.new(0, 18, 0)
-												local pen = self:CanPenetrate(up, bone, client.logic.currentgun.data.penetrationdepth)
-												--debug.profileend("BB self Teleport Resolver") -- fuck
-												if pen then
-													self.firepos = up
-													self.needsTP = true
-													cpart = bone
-													theplayer = player
-													firepos = up
-													head = k == "head"
-													if menu.priority[player.Name] then break end
-												else
-													self.needsTP = false
-												end
-											elseif resolvertype == 5 then -- "combined"
-												-- basically combines fast axis shifting with offsetting the hitbox or just sending a raycast to the hitbox for the intersection point, really broken
-												
-												--[[ local extendSize = HITBOX_SHIFT_AMOUNT
-												
-												local boneX = bone.Position.X
-												local boneY = bone.Position.Y
-												local boneZ = bone.Position.Z
-												
-												local localX = camposv3.X
-												local localY = camposv3.Y
-												local localZ = camposv3.Z
-												
-												local extendX = Vector3.new(extendSize, 0, 0)
-												local extendY = Vector3.new(0, extendSize, 0)
-												local extendZ = Vector3.new(0, 0, extendSize)
-												
-												local bestDirection =
-												boneY < localY and extendY or
-												boneY > localY and -extendY or
-												boneX < localX and extendX or
-												boneX > localX and -extendX or
-												boneZ < localZ and extendZ or
-												boneZ > localZ and -extendZ or "wtf" ]]
-												local pullAmount = clamp((HITBOX_SHIFT_AMOUNT - HITBOX_SHIFT_AMOUNT * misses / 10), 4.5, HITBOX_SHIFT_AMOUNT) 
-												local pullVector = (bone.Position - camposv3).Unit * pullAmount
-
-												local newTargetPosition = bone.Position - pullVector
-												
-												--local pVelocity = camera:GetTrajectory(newTargetPosition, barrel)
-												
-												sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
-												
-												if sphereHitbox.Size ~= rageHitboxSize then
-													sphereHitbox.Size = rageHitboxSize
-												end
-												
-												--local penetrated = self:CanPenetrate(LOCAL_PLAYER, player, pVelocity, newTargetPosition, barrel, false, sphereHitbox)
-												local wl = {
-													[sphereHitbox] = true
-												}
-												
-												local penetrated, exited, intersectionpos = self:CanPenetrate(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth)
-												if penetrated then
-													self.firepos = camposv3
+											elseif resolvertype == 4 then -- "combined"
+												local resolvedPosition, bulletintersection = self:HitscanOnAxes(camposreal, player, bone, true)
+												if resolvedPosition then
+													self.firepos = resolvedPosition
 													cpart = bone
 													theplayer = player
 													self.intersection = newTargetPosition
-													firepos = camposv3
+													firepos = resolvedPosition
 													head = k == "head"
-													--warn("penetrated normally")
-												else
-													-- self:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
-													local resolvedPosition, bulletintersection = self:HitscanOnAxes(camposreal, player, sphereHitbox, 1, 9)
-													if resolvedPosition then
-														self.firepos = resolvedPosition
-														cpart = bone
-														theplayer = player
-														self.intersection = newTargetPosition
-														firepos = resolvedPosition
-														head = k == "head"
-														if menu.priority[player.Name] then break end
-													else
-														--warn("no axes")
-														-- --local _, intersection = workspace:FindPartOnRayWithWhitelist(Ray.new(args[1].firepos, (part.Position - args[1].firepos) * 3000), {sphereHitbox})
-														sphereHitbox.Position = bone.Position
-														
-														if sphereHitbox.Size ~= rageHitboxSize then
-															sphereHitbox.Size = rageHitboxSize
-														end
-														
-														-- dick sucking god.
-														local penetrated, exited, newintersection = self:CanPenetrate(camposv3, sphereHitbox, client.logic.currentgun.data.penetrationdepth, wl)
-														
-														--warn(penetrated, intersectionPoint)
-														
-														if penetrated then
-															self.firepos = camposv3
-															cpart = bone
-															theplayer = player
-															self.intersection = newTargetPosition
-															firepos = camposv3
-															head = k == "head"
-														else
-															--warn("no standardized autowall hit")
-														end
-													end
+													if menu.priority[player.Name] then break end
 												end
 											end
 										end
@@ -8604,93 +8506,49 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				return position
 			end
 		end
-		local hitscanPoints = {0,0,0,0,0,0,0}
-		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist)
+
+		local hitscanPoints = {0,0,0,0,0,0,0,0}
+		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist, hitboxshift)
+			local step = 9
+			local hitscanOffsets = {CFrame.new(0, step, 0), CFrame.new(0, -step, 0), CFrame.new(step, 0, 0), CFrame.new(-step, 0, 0), CFrame.new(0, 0, step), CFrame.new(0, 0, -step), CFrame.new()}
+		
 			assert(bodypart, "hello")
 			
 			local dest = typeof(bodypart) ~= "Vector3" and bodypart.Position or bodypart -- fuck
 			
 			assert(person, "something went wrong in your nasa rocket launch")
 			assert(typeof(origin) == "CFrame", "what are you trying to do young man") -- end
+			
 			local position = origin
+			if hitboxshift then 
+				local misses = self.predictedMisses[person] or 1
+				local pullAmount = clamp((HITBOX_SHIFT_AMOUNT - HITBOX_SHIFT_AMOUNT * misses / 10), 4.5, HITBOX_SHIFT_AMOUNT) 
+				local pullVector = (bone.Position - origin).Unit * pullAmount
+				local newTargetPosition = bone.Position - pullVector
+				sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
+				bodypart = sphereHitbox
+			end
 			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
 			-- for k, v in next, hitscanPoints do
 			-- 	print(k, v)
 			-- end
-			for i = 1, max_step do
-				position = position * CFrame.new(0, step, 0)
+			for i = 1, #hitscanOffsets do
+				position = position * hitscanOffsets[i]
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 				if pen then
-					hitscanPoints[1] += 1
+					hitscanPoints[i] += 1
 					return position.p, bulletintersection
+				else
+					position = origin
 				end
 			end
-			
-			position = origin
-			
-			for i = 1, max_step do
-				position = position * CFrame.new(0, -step, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
-				if pen then
-					hitscanPoints[2] += 1
-					return position.p, bulletintersection
-				end
-			end
-			
-			position = origin
-			
-			for i = 1, max_step do
-				position = position * CFrame.new(0, 0, step)
-				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
-				if pen then
-					hitscanPoints[3] += 1
-					return position.p, bulletintersection
-				end
-			end
-			
-			position = origin
-			
-			for i = 1, max_step do
-				position = position * CFrame.new(0, 0, -step)
-				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
-				if pen then
-					hitscanPoints[4] += 1
-					return position.p, bulletintersection
-				end
-			end
-			
-			position = origin
-			
-			for i = 1, max_step do
-				position = position * CFrame.new(step, 0, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
-				if pen then
-					hitscanPoints[5] += 1
-					return position.p, bulletintersection
-				end
-			end
-			
-			position = origin
-			
-			for i = 1, max_step do
-				position = position * CFrame.new(-step, 0, 0)
-				local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
-				if pen then
-					hitscanPoints[6] += 1
-					return position.p, bulletintersection
-				end
-			end
-			position = origin
-			
-			for i = 1, max_step do
-				local pull = (bodypart.Position - position.p).Unit * step
-				position = position.p + pull
-				local pen, exited, bulletintersection = ragebot:CanPenetrate(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
+			local pull = (bodypart.Position - position.p).Unit * step
+			position = position.p + pull
+			local pen, exited, bulletintersection = ragebot:CanPenetrate(position, bodypart, client.logic.currentgun.data.penetrationdepth, whitelist)
 
-				if pen then
-					hitscanPoints[7] += 1
-					return position, bulletintersection
-				end
+			if pen then
+				hitscanPoints[8] += 1
+				return position, bulletintersection
 			end
 			
 			return nil
@@ -9769,7 +9627,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						self.autopeekposition = nil
 						return
 					end
-					rootpart.Velocity = diff.Unit * menu:GetVal("Misc", "Movement", "Fly Speed")
+					rootpart.CFrame += diff.Unit * 2
 				end
 			else
 				self.autopeekposition = nil
@@ -9826,7 +9684,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			
 		end
-		
 		local stutterFrames = 0
 		do--ANCHOR send hook
 			client.net.send = function(self, ...)
@@ -9975,17 +9832,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
 						-- properly when you're using Aimbot Performance Mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
 						
-						if menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type") == 5 and ragebot.needsTP then
-							send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
-							send(self, "repupdate", client.char.head.Position + Vector3.new(0, 18, 0), client.cam.angles)
-							ragebot.needsTP = false
-						end
-						
-						if menu:GetVal("Rage", "Hack vs. Hack", "Resolver Type") == 7 and ragebot.repupdate then
-							send(self, "repupdate", ragebot.repupdate, client.cam.angles)
-							args[2].camerapos = ragebot.repupdate
-							ragebot.repupdate = nil
-						end
 						local angle, time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed)
 						if not angle or not time then return end
 						for k = 1, #args[2].bullets do
@@ -11026,7 +10872,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 								
 								if menu:GetVal("Visuals", "Dropped ESP", "Weapon Names") then
-									if client.logic.currentgun and v.Gun.Value == client.logic.currentgun.data.name then
+									if client.logic.currentgun and client.logic.currentgun and client.logic.currentgun.data and v.Gun.Value == client.logic.currentgun.data.name then
 										wepesp[1][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Names", "color1", true)
 										wepesp[1][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Names", "color1")[4] * gunclearness /255
 									else
@@ -12292,7 +12138,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							type = "dropbox",
 							name = "Resolver Type",
 							value = 2,
-							values = {"Cubic", "Axis Shifting", "Random", "Teleport", "Axis + Hitbox Shifting"}
+							values = {"Cubic", "Axis Shifting", "Random", "Axis + Hitbox Shifting"}
 						},
 						--[[{
 							type = "slider",
@@ -13460,6 +13306,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = "keybind",
 									toggletype = 0
 								},
+								tooltip = "Throws 3 grenades instantly on random enemies."
+							},
+							{
+								type = "toggle",
+								name = "Auto Rapid Kill",
+								value = false,
 								tooltip = "Throws 3 grenades instantly on random enemies."
 							},
 							{
