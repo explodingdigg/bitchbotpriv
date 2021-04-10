@@ -177,6 +177,7 @@ do
 							drawing.Size = Vector2.new(locRect.w, locRect.h)
 						elseif i == "fade" then
 							drawing.Position = Vector2.new(locRect.x-1, locRect.y-1)
+							drawing.Size = Vector2.new(locRect.w+2, locRect.h+2)
 							local t = (200-fade)/255/3
 							drawing.Transparency = t < 0.4 and 0.4 or t
 						elseif i == "line" then
@@ -670,18 +671,9 @@ local function UnpackRelations()
 		repeat game.RunService.Heartbeat:Wait() until menu
 	end
 	menu.friends = final.friends
+	table.insert(menu.friends, LOCAL_PLAYER.Name)
 	menu.priority = final.priority
 end
-
-CreateThread(function()
-	UnpackRelations()
-	if (not menu or not menu.GetVal) then
-		repeat game.RunService.Heartbeat:Wait() until (menu and menu.GetVal)
-	end
-	if #menu.friends > 0 and #menu.priority > 0 then
-		CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players", #menu.friends, #menu.priority))
-	end
-end)
 
 local function WriteRelations()
 	local str = "bb:{{friends:"
@@ -732,6 +724,17 @@ local function WriteRelations()
 	
 	writefile("bitchbot/relations.bb", str)
 end
+CreateThread(function()
+	UnpackRelations()
+	WriteRelations()
+	if (not menu or not menu.GetVal) then
+		repeat game.RunService.Heartbeat:Wait() until (menu and menu.GetVal)
+	end
+	if #menu.friends > 0 and #menu.priority > 0 then
+		CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players", #menu.friends, #menu.priority))
+	end
+end)
+
 
 local LOCAL_PLAYER = Players.LocalPlayer
 local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
@@ -778,7 +781,7 @@ local ColorRange = function(value, ranges) -- ty tony for dis function u a homie
 	local minColor = ranges[selected]
 	local maxColor = ranges[selected + 1]
 	local lerpValue = (value - minColor.start) / (maxColor.start - minColor.start)
-	return Color3.new(Lerp( lerpValue, minColor.color.r, maxColor.color.r ), Lerp( lerpValue, minColor.color.g, maxColor.color.g ), Lerp( lerpValue, minColor.color.b, maxColor.color.b ))
+	return Color3.new(Lerp(lerpValue, minColor.color.r, maxColor.color.r), Lerp(lerpValue, minColor.color.g, maxColor.color.g), Lerp(lerpValue, minColor.color.b, maxColor.color.b))
 end
 
 
@@ -1701,7 +1704,7 @@ function menu.Initialize(menutable)
 										menu.options[v.name][g_name][v2.name][5][5] = false
 										menu.options[v.name][g_name][v2.name][5].toggletype = v2.extra.toggletype == nil and 1 or v2.extra.toggletype
 										menu.options[v.name][g_name][v2.name][5].relvalue = false
-										table.insert(menu.keybinds, {menu.options[v.name][g_name][v2.name], tostring(v2.name)})
+										menu.options[v.name][g_name][v2.name][5].bind = table.insert(menu.keybinds, {menu.options[v.name][g_name][v2.name], tostring(v2.name)})
 									elseif v2.extra.type == "single colorpicker" then
 										menu.options[v.name][g_name][v2.name][5] = {}
 										menu.options[v.name][g_name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
@@ -6720,10 +6723,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				client.trajectory = garbage
 			elseif name == "addplayer" then
 				client.addplayer = garbage
-				garbage = function(...)
-					-- print(...)
-					return client.addplayer(...)
-				end
+			elseif name == "removeplayer" then
+				client.removeplayer = garbage
 			elseif name == "call" then
 				client.call = garbage
 			elseif name == "loadplayer" then
@@ -7014,6 +7015,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					targetted += 1
 				end
 			end
+			WriteRelations()
 			CreateNotification(("Friended %d players below rank %d"):format(targetted, max))
 		end,
 		annoy = function(name)
@@ -7044,6 +7046,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					return CreateNotification("Friended " .. name)
 				end
 			end
+			WriteRelations()
 			CreateNotification("No such player by the name '" .. name .. "' was found in the game.")
 		end,
 		target = function(name)
@@ -7241,9 +7244,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	client.localrank = client.rankcalculator(client.dirtyplayerdata.stats.experience)
 	
 	client.fakeplayer = Instance.new("Player", Players) -- thank A_003 for this (third person body)🔥
-	client.fakeplayer.Name = " "
 	client.fakeplayer.Team = LOCAL_PLAYER.Team
-	
+	client.removeplayer(client.fakeplayer) -- remove this moron from the leaderboard ez win
 	debug.setupvalue(client.loadplayer, 1, client.fakeplayer)
 	client.loadplayer(LOCAL_PLAYER)
 	client.fakeupdater = client.getupdater(LOCAL_PLAYER)
@@ -7252,6 +7254,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	client.fakeplayer.Parent = nil
 	do
 		local updatervalues = getupvalues(client.fakeupdater.step)
+		
 		--[[updatervalues[11].s = 7
 		updatervalues[15].s = 100]]
 		client.fake_upvs = updatervalues
@@ -8498,18 +8501,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			return nil
 		end
-		
-		function ragebot:HitscanSmart(origin, bodypart)
-			local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit * 8
-			local position = origin + offset
-			if ragebot:CanPenetrateRaycast(position, bodypart.Position, client.logic.currentgun.data.penetrationdepth) then
-				return position
-			end
-		end
 
 		local hitscanPoints = {0,0,0,0,0,0,0,0}
 		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist, hitboxshift)
-			local step = 9
+			local step = 9.5
 			local hitscanOffsets = {CFrame.new(0, step, 0), CFrame.new(0, -step, 0), CFrame.new(step, 0, 0), CFrame.new(-step, 0, 0), CFrame.new(0, 0, step), CFrame.new(0, 0, -step), CFrame.new()}
 		
 			assert(bodypart, "hello")
@@ -8803,7 +8798,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-					print(lastrealpos)
 					
 					if menu and menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
 						local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
@@ -8814,8 +8808,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								blowuptick = btick, -- might need to be tested more
 								start = curtick
 							})
-						else
-							print"this is the problem"
 						end
 					end
 				end
@@ -8929,14 +8921,24 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						if victim == ragebot.firsttarget then
 							ragebot.firsttarget = nil
 						end
-						if not repupdates[victim] then
-							printconsole("Unable to find position data for " .. victim.Name)
-						end
+						-- if not repupdates[victim] then
+						-- 	printconsole("Unable to find position data for " .. victim.Name)
+						-- end
 						repupdates[victim] = {}
-					elseif ragebot then
-						ragebot.predictedDamageDealt = table.create(Players.MaxPlayers)
-						ragebot.predictedDamageDealtRemovals = table.create(Players.MaxPlayers)
-						ragebot.firsttarget = killer
+					else
+						if menu:GetVal("Misc", "Extra", "Auto Respawn") then
+							CreateNotification("Respawning...")
+							CreateThread(function()
+								wait(6) 
+								client.menu:deploy()
+								printconsole("Respawned.")
+							end)
+						end
+						if ragebot then
+							ragebot.predictedDamageDealt = table.create(Players.MaxPlayers)
+							ragebot.predictedDamageDealtRemovals = table.create(Players.MaxPlayers)
+							ragebot.firsttarget = killer
+						end
 					end
 					ragebot.predictedDamageDealt[victim] = 0
 					ragebot.predictedMisses[victim] = 0
@@ -9168,7 +9170,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			return castresults
 		end
-
+		--keybind connection shit
+		
 		function misc:CreateBeam(origin_att, ending_att)
 			local beam = Instance.new("Beam")
 			beam.Texture = "http://www.roblox.com/asset/?id=446111271"
@@ -9196,7 +9199,67 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			beam.Parent = workspace
 			return beam
 		end
-		
+		function misc:RapidKill()
+			local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
+			local i = 1
+			local nadesent = false
+			for k,v in next, team:GetPlayers() do
+				if i >= 4 then break end
+				if not (table.find(menu.friends, v.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")) and client.hud:isplayeralive(v) then
+					i += 1
+					client.logic.gammo -= 1
+					local curbodyparts = client.replication.getbodyparts(v)
+					if not curbodyparts then return end
+					local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10
+					and curbodyparts.rootpart.Position or curbodyparts.head.Position
+					local args = {
+						"FRAG",
+						{
+							frames = {
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(0/0),
+									p0 = client.lastrepupdate or client.char.head.Position,
+									rotv = Vector3.new()
+								},
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(0/0),
+									p0 = Vector3.new(0/0),
+									rotv = Vector3.new()
+								},
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(),
+									p0 = chosenpos + Vector3.new(0, 3, 0),
+									rotv = Vector3.new()
+								}
+							},
+							time = tick(),
+							curi = 1,
+							blowuptime = 0
+						}
+					}
+					
+					send(client.net, "newgrenade", unpack(args))
+					nadesent = true
+					client.hud:updateammo("GRENADE")
+				end
+			end
+			return nadesent
+		end
 		local setsway = client.cam.setswayspeed
 		client.cam.setswayspeed = function(self,v)
 			setsway(self, menu:GetVal("Visuals", "Camera Visuals", "No Scope Sway") and 0 or v)
@@ -9219,7 +9282,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 		local rootpart
 		local humanoid
-		
+
 		function misc:SpotPlayers()
 			if not menu:GetVal("Misc", "Extra", "Auto Spot") then return end
 			local players = {}
@@ -9553,7 +9616,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					rootpart.Anchored = true
 				end
 			end
-			if not menu:GetKey("Misc", "Movement", "Fly") or menu:GetKey("Rage", "Extra", "Auto Peek") then
+			if not menu:GetKey("Misc", "Movement", "Fly") then
 				rootpart.Anchored = false
 			end
 		end
@@ -9658,7 +9721,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 		end
 		
-		
 		function misc:MainLoop()
 			if menu:GetKey("Misc", "Exploits", "Lock Player Positions") then
 				NETWORK_SETTINGS.IncomingReplicationLag = 9e9
@@ -9681,8 +9743,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					rootpart.Anchored = misc.autopeekposition and false or true
 				end
 			end
-			
-			
 		end
 		local stutterFrames = 0
 		do--ANCHOR send hook
@@ -9701,7 +9761,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					misc:ApplyGunMods()
 				end
 				if args[1] == "logmessage" or args[1] == "debug" then
-					return
+					local message = ""
+					for i = 1, #args do
+						message ..= tostring(args[i]) .. ", "
+					end
+					return CreateNotification(message)
 				end
 				if args[1] == "repupdate" then
 					if args[2] ~= args[2] or args[2].Unit.X ~= args[2].Unit.X then
@@ -11381,64 +11445,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						return Enum.ContextActionResult.Sink
 					end
 				end
-
+				
 				if menu:GetVal("Misc", "Exploits", "Rapid Kill") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", "keybind") then
-					local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
-					local i = 1
-					for k,v in next, team:GetPlayers() do
-						if i >= 4 then break end
-						if not (table.find(menu.friends, v.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")) and client.hud:isplayeralive(v) then
-							i += 1
-							client.logic.gammo -= 1
-							local curbodyparts = client.replication.getbodyparts(v)
-							if not curbodyparts then return end
-							local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10
-							and curbodyparts.rootpart.Position or curbodyparts.head.Position
-							local args = {
-								"FRAG",
-								{
-									frames = {
-										{
-											v0 = Vector3.new(),
-											glassbreaks = {},
-											t0 = 0,
-											offset = Vector3.new(),
-											rot0 = CFrame.new(),
-											a = Vector3.new(0/0),
-											p0 = client.lastrepupdate or client.char.head.Position,
-											rotv = Vector3.new()
-										},
-										{
-											v0 = Vector3.new(),
-											glassbreaks = {},
-											t0 = 0,
-											offset = Vector3.new(),
-											rot0 = CFrame.new(),
-											a = Vector3.new(0/0),
-											p0 = Vector3.new(0/0),
-											rotv = Vector3.new()
-										},
-										{
-											v0 = Vector3.new(),
-											glassbreaks = {},
-											t0 = 0,
-											offset = Vector3.new(),
-											rot0 = CFrame.new(),
-											a = Vector3.new(),
-											p0 = chosenpos + Vector3.new(0, 3, 0),
-											rotv = Vector3.new()
-										}
-									},
-									time = tick(),
-									curi = 1,
-									blowuptime = 0
-								}
-							}
-							
-							send(client.net, "newgrenade", unpack(args))
-							client.hud:updateammo("GRENADE")
-						end
-					end
+					misc:RapidKill()
 					return Enum.ContextActionResult.Sink
 				end
 			end
@@ -11489,18 +11498,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		MouseUnlockHook()
 		--debug.profilebegin("Main BB Loop")
 		--debug.profilebegin("Noclip Cheat check")
-		if not client.char.alive then
-			-- if keybindtoggles.fakebody then
-			-- 	keybindtoggles.fakebody = false
-			-- 	CreateNotification("Noclip automatically disabled due to death")
-			-- 	client.fakeoffset = 18
-			-- end
-
-			-- if keybindtoggles.superaa then
-			-- 	keybindtoggles.superaa = false
-			-- 	client.superaastart = nil
-			-- 	CreateNotification("Fake position automatically disabled due to death")
-			-- end
+		if client.char.alive and menu:GetVal("Misc", "Exploits", "Rapid Kill") and menu:GetVal("Misc", "Exploits", "Auto Rapid Kill") then
+			if misc:RapidKill() then
+				client.net:send("forcereset")
+			end
 		end
 		if menu:GetVal("Rage", "Fake Lag", "Enabled") and menu:GetKey("Rage", "Fake Lag", "Manual Choke") then
 			if not menu:GetKey("Rage", "Fake Lag", "Manual Choke") then
@@ -13192,6 +13193,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							},
 							{
 								type = "toggle",
+								name = "Auto Respawn",
+								value = false,
+								tooltip = "Automatically respawns after deaths."
+							},
+							{
+								type = "toggle",
 								name = "Auto Vote",
 								value = false,
 								tooltip = "When votekicks are started, Bitch Bot will automatically choose\nwhat choice to make depending on the options below."
@@ -13312,7 +13319,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								type = "toggle",
 								name = "Auto Rapid Kill",
 								value = false,
-								tooltip = "Throws 3 grenades instantly on random enemies."
+								tooltip = "Throws 3 grenades instantly on random enemies,\nthen respawns to do it again.\nWorks only when Rapid Kill is enabled."
 							},
 							{
 								type = "toggle",
@@ -13330,8 +13337,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							},
 							{
 								type = "toggle",
+								name = "Crimwalk Teleport",
+								value = true,
+							},
+							{
+								type = "toggle",
 								name = "Disable Crimwalk on Shot",
-								value = false
+								value = true,
 							},
 							{
 								type = "toggle",
