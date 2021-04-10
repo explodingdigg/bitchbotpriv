@@ -163,9 +163,9 @@ do
 				fade = fade > 255 and 255 or fade < 0 and 0 or fade
 				
 				if self.enabled then
+					local linenum = 1
 					for i, drawing in pairs(self.drawings) do
 						drawing.Transparency = fade/255
-						
 						
 						if type(i) == "number" then
 							drawing.Position = Vector2.new(locRect.x + 1, locRect.y + i)
@@ -180,14 +180,16 @@ do
 							drawing.Size = Vector2.new(locRect.w+2, locRect.h+2)
 							local t = (200-fade)/255/3
 							drawing.Transparency = t < 0.4 and 0.4 or t
-						elseif i == "line" then
-							drawing.Position = Vector2.new(locRect.x+1, locRect.y+1)
+						elseif i:find"line" then
+							drawing.Position = Vector2.new(locRect.x+linenum, locRect.y+1)
 							if menu then
-								local color = customcolor or (menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163))
+								local mencol = customcolor or (menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163))
+								local color = linenum == 1 and mencol or Color3.fromRGB(mencol.R*255-40,mencol.G*255-40,mencol.B*255-40) -- super shit
 								if drawing.Color ~= color then
 									drawing.Color = color
 								end
 							end
+							linenum+=1
 						end
 						
 					end
@@ -225,6 +227,7 @@ do
 			Note.size = Vector2.new(Note.drawings.text.TextBounds.x + 7, Note.size.y)
 		end
 		Note.drawings.line = Rectangle(1, Note.size.y - 2, true, color)
+		Note.drawings.line1 = Rectangle(1, Note.size.y - 2, true, color)
 		
 		notes[#notes+1] = Note
 		
@@ -671,7 +674,7 @@ local function UnpackRelations()
 		repeat game.RunService.Heartbeat:Wait() until menu
 	end
 	menu.friends = final.friends
-	table.insert(menu.friends, LOCAL_PLAYER.Name)
+	table.insert(menu.friends, Players.LocalPlayer.Name)
 	menu.priority = final.priority
 end
 
@@ -4090,26 +4093,16 @@ function menu.Initialize(menutable)
 			menu:InputBeganKeybinds(input)
 			if menu.open then
 				if menu.tabnames[menu.activetab] == "Settings" then
-					if menu:GetVal("Settings", "Cheat Settings", "Custom Menu Name") then
-						bbmenu[27].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1]
+					bbmenu[27].Text = menu:GetVal("Settings", "Cheat Settings", "Custom Menu Name") and menu:GetVal("Settings", "Cheat Settings", "MenuName") or "Bitch Bot"
 
-						menu.watermark.text[1].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1] .. menu.watermark.textString
+					menu.watermark.text[1].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1] .. menu.watermark.textString
 
-						for i, v in ipairs(menu.watermark.rect) do
-							v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
+					for i, v in ipairs(menu.watermark.rect) do
+						local len = (#menu.watermark.text[1].Text) * 7 + 10
+						if i == #menu.watermark.rect then
+							len += 2
 						end
-					else 
-						if bbmenu[27].Text ~= "Bitch Bot" then
-							bbmenu[27].Text = "Bitch Bot"
-						end
-
-						if menu.watermark.text[1].Text ~= "Bitch Bot".. menu.watermark.textString then
-							menu.watermark.text[1].Text = "Bitch Bot".. menu.watermark.textString
-
-							for i, v in ipairs(menu.watermark.rect) do
-								v.Size = Vector2.new((#menu.watermark.text[1].Text) * 7 + 10, v.Size.y)
-							end
-						end
+						v.Size = Vector2.new(len, v.Size.y)
 					end
 				end
 			end
@@ -13780,6 +13773,7 @@ do
 		Draw:FilledRect(false, wm.pos.x, wm.pos.y + 3 + i, wm.width, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, wm.rect)
 	end
 	Draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, wm.height, {0, 0, 0, 255}, wm.rect)
+	Draw:OutlinedRect(false, wm.pos.x-1, wm.pos.y-1, wm.width+2, wm.height+2, {0, 0, 0, 255*0.4}, wm.rect)
 	Draw:OutlinedText(fulltext, 2, false, wm.pos.x + 5, wm.pos.y + 3, 13, false, {255, 255, 255, 255}, {0, 0, 0, 255}, wm.text)
 end
 
