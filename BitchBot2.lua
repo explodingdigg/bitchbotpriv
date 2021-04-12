@@ -658,7 +658,10 @@ local function UnpackRelations()
 			if final[cellname] then
 				for k,v in data:gmatch "%d+[^,}]" do
 					local status, ret = pcall(function() -- wrapping this in a pcall since roblox will throw an error if the player user ID does not exist
-						local playername = Players:GetNameFromUserIdAsync(tonumber(k))
+						local playername = k
+						if tonumber(k) then
+							playername = Players:GetNameFromUserIdAsync(tonumber(k))
+						end
 						table.insert(final[cellname], 1, playername)
 					end)
 					if not status then
@@ -690,14 +693,14 @@ local function WriteRelations()
 		
 		if not pass then
 			local newpass, newret = pcall(function()
-				userid = Players:GetUserIdFromNameAsync(v)
+				userid = v
 			end)
 		end
 		
 		if userid then
 			str ..= tostring(userid) .. ","
 		else
-			str ..= tostring(playerobj.UserId) .. ","
+			str ..= tostring(playerobj.Name) .. ","
 		end
 	end
 	
@@ -712,14 +715,14 @@ local function WriteRelations()
 		
 		if not pass then
 			local newpass, newret = pcall(function()
-				userid = Players:GetUserIdFromNameAsync(v)
+				userid = v
 			end)
 		end
 		
 		if userid then
 			str ..= tostring(userid) .. ","
 		else
-			str ..= tostring(playerobj.UserId) .. ","
+			str ..= tostring(playerobj.Name) .. ","
 		end
 	end
 	
@@ -734,7 +737,7 @@ CreateThread(function()
 		repeat game.RunService.Heartbeat:Wait() until (menu and menu.GetVal)
 	end
 	if #menu.friends > 0 and #menu.priority > 0 then
-		CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players", #menu.friends, #menu.priority))
+		CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players, why the fuck do you have so many people friended you moron", #menu.friends, #menu.priority))
 	end
 end)
 
@@ -8432,7 +8435,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 
 		local hitscanPoints = {0,0,0,0,0,0,0,0}
-		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist, hitboxshift)
+		function ragebot:HitscanOnAxes(origin, person, bodypart, max_step, step, whitelist, hitboxshift, aliveplayers)
 			local step = 9.5
 			local hitscanOffsets = {CFrame.new(0, step, 0), CFrame.new(0, -step, 0), CFrame.new(-step, 0, 0), CFrame.new(step, 0, 0), CFrame.new(0, 0, -step), CFrame.new(0, 0, step), CFrame.new()}
 			-- values = {{"Forward", true}, {"Backward", true}, {"Left", false}, {"Right", false}, {"Up", true}, {"Down", true}, {"Origin", true}, {"Towards", true}}
