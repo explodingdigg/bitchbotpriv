@@ -8206,31 +8206,30 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local curbodyparts = client.replication.getbodyparts(player)
 					if curbodyparts and client.hud:isplayeralive(player) then
 						local resolvedPosition
-						if repupdates[player] and repupdates[player][#repupdates[player]] then
-							local dist = math.abs((curbodyparts.rootpart.Position - repupdates[player][#repupdates[player]].position).Magnitude)
-							if dist > 18 then -- fake body resolver
-								-- rootpart.Position = repupdates[player][#repupdates[player]].position
-								usedhitscan = {
-									rootpart = true -- because all other parts cannot be hit, only rootpart can be
-								}
-								resolvedPosition = repupdates[player][#repupdates[player]].position
-								-- this definitely needs a lot more work because i believe sometimes it just aims at the wrong area... don't know why
+						if ragebot.predictedMisses[player] and ragebot.predictedMisses[player] > 2 then
+							if repupdates[player] and repupdates[player][#repupdates[player]] then
+								local dist = math.abs((curbodyparts.rootpart.Position - repupdates[player][#repupdates[player]].position).Magnitude)
+								if dist > 18 then -- fake body resolver
+									-- rootpart.Position = repupdates[player][#repupdates[player]].position
+									resolvedPosition = repupdates[player][#repupdates[player]].position
+									-- this definitely needs a lot more work because i believe sometimes it just aims at the wrong area... don't know why
+								end
+								-- CreateNotification"crimwalk resolve"
+							elseif ragebot.fakePositionsResolved[player] then
+								local dist = math.abs((curbodyparts.rootpart.Position - ragebot.fakePositionsResolved[player]).Magnitude)
+								if dist > 18 then
+									resolvedPosition = ragebot.fakePositionsResolved[player]
+								end
+								-- CreateNotification"fake position resolve"
 							end
 						end
-						if ragebot.fakePositionsResolved[player] then
-							local dist = math.abs((curbodyparts.rootpart.Position - ragebot.fakePositionsResolved[player]).Magnitude)
-							if dist > 18 then
-								usedhitscan = {
-									rootpart = true -- because all other parts cannot be hit, only rootpart can be
-								}
-								resolvedPosition = ragebot.fakePositionsResolved[player]
-							end
+						if resolvedPosition then 
+							curbodyparts.rootpart.Position = resolvedPosition
+							-- CreateNotification"resolving actually"
 						end
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and usedhitscan[k] then
-								if resolvedPosition and k.Position and (resolvedPosition - k.Position) < 18 then
-									if resolvedPosition then bone.Position = resolvedPosition; CreateNotification"YEAH THIS NIINA JUST GOT RESOLVED ROFL" end
-								end
+								
 								local fovToBone = camera:GetFOV(bone)
 								if fovToBone < aimbotFov or aimbotFov > 180 then -- Awesome
 									if camera:IsVisible(bone, bone.Parent, camposv3) then
@@ -9651,16 +9650,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 		function misc:AutoJump()
 			
-			
 			if menu:GetVal("Misc", "Movement", "Auto Jump") and INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
 				humanoid.Jump = true
 			end
 			
-			
 		end
 		
 		function misc:GravityShift()
-			
 			
 			if menu:GetVal("Misc", "Tweaks", "Gravity Shift") then
 				local scaling = menu:GetVal("Misc", "Tweaks", "Gravity Shift Percentage")
@@ -9669,7 +9665,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			else
 				workspace.Gravity = 196.2
 			end
-			
 			
 		end
 		
@@ -9755,7 +9750,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 				if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 				if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
-				if args[1] == "falldamage" and menu:GetVal("Misc", "Tweaks", "Prevent Fall Damage") then return end
+				if (args[1] == "falldamage" or args[1] == "forcereset") and menu:GetVal("Misc", "Tweaks", "Prevent Fall Damage") then return end
 				if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
 					local closest = math.huge
 					local part
@@ -12655,15 +12650,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								color = {255, 210, 0, 255}
 							}
 						},
+						-- {
+						-- 	type = "slider",
+						-- 	name = "Max Player Text",
+						-- 	value = 0,
+						-- 	minvalue = 0,
+						-- 	maxvalue = 32,
+						-- 	custom = {[0] = "None"},
+						-- }
 						{
-							type = "slider",
-							name = "Max Player Text",
-							value = 0,
-							minvalue = 0,
-							maxvalue = 32,
-							custom = {[0] = "None"},
+							type = "toggle",
+							name = "Show Resolved Positions",
+							value = false,
 						}
-						
 					}
 				},
 				{
