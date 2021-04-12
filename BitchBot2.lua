@@ -647,16 +647,16 @@ local function UnpackRelations()
 	
 	if str then
 		local tb = {}
-		for k,v in str:gmatch "{[%a]+:.[%d,%s+]+[}]" do
+		for k,v in str:gmatch "{[%a]+:.[%a,%s+]+[}]" do
 			tb[#tb + 1] = k
 		end
-		
+
 		for i = 1, #tb do
 			local data = tb[i]
 
 			local cellname = data:match("%a+")
 			if final[cellname] then
-				for k,v in data:gmatch "%d+[^,}]" do
+				for k,v in data:gmatch "[^,^:]+[^,}]" do
 					local status, ret = pcall(function() -- wrapping this in a pcall since roblox will throw an error if the player user ID does not exist
 						local playername = k
 						if tonumber(k) then
@@ -735,9 +735,6 @@ CreateThread(function()
 	WriteRelations()
 	if (not menu or not menu.GetVal) then
 		repeat game.RunService.Heartbeat:Wait() until (menu and menu.GetVal)
-	end
-	if #menu.friends > 0 and #menu.priority > 0 then
-		CreateNotification(string.format("Finished reading relations.bb file with %d friends and %d priority players, why the fuck do you have so many people friended you moron", #menu.friends, #menu.priority))
 	end
 end)
 
@@ -9750,7 +9747,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 				if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
 				if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
-				if (args[1] == "falldamage" or args[1] == "forcereset") and menu:GetVal("Misc", "Tweaks", "Prevent Fall Damage") then return end
+				if args[1] == "falldamage" and menu:GetVal("Misc", "Tweaks", "Prevent Fall Damage") then return end
 				if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
 					local closest = math.huge
 					local part
@@ -10532,18 +10529,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local torso = parts.torso.CFrame
 						local rootpart = parts.rootpart.CFrame
 						local position = rootpart.Position
-						local rep = repupdates[ply] and repupdates[ply][#repupdates[ply]]
-						
-						if rep and (rep.position - torso.p).Magnitude > 17 then
-							position = rep and rep.position or position 
-						end
+						if menu:GetVal("Visuals", "ESP Settings", "Show Resolved Positions") then
+							local rep = repupdates[ply] and repupdates[ply][#repupdates[ply]]
+							
+							if rep and (rep.position - torso.p).Magnitude > 17 then
+								position = rep and rep.position or position 
+							end
 
-						local rep = repupdates[ply] and repupdates[ply][#repupdates[ply]]
-					
-						if rep and (rep.position - torso.p).Magnitude > 17 then
-							position = rep and rep.position or position 
-						end
+							local rep = ragebot.fakePositionsResolved[ply]
 						
+							if ragebot.predictedMisses[ply] and ragebot.predictedMisses[ply] > 5 and rep and (rep - torso.p).Magnitude > 17 then
+								position = rep and rep or position 
+							end
+						end
 						--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. ply.Name)
 						
 						local vTop = position + (torso.UpVector * 1.8) + cam.UpVector
