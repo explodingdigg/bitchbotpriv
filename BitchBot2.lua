@@ -2717,8 +2717,8 @@ function menu.Initialize(menutable)
 	local doubleclickDelay = 1
 	local buttonsInQue = {}
 
-	local function SaveCurSettings()
-		local figgy = "BitchBot v2\nmade with <3 from Nate, Bitch, Classy, and Json\n\n" -- screw zarzel XD
+	local function SaveCurSettings() --ANCHOR figgies
+		local figgy = "BitchBot v2\nmade with <3 by nata and bitch\n\n" -- screw zarzel XD (and json and classy)
 			
 		for k, v in next, menuElementTypes do
 			figgy ..= v.. "s {\n"
@@ -2756,10 +2756,12 @@ function menu.Initialize(menutable)
 					if v2[2] == "toggle" then
 						if v2[5] ~= nil then
 							if v2[5][2] == "keybind" then
+								local toggletype = "|".. tostring(v2[5].toggletype)
+
 								if v2[5][1] == nil then
-									figgy = figgy..k.."|"..k1.."|"..k2.."|nil\n"
+									figgy = figgy..k.."|"..k1.."|"..k2.."|nil".."|".. tostring(v2[5].toggletype).."\n"
 								else
-									figgy = figgy..k.."|"..k1.."|"..k2.."|"..tostring(v2[5][1].Value).."\n"
+									figgy = figgy..k.."|"..k1.."|"..k2.."|"..tostring(v2[5][1].Value).. "|".. tostring(v2[5].toggletype).. "\n"
 								end
 							end
 						end
@@ -2970,11 +2972,21 @@ function menu.Initialize(menutable)
 			for i = 1, end_ - start - 1 do
 				local tt = string.split(lines[i + start], "|")
 				if menu.options[tt[1]] ~= nil and menu.options[tt[1]][tt[2]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]] ~= nil and menu.options[tt[1]][tt[2]][tt[3]][5] ~= nil then
+
+					if tt[5] ~= nil then
+						local toggletype = clamp(tonumber(tt[5]), 1, 4)
+						if menu.options[tt[1]][tt[2]][tt[3]][5].toggletype ~= 0 then
+							menu.options[tt[1]][tt[2]][tt[3]][5].toggletype = toggletype
+						end
+					end
+
 					if tt[4] == "nil" then
 						menu.options[tt[1]][tt[2]][tt[3]][5][1] = nil
 					else
 						menu.options[tt[1]][tt[2]][tt[3]][5][1] = keyz[tonumber(tt[4])]
 					end
+
+					
 				end
 			end
 			
@@ -12980,6 +12992,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								name = "Fly",
 								value = false,
 								unsafe = true,
+								tooltip = "Manipulates your velocity to make you fly.\nUse 60 speed or below to never get banned.",
 								extra = {
 									type = "keybind",
 									key = Enum.KeyCode.B,
@@ -12989,7 +13002,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							{
 								type = "slider",
 								name = "Fly Speed",
-								value = 70,
+								value = 60,
 								minvalue = 1,
 								maxvalue = 200,
 								stradd = " stud/s"
@@ -13005,6 +13018,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								name = "Speed",
 								value = false,
 								unsafe = true,
+								tooltip = "Manipulates your velocity to make you move faster, unlike fly it doesn't make you fly.\nUse 60 speed or below to never get banned.",
 								extra = {
 									type = "keybind",
 									toggletype = 4
