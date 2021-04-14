@@ -9634,11 +9634,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end 
 				if self.autopeekposition and not workspace:Raycast(client.lastrepupdate, self.autopeekposition - client.lastrepupdate, mapRaycast) then
 					local diff = (self.autopeekposition - client.cam.cframe.p)
+					local oldpos = client.cam.cframe.p
 					if diff.Magnitude < 5 then 
-						self.autopeekposition = nil
+						self.autopeekposition = oldpos
 						return
 					end
-					rootpart.CFrame += diff.Unit * 2
+					for i = 1, dist, 2 do
+						rootpart.CFrame += diff.Unit * 2
+						client.net:send("repupdate", Camera.CFrame.Position, Vector2.new(0,0))
+					end
 				end
 			else
 				self.autopeekposition = nil
@@ -9967,7 +9971,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local spinRate = menu:GetVal("Rage", "Anti Aim", "Spin Rate")
 					---"off,down,up,roll,upside down,random"
 					--{"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random"} pitch
-					
+					local new_angles
 					if pitchChoice == 2 then
 						pitch = -4
 					elseif pitchChoice == 3 then
@@ -9999,10 +10003,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						yaw = 16478887
 					elseif yawChoice == 6 then
 						yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+					elseif yawChoice == 7 then
+						new_angles = Vector2.new()
 					end
 					
 					-- yaw += jitter
-					local new_angles = Vector2.new(clamp(pitch, 1.47262156, -1.47262156), yaw)
+					new_angles = new_angles or Vector2.new(clamp(pitch, 1.47262156, -1.47262156), yaw)
 					-- args[3] = new_angles
 					ragebot.angles = new_angles
 				end
@@ -12213,7 +12219,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								type = "dropbox",
 								name = "Yaw",
 								value = 2,
-								values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"}
+								values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin", "Break Killcam"}
 							},
 							{
 								type = "slider",
@@ -13297,8 +13303,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							},
 							{
 								type = "toggle",
-								name = "Crimwalk Teleport",
-								value = true,
+								name = "Teleport",
+								value = false, 
+								extra = {
+									type = "keybind",
+									toggletype = 0
+								},
+								tooltip = "When key pressed you will teleport to the mouse position"
 							},
 							{
 								type = "toggle",
