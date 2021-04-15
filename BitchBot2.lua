@@ -731,11 +731,11 @@ local function WriteRelations()
 	writefile("bitchbot/relations.bb", str)
 end
 CreateThread(function()
-	UnpackRelations()
-	WriteRelations()
 	if (not menu or not menu.GetVal) then
 		repeat game.RunService.Heartbeat:Wait() until (menu and menu.GetVal)
 	end
+	UnpackRelations()
+	WriteRelations()
 end)
 
 
@@ -1707,7 +1707,7 @@ function menu.Initialize(menutable)
 										menu.options[v.name][g_name][v2.name][5][5] = false
 										menu.options[v.name][g_name][v2.name][5].toggletype = v2.extra.toggletype == nil and 1 or v2.extra.toggletype
 										menu.options[v.name][g_name][v2.name][5].relvalue = false
-										menu.options[v.name][g_name][v2.name][5].bind = table.insert(menu.keybinds, {menu.options[v.name][g_name][v2.name], tostring(v2.name)})
+										menu.options[v.name][g_name][v2.name][5].bind = table.insert(menu.keybinds, {menu.options[v.name][g_name][v2.name], tostring(v2.name), tostring(g_name), tostring(v.name)})
 									elseif v2.extra.type == "single colorpicker" then
 										menu.options[v.name][g_name][v2.name][5] = {}
 										menu.options[v.name][g_name][v2.name][5][4] = Draw:ColorPicker(v2.extra.color, v1.x + v1.width - 38, y_pos + v1.y - 1, tabz[k])
@@ -6629,7 +6629,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			[7] = {}, -- bar_moving_1
 			[8] = {} -- bar_moving_2
 		},
-		[9] = {} -- fov circles
+		[9] = {}, -- fov circles
+		
+		[10] = {
+			[1] = {}, --boxes
+			[2] = {}, --outlines
+			[3] = {}, --text
+		} -- shitty keybinds
 	}
 
 	local allespnum = #allesp
@@ -6643,8 +6649,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	local nade_espnum = #nade_esp
 	
 	for i = 1, 50 do
+		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, allesp[10][1])
+	end
+	for i = 1, 50 do
+		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, allesp[10][2])
+	end
+	for i = 1, 50 do
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[1])
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[2])
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp[10][3])
 	end
 	for i = 1, 4 do
 		allesp[9][i] = {}
@@ -7565,40 +7578,52 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 	end
 	
-	--[[ local invisibility = function()
-		if client.invismodel then
-			client.invismodel:Destroy()
-			client.invismodel = nil
-			return
-		end
+	local invisibility = function()
+		local user_is_teleporting = false
 		local oldsend = client.net.send
-		
-		client.net.send = function(self, event, ...)
-			if event == "repupdate" then return end
-			oldsend(self, event, ...)
+		local char = LOCAL_PLAYER.Character
+		client.net.send = function(self, name, ...)
+			local args = {...}
+			if name == "falldamage" then
+				return
+			end
+			if name == "repupdate"then
+				if user_is_teleporting then
+					args[1] = cf + Vector3.new(0, math.random(-9e9, 9e9), 0)
+					return
+				end
+			end
+			return oldsend(self, name, unpack(args))
 		end
-		
-		local char = game.Players.LocalPlayer.Character
-		if not char then return end
-		local getChild = char.FindFirstChild
-		
-		local root = getChild(char, "HumanoidRootPart")
-		
-		local op = root.CFrame
-		root.Velocity = Vector3.new(0, 300, 0) -- this right here
-		root.CFrame += CFrame.new(0, math.huge, 0)
-		--yes
-		wait(0.2) -- (json)had to change this to 0.2 because apparently the interval for the first wait can't be more than this wtf
-		do
-			local clone = root:Clone()
-			client.invismodel = clone
+
+		local cf = char:FindFirstChild("HumanoidRootPart").CFrame
+		local hv = char:FindFirstChild("HumanoidRootPart").Velocity
+
+		char:FindFirstChild("HumanoidRootPart").Velocity = Vector3.new(0, math.random(-9e9, 9e9), 0)
+		char:FindFirstChild("HumanoidRootPart").CFrame = cf + Vector3.new(0, math.random(-9e9, 9e9), 0)
+
+		user_is_teleporting = true
+
+		wait(0.2)
+
+		local model = Instance.new("Model", workspace)
+		for k, v in next, char:GetChildren() do
+			if v.ClassName == "Part" then
+				copy = v:Clone()
+				v.Parent = model
+				v.CFrame = cf + Vector3.new(-math.huge, -math.huge, -math.huge)
+				v.Velocity = Vector3.new(-math.huge, -math.huge, -math.huge)
+				copy.Parent = char
+			end
 		end
-		wait(0)
-		root.CFrame = op
+
+		wait(0.2)
+
 		-- come bak
-		root.Velocity = Vector3.new()
+		char:FindFirstChild("HumanoidRootPart").Velocity = Vector3.new()
+		char:FindFirstChild("HumanoidRootPart").CFrame = cf
 		client.net.send = oldsend
-	end ]]
+	end
 	
 	
 	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK -- fuk json
@@ -7829,17 +7854,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							oldNewIndex(self, "Velocity", Vector3.new(0, 0, 0))
 							return
 						end
-					end
-				end
-			end
-			if self == Lighting then
-				if menu:GetVal("Visuals", "Fog", "Enabled") then
-					if id == "FogEnd" then
-						val = menu:GetVal("Visuals", "Fog", "Fog End")
-					elseif id == "FogStart" then
-						val = menu:GetVal("Visuals", "Fog", "Fog Begin")
-					elseif id == "FogColor" then
-						val = menu:GetVal("Visuals", "Fog", "Enabled", "color", true)
 					end
 				end
 			end
@@ -8187,8 +8201,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			--local hitscan = hitscan or {}
 			local partPreference = hitboxPriority or "you know who i am? well you about to find out, your barbecue boy"
 			local closest, cpart, theplayer = math.huge, nil, nil
-			
-			local players = players or Players:GetPlayers()
+			if not players then
+				players = {self.firsttarget, table.unpack(Players:GetPlayers())} --= this is so much fucking ebtter but it's still ultra shit
+			end
 			
 			local autowall = menu:GetVal("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = menu:GetVal("Rage", "Hack vs. Hack", "Autowall Resolver")
@@ -8202,7 +8217,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local head
 
 			local aimbotFov = menu:GetVal("Rage", "Aimbot", "Aimbot FOV")
-			players = {self.firsttarget, table.unpack(players)} --= this is so much fucking ebtter but it's still ultra shit
 			for i, player in next, players do
 				local usedhitscan = hitscan -- should probably do this a different way
 				if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then continue end
@@ -8612,8 +8626,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		-- setrawmetatable(client.cam.magspring, mt)
 		client.cam.setmagnification = function(self, m)
 			local lnm = math.log(m)
-			if menu and not menu.open and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then 
-				return
+			if menu and menu:GetVal("Visuals", "Camera Visuals", "Disable ADS FOV") then 
+				if lnm > self.magspring.p then return end -- THIS IS SOFUCKING DUMB LOL
 			end
 			self.magspring.p = lnm
 			self.magspring.t = lnm
@@ -9227,7 +9241,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local dist = (newpos-start).Magnitude
 			for i = 1, dist do
 				LOCAL_PLAYER.Character.HumanoidRootPart.Position += unit
-				client.net:send("repupdate", start + unit*i, ragebot.angles)
+				if not menu:GetKey("Misc", "Exploits", "Crimwalk") then 
+					client.net:send("repupdate", start + unit*i, ragebot.angles)
+				end
 			end
 			
 		end
@@ -9640,6 +9656,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		
 		local autopeekiterator = 5
 		function misc:AutoPeek()
+			if self.autopeektimeout and self.autopeektimeout > 0 then
+				self.autopeektimeout -= 1
+				return
+			end
 			if menu:GetKey("Rage", "Extra", "Auto Peek") and menu:GetVal("Rage", "Aimbot", "Enabled") then
 				local hitscanpreference = misc:GetParts({[menu:GetVal("Rage", "Aimbot", "Hitscan Priority")]=true})
 				local prioritizedpart = menu:GetVal("Rage", "Aimbot", "Hitscan Priority")
@@ -9658,12 +9678,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local diff = (self.autopeekposition - client.cam.cframe.p)
 					if diff.Magnitude < 5 then 
 						self.autopeekposition = nil
+						self.autopeektimeout = 100
 						return
 					end
 					for i = 1, dist, 2 do
 						rootpart.CFrame += diff.Unit * 2
 						client.net:send("repupdate", Camera.CFrame.Position, ragebot.angles)
 					end
+					self.autopeektimeout = 100
 				end
 			else
 				self.autopeekposition = nil
@@ -10565,17 +10587,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					
 					local torso = parts.torso.CFrame
 					local rootpart = parts.rootpart.CFrame
-					local position = rootpart.Position
+					local position = torso.Position
 					if menu:GetVal("Visuals", "ESP Settings", "Show Resolved Positions") then
+						local misses = ragebot.predictedMisses[ply] and ragebot.predictedMisses[ply] % 7
 						local rep = repupdates[ply] and repupdates[ply][#repupdates[ply]]
 						
-						if rep and (rep.position - torso.p).Magnitude > 17 then
+						if rep and (rep.position - torso.p).Magnitude > 17 and misses > 3 then
 							position = rep and rep.position or position 
 						end
 
 						local rep = ragebot.fakePositionsResolved[ply]
 					
-						if ragebot.predictedMisses[ply] and ragebot.predictedMisses[ply] > 5 and rep and (rep - torso.p).Magnitude > 17 then
+						if misses and misses > 5 and rep and (rep - torso.p).Magnitude > 17 then
 							position = rep and rep or position 
 						end
 					end
@@ -11027,6 +11050,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 			end
 
+			
+
 			--debug.profilebegin("renderVisuals Dropped ESP Grenade Warning")
 			if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
 				local health = client.char:gethealth()
@@ -11277,6 +11302,46 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			--debug.profileend("renderVisuals Local Visuals")
 		end
+		if menu:GetVal("Visuals", "Keybinds", "Enabled") then
+			local texts = allesp[10]
+			local margin = SCREEN_SIZE.y / 2
+			local posx = menu.stat_menu and 330 or 5
+			local col = menu:GetVal("Visuals", "Keybinds", "Enabled", "color", true)
+			local transparency = menu:GetVal("Visuals", "Keybinds", "Enabled", "color")[4] / 255	
+			local newtexts = {}
+			for i = 1, #menu.keybinds do
+				local keybind = menu.keybinds[i]
+				local box1 = texts[1][i]
+				local box = texts[2][i]
+				local text = texts[3][i]
+				if keybind and keybind[1] and menu:GetVal(keybind[4], keybind[3], keybind[2]) and menu:GetKey(keybind[4], keybind[3], keybind[2]) then
+					table.insert(newtexts, keybind[3] .. " " .. keybind[2])
+				end
+				text.Visible = false
+				box.Visible = false
+				box1.Visible = false
+			end
+			table.sort(newtexts, function(s, s1) return #s > #s1 end) -- i hate this shit
+			for i = 1, #newtexts do
+				local box1 = texts[1][i]
+				local box = texts[2][i]
+				local text = texts[3][i]
+				text.Center = false
+				text.Position = Vector2.new(posx + 2, margin)
+				text.Text = newtexts[i]
+				text.Color = col
+				text.Transparency = transparency
+				text.Visible = true
+				box.Position = Vector2.new(posx, margin)
+				box.Visible = true
+				box.Size = text.TextBounds + Vector2.new(4, 2)
+				box.Color = Color3.fromRGB(35, 35, 35)
+				box1.Position = Vector2.new(posx-1, margin-1)
+				box1.Visible = true
+				box1.Size = text.TextBounds + Vector2.new(6, 4)
+				margin += 15
+			end
+		end
 		--debug.profileend("renderVisuals Main")
 		--debug.profilebegin("renderVisuals No Scope")
 		do -- no scope pasted from v1 lol
@@ -11452,7 +11517,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			
 			if shitting_my_pants == false then
-
+				-- if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") then
+				-- 	invisibility()
+				-- end
 				--[[ if menu:GetVal("Misc", "Exploits", "Super Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind") then
 					CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
 					for i = 1, 50 do
@@ -12765,7 +12832,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					}
 				},
 				{
-					name = {"World", "Misc", "Fog", "FOV"},
+					name = {"World", "Misc", "Keybinds", "FOV"},
 					
 					autopos = "right",
 					size = 144,
@@ -12875,24 +12942,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								value = false,
 								extra = {
 									type = "single colorpicker",
-									name = "Fog Color",
-									color = {127, 72, 163}
+									name = "Text Color",
+									color = {127, 72, 163, 255}
 								},
 							},
-							{
-								type = "slider",
-								name = "Fog Begin",
-								value = 50,
-								minvalue = 5, 
-								maxvalue = 1000,
-							},
-							{
-								type = "slider",
-								name = "Fog End",
-								value = 1000,
-								minvalue = 100, 
-								maxvalue = 10000
-							}
 						}
 					},
 					[4] = {
@@ -13021,7 +13074,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								name = "Fly",
 								value = false,
 								unsafe = true,
-								tooltip = "Manipulates your velocity to make you fly.\nUse 60 speed or below to never get banned.",
+								tooltip = "Manipulates your velocity to make you fly.\nUse 60 speed or below to never get flagged.",
 								extra = {
 									type = "keybind",
 									key = Enum.KeyCode.B,
@@ -13047,7 +13100,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								name = "Speed",
 								value = false,
 								unsafe = true,
-								tooltip = "Manipulates your velocity to make you move faster, unlike fly it doesn't make you fly.\nUse 60 speed or below to never get banned.",
+								tooltip = "Manipulates your velocity to make you move faster, unlike fly it doesn't make you fly.\nUse 60 speed or below to never get flagged.",
 								extra = {
 									type = "keybind",
 									toggletype = 4
@@ -13287,14 +13340,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					},
 					[2] = {
 						content = {
+							
 							--[[{
-								type = "toggle",
-								name = "Invisibility",
-								extra = {
-									type = "keybind"
-								}
-							},
-							{
 								type = "toggle",
 								name = "Super Invisibility",
 								value = false,
@@ -13308,13 +13355,21 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								doubleclick = true,
 								tooltip = "Attempts to overwhelm the server so that users are kicked for internet connection problems.\nRoblox may detect strange activity and automatically\nkick you for it before the server can crash."
 							},
+							-- {
+							-- 	type = "toggle",
+							-- 	name = "Invisibility",
+							-- 	extra = {
+							-- 		type = "keybind",
+							-- 		toggletype = 0
+							-- 	}
+							-- },
 							{
 								type = "toggle",
 								name = "Rapid Kill",
 								value = false,
 								extra = {
 									type = "keybind",
-									toggletype = 0
+									toggletype = 0,
 								},
 								tooltip = "Throws 3 grenades instantly on random enemies."
 							},
@@ -13344,7 +13399,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								value = false, 
 								extra = {
 									type = "keybind",
-									toggletype = 0
+									toggletype = 0,
 								},
 								tooltip = "When key pressed you will teleport to the mouse position"
 							},
