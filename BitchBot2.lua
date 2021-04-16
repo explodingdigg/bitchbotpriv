@@ -6633,8 +6633,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		
 		[10] = {
 			[1] = {}, --boxes
-			[2] = {}, --outlines
-			[3] = {}, --text
+			[2] = {}, --gradient
+			[3] = {}, --outlines
+			[4] = {}, --text
 		} -- shitty keybinds
 	}
 
@@ -6651,13 +6652,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	for i = 1, 50 do
 		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, allesp[10][1])
 	end
+	
+	
+	local this_is_really_ugly = 50 - 15 * 1.7
 	for i = 1, 50 do
-		Draw:FilledRect(false, 20, 20, 2, 20, {30, 30, 30, 255}, allesp[10][2])
+		Draw:FilledRect(false, 20, 20, 2, 20, {this_is_really_ugly, this_is_really_ugly, this_is_really_ugly, 255}, allesp[10][3])
+	end
+	for i = 1, 15 do
+		Draw:FilledRect(false, 0, 0, 10, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, allesp[10][2])
 	end
 	for i = 1, 50 do
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[1])
 		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, wepesp[2])
-		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp[10][3])
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, {255, 255, 255, 255}, {0, 0, 0}, allesp[10][4])
 	end
 	for i = 1, 4 do
 		allesp[9][i] = {}
@@ -11304,42 +11311,67 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 		if menu:GetVal("Visuals", "Keybinds", "Enabled") then
 			local texts = allesp[10]
+			local sizetype = menu:GetVal("Visuals", "Keybinds", "Use List Sizes")
+			local posy = SCREEN_SIZE.y / 2
 			local margin = SCREEN_SIZE.y / 2
 			local posx = menu.stat_menu and 330 or 5
 			local col = menu:GetVal("Visuals", "Keybinds", "Enabled", "color", true)
 			local transparency = menu:GetVal("Visuals", "Keybinds", "Enabled", "color")[4] / 255	
-			local newtexts = {}
+			local newtexts = 	{}
 			for i = 1, #menu.keybinds do
 				local keybind = menu.keybinds[i]
 				local box1 = texts[1][i]
 				local box = texts[2][i]
-				local text = texts[3][i]
+				local box2 = texts[3][i]
+				local text = texts[4][i]
 				if keybind and keybind[1] and menu:GetVal(keybind[4], keybind[3], keybind[2]) and menu:GetKey(keybind[4], keybind[3], keybind[2]) then
-					table.insert(newtexts, keybind[3] .. " " .. keybind[2])
+					table.insert(newtexts, keybind[3] .. ": " .. keybind[2])
 				end
 				text.Visible = false
 				box.Visible = false
 				box1.Visible = false
+				box2.Visible = false
 			end
 			table.sort(newtexts, function(s, s1) return #s > #s1 end) -- i hate this shit
+			
+			local maxwidth = Vector2.new(0, 0)
 			for i = 1, #newtexts do
 				local box1 = texts[1][i]
-				local box = texts[2][i]
-				local text = texts[3][i]
+				local box = texts[3][i]
+				local text = texts[4][i]
 				text.Center = false
 				text.Position = Vector2.new(posx + 2, margin)
 				text.Text = newtexts[i]
+				if i == 1 then
+					maxwidth = Vector2.new(text.TextBounds.x + 4, text.TextBounds.y)
+				end
 				text.Color = col
 				text.Transparency = transparency
 				text.Visible = true
 				box.Position = Vector2.new(posx, margin)
 				box.Visible = true
-				box.Size = text.TextBounds + Vector2.new(4, 2)
-				box.Color = Color3.fromRGB(35, 35, 35)
+				
+				
 				box1.Position = Vector2.new(posx-1, margin-1)
 				box1.Visible = true
-				box1.Size = text.TextBounds + Vector2.new(6, 4)
+				
+				box1.Color = Color3.new(0, 0, 0)
+
+				
+				if sizetype then
+					box.Size = text.TextBounds + Vector2.new(4, 2)
+					box1.Size = text.TextBounds + Vector2.new(6, 4)
+				else
+					box.Size = maxwidth+Vector2.new(0,2)
+					box1.Size = maxwidth+Vector2.new(2,4)
+				end
 				margin += 15
+			end
+			for i = 1, 15 do
+				local box = texts[2][i]
+				box.Position = Vector2.new(posx, posy + i - 1)
+				box.Size = Vector2.new(maxwidth.x, 1)
+				box.Visible = true
 			end
 		end
 		--debug.profileend("renderVisuals Main")
@@ -12946,6 +12978,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									color = {127, 72, 163, 255}
 								},
 							},
+							{
+								type = "toggle",
+								name = "Use List Sizes", 
+								value = false
+							}
 						}
 					},
 					[4] = {
