@@ -639,40 +639,30 @@ local stats = game:GetService("Stats")
 
 local function UnpackRelations()
 	local str = isfile("bitchbot/relations.bb") and readfile("bitchbot/relations.bb") or nil
-	
 	local final = {
 		friends = {},
 		priority = {}
 	}
-	
 	if str then
-		local tb = {}
-		for k,v in str:gmatch "{[%a]+:.[%a,%s+]+[}]" do
-			tb[#tb + 1] = k
+		if str:find("bb:{{") then
+			writefile("bitchbot/relations.bb", "")
 		end
-
-		for i = 1, #tb do
-			local data = tb[i]
-
-			local cellname = data:match("%a+")
-			if final[cellname] then
-				for k,v in data:gmatch "[^,^:]+[^,}]" do
-					local status, ret = pcall(function() -- wrapping this in a pcall since roblox will throw an error if the player user ID does not exist
-						local playername = k
-						if tonumber(k) then
-							playername = Players:GetNameFromUserIdAsync(tonumber(k))
-						end
-						table.insert(final[cellname], 1, playername)
-					end)
-					if not status then
-						CreateNotification(string.format("Error occurred while identifying player \"%s\" (%s player). See debuglog.bb", k, cellname))
-						appendfile("bitchbot/debuglog.bb", tostring(ret) .. "\n" .. debug.traceback() .. "\n\n")
-					end
-				end
-			end
+		local friends, frend = str:find "friends:"
+		local priority, priend = str:find "\npriority:"
+		local friendslist = str:sub(frend+1, priority-1)
+		local prioritylist = str:sub(priend+1)
+		print(friendslist)
+		print(prioritylist)
+		print("")
+		for i in friendslist:gmatch("[^,]+") do
+			print(i)
+			table.insert(final.friends, i)
+		end
+		for i in prioritylist:gmatch("[^,]+") do
+			print(i)
+			table.insert(final.priority, i)
 		end
 	end
-	
 	if not menu then
 		repeat game.RunService.Heartbeat:Wait() until menu
 	end
@@ -682,7 +672,7 @@ local function UnpackRelations()
 end
 
 local function WriteRelations()
-	local str = "bb:{{friends:"
+	local str = "friends:"
 	
 	for k,v in next, menu.friends do
 		local playerobj
@@ -704,7 +694,7 @@ local function WriteRelations()
 		end
 	end
 	
-	str ..= "}{priority:"
+	str ..= "\npriority:"
 	
 	for k,v in next, menu.priority do
 		local playerobj
@@ -726,16 +716,15 @@ local function WriteRelations()
 		end
 	end
 	
-	str ..= "}}"
-	
 	writefile("bitchbot/relations.bb", str)
 end
 CreateThread(function()
 	if (not menu or not menu.GetVal) then
 		repeat game.RunService.Heartbeat:Wait() until (menu and menu.GetVal)
 	end
+	wait(2)
 	UnpackRelations()
-	WriteRelations()
+	-- WriteRelations()
 end)
 
 
@@ -11357,7 +11346,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				
 				box1.Color = Color3.new(0, 0, 0)
 
-				
+
 				if sizetype then
 					box.Size = text.TextBounds + Vector2.new(4, 2)
 					box1.Size = text.TextBounds + Vector2.new(6, 4)
