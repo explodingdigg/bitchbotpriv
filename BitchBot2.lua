@@ -651,15 +651,10 @@ local function UnpackRelations()
 		local priority, priend = str:find "\npriority:"
 		local friendslist = str:sub(frend+1, priority-1)
 		local prioritylist = str:sub(priend+1)
-		print(friendslist)
-		print(prioritylist)
-		print("")
 		for i in friendslist:gmatch("[^,]+") do
-			print(i)
 			table.insert(final.friends, i)
 		end
 		for i in prioritylist:gmatch("[^,]+") do
-			print(i)
 			table.insert(final.priority, i)
 		end
 	end
