@@ -262,33 +262,33 @@ end
 --validity check
 --SECTION commented these out for development 
 
--- make_synreadonly(syn)
--- make_synreadonly(Drawing)
--- protectfunction(getgenv)
--- protectfunction(getgc)
+make_synreadonly(syn)
+make_synreadonly(Drawing)
+protectfunction(getgenv)
+protectfunction(getgc)
 
--- local init
--- if syn then
--- 	init = getfenv(saveinstance).script
--- end
+local init
+if syn then
+	init = getfenv(saveinstance).script
+end
 
--- script.Name = "\1"
--- local function search_hookfunc(tbl)
--- 	for i,v in pairs(tbl) do
--- 		local s = getfenv(v).script
--- 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
--- 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
--- 				writefile("poop.text", "did the funny") 
--- 				SX_CRASH()
--- 				break
--- 			end
--- 		end
--- 	end
--- end
--- search_hookfunc(getgc())
--- search_hookfunc = nil
+script.Name = "\1"
+local function search_hookfunc(tbl)
+	for i,v in pairs(tbl) do
+		local s = getfenv(v).script
+		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+				writefile("poop.text", "did the funny") 
+				SX_CRASH()
+				break
+			end
+		end
+	end
+end
+search_hookfunc(getgc())
+search_hookfunc = nil
 
--- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 --!SECTION 
 
 local menuWidth, menuHeight = 500, 600 
@@ -646,7 +646,9 @@ local function UnpackRelations()
 	if str then
 		if str:find("bb:{{") then
 			writefile("bitchbot/relations.bb", "")
+			return
 		end
+		
 		local friends, frend = str:find "friends:"
 		local priority, priend = str:find "\npriority:"
 		local friendslist = str:sub(frend+1, priority-1)
@@ -2586,6 +2588,7 @@ function menu.Initialize(menutable)
 	end
 
 	function menu:InputBeganKeybinds(key) -- this is super shit because once we add mouse we need to change all this shit to be the contextaction stuff 
+		if INPUT_SERVICE:GetFocusedTextBox() then return end
 		for i = 1, #self.keybinds do
 			local value = self.keybinds[i][1]
 			if key.KeyCode == value[5][1] then
@@ -4085,6 +4088,7 @@ function menu.Initialize(menutable)
 					menu.modkeys.alt.direction = direction:lower()
 				end
 			end
+			if not menu then return end -- this fixed shit with unload
 			menu:InputBeganMenu(input)
 			menu:InputBeganKeybinds(input)
 			if menu.open then
@@ -7569,52 +7573,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 	end
 	
-	local invisibility = function()
-		local user_is_teleporting = false
-		local oldsend = client.net.send
-		local char = LOCAL_PLAYER.Character
-		client.net.send = function(self, name, ...)
-			local args = {...}
-			if name == "falldamage" then
-				return
-			end
-			if name == "repupdate"then
-				if user_is_teleporting then
-					args[1] = cf + Vector3.new(0, math.random(-9e9, 9e9), 0)
-					return
-				end
-			end
-			return oldsend(self, name, unpack(args))
-		end
-
-		local cf = char:FindFirstChild("HumanoidRootPart").CFrame
-		local hv = char:FindFirstChild("HumanoidRootPart").Velocity
-
-		char:FindFirstChild("HumanoidRootPart").Velocity = Vector3.new(0, math.random(-9e9, 9e9), 0)
-		char:FindFirstChild("HumanoidRootPart").CFrame = cf + Vector3.new(0, math.random(-9e9, 9e9), 0)
-
-		user_is_teleporting = true
-
-		wait(0.2)
-
-		local model = Instance.new("Model", workspace)
-		for k, v in next, char:GetChildren() do
-			if v.ClassName == "Part" then
-				copy = v:Clone()
-				v.Parent = model
-				v.CFrame = cf + Vector3.new(-math.huge, -math.huge, -math.huge)
-				v.Velocity = Vector3.new(-math.huge, -math.huge, -math.huge)
-				copy.Parent = char
-			end
-		end
-
-		wait(0.2)
-
-		-- come bak
-		char:FindFirstChild("HumanoidRootPart").Velocity = Vector3.new()
-		char:FindFirstChild("HumanoidRootPart").CFrame = cf
-		client.net.send = oldsend
-	end
+	
 	
 	
 	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK -- fuk json
@@ -9131,7 +9090,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			return castresults
 		end
 		--keybind connection shit
-		
 		function misc:CreateBeam(origin_att, ending_att)
 			local beam = Instance.new("Beam")
 			beam.Texture = "http://www.roblox.com/asset/?id=446111271"
@@ -9158,6 +9116,44 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			beam.Parent = workspace
 			return beam
+		end
+		function misc:Invisibility()
+			if not self.tpavailable then return end
+			self.tpavailable = false
+			if self.model then
+				self.model:Destroy()
+				self.model = nil
+			end
+			local char = LOCAL_PLAYER.Character
+
+			self.teleporting = false
+
+			local cf = char:FindFirstChild("HumanoidRootPart").CFrame
+			local hv = char:FindFirstChild("HumanoidRootPart").Velocity
+
+			char:FindFirstChild("HumanoidRootPart").Velocity = Vector3.new(0, math.random(-9e9, 9e9), 0)
+			char:FindFirstChild("HumanoidRootPart").CFrame = cf + Vector3.new(0, math.random(-9e9, 9e9), 0)
+
+			self.teleporting = true
+
+			wait(0.2)
+
+			self.model = Instance.new("Model", workspace)
+			for k, v in next, char:GetChildren() do
+				if v:IsA"BasePart" then
+					copy = v:Clone()
+					v.Parent = self.model
+					v.CFrame = cf + Vector3.new(-math.huge, -math.huge, -math.huge)
+					v.Velocity = Vector3.new(-math.huge, -math.huge, -math.huge)
+					copy.Parent = char
+				end
+			end
+
+			wait(0.2)
+
+			char:FindFirstChild("HumanoidRootPart").Velocity = Vector3.new()
+			char:FindFirstChild("HumanoidRootPart").CFrame = cf
+			self.teleporting = false
 		end
 		function misc:RapidKill()
 			local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
@@ -9651,6 +9647,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				self.autopeektimeout -= 1
 				return
 			end
+			
+			if not client.char.alive then return end
 			if menu:GetKey("Rage", "Extra", "Auto Peek") and menu:GetVal("Rage", "Aimbot", "Enabled") then
 				local hitscanpreference = misc:GetParts({[menu:GetVal("Rage", "Aimbot", "Hitscan Priority")]=true})
 				local prioritizedpart = menu:GetVal("Rage", "Aimbot", "Hitscan Priority")
@@ -9666,16 +9664,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end 
 				if self.autopeekposition and not workspace:Raycast(client.lastrepupdate, self.autopeekposition - client.lastrepupdate, mapRaycast) then
-					local diff = (self.autopeekposition - client.cam.cframe.p)
-					if diff.Magnitude < 5 then 
-						self.autopeekposition = nil
-						self.autopeektimeout = 100
-						return
-					end
-					for i = 1, dist, 2 do
-						rootpart.CFrame += diff.Unit * 2
-						client.net:send("repupdate", Camera.CFrame.Position, ragebot.angles)
-					end
+					misc:Teleport(self.autopeekposition)
+					self.autopeekposition = nil
 					self.autopeektimeout = 100
 				end
 			else
@@ -9731,216 +9721,226 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 		local stutterFrames = 0
 		do--ANCHOR send hook
-			client.net.send = function(self, ...)
-				local args = {...}
-				if menu:GetVal("Misc", "Exploits", "Skin Changer") and args[1] == "changecamo" then
-					local tid = menu:GetVal("Misc", "Exploits", "skinchangerTexture")
-					args[6].TextureProperties.TextureId = tid == "" and nil or tid
-					args[6].TextureProperties.Transparency = 1 - menu:GetVal("Misc", "Exploits", "Skin Changer", "color")[4]/255
-					args[6].TextureProperties.StudsPerTileU = menu:GetVal("Misc", "Exploits", "Scale X") / 100
-					args[6].TextureProperties.StudsPerTileV = menu:GetVal("Misc", "Exploits", "Scale Y") / 100
-					args[6].BrickProperties.BrickColor = menu:GetVal("Misc", "Exploits", "Skin Changer", "color", true)
-					args[6].BrickProperties.Material = mats[menu:GetVal("Misc", "Exploits", "Skin Material")]
+		client.net.send = function(self, ...)
+			local args = {...}
+			if menu and menu:GetVal("Misc", "Exploits", "Skin Changer") and args[1] == "changecamo" then
+				local tid = menu:GetVal("Misc", "Exploits", "skinchangerTexture")
+				args[6].TextureProperties.TextureId = tid == "" and nil or tid
+				args[6].TextureProperties.Transparency = 1 - menu:GetVal("Misc", "Exploits", "Skin Changer", "color")[4]/255
+				args[6].TextureProperties.StudsPerTileU = menu:GetVal("Misc", "Exploits", "Scale X") / 100
+				args[6].TextureProperties.StudsPerTileV = menu:GetVal("Misc", "Exploits", "Scale Y") / 100
+				args[6].BrickProperties.BrickColor = menu:GetVal("Misc", "Exploits", "Skin Changer", "color", true)
+				args[6].BrickProperties.Material = mats[menu:GetVal("Misc", "Exploits", "Skin Material")]
+			end
+			if args[1] == "spawn" then
+				misc.tpavailable = true
+				misc:ApplyGunMods()
+				misc.autopeektimeout = 100
+			end
+			if args[1] == "logmessage" or args[1] == "debug" then
+				local message = ""
+				for i = 1, #args do
+					message ..= tostring(args[i]) .. ", "
 				end
-				if args[1] == "spawn" then
-					misc:ApplyGunMods()
+				return CreateNotification(message)
+			end
+			if args[1] == "repupdate" then
+				if misc.teleporting then
+					return 
 				end
-				if args[1] == "logmessage" or args[1] == "debug" then
-					local message = ""
-					for i = 1, #args do
-						message ..= tostring(args[i]) .. ", "
-					end
-					return CreateNotification(message)
+
+				if  args[2] ~= args[2] or args[2].Unit.X ~= args[2].Unit.X then
+					return
 				end
-				if args[1] == "repupdate" then
-					if args[2] ~= args[2] or args[2].Unit.X ~= args[2].Unit.X then
-						return
-					end
-				end
-				if args[1] == "chatted" then
-					local message = args[2]
-					local commandLocation = string.find(message, "\\")
-					if commandLocation == 1 then
-						local i = 1
-						local args = {}
-						local func
-						local name
-						for f in message:gmatch("%w+") do
-							if i == 1 then
-								if CommandFunctions[f:lower()] then
-									name = f:lower()
-									func = CommandFunctions[f:lower()]
-								end
-							else
-								table.insert(args, f)
+			end
+			if args[1] == "chatted" then
+				local message = args[2]
+				local commandLocation = string.find(message, "\\")
+				if commandLocation == 1 then
+					local i = 1
+					local args = {}
+					local func
+					local name
+					for f in message:gmatch("%w+") do
+						if i == 1 then
+							if CommandFunctions[f:lower()] then
+								name = f:lower()
+								func = CommandFunctions[f:lower()]
 							end
-							i += 1
+						else
+							table.insert(args, f)
 						end
-						if name == "cmdlist" then
-							return func(CommandFunctions, unpack(args))
-						end
-						return func(unpack(args))
+						i += 1
 					end
+					if name == "cmdlist" then
+						return func(CommandFunctions, unpack(args))
+					end
+					return func(unpack(args))
 				end
-				if args[1] == "bullethit" and menu:GetVal("Misc", "Extra", "Suppress Only") then return end
-				if args[1] == "bullethit" or args[1] == "knifehit" then
-					if table.find(menu.friends, args[2].Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then return end
+			end
+			if args[1] == "bullethit" and menu:GetVal("Misc", "Extra", "Suppress Only") then return end
+			if args[1] == "bullethit" or args[1] == "knifehit" then
+				if table.find(menu.friends, args[2].Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then return end
+			end
+			if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
+			if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
+			if args[1] == "falldamage" then 
+				if menu:GetVal("Misc", "Tweaks", "Prevent Fall Damage") or misc.teleporting then
+					return 
 				end
-				if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
-				if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
-				if args[1] == "falldamage" and menu:GetVal("Misc", "Tweaks", "Prevent Fall Damage") then return end
-				if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
-					local closest = math.huge
-					local part
-					for i, player in pairs(Players:GetPlayers()) do
-						if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then continue end
-						if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
-							local bodyparts = client.replication.getbodyparts(player)
-							if bodyparts then
-								local fovToBone = camera:GetFOV(bodyparts.head)
-								if fovToBone < closest then
-									closest = fovToBone
-									part = bodyparts.head
-								end
+			end
+			if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
+				local closest = math.huge
+				local part
+				for i, player in pairs(Players:GetPlayers()) do
+					if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then continue end
+					if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
+						local bodyparts = client.replication.getbodyparts(player)
+						if bodyparts then
+							local fovToBone = camera:GetFOV(bodyparts.head)
+							if fovToBone < closest then
+								closest = fovToBone
+								part = bodyparts.head
 							end
 						end
 					end
-					
-					if (closest and part) then
-						local args = {
-							"FRAG",
-							{
-								frames = {
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(0 / 0),
-										p0 = client.lastrepupdate or client.char.head.Position,
-										rotv = Vector3.new()
-									},
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(0/0),
-										p0 = Vector3.new(0/0),
-										rotv = Vector3.new()
-									},
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(),
-										p0 = part.Position + Vector3.new(0, 3, 0),
-										rotv = Vector3.new()
-									}
-								},
-								time = tick(),
-								curi = 1,
-								blowuptime = 0
-							}
-						}
-						
-						send(client.net, "newgrenade", unpack(args))
-						client.hud:updateammo("GRENADE")
-						return
-					end
-					
 				end
 				
-				if args[1] == "newbullets" then
-					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
-						send(self, "equip", client.logic.currentgun.id)
-					end
+				if (closest and part) then
+					local args = {
+						"FRAG",
+						{
+							frames = {
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(0 / 0),
+									p0 = client.lastrepupdate or client.char.head.Position,
+									rotv = Vector3.new()
+								},
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(0/0),
+									p0 = Vector3.new(0/0),
+									rotv = Vector3.new()
+								},
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(),
+									p0 = part.Position + Vector3.new(0, 3, 0),
+									rotv = Vector3.new()
+								}
+							},
+							time = tick(),
+							curi = 1,
+							blowuptime = 0
+						}
+					}
 					
-					if legitbot.silentVector then
-						for k = 1, #args[2].bullets do
-							local bullet = args[2].bullets[k]
-							bullet[1] = legitbot.silentVector
-						end
-					end
-					
-					
-					if ragebot.silentVector then
-						-- duct tape fix or whatever the fuck its called for this its stupid
-						args[2].camerapos = client.lastrepupdate -- attempt to make dumping happen less
-						args[2].firepos = ragebot.firepos
-						-- if shitting_my_pants == false and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then
-						-- 	args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
-						-- end
-						local cachedtimedata = {}
-						
-						local hitpoint = ragebot.intersection ~= nil and Vector3.new(ragebot.intersection.X, ragebot.intersection.Y, ragebot.intersection.Z) or ragebot.targetpart.Position -- fuckkkkkkkkk
-						-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
-						-- properly when you're using Aimbot Performance Mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
-						
-						local angle, time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed)
-						if not angle or not time then return end
-						for k = 1, #args[2].bullets do
-							local bullet = args[2].bullets[k]
-							bullet[1] = angle
-						end
-						
-						if menu:GetVal("Rage", "Fake Lag", "Release Packets on Shoot") then
-							menu:SetKey("Rage", "Fake Lag", "Manual Choke")
-							syn.set_thread_identity(1) -- might lag...... idk probably not
-							NETWORK:SetOutgoingKBPSLimit(0)
-						end
-						
-						args[3] -= time or 0
-						send(self, unpack(args))
-						
-						for k = 1, #args[2].bullets do
-							local bullet = args[2].bullets[k]
-							if menu:GetVal("Visuals", "Misc", "Bullet Tracers") then
-								local origin = args[2].firepos
-								local attach_origin = Instance.new("Attachment", workspace.Terrain)
-								attach_origin.Position = origin
-								local ending = origin + bullet[1].unit.Unit * 300
-								local attach_ending = Instance.new("Attachment", workspace.Terrain)
-								attach_ending.Position = ending
-								local beam = misc:CreateBeam(attach_origin, attach_ending)
-								beam.Parent = workspace
-							end
-							local hitinfo = {
-								ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
-							}
-							client.hud:firehitmarker(ragebot.targetpart.Name == "Head")
-							client.sound.PlaySound("hitmarker", nil, 1, 1.5)
-							send(self, 'bullethit', unpack(hitinfo))
-						end
-					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
-						local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
-						send(self, "equip", slot)
-					end
+					send(client.net, "newgrenade", unpack(args))
+					client.hud:updateammo("GRENADE")
 					return
-				else
-					if menu:GetVal("Visuals", "Misc", "Bullet Tracers") then
-						for k = 1, #args[2].bullets do
-							local bullet = args[2].bullets[k]
+				end
+				
+			end
+			
+			if args[1] == "newbullets" then
+				if menu:GetVal("Misc", "Exploits", "Fake Equip") then
+					send(self, "equip", client.logic.currentgun.id)
+				end
+				
+				if legitbot.silentVector then
+					for k = 1, #args[2].bullets do
+						local bullet = args[2].bullets[k]
+						bullet[1] = legitbot.silentVector
+					end
+				end
+				
+				
+				if ragebot.silentVector then
+					-- duct tape fix or whatever the fuck its called for this its stupid
+					args[2].camerapos = client.lastrepupdate -- attempt to make dumping happen less
+					args[2].firepos = ragebot.firepos
+					-- if shitting_my_pants == false and menu:GetVal("Misc", "Exploits", "Noclip") and keybindtoggles.fakebody then
+					-- 	args[2].camerapos = client.cam.cframe.p - Vector3.new(0, client.fakeoffset, 0)
+					-- end
+					local cachedtimedata = {}
+					
+					local hitpoint = ragebot.intersection ~= nil and Vector3.new(ragebot.intersection.X, ragebot.intersection.Y, ragebot.intersection.Z) or ragebot.targetpart.Position -- fuckkkkkkkkk
+					-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
+					-- properly when you're using Aimbot Performance Mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
+					
+					local angle, time = client.trajectory(ragebot.firepos, GRAVITY, hitpoint, client.logic.currentgun.data.bulletspeed)
+					if not angle or not time then return end
+					for k = 1, #args[2].bullets do
+						local bullet = args[2].bullets[k]
+						bullet[1] = angle
+					end
+					
+					if menu:GetVal("Rage", "Fake Lag", "Release Packets on Shoot") then
+						menu:SetKey("Rage", "Fake Lag", "Manual Choke")
+						syn.set_thread_identity(1) -- might lag...... idk probably not
+						NETWORK:SetOutgoingKBPSLimit(0)
+					end
+					
+					args[3] -= time or 0
+					send(self, unpack(args))
+					
+					for k = 1, #args[2].bullets do
+						local bullet = args[2].bullets[k]
+						if menu:GetVal("Visuals", "Misc", "Bullet Tracers") then
 							local origin = args[2].firepos
 							local attach_origin = Instance.new("Attachment", workspace.Terrain)
 							attach_origin.Position = origin
-							local ending = origin + (type(bullet[1]) == "table" and bullet[1].unit.Unit or bullet[1].Unit) * 300
+							local ending = origin + bullet[1].unit.Unit * 300
 							local attach_ending = Instance.new("Attachment", workspace.Terrain)
 							attach_ending.Position = ending
 							local beam = misc:CreateBeam(attach_origin, attach_ending)
 							beam.Parent = workspace
 						end
+						local hitinfo = {
+							ragebot.target, hitpoint, ragebot.targetpart, bullet[2]
+						}
+						client.hud:firehitmarker(ragebot.targetpart.Name == "Head")
+						client.sound.PlaySound("hitmarker", nil, 1, 1.5)
+						send(self, 'bullethit', unpack(hitinfo))
 					end
-				end
-				
 				if menu:GetVal("Misc", "Exploits", "Fake Equip") then
 					local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
 					send(self, "equip", slot)
 				end
+				return
+			else
+				if menu:GetVal("Visuals", "Misc", "Bullet Tracers") then
+					for k = 1, #args[2].bullets do
+						local bullet = args[2].bullets[k]
+						local origin = args[2].firepos
+						local attach_origin = Instance.new("Attachment", workspace.Terrain)
+						attach_origin.Position = origin
+						local ending = origin + (type(bullet[1]) == "table" and bullet[1].unit.Unit or bullet[1].Unit) * 300
+						local attach_ending = Instance.new("Attachment", workspace.Terrain)
+						attach_ending.Position = ending
+						local beam = misc:CreateBeam(attach_origin, attach_ending)
+						beam.Parent = workspace
+					end
+				end
+			end
+			
+			if menu:GetVal("Misc", "Exploits", "Fake Equip") then
+				local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
+				send(self, "equip", slot)
+			end
 			elseif args[1] == "stab" then
 				syn.set_thread_identity(1)
 				NETWORK:SetOutgoingKBPSLimit(0)
@@ -11312,7 +11312,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					table.insert(newtexts, keybind[3] .. ": " .. keybind[2])
 				end
 				text.Visible = false
-				box.Visible = false
+				if box then
+					box.Visible = false
+				end
 				box1.Visible = false
 				box2.Visible = false
 			end
@@ -11451,6 +11453,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	local oldpos = nil
 
 	local function pfkeycheck(actionName, inputState, inputObject)
+		if INPUT_SERVICE:GetFocusedTextBox() then return Enum.ContextActionResult.Sink end
 		if actionName == "BB PF check" then
 			if inputState == Enum.UserInputState.Begin then
 				------------------------------------------
@@ -11525,6 +11528,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					misc:Teleport()
 					return Enum.ContextActionResult.Sink
 				end
+				if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") then
+					local thing1, thing2 = pcall(misc.Invisibility, misc)
+					return Enum.ContextActionResult.Sink
+				end
 			end
 			-----------------------------------------
 			------------"HELD KEY ACTION"------------
@@ -11533,9 +11540,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			
 			if shitting_my_pants == false then
-				-- if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") then
-				-- 	invisibility()
-				-- end
+				
 				--[[ if menu:GetVal("Misc", "Exploits", "Super Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind") then
 					CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
 					for i = 1, 50 do
@@ -11543,7 +11548,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						send(nil, "repupdate", client.cam.cframe.p, Vector3.new(num, num, num))
 					end
 					return Enum.ContextActionResult.Sink
-				end ]] -- idk if this will even work anymore after the replication fixes
+				end]] -- idk if this will even work anymore after the replication fixes
 			end
 
 			
@@ -12337,7 +12342,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								type = "dropbox",
 								name = "Yaw",
 								value = 2,
-								values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin", "Break Killcam"}
+								values = {"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"}
 							},
 							{
 								type = "slider",
@@ -13376,14 +13381,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								doubleclick = true,
 								tooltip = "Attempts to overwhelm the server so that users are kicked for internet connection problems.\nRoblox may detect strange activity and automatically\nkick you for it before the server can crash."
 							},
-							-- {
-							-- 	type = "toggle",
-							-- 	name = "Invisibility",
-							-- 	extra = {
-							-- 		type = "keybind",
-							-- 		toggletype = 0
-							-- 	}
-							-- },
+							{
+								type = "toggle",
+								name = "Invisibility",
+								extra = {
+									type = "keybind",
+									toggletype = 0
+								}
+							},
 							{
 								type = "toggle",
 								name = "Rapid Kill",
@@ -13761,6 +13766,7 @@ K/D: %d/%d
 		
 		local oldslectedplyr = nil
 		menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
+
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				if menu.tabnames[menu.activetab] == "Settings" and menu.open then
 					game.RunService.Stepped:wait()
