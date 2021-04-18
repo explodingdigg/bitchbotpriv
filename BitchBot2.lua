@@ -262,33 +262,33 @@ end
 --validity check
 --SECTION commented these out for development 
 
-make_synreadonly(syn)
-make_synreadonly(Drawing)
-protectfunction(getgenv)
-protectfunction(getgc)
+-- make_synreadonly(syn)
+-- make_synreadonly(Drawing)
+-- protectfunction(getgenv)
+-- protectfunction(getgc)
 
-local init
-if syn then
-	init = getfenv(saveinstance).script
-end
+-- local init
+-- if syn then
+-- 	init = getfenv(saveinstance).script
+-- end
 
-script.Name = "\1"
-local function search_hookfunc(tbl)
-	for i,v in pairs(tbl) do
-		local s = getfenv(v).script
-		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
-			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
-				writefile("poop.text", "did the funny") 
-				SX_CRASH()
-				break
-			end
-		end
-	end
-end
-search_hookfunc(getgc())
-search_hookfunc = nil
+-- script.Name = "\1"
+-- local function search_hookfunc(tbl)
+-- 	for i,v in pairs(tbl) do
+-- 		local s = getfenv(v).script
+-- 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+-- 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+-- 				writefile("poop.text", "did the funny") 
+-- 				SX_CRASH()
+-- 				break
+-- 			end
+-- 		end
+-- 	end
+-- end
+-- search_hookfunc(getgc())
+-- search_hookfunc = nil
 
-if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+-- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 --!SECTION 
 
 local menuWidth, menuHeight = 500, 600 
@@ -645,7 +645,7 @@ local function UnpackRelations()
 	}
 	if str then
 		if str:find("bb:{{") then
-			writefile("bitchbot/relations.bb", "")
+			writefile("bitchbot/relations.bb", "friends:\npriority:")
 			return
 		end
 		
@@ -721,7 +721,7 @@ CreateThread(function()
 	end
 	wait(2)
 	UnpackRelations()
-	-- WriteRelations()
+	WriteRelations()
 end)
 
 
@@ -7075,6 +7075,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			CreateNotification("No such player by the name '" .. name .. "' was found in the game.")
 		end,
 		setfpscap = function(num)
+			if not num then return CreateNotification("Please provide a number.") end
 			if num < 10 then
 				CreateNotification("Can't set max FPS below 10, setting to 10.")
 				getgenv().maxfps = 10
@@ -9775,7 +9776,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					if name == "cmdlist" then
 						return func(CommandFunctions, unpack(args))
 					end
-					return func(unpack(args))
+					if func then
+						return func(unpack(args))
+					else
+						CreateNotification("Not a command, try \\cmdlist to see available commands.")
+					end
 				end
 			end
 			if args[1] == "bullethit" and menu:GetVal("Misc", "Extra", "Suppress Only") then return end
@@ -10515,25 +10520,26 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			menu.crosshair.inner[2].Visible = true
 			local ignore = {workspace.Ignore, Camera}
 			local barrel = client.logic.currentgun:isaiming() and client:GetToggledSight(client.logic.currentgun).sightpart or client.logic.currentgun.barrel
-			local trigger = barrel.Parent.Trigger
-			local hit, hitpos = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.Position, trigger.CFrame.LookVector * 100), ignore)
-			local size = 6
-			local color = menu:GetVal("Visuals", "Misc", "Laser Pointer", "color", true)
-			menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
-			menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
-			
-			menu.crosshair.inner[1].Color = color
-			menu.crosshair.inner[2].Color = color
-			
-			menu.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
-			menu.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
-			local hit2d = Camera:WorldToViewportPoint(hitpos)
+			if barrel.Parent then
+				local trigger = barrel.Parent.Trigger
+				local hit, hitpos = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.Position, trigger.CFrame.LookVector * 100), ignore)
+				local size = 6
+				local color = menu:GetVal("Visuals", "Misc", "Laser Pointer", "color", true)
+				menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
+				menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
+				
+				menu.crosshair.inner[1].Color = color
+				menu.crosshair.inner[2].Color = color
+				
+				menu.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
+				menu.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
+				local hit2d = Camera:WorldToViewportPoint(hitpos)
 
-			menu.crosshair.inner[1].Position = Vector2.new(hit2d.x - size, hit2d.y)
-			menu.crosshair.inner[2].Position = Vector2.new(hit2d.x, hit2d.y - size)
-			
-			menu.crosshair.outline[1].Position = Vector2.new(hit2d.x - size - 1, hit2d.y - 1)
-			menu.crosshair.outline[2].Position = Vector2.new(hit2d.x - 1, hit2d.y - 1 - size)
+				menu.crosshair.inner[1].Position = Vector2.new(hit2d.x - size, hit2d.y)
+				menu.crosshair.inner[2].Position = Vector2.new(hit2d.x, hit2d.y - size)			
+				menu.crosshair.outline[1].Position = Vector2.new(hit2d.x - size - 1, hit2d.y - 1)
+				menu.crosshair.outline[2].Position = Vector2.new(hit2d.x - 1, hit2d.y - 1 - size)
+			end
 		else
 			menu.crosshair.outline[1].Visible = false
 			menu.crosshair.outline[2].Visible = false
@@ -10583,13 +10589,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local misses = ragebot.predictedMisses[ply] and ragebot.predictedMisses[ply] % 7
 						local rep = repupdates[ply] and repupdates[ply][#repupdates[ply]]
 						
-						if rep and (rep.position - torso.p).Magnitude > 17 and misses > 3 then
+						if rep and torso and misses > 3 then
 							position = rep and rep.position or position 
 						end
 
 						local rep = ragebot.fakePositionsResolved[ply]
 					
-						if misses and misses > 5 and rep and (rep - torso.p).Magnitude > 17 then
+						if misses and misses > 5 and rep then
 							position = rep and rep or position 
 						end
 					end
