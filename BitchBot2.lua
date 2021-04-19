@@ -6813,11 +6813,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				rawset(garbage, "task", function(...)
 					oldtask(...)
 					if not client.superaastart then
-						if ragebot.silentVector and menu:GetVal("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then
-							client.cam.shakecframe = CFrame.lookAt(ragebot.firepos + (ragebot.firepos - client.cam.basecframe.p), ragebot.targetpart.Position)
+						if ragebot.target and menu:GetVal("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" then
+							local oldpos = client.cam.shakecframe
+							client.cam.shakecframe = CFrame.lookAt(oldpos.Position, ragebot.targetpart.Position)
 						end
 					else
 						client.cam.shakecframe = client.superaastart
+					end
+					
+					if client.logic.currentgun and menu:GetVal("Visuals", "Viewmodel", "Enabled") then
+						local a = -1 * client:GetToggledSight(client.logic.currentgun).sightspring + 1
+						local offset = CFrame.new(menu:GetVal("Visuals", "Viewmodel", "Offset X") / 10 * a, menu:GetVal("Visuals", "Viewmodel", "Offset Y") / 10 * a, menu:GetVal("Visuals", "Viewmodel", "Offset Z") / 10 * a)
+						client.cam.shakecframe *= offset
 					end
 					return
 				end)
@@ -8133,7 +8140,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local firerate = type(client.logic.currentgun.data.firerate) == "table" and client.logic.currentgun.data.firerate[1] or client.logic.currentgun.data.firerate
 				local scaledFirerate = firerate * menu:GetVal("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
 				local damage = self:GetDamage(dist, head)
-
+				damage *= client.logic.currentgun.data.pelletcount or 1  -- super shotgun cheat
 				ragebot:shoot(scaledFirerate, target, damage)
 				misc.autopeekposition = nil
 			end
@@ -8251,6 +8258,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if (cpart and theplayer and closest and firepos) and menu:GetKey("Misc", "Exploits", "Crimwalk") and menu:GetVal("Misc", "Exploits", "Disable Crimwalk on Shot") then
 				menu:SetKey("Misc", "Exploits", "Crimwalk") 
 				CreateNotification("Crimwalk disabled due to ragebot")
+				LOCAL_PLAYER.Character.HumanoidRootPart.Position = client.lastrepupdate
 			end
 			--debug.profileend("BB self GetTarget")
 			return cpart, theplayer, closest, firepos, head
@@ -9424,6 +9432,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local swingspring = debug.getupvalue(client.char.step, 15)
 			local sprintspring = debug.getupvalue(client.char.setsprint, 10)
 			local zoommodspring = debug.getupvalue(client.char.step, 1) -- sex.
+			
 			client.zoommodspring = zoommodspring -- fuck
 			
 			local oldjump = client.char.jump
@@ -10173,7 +10182,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							end
 							local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, priority_list)
-							if not targetPart and not menu:GetVal("Misc", "Extra", "Target Only Priority Players") then
+							if not targetPart then
 								targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 							end
 							legitbot.target = player
@@ -10197,7 +10206,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, priority_list)
-						if not targetPart and not menu:GetVal("Misc", "Extra", "Target Only Priority Players") then
+						if not targetPart then
 							targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
 						end
 						if targetPart and closest < fov then
@@ -10255,12 +10264,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
 				if client.logic.currentgun
 				and client.logic.currentgun.type ~= "KNIFE"
-				and INPUT_SERVICE:IsMouseButtonPressed(0)
 				and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS") then
 					if client.logic.currentgun.data.blackscope and isPlayerScoped or client.logic.currentgun.data.blackscope then
 						local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
 						local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-						local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * (client.cam.shakespring.p.Magnitude + client.zoommodspring.p^8)
+						local rcsdelta = Vector3.new(rcs.x * xo/100, rcs.y * yo/100, 0) * (client.cam.shakespring.p.Magnitude + client:GetToggledSight(client.logic.currentgun).sightspring.p ^ 4)
 						Pos += rcsdelta
 					end
 				end
@@ -10369,7 +10377,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				
 				for i, Player in pairs(players) do
 					if table.find(menu.friends, Player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then continue end
-					if not table.find(menu.priority, Player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players") then continue end
 
 					if Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
 						local Parts = client.replication.getbodyparts(Player)
@@ -12900,63 +12907,96 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					}
 				},
 				{
-					name = "Camera Visuals",
+					name = {"Camera Visuals", "Viewmodel"},
 					autopos = "right",
-					content = {
-						{
-							type = "slider",
-							name = "Camera FOV",
-							value = 85,
-							minvalue = 60,
-							maxvalue = 120,
-							stradd = "°"
-						},
-						{
-							type = "toggle",
-							name = "No Camera Bob",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "No Scope Sway",
-							value = false
-						},
-						{
-							type = "toggle",
-							name = "Disable ADS FOV",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "No Scope Border",
-							value = false,
-						},
-						{
-							type = "toggle",
-							name = "No Visual Suppression",
-							value = false,
-							tooltip = "Removes the suppression of enemies' bullets."
-						},
-						{
-							type = "toggle",
-							name = "No Gun Bob or Sway",
-							value = false,
-							tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving your mouse."
-						},
-						{
-							type = "toggle",
-							name = "Reduce Camera Recoil",
-							value = false,
-							tooltip = "Reduces camera recoil by X%. Does not affect visible weapon recoil or kick."
-						},
-						{
-							type = "slider",
-							name = "Camera Recoil Reduction",
-							value = 10,
-							minvalue = 0,
-							maxvalue = 100,
-							stradd = "%"
-						},
+					size = 240,
+					[1] = {
+						content = {
+							{
+								type = "slider",
+								name = "Camera FOV",
+								value = 85,
+								minvalue = 60,
+								maxvalue = 120,
+								stradd = "°"
+							},
+							{
+								type = "toggle",
+								name = "No Camera Bob",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "No Scope Sway",
+								value = false
+							},
+							{
+								type = "toggle",
+								name = "Disable ADS FOV",
+								value = false,
+							},
+							{
+								type = "toggle",
+								name = "No Scope Border",
+								value = false,
+							},
+							{
+								type = "toggle",
+								name = "No Visual Suppression",
+								value = false,
+								tooltip = "Removes the suppression of enemies' bullets."
+							},
+							{
+								type = "toggle",
+								name = "No Gun Bob or Sway",
+								value = false,
+								tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving your mouse."
+							},
+							{
+								type = "toggle",
+								name = "Reduce Camera Recoil",
+								value = false,
+								tooltip = "Reduces camera recoil by X%. Does not affect visible weapon recoil or kick."
+							},
+							{
+								type = "slider",
+								name = "Camera Recoil Reduction",
+								value = 10,
+								minvalue = 0,
+								maxvalue = 100,
+								stradd = "%"
+							},
+						}
+					},
+					[2] = {
+						content = {
+							{
+								type = "toggle",
+								name = "Enabled",
+								value = false
+							},
+							{
+								type = "slider",
+								name = "Offset X",
+								value = 0,
+								minvalue = -100,
+								maxvalue = 100,
+							},
+							{
+								type = "slider",
+								name = "Offset Y",
+								value = 0,
+								minvalue = -100,
+								maxvalue = 100,
+							},
+							{
+								type = "slider",
+								name = "Offset Z",
+								value = 0,
+								minvalue = -100,
+								maxvalue = 100,
+							}
+						}
 					}
 				},
 				{
@@ -13377,8 +13417,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							{
 								type = "toggle",
 								name = "Target Only Priority Players",
-								value = true,
-								tooltip = "When turned on, all modules that target players will ignore anybody that isn't on the Priority list."
+								value = false,
+								tooltip = "When turned on, all modules except for Aim Assist that target players\nwill ignore anybody that isn't on the Priority list."
 							},
 							{
 								type = "toggle",
