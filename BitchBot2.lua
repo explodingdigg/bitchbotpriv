@@ -289,6 +289,7 @@ end
 -- search_hookfunc = nil
 
 -- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+
 --!SECTION 
 
 local menuWidth, menuHeight = 500, 600 
@@ -2688,7 +2689,7 @@ function menu.Initialize(menutable)
 		if option.toggletype ~= 0 then
 			return option.relvalue
 		else
-			return option[1]
+			return false
 		end
 	end
 
@@ -8171,6 +8172,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			for i, player in next, players do
 				local usedhitscan = hitscan -- should probably do this a different way
 				if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then continue end
+				if not table.find(menu.priority, player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players") then continue end
 				if menu:GetVal("Rage", "Settings", "Aimbot Damage Prediction") and self.predictedDamageDealt[player] and self.predictedDamageDealt[player] > menu:GetVal("Rage", "Settings", "Damage Prediction Limit") then continue end
 				local misses = self.predictedMisses[player] or 1
 				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
@@ -8261,6 +8263,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 			for i, ply in ipairs(Players:GetPlayers()) do
 				if table.find(menu.friends, ply.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then continue end
+				if not table.find(menu.priority, ply.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players") then continue end
 				
 				if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
 					local parts = client.replication.getbodyparts(ply)
@@ -8275,7 +8278,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local part2, ray_pos = workspace:FindPartOnRayWithIgnoreList(Ray.new(client.cam.cframe.p - Vector3.new(0,2,0), target_direction), ignore)
 					
 					local ray_distance = (target_pos - ray_pos).Magnitude
-					
 					table.insert(results, {player = ply, part = parts.head, tppos = ray_pos, direction = target_direction, dist = target_dist, insight = ray_distance < 15 and part1 == part2})
 				end
 				
@@ -8509,7 +8511,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 						local targetPart, targetPlayer, fov, firepos, head = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
-						if not targetPart and not menu:GetVal("Rage", "Aimbot", "Target Only Priority Players") then
+						if not targetPart and not menu:GetVal("Misc", "Extra", "Target Only Priority Players") then
 							targetPart, targetPlayer, fov, firepos, head = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
 						end
 						ragebot:AimAtTarget(targetPart, targetPlayer, head, firepos)
@@ -8901,6 +8903,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							}
 						}
 						if not (table.find(menu.friends, args[1].Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")) and menu:GetVal("Misc", "Exploits", "Grenade Teleport") and args[1] ~= LOCAL_PLAYER then
+							if not table.find(menu.priority, args[1].Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players") then return end
 							fragargs.blowuptime = 1
 							
 							local killerbodyparts = client.replication.getbodyparts(args[1])
@@ -8991,7 +8994,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					if newangles.Magnitude >= 2 ^ 10 then
 						return
 					end
-					
 					return func(player, newangles)
 				end
 			end
@@ -9161,9 +9163,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local i = 1
 			local nadesent = false
 			for k,v in next, team:GetPlayers() do
-				if i >= 4 then break end
-				if not (table.find(menu.friends, v.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")) and client.hud:isplayeralive(v) then
-					i += 1
+				if client.logic.gammo <= 0 then break end
+				if table.find(menu.priority, v.Name) and client.hud:isplayeralive(v) then
 					client.logic.gammo -= 1
 					local curbodyparts = client.replication.getbodyparts(v)
 					if not curbodyparts then return end
@@ -9215,6 +9216,62 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					client.hud:updateammo("GRENADE")
 				end
 			end
+			for k,v in next, team:GetPlayers() do
+				if client.logic.gammo <= 0 then break end
+				if not (table.find(menu.friends, v.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")) and client.hud:isplayeralive(v) then
+					if not table.find(menu.friends, v.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players") then continue end
+					client.logic.gammo -= 1
+					local curbodyparts = client.replication.getbodyparts(v)
+					if not curbodyparts then return end
+					local chosenpos = math.abs((curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude) > 10
+					and curbodyparts.rootpart.Position or curbodyparts.head.Position
+					local args = {
+						"FRAG",
+						{
+							frames = {
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(0/0),
+									p0 = client.lastrepupdate or client.char.head.Position,
+									rotv = Vector3.new()
+								},
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(0/0),
+									p0 = Vector3.new(0/0),
+									rotv = Vector3.new()
+								},
+								{
+									v0 = Vector3.new(),
+									glassbreaks = {},
+									t0 = 0,
+									offset = Vector3.new(),
+									rot0 = CFrame.new(),
+									a = Vector3.new(),
+									p0 = chosenpos + Vector3.new(0, 3, 0),
+									rotv = Vector3.new()
+								}
+							},
+							time = tick(),
+							curi = 1,
+							blowuptime = 0
+						}
+					}
+					
+					send(client.net, "newgrenade", unpack(args))
+					nadesent = true
+					client.hud:updateammo("GRENADE")
+				end
+			end
+			
 			return nadesent
 		end
 
@@ -9721,7 +9778,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 		end
 		local stutterFrames = 0
-		do--ANCHOR send hook
+
+	do--ANCHOR send hook
 		client.net.send = function(self, ...)
 			local args = {...}
 			if menu and menu:GetVal("Misc", "Exploits", "Skin Changer") and args[1] == "changecamo" then
@@ -9783,12 +9841,20 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 			end
-			if args[1] == "bullethit" and menu:GetVal("Misc", "Extra", "Suppress Only") then return end
-			if args[1] == "bullethit" or args[1] == "knifehit" then
-				if table.find(menu.friends, args[2].Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then return end
+			if args[1] == "bullethit" and menu:GetVal("Misc", "Extra", "Suppress Only") then 
+				return 
 			end
-			if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then return end
-			if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then return end
+			if args[1] == "bullethit" or args[1] == "knifehit" then
+				if table.find(menu.friends, args[2].Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then 
+					return 
+				end
+			end
+			if args[1] == "stance" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Force Stance") ~= 1 then 
+				
+				return end
+			if args[1] == "sprint" and menu:GetVal("Rage", "Anti Aim", "Enabled") and menu:GetVal("Rage", "Anti Aim", "Lower Arms") then 
+				return 
+			end
 			if args[1] == "falldamage" then 
 				if menu:GetVal("Misc", "Tweaks", "Prevent Fall Damage") or misc.teleporting then
 					return 
@@ -9799,6 +9865,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local part
 				for i, player in pairs(Players:GetPlayers()) do
 					if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then continue end
+					if not table.find(menu.priority, player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players") then continue end
 					if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
 						local bodyparts = client.replication.getbodyparts(player)
 						if bodyparts then
@@ -9872,7 +9939,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 				
-				
 				if ragebot.silentVector then
 					-- duct tape fix or whatever the fuck its called for this its stupid
 					args[2].camerapos = client.lastrepupdate -- attempt to make dumping happen less
@@ -9921,26 +9987,26 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						client.sound.PlaySound("hitmarker", nil, 1, 1.5)
 						send(self, 'bullethit', unpack(hitinfo))
 					end
-				if menu:GetVal("Misc", "Exploits", "Fake Equip") then
-					local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
-					send(self, "equip", slot)
-				end
-				return
-			else
-				if menu:GetVal("Visuals", "Misc", "Bullet Tracers") then
-					for k = 1, #args[2].bullets do
-						local bullet = args[2].bullets[k]
-						local origin = args[2].firepos
-						local attach_origin = Instance.new("Attachment", workspace.Terrain)
-						attach_origin.Position = origin
-						local ending = origin + (type(bullet[1]) == "table" and bullet[1].unit.Unit or bullet[1].Unit) * 300
-						local attach_ending = Instance.new("Attachment", workspace.Terrain)
-						attach_ending.Position = ending
-						local beam = misc:CreateBeam(attach_origin, attach_ending)
-						beam.Parent = workspace
+					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
+						local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
+						send(self, "equip", slot)
+					end
+					return
+				else
+					if menu:GetVal("Visuals", "Misc", "Bullet Tracers") then
+						for k = 1, #args[2].bullets do
+							local bullet = args[2].bullets[k]
+							local origin = args[2].firepos
+							local attach_origin = Instance.new("Attachment", workspace.Terrain)
+							attach_origin.Position = origin
+							local ending = origin + (type(bullet[1]) == "table" and bullet[1].unit.Unit or bullet[1].Unit) * 300
+							local attach_ending = Instance.new("Attachment", workspace.Terrain)
+							attach_ending.Position = ending
+							local beam = misc:CreateBeam(attach_origin, attach_ending)
+							beam.Parent = workspace
+						end
 					end
 				end
-			end
 			
 			if menu:GetVal("Misc", "Exploits", "Fake Equip") then
 				local slot = menu:GetVal("Misc", "Exploits", "Fake Slot")
@@ -10060,12 +10126,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			return send(self, unpack(args))
 		end
-		--Legitbot definition defines legit functions
-		--Legitbot definition defines legit functions
-		--Legitbot definition defines legit functions
-		--Legitbot definition defines legit functions
-		--Legitbot definition defines legit functions
-		--Legitbot definition defines legit functions
+		-- Legitbot definition defines legit functions
+		-- Legitbot definition defines legit functions
+		-- Legitbot definition defines legit functions
+		-- Legitbot definition defines legit functions
+		-- Legitbot definition defines legit functions
+		-- Legitbot definition defines legit functions
 		-- Not Rage Functons Dumbass
 		
 		do -- ANCHOR Legitbot definition defines legit functions
@@ -10100,7 +10166,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local hitscan = misc:GetParts(menu:GetVal("Legit", "Aim Assist", "Hitscan Points"))
 						
 						if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2 then
-							local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+							local priority_list = {}
+							for k, PlayerName in pairs(menu.priority) do
+								if Players:FindFirstChild(PlayerName) then
+									table.insert(priority_list, game.Players[PlayerName])
+								end
+							end
+							local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, priority_list)
+							if not targetPart and not menu:GetVal("Misc", "Extra", "Target Only Priority Players") then
+								targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+							end
 							legitbot.target = player
 							local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") * 5 + 10
 							if targetPart then
@@ -10115,8 +10190,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local hnum = menu:GetVal("Legit", "Bullet Redirection", "Hitscan Priority")
 						local hitboxPriority = hnum == 1 and "head" or hnum == 2 and "torso" or hnum == 3 and false
 						local hitscan = misc:GetParts(menu:GetVal("Legit", "Bullet Redirection", "Hitscan Points"))
-						
-						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+						local priority_list = {}
+						for k, PlayerName in pairs(menu.priority) do
+							if Players:FindFirstChild(PlayerName) then
+								table.insert(priority_list, game.Players[PlayerName])
+							end
+						end
+						local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, priority_list)
+						if not targetPart and not menu:GetVal("Misc", "Extra", "Target Only Priority Players") then
+							targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+						end
 						if targetPart and closest < fov then
 							legitbot.silentVector = legitbot:SilentAimAtTarget(targetPart)
 						elseif client.logic.currentgun and client.logic.currentgun.barrel then
@@ -10145,6 +10228,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local Pos, visCheck
 				
 				if menu:GetVal("Legit", "Aim Assist", "Adjust for Bullet Drop") then
+					if not client.logic.currentgun or not client.logic.currentgun.data or not client.logic.currentgun.data.bulletspeed then return end
 					local bulletVelocity, bulletTravelTime = client.trajectory(client.cam.cframe.p, GRAVITY, targetPart.Position, client.logic.currentgun.data.bulletspeed)
 					local finalPosition
 					if menu:GetVal("Legit", "Aim Assist", "Target Prediction") then
@@ -10285,6 +10369,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				
 				for i, Player in pairs(players) do
 					if table.find(menu.friends, Player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then continue end
+					if not table.find(menu.priority, Player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players") then continue end
+
 					if Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
 						local Parts = client.replication.getbodyparts(Player)
 						if Parts then
@@ -10958,7 +11044,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									wepesp[1][gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 25))
 								end
 								if menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") then
-									wepesp[2][gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
+									if v.Spare then
+										wepesp[2][gunnum].Text = "[ "..tostring(v.Spare.Value).." ]"
+									end
 									wepesp[2][gunnum].Color = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color", true)
 									wepesp[2][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color")[4] * gunclearness /255
 									wepesp[2][gunnum].Visible = true
@@ -12191,11 +12279,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							value = 1,
 							values = {"Head", "Body"}
 						},
-						{
-							type = "toggle",
-							name = "Target Only Priority Players",
-							value = false
-						},
 					},
 				},
 				{
@@ -13275,6 +13358,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							},
 							{
 								type = "toggle",
+								name = "Target Only Priority Players",
+								value = true,
+								tooltip = "When turned on, all modules that target players will ignore anybody that isn't on the Priority list."
+							},
+							{
+								type = "toggle",
 								name = "Suppress Only",
 								value = false,
 								tooltip = "When turned on, bullets do not deal damage."
@@ -13445,9 +13534,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								name = "Vertical Floor Clip",
 								value = false,
 								extra = {
-									type = "keybind"
+									type = "keybind",
+									toggletype = 0,
 								},
-								tooltip = "Teleports you 19 studs under the ground. Must be over glass or non-collidable parts to work. \nHold Alt to go up, and Shift to go forwards."
+								tooltip = "Teleports you 19 studs under the ground. Must be over glass or non-collidable parts to work. \nHold Alt to go up, and Shift to go forwards.",
 							},
 							{
 								type = "toggle",
