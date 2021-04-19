@@ -6625,7 +6625,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			[2] = {}, --gradient
 			[3] = {}, --outlines
 			[4] = {}, --text
-		} -- shitty keybinds
+		} -- shitty keybinds --keybinds -- keybinds
 	}
 
 	local allespnum = #allesp
@@ -6647,7 +6647,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	for i = 1, 50 do
 		Draw:FilledRect(false, 20, 20, 2, 20, {this_is_really_ugly, this_is_really_ugly, this_is_really_ugly, 255}, allesp[10][3])
 	end
-	for i = 1, 15 do
+	for i = 1, 17 do
 		Draw:FilledRect(false, 0, 0, 10, 1, {50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255}, allesp[10][2])
 	end
 	for i = 1, 50 do
@@ -11392,7 +11392,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local sizetype = menu:GetVal("Visuals", "Keybinds", "Use List Sizes")
 			local posy = SCREEN_SIZE.y / 2
 			local margin = SCREEN_SIZE.y / 2
-			local posx = menu.stat_menu and 330 or 5
+			local posx = menu.stat_menu and 330 or 10
 			local col = menu:GetVal("Visuals", "Keybinds", "Enabled", "color", true)
 			local transparency = menu:GetVal("Visuals", "Keybinds", "Enabled", "color")[4] / 255	
 			local newtexts = 	{}
@@ -11413,18 +11413,25 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				box2.Visible = false
 			end
 			table.sort(newtexts, function(s, s1) return #s > #s1 end) -- i hate this shit
-			
+			table.insert(newtexts, 1, "Keybinds")
 			local maxwidth = Vector2.new(0, 0)
+			for i = 1, #newtexts do
+				local text = texts[4][i]
+				text.Center = false
+				text.Text = newtexts[i]
+				if i <= 2 then
+					local newthing = Vector2.new(text.TextBounds.x + 4, text.TextBounds.y)
+					if newthing.x > maxwidth.x then
+						maxwidth = newthing
+					end
+				end
+			end
 			for i = 1, #newtexts do
 				local box1 = texts[1][i]
 				local box = texts[3][i]
 				local text = texts[4][i]
-				text.Center = false
 				text.Position = Vector2.new(posx + 2, margin)
-				text.Text = newtexts[i]
-				if i == 1 then
-					maxwidth = Vector2.new(text.TextBounds.x + 4, text.TextBounds.y)
-				end
+				
 				text.Color = col
 				text.Transparency = transparency
 				text.Visible = true
@@ -11432,24 +11439,35 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				box.Visible = true
 				
 				
-				box1.Position = Vector2.new(posx-1, margin-1)
+				box1.Position = Vector2.new(posx-1, margin-3)
 				box1.Visible = true
 				
 				box1.Color = Color3.new(0, 0, 0)
 
 
-				if sizetype then
-					box.Size = text.TextBounds + Vector2.new(4, 2)
-					box1.Size = text.TextBounds + Vector2.new(6, 4)
+				if sizetype and i ~= 1 then
+					box.Size = text.TextBounds + Vector2.new(4, 3)
+					box1.Size = text.TextBounds + Vector2.new(6, 7)
 				else
-					box.Size = maxwidth+Vector2.new(0,2)
-					box1.Size = maxwidth+Vector2.new(2,4)
+					box.Size = maxwidth+Vector2.new(0,3)
+					box1.Size = maxwidth+Vector2.new(2,7)
 				end
 				margin += 15
+				margin += i == 1 and 2 or 0
 			end
 			for i = 1, 15 do
 				local box = texts[2][i]
 				box.Position = Vector2.new(posx, posy + i - 1)
+				box.Size = Vector2.new(maxwidth.x, 1)
+				box.Visible = true
+			end
+			for i = 1, 2 do
+				local k = i + 15
+				local box = texts[2][k]
+				local color = (menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color", true) or Color3.fromRGB(127, 72, 163))
+				color = i == 1 and color or Color3.fromRGB(color.R*255-40,color.G*255-40,color.B*255-40) -- super shit
+				box.Color = color
+				box.Position = Vector2.new(posx, posy + i - 3)
 				box.Size = Vector2.new(maxwidth.x, 1)
 				box.Visible = true
 			end
