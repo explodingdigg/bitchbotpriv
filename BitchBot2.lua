@@ -2589,7 +2589,7 @@ function menu.Initialize(menutable)
 	end
 
 	function menu:InputBeganKeybinds(key) -- this is super shit because once we add mouse we need to change all this shit to be the contextaction stuff 
-		if INPUT_SERVICE:GetFocusedTextBox() then return end
+		if INPUT_SERVICE:GetFocusedTextBox() or menu.textboxopen then return end
 		for i = 1, #self.keybinds do
 			local value = self.keybinds[i][1]
 			if key.KeyCode == value[5][1] then
@@ -11453,7 +11453,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					box1.Size = maxwidth+Vector2.new(2,7)
 				end
 				margin += 15
-				margin += i == 1 and 2 or 0
 			end
 			for i = 1, 15 do
 				local box = texts[2][i]
@@ -11566,6 +11565,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 	local function pfkeycheck(actionName, inputState, inputObject)
 		if INPUT_SERVICE:GetFocusedTextBox() then return Enum.ContextActionResult.Sink end
+		if INPUT_SERVICE:GetFocusedTextBox() or menu.textboxopen then return Enum.ContextActionResult.Sink end
 		if actionName == "BB PF check" then
 			if inputState == Enum.UserInputState.Begin then
 				------------------------------------------
