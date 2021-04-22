@@ -9185,6 +9185,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if not rootpart then return end
 			if self.newroot then
 				self.newroot:Destroy()
+				self.newroot = nil
 				return CreateNotification("Disabled Invisibility")
 			end
 
