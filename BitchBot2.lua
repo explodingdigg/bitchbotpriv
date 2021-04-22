@@ -84,7 +84,6 @@ do
 	end
 	
 	local function Text(text)
-		
 		local s = DrawingObject("Text", Color3.new(1,1,1))
 		
 		s.Text = text
@@ -6873,7 +6872,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	end
 
 	client.loadedguns = getupvalue(client.char.unloadguns, 2) -- i hope this works
-	
+	client.lastrepupdate = Vector3.new(-10000,-10000,-1000) --- this is super shit
 	client.roundsystem.lock = nil -- we do a little trolling
 
 	client.lastlock = false -- fucking dumb
@@ -7968,6 +7967,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		ragebot.predictedDamageDealtRemovals = {}
 		ragebot.predictedMisses = {}
 		ragebot.predictedShotAt = {}
+		ragebot.resolverType = {}
 		ragebot.fakePositionsResolved = {}
 		ragebot.firsttarget = nil
 		ragebot.spin = 0
@@ -8074,23 +8074,26 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			return penetrated, exited, step_pos
 		end
 
+
 		function ragebot:GetResolvedPosition(player, curbodyparts)
 			local resolvedPosition
-			local misses = self.predictedMisses[player] and self.predictedMisses[player] % 7
-			if misses and misses > 2 then
+			local misses = self.predictedMisses[player]
+			local modmisses = misses and misses % 5
+			if misses and modmisses > 2 and misses < 16 then
 				curbodyparts = curbodyparts or client.replication.getbodyparts(player)
 				if not curbodyparts or not client.hud:isplayeralive(player) then return end
-					if misses then
+					if modmisses then
 					local rep = repupdates[player] and repupdates[player][#repupdates[player]]
 					
-					if rep and torso and misses > 3 then
-						resolvedPosition = rep and rep.position or resolvedPosition 
+					if rep and rep.position and torso and modmisses > 3 then
+						resolvedPosition = rep.position
 					end
 
 					local rep = self.fakePositionsResolved[player]
 				
-					if (misses and misses > 5 and rep) or (rep and (rep - curbodyparts.torso.Position).Magnitude > 18) then
-						resolvedPosition = rep and rep or resolvedPosition 
+					if rep and (modmisses > 4 or (rep - curbodyparts.torso.Position).Magnitude > 18) then
+						CreateNotification("This worx")
+						resolvedPosition = rep
 					end
 				end
 			end
@@ -8216,7 +8219,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local resolvertype = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shifting")
 			--local campos = client.cam.basecframe
 			local zerocf = client.cam.basecframe - client.cam.basecframe.p
-			local campos = origin or zerocf + client.lastrepupdate
+			local campos = origin or zerocf + (client.lastrepupdate or client.cam.cframe.p)
 			local camposreal = keybindtoggles.fakebody and campos - Vector3.new(0, client.fakeoffset, 0) or campos
 			local camposv3 = camposreal.p
 			local firepos
@@ -8452,14 +8455,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		local function getHitboxShift(person, bodypart, position)
 			local misses = ragebot.predictedMisses[person] or 0
 			local HITBOX_SHIFT_TOTAL = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shift Distance")
-			local HITBOX_SHIFT_AMOUNT = HITBOX_SHIFT_TOTAL/2
+			local HITBOX_SHIFT_AMOUNT = HITBOX_SHIFT_TOTAL
+			local HITBOX_SHIFT_SIZE = 1
 			local pullAmount = clamp((HITBOX_SHIFT_AMOUNT - HITBOX_SHIFT_AMOUNT * misses / 10), 2, HITBOX_SHIFT_AMOUNT) 
-			local shiftSize = clamp(HITBOX_SHIFT_AMOUNT - misses, 1, HITBOX_SHIFT_AMOUNT)
+			-- local shiftSize = clamp(HITBOX_SHIFT_SIZE - misses, 1, HITBOX_SHIFT_SIZE)
 			local pullVector = (bodypart.Position - position).Unit * pullAmount
 			local newTargetPosition = bodypart.Position - pullVector
-			sphereHitbox.Size = Vector3.new(shiftSize, shiftSize, shiftSize)
+			sphereHitbox.Size = Vector3.new(HITBOX_SHIFT_SIZE, HITBOX_SHIFT_SIZE, HITBOX_SHIFT_SIZE)
 			sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
-			return sphereHitbox, {[sphereHitbox] = true}, pullAmount, shiftSize
+			return sphereHitbox, {[sphereHitbox] = true}, pullAmount, HITBOX_SHIFT_SIZE
 		end
 
 		function ragebot:HitscanOnAxes(origin, person, bodypart, hitboxshift)
@@ -8491,6 +8495,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position, hitbox, client.logic.currentgun.data.penetrationdepth, whitelist)
 
 				if pen then
+					CreateNotification(tostring(dist) .. " " .. tostring(thick))
 					hitscanPoints[8] += 1
 					return position, bulletintersection
 				end
@@ -8505,6 +8510,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 					local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, hitbox, client.logic.currentgun.data.penetrationdepth, whitelist)
 					if pen then
+						CreateNotification(tostring(dist) .. " " .. tostring(thick))
 						hitscanPoints[i] += 1
 						return position.p, bulletintersection
 					else
@@ -8996,6 +9002,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if found9 then
 				clienteventfuncs[hash] = function(bulletdata)
 					ragebot.fakePositionsResolved[bulletdata.player] = bulletdata.firepos
+					local misses = ragebot.predictedMisses[bulletdata.player]
+					if misses and misses > 16 then
+						ragebot.predictedMisses[bulletdata.player] = 5
+					end
 					local vec = Vector3.new()
 					for k, bullet in next, bulletdata.bullets do
 						if typeof(bullet) ~= "Vector3" then
@@ -9169,42 +9179,43 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			return beam
 		end
 		function misc:Invisibility()
-			if not self.tpavailable then return end
-			self.tpavailable = false
-			if self.model then
-				self.model:Destroy()
-				self.model = nil
-			end
+
 			local char = LOCAL_PLAYER.Character
+			local rootpart = char:FindFirstChild("HumanoidRootPart")
+			if not rootpart then return end
+			if self.newroot then
+				self.newroot:Destroy()
+				return CreateNotification("Disabled Invisibility")
+			end
 
 			self.teleporting = false
 
-			local cf = char:FindFirstChild("HumanoidRootPart").CFrame
-			local hv = char:FindFirstChild("HumanoidRootPart").Velocity
+			local cf = rootpart.CFrame
+			local hv = rootpart.Velocity
 
-			char:FindFirstChild("HumanoidRootPart").Velocity = Vector3.new(0, math.random(-9e9, 9e9), 0)
-			char:FindFirstChild("HumanoidRootPart").CFrame = cf + Vector3.new(0, math.random(-9e9, 9e9), 0)
+			rootpart.Velocity = Vector3.new(0, 900, 0)
+			rootpart.CFrame = cf + Vector3.new(0, 9e9, 0)
 
 			self.teleporting = true
 
 			wait(0.2)
 
-			self.model = Instance.new("Model", workspace)
-			for k, v in next, char:GetChildren() do
-				if v:IsA"BasePart" then
-					copy = v:Clone()
-					v.Parent = self.model
-					v.CFrame = cf + Vector3.new(-math.huge, -math.huge, -math.huge)
-					v.Velocity = Vector3.new(-math.huge, -math.huge, -math.huge)
-					copy.Parent = char
-				end
-			end
+			
+			copy = rootpart:Clone()
+			rootpart.CFrame = cf + Vector3.new(-math.huge, -math.huge, -math.huge)
+			rootpart.Velocity = Vector3.new(-math.huge, -math.huge, -math.huge)
+			copy.Parent = char
+
 
 			wait(0.2)
 
-			char:FindFirstChild("HumanoidRootPart").Velocity = Vector3.new()
-			char:FindFirstChild("HumanoidRootPart").CFrame = cf
 			self.teleporting = false
+
+			copy.Velocity = Vector3.new()
+			copy.CFrame = cf
+			self.newroot = copy
+
+			return CreateNotification("Enabled Invisibility")
 		end
 		function misc:RapidKill()
 			local team = LOCAL_PLAYER.Team.Name == "Phantoms" and game.Teams.Ghosts or game.Teams.Phantoms
@@ -9841,7 +9852,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				args[6].BrickProperties.Material = mats[menu:GetVal("Misc", "Exploits", "Skin Material")]
 			end
 			if args[1] == "spawn" then
-				misc.tpavailable = true
+				misc.model = nil
 				misc:ApplyGunMods()
 				misc.autopeektimeout = 100
 			end
@@ -11685,7 +11696,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					return Enum.ContextActionResult.Sink
 				end
 				if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind") then
-					local thing1, thing2 = pcall(misc.Invisibility, misc)
+					local thing1, thing2 = misc:Invisibility()
 					return Enum.ContextActionResult.Sink
 				end
 			end
@@ -12381,6 +12392,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							value = 16,
 							minvalue = 1,
 							maxvalue = 30,
+							stradd = " studs"
 						},
 						{
 							type = "combobox",
