@@ -7332,7 +7332,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			[4] = {},
 			[5] = {},
 		},
-		[2] = { [1] = {}, [2] = {}, [3] = {} }, -- box
+		[2] = { [1] = {}, [2] = {}, [3] = {}, [4] = {}}, -- box
 		[3] = { -- hp
 			[1] = {},
 			[2] = {},
@@ -7569,8 +7569,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						client.cam.shakecframe = client.superaastart
 					end
 
-					if client.logic.currentgun and menu:GetVal("Visuals", "Viewmodel", "Enabled") and client.logic.currentgun.type ~= "KNIFE"
-					then
+					if client.logic.currentgun and menu:GetVal("Visuals", "Viewmodel", "Enabled") and client.logic.currentgun.type ~= "KNIFE" then
 						local a = -1 * client:GetToggledSight(client.logic.currentgun).sightspring.p + 1
 						local offset = CFrame.Angles(
 							math.rad(menu:GetVal("Visuals", "Viewmodel", "Pitch")) * a,
@@ -8047,6 +8046,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	client.fake3pcharloaded = false
 	client.loadplayer(LOCAL_PLAYER)
 	client.fakeupdater = client.getupdater(LOCAL_PLAYER)
+	if client.char.rootpart then
+		-- client.fakerootpart.CFrame = client.char.rootpart.CFrame
+		-- local rootpartpos = client.char.rootpart.Position
+
+		local fakeupdaterupvals = debug.getupvalues(client.fakeupdater.step)
+		fakeupdaterupvals[4].p = Vector3.new()
+		fakeupdaterupvals[4].t = Vector3.new()
+		fakeupdaterupvals[4].v = Vector3.new()
+	end
 	debug.setupvalue(client.loadplayer, 1, LOCAL_PLAYER)
 
 	client.fakeplayer.Parent = nil
@@ -8837,18 +8845,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if not curbodyparts or not client.hud:isplayeralive(player) then
 				return
 			end
+			if modmisses and modmisses > 1 then
+				local rep = repupdates[player] and repupdates[player][#repupdates[player]]
 
-			local rep = repupdates[player] and repupdates[player][#repupdates[player]]
-
-			if rep and (rep.position - curbodyparts.torso.Position).Magnitude > 18 and curbodyparts.torso then
-				resolvedPosition = rep.position
-			end
-			-- if misses and misses > 2 then
-				-- local rep = self.fakePositionsResolved[player]
-				if --[[rep and ]](modmisses and (curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude > 18) then
-					resolvedPosition = curbodyparts.rootpart.Position
+				if rep and (rep.position - curbodyparts.torso.Position).Magnitude > 18 and curbodyparts.torso then
+					resolvedPosition = rep.position
 				end
-			-- end
+			end
+			if (curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude > 18 then
+				resolvedPosition = curbodyparts.rootpart.Position
+			end
 			
 			return resolvedPosition
 		end
@@ -8975,7 +8981,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 			local autowall = menu:GetVal("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = menu:GetVal("Rage", "Hack vs. Hack", "Autowall Hitscan")
-			local resolvertype = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shifting")
+			local hitboxshift = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shifting")
 			--local campos = client.cam.basecframe
 			local zerocf = client.cam.basecframe - client.cam.basecframe.p
 			local campos = origin or zerocf + (client.lastrepupdate or client.cam.cframe.p)
@@ -9009,12 +9015,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local resolved = false
 						if resolvedPosition then
 							resolved = true
-							resolverHitbox.Position = resolvedPosition
+							
+							-- resolverHitbox.Position = resolvedPosition
 						end
 						for k, bone in next, curbodyparts do
 							if bone.ClassName == "Part" and usedhitscan[k] then
-								local newbone = resolved and resolverHitbox or bone
+								-- local newbone = resolved and resolverHitbox or bone
+								local newbone = {Position = resolvedPosition or bone.Position}
 								local fovToBone = camera:GetFOV(newbone)
+								
 								if fovToBone < aimbotFov or aimbotFov > 180 then -- Awesome
 									if camera:IsVisible(newbone, newbone.Parent, camposv3) then
 										if fovToBone < closest then
@@ -9039,7 +9048,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											continue
 										end
 										if aw_resolve then
-											local axisPosition, bulletintersection = self:HitscanOnAxes(camposreal, player, newbone, resolvertype)
+											local axisPosition, bulletintersection = self:HitscanOnAxes(camposreal, player, newbone, hitboxshift)
 											if axisPosition then
 												self.firepos = axisPosition
 												cpart = bone
@@ -9267,7 +9276,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 		StatMenuRendered:connect(function(text)
 			text.Text ..= string.format("\n--hitscan--\npoint1: %d point2: %d\npoint3: %d point4: %d\npoint5: %d point6: %d\npoint7: %d point8: %d", unpack(hitscanPoints))
-			text.Text ..= string.format("\n--hitbox shift--\npoint1: %d\npoint2: %d\npoint3: %d", unpack(hitscanPoints))
+			text.Text ..= string.format("\n--hitbox shift--\npoint1: %d\npoint2: %d\npoint3: %d", unpack(hitboxShiftPoints))
 		end)
 		local shiftmode = 1
 		local shiftmodes = {
@@ -9288,19 +9297,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local misses = ragebot.predictedMisses[person] or 0
 			local HITBOX_SHIFT_TOTAL = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shift Distance")
 			local HITBOX_SHIFT_AMOUNT = HITBOX_SHIFT_TOTAL
-			local HITBOX_SHIFT_SIZE = 1
-			local pullAmount = clamp(
+			local HITBOX_SHIFT_SIZE = clamp(
 				(HITBOX_SHIFT_AMOUNT - HITBOX_SHIFT_AMOUNT * misses / 10),
 				HITBOX_SHIFT_AMOUNT / 5,
 				HITBOX_SHIFT_AMOUNT
 			)
+			local pullAmount = 1
 			-- local shiftSize = clamp(HITBOX_SHIFT_SIZE - misses, 1, HITBOX_SHIFT_SIZE)
 
 			local pullVector = shiftmodes[shiftmode](bodypart, position, LOCAL_PLAYER.Character.HumanoidRootPart)  * pullAmount
 			local newTargetPosition = bodypart.Position - pullVector
 			sphereHitbox.Size = Vector3.new(HITBOX_SHIFT_SIZE, HITBOX_SHIFT_SIZE, HITBOX_SHIFT_SIZE)
 			sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
-
 			return sphereHitbox, { [sphereHitbox] = true }, shiftmode
 		end
 
@@ -9340,6 +9348,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local pen, exited, bulletintersection = ragebot:CanPenetrate(position, hitbox, client.logic.currentgun.data.penetrationdepth, whitelist)
 
 				if pen then
+					if hitboxshift then
+						hitboxShiftPoints[method] += 1
+					end
 					hitscanPoints[8] += 1
 					return position, bulletintersection
 				end
@@ -9354,6 +9365,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 					local pen, exited, bulletintersection = ragebot:CanPenetrate(position.p, hitbox, client.logic.currentgun.data.penetrationdepth, whitelist)
 					if pen then
+						if hitboxshift then
+							hitboxShiftPoints[method] += 1
+						end
 						hitscanPoints[i] += 1
 						return position.p, bulletintersection
 					else
@@ -10095,6 +10109,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					self.newroot:Destroy()
 					self.newroot = nil
 				else
+
 					rootpart.CFrame = self.newroot.CFrame
 				end
 			end
@@ -10981,7 +10996,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						
 						if not ragebot.intersection then
 							ragebot.intersection = ragebot.targetpart.Position
-							CreateNotification("FAIL")
 						end
 						-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
 						-- properly when you're using Aimbot Performance Mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
@@ -11846,6 +11860,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local health = math.ceil(client.hud:getplayerhealth(ply))
 							local spoty = 0
 							local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", "color")[4] / 255
+							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Filled Box", "color")[4] / 255
 
 							local distance = math.floor((parts.rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
 
@@ -11895,7 +11910,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								if menu.options["Visuals"][GroupBox]["Box"][1] then
 									--debug.profilebegin("renderVisuals Player ESP Render Box " .. ply.Name)
 									for i = -1, 1 do
-										local box = allesp[2][i + 2][curplayer]
+										local box = allesp[2][i + 3][curplayer]
 										box.Visible = true
 										box.Position = boxPosition + Vector2.new(i, i)
 										box.Size = boxSize - Vector2.new(i * 2, i * 2)
@@ -11908,6 +11923,28 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									end
 									--debug.profileend("renderVisuals Player ESP Render Box " .. ply.Name)
 								end
+								if menu.options["Visuals"][GroupBox]["Filled Box"][1] then
+									--debug.profilebegin("renderVisuals Player ESP Render Box " .. ply.Name)
+
+									local box = allesp[2][1][curplayer]
+									box.Visible = true
+									box.Position = boxPosition
+									box.Size = boxSize
+									if not menu.options["Visuals"][GroupBox]["Box"][1] then
+										box.Position -= Vector2.new(1,1)
+										box.Size += Vector2.new(2,2)
+									end
+									box.Transparency = boxtransparencyfilled
+									box.Filled = true
+
+									if i ~= 0 then
+										box.Color = RGB(20, 20, 20)
+									end
+									--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
+
+									--debug.profileend("renderVisuals Player ESP Render Box " .. ply.Name)
+								end
+								
 
 								if menu.options["Visuals"][GroupBox]["Health Bar"][1] then
 									--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. ply.Name)
@@ -12039,12 +12076,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 								--da colourz !!! :D 🔥🔥🔥🔥
 
-								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, ply.Name)
-								then
+								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, ply.Name) then
 									allesp[4][1][curplayer].Color = priority_color
 									allesp[4][1][curplayer].Transparency = priority_alpha
 
-									allesp[2][2][curplayer].Color = priority_color
+									allesp[2][3][curplayer].Color = priority_color
+									allesp[2][1][curplayer].Color = priority_color
 
 									allesp[4][2][curplayer].Color = priority_color
 									allesp[4][2][curplayer].Transparency = priority_alpha
@@ -12062,7 +12099,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[4][1][curplayer].Color = friend_color
 									allesp[4][1][curplayer].Transparency = friend_alpha
 
-									allesp[2][2][curplayer].Color = friend_color
+									allesp[2][1][curplayer].Color = friend_color
+									allesp[2][3][curplayer].Color = friend_color
 
 									allesp[4][2][curplayer].Color = friend_color
 									allesp[4][2][curplayer].Transparency = friend_alpha
@@ -12082,7 +12120,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[4][1][curplayer].Color = target_color
 									allesp[4][1][curplayer].Transparency = target_alpha
 
-									allesp[2][2][curplayer].Color = target_color
+									allesp[2][3][curplayer].Color = target_color
+									allesp[2][1][curplayer].Color = target_color
 
 									allesp[4][2][curplayer].Color = target_color
 									allesp[4][2][curplayer].Transparency = target_alpha
@@ -12099,7 +12138,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[4][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Name", "color", true) -- RGB(menu.options["Visuals"][GroupBox]["Name"][5][1][1], menu.options["Visuals"][GroupBox]["Name"][5][1][2], menu.options["Visuals"][GroupBox]["Name"][5][1][3])
 									allesp[4][1][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Name", "color")[4] / 255
 
-									allesp[2][2][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", "color", true)
+									allesp[2][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", "color", true)
+									allesp[2][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Filled Box", "color", true)
 
 									allesp[4][2][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color", true)
 									allesp[4][2][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color")[4] / 255
@@ -13264,7 +13304,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								if client.char.rootpart then
 									client.fakerootpart.CFrame = client.char.rootpart.CFrame
 									local rootpartpos = client.char.rootpart.Position
-
+									local fakeupdaterupvals = debug.getupvalues(client.fakeupdater.step)
 									fakeupdaterupvals[4].p = rootpartpos
 									fakeupdaterupvals[4].t = rootpartpos
 									fakeupdaterupvals[4].v = Vector3.new()
@@ -13863,7 +13903,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						{
 							name = { "Enemy ESP", "Team ESP", "Local" },
 							autopos = "left",
-							size = 288,
+							size = 300,
 							[1] = {
 								content = {
 									{
@@ -13894,6 +13934,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											type = "single colorpicker",
 											name = "Enemy Box",
 											color = { 255, 0, 0, 150 },
+										},
+									},
+									{
+										type = "toggle",
+										name = "Filled Box",
+										value = false,
+										extra = {
+											type = "single colorpicker",
+											name = "Enemy Filled Box",
+											color = { 255, 0, 0, 90 },
 										},
 									},
 									{
@@ -14011,6 +14061,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											type = "single colorpicker",
 											name = "Team Box",
 											color = { 0, 255, 0, 150 },
+										},
+									},
+									{
+										type = "toggle",
+										name = "Filled Box",
+										value = false,
+										extra = {
+											type = "single colorpicker",
+											name = "Team Filled Box",
+											color = { 0, 255, 0, 90 },
 										},
 									},
 									{
