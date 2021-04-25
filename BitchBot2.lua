@@ -3973,6 +3973,7 @@ function menu.Initialize(menutable)
 					end
 				end
 			end
+			local newdropbox_open
 			for k, v in pairs(menu.options) do
 				if menu.tabnames[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
@@ -4151,11 +4152,11 @@ function menu.Initialize(menutable)
 												v2[6]
 											)
 											v2[5] = true
-											menu.dropbox_open = v2
+											newdropbox_open = v2
 										else
 											set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 											v2[5] = false
-											menu.dropbox_open = nil
+											newdropbox_open = nil
 										end
 									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) and v2[5]
 									then
@@ -4171,7 +4172,7 @@ function menu.Initialize(menutable)
 												v2[1] = i
 												set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 												v2[5] = false
-												menu.dropbox_open = nil
+												newdropbox_open = nil
 											end
 										end
 
@@ -4199,11 +4200,11 @@ function menu.Initialize(menutable)
 												v2[6]
 											)
 											v2[5] = true
-											menu.dropbox_open = v2
+											newdropbox_open = v2
 										else
 											set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 											v2[5] = false
-											menu.dropbox_open = nil
+											newdropbox_open = nil
 										end
 									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) and v2[5]
 									then
@@ -4309,6 +4310,7 @@ function menu.Initialize(menutable)
 					end
 				end
 			end
+			menu.dropbox_open = newdropbox_open
 		end
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
@@ -8846,6 +8848,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				return
 			end
 			if modmisses and modmisses > 1 then
+				print(modmisses)
 				local rep = repupdates[player] and repupdates[player][#repupdates[player]]
 
 				if rep and (rep.position - curbodyparts.torso.Position).Magnitude > 18 and curbodyparts.torso then
@@ -8854,6 +8857,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			if (curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude > 18 then
 				resolvedPosition = curbodyparts.rootpart.Position
+			end
+			if modmisses and modmisses > 3 then
+				local rep = self.fakePositionsResolved[player]
+				
+				if rep and (modmisses > 4 or (rep - curbodyparts.torso.Position).Magnitude > 18) then
+					resolvedPosition = rep
+				end
 			end
 			
 			return resolvedPosition
