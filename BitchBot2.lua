@@ -605,7 +605,7 @@ local NETWORK = game:service("NetworkClient")
 local NETWORK_SETTINGS = settings().Network
 NETWORK:SetOutgoingKBPSLimit(0)
 
-setfpscap(maxfps or 144)
+setfpscap(getgenv().maxfps or 144)
 
 if not isfolder("bitchbot") then
 	makefolder("bitchbot")
@@ -3178,13 +3178,15 @@ function menu.Initialize(menutable)
 
 	function menu:GetKey(tab, groupbox, name)
 		local option = self.options[tab][groupbox][name][5]
-		if option.toggletype ~= 0 then
-			if option.lastvalue == nil then
-				option.lastvalue = option.relvalue
+		if self:GetVal(tab, groupbox, name) then
+			if option.toggletype ~= 0 then
+				if option.lastvalue == nil then
+					option.lastvalue = option.relvalue
+				end
+				return option.relvalue, option.lastvalue, option.event
+			else
+				return false
 			end
-			return option.relvalue, option.lastvalue, option.event
-		else
-			return false
 		end
 	end
 
@@ -4481,9 +4483,7 @@ function menu.Initialize(menutable)
 		-- i wish it showed comment dates that would be cool
 		-- nah that would suck fk u (comment made on 3/4/2021 3:35 pm est by bitch)
 
-		if menu.lastActive ~= menu.windowactive then
-			setfpscap(menu.windowactive and (maxfps or 144) or 15)
-		end
+		
 		menu.lastActive = menu.windowactive
 		for button, time in next, buttonsInQue do
 			if time and tick() - time < doubleclickDelay then
@@ -4695,10 +4695,15 @@ function menu.Initialize(menutable)
 					end
 				end
 			end
-
+			menu.inmenu = LOCAL_MOUSE.x > menu.x and LOCAL_MOUSE.x < menu.x + menu.w and LOCAL_MOUSE.y > menu.y - 32 and LOCAL_MOUSE.y < menu.y + menu.h
+			menu.inmiddlemenu = LOCAL_MOUSE.x > menu.x + 9 and LOCAL_MOUSE.x < menu.x + menu.w - 9 and LOCAL_MOUSE.y > menu.y - 9 and LOCAL_MOUSE.y < menu.y + menu.h - 47
 			if (
-					(
+					--[[(
 						LOCAL_MOUSE.x > menu.x and LOCAL_MOUSE.x < menu.x + menu.w and LOCAL_MOUSE.y > menu.y - 32 and LOCAL_MOUSE.y < menu.y - 11
+					)]]
+					(
+						menu.inmenu and 
+						not menu.inmiddlemenu
 					) or menu.dragging
 				) and not menu.dontdrag
 			then
@@ -4710,7 +4715,19 @@ function menu.Initialize(menutable)
 					end
 					menu.x = (original_menu_X - clickspot_x) + LOCAL_MOUSE.x
 					menu.y = (original_menu_y - clickspot_y) + LOCAL_MOUSE.y - 36
-					
+					if menu.y < 0 then
+						menu.y = 0
+					end
+					if menu.x < -menu.w / 4 * 3 then
+						menu.x = -menu.w / 4 * 3
+					end
+					if menu.x + menu.w / 4 > SCREEN_SIZE.x then
+						menu.x = SCREEN_SIZE.x - menu.w / 4
+					end
+					if menu.y > SCREEN_SIZE.y - 20 then
+						menu.y = SCREEN_SIZE.y - 20
+					end
+					menu:SetMenuPos(menu.x, menu.y)
 				else
 					menu.dragging = false
 				end
@@ -4908,7 +4925,6 @@ local avgfps = 100
 -- fixed ur shitty fps counter
 local StatMenuRendered = event.new("StatMenuRendered")
 menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --ANCHOR MENU HEARTBEAT
-	menu:SetMenuPos(menu.x, menu.y)
 	if menu.y < 0 then
 		menu.y = 0
 		menu:SetMenuPos(menu.x, 0)
@@ -6462,6 +6478,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 				-- local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
 				local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1.3) + cam.UpVector)
 				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 3) - cam.UpVector)
+				
 
 				local minY = math.abs(bottom.y - top.y)
 				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
@@ -7276,39 +7293,46 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 	menu.activetab = 5
 	menu.annoylist = table.create(game.Players.MaxPlayers - 1)
-	local indicator = Instance.new("Part", workspace)
-	local sphereHitbox = Instance.new("Part", workspace)
-	local resolverHitbox = Instance.new("Part", workspace)
-	sphereHitbox.Name = "abcdefg"
+	menu.parts = {}
+	menu.parts.indicator = Instance.new("Part", workspace)
+	menu.parts.sphereHitbox = Instance.new("Part", workspace)
+	menu.parts.resolverHitbox = Instance.new("Part", workspace)
+	menu.parts.backtrackHitbox = Instance.new("Part", workspace)
+	menu.parts.sphereHitbox.Name = "abcdefg"
 	local diameter
 	do
-		diameter = 1 -- up to 12 works
-		sphereHitbox.Size = Vector3.new(diameter, diameter, diameter)
-		sphereHitbox.Position = Vector3.new()
-		sphereHitbox.Shape = Enum.PartType.Ball
-		sphereHitbox.Transparency = 0
-		local box = Instance.new("BoxHandleAdornment", sphereHitbox)
-		box.AlwaysOnTop = true
-		box.Adornee = box.Parent
-		box.ZIndex = 5
-		box.Color3 = Color3.new(1,0,0)
-		box.Size = sphereHitbox.Size
-		box.Transparency = 0
-		table.insert(misc.adornments, box)
-		sphereHitbox.Anchored = true
-		sphereHitbox.CanCollide = false
-		resolverHitbox.Size = Vector3.new(diameter, diameter, diameter)
-		resolverHitbox.Position = Vector3.new()
-		resolverHitbox.Shape = Enum.PartType.Ball
-		resolverHitbox.Transparency = 1
-		resolverHitbox.Anchored = true
-		resolverHitbox.CanCollide = false
-		indicator.Size = Vector3.new(1, 1, 1)
-		indicator.Position = Vector3.new()
-		indicator.Shape = Enum.PartType.Ball
-		indicator.Transparency = 1
-		indicator.Anchored = true
-		indicator.CanCollide = false
+		menu.parts.sphereHitbox.Size = Vector3.new(1, 1, 1)
+		menu.parts.sphereHitbox.Position = Vector3.new()
+		menu.parts.sphereHitbox.Shape = Enum.PartType.Ball
+		menu.parts.sphereHitbox.Transparency = 1
+		-- local box = Instance.new("BoxHandleAdornment", menu.parts.sphereHitbox)
+		-- box.AlwaysOnTop = true
+		-- box.Adornee = box.Parent
+		-- box.ZIndex = 5
+		-- box.Color3 = Color3.new(1,0,0)
+		-- box.Size = menu.parts.sphereHitbox.Size
+		-- box.Transparency = 0
+		-- table.insert(misc.adornments, box)
+		menu.parts.sphereHitbox.Anchored = true
+		menu.parts.sphereHitbox.CanCollide = false
+		menu.parts.resolverHitbox.Size = Vector3.new(1, 1, 1)
+		menu.parts.resolverHitbox.Position = Vector3.new()
+		menu.parts.resolverHitbox.Shape = Enum.PartType.Ball
+		menu.parts.resolverHitbox.Transparency = 1
+		menu.parts.resolverHitbox.Anchored = true
+		menu.parts.resolverHitbox.CanCollide = false
+		menu.parts.indicator.Size = Vector3.new(1, 1, 1)
+		menu.parts.indicator.Position = Vector3.new()
+		menu.parts.indicator.Shape = Enum.PartType.Ball
+		menu.parts.indicator.Transparency = 1
+		menu.parts.indicator.Anchored = true
+		menu.parts.indicator.CanCollide = false
+		menu.parts.backtrackHitbox.Size = Vector3.new(1, 1, 1)
+		menu.parts.backtrackHitbox.Position = Vector3.new()
+		menu.parts.backtrackHitbox.Shape = Enum.PartType.Ball
+		menu.parts.backtrackHitbox.Transparency = 1
+		menu.parts.backtrackHitbox.Anchored = true
+		menu.parts.backtrackHitbox.CanCollide = false
 	end
 
 
@@ -7390,13 +7414,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			[8] = {}, -- bar_moving_2
 		},
 		[9] = {}, -- fov circles
-
 		[10] = {
 			[1] = {}, --boxes
 			[2] = {}, --gradient
 			[3] = {}, --outlines
 			[4] = {}, --text
 		}, -- shitty keybinds --keybinds -- keybinds
+		[11] = { {} }, -- backtrack lines
 	}
 
 	local allespnum = #allesp
@@ -7408,7 +7432,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	local nade_esp = allesp[8]
 
 	local nade_espnum = #nade_esp
-
+	for i = 1, Players.MaxPlayers do
+		Draw:Circle(false, 0, 0, 0, 1, 32, { 0, 0, 0, 0 }, allesp[11][1])
+	end
 	for i = 1, 50 do
 		Draw:FilledRect(false, 20, 20, 2, 20, { 30, 30, 30, 255 }, allesp[10][1])
 	end
@@ -7528,7 +7554,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				client.updateplayernames = garbage
 			end
 			if getfenv(garbage).script then
-				if islclosure(garbage) and table.find(debug.getconstants(garbage), "Indicator") then
+				if islclosure(garbage) and table.find(debug.getconstants(garbage), "menu.parts.indicator") then
 					client.newgrenade = garbage
 				end
 			end
@@ -7539,6 +7565,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				client.menu = garbage
 			elseif rawget(garbage, "breakwindow") then
 				client.effects = garbage
+			elseif rawget(garbage, "aimsen") then
+				client.settings = garbage
 			elseif rawget(garbage, "send") then
 				client.net = garbage
 			elseif rawget(garbage, "gammo") then
@@ -7580,6 +7608,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local oldtask = rawget(garbage, "task")
 				rawset(garbage, "task", function(...)
 					oldtask(...)
+					if not client then return end
 					if not client.superaastart then
 						if ragebot.target and menu:GetVal("Rage", "Aimbot", "Rotate Viewmodel") and client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE"
 						then
@@ -7650,27 +7679,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	client.fakelagpos = Vector3.new()
 	client.fakelagtime = 0
 
-	-- for _, ply in next, Players:GetPlayers() do
-	-- 	local updater = client.getupdater(ply)
-	-- 	if updater then
-	-- 		local step = updater.step
-	-- 		updater.step = function(what, what1)
-	-- 			if not menu then
-	-- 				return step(what, what1)
-	-- 			else
-	-- 				if menu:GetVal("Rage", "Aimbot", "Enabled")
-	-- 					or menu:GetKey("Visuals", "Local", "Third Person")
-	-- 					or keybindtoggles.superaa
-	-- 				then
-	-- 					return step(3, true)
-	-- 				else
-	-- 					return step(what, what1)
-	-- 				end
-	-- 			end
-	-- 		end
-	-- 		if not client.updatersteps[ply] then client.updatersteps[ply] = step end
-	-- 	end
-	-- end
+	for _, ply in next, Players:GetPlayers() do
+		if ply == LOCAL_PLAYER then continue end
+		local updater = client.getupdater(ply)
+		if updater then
+			local step = updater.step
+			updater.step = function(what, what1)
+				if not menu then
+					return step(what, what1)
+				else
+					if menu:GetVal("Rage", "Aimbot", "Enabled")
+						or menu:GetKey("Visuals", "Local", "Third Person")
+					then
+						return step(3, true)
+					else
+						return step(what, what1)
+					end
+				end
+			end
+			if not client.updatersteps[ply] then client.updatersteps[ply] = step end
+		end
+	end
 
 	client.nametagupdaters_cache = {}
 	client.nametagupdaters = getupvalue(client.updateplayernames, 1)
@@ -7756,7 +7785,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				self.predictedDamageDealt[target] = 0
 			end
 			self.predictedDamageDealt[target] += damageDealt
-			self.predictedShotAt[target] = 2
+			self.predictedShotAt[target] = { val = 1, reason = "?" }
 			self.predictedDamageDealtRemovals[target] = tick() + GetLatency() * menu:GetVal("Rage", "Settings", "Damage Prediction Time") / 100
 		end
 	end
@@ -8175,7 +8204,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			"诶比西迪伊艾弗吉艾尺艾杰开艾勒艾马艾娜哦屁吉吾",
 			"完成与草屋两个苏巴完成与草屋两个苏巴完成与草屋",
 			"庆崇你好我讨厌你愚蠢的母愚蠢的母庆崇",
-			"坐下，一直保持着安静的状态。 谁把他拥有的东西给了他，所以他不那么爱欠债务，却拒绝参加锻炼，这让他爱得更少了",
+			"坐下，一直保持着安静的状态。 谁把他拥有的东西给了他，所以他不那么爱欠债务，却拒��参加锻炼，这让他爱得更少了",
 			", yīzhí bǎochízhe ānjìng de zhuàngtài. Shéi bǎ tā yǒngyǒu de dōngxī gěile tā, suǒyǐ tā bù nàme ài qiàn zhàiwù, què jùjué cānjiā duànliàn, z",
 			"他，所以他不那r给了他东西给了他爱欠s，却拒绝参加锻炼，这让他爱得更UGT少了",
 			"bbot 有的东西给了他，所以他不那rblx trader captain么有的东西给了他爱欠绝参加锻squidward炼，务，却拒绝参加锻炼，这让他爱得更UGT少了",
@@ -8539,7 +8568,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if client.char.alive then
 				if self == workspace.Camera then
 					if id == "CFrame" then
-						if menu:GetVal("Visuals", "Local", "Third Person") and menu:GetKey("Visuals", "Local", "Third Person")
+						if menu:GetVal("Visuals", "Local", "Third Person") and menu:GetKey("Visuals", "Local", "Third Person") and client.char.alive
 						then
 							local dist = menu:GetVal("Visuals", "Local", "Third Person Distance") / 10
 							local params = RaycastParams.new()
@@ -8757,7 +8786,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		ragebot.predictedDamageDealtRemovals = {}
 		ragebot.predictedMisses = {}
 		ragebot.predictedShotAt = {}
-		ragebot.resolverType = {}
 		ragebot.fakePositionsResolved = {}
 		ragebot.firsttarget = nil
 		ragebot.spin = 0
@@ -8889,7 +8917,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if modmisses and modmisses > 3 then
 				local rep = self.fakePositionsResolved[player]
 				
-				if rep and (modmisses > 4 or (rep - curbodyparts.torso.Position).Magnitude > 18) then
+				if rep and (rep - curbodyparts.torso.Position).Magnitude > 18 then
 					resolvedPosition = rep
 				end
 			end
@@ -8962,7 +8990,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 		end
 
-		function ragebot:AimAtTarget(part, target, head, origin, resolved)
+		function ragebot:AimAtTarget(part, target, head, origin, resolved, backtrack_frame)
 			local origin = origin or client.cam.cframe.p
 			if not part then
 				ragebot.silentVector = nil
@@ -8975,7 +9003,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				return
 			end
 
-			local position = (resolved and resolved.Position) or (part and part.Position)
+			local position = (backtrack_frame and backtrack_frame.pos) or (part and part.Position)
 			local target_pos = position
 			local dist = (position - origin).Magnitude
 			local dir = camera:GetTrajectory(position, origin) - origin
@@ -8987,6 +9015,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			ragebot.targetpart = part
 			ragebot.firepos = origin
 			ragebot.shooting = true
+			ragebot.time = (backtrack_frame and backtrack_frame.time) or tick()
 			if menu:GetVal("Rage", "Aimbot", "Auto Shoot") then
 				local firerate = type(client.logic.currentgun.data.firerate) == "table" and client.logic.currentgun.data.firerate[1] or client.logic.currentgun.data.firerate
 				local scaledFirerate = firerate  * menu:GetVal("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
@@ -9000,12 +9029,28 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		local HITBOX_SHIFT_SIZE = Vector3.new(3, 3, 3)
 		local HITBOX_SHIFT_AMOUNT = 12.5833333333333
 		local lastHitboxPriority
-		local lastHitscan
+		ragebot.backtrackframes = {}
 
-		function ragebot:GetTarget(hitboxPriority, hitscan, players, origin)
+		function ragebot:GetBacktrackedPosition(player, curbodyparts, time)
+			if not self.backtrackframes[player] then
+				self.backtrackframes[player] = {}
+			end
+			local newframe = {pos = curbodyparts.rootpart.Position, time = tick()}
+			if not self.backtrackframes[player][1] or (newframe.pos - self.backtrackframes[player][#self.backtrackframes[player]].pos).Magnitude > 1 then
+				table.insert(self.backtrackframes[player], newframe)
+			end
+
+			for i = #self.backtrackframes[player], 1, -1  do
+				if not self.backtrackframes[player][i] then continue end
+				if tick() - self.backtrackframes[player][i].time > time - GetLatency() * 2 then
+					table.remove(self.backtrackframes[player], i)
+				end 
+			end
+			return self.backtrackframes[player][1]
+		end
+		function ragebot:GetTarget(hitboxPriority, players, origin)
+			hitboxPriority = hitboxPriority == 1 and "head" or "torso"
 			hitboxPriority = hitboxPriority or lastHitboxPriority
-			hitscan = hitscan or lastHitscan
-			lastHitscan = hitscan or lastHitscan
 			lastHitboxPriority = hitboxPriority or lastHitboxPriority
 			self.intersection = nil
 
@@ -9020,7 +9065,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 			local autowall = menu:GetVal("Rage", "Aimbot", "Auto Wall")
 			local aw_resolve = menu:GetVal("Rage", "Hack vs. Hack", "Autowall Hitscan")
-			local resolvertype = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shifting")
+			local hitboxshift = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shifting")
 			--local campos = client.cam.basecframe
 			local zerocf = client.cam.basecframe - client.cam.basecframe.p
 			local campos = origin or zerocf + client.lastrepupdate
@@ -9030,39 +9075,65 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local head
 			local resolvedPosition
 			local newbone
+			local backtrackFrame 
 
 			local aimbotFov = menu:GetVal("Rage", "Aimbot", "Aimbot FOV")
-			for i, player in next, players do
-				local usedhitscan = hitscan -- should probably do this a different way
-				if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then
-					continue
-				end
-				if
-					not table.find(menu.priority, player.Name)
-					and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
-				then
-					continue
-				end
-				if
-					menu:GetVal("Rage", "Settings", "Aimbot Damage Prediction")
-					and self.predictedDamageDealt[player]
-					and self.predictedDamageDealt[player] > menu:GetVal("Rage", "Settings", "Damage Prediction Limit")
-				then
-					continue
-				end
-				local misses = self.predictedMisses[player] or 1
-				if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
-					local curbodyparts = client.replication.getbodyparts(player)
-					if curbodyparts and client.hud:isplayeralive(player) then
-						resolvedPosition = self:GetResolvedPosition(player, curbodyparts)
-						ragebot.resolved = false
-						if resolvedPosition then
-							resolverHitbox.Position = resolvedPosition
-							ragebot.resolved = true
+			for usingbacktrack = 0, 1 do
+				if cpart and usingbacktrack == 1 then break end
+				for i, player in next, players do
+					if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
+						if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then
+							continue
 						end
-						for k, bone in next, curbodyparts do
-							if bone.ClassName == "Part" and usedhitscan[k] then
-								local newbone = resolved and resolverHitbox or bone
+						if
+							not table.find(menu.priority, player.Name)
+							and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
+						then
+							continue
+						end
+						if
+							menu:GetVal("Rage", "Settings", "Aimbot Damage Prediction")
+							and self.predictedDamageDealt[player]
+							and self.predictedDamageDealt[player] > menu:GetVal("Rage", "Settings", "Damage Prediction Limit")
+						then
+							continue
+						end
+						local misses = self.predictedMisses[player] or 1
+						local curbodyparts = client.replication.getbodyparts(player)
+						if curbodyparts and client.hud:isplayeralive(player) then
+							local newhitboxshift = hitboxshift
+							resolvedPosition = self:GetResolvedPosition(player, curbodyparts)
+							local resolved = false
+
+							if resolvedPosition then
+								menu.parts.resolverHitbox.Position = resolvedPosition
+								resolved = true
+								newhitboxshift = false
+							end
+							local backtracked, backtrackpart
+							if not resolved then
+								if menu:GetVal("Rage", "Hack vs. Hack", "Backtracking") and usingbacktrack == 1 then
+									backtrackFrame = self:GetBacktrackedPosition(player, curbodyparts, menu:GetVal("Rage", "Hack vs. Hack", "Backtracking Time")/1000 / (client.stutterFrames % 2 == 1 and 2 or 1))
+									
+									if backtrackFrame and backtrackFrame.pos then
+										newhitboxshift = false
+										backtracked = true
+										time = backtrackFrame.time
+										backtrackpart = menu.parts.backtrackHitbox
+										backtrackpart.Position = backtrackFrame.pos
+									end
+								end
+							end
+							local bone = curbodyparts[hitboxPriority]
+							if bone.ClassName == "Part" then
+								local newbone = bone
+								if resolved then
+									newbone = menu.parts.resolverHitbox
+									self.intersection = menu.parts.resolverHitbox.Position
+								elseif backtracked then
+									newbone = backtrackpart
+									self.intersection = backtrackpart.Position
+								end
 								local fovToBone = camera:GetFOV(newbone)
 								if fovToBone < aimbotFov or aimbotFov > 180 then -- Awesome
 									if camera:IsVisible(newbone, camposv3) then
@@ -9071,7 +9142,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											cpart = bone
 											theplayer = player
 											firepos = camposv3
-											head = k == "head"
+											head = hitboxPriority == "head"
 											if menu.priority[player.Name] then
 												break
 											end
@@ -9096,20 +9167,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											cpart = newbone
 											theplayer = player
 											firepos = camposv3
-											head = k == "head"
+											head = hitboxPriority == "head"
 											if menu.priority[player.Name] then
 												break
 											end
 										elseif aw_resolve then
 											local axisPosition, bulletintersection =
-												self:HitscanOnAxes(camposreal, player, newbone, resolvertype)
+												self:HitscanOnAxes(camposreal, player, newbone, newhitboxshift)
 											if axisPosition then
 												self.firepos = axisPosition
 												cpart = bone
 												theplayer = player
-												self.intersection = resolved and resolvedPosition or bone.Position
 												firepos = axisPosition
-												head = k == "head"
+												head = hitboxPriority == "head"
 												if menu.priority[player.Name] then
 													break
 												end
@@ -9133,7 +9203,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				LOCAL_PLAYER.Character.HumanoidRootPart.Position = client.lastrepupdate
 			end
 			--debug.profileend("BB self GetTarget")
-			return cpart, theplayer, closest, firepos, head, newbone
+			
+			return cpart, theplayer, closest, firepos, head, backtrackFrame
 		end
 
 		function ragebot:GetKnifeTargets()
@@ -9316,12 +9387,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		local hitscanPoints = { 0, 0, 0, 0, 0, 0, 0, 0 }
 		local hitboxShiftPoints = { 0, 0, 0 }
 		local hitboxShiftAmount = { 0, 0 }
-
-		StatMenuRendered:connect(function(text)
-			text.Text ..= string.format("\n--hitscan--\npoint1: %d point2: %d\npoint3: %d point4: %d\npoint5: %d point6: %d\npoint7: %d point8: %d", unpack(hitscanPoints))
-			text.Text ..= string.format("\n--hitbox shift--\npoint1: %d\npoint2: %d\npoint3: %d", unpack(hitboxShiftPoints))
-			text.Text ..= string.format("\n--hitbox shift--\nradius: %d\ndistance: %d", unpack(hitboxShiftAmount))
-		end)
+		if BBOT.username == "dev" then
+			StatMenuRendered:connect(function(text)
+				text.Text ..= string.format("\n--hitscan-- %d %d %d %d %d %d %d %d", unpack(hitscanPoints))
+				text.Text ..= string.format("\n--hitbox shift method-- %d %d %d", unpack(hitboxShiftPoints))
+				text.Text ..= string.format("\n--hitbox-- %d %d", unpack(hitboxShiftAmount))
+				if ragebot.lasthittick and ragebot.lasthittime then
+					text.Text ..= string.format("\n--backtracking-- %dms", (ragebot.lasthittick - ragebot.lasthittime) * 1000)
+				end
+				text.Text ..= string.format("\n--avoid collisions-- %f %f %f", misc.normal.x, misc.normal.y, misc.normal.z)
+			end)
+		end
 		local shiftmode = 1
 		local shiftmodes = {
 			function(part, position)
@@ -9343,11 +9419,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		-- 	local shiftSize = clamp(HITBOX_SHIFT_AMOUNT - misses, 1, HITBOX_SHIFT_AMOUNT)
 		-- 	local pullVector = (bodypart.Position - position).Unit * pullAmount
 		-- 	local newTargetPosition = bodypart.Position - pullVector
-		-- 	sphereHitbox.Size = Vector3.new(shiftSize, shiftSize, shiftSize)
-		-- 	sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
+		-- 	menu.parts.sphereHitbox.Size = Vector3.new(shiftSize, shiftSize, shiftSize)
+		-- 	menu.parts.sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
 		-- 	hitboxShiftAmount[1] = shiftSize
 		-- 	hitboxShiftAmount[2] = pullAmount
-		-- 	return sphereHitbox, { [sphereHitbox] = true }, pullAmount, shiftSize
+		-- 	return menu.parts.sphereHitbox, { [menu.parts.sphereHitbox] = true }, pullAmount, shiftSize
 		-- end
 
 		
@@ -9364,11 +9440,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local pullVector = shiftmodes[shiftmode](bodypart, position, LOCAL_PLAYER.Character.HumanoidRootPart) * pullAmount
 			local newTargetPosition = bodypart.Position - pullVector
 
-			sphereHitbox.Size = Vector3.new(shiftSize, shiftSize, shiftSize)
-			sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
+			menu.parts.sphereHitbox.Size = Vector3.new(shiftSize, shiftSize, shiftSize)
+			menu.parts.sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
 			hitboxShiftAmount[1] = shiftSize
 			hitboxShiftAmount[2] = pullAmount
-			return sphereHitbox, { [sphereHitbox] = true }, shiftmode
+			return menu.parts.sphereHitbox, { [menu.parts.sphereHitbox] = true }, shiftmode
 		end
 		
 		function ragebot:HitscanOnAxes(origin, person, bodypart, hitboxshift)
@@ -9391,9 +9467,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			assert(typeof(origin) == "CFrame", "what are you trying to do young man") -- end
 
 			local maxPoints = client.aliveplayers
-					and math.ceil(menu:GetVal("Rage", "Hack vs. Hack", "Max Hitscan Points") / client.aliveplayers)
+					and math.ceil(menu:GetVal("Rage", "Settings", "Max Hitscan Points") / client.aliveplayers)
 				or #hitscanOffsets
-			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, sphereHitbox)
+			-- ragebot:CanPenetrateRaycast(barrel, bone.Position, client.logic.currentgun.data.penetrationdepth, true, menu.parts.sphereHitbox)
 			-- for k, v in next, hitscanPoints do
 			-- 	print(k, v)
 			-- end
@@ -9439,7 +9515,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 		function ragebot:MainLoop() -- lfg
 			ragebot.silentVector = nil
-			local hitscanpreference = misc:GetParts({ [menu:GetVal("Rage", "Aimbot", "Hitscan Priority")] = true })
 			local prioritizedpart = menu:GetVal("Rage", "Aimbot", "Hitscan Priority")
 
 			ragebot:Stance()
@@ -9488,11 +9563,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								table.insert(priority_list, game.Players[PlayerName])
 							end
 						end
-						local targetPart, targetPlayer, fov, firepos, head, newbone, hitbox = ragebot:GetTarget(prioritizedpart, hitscanpreference, priority_list)
+						local targetPart, targetPlayer, fov, firepos, head, backtrackFrame = ragebot:GetTarget(prioritizedpart, priority_list)
 						if not targetPart and not menu:GetVal("Misc", "Extra", "Target Only Priority Players") then
-							targetPart, targetPlayer, fov, firepos, head,  newbone, hitbox = ragebot:GetTarget(prioritizedpart, hitscanpreference, playerlist)
+							targetPart, targetPlayer, fov, firepos, head, backtrackFrame = ragebot:GetTarget(prioritizedpart, playerlist)
 						end
-						ragebot:AimAtTarget(targetPart, targetPlayer, head, firepos, resolved)
+						ragebot:AimAtTarget(targetPart, targetPlayer, head, firepos, resolved, backtrackFrame)
 					end
 				else
 					self.target = nil
@@ -9847,6 +9922,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						-- if not repupdates[victim] then
 						-- 	printconsole("Unable to find position data for " .. victim.Name)
 						-- end
+						ragebot.backtrackframes[victim] = {}
 						repupdates[victim] = {}
 						ragebot.fakePositionsResolved[victim] = nil
 					else
@@ -10170,10 +10246,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					self.newroot = nil
 				else
 					-- client.char.rootpart.CFrame = self.newroot.CFrame
-					--idk if i can matipulate this at all
+					--idk if i can manipulate this at all
 				end
 			end
 		end
+
 
 		function misc:Invisibility(val)
 			local char = LOCAL_PLAYER.Character
@@ -10370,6 +10447,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 
 		function misc:Teleport(newpos)
+			if not client.char.alive then return end
 			misc:BypassSpeedCheck(false)
 			local start = Camera.CFrame.p
 			if not newpos then
@@ -10387,6 +10465,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					client.net:send("repupdate", rootpart.Position + Vector3.new(0, client.char.headheight, 0), ragebot.angles)
 				end
 			end
+			
 		end
 		local setsway = client.cam.setswayspeed
 		client.cam.setswayspeed = function(self, v)
@@ -10574,40 +10653,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end) ]]
 		end
 		menu.connections.button_pressed_pf = ButtonPressed:connect(function(tab, gb, name)
-			if name == "Crash Server" then
-				CreateNotification("Attempting to crash server...")
-				while wait() do
-					for i = 1, 35 do
-						local tid = 846964998 ^ math.random(-100, 100)
-
-						client.net:send("changecamo", "Recon", "Secondary", "GLOCK 17", "Slot1", {
-							BrickProperties = {
-								Color = {
-									r = math.random(0, 255),
-									g = math.random(0, 255),
-									b = math.random(0, 255),
-								},
-								BrickColor = "Black",
-								Reflectance = math.random(0, 100),
-							},
-							TextureProperties = {
-								Color = {
-									r = math.random(0, 255),
-									g = math.random(0, 255),
-									b = math.random(0, 255),
-								},
-								OffsetStudsU = math.random(0, 4),
-								OffsetStudsV = math.random(0, 4),
-								StudsPerTileU = math.random(0, 4),
-								StudsPerTileV = math.random(0, 4),
-								TextureId = tid,
-							},
-							Name = "",
-							TextureId = tid,
-						})
-					end
-				end
-			end
+			
 
 			if name == "Join New Game" then
 				game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer)
@@ -10777,24 +10823,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					travel -= rightVector
 				end
 
-				travel = Vector2.new(travel.x, travel.Z).Unit
-
-				if travel.x == travel.x then
-					if speedtype == 2 and (
-							humanoid:GetState() ~= Enum.HumanoidStateType.Freefall or not humanoid.Jump
-						)
+				travel = travel.Unit
+				if travel.x == travel.x and humanoid:GetState() ~= Enum.HumanoidStateType.Climbing then
+					if speedtype == 2 and (humanoid:GetState() ~= Enum.HumanoidStateType.Freefall or not humanoid.Jump)
 					then
 						return
 					elseif speedtype == 3 and not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.Space) then
 						return
 					end
-
+				
 					if menu:GetKey("Misc", "Movement", "Speed", true) then
-						if speedtype == 1 then
-							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
-						else
-							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.y * speed)
-						end
+						rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.z * speed)
 					end
 				end
 			end
@@ -10818,7 +10857,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local dist = (autopeekiterator % 20) + 10
 				local origin = client.lastrepupdate + Camera.CFrame.LookVector * dist
 				if not self.autopeekposition then
-					local targetPart, targetPlayer, fov, firepos, head, newbone, hitbox = ragebot:GetTarget(prioritizedpart, hitscanpreference, nil, CFrame.new(origin))
+					local targetPart, targetPlayer, fov, firepos, head, newbone, hitbox = ragebot:GetTarget(prioritizedpart, nil, CFrame.new(origin))
 					
 
 					self.autopeekposition = firepos
@@ -10864,11 +10903,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			else
 				NETWORK_SETTINGS.IncomingReplicationLag = 0
 			end
-
-			rootpart = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
+			local newval, lastval = menu:GetKey("Misc", "Exploits", "Teleport")
+			if not newval and lastval then
+				misc:Teleport()
+			end
+			
+			rootpart = LOCAL_PLAYER.Character and client.char.rootpart
 			rootpart = self.invisroot or self.newroot or rootpart
 			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid")
-			misc:BypassSpeedCheck(menu:GetVal("Misc", "Movement", "Bypass Speed Checks"))
+			local tpval, lastval = menu:GetKey("Misc", "Exploits", "Teleport")
+			misc:BypassSpeedCheck(menu:GetVal("Misc", "Movement", "Bypass Speed Checks") and not tpval and not lastval)
 			if rootpart and humanoid then
 				if not CHAT_BOX.Active then
 					misc:SpeedHack()
@@ -10894,20 +10938,20 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end)
 			end
 		end
-		local stutterFrames = 0
+		client.stutterFrames = 0
 
 		do --ANCHOR send hook
 			client.net.send = function(self, ...)
 				local args = { ... }
-				if menu and menu:GetVal("Misc", "Exploits", "Skin Changer") and args[1] == "changecamo" then
-					local tid = menu:GetVal("Misc", "Exploits", "skinchangerTexture")
-					args[6].TextureProperties.TextureId = tid == "" and nil or tid
-					args[6].TextureProperties.Transparency = 1 - menu:GetVal("Misc", "Exploits", "Skin Changer", "color")[4] / 255
-					args[6].TextureProperties.StudsPerTileU = menu:GetVal("Misc", "Exploits", "Scale X") / 100
-					args[6].TextureProperties.StudsPerTileV = menu:GetVal("Misc", "Exploits", "Scale Y") / 100
-					args[6].BrickProperties.BrickColor = menu:GetVal("Misc", "Exploits", "Skin Changer", "color", true)
-					args[6].BrickProperties.Material = mats[menu:GetVal("Misc", "Exploits", "Skin Material")]
-				end
+				-- if menu and menu:GetVal("Misc", "Exploits", "Skin Changer") and args[1] == "changecamo" then
+				-- 	local tid = menu:GetVal("Misc", "Exploits", "skinchangerTexture")
+				-- 	args[6].TextureProperties.TextureId = tid == "" and nil or tid
+				-- 	args[6].TextureProperties.Transparency = 1 - menu:GetVal("Misc", "Exploits", "Skin Changer", "color")[4] / 255
+				-- 	args[6].TextureProperties.StudsPerTileU = menu:GetVal("Misc", "Exploits", "Scale X") / 100
+				-- 	args[6].TextureProperties.StudsPerTileV = menu:GetVal("Misc", "Exploits", "Scale Y") / 100
+				-- 	args[6].BrickProperties.BrickColor = menu:GetVal("Misc", "Exploits", "Skin Changer", "color", true)
+				-- 	args[6].BrickProperties.Material = mats[menu:GetVal("Misc", "Exploits", "Skin Material")]
+				-- end
 				if args[1] == "spawn" then
 					
 					if menu:GetVal("Misc", "Extra", "Break Windows") then
@@ -11079,20 +11123,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						-- end
 						local cachedtimedata = {}
 						
-						local hitpoint = ragebot.intersection and Vector3.new(ragebot.intersection.x, ragebot.intersection.y, ragebot.intersection.z) 
-						if not hitpoint then 
-							hitpoint = ragebot.targetpart.Position -- fuckkkkkkkkk
-						end
+						local hitpoint = ragebot.intersection or ragebot.targetpart.Position
 						-- i need to improve this intersection system a lot, because this can cause problems and nil out and not register the hit
 						-- properly when you're using Aimbot Performance Mode... fuggjegrnjeiar ngreoi greion agreino agrenoigenroino
 
-						local angle, time = client.trajectory(
+						local angle, bullettime = client.trajectory(
 								ragebot.firepos,
 								GRAVITY,
 								hitpoint,
 								client.logic.currentgun.data.bulletspeed
 							)
-						if not angle or not time then
+						if not angle or not bullettime then
 							return
 						end
 						for k = 1, #args[2].bullets do
@@ -11107,8 +11148,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							syn.set_thread_identity(1) -- might lag...... idk probably not
 							NETWORK:SetOutgoingKBPSLimit(0)
 						end
-
-						args[3] -= time
+						ragebot.lasthittime = ragebot.time
+						ragebot.lasthittick = tick()
+						args[3] = ragebot.time - bullettime
 						send(self, unpack(args))
 
 						for k = 1, #args[2].bullets do
@@ -11239,7 +11281,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					-- end
 					if menu:GetVal("Rage", "Anti Aim", "Enabled") then
 						--args[2] = ragebot:AntiNade(args[2])
-						stutterFrames += 1
+						client.stutterFrames += 1
 						local pitch = args[3].x
 						local yaw = args[3].y
 						local pitchChoice = menu:GetVal("Rage", "Anti Aim", "Pitch")
@@ -11278,7 +11320,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						elseif yawChoice == 5 then
 							yaw = 16478887
 						elseif yawChoice == 6 then
-							yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+							yaw = client.stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
 						elseif yawChoice == 7 then
 							new_angles = Vector2.new()
 						end
@@ -11689,15 +11731,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 													local whitelist = { bodypart }
 
 													if gun.type == "SHOTGUN" or gun.data.pelletcount then
-														table.insert(whitelist, sphereHitbox)
-														sphereHitbox.Position = bodypart.Position
+														table.insert(whitelist, menu.parts.sphereHitbox)
+														menu.parts.sphereHitbox.Position = bodypart.Position
 													end
 
 													local hit, hitpos = workspace:FindPartOnRayWithWhitelist(
 														Ray.new(barrel.Position, normalized * 4000),
 														whitelist
 													)
-													if hit and hit:IsDescendantOf(bodypart.Parent.Parent) or hit == sphereHitbox
+													if hit and hit:IsDescendantOf(bodypart.Parent.Parent) or hit == menu.parts.sphereHitbox
 													then
 														local hitdir = (hitpos - barrel.Position).unit
 														if hitdir:Dot(direction) > 0.9993 then
@@ -11763,7 +11805,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 			--ADS Fov hook
 			local crosshairColors
-			local function renderVisuals()
+			local function renderVisuals(dt)
+				local _new, _last = menu:GetVal("Misc", "Extra", "Disable 3D Rendering")
+				if _new ~= _last then
+					game:GetService("RunService"):Set3dRenderingEnabled(not _new)
+				end
 				client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 				if menu.open then
 					--debug.profilebegin("renderVisuals Char")
@@ -11887,14 +11933,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local target_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color")[4] / 255
 					client.aliveplayers = 0
 					for curplayer = 1, #players do
+						
+						
 						local ply = players[curplayer]
 
 						if client.hud:isplayeralive(ply) then
 							local parts = client.replication.getbodyparts(ply)
 
+							
 							if not parts then
 								continue
 							end
+							local resolvedPosition = ragebot:GetResolvedPosition(ply)
+							local backtrackedPosition = ragebot:GetBacktrackedPosition(ply, parts, menu:GetVal("Rage", "Hack vs. Hack", "Backtracking Time")/1000)
 
 							local GroupBox = "Team ESP"
 							if ply.Team ~= LOCAL_PLAYER.Team then
@@ -11912,7 +11963,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local rootpart = parts.rootpart.CFrame
 							local position = torso.Position
 							local resolved = false
-							if menu:GetVal("Visuals", "ESP Settings", "Show Resolved Positions") then
+							local resolvedColor = menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag", "color", true)
+							local resolvedTransparency = menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag", "color")[4]/255
+							if menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag") then
 								local newpos = ragebot:GetResolvedPosition(ply, parts)
 								if newpos then
 									resolved = true
@@ -11926,6 +11979,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 							local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 							local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
+							
+							if backtrackedPosition and menu:GetVal("Visuals", "Enemy ESP", "Show Backtrack Position") then 
+								backtrackedPosition, btRendered = Camera:WorldToViewportPoint(backtrackedPosition.pos)
+								if btRendered then
+									allesp[11][1][curplayer].Position = Vector2.new(backtrackedPosition.x, backtrackedPosition.y)
+									allesp[11][1][curplayer].NumSides = 12
+									allesp[11][1][curplayer].Radius = 1 / backtrackedPosition.z * 100 + 3
+									allesp[11][1][curplayer].Thickness = 1
+									allesp[11][1][curplayer].Visible = true
+									allesp[11][1][curplayer].Transparency = 1
+									allesp[11][1][curplayer].Color = Color3.new(1,1,1)
+								end
+							end
 
 							-- local minY = math.abs(bottom.y - top.y)
 							-- local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
@@ -11990,6 +12056,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 									allesp[4][1][curplayer].Text = namestring
 									allesp[4][1][curplayer].Visible = true
+									allesp[4][1][curplayer].Transparency = 1
+									allesp[4][1][curplayer].Color = resolvedColor
+
 									allesp[4][1][curplayer].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
 								end
 
@@ -13030,11 +13099,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							misc:RapidKill()
 							return Enum.ContextActionResult.Sink
 						end
-						if menu:GetVal("Misc", "Exploits", "Teleport") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Teleport", "keybind")
-						then
-							misc:Teleport()
-							return Enum.ContextActionResult.Sink
-						end
+						
 						if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind")
 						then
 							local thing1, thing2 = misc:Invisibility()
@@ -13045,7 +13110,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					------------"HELD KEY ACTION"------------
 					-----------------------------------------
 					local keyflag = inputState == Enum.UserInputState.Begin
-
+					
 					if shitting_my_pants == false then
 
 						--[[ if menu:GetVal("Misc", "Exploits", "Super Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind") then
@@ -13069,7 +13134,24 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		if chat_box.Active then return end
 	end) ]]
 
-			menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function()
+			menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function(dt)
+				if menu.lastActive ~= menu.windowactive then
+					setfpscap((menu.windowactive or menu:GetVal("Misc", "Exploits", "Stress Server")) and (getgenv().maxfps or 144) or 15)
+				end
+				if menu:GetVal("Misc", "Exploits", "Stress Server") then
+					for i = 1, menu:GetVal("Misc", "Exploits", "Stress Amount") do
+						-- client.net:send("getrounddata")
+						-- client.net:send("changeclass", "Scout")
+						-- client.net:send("changeclass", "Assault")
+						-- client.net:send("changeclass", "Support")
+						-- client.net:send("changeclass", "Recon")
+						-- local other = i % 2 == 0 and "FLASHLIGHT" or ""
+						-- local under = math.random() > 0.5 and "FLASHLIGHT" or ""
+						-- client.net:send("changewep", "Primary", "MP5K")
+						client.net:send("changecamo","Primary","COLT LMG","Slot2","",{ TextureId = "", StudsPerTileU = 1, StudsPerTileV=1, OffsetStudsV=0, Transparency=0, OffsetStudsU=0 },{ DefaultColor=true, Material="SmoothPlastic", BrickColor="Black", Reflectance=0 })
+						client.net:send("changeatt", "Primary", "MP5K", { Underbarrel = under, Other = other, Ammo = "", Barrel = "", Optics = "" })
+					end
+				end
 				for index, time in next, ragebot.predictedDamageDealtRemovals do
 					if time and (tick() > time) then
 						ragebot.predictedDamageDealt[index] = 0
@@ -13077,9 +13159,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							ragebot.predictedMisses[index] = 0
 						end
 						if not ragebot.predictedShotAt[index] then
-							ragebot.predictedShotAt[index] = 0
+							ragebot.predictedShotAt[index] = { val = 0, reason = "?" }
 						end
-						ragebot.predictedMisses[index] += ragebot.predictedShotAt[index]
+						ragebot.predictedMisses[index] += ragebot.predictedShotAt[index].val
 						ragebot.predictedShotAt[index] = 0
 						time = nil
 					end
@@ -13111,7 +13193,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 				--debug.profilebegin("BB Rendering")
 				do --rendering
-					renderVisuals()
+					renderVisuals(dt)
 					if menu.open then
 						setconstant(
 							client.cam.step,
@@ -13294,7 +13376,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 				--debug.profileend()
 
-				if menu:GetVal("Visuals", "Local", "Third Person") and menu:GetKey("Visuals", "Local", "Third Person")
+				if menu:GetVal("Visuals", "Local", "Third Person") and menu:GetKey("Visuals", "Local", "Third Person") and client.char.alive
 				then -- do third person model
 					if client.char.alive then
 						--debug.profilebegin("Third Person")
@@ -13753,20 +13835,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									unsafe = true,
 								},
 								{
-									type = "toggle",
-									name = "Hitbox Shifting",
-									value = false,
-									tooltip = "Increases possible penetration with Autowall. The higher\nthe Hitbox Shift Distance the more likely it is to miss shots.\nWhen it misses it will try disable this.",
-								},
-								{
-									type = "slider",
-									name = "Hitbox Shift Distance",
-									value = 16,
-									minvalue = 1,
-									maxvalue = 30,
-									stradd = " studs",
-								},
-								{
 									type = "combobox",
 									name = "Hitscan Points",
 									values = {
@@ -13781,11 +13849,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 								},
 								{
+									type = "toggle",
+									name = "Hitbox Shifting",
+									value = false,
+									tooltip = "Increases possible penetration with Autowall. The higher\nthe Hitbox Shift Distance the more likely it is to miss shots.\nWhen it misses it will try disable this.",
+								},
+								{
 									type = "slider",
-									name = "Max Hitscan Points",
-									value = 100,
-									minvalue = 0,
-									maxvalue = 300,
+									name = "Hitbox Shift Distance",
+									value = 16,
+									minvalue = 1,
+									maxvalue = 30,
+									stradd = " studs",
 								},
 								{
 									type = "toggle",
@@ -13797,6 +13872,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									name = "Stance Choice",
 									value = 1,
 									values = { "Stand", "Crouch", "Prone" },
+								},
+								{
+									type = "toggle", 
+									name = "Backtracking",
+									value = false,
+								},
+								{
+									type = "slider",
+									name = "Backtracking Time",
+									value = 4000,
+									minvalue = 0,
+									maxvalue = 5000,
+									stradd = " ms",
 								},
 								{
 									type = "toggle",
@@ -13870,6 +13958,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										minvalue = 100,
 										maxvalue = 500,
 										stradd = "%",
+									},
+									{
+										type = "slider",
+										name = "Max Hitscan Points",
+										value = 30,
+										minvalue = 0,
+										maxvalue = 300,
+										stradd = " points",
 									},
 								},
 							},
@@ -13989,7 +14085,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						{
 							name = { "Enemy ESP", "Team ESP", "Local" },
 							autopos = "left",
-							size = 300,
+							size = 330,
 							[1] = {
 								content = {
 									{
@@ -14114,6 +14210,26 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = "toggle",
 										name = "Dynamic Arrow Size",
 										value = true,
+									},
+									{
+										type = "toggle",
+										name = "Show Resolved Flag",
+										extra = {
+											type = "single colorpicker",
+											name = "Resolved Flag Color",
+											color = { 255, 255, 0, 255 },
+										},
+										value = false,
+									},
+									{
+										type = "toggle",
+										name = "Show Backtrack Position",
+										extra = {
+											type = "single colorpicker",
+											name = "Backtracking Color",
+											color = { 255, 255, 255, 255 },
+										},
+										value = false,
 									},
 								},
 							},
@@ -14369,11 +14485,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								-- 	maxvalue = 32,
 								-- 	custom = {[0] = "None"},
 								-- }
-								{
-									type = "toggle",
-									name = "Show Resolved Positions",
-									value = false,
-								},
 							},
 						},
 						{
@@ -14800,6 +14911,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = "toggle",
+										name = "Avoid Collisions",
+										value = false,
+									},
+									{
+										type = "toggle",
 										name = "Circle Strafe",
 										value = false,
 										extra = {
@@ -14927,6 +15043,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = "toggle",
+										name = "Disable 3D Rendering",
+										value = false,
+										tooltip = "When turned on, all 3D rendering will be disabled.\nThis helps with running multiple instances at once."
+									},
+									{
+										type = "toggle",
 										name = "Suppress Only",
 										value = false,
 										tooltip = "When turned on, bullets do not deal damage.",
@@ -15051,10 +15173,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								}
 							},]]
 									{
-										type = "button",
-										name = "Crash Server",
-										doubleclick = true,
-										tooltip = "Attempts to overwhelm the server so that users are kicked for internet connection problems.\nRoblox may detect strange activity and automatically\nkick you for it before the server can crash.",
+										type = "toggle",
+										name = "Stress Server",
+										tooltip = "Attempts to overwhelm the server so that users are kicked\nfor internet connection problems.\nUsually needs multiple instances running to cause a crash.",
+									},
+									{
+										type = "slider", 
+										name = "Stress Amount",
+										minvalue = 1, 
+										maxvalue = 10,
+										value = 5
 									},
 									{
 										type = "toggle",
@@ -15100,9 +15228,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										value = false,
 										extra = {
 											type = "keybind",
-											toggletype = 0,
+											toggletype = 1,
 										},
-										tooltip = "When key pressed you will teleport to the mouse position",
+										tooltip = "When key released you will teleport to the mouse position",
 									},
 									{
 										type = "toggle",
@@ -15162,44 +15290,44 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										},
 										tooltip = "Locks all other players' positions.",
 									},
-									{
-										type = "toggle",
-										name = "Skin Changer",
-										value = false,
-										tooltip = "While this is enabled, all custom skins will apply with the custom settings below.",
-										extra = {
-											type = "single colorpicker",
-											name = "Weapon Skin Color",
-											color = { 127, 72, 163, 255 },
-										},
-									},
-									{
-										type = "textbox",
-										name = "skinchangerTexture",
-										text = "6156783684",
-									},
-									{
-										type = "slider",
-										name = "Scale X",
-										value = 10,
-										minvalue = 1,
-										maxvalue = 500,
-										stradd = "%",
-									},
-									{
-										type = "slider",
-										name = "Scale Y",
-										value = 10,
-										minvalue = 1,
-										maxvalue = 500,
-										stradd = "%",
-									},
-									{
-										type = "dropbox",
-										name = "Skin Material",
-										value = 1,
-										values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-									},
+									-- {
+									-- 	type = "toggle",
+									-- 	name = "Skin Changer",
+									-- 	value = false,
+									-- 	tooltip = "While this is enabled, all custom skins will apply with the custom settings below.",
+									-- 	extra = {
+									-- 		type = "single colorpicker",
+									-- 		name = "Weapon Skin Color",
+									-- 		color = { 127, 72, 163, 255 },
+									-- 	},
+									-- },
+									-- {
+									-- 	type = "textbox",
+									-- 	name = "skinchangerTexture",
+									-- 	text = "6156783684",
+									-- },
+									-- {
+									-- 	type = "slider",
+									-- 	name = "Scale X",
+									-- 	value = 10,
+									-- 	minvalue = 1,
+									-- 	maxvalue = 500,
+									-- 	stradd = "%",
+									-- },
+									-- {
+									-- 	type = "slider",
+									-- 	name = "Scale Y",
+									-- 	value = 10,
+									-- 	minvalue = 1,
+									-- 	maxvalue = 500,
+									-- 	stradd = "%",
+									-- },
+									-- {
+									-- 	type = "dropbox",
+									-- 	name = "Skin Material",
+									-- 	value = 1,
+									-- 	values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
+									-- },
 								},
 							},
 						},
