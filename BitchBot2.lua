@@ -7785,7 +7785,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				self.predictedDamageDealt[target] = 0
 			end
 			self.predictedDamageDealt[target] += damageDealt
-			self.predictedShotAt[target] = { val = 1, reason = "?" }
+			self.predictedShotAt[target] = 0
 			self.predictedDamageDealtRemovals[target] = tick() + GetLatency() * menu:GetVal("Rage", "Settings", "Damage Prediction Time") / 100
 		end
 	end
@@ -13159,9 +13159,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							ragebot.predictedMisses[index] = 0
 						end
 						if not ragebot.predictedShotAt[index] then
-							ragebot.predictedShotAt[index] = { val = 0, reason = "?" }
+							ragebot.predictedShotAt[index] = 0
 						end
-						ragebot.predictedMisses[index] += ragebot.predictedShotAt[index].val
+						ragebot.predictedMisses[index] += ragebot.predictedShotAt[index]
 						ragebot.predictedShotAt[index] = 0
 						time = nil
 					end
