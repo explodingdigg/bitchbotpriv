@@ -10837,6 +10837,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
 						travel -= rightVector
 					end
+					misc.circleStrafeDirection = Vector3.new(looking.x, 0, looking.z).Unit
 				else
 					travel = misc.circleStrafeDirection
 					local angle = -0.1
@@ -10853,7 +10854,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 
 				travel = travel.Unit
-				if menu:GetVal("Misc", "Movement", "Avoid Collisions") then
+				if menu:GetKey("Misc", "Movement", "Avoid Collisions") then
 					local position = client.char.rootpart.CFrame.p
 					for i = 1, 10 do
 						local part, position, normal = workspace:FindPartOnRayWithWhitelist(
@@ -14994,6 +14995,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = "toggle",
 										name = "Avoid Collisions",
 										value = false,
+										extra = {
+											type = "keybind",
+											toggletype = 4,
+										}
 									},
 									{
 										type = "toggle",
