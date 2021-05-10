@@ -2338,7 +2338,7 @@ function menu.Initialize(menutable)
 	Draw:OutlinedText("_", 1, false, 10, 10, 14, false, { 225, 225, 225, 255 }, { 20, 20, 20 }, plusminus)
 	Draw:OutlinedText("+", 1, false, 10, 10, 14, false, { 225, 225, 225, 255 }, { 20, 20, 20 }, plusminus)
 
-	local function set_plusminus(value, x, y)
+	function menu:SetPlusMinus(value, x, y)
 		for i, v in ipairs(plusminus) do
 			if value == 0 then
 				v.Visible = false
@@ -2369,7 +2369,7 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	set_plusminus(0, 20, 20)
+	menu:SetPlusMinus(0, 20, 20)
 
 	--DROP BOX THINGY
 	local dropboxthingy = {}
@@ -2383,7 +2383,7 @@ function menu.Initialize(menutable)
 		Draw:OutlinedText("", 2, false, 20, 20, 13, false, { 255, 255, 255, 255 }, { 0, 0, 0 }, dropboxtexty)
 	end
 
-	local function set_dropboxthingy(visible, x, y, length, value, values)
+	function menu:SetDropBox(visible, x, y, length, value, values)
 		for k, v in pairs(dropboxthingy) do
 			v.Visible = visible
 		end
@@ -2445,7 +2445,7 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
+	menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 
 	--MODE SELECT THING
 	local modeselect = {}
@@ -2470,7 +2470,7 @@ function menu.Initialize(menutable)
 		)
 	end
 
-	local function set_modeselect(visible, x, y, value)
+	function menu:SetKeybindSelect(visible, x, y, value)
 		for k, v in pairs(modeselect) do
 			v.Visible = visible
 		end
@@ -2495,7 +2495,7 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	set_modeselect(false, 200, 400, 1)
+	menu:SetKeybindSelect(false, 200, 400, 1)
 
 	--COLOR PICKER
 	local cp = {
@@ -2618,6 +2618,8 @@ function menu.Initialize(menutable)
 
 	local function set_oldcolor(r, g, b, a)
 		oldcolor.Color = RGB(r, g, b)
+		cp.oldcolor = oldcolor.Color
+		cp.oldcoloralpha = a
 		if a ~= nil then
 			oldcolor.Transparency = a / 255
 		else
@@ -2645,26 +2647,26 @@ function menu.Initialize(menutable)
 	Draw:OutlinedRect(true, 31, 31, 3, 3, { 255, 255, 255, 255 }, cp.drawings)
 	table.insert(dragbar_m, cp.drawings[#cp.drawings])
 
-	local function set_dragbar_r(x, y)
+	function menu:SetDragBarR(x, y)
 		dragbar_r[1].Position = Vector2.new(x, y)
 		dragbar_r[2].Position = Vector2.new(x + 1, y + 1)
 	end
 
-	local function set_dragbar_b(x, y)
+	function menu:SetDragBarB(x, y)
 		dragbar_b[1].Position = Vector2.new(x, y)
 		dragbar_b[2].Position = Vector2.new(x + 1, y + 1)
 	end
 
-	local function set_dragbar_m(x, y)
+	function menu:SetDragBarM(x, y)
 		dragbar_m[1].Position = Vector2.new(x, y)
 		dragbar_m[2].Position = Vector2.new(x + 1, y + 1)
 	end
 
-	local function set_colorpicker(visible, color, value, alpha, text, x, y)
+	function menu:SetColorPicker(visible, color, value, alpha, text, x, y)
 		for k, v in pairs(cp.drawings) do
 			v.Visible = visible
 		end
-
+		cp.oldalpha = alpha
 		if visible then
 			cp.x = clamp(x, 0, SCREEN_SIZE.x - cp.w)
 			cp.y = clamp(y, 0, SCREEN_SIZE.y - cp.h)
@@ -2678,8 +2680,8 @@ function menu.Initialize(menutable)
 			cp.hsv.s = s
 			cp.hsv.v = v
 
-			set_dragbar_r(cp.x + 175, cp.y + 23 + math.floor((1 - h) * 156))
-			set_dragbar_m(cp.x + 9 + math.floor(s * 156), cp.y + 23 + math.floor((1 - v) * 156))
+			menu:SetDragBarR(cp.x + 175, cp.y + 23 + math.floor((1 - h) * 156))
+			menu:SetDragBarM(cp.x + 9 + math.floor(s * 156), cp.y + 23 + math.floor((1 - v) * 156))
 			if not alpha then
 				set_newcolor(color[1], color[2], color[3])
 				set_oldcolor(color[1], color[2], color[3])
@@ -2702,7 +2704,7 @@ function menu.Initialize(menutable)
 					cp.drawings[i].Size = Vector2.new(cp.w, cp.h)
 				end
 				cp.drawings[3].Size = Vector2.new(cp.w - 2, cp.h - 2)
-				set_dragbar_b(cp.x + 12 + math.floor(156 * (color[4] / 255)), cp.y + 188)
+				menu:SetDragBarB(cp.x + 12 + math.floor(156 * (color[4] / 255)), cp.y + 188)
 			end
 
 			applytext.Position = Vector2.new(235 + cp.x, cp.y + cp.h - 23)
@@ -2711,7 +2713,7 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	set_colorpicker(false, { 255, 0, 0 }, nil, false, "", 0, 0)
+	menu:SetColorPicker(false, { 255, 0, 0 }, nil, false, "", 0, 0)
 
 	--TOOL TIP
 	local tooltip = {
@@ -2775,7 +2777,7 @@ function menu.Initialize(menutable)
 	ttText(tooltip.text, false, false, tooltip.x + 7, tooltip.y + 1, tooltip.drawings)
 
 	local bbmouse = {}
-	local function set_tooltip(x, y, text, visible, dt)
+	function menu:SetToolTip(x, y, text, visible, dt)
 		dt = dt or 0
 		x = x or tooltip.x
 		y = y or tooltip.y
@@ -2792,6 +2794,9 @@ function menu.Initialize(menutable)
 				tooltip.time = -1
 			end
 		end
+		if not visible and tooltip.time < 0 then
+			tooltip.time = -1
+		end
 		if tooltip.time > 1 then
 			tooltip.time = 1
 		end
@@ -2805,10 +2810,7 @@ function menu.Initialize(menutable)
 		end
 		for k, v in pairs(tooltip.postable) do
 			v[1].Position = Vector2.new(x + v[2], y + v[3])
-			v[1].Transparency = (0.3 + tooltip.time) ^ 3 - 1
-			if not menu.open then
-				v[1].Transparency = 0
-			end
+			v[1].Transparency = math.min((0.3 + tooltip.time) ^ 3 - 1, menu.fade_amount or 1)
 		end
 		tooltip.drawings[1].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 		tooltip.drawings[2].Color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40)
@@ -2827,7 +2829,7 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	set_tooltip(500, 500, "", false)
+	menu:SetToolTip(500, 500, "", false)
 
 	-- mouse shiz
 	local mousie = {
@@ -2856,7 +2858,7 @@ function menu.Initialize(menutable)
 	Draw:OutlinedText("?", 2, false, 0, 0, 13, false, { 255, 255, 255, 255 }, { 15, 15, 15 }, bbmouse)
 
 	local lastMousePos = Vector2.new()
-	function menu:set_mouse_pos(x, y)
+	function menu:SetMousePosition(x, y)
 		FireEvent("bb_mousemoved", lastMousePos ~= Vector2.new(x, y))
 		for k = 1, #bbmouse do
 			local v = bbmouse[k]
@@ -2871,7 +2873,7 @@ function menu.Initialize(menutable)
 		lastMousePos = Vector2.new(x, y)
 	end
 
-	function menu:set_menu_clr(r, g, b)
+	function menu:setMenuclr(r, g, b)
 		menu.watermark.rect[1].Color = RGB(r - 40, g - 40, b - 40)
 		menu.watermark.rect[2].Color = RGB(r, g, b)
 
@@ -2934,7 +2936,7 @@ function menu.Initialize(menutable)
 
 	menu.dropbox_open = nil
 
-	menu.colorpicker_open = false
+	menu.colorPickerOpen = false
 
 	menu.textboxopen = nil
 
@@ -2993,12 +2995,12 @@ function menu.Initialize(menutable)
 					end
 				end
 				menu.keybind_open = nil
-				set_modeselect(false, 20, 20, 1)
+				menu:SetKeybindSelect(false, 20, 20, 1)
 				menu.dropbox_open = nil
-				set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
-				menu.colorpicker_open = nil
-				set_tooltip(nil, nil, nil, false)
-				set_colorpicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
+				menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
+				menu.colorPickerOpen = nil
+				menu:SetToolTip(nil, nil, nil, false)
+				menu:SetColorPicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
 			end
 			if not menu.fading then
 				menu.fading = true
@@ -3746,8 +3748,8 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	local function mousebutton2downfunc()
-		if menu.colorpicker_open or menu.dropbox_open then
+	local function MouseButton2Event()
+		if menu.colorPickerOpen or menu.dropbox_open then
 			return
 		end
 
@@ -3775,7 +3777,7 @@ function menu.Initialize(menutable)
 										if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 44, 16) then
 											if menu.keybind_open ~= v2 and v2[5].toggletype ~= 0 then
 												menu.keybind_open = v2
-												set_modeselect(
+												menu:SetKeybindSelect(
 													true,
 													v2[5][3][1] + menu.x,
 													v2[5][3][2] + 16 + menu.y,
@@ -3783,7 +3785,7 @@ function menu.Initialize(menutable)
 												)
 											else
 												menu.keybind_open = nil
-												set_modeselect(false, 20, 20, 1)
+												menu:SetKeybindSelect(false, 20, 20, 1)
 											end
 										end
 									end
@@ -3796,11 +3798,11 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	local function mousebutton1downfunc() --ANCHOR menu mouse down func
+	local function MouseButton1Event() --ANCHOR menu mouse down func
 		menu.dropbox_open = nil
 		menu.textboxopen = false
 
-		set_modeselect(false, 20, 20, 1)
+		menu:SetKeybindSelect(false, 20, 20, 1)
 		if menu.keybind_open then
 			local key = menu.keybind_open
 			local foundkey = false
@@ -3822,7 +3824,7 @@ function menu.Initialize(menutable)
 				for k2, v2 in pairs(v1) do
 					if v2[2] == "dropbox" and v2[5] then
 						if not menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) then
-							set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
+							menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 							v2[5] = false
 						else
 							menu.dropbox_open = v2
@@ -3830,7 +3832,7 @@ function menu.Initialize(menutable)
 					end
 					if v2[2] == "combobox" and v2[5] then
 						if not menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) then
-							set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
+							menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 							v2[5] = false
 						else
 							menu.dropbox_open = v2
@@ -3846,20 +3848,70 @@ function menu.Initialize(menutable)
 							elseif v2[5][2] == "single colorpicker" then
 								if v2[5][5] == true then
 									if not menu:MouseInColorPicker(0, 0, cp.w, cp.h) then
-										set_colorpicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
+										if menu.colorPickerOpen then
+											
+											local tempclr = cp.oldcolor
+											menu.colorPickerOpen[4][1].Color = tempclr
+											for i = 2, 3 do
+												menu.colorPickerOpen[4][i].Color = RGB(
+													math.floor(tempclr.R * 255) - 40,
+													math.floor(tempclr.G * 255) - 40,
+													math.floor(tempclr.B * 255) - 40
+												)
+											end
+											if cp.alpha then
+												menu.colorPickerOpen[1] = {
+													math.floor(tempclr.R * 255),
+													math.floor(tempclr.G * 255),
+													math.floor(tempclr.B * 255),
+													cp.oldcoloralpha,
+												}
+											else
+												menu.colorPickerOpen[1] = {
+													math.floor(tempclr.R * 255),
+													math.floor(tempclr.G * 255),
+													math.floor(tempclr.B * 255),
+												}
+											end
+										end
+										menu:SetColorPicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
 										v2[5][5] = false
-										menu.colorpicker_open = nil
-										menu.colorpicker_open = nil
+										menu.colorPickerOpen = nil -- close colorpicker
 									end
 								end
 							elseif v2[5][2] == "double colorpicker" then
 								for k3, v3 in pairs(v2[5][1]) do
 									if v3[5] == true then
 										if not menu:MouseInColorPicker(0, 0, cp.w, cp.h) then
-											set_colorpicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
+											if menu.colorPickerOpen then
+												local tempclr = cp.oldcolor
+												menu.colorPickerOpen[4][1].Color = tempclr
+												for i = 2, 3 do
+													menu.colorPickerOpen[4][i].Color = RGB(
+														math.floor(tempclr.R * 255) - 40,
+														math.floor(tempclr.G * 255) - 40,
+														math.floor(tempclr.B * 255) - 40
+													)
+												end
+												if cp.alpha then
+													menu.colorPickerOpen[1] = {
+														math.floor(tempclr.R * 255),
+														math.floor(tempclr.G * 255),
+														math.floor(tempclr.B * 255),
+														cp.oldcoloralpha,
+													}
+												else
+													menu.colorPickerOpen[1] = {
+														math.floor(tempclr.R * 255),
+														math.floor(tempclr.G * 255),
+														math.floor(tempclr.B * 255),
+													}
+												end
+											end
+											menu:SetColorPicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
 											v3[5] = false
-											menu.colorpicker_open = nil
-											menu.colorpicker_open = nil
+											menu.colorPickerOpen = nil -- close colorpicker
+											
 										end
 									end
 								end
@@ -3885,66 +3937,95 @@ function menu.Initialize(menutable)
 				menu.activetab = i
 				setActiveTab(menu.activetab)
 				menu:SetMenuPos(menu.x, menu.y)
-				set_tooltip(nil, nil, nil, false)
+				menu:SetToolTip(nil, nil, nil, false)
 			end
 		end
-		if menu.colorpicker_open then
+		if menu.colorPickerOpen then
 			if menu:MouseInColorPicker(197, cp.h - 25, 75, 20) then
+				--apply newcolor to oldcolor
 				local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
-				menu.colorpicker_open[4][1].Color = tempclr
+				menu.colorPickerOpen[4][1].Color = tempclr
 				for i = 2, 3 do
-					menu.colorpicker_open[4][i].Color = RGB(
+					menu.colorPickerOpen[4][i].Color = RGB(
 						math.floor(tempclr.R * 255) - 40,
 						math.floor(tempclr.G * 255) - 40,
 						math.floor(tempclr.B * 255) - 40
 					)
 				end
 				if cp.alpha then
-					menu.colorpicker_open[1] = {
+					menu.colorPickerOpen[1] = {
 						math.floor(tempclr.R * 255),
 						math.floor(tempclr.G * 255),
 						math.floor(tempclr.B * 255),
 						cp.hsv.a,
 					}
 				else
-					menu.colorpicker_open[1] = {
+					menu.colorPickerOpen[1] = {
 						math.floor(tempclr.R * 255),
 						math.floor(tempclr.G * 255),
 						math.floor(tempclr.B * 255),
 					}
 				end
-				menu.colorpicker_open = nil
-				menu.colorpicker_open = nil
-				set_colorpicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
+				menu.colorPickerOpen = nil
+				menu:SetColorPicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
 			end
 			if menu:MouseInColorPicker(264, 2, 14, 14) then
-				menu.colorpicker_open = nil
-				menu.colorpicker_open = nil
-				set_colorpicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
+				-- x out
+				local tempclr = cp.oldcolor
+				menu.colorPickerOpen[4][1].Color = tempclr
+				for i = 2, 3 do
+					menu.colorPickerOpen[4][i].Color = RGB(
+						math.floor(tempclr.R * 255) - 40,
+						math.floor(tempclr.G * 255) - 40,
+						math.floor(tempclr.B * 255) - 40
+					)
+				end
+				if cp.alpha then
+					menu.colorPickerOpen[1] = {
+						math.floor(tempclr.R * 255),
+						math.floor(tempclr.G * 255),
+						math.floor(tempclr.B * 255),
+						cp.oldcoloralpha,
+					}
+				else
+					menu.colorPickerOpen[1] = {
+						math.floor(tempclr.R * 255),
+						math.floor(tempclr.G * 255),
+						math.floor(tempclr.B * 255),
+					}
+				end
+				menu.colorPickerOpen = nil
+				menu:SetColorPicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
 			end
 			if menu:MouseInColorPicker(10, 23, 160, 160) then
 				cp.dragging_m = true
+				--set value and saturation
 			elseif menu:MouseInColorPicker(176, 23, 14, 160) then
 				cp.dragging_r = true
+				--set hue
 			elseif menu:MouseInColorPicker(10, 189, 160, 14) and cp.alpha then
 				cp.dragging_b = true
+				--set transparency
 			end
 
 			if menu:MouseInColorPicker(197, 37, 75, 20) then
 				menu.copied_clr = newcolor.Color
+				--copy newcolor
 			elseif menu:MouseInColorPicker(197, 57, 75, 20) then
+				--paste newcolor
 				if menu.copied_clr ~= nil then
 					local cpa = false
 					local clrtable = { menu.copied_clr.R * 255, menu.copied_clr.G * 255, menu.copied_clr.B * 255 }
-					if menu.colorpicker_open[1][4] ~= nil then
+					if menu.colorPickerOpen[1][4] ~= nil then
 						cpa = true
-						table.insert(clrtable, menu.colorpicker_open[1][4])
+						table.insert(clrtable, menu.colorPickerOpen[1][4])
 					end
 
-					set_colorpicker(true, clrtable, menu.colorpicker_open, cpa, menu.colorpicker_open[6], cp.x, cp.y)
-					local oldclr = menu.colorpicker_open[4][1].Color
-					if menu.colorpicker_open[1][4] ~= nil then
-						set_oldcolor(oldclr.R * 255, oldclr.G * 255, oldclr.B * 255, menu.colorpicker_open[1][4])
+					menu:SetColorPicker(true, clrtable, menu.colorPickerOpen, cpa, menu.colorPickerOpen[6], cp.x, cp.y)
+					cp.oldclr = menu.colorPickerOpen[4][1].Color
+					local oldclr = cp.oldclr
+					if menu.colorPickerOpen[1][4] ~= nil then
+						set_oldcolor(oldclr.R * 255, oldclr.G * 255, oldclr.B * 255, menu.colorPickerOpen[1][4])
 					else
 						set_oldcolor(oldclr.R * 255, oldclr.G * 255, oldclr.B * 255)
 					end
@@ -3952,7 +4033,7 @@ function menu.Initialize(menutable)
 			end
 
 			if menu:MouseInColorPicker(197, 91, 75, 40) then
-				menu.copied_clr = oldcolor.Color
+				menu.copied_clr = oldcolor.Color --copy oldcolor
 			end
 		else
 			for k, v in pairs(menu.multigroups) do
@@ -3986,7 +4067,7 @@ function menu.Initialize(menutable)
 									end
 								end
 
-								menu:set_menu_visibility(true)
+								menu:setMenuVisible(true)
 								setActiveTab(menu.activetab)
 								menu:SetMenuPos(menu.x, menu.y)
 							end
@@ -4066,10 +4147,10 @@ function menu.Initialize(menutable)
 										elseif v2[5][2] == "single colorpicker" then
 											if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 28, 14) then
 												v2[5][5] = true
-												menu.colorpicker_open = v2[5]
-												menu.colorpicker_open = v2[5]
+												menu.colorPickerOpen = v2[5]
+												menu.colorPickerOpen = v2[5]
 												if v2[5][1][4] ~= nil then
-													set_colorpicker(
+													menu:SetColorPicker(
 														true,
 														v2[5][1],
 														v2[5],
@@ -4079,7 +4160,7 @@ function menu.Initialize(menutable)
 														LOCAL_MOUSE.y + 36
 													)
 												else
-													set_colorpicker(
+													menu:SetColorPicker(
 														true,
 														v2[5][1],
 														v2[5],
@@ -4094,10 +4175,10 @@ function menu.Initialize(menutable)
 											for k3, v3 in pairs(v2[5][1]) do
 												if menu:MouseInMenu(v3[3][1], v3[3][2], 28, 14) then
 													v3[5] = true
-													menu.colorpicker_open = v3
-													menu.colorpicker_open = v3
+													menu.colorPickerOpen = v3
+													menu.colorPickerOpen = v3
 													if v3[1][4] ~= nil then
-														set_colorpicker(
+														menu:SetColorPicker(
 															true,
 															v3[1],
 															v3,
@@ -4107,7 +4188,7 @@ function menu.Initialize(menutable)
 															LOCAL_MOUSE.y + 36
 														)
 													else
-														set_colorpicker(
+														menu:SetColorPicker(
 															true,
 															v3[1],
 															v3,
@@ -4164,7 +4245,7 @@ function menu.Initialize(menutable)
 									end
 									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 36) then
 										if not v2[5] then
-											set_dropboxthingy(
+											menu:SetDropBox(
 												true,
 												v2[3][1] + menu.x + 1,
 												v2[3][2] + menu.y + 13,
@@ -4175,7 +4256,7 @@ function menu.Initialize(menutable)
 											v2[5] = true
 											newdropbox_open = v2
 										else
-											set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
+											menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 											v2[5] = false
 											newdropbox_open = nil
 										end
@@ -4191,7 +4272,7 @@ function menu.Initialize(menutable)
 											then
 												v2[4][1].Text = v2[6][i]
 												v2[1] = i
-												set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
+												menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 												v2[5] = false
 												newdropbox_open = nil
 											end
@@ -4223,7 +4304,7 @@ function menu.Initialize(menutable)
 											v2[5] = true
 											newdropbox_open = v2
 										else
-											set_dropboxthingy(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
+											menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 											v2[5] = false
 											newdropbox_open = nil
 										end
@@ -4359,7 +4440,7 @@ function menu.Initialize(menutable)
 			else
 				menu.mc = { 127, 72, 163 }
 			end
-			menu:set_menu_clr(menu.mc[1], menu.mc[2], menu.mc[3])
+			menu:setMenuclr(menu.mc[1], menu.mc[2], menu.mc[3])
 
 			local wme = menu:GetVal("Settings", "Cheat Settings", "Watermark")
 			for k, v in pairs(menu.watermark.rect) do
@@ -4433,19 +4514,19 @@ function menu.Initialize(menutable)
 		end
 	end)
 
-	function menu:set_menu_alphaparency(transparency)
+	function menu:setMenuAlpha(transparency)
 		for k, v in pairs(bbmouse) do
-			v.Transparency = transparency / 255
+			v.Transparency = transparency
 		end
 		for k, v in pairs(bbmenu) do
-			v.Transparency = transparency / 255
+			v.Transparency = transparency
 		end
 		for k, v in pairs(tabz[menu.activetab]) do
-			v.Transparency = transparency / 255
+			v.Transparency = transparency
 		end
 	end
 
-	function menu:set_menu_visibility(visible)
+	function menu:setMenuVisible(visible)
 		for k, v in pairs(bbmouse) do
 			v.Visible = visible
 		end
@@ -4471,8 +4552,8 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	menu:set_menu_alphaparency(0)
-	menu:set_menu_visibility(false)
+	menu:setMenuAlpha(0)
+	menu:setMenuVisible(false)
 	menu.lastActive = true
 	menu.open = false
 	menu.windowactive = true
@@ -4519,31 +4600,31 @@ function menu.Initialize(menutable)
 		end
 		if menu.fading then
 			if menu.open then
-				local timesincefade = tick() - menu.fadestart
-				local fade_amount = 255 - math.floor((timesincefade * 10) * 255)
-				set_plusminus(0, 20, 20)
-				menu:set_menu_alphaparency(fade_amount)
-				if fade_amount <= 0 then
+				menu.timesincefade = tick() - menu.fadestart
+				menu.fade_amount = 1 - (menu.timesincefade * 10)
+				menu:SetPlusMinus(0, 20, 20)
+				menu:setMenuAlpha(menu.fade_amount)
+				if menu.fade_amount <= 0 then
 					menu.open = false
 					menu.fading = false
-					menu:set_menu_alphaparency(0)
-					menu:set_menu_visibility(false)
+					menu:setMenuAlpha(0)
+					menu:setMenuVisible(false)
 				else
-					menu:set_menu_alphaparency(fade_amount)
+					menu:setMenuAlpha(menu.fade_amount)
 				end
 			else
-				menu:set_menu_visibility(true)
+				menu:setMenuVisible(true)
 				setActiveTab(menu.activetab)
-				local timesincefade = tick() - menu.fadestart
-				local fade_amount = math.floor((timesincefade * 10) * 255)
-				menu.fadeamount = fade_amount
-				menu:set_menu_alphaparency(fade_amount)
-				if fade_amount >= 255 then
+				menu.timesincefade = tick() - menu.fadestart
+				menu.fade_amount = (menu.timesincefade * 10)
+				menu.fadeamount = menu.fade_amount
+				menu:setMenuAlpha(menu.fade_amount)
+				if menu.fade_amount >= 1 then
 					menu.open = true
 					menu.fading = false
-					menu:set_menu_alphaparency(255)
+					menu:setMenuAlpha(1)
 				else
-					menu:set_menu_alphaparency(fade_amount)
+					menu:setMenuAlpha(menu.fade_amount)
 				end
 			end
 		end
@@ -4556,10 +4637,10 @@ function menu.Initialize(menutable)
 				end
 			end
 		end
-		menu:set_mouse_pos(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
-		set_tooltip(nil, nil, nil, false, fdt)
+		menu:SetMousePosition(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
+		local settooltip = true
 		if menu.open or menu.fading then
-			set_plusminus(0, 20, 20)
+			menu:SetPlusMinus(0, 20, 20)
 			for k, v in pairs(menu.options) do
 				if menu.tabnames[menu.activetab] == k then
 					for k1, v1 in pairs(v) do
@@ -4579,17 +4660,18 @@ function menu.Initialize(menutable)
 						if pass then
 							for k2, v2 in pairs(v1) do
 								if v2[2] == "toggle" then
-									if not menu.dropbox_open and not menu.colorpicker_open then
+									if not menu.dropbox_open and not menu.colorPickerOpen then
 										if menu.open and menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16)
 										then
-											if v2.tooltip then
-												set_tooltip(
+											if v2.tooltip and settooltip then
+												menu:SetToolTip(
 													menu.x + v2[3][1],
 													menu.y + v2[3][2] + 18,
 													v2.tooltip,
 													true,
-													fdt * 2--[[this is really fucking stupid]]
+													fdt--[[this is really fucking stupid]] -- this is no longer really fucking stupid
 												)
+												settooltip = false
 											end
 										end
 									end
@@ -4622,18 +4704,18 @@ function menu.Initialize(menutable)
 												2
 											)
 										end
-										set_plusminus(1, v2[7][1], v2[7][2])
+										menu:SetPlusMinus(1, v2[7][1], v2[7][2])
 									else
 										if not menu.dropbox_open then
 											if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
 												if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
 													if menu:MouseInMenu(v2[7][1], v2[7][2], 11, 13) then
-														set_plusminus(2, v2[7][1], v2[7][2])
+														menu:SetPlusMinus(2, v2[7][1], v2[7][2])
 													elseif menu:MouseInMenu(v2[7][1] + 11, v2[7][2], 11, 13) then
-														set_plusminus(3, v2[7][1], v2[7][2])
+														menu:SetPlusMinus(3, v2[7][1], v2[7][2])
 													end
 												else
-													set_plusminus(1, v2[7][1], v2[7][2])
+													menu:SetPlusMinus(1, v2[7][1], v2[7][2])
 												end
 											end
 										end
@@ -4746,9 +4828,9 @@ function menu.Initialize(menutable)
 			elseif not menu.mousedown then
 				menu.dontdrag = false
 			end
-			if menu.colorpicker_open then
+			if menu.colorPickerOpen then
 				if cp.dragging_m then
-					set_dragbar_m(
+					menu:SetDragBarM(
 						clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - 2,
 						clamp(LOCAL_MOUSE.y + 36, cp.y + 25, cp.y + 180) - 2
 					)
@@ -4756,8 +4838,31 @@ function menu.Initialize(menutable)
 					cp.hsv.s = (clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - cp.x - 12) / 155
 					cp.hsv.v = 1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155)
 					newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
+					local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
+					menu.colorPickerOpen[4][1].Color = tempclr
+					for i = 2, 3 do
+						menu.colorPickerOpen[4][i].Color = RGB(
+							math.floor(tempclr.R * 255) - 40,
+							math.floor(tempclr.G * 255) - 40,
+							math.floor(tempclr.B * 255) - 40
+						)
+					end
+					if cp.alpha then
+						menu.colorPickerOpen[1] = {
+							math.floor(tempclr.R * 255),
+							math.floor(tempclr.G * 255),
+							math.floor(tempclr.B * 255),
+							cp.hsv.a,
+						}
+					else
+						menu.colorPickerOpen[1] = {
+							math.floor(tempclr.R * 255),
+							math.floor(tempclr.G * 255),
+							math.floor(tempclr.B * 255),
+						}
+					end
 				elseif cp.dragging_r then
-					set_dragbar_r(cp.x + 175, clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178))
+					menu:SetDragBarR(cp.x + 175, clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178))
 
 					maincolor.Color = Color3.fromHSV(
 							1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155),
@@ -4767,8 +4872,54 @@ function menu.Initialize(menutable)
 
 					cp.hsv.h = 1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155)
 					newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
+					local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
+					menu.colorPickerOpen[4][1].Color = tempclr
+					for i = 2, 3 do
+						menu.colorPickerOpen[4][i].Color = RGB(
+							math.floor(tempclr.R * 255) - 40,
+							math.floor(tempclr.G * 255) - 40,
+							math.floor(tempclr.B * 255) - 40
+						)
+					end
+					if cp.alpha then
+						menu.colorPickerOpen[1] = {
+							math.floor(tempclr.R * 255),
+							math.floor(tempclr.G * 255),
+							math.floor(tempclr.B * 255),
+							cp.hsv.a,
+						}
+					else
+						menu.colorPickerOpen[1] = {
+							math.floor(tempclr.R * 255),
+							math.floor(tempclr.G * 255),
+							math.floor(tempclr.B * 255),
+						}
+					end
 				elseif cp.dragging_b then
-					set_dragbar_b(clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168), cp.y + 188)
+					local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
+					menu.colorPickerOpen[4][1].Color = tempclr
+					for i = 2, 3 do
+						menu.colorPickerOpen[4][i].Color = RGB(
+							math.floor(tempclr.R * 255) - 40,
+							math.floor(tempclr.G * 255) - 40,
+							math.floor(tempclr.B * 255) - 40
+						)
+					end
+					if cp.alpha then
+						menu.colorPickerOpen[1] = {
+							math.floor(tempclr.R * 255),
+							math.floor(tempclr.G * 255),
+							math.floor(tempclr.B * 255),
+							cp.hsv.a,
+						}
+					else
+						menu.colorPickerOpen[1] = {
+							math.floor(tempclr.R * 255),
+							math.floor(tempclr.G * 255),
+							math.floor(tempclr.B * 255),
+						}
+					end
+					menu:SetDragBarB(clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168), cp.y + 188)
 					newcolor.Transparency = (clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168) - cp.x - 10) / 158
 					cp.hsv.a = math.floor(((clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168) - cp.x - 10) / 158) * 255)
 				else
@@ -4786,6 +4937,9 @@ function menu.Initialize(menutable)
 		else
 			menu.dragging = false
 		end
+		if settooltip then
+			menu:SetToolTip(nil, nil, nil, false, fdt)
+		end
 	end
 
 	menu.connections.inputstart = INPUT_SERVICE.InputBegan:Connect(function(input)
@@ -4793,11 +4947,11 @@ function menu.Initialize(menutable)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				menu.mousedown = true
 				if menu.open and not menu.fading then
-					mousebutton1downfunc()
+					MouseButton1Event()
 				end
 			elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
 				if menu.open and not menu.fading then
-					mousebutton2downfunc()
+					MouseButton2Event()
 				end
 			end
 
@@ -9726,10 +9880,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local args = {...}
 				if menu and menu:GetVal("Misc", "Extra", "Disable Team Sounds") then
 					if not args[1]:match("friendly") then
-						return playsound(...)
+						return playsound(unpack(args))
+					else
+						print("yeah what")
 					end
 				else
-					return playsound(...)
+					return playsound(unpack(args))
 				end
 			end
 		end
@@ -10855,10 +11011,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 				travel = travel.Unit
 				if menu:GetKey("Misc", "Movement", "Avoid Collisions") then
+					local scale = menu:GetVal("Misc", "Movement", "Avoid Collisions Scale") / 1000
 					local position = client.char.rootpart.CFrame.p
 					for i = 1, 10 do
 						local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-							Ray.new(position, (travel * speed / 10) + Vector3.new(0,rootpart.Velocity.y/10,0)),
+							Ray.new(position, (travel * speed * scale) + Vector3.new(0,rootpart.Velocity.y/10,0)),
 							client.roundsystem.raycastwhitelist
 						) 
 						misc.normal = normal
@@ -11772,9 +11929,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 														if dot >= dotthreshold then
 															gun:shoot(true)
 															legitbot.triggerbotShooting = true
-															if isaiming then
-																gun:setaim(false)
-															end
+															return
 														end
 													end
 												else
@@ -11794,9 +11949,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 														local hitdir = (hitpos - barrel.Position).unit
 														if hitdir:Dot(direction) > 0.9993 then
 															gun:shoot(true)
-															if isaiming then
-																gun:setaim(false)
-															end
+															legitbot.triggerbotShooting = true
+															return
 														end
 													end
 												end
@@ -12940,12 +13094,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						if listsizes then
 							box.Size = text.TextBounds + Vector2.new(4, 3)
 							box1.Size = text.TextBounds + Vector2.new(6, 7)
-							box3.Size = text.TextBounds + Vector2.new(i == 2 and -maxwidth.x + 6 or 8, i == 1 and 21 or i == 2 and 6 or 5)
-							box3.Position = Vector2.new(i == 2 and posx + maxwidth.x or posx - 2, (i == 1 or i == 2) and margin - 4 or margin)
+							box3.Size = text.TextBounds + Vector2.new(i == 2 and -maxwidth.x + 6 or 8, (i == #newtexts and i == 1) and 9 or i == 1 and 21 or i == 2 and 6 or 5) -- this is fucking stupid i hate this. why did i do this
+							box3.Position = Vector2.new(i == 2 and posx + maxwidth.x or posx - 2, (i == 1 or i == 2) and margin - 4 or margin) -- this is fucking stupid i hate this. why did i do this
 						else
 							box.Size = maxwidth + maxwidth2 + Vector2.new(0, 3)
 							box1.Size = maxwidth + maxwidth2 + Vector2.new(2, 7)
-							box3.Size = maxwidth + maxwidth2 + Vector2.new(4, i == 1 and 6 or i == #newtexts and 4 or 3)
+							box3.Size = maxwidth + maxwidth2 + Vector2.new(4, (i == #newtexts and i == 1) and 9 or i == #newtexts and 4 or i == 1 and 6 or 3) -- this is fucking stupid i hate this. why did i do this
 							box3.Position = Vector2.new(posx - 2, (i == 1) and margin - 4 or i == #newtexts and margin + 1 or margin) -- this is fucking stupid i hate this. why did i do this
 						end
 						margin += 15
@@ -13829,11 +13983,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = "toggle",
 									name = "Silent Aim",
 									value = false,
+									tooltip = "Stops the camera from rotating toward targetted players.",
 								},
 								{
 									type = "toggle",
 									name = "Rotate Viewmodel",
 									value = false,
+									tooltip = "Rotates weapon viewmodel toward the targetted player."
 								},
 								{
 									type = "slider",
@@ -13862,11 +14018,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = "toggle",
 									name = "Auto Shoot",
 									value = false,
+									tooltip = "Automatically shoots players when a target is found."
 								},
 								{
 									type = "toggle",
 									name = "Double Tap",
 									value = false,
+									tooltip = "Shoots twice when target is found when Auto Shoot is enabled."
 								},
 								{
 									type = "dropbox",
@@ -13899,6 +14057,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									name = "Autowall Hitscan",
 									value = false,
 									unsafe = true,
+									tooltip = "While using Auto Wall, this will hitscan multiple points\nto increase penetration and help for peeking.",
 								},
 								{
 									type = "combobox",
@@ -13932,6 +14091,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = "toggle",
 									name = "Force Player Stances",
 									value = false,
+									tooltip = "Changes the stance of other players to the selected Stance Choice.",
 								},
 								{
 									type = "dropbox",
@@ -13943,6 +14103,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = "toggle", 
 									name = "Backtracking",
 									value = false,
+									tooltip = "Attempts to abuse lag compensation and shoot players where they were in the past.\nUsing Visuals->Enemy ESP->Show Backtracked Position will help illustrate this."
 								},
 								{
 									type = "slider",
@@ -14158,6 +14319,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = "toggle",
 										name = "Enabled",
 										value = true,
+										tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
 									},
 									{
 										type = "toggle",
@@ -14305,6 +14467,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = "toggle",
 										name = "Enabled",
 										value = false,
+										tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
 									},
 									{
 										type = "toggle",
@@ -14597,7 +14760,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = "toggle",
 										name = "No Gun Bob or Sway",
 										value = false,
-										tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving your mouse.",
+										tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving the mouse.",
 									},
 									{
 										type = "toggle",
@@ -14692,13 +14855,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											name = { "Inside Ambience", "Outside Ambience" },
 											color = { { 117, 76, 236 }, { 117, 76, 236 } },
 										},
-										tooltip = "Changes the map's ambient colors to the user defined colors.",
+										tooltip = "Changes the map's ambient colors to your defined colors.",
 									},
 									{
 										type = "toggle",
 										name = "Force Time",
 										value = false,
-										tooltip = "Forces the time to the time set by the user below.",
+										tooltip = "Forces the time to the time set by your below.",
 									},
 									{
 										type = "slider",
@@ -14995,10 +15158,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = "toggle",
 										name = "Avoid Collisions",
 										value = false,
+										tooltip = "Attempts to stops you from running into obstacles\nfor Speed and Circle Strafe.",
 										extra = {
 											type = "keybind",
 											toggletype = 4,
 										}
+									},
+									{
+										type = "slider",
+										name = "Avoid Collisions Scale",
+										value = 100,
+										minvalue = 0,
+										maxvalue = 100,
+										stradd = "%",
 									},
 									{
 										type = "toggle",
