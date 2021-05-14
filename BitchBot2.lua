@@ -1,3 +1,18 @@
+local COLOR = 1
+local COLOR1 = 2
+local COLOR2 = 3
+local COMBOBOX = 4
+local TOGGLE = 5
+local KEYBIND = 6
+local DROPBOX = 7
+local COLORPICKER = 8
+local DOUBLE_COLORPICKERS = 9
+local SLIDER = 10
+local BUTTON = 11
+local LIST = 12
+local IMAGE = 13
+local TEXTBOX = 14 -- menu type enums and shit
+
 if not BBOT then
 	BBOT = { username = "dev" }
 end
@@ -61,7 +76,7 @@ end
 local function map(N, OldMin, OldMax, Min, Max)
 	return (N - OldMin) / (OldMax - OldMin) * (Max - Min) + Min
 end
-
+local CreateNotification
 do
 	local notes = {}
 	local function DrawingObject(t, col)
@@ -98,7 +113,7 @@ do
 		return s
 	end
 
-	function CreateNotification(t, customcolor) -- TODO i want some kind of prioritized message to the notification list, like a warning or something. warnings have icons too maybe? idk??
+	CreateNotification = function(t, customcolor) -- TODO i want some kind of prioritized message to the notification list, like a warning or something. warnings have icons too maybe? idk??
 		local gap = 25
 		local width = 18
 
@@ -179,7 +194,7 @@ do
 							drawing.Position = Vector2.new(locRect.x + linenum, locRect.y + 1)
 							if menu then
 								local mencol = customcolor or (
-										menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
+										menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", COLOR))) or Color3.fromRGB(127, 72, 163)
 									)
 								local color = linenum == 1 and mencol or Color3.fromRGB(mencol.R * 255 - 40, mencol.G * 255 - 40, mencol.B * 255 - 40) -- super shit
 								if drawing.Color ~= color then
@@ -214,7 +229,7 @@ do
 			local c = 0.28 - i / 80
 			Note.drawings[i] = Rectangle(200, 1, true, Color3.new(c, c, c))
 		end
-		local color = (menu and menu.GetVal) and customcolor or menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color"))) or Color3.fromRGB(127, 72, 163)
+		local color = (menu and menu.GetVal) and customcolor or menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", COLOR))) or Color3.fromRGB(127, 72, 163)
 
 		Note.drawings.text = Text(t)
 		if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
@@ -282,7 +297,6 @@ end
 -- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
 --!SECTION
-
 local menuWidth, menuHeight = 500, 600
 menu = { -- this is for menu stuffs n shi
 	w = menuWidth,
@@ -2016,7 +2030,7 @@ function menu.Initialize(menutable)
 
 					if content ~= nil then
 						for k2, v2 in pairs(content) do
-							if v2.type == "toggle" then
+							if v2.type == TOGGLE then
 								menu.options[v.name][g_name][v2.name] = {}
 								local unsafe = false
 								if v2.unsafe then
@@ -2030,7 +2044,7 @@ function menu.Initialize(menutable)
 								menu.options[v.name][g_name][v2.name][6] = unsafe
 								menu.options[v.name][g_name][v2.name].tooltip = v2.tooltip or nil
 								if v2.extra ~= nil then
-									if v2.extra.type == "keybind" then
+									if v2.extra.type == KEYBIND then
 										menu.options[v.name][g_name][v2.name][5] = {}
 										menu.options[v.name][g_name][v2.name][5][4] = Draw:Keybind(
 											v2.extra.key,
@@ -2057,7 +2071,7 @@ function menu.Initialize(menutable)
 												tostring(g_name),
 												tostring(v.name),
 											})
-									elseif v2.extra.type == "single colorpicker" then
+									elseif v2.extra.type == COLORPICKER then
 										menu.options[v.name][g_name][v2.name][5] = {}
 										menu.options[v.name][g_name][v2.name][5][4] = Draw:ColorPicker(
 											v2.extra.color,
@@ -2070,7 +2084,7 @@ function menu.Initialize(menutable)
 										menu.options[v.name][g_name][v2.name][5][3] = { v1.x + v1.width - 38, y_pos + v1.y - 1 }
 										menu.options[v.name][g_name][v2.name][5][5] = false
 										menu.options[v.name][g_name][v2.name][5][6] = v2.extra.name
-									elseif v2.extra.type == "double colorpicker" then
+									elseif v2.extra.type == DOUBLE_COLORPICKER then
 										menu.options[v.name][g_name][v2.name][5] = {}
 										menu.options[v.name][g_name][v2.name][5][1] = {}
 										menu.options[v.name][g_name][v2.name][5][1][1] = {}
@@ -2091,7 +2105,7 @@ function menu.Initialize(menutable)
 									end
 								end
 								y_pos += 18
-							elseif v2.type == "slider" then
+							elseif v2.type == SLIDER then
 								menu.options[v.name][g_name][v2.name] = {}
 								menu.options[v.name][g_name][v2.name][4] = Draw:Slider(
 									v2.name,
@@ -2117,7 +2131,7 @@ function menu.Initialize(menutable)
 								menu.options[v.name][g_name][v2.name].custom = v2.custom or {}
 
 								y_pos += 30
-							elseif v2.type == "dropbox" then
+							elseif v2.type == DROPBOX then
 								menu.options[v.name][g_name][v2.name] = {}
 								menu.options[v.name][g_name][v2.name][1] = v2.value
 								menu.options[v.name][g_name][v2.name][2] = v2.type
@@ -2140,7 +2154,7 @@ function menu.Initialize(menutable)
 									menu.options[v.name][g_name][v2.name][3] = { v2.x + 7, v2.y - 1, v2.w }
 									menu.options[v.name][g_name][v2.name][4] = Draw:Dropbox(v2.name, v2.value, v2.values, v2.x + 8, v2.y, v2.w, tabz[k])
 								end
-							elseif v2.type == "combobox" then
+							elseif v2.type == COMBOBOX then
 								menu.options[v.name][g_name][v2.name] = {}
 								menu.options[v.name][g_name][v2.name][4] = Draw:Combobox(
 										v2.name,
@@ -2155,7 +2169,7 @@ function menu.Initialize(menutable)
 								menu.options[v.name][g_name][v2.name][3] = { v1.x + 7, v1.y + y_pos - 1, v1.width - 16 }
 								menu.options[v.name][g_name][v2.name][5] = false
 								y_pos += 40
-							elseif v2.type == "button" then
+							elseif v2.type == BUTTON then
 								menu.options[v.name][g_name][v2.name] = {}
 								menu.options[v.name][g_name][v2.name][1] = false
 								menu.options[v.name][g_name][v2.name][2] = v2.type
@@ -2172,7 +2186,7 @@ function menu.Initialize(menutable)
 									menu.options[v.name][g_name][v2.name][3] = { v2.x + 7, v2.y - 1, v2.w }
 									menu.options[v.name][g_name][v2.name][4] = Draw:Button(v2.name, v2.x + 8, v2.y, v2.w, tabz[k])
 								end
-							elseif v2.type == "textbox" then
+							elseif v2.type == TEXTBOX then
 								menu.options[v.name][g_name][v2.name] = {}
 								menu.options[v.name][g_name][v2.name][4] = Draw:TextBox(v2.name, v2.text, v1.x + 8, v1.y + y_pos, v1.width - 16, tabz[k])
 								menu.options[v.name][g_name][v2.name][1] = v2.text
@@ -2200,7 +2214,7 @@ function menu.Initialize(menutable)
 								menu.options[v.name][g_name][v2.name][7] = v2.columns
 								menu.options[v.name][g_name][v2.name][8] = { v1.x + 8, v1.y + y_pos, v1.width - 16 }
 								y_pos += 22 + (22 * v2.size)
-							elseif v2.type == "image" then
+							elseif v2.type == IMAGE then
 								menu.options[v.name][g_name][v2.name] = {}
 								menu.options[v.name][g_name][v2.name][1] = Draw:ImageWithText(v2.size, nil, v2.text, v1.x + 8, v1.y + y_pos, tabz[k])
 								menu.options[v.name][g_name][v2.name][2] = v2.type
@@ -2887,7 +2901,7 @@ function menu.Initialize(menutable)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
-					if v2[2] == "toggle" then
+					if v2[2] == TOGGLE then
 						if not v2[1] then
 							for i = 0, 3 do
 								v2[4][i + 1].Color = ColorRange(i, {
@@ -2906,7 +2920,7 @@ function menu.Initialize(menutable)
 								})
 							end
 						end
-					elseif v2[2] == "slider" then
+					elseif v2[2] == SLIDER then
 						for i = 0, 3 do
 							v2[4][i + 1].Color = ColorRange(i, {
 								[1] = { start = 0, color = RGB(menucolor[1], menucolor[2], menucolor[3]) },
@@ -2965,22 +2979,22 @@ function menu.Initialize(menutable)
 					local v = menu.options[k]
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
-							if v2[2] == "slider" and v2[5] then
+							if v2[2] == SLIDER and v2[5] then
 								v2[5] = false
-							elseif v2[2] == "dropbox" and v2[5] then
+							elseif v2[2] == DROPBOX and v2[5] then
 								v2[5] = false
-							elseif v2[2] == "combobox" and v2[5] then
+							elseif v2[2] == COMBOBOX and v2[5] then
 								v2[5] = false
-							elseif v2[2] == "toggle" then
+							elseif v2[2] == TOGGLE then
 								if v2[5] ~= nil then
-									if v2[5][2] == "keybind" and v2[5][5] then
+									if v2[5][2] == KEYBIND and v2[5][5] then
 										v2[5][4][2].Color = RGB(30, 30, 30)
 										v2[5][5] = false
-									elseif v2[5][2] == "single colorpicker" and v2[5][5] then
+									elseif v2[5][2] == COLORPICKER and v2[5][5] then
 										v2[5][5] = false
 									end
 								end
-							elseif v2[2] == "button" then
+							elseif v2[2] == BUTTON then
 								if v2[1] then
 									for i = 0, 8 do
 										v2[4][i + 1].Color = ColorRange(i, {
@@ -3017,7 +3031,7 @@ function menu.Initialize(menutable)
 				for k, v in pairs(menu.options) do
 					for k1, v1 in pairs(v) do
 						for k2, v2 in pairs(v1) do
-							if v2[2] == "textbox" then
+							if v2[2] == TEXTBOX then
 								if v2[5] then
 									v2[5] = false
 									v2[4].Color = RGB(255, 255, 255)
@@ -3035,9 +3049,9 @@ function menu.Initialize(menutable)
 			for k, v in pairs(menu.options) do
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
-						if v2[2] == "toggle" then
+						if v2[2] == TOGGLE then
 							if v2[5] ~= nil then
-								if v2[5][2] == "keybind" and v2[5][5] and key.KeyCode.Value ~= 0 then
+								if v2[5][2] == KEYBIND and v2[5][5] and key.KeyCode.Value ~= 0 then
 									v2[5][4][2].Color = RGB(30, 30, 30)
 									v2[5][4][1].Text = KeyEnumToName(key.KeyCode)
 									if KeyEnumToName(key.KeyCode) == "None" then
@@ -3048,7 +3062,7 @@ function menu.Initialize(menutable)
 									v2[5][5] = false
 								end
 							end
-						elseif v2[2] == "textbox" then --ANCHOR TEXTBOXES
+						elseif v2[2] == TEXTBOX then --ANCHOR TEXTBOXES
 							if v2[5] then
 								if not INPUT_SERVICE:IsKeyDown(Enum.KeyCode.LeftControl) then
 									if string.len(v2[1]) <= 28 then
@@ -3146,39 +3160,41 @@ function menu.Initialize(menutable)
 		keyz[v.Value] = v
 	end
 
+
 	function menu:GetVal(tab, groupbox, name, ...)
 		local args = { ... }
 
 		local option = menu.options[tab][groupbox][name]
 
 		if args[1] == nil then
-			if option[2] == "toggle" then
+			if option[2] == TOGGLE then
 				local lastval = option[7]
 				option[7] = option[1]
 				return option[1], lastval
-			elseif option[2] ~= "combobox" then
+			elseif option[2] ~= COMBOBOX then
 				return option[1]
 			else
 				local temptable = {}
-				for k, v in ipairs(option[1]) do
+				for k = 1, #option[1] do
+					local v = option[1][k]
 					table.insert(temptable, v[2])
 				end
 				return temptable
 			end
 		else
-			if args[1] == "keybind" or args[1] == "color" then
+			if args[1] == KEYBIND or args[1] == COLOR then
 				if args[2] then
 					return RGB(option[5][1][1], option[5][1][2], option[5][1][3])
 				else
 					return option[5][1]
 				end
-			elseif args[1] == "color1" then
+			elseif args[1] == COLOR1 then
 				if args[2] then
 					return RGB(option[5][1][1][1][1], option[5][1][1][1][2], option[5][1][1][1][3])
 				else
 					return option[5][1][1][1]
 				end
-			elseif args[1] == "color2" then
+			elseif args[1] == COLOR2 then
 				if args[2] then
 					return RGB(option[5][1][2][1][1], option[5][1][2][1][2], option[5][1][2][1][3])
 				else
@@ -3196,10 +3212,9 @@ function menu.Initialize(menutable)
 					option.lastvalue = option.relvalue
 				end
 				return option.relvalue, option.lastvalue, option.event
-			else
-				return false
 			end
 		end
+		return false
 	end
 
 	function menu:SetKey(tab, groupbox, name, val)
@@ -3214,7 +3229,7 @@ function menu.Initialize(menutable)
 		end
 	end
 
-	local menuElementTypes = { "toggle", "slider", "dropbox", "textbox" }
+	local menuElementTypes = { [TOGGLE] = "toggle", [SLIDER] = "slider", [DROPBOX] = "dropbox", [TEXTBOX] = "textbox" }
 	local doubleclickDelay = 1
 	local buttonsInQue = {}
 
@@ -3226,7 +3241,7 @@ function menu.Initialize(menutable)
 			for k1, v1 in pairs(menu.options) do
 				for k2, v2 in pairs(v1) do
 					for k3, v3 in pairs(v2) do
-						if v3[2] == tostring(v) and k3 ~= "Configs" and k3 ~= "Player Status" and k3 ~= "ConfigName"
+						if v3[2] == k and k3 ~= "Configs" and k3 ~= "Player Status" and k3 ~= "ConfigName"
 						then
 							figgy ..= k1 .. "|" .. k2 .. "|" .. k3 .. "|" .. tostring(v3[1]) .. "\n"
 						end
@@ -3239,7 +3254,7 @@ function menu.Initialize(menutable)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
-					if v2[2] == "combobox" then
+					if v2[2] == COMBOBOX then
 						local boolz = ""
 						for k3, v3 in pairs(v2[1]) do
 							boolz = boolz .. tostring(v3[2]) .. ", "
@@ -3254,9 +3269,9 @@ function menu.Initialize(menutable)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
-					if v2[2] == "toggle" then
+					if v2[2] == TOGGLE then
 						if v2[5] ~= nil then
-							if v2[5][2] == "keybind" then
+							if v2[5][2] == KEYBIND then
 								local toggletype = "|" .. tostring(v2[5].toggletype)
 
 								if v2[5][1] == nil then
@@ -3294,9 +3309,9 @@ function menu.Initialize(menutable)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
-					if v2[2] == "toggle" then
+					if v2[2] == TOGGLE then
 						if v2[5] ~= nil then
-							if v2[5][2] == "single colorpicker" then
+							if v2[5][2] == COLORPICKER then
 								local clrz = ""
 								for k3, v3 in pairs(v2[5][1]) do
 									clrz = clrz .. tostring(v3) .. ", "
@@ -3313,9 +3328,9 @@ function menu.Initialize(menutable)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
-					if v2[2] == "toggle" then
+					if v2[2] == TOGGLE then
 						if v2[5] ~= nil then
-							if v2[5][2] == "double colorpicker" then
+							if v2[5][2] == DOUBLE_COLORPICKER then
 								local clrz1 = ""
 								for k3, v3 in pairs(v2[5][1][1][1]) do
 									clrz1 = clrz1 .. tostring(v3) .. ", "
@@ -3584,7 +3599,7 @@ function menu.Initialize(menutable)
 			for k, v in pairs(menu.options) do
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
-						if v2[2] == "toggle" then
+						if v2[2] == TOGGLE then
 							if not v2[1] then
 								for i = 0, 3 do
 									v2[4][i + 1].Color = ColorRange(i, {
@@ -3604,15 +3619,15 @@ function menu.Initialize(menutable)
 								end
 							end
 							if v2[5] ~= nil then
-								if v2[5][2] == "keybind" then
+								if v2[5][2] == KEYBIND then
 									v2[5][4][2].Color = RGB(30, 30, 30)
 									v2[5][4][1].Text = KeyEnumToName(v2[5][1])
-								elseif v2[5][2] == "single colorpicker" then
+								elseif v2[5][2] == COLORPICKER then
 									v2[5][4][1].Color = RGB(v2[5][1][1], v2[5][1][2], v2[5][1][3])
 									for i = 2, 3 do
 										v2[5][4][i].Color = RGB(v2[5][1][1] - 40, v2[5][1][2] - 40, v2[5][1][3] - 40)
 									end
-								elseif v2[5][2] == "double colorpicker" then
+								elseif v2[5][2] == DOUBLE_COLORPICKER then
 									for i, v3 in ipairs(v2[5][1]) do
 										v3[4][1].Color = RGB(v3[1][1], v3[1][2], v3[1][3])
 										for i1 = 2, 3 do
@@ -3621,7 +3636,7 @@ function menu.Initialize(menutable)
 									end
 								end
 							end
-						elseif v2[2] == "slider" then
+						elseif v2[2] == SLIDER then
 							if v2[1] < v2[6][1] then
 								v2[1] = v2[6][1]
 							elseif v2[1] > v2[6][2] then
@@ -3638,12 +3653,12 @@ function menu.Initialize(menutable)
 							for i = 1, 4 do
 								v2[4][i].Size = Vector2.new((v2[3][3] - 4) * ((v2[1] - v2[6][1]) / (v2[6][2] - v2[6][1])), 2)
 							end
-						elseif v2[2] == "dropbox" then
+						elseif v2[2] == DROPBOX then
 							if v2[6][v2[1]] == nil then
 								v2[1] = 1
 							end
 							v2[4][1].Text = v2[6][v2[1]]
-						elseif v2[2] == "combobox" then
+						elseif v2[2] == COMBOBOX then
 							local textthing = ""
 							for k3, v3 in pairs(v2[1]) do
 								if v3[2] then
@@ -3659,7 +3674,7 @@ function menu.Initialize(menutable)
 								textthing = string_cut(textthing, 25)
 							end
 							v2[4][1].Text = textthing
-						elseif v2[2] == "textbox" then
+						elseif v2[2] == TEXTBOX then
 							v2[4].Text = v2[1]
 						end
 					end
@@ -3771,9 +3786,9 @@ function menu.Initialize(menutable)
 
 					if pass then
 						for k2, v2 in pairs(v1) do --ANCHOR more menu bs
-							if v2[2] == "toggle" then
+							if v2[2] == TOGGLE then
 								if v2[5] ~= nil then
-									if v2[5][2] == "keybind" then
+									if v2[5][2] == KEYBIND then
 										if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 44, 16) then
 											if menu.keybind_open ~= v2 and v2[5].toggletype ~= 0 then
 												menu.keybind_open = v2
@@ -3822,7 +3837,7 @@ function menu.Initialize(menutable)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
-					if v2[2] == "dropbox" and v2[5] then
+					if v2[2] == DROPBOX and v2[5] then
 						if not menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[6] + 1) + 3) then
 							menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 							v2[5] = false
@@ -3830,7 +3845,7 @@ function menu.Initialize(menutable)
 							menu.dropbox_open = v2
 						end
 					end
-					if v2[2] == "combobox" and v2[5] then
+					if v2[2] == COMBOBOX and v2[5] then
 						if not menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 24 * (#v2[1] + 1) + 3) then
 							menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
 							v2[5] = false
@@ -3838,14 +3853,14 @@ function menu.Initialize(menutable)
 							menu.dropbox_open = v2
 						end
 					end
-					if v2[2] == "toggle" then
+					if v2[2] == TOGGLE then
 						if v2[5] ~= nil then
-							if v2[5][2] == "keybind" then
+							if v2[5][2] == KEYBIND then
 								if v2[5][5] == true then
 									v2[5][4][2].Color = RGB(30, 30, 30)
 									v2[5][5] = false
 								end
-							elseif v2[5][2] == "single colorpicker" then
+							elseif v2[5][2] == COLORPICKER then
 								if v2[5][5] == true then
 									if not menu:MouseInColorPicker(0, 0, cp.w, cp.h) then
 										if menu.colorPickerOpen then
@@ -3879,7 +3894,7 @@ function menu.Initialize(menutable)
 										menu.colorPickerOpen = nil -- close colorpicker
 									end
 								end
-							elseif v2[5][2] == "double colorpicker" then
+							elseif v2[5][2] == DOUBLE_COLORPICKER then
 								for k3, v3 in pairs(v2[5][1]) do
 									if v3[5] == true then
 										if not menu:MouseInColorPicker(0, 0, cp.w, cp.h) then
@@ -3918,7 +3933,7 @@ function menu.Initialize(menutable)
 							end
 						end
 					end
-					if v2[2] == "textbox" and v2[5] then
+					if v2[2] == TEXTBOX and v2[5] then
 						v2[4].Color = RGB(255, 255, 255)
 						v2[5] = false
 						v2[4].Text = v2[1]
@@ -4094,7 +4109,7 @@ function menu.Initialize(menutable)
 
 						if pass then
 							for k2, v2 in pairs(v1) do
-								if v2[2] == "toggle" and not menu.dropbox_open then
+								if v2[2] == TOGGLE and not menu.dropbox_open then
 									if menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16) then
 										if v2[6] then
 											if menu:GetVal(
@@ -4139,12 +4154,12 @@ function menu.Initialize(menutable)
 										FireEvent("bb_togglepressed", k1, k2, v2)
 									end
 									if v2[5] ~= nil then
-										if v2[5][2] == "keybind" then
+										if v2[5][2] == KEYBIND then
 											if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 44, 16) then
 												v2[5][4][2].Color = RGB(menu.mc[1], menu.mc[2], menu.mc[3])
 												v2[5][5] = true
 											end
-										elseif v2[5][2] == "single colorpicker" then
+										elseif v2[5][2] == COLORPICKER then
 											if menu:MouseInMenu(v2[5][3][1], v2[5][3][2], 28, 14) then
 												v2[5][5] = true
 												menu.colorPickerOpen = v2[5]
@@ -4171,7 +4186,7 @@ function menu.Initialize(menutable)
 													)
 												end
 											end
-										elseif v2[5][2] == "double colorpicker" then
+										elseif v2[5][2] == DOUBLE_COLORPICKER then
 											for k3, v3 in pairs(v2[5][1]) do
 												if menu:MouseInMenu(v3[3][1], v3[3][2], 28, 14) then
 													v3[5] = true
@@ -4202,7 +4217,7 @@ function menu.Initialize(menutable)
 											end
 										end
 									end
-								elseif v2[2] == "slider" and not menu.dropbox_open then
+								elseif v2[2] == SLIDER and not menu.dropbox_open then
 									if menu:MouseInMenu(v2[7][1], v2[7][2], 22, 13) then
 										local stepval = 1
 										if v2.stepsize then
@@ -4237,7 +4252,7 @@ function menu.Initialize(menutable)
 									elseif menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
 										v2[5] = true
 									end
-								elseif v2[2] == "dropbox" then
+								elseif v2[2] == DROPBOX then
 									if menu.dropbox_open then
 										if v2 ~= menu.dropbox_open then
 											continue
@@ -4285,7 +4300,7 @@ function menu.Initialize(menutable)
 											textbox[4].Text = textbox[1]
 										end
 									end
-								elseif v2[2] == "combobox" then
+								elseif v2[2] == COMBOBOX then
 									if menu.dropbox_open then
 										if v2 ~= menu.dropbox_open then
 											continue
@@ -4345,7 +4360,7 @@ function menu.Initialize(menutable)
 											end
 										end
 									end
-								elseif v2[2] == "button" and not menu.dropbox_open then
+								elseif v2[2] == BUTTON and not menu.dropbox_open then
 									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 22) then
 										if not v2[1] then
 											buttonpressed(v2)
@@ -4361,7 +4376,7 @@ function menu.Initialize(menutable)
 											v2[1] = true
 										end
 									end
-								elseif v2[2] == "textbox" and not menu.dropbox_open then
+								elseif v2[2] == TEXTBOX and not menu.dropbox_open then
 									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 22) then
 										if not v2[5] then
 											menu.textboxopen = v2
@@ -4417,7 +4432,7 @@ function menu.Initialize(menutable)
 		for k, v in pairs(menu.options) do
 			for k1, v1 in pairs(v) do
 				for k2, v2 in pairs(v1) do
-					if v2[2] == "toggle" then
+					if v2[2] == TOGGLE then
 						if v2[6] then
 							if not menu:GetVal("Settings", "Cheat Settings", "Allow Unsafe Features") then
 								v2[1] = false
@@ -4458,10 +4473,10 @@ function menu.Initialize(menutable)
 			if menu.tabnames[menu.activetab] == k then
 				for k1, v1 in pairs(v) do
 					for k2, v2 in pairs(v1) do
-						if v2[2] == "slider" and v2[5] then
+						if v2[2] == SLIDER and v2[5] then
 							v2[5] = false
 						end
-						if v2[2] == "button" and v2[1] then
+						if v2[2] == BUTTON and v2[1] then
 							for i = 0, 8 do
 								v2[4][i + 1].Color = ColorRange(i, {
 									[1] = { start = 0, color = RGB(50, 50, 50) },
@@ -4659,7 +4674,7 @@ function menu.Initialize(menutable)
 
 						if pass then
 							for k2, v2 in pairs(v1) do
-								if v2[2] == "toggle" then
+								if v2[2] == TOGGLE then
 									if not menu.dropbox_open and not menu.colorPickerOpen then
 										if menu.open and menu:MouseInMenu(v2[3][1], v2[3][2], 30 + v2[4][5].TextBounds.x, 16)
 										then
@@ -4675,7 +4690,7 @@ function menu.Initialize(menutable)
 											end
 										end
 									end
-								elseif v2[2] == "slider" then
+								elseif v2[2] == SLIDER then
 									if v2[5] then
 										local new_val = (v2[6][2] - v2[6][1])  * (
 												(
@@ -5366,22 +5381,22 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					autofill = true,
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Enabled",
 							value = false,
 							extra = {
-								type = "keybind",
+								type = KEYBIND,
 								key = Enum.KeyCode.J,
 								toggletype = 4,
 							},
 						},
 						{
-							type = "combobox",
+							type = COMBOBOX,
 							name = "Checks",
 							values = { { "Alive", true }, { "Same Team", false }, { "Distance", false } },
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Max Distance",
 							value = 100,
 							minvalue = 30,
@@ -5389,7 +5404,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							stradd = "m",
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Aimbot FOV",
 							value = 0,
 							minvalue = 0,
@@ -5397,28 +5412,28 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							stradd = "°",
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "FOV Calculation",
 							value = 1,
 							values = { "Static", "Actual FOV" },
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Visibility Check",
 							value = false,
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Auto Shoot",
 							value = false,
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Smoothing",
 							value = false,
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Smoothing Value",
 							value = 0,
 							minvalue = 0,
@@ -5437,76 +5452,76 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					autopos = "left",
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Name",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Name ESP",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Head Dot",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Head Dot",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Box",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Box ESP",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Health Bar",
 							value = false,
 							extra = {
-								type = "double colorpicker",
+								type = DOUBLE_COLORPICKER,
 								name = { "Low Health", "Max Health" },
 								color = { { 255, 0, 0 }, { 0, 255, 0 } },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Health Number",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Health Number ESP",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Team",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Team ESP",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Team Color Based",
 							value = false,
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Distance",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Distance ESP",
 								color = { 255, 255, 255, 255 },
 							},
@@ -5519,24 +5534,24 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					autofill = true,
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Custom Crosshair",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Crosshair Color",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Crosshair Position",
 							value = 1,
 							values = { "Center Of Screen", "Mouse" },
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Crosshair Size",
 							value = 10,
 							minvalue = 5,
@@ -5544,11 +5559,11 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							stradd = "px",
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Draw Aimbot FOV",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Aimbot FOV Circle Color",
 								color = { 255, 255, 255, 255 },
 							},
@@ -5560,18 +5575,18 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					autopos = "right",
 					content = {
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "ESP Sorting",
 							value = 1,
 							values = { "None", "Distance" },
 						},
 						{
-							type = "combobox",
+							type = COMBOBOX,
 							name = "Checks",
 							values = { { "Alive", true }, { "Same Team", false }, { "Distance", false } },
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Max Distance",
 							value = 100,
 							minvalue = 30,
@@ -5579,31 +5594,31 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							stradd = "m",
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Highlight Aimbot Target",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Aimbot Target",
 								color = { 255, 150, 0, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Highlight Friends",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Friended Players",
 								color = { 0, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Highlight Priority",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Priority Players",
 								color = { 255, 210, 0, 255 },
 							},
@@ -5616,12 +5631,12 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					autofill = true,
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Change FOV",
 							value = false,
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Camera FOV",
 							value = 60,
 							minvalue = 60,
@@ -5641,12 +5656,12 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					autofill = true,
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Speed",
 							value = false,
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Speed Factor",
 							value = 40,
 							minvalue = 1,
@@ -5654,33 +5669,33 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							stradd = " stud/s",
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Speed Method",
 							value = 1,
 							values = { "Velocity", "Walk Speed" },
 						},
 						-- {
-						-- 	type = "combobox",
-						-- 	name = "Combobox",
+						-- 	type = COMBOBOX,
+						-- 	name = COMBOBOX,
 						-- 	values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
 						-- },
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Fly",
 							value = false,
 							extra = {
-								type = "keybind",
+								type = KEYBIND,
 								key = Enum.KeyCode.B,
 							},
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Fly Method",
 							value = 1,
 							values = { "Fly", "Noclip" },
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Fly Speed",
 							value = 40,
 							minvalue = 1,
@@ -5688,12 +5703,13 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							stradd = " stud/s",
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Mouse Teleport",
 							value = false,
 							extra = {
-								type = "keybind",
+								type = KEYBIND,
 								key = Enum.KeyCode.Q,
+								toggletype = 0
 							},
 						},
 					},
@@ -5704,22 +5720,22 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					autofill = true,
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Enable Tick Manipulation",
 							value = false,
 							unsafe = true,
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Shift Tick Base",
 							value = false,
 							extra = {
-								type = "keybind",
+								type = KEYBIND,
 								key = Enum.KeyCode.E,
 							},
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Shifted Tick Base Add",
 							value = 20,
 							minvalue = 1,
@@ -5748,13 +5764,13 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							columns = 3,
 						},
 						{
-							type = "image",
+							type = IMAGE,
 							name = "Player Info",
 							text = "No Player Selected",
 							size = 72,
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Player Status",
 							x = 307,
 							y = 314,
@@ -5772,41 +5788,41 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					height = 182,
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Menu Accent",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Accent Color",
 								color = { 127, 72, 163 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Watermark",
 							value = true,
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Custom Menu Name",
 							value = MenuName and true or false,
 						},
 						{
-							type = "textbox",
+							type = TEXTBOX,
 							name = "MenuName",
 							text = MenuName or "Bitch Bot",
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Set Clipboard Game ID",
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Unload Cheat",
 							doubleclick = true,
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Allow Unsafe Features",
 							value = false,
 						},
@@ -5820,29 +5836,29 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					height = 182,
 					content = {
 						{
-							type = "textbox",
+							type = TEXTBOX,
 							name = "ConfigName",
 							file = true,
 							text = "",
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Configs",
 							value = 1,
 							values = GetConfigs(),
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Load Config",
 							doubleclick = true,
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Save Config",
 							doubleclick = true,
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Delete Config",
 							doubleclick = true,
 						},
@@ -5976,28 +5992,28 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			return
 		end
 		for i = 1, Players.MaxPlayers do
-			local hdt = menu:GetVal("Visuals", "Player ESP", "Head Dot", "color")[4]
-			allesp.headdot[i].Color = menu:GetVal("Visuals", "Player ESP", "Head Dot", "color", true)
+			local hdt = menu:GetVal("Visuals", "Player ESP", "Head Dot", COLOR)[4]
+			allesp.headdot[i].Color = menu:GetVal("Visuals", "Player ESP", "Head Dot", COLOR, true)
 			allesp.headdot[i].Transparency = hdt / 255
 			allesp.headdotoutline[i].Transparency = (hdt - 40) / 255
 
-			local boxt = menu:GetVal("Visuals", "Player ESP", "Box", "color")[4]
-			allesp.box[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", "color", true)
+			local boxt = menu:GetVal("Visuals", "Player ESP", "Box", COLOR)[4]
+			allesp.box[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", COLOR, true)
 			allesp.box[i].Transparency = boxt
 			allesp.innerbox[i].Transparency = boxt
 			allesp.outerbox[i].Transparency = boxt
 
-			allesp.hptext[i].Color = menu:GetVal("Visuals", "Player ESP", "Health Number", "color", true)
-			allesp.hptext[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Health Number", "color")[4] / 255
+			allesp.hptext[i].Color = menu:GetVal("Visuals", "Player ESP", "Health Number", COLOR, true)
+			allesp.hptext[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Health Number", COLOR)[4] / 255
 
-			allesp.name[i].Color = menu:GetVal("Visuals", "Player ESP", "Name", "color", true)
-			allesp.name[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Name", "color")[4] / 255
+			allesp.name[i].Color = menu:GetVal("Visuals", "Player ESP", "Name", COLOR, true)
+			allesp.name[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Name", COLOR)[4] / 255
 
-			allesp.team[i].Color = menu:GetVal("Visuals", "Player ESP", "Team", "color", true)
-			allesp.team[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Team", "color")[4] / 255
+			allesp.team[i].Color = menu:GetVal("Visuals", "Player ESP", "Team", COLOR, true)
+			allesp.team[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Team", COLOR)[4] / 255
 
-			allesp.distance[i].Color = menu:GetVal("Visuals", "Player ESP", "Distance", "color", true)
-			allesp.distance[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Distance", "color")[4] / 255
+			allesp.distance[i].Color = menu:GetVal("Visuals", "Player ESP", "Distance", COLOR, true)
+			allesp.distance[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Distance", COLOR)[4] / 255
 		end
 	end
 
@@ -6097,7 +6113,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	end
 
 	local function Aimbot()
-		if menu:GetVal("Aimbot", "Aimbot", "Enabled") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Aimbot", "Aimbot", "Enabled", "keybind"))
+		if menu:GetVal("Aimbot", "Aimbot", "Enabled") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Aimbot", "Aimbot", "Enabled", KEYBIND))
 		then
 			local organizedPlayers = {}
 			local fovType = menu:GetVal("Aimbot", "Aimbot", "FOV Calculation")
@@ -6177,7 +6193,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						end
 						if not menu then
 							return shared.tick_ref()
-						elseif menu:GetVal("Misc", "Exploits", "Enable Tick Manipulation") and menu:GetVal("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Misc", "Exploits", "Shift Tick Base", "keybind"))
+						elseif menu:GetVal("Misc", "Exploits", "Enable Tick Manipulation") and menu:GetVal("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Misc", "Exploits", "Shift Tick Base", KEYBIND))
 						then
 							menu.tickbaseadd += menu:GetVal("Misc", "Exploits", "Shifted Tick Base Add") * 0.001
 							return shared.tick_ref() + menu.tickbaseadd
@@ -6256,8 +6272,8 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					menu.fovcircle[1].Visible = true
 					menu.fovcircle[2].Visible = true
 
-					menu.fovcircle[2].Color = menu:GetVal("Visuals", "Misc", "Draw Aimbot FOV", "color", true)
-					local transparency = menu:GetVal("Visuals", "Misc", "Draw Aimbot FOV", "color")[4]
+					menu.fovcircle[2].Color = menu:GetVal("Visuals", "Misc", "Draw Aimbot FOV", COLOR, true)
+					local transparency = menu:GetVal("Visuals", "Misc", "Draw Aimbot FOV", COLOR)[4]
 					menu.fovcircle[1].Transparency = (transparency - 40) / 255
 					menu.fovcircle[2].Transparency = transparency / 255
 				else
@@ -6266,7 +6282,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				end
 				if menu:GetVal("Visuals", "Misc", "Custom Crosshair") then
 					local size = menu:GetVal("Visuals", "Misc", "Crosshair Size")
-					local color = menu:GetVal("Visuals", "Misc", "Custom Crosshair", "color", true)
+					local color = menu:GetVal("Visuals", "Misc", "Custom Crosshair", COLOR, true)
 					menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
 					menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
 
@@ -6287,13 +6303,13 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	local function unikeycheck(actionName, inputState, inputObject)
 		if actionName == "BB UNI check" then
 			if inputState == Enum.UserInputState.Begin then
-				if menu:GetVal("Misc", "Movement", "Fly") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Fly", "keybind")
+				if menu:GetVal("Misc", "Movement", "Fly") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Fly", KEYBIND)
 				then
 					cachedValues.FlyToggle = not cachedValues.FlyToggle
 					LOCAL_PLAYER.Character.HumanoidRootPart.Anchored = false
 					return Enum.ContextActionResult.Sink
 				end
-				if menu:GetVal("Misc", "Movement", "Mouse Teleport") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Mouse Teleport", "keybind")
+				if menu:GetVal("Misc", "Movement", "Mouse Teleport") and inputObject.KeyCode == menu:GetVal("Misc", "Movement", "Mouse Teleport", KEYBIND)
 				then
 					local targetPos = LOCAL_MOUSE.Hit.p
 					local RP = LOCAL_PLAYER.Character.HumanoidRootPart
@@ -6307,7 +6323,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			-----------------------------------------
 			local keyflag = inputState == Enum.UserInputState.Begin
 
-			if inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Shift Tick Base", "keybind") then
+			if inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Shift Tick Base", KEYBIND) then
 				menu.tickbaseadd = 0
 				return Enum.ContextActionResult.Sink
 			end
@@ -6477,11 +6493,11 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							allesp.healthinner[i].Color = ColorRange(health, {
 								[1] = {
 									start = 0,
-									color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color1", true),
+									color = menu:GetVal("Visuals", "Player ESP", "Health Bar", COLOR1, true),
 								},
 								[2] = {
 									start = 100,
-									color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color2", true),
+									color = menu:GetVal("Visuals", "Player ESP", "Health Bar", COLOR2, true),
 								},
 							})
 
@@ -6618,11 +6634,11 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 		end
 
 		if menu:GetVal("Visuals", "Player ESP", "Enabled") then
-			local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
-			local priority_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color")[4] / 255
+			local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", COLOR, true)
+			local priority_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", COLOR)[4] / 255
 
-			local friend_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
-			local friend_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color")[4] / 255
+			local friend_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR, true)
+			local friend_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR)[4] / 255
 
 			for i, player in pairs(Players:GetPlayers()) do
 				if not player.Character or not player.Character.Humanoid or player == LOCAL_PLAYER then
@@ -6658,7 +6674,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					local boxsize = { w = sizeX, h = sizeY }
 
 					if menu:GetVal("Visuals", "Player ESP", "Box") then
-						local boxtrans = menu:GetVal("Visuals", "Player ESP", "Box", "color")[4]
+						local boxtrans = menu:GetVal("Visuals", "Player ESP", "Box", COLOR)[4]
 
 						allesp.outerbox[i].Position = Vector2.new(boxtop.x - 1, boxtop.y - 1)
 						allesp.outerbox[i].Size = Vector2.new(boxsize.w + 2, boxsize.h + 2)
@@ -6689,11 +6705,11 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 						allesp.healthinner[i].Color = ColorRange(health, {
 							[1] = {
 								start = 0,
-								color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color1", true),
+								color = menu:GetVal("Visuals", "Player ESP", "Health Bar", COLOR1, true),
 							},
 							[2] = {
 								start = 100,
-								color = menu:GetVal("Visuals", "Player ESP", "Health Bar", "color2", true),
+								color = menu:GetVal("Visuals", "Player ESP", "Health Bar", COLOR2, true),
 							},
 						})
 
@@ -6788,19 +6804,19 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 						allesp.downed[i].Color = friend_color
 						allesp.downed[i].Transparency = friend_alpha
 					else
-						allesp.name[i].Color = menu:GetVal("Visuals", "Player ESP", "Name", "color", true)
-						allesp.name[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Name", "color")[4] / 255
+						allesp.name[i].Color = menu:GetVal("Visuals", "Player ESP", "Name", COLOR, true)
+						allesp.name[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Name", COLOR)[4] / 255
 
-						allesp.box[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", "color", true)
+						allesp.box[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", COLOR, true)
 
-						allesp.item[i].Color = menu:GetVal("Visuals", "Player ESP", "Held Item", "color", true)
-						allesp.item[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Held Item", "color")[4] / 255
+						allesp.item[i].Color = menu:GetVal("Visuals", "Player ESP", "Held Item", COLOR, true)
+						allesp.item[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Held Item", COLOR)[4] / 255
 
-						allesp.distance[i].Color = menu:GetVal("Visuals", "Player ESP", "Distance", "color", true)
-						allesp.distance[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Distance", "color")[4] / 255
+						allesp.distance[i].Color = menu:GetVal("Visuals", "Player ESP", "Distance", COLOR, true)
+						allesp.distance[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Distance", COLOR)[4] / 255
 
-						allesp.downed[i].Color = menu:GetVal("Visuals", "Player ESP", "Downed", "color", true)
-						allesp.downed[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Downed", "color")[4] / 255
+						allesp.downed[i].Color = menu:GetVal("Visuals", "Player ESP", "Downed", COLOR, true)
+						allesp.downed[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Downed", COLOR)[4] / 255
 					end
 				end
 			end
@@ -6824,112 +6840,112 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					autopos = "left",
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Enabled",
 							value = true,
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Downed",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Player Downed Flag Color",
 								color = { 252, 186, 3, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Name",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Player Name Color",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Box",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Player Box Color",
 								color = { 255, 0, 0, 200 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Health Bar",
 							value = true,
 							extra = {
-								type = "double colorpicker",
+								type = DOUBLE_COLORPICKER,
 								name = { "Low Health", "Max Health" },
 								color = { { 255, 0, 0 }, { 0, 255, 0 } },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Health Number",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Player Health Number Color",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Held Item",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Player Held Item Color",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Distance",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Player Distance Color",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Chams",
 							value = true,
 							extra = {
-								type = "double colorpicker",
+								type = DOUBLE_COLORPICKER,
 								name = { "Visible Player Chams", "Invisible Player Chams" },
 								color = { { 255, 0, 0, 200 }, { 100, 0, 0, 100 } },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Skeleton",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Player Skeleton Color",
 								color = { 255, 255, 255, 180 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Out of View",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Arrow Color",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Arrow Distance",
 							value = 50,
 							minvalue = 10,
@@ -6937,7 +6953,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 							stradd = "%",
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Dynamic Arrow Size",
 							value = true,
 						},
@@ -6949,7 +6965,7 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					autofill = true,
 					content = {
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Max HP Visibility Cap",
 							value = 90,
 							minvalue = 50,
@@ -6957,12 +6973,12 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 							stradd = "hp",
 						},
 						{
-							type = "combobox",
+							type = COMBOBOX,
 							name = "Ignore",
 							values = { { "Distance", false }, { "Down", false }, { "Party", false } },
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Max Distance",
 							value = 100,
 							minvalue = 30,
@@ -6970,31 +6986,31 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 							stradd = "m",
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Highlight Aimbot Target",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Aimbot Target",
 								color = { 255, 0, 0, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Highlight Friends",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Friended Players",
 								color = { 0, 255, 255, 255 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Highlight Priority",
 							value = true,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Priority Players",
 								color = { 255, 210, 0, 255 },
 							},
@@ -7006,24 +7022,24 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					autopos = "right",
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Custom Crosshair",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Crosshair Color",
 								color = { 255, 255, 255, 255 },
 							},
 						},
 
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Crosshair Position",
 							value = 1,
 							values = { "Center Of Screen", "Mouse" },
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Crosshair Size",
 							value = 10,
 							minvalue = 5,
@@ -7031,11 +7047,11 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 							stradd = "px",
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Draw Aimbot FOV",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Aimbot FOV Circle Color",
 								color = { 255, 255, 255, 255 },
 							},
@@ -7047,12 +7063,12 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					autopos = "right",
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Force Time",
 							value = false,
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Custom Time",
 							value = 0,
 							minvalue = 0,
@@ -7078,12 +7094,12 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					autofill = true,
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Speed",
 							value = false,
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Speed Factor",
 							value = 40,
 							minvalue = 1,
@@ -7091,28 +7107,28 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 							stradd = " stud/s",
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Speed Method",
 							value = 1,
 							values = { "Velocity", "Walk Speed" },
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Fly",
 							value = false,
 							extra = {
-								type = "keybind",
+								type = KEYBIND,
 								key = Enum.KeyCode.B,
 							},
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Fly Method",
 							value = 1,
 							values = { "Fly", "Noclip" },
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Fly Speed",
 							value = 40,
 							minvalue = 1,
@@ -7120,11 +7136,11 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 							stradd = " stud/s",
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Mouse Teleport",
 							value = false,
 							extra = {
-								type = "keybind",
+								type = KEYBIND,
 								key = Enum.KeyCode.Q,
 							},
 						},
@@ -7150,13 +7166,13 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 							columns = 3,
 						},
 						{
-							type = "image",
+							type = IMAGE,
 							name = "Player Info",
 							text = "No Player Selected",
 							size = 72,
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Player Status",
 							x = 307,
 							y = 314,
@@ -7174,41 +7190,41 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					height = 182,
 					content = {
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Menu Accent",
 							value = false,
 							extra = {
-								type = "single colorpicker",
+								type = COLORPICKER,
 								name = "Accent Color",
 								color = { 127, 72, 163 },
 							},
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Watermark",
 							value = true,
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Custom Menu Name",
 							value = MenuName and true or false,
 						},
 						{
-							type = "textbox",
+							type = TEXTBOX,
 							name = "MenuName",
 							text = MenuName or "Bitch Bot",
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Set Clipboard Game ID",
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Unload Cheat",
 							doubleclick = true,
 						},
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Allow Unsafe Features",
 							value = false,
 						},
@@ -7222,29 +7238,29 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					height = 182,
 					content = {
 						{
-							type = "textbox",
+							type = TEXTBOX,
 							name = "ConfigName",
 							file = true,
 							text = "",
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Configs",
 							value = 1,
 							values = GetConfigs(),
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Load Config",
 							doubleclick = true,
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Save Config",
 							doubleclick = true,
 						},
 						{
-							type = "button",
+							type = BUTTON,
 							name = "Delete Config",
 							doubleclick = true,
 						},
@@ -7588,7 +7604,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		[11] = { {} }, -- backtrack lines
 	}
 
-	local allespnum = #allesp
 
 	local wepesp = allesp[7]
 
@@ -8210,13 +8225,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	local ghostchar = charcontainer.Ghost
 	local phantomchar = charcontainer.Phantoms
 
-	local repupdates = {}
+	ragebot.repupdates = {}
 
 	for _, player in next, Players:GetPlayers() do
 		if player == LOCAL_PLAYER then
 			continue
 		end
-		repupdates[player] = {}
+		ragebot.repupdates[player] = {}
 	end
 
 	local ncf = CFrame.new()
@@ -8574,6 +8589,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	end
 
 	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK -- fuk json
+		debug.profilebegin("render chams")
 		local PlayerList = Players:GetPlayers()
 		for k = 1, #PlayerList do
 			local player = PlayerList[k]
@@ -8591,23 +8607,23 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 				if player.Team ~= Players.LocalPlayer.Team then
 					enabled = menu:GetVal("Visuals", "Enemy ESP", "Chams")
-					col = menu:GetVal("Visuals", "Enemy ESP", "Chams", "color2", true)
-					vTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", "color2")[4] / 255
-					xqz = menu:GetVal("Visuals", "Enemy ESP", "Chams", "color1", true)
-					ivTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", "color1")[4] / 255
+					col = menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR2, true)
+					vTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR2)[4] / 255
+					xqz = menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR1, true)
+					ivTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR1)[4] / 255
 				else
 					enabled = menu:GetVal("Visuals", "Team ESP", "Chams")
-					col = menu:GetVal("Visuals", "Team ESP", "Chams", "color2", true)
-					vTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", "color2")[4] / 255
-					xqz = menu:GetVal("Visuals", "Team ESP", "Chams", "color1", true)
-					ivTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", "color1")[4] / 255
+					col = menu:GetVal("Visuals", "Team ESP", "Chams", COLOR2, true)
+					vTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", COLOR2)[4] / 255
+					xqz = menu:GetVal("Visuals", "Team ESP", "Chams", COLOR1, true)
+					ivTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", COLOR1)[4] / 255
 				end
 
 				player.Character = Body.rootpart.Parent
 				local Parts = player.Character:GetChildren()
 				for k1 = 1, #Parts do
 					Part = Parts[k1]
-					--debug.profilebegin("renderChams " .. player.Name)
+					debug.profilebegin("renderChams " .. player.Name)
 					if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
 						local helmet = Part:FindFirstChild("HELMET")
 						if helmet then
@@ -8657,13 +8673,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											"Visuals",
 											"ESP Settings",
 											"Highlight Priority",
-											"color",
+											COLOR,
 											true
 										)
 									col = bColor:Mult(xqz, 0.6)
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, player.Name)
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR) and table.find(menu.friends, player.Name)
 								then
-									xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
+									xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR, true)
 									col = bColor:Mult(xqz, 0.6)
 								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (
 										player == legitbot.target or player == ragebot.target
@@ -8673,7 +8689,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										"Visuals",
 										"ESP Settings",
 										"Highlight Aimbot Target",
-										"color",
+										COLOR,
 										true
 									)
 									col = bColor:Mult(xqz, 0.6)
@@ -8684,10 +8700,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-					--debug.profileend("renderChams " .. player.Name)
+					debug.profileend("renderChams " .. player.Name)
 				end
 			end
 		end
+		debug.profileend("render chams")
 	end
 
 	local send = client.net.send
@@ -9069,15 +9086,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local modmisses = misses and misses % 5
 
 			curbodyparts = curbodyparts or client.replication.getbodyparts(player)
-			if not curbodyparts or not client.hud:isplayeralive(player) then
+			if not curbodyparts or not client.hud:isplayeralive(player) or not curbodyparts.torso then
 				return
 			end
-			if modmisses and modmisses > 1 then
-				local rep = repupdates[player] and repupdates[player][#repupdates[player]]
-
-				if rep and (rep.position - curbodyparts.torso.Position).Magnitude > 18 and curbodyparts.torso then
-					resolvedPosition = rep.position
-				end
+			local rep = ragebot.repupdates[player] 
+			if rep and rep.position and rep.position and (rep.position - curbodyparts.torso.Position).Magnitude > 18  then
+				resolvedPosition = rep.position
 			end
 			if (curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude > 18 then
 				resolvedPosition = curbodyparts.rootpart.Position
@@ -9222,7 +9236,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			lastHitboxPriority = hitboxPriority or lastHitboxPriority
 			self.intersection = nil
 
-			--debug.profilebegin("BB self GetTarget")
+			debug.profilebegin("BB self GetTarget")
 			--local hitscan = hitscan or {}
 			local partPreference = hitboxPriority
 				or "you know who i am? well you about to find out, your barbecue boy"
@@ -9243,6 +9257,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local head
 			local resolvedPosition
 			local newbone
+			local realbone
 			local backtrackFrame 
 
 			local aimbotFov = menu:GetVal("Rage", "Aimbot", "Aimbot FOV")
@@ -9292,9 +9307,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									end
 								end
 							end
-							local bone = curbodyparts[hitboxPriority]
+							local bone = curbodyparts.rootpart
+							realbone = curbodyparts[hitboxPriority]
 							if bone.ClassName == "Part" then
-								local newbone = bone
+								local newbone = realbone
 								if resolved then
 									newbone = menu.parts.resolverHitbox
 									self.intersection = menu.parts.resolverHitbox.Position
@@ -9318,7 +9334,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											continue
 										end
 									elseif autowall ~= 1 then
-										--debug.profilebegin("BB self Penetration Check " .. player.Name)
+										debug.profilebegin("BB self Penetration Check " .. player.Name)
 										local directionVector = camera:GetTrajectory(newbone.Position, camposv3)
 										-- self:CanPenetrate(LOCAL_PLAYER, player, directionVector, newbone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
 										-- self:CanPenetrate(origin, target, velocity, penetration)
@@ -9326,13 +9342,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											continue
 										end
 										if
-											self:CanPenetrate(
+										self:CanPenetrate(
 												camposv3,
 												newbone,
-												client.logic.currentgun.data.penetrationdepth
+												client.logic.currentgun.data.penetrationdepth+1
 											)
 										then
-											cpart = newbone
+											cpart = realbone
 											theplayer = player
 											firepos = camposv3
 											head = hitboxPriority == "head"
@@ -9344,7 +9360,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 												self:HitscanOnAxes(camposreal, player, newbone, newhitboxshift)
 											if axisPosition then
 												self.firepos = axisPosition
-												cpart = bone
+												cpart = realbone
 												theplayer = player
 												firepos = axisPosition
 												head = hitboxPriority == "head"
@@ -9353,7 +9369,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 												end
 											end
 										end
-										--debug.profileend("BB self Penetration Check " .. player.Name)
+										debug.profileend("BB self Penetration Check " .. player.Name)
 									end
 								end
 							end
@@ -9370,7 +9386,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				CreateNotification("Crimwalk disabled due to ragebot")
 				LOCAL_PLAYER.Character.HumanoidRootPart.Position = client.lastrepupdate
 			end
-			--debug.profileend("BB self GetTarget")
+			debug.profileend("BB self GetTarget")
 			
 			return cpart, theplayer, closest, firepos, head, backtrackFrame
 		end
@@ -9553,12 +9569,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 
 		local hitscanPoints = { 0, 0, 0, 0, 0, 0, 0, 0 }
-		local hitboxShiftPoints = { 0, 0, 0 }
+		local hitboxShiftPoints = { 0, 0, 0, 0, 0 }
 		local hitboxShiftAmount = { 0, 0 }
 		if BBOT.username == "dev" then
 			StatMenuRendered:connect(function(text)
 				text.Text ..= string.format("\n--hitscan-- %d %d %d %d %d %d %d %d", unpack(hitscanPoints))
-				text.Text ..= string.format("\n--hitbox shift method-- %d %d %d", unpack(hitboxShiftPoints))
+				text.Text ..= string.format("\n--hitbox shift method-- %d %d %d %d %d", unpack(hitboxShiftPoints))
 				text.Text ..= string.format("\n--hitbox-- %d %d", unpack(hitboxShiftAmount))
 				if ragebot.lasthittick and ragebot.lasthittime then
 					text.Text ..= string.format("\n--backtracking-- %dms", (ragebot.lasthittick - ragebot.lasthittime) * 1000)
@@ -9575,11 +9591,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			function(part, position)
 				return part.Velocity.Unit
 			end,
+			function(part, position)
+				return -part.Velocity.Unit
+			end,
 			function(part, position, localpart)
 				return localpart.Velocity.Unit
 			end,
+			function(part, position, localpart)
+				return -localpart.Velocity.Unit
+			end,
 		}
-		-- local function getHitboxShift(person, bodypart, position)
+		-- local function GetHitBoxShift(person, bodypart, position)
 		-- 	local misses = ragebot.predictedMisses[person] or 0
 		-- 	local HITBOX_SHIFT_TOTAL = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shift Distance")
 		-- 	local HITBOX_SHIFT_AMOUNT = HITBOX_SHIFT_TOTAL / 2
@@ -9596,9 +9618,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		-- end
 
 		
-		local function getHitboxShift(person, bodypart, position)
-			shiftmode += math.random(1,2)
-			shiftmode %= 3
+		local function GetHitBoxShift(person, bodypart, position)
+			shiftmode += 1
+			shiftmode %= #shiftmodes
 			shiftmode += 1
 			local misses = ragebot.predictedMisses[person] or 0
 			local HITBOX_SHIFT_TOTAL = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shift Distance")
@@ -9608,7 +9630,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local shiftSize = clamp(HITBOX_SHIFT_AMOUNT - misses, 1, HITBOX_SHIFT_AMOUNT)
 			local pullVector = shiftmodes[shiftmode](bodypart, position, LOCAL_PLAYER.Character.HumanoidRootPart) * pullAmount
 			local newTargetPosition = bodypart.Position - pullVector
-
+			
 			menu.parts.sphereHitbox.Size = Vector3.new(shiftSize, shiftSize, shiftSize)
 			menu.parts.sphereHitbox.Position = newTargetPosition -- ho. ly. fu. cking. shit,.,m
 			hitboxShiftAmount[1] = shiftSize
@@ -9648,15 +9670,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local pull = (bodypart.Position - position.p).Unit * step
 				position = position.p + pull
 				local hitbox = bodypart
-				local dist, thick
+				local shifttype
 				if hitboxshift then
-					hitbox, whitelist, dist, thick = getHitboxShift(person, bodypart, position)
+					hitbox, whitelist, shifttype = GetHitBoxShift(person, bodypart, position)
 				end
 				local pen, exited, bulletintersection =
 					ragebot:CanPenetrate(position, hitbox, client.logic.currentgun.data.penetrationdepth, whitelist)
 
 				if pen then
 					hitscanPoints[8] += 1
+					if shifttype then
+						hitboxShiftPoints[shifttype] += 1
+					end
 					return position, bulletintersection
 				end
 			end
@@ -9664,14 +9689,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if resolverPoints[i] == true then -- this is so that it doesn't skip for the origin point
 					local position = origin * hitscanOffsets[i]
 					local hitbox = bodypart
-					local dist, thick
+					local shifttype
 					if hitboxshift then
-						hitbox, whitelist, dist, thick = getHitboxShift(person, bodypart, position.p)
+						hitbox, whitelist, shifttype = GetHitBoxShift(person, bodypart, position.p)
 					end
 					local pen, exited, bulletintersection =
 						ragebot:CanPenetrate(position.p, hitbox, client.logic.currentgun.data.penetrationdepth, whitelist)
 					if pen then
 						hitscanPoints[i] += 1
+						if shifttype then
+							hitboxShiftPoints[shifttype] += 1
+						end
 						return position.p, bulletintersection
 					else
 						position = origin
@@ -9862,7 +9890,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			beam.LightEmission = 1
 			beam.LightInfluence = 1
 			beam.Enabled = true
-			beam.Color = ColorSequence.new(menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color2", true))
+			beam.Color = ColorSequence.new(menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", COLOR2, true))
 			beam.Attachment0 = origin_att
 			beam.Attachment1 = ending_att
 			beam.Width0 = 0.2
@@ -9934,8 +9962,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							lastrealpos = pos
 
 							if menu and menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP") then
-								local c1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color1", true)
-								local c2 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", "color2", true)
+								local c1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", COLOR1, true)
+								local c2 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", COLOR2, true)
 								local colorz = { c1, c2 }
 								if nextpos then
 									--local mag = (nextpos - pos).magnitude
@@ -10090,11 +10118,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						if victim == ragebot.firsttarget then
 							ragebot.firsttarget = nil
 						end
-						-- if not repupdates[victim] then
+						-- if not ragebot.repupdates[victim] then
 						-- 	printconsole("Unable to find position data for " .. victim.Name)
 						-- end
 						ragebot.backtrackframes[victim] = {}
-						repupdates[victim] = {}
+						ragebot.repupdates[victim] = {}
 						ragebot.fakePositionsResolved[victim] = nil
 					else
 						if ragebot then
@@ -10160,7 +10188,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							if not killerbodyparts then
 								return func(...)
 							end
-							local rep = repupdates[args[1]][#repupdates[args[1]]]
+							local rep = ragebot.repupdates[args[1]][#ragebot.repupdates[args[1]]]
 							local repupdatePosition = rep and rep.position or killerbodyparts.rootpart.Position
 
 							fragargs[2].frames[1].a = Vector3.new(0 / 0)
@@ -10235,16 +10263,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				clienteventfuncs[hash] = function(player, newangles)
 					local bodyparts = client.replication.getbodyparts(player)
 					if bodyparts and type(bodyparts) == "table" then
-						if not repupdates[player] then
-							repupdates[player] = {}
-						end
-						local data = repupdates[player]
 						local pos = bodyparts.rootpart.Position
-						table.insert(data, 1, {
+						ragebot.repupdates[player] = {
 							["position"] = pos,
 							["tick"] = tick(),
-						})
-						table.remove(data, 19)
+						}
 					end
 
 					if newangles.Magnitude >= 2 ^ 10 then
@@ -10368,7 +10391,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				misc:Invisibility(true)
 			end
 		end)
-
+		misc.beams = {}
 		function misc:CreateBeam(origin_att, ending_att)
 			local beam = Instance.new("Beam")
 			beam.Texture = "http://www.roblox.com/asset/?id=446111271"
@@ -10379,11 +10402,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			beam.TextureLength = 12
 			beam.FaceCamera = true
 			beam.Enabled = true
-			beam.Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0),
-				NumberSequenceKeypoint.new(1, 1),
-			})
-			beam.Color = ColorSequence.new(menu:GetVal("Visuals", "Misc", "Bullet Tracers", "color", true), Color3.new(0, 0, 0))
+			beam.ZOffset = -1
+			beam.Transparency = NumberSequence.new(0,0)
+			beam.Color = ColorSequence.new(menu:GetVal("Visuals", "Misc", "Bullet Tracers", COLOR, true), Color3.new(0, 0, 0))
 			beam.Attachment0 = origin_att
 			beam.Attachment1 = ending_att
 			debris:AddItem(beam, 3)
@@ -10392,9 +10413,21 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 			local speedtween = TweenInfo.new(5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0)
 			tween:Create(beam, speedtween, { TextureSpeed = 2 }):Play()
-
 			beam.Parent = workspace
+			table.insert(misc.beams, { beam = beam, time = tick() })
 			return beam
+		end
+
+		function misc:UpdateBeams()
+			local time = tick()
+			for i = #self.beams, 1, -1 do
+				if self.beams[i].beam  then
+					local transparency = (time - self.beams[i].time) - 2
+					self.beams[i].beam.Transparency = NumberSequence.new(transparency, transparency)
+				else
+					table.remove(self.beams, i)
+				end
+			end
 		end
 		
 		function misc:BypassSpeedCheck(val)
@@ -10885,7 +10918,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 								--part.Material = mats[armmaterial]
 								if part.ClassName == "MeshPart" or part.Name == "Sleeve" then
-									--part.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
+									--part.Color = menu:GetVal("Visuals", "Local", "Arm Chams", COLOR1, true)
 									if part.Transparency ~= 1 then
 										part.Transparency = 0
 									end
@@ -10909,7 +10942,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 								--part.Material = mats[Weaponmaterial]
 								if part.ClassName == "MeshPart" or part.Name == "Sleeve" then
-									--part.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
+									--part.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", COLOR1, true)
 									if part.Transparency ~= 1 then
 										part.Transparency = 0
 									end
@@ -11150,14 +11183,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 		do --ANCHOR send hook
 			client.net.send = function(self, ...)
+				debug.profilebegin("netsend")
+
 				local args = { ... }
 				-- if menu and menu:GetVal("Misc", "Exploits", "Skin Changer") and args[1] == "changecamo" then
 				-- 	local tid = menu:GetVal("Misc", "Exploits", "skinchangerTexture")
 				-- 	args[6].TextureProperties.TextureId = tid == "" and nil or tid
-				-- 	args[6].TextureProperties.Transparency = 1 - menu:GetVal("Misc", "Exploits", "Skin Changer", "color")[4] / 255
+				-- 	args[6].TextureProperties.Transparency = 1 - menu:GetVal("Misc", "Exploits", "Skin Changer", COLOR)[4] / 255
 				-- 	args[6].TextureProperties.StudsPerTileU = menu:GetVal("Misc", "Exploits", "Scale X") / 100
 				-- 	args[6].TextureProperties.StudsPerTileV = menu:GetVal("Misc", "Exploits", "Scale Y") / 100
-				-- 	args[6].BrickProperties.BrickColor = menu:GetVal("Misc", "Exploits", "Skin Changer", "color", true)
+				-- 	args[6].BrickProperties.BrickColor = menu:GetVal("Misc", "Exploits", "Skin Changer", COLOR, true)
 				-- 	args[6].BrickProperties.Material = mats[menu:GetVal("Misc", "Exploits", "Skin Material")]
 				-- end
 				if args[1] == "spawn" then
@@ -11543,6 +11578,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 
+				debug.profileend("netsend")
 				return send(self, unpack(args))
 			end
 			-- Legitbot definition defines legit functions
@@ -11575,7 +11611,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 					if not menu.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun
 					then
-						--debug.profilebegin("Legitbot Main")
+						debug.profilebegin("Legitbot Main")
 						if menu:GetVal("Legit", "Aim Assist", "Enabled") then
 							local keybind = menu:GetVal("Legit", "Aim Assist", "Aimbot Key") - 1
 							local fov = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV")
@@ -11593,20 +11629,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										table.insert(priority_list, game.Players[PlayerName])
 									end
 								end
-								local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, priority_list)
+								local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, priority_list, fov, dzFov)
 								if not targetPart then
-									targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+									targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, nil, fov, dzFov)
 								end
 								legitbot.target = player
 								local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") * 5 + 10
 								if targetPart then
-									if closest < fov and closest > dzFov then
-										legitbot:AimAtTarget(
-											targetPart,
-											smoothing,
-											menu:GetVal("Legit", "Aim Assist", "Smoothing Type")
-										)
-									end
+									legitbot:AimAtTarget(
+										targetPart,
+										smoothing,
+										menu:GetVal("Legit", "Aim Assist", "Smoothing Type")
+									)
 								end
 							end
 						end
@@ -11621,11 +11655,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									table.insert(priority_list, game.Players[PlayerName])
 								end
 							end
-							local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, priority_list)
+							local targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, priority_list, fov)
 							if not targetPart then
-								targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan)
+								targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, nil, fov)
 							end
-							if targetPart and closest < fov then
+							if targetPart then
 								legitbot.silentVector = legitbot:SilentAimAtTarget(targetPart)
 							elseif client.logic.currentgun and client.logic.currentgun.barrel then
 								legitbot.silentVector = nil
@@ -11639,12 +11673,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							end
 						end
-						--debug.profileend("Legitbot Main")
+						debug.profileend("Legitbot Main")
 					end
 				end
 
 				function legitbot:AimAtTarget(targetPart, smoothing, smoothtype)
-					--debug.profilebegin("Legitbot AimAtTarget")
+					debug.profilebegin("Legitbot AimAtTarget")
 					if not targetPart then
 						return
 					end
@@ -11714,11 +11748,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 						Move_Mouse(newMovement / smoothing * 100)
 					end
-					--debug.profileend("Legitbot AimAtTarget")
+					debug.profileend("Legitbot AimAtTarget")
 				end
 
 				function legitbot:SilentAimAtTarget(targetPart)
-					--debug.profilebegin("Legitbot SilentAimAtTarget")
+					debug.profilebegin("Legitbot SilentAimAtTarget")
 
 					if not targetPart or not targetPart.Position or not client.logic.currentgun then
 						return
@@ -11772,7 +11806,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
 					dir += offset * offsetMult
 
-					--debug.profileend("Legitbot SilentAimAtTarget")
+					debug.profileend("Legitbot SilentAimAtTarget")
 					if client.logic.currentgun.type == "SHOTGUN" then
 						local x, y, z = CFrame.lookAt(Vector3.new(), dir.Unit):ToOrientation()
 						client.logic.currentgun.barrel.Orientation = Vector3.new(math.deg(x), math.deg(y), math.deg(z))
@@ -11788,19 +11822,20 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 				--[[
-			if menu:GetVal("Legit", "Aim Assist", "Auto Wallbang") then
-				local dir = camera:GetTrajectory(Bone.Position, client.cam.cframe.p) - client.cam.cframe.p
-				if ragebot:CanPenetrate(LOCAL_PLAYER, Player, dir, Bone.Position)  then
-					closest
+				if menu:GetVal("Legit", "Aim Assist", "Auto Wallbang") then
+					local dir = camera:GetTrajectory(Bone.Position, client.cam.cframe.p) - client.cam.cframe.p
+					if ragebot:CanPenetrate(LOCAL_PLAYER, Player, dir, Bone.Position)  then
+						closest
+					end
+				elseif camera:IsVisible(Bone) then
+					closest = camera:GetFOV(Bone)
+					closestPart = Bone
+					player = Player
 				end
-			elseif camera:IsVisible(Bone) then
-				closest = camera:GetFOV(Bone)
-				closestPart = Bone
-				player = Player
-			end
-			]]
-				function legitbot:GetTargetLegit(partPreference, hitscan, players)
-					--debug.profilebegin("Legitbot GetTargetLegit")
+				]]
+				function legitbot:GetTargetLegit(partPreference, hitscan, players, maxfov, minfov)
+					minfov = minfov or 0
+					debug.profilebegin("Legitbot GetTargetLegit")
 					local closest, closestPart, player = math.huge
 					partPreference = partPreference or "what"
 					hitscan = hitscan or {}
@@ -11812,11 +11847,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							new_closest = closest
 							for k, Bone in pairs(Parts) do
 								if Bone.ClassName == "Part" and hitscan[k] then
-									local fovToBone = camera:GetFOV(
-										Bone,
-										client.logic.currentgun:isaiming() and client:GetToggledSight(client.logic.currentgun).sightpart
-									)
-									if fovToBone < closest then
+									local fovToBone = camera:GetFOV(Bone)
+									if fovToBone > minfov and fovToBone < maxfov and fovToBone < closest then
 										local validPart = isValidTarget(Bone, Player)
 										if validPart then
 											closest = fovToBone
@@ -11843,7 +11875,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								for k, Bone in pairs(Parts) do
 									if Bone.ClassName == "Part" and hitscan[k] then
 										local fovToBone = camera:GetFOV(Bone)
-										if fovToBone < closest then
+										if fovToBone > minfov and fovToBone < maxfov and fovToBone < closest then
 											local validPart = isValidTarget(Bone, Player)
 											if validPart then
 												closest = fovToBone
@@ -11870,7 +11902,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-					--debug.profileend("Legitbot GetTargetLegit")
+					debug.profileend("Legitbot GetTargetLegit")
 					return closestPart, closest, player
 				end
 
@@ -11887,7 +11919,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local dsrgposrdjiogjaiogjaoeihjoaiest = "data" -- it loves it
 
 						local thebarrel = gun.barrel
-						--debug.profilebegin("Legitbot Triggerbot")
+						debug.profilebegin("Legitbot Triggerbot")
 						local bulletspeed = gun.data.bulletspeed
 						local isaiming = gun:isaiming()
 						local zoomval = menu:GetVal("Legit", "Trigger Bot", "Aim Percentage") / 100
@@ -11963,17 +11995,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							end
 						end
-					--[[local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
-					
-					if hit and parts[hit.Name] then
-						if not camera:IsVisible(hit) then return end
-						client.logic.currentgun:shoot(true)
-						legitbot.triggerbotShooting = true
-					elseif legitbot.triggerbotShooting then
-						client.logic.currentgun:shoot(false)
-						legitbot.triggerbotShooting = false
-					end]]
-						--debug.profileend("Legitbot Triggerbot")
+						--[[local hit = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.CFrame.Position, barrel.CFrame.LookVector*5000), {Camera, workspace.Players[LOCAL_PLAYER.Team.Name], workspace.Ignore})
+						
+						if hit and parts[hit.Name] then
+							if not camera:IsVisible(hit) then return end
+							client.logic.currentgun:shoot(true)
+							legitbot.triggerbotShooting = true
+						elseif legitbot.triggerbotShooting then
+							client.logic.currentgun:shoot(false)
+							legitbot.triggerbotShooting = false
+						end]]
+						debug.profileend("Legitbot Triggerbot")
 					end
 				end
 			end
@@ -12014,9 +12046,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if _new ~= _last then
 					game:GetService("RunService"):Set3dRenderingEnabled(not _new)
 				end
+				misc:UpdateBeams()
 				client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 				if menu.open then
-					--debug.profilebegin("renderVisuals Char")
+					debug.profilebegin("renderVisuals Char")
 					local crosshud = PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()
 					for i = 1, #crosshud do
 						local frame = crosshud[i]
@@ -12026,16 +12059,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								outline = frame.BorderColor3,
 							}
 						end -- MEOW -core 2021
-						local inline = menu:GetVal("Visuals", "Misc", "Crosshair Color", "color1", true)
-						local outline = menu:GetVal("Visuals", "Misc", "Crosshair Color", "color2", true)
+						local inline = menu:GetVal("Visuals", "Misc", "Crosshair Color", COLOR1, true)
+						local outline = menu:GetVal("Visuals", "Misc", "Crosshair Color", COLOR2, true)
 						local enabled = menu:GetVal("Visuals", "Misc", "Crosshair Color")
 						frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
 						frame.BorderColor3 = enabled and outline or crosshairColors.outline
-						--debug.profileend()
 					end
+					debug.profileend("renderVisuals Char")
 				end -- fun end!
 				--------------------------------------world funnies
-				--debug.profilebegin("renderVisuals World")
+				debug.profilebegin("renderVisuals World")
 				if menu.options["Visuals"]["World"]["Force Time"][1] then
 					game.Lighting.ClockTime = menu.options["Visuals"]["World"]["Custom Time"][1]
 				end
@@ -12065,26 +12098,24 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					game.Lighting.MapSaturation.TintColor = RGB(170, 170, 170)
 					game.Lighting.MapSaturation.Saturation = -0.25
 				end
-				--debug.profileend("renderVisuals World")
+				debug.profileend("renderVisuals World")
 
-				--debug.profilebegin("renderVisuals Player ESP Reset")
+				debug.profilebegin("renderVisuals Player ESP Reset")
 				-- TODO this reset may need to be improved to a large extent, it's taking up some time but idk if the frame times are becoming worse because of this
-				for i = 1, allespnum do
+				for i = 1, #allesp do
 					local drawclass = allesp[i]
 					for j = 1, #drawclass do
 						local drawdata = drawclass[j]
-						if type(drawdata) == "table" and #drawdata > 0 then
-							for k = 1, #drawdata do
-								drawdata[k].Visible = false
-							end
+						for k = 1, #drawdata do
+							drawdata[k].Visible = false
 						end
 					end
 				end
 
-				--debug.profileend("renderVisuals Player ESP Reset")
+				debug.profileend("renderVisuals Player ESP Reset")
 
 				----------
-				--debug.profilebegin("renderVisuals Main")
+				debug.profilebegin("renderVisuals Main")
 				if client.logic.currentgun and client.logic.currentgun.barrel and client.char.alive and menu:GetVal("Visuals", "Misc", "Laser Pointer")
 				then
 					menu.crosshair.outline[1].Visible = true
@@ -12097,7 +12128,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local trigger = barrel.Parent.Trigger
 						local hit, hitpos = workspace:FindPartOnRayWithIgnoreList(Ray.new(barrel.Position, trigger.CFrame.LookVector * 100), ignore)
 						local size = 6
-						local color = menu:GetVal("Visuals", "Misc", "Laser Pointer", "color", true)
+						local color = menu:GetVal("Visuals", "Misc", "Laser Pointer", COLOR, true)
 						menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
 						menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
 
@@ -12127,20 +12158,20 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					-- end)
 					local cam = client.cam.cframe
 
-					local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color", true)
-					local priority_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", "color")[4] / 255
+					local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", COLOR, true)
+					local priority_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", COLOR)[4] / 255
 
-					local friend_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color", true)
-					local friend_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color")[4] / 255
+					local friend_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR, true)
+					local friend_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR)[4] / 255
 
-					local target_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color", true)
-					local target_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", "color")[4] / 255
+					local target_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", COLOR, true)
+					local target_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", COLOR)[4] / 255
 					client.aliveplayers = 0
 					for curplayer = 1, #players do
 						
 						
 						local ply = players[curplayer]
-
+						local plyname = ply.Name
 						if client.hud:isplayeralive(ply) then
 							local parts = client.replication.getbodyparts(ply)
 
@@ -12167,8 +12198,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local rootpart = parts.rootpart.CFrame
 							local position = torso.Position
 							local resolved = false
-							local resolvedColor = menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag", "color", true)
-							local resolvedTransparency = menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag", "color")[4]/255
+							local resolvedColor = menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag", COLOR, true)
+							local resolvedTransparency = menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag", COLOR)[4]/255
 							if menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag") then
 								local newpos = ragebot:GetResolvedPosition(ply, parts)
 								if newpos then
@@ -12176,7 +12207,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 								position = newpos or position
 							end
-							--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. ply.Name)
+							debug.profilebegin("renderVisuals Player ESP Box Calculation " .. plyname)
 
 							local vTop = position + (torso.UpVector * 1.8) + cam.UpVector
 							local vBottom = position - (torso.UpVector * 2.5) - cam.UpVector
@@ -12210,13 +12241,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								math.floor(math.min(top.y, bottom.y))
 							)
 
-							--debug.profileend("renderVisuals Player ESP Box Calculation " .. ply.Name)
+							debug.profileend("renderVisuals Player ESP Box Calculation " .. plyname)
 
 							local GroupBox = ply.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 							local health = math.ceil(client.hud:getplayerhealth(ply))
 							local spoty = 0
-							local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", "color")[4] / 255
-							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Filled Box", "color")[4] / 255
+							local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", COLOR)[4] / 255
+							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Filled Box", COLOR)[4] / 255
 
 							local distance = math.floor((parts.rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
 
@@ -12230,15 +12261,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									math.floor(boxPosition.y) - 4
 								)
 								if nameon or rankon then
-									--debug.profilebegin("renderVisuals Player ESP Render Name " .. Player.Name)
+									debug.profilebegin("renderVisuals Player ESP Render Name " .. plyname)
 									local namestring = ""
 
 									if rankon then
-										local playerdata = teamdata[1]:FindFirstChild(ply.Name) or teamdata[2]:FindFirstChild(ply.Name)
+										local playerdata = teamdata[1]:FindFirstChild(plyname) or teamdata[2]:FindFirstChild(plyname)
 										namestring = "[" .. playerdata.Rank.Text .. "]"
 									end
 									if nameon then
-										local name = tostring(ply.Name)
+										local name = tostring(plyname)
 										if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
 											name = string.lower(name)
 										elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
@@ -12267,7 +12298,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 
 								if menu.options["Visuals"][GroupBox]["Box"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Box " .. ply.Name)
+									debug.profilebegin("renderVisuals Player ESP Render Box " .. plyname)
 									for i = -1, 1 do
 										local box = allesp[2][i + 3][curplayer]
 										box.Visible = true
@@ -12280,10 +12311,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										end
 										--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 									end
-									--debug.profileend("renderVisuals Player ESP Render Box " .. ply.Name)
+									debug.profileend("renderVisuals Player ESP Render Box " .. plyname)
 								end
 								if menu.options["Visuals"][GroupBox]["Filled Box"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Box " .. ply.Name)
+									debug.profilebegin("renderVisuals Player ESP Render Box " .. plyname)
 
 									local box = allesp[2][1][curplayer]
 									box.Visible = true
@@ -12301,12 +12332,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									end
 									--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 
-									--debug.profileend("renderVisuals Player ESP Render Box " .. ply.Name)
+									debug.profileend("renderVisuals Player ESP Render Box " .. plyname)
 								end
 								
 
 								if menu.options["Visuals"][GroupBox]["Health Bar"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. ply.Name)
+									debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. plyname)
 
 									local ySizeBar = -math.floor(boxSize.y * health / 100)
 									if menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1]
@@ -12323,7 +12354,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											clamp(ySizeBar + boxSize.y - tb.y * 0.5, -4, boxSize.y - 10)
 										)
 										--hptext.Position = Vector2.new(boxPosition.x - 7 - tb.x, boxPosition.y + clamp(boxSize.y + ySizeBar - 8, -4, boxSize.y - 10))
-										hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", "color", true)
+										hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", COLOR, true)
 										hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 
 
@@ -12352,18 +12383,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[3][2][curplayer].Color = ColorRange(health, {
 										[1] = {
 											start = 0,
-											color = menu:GetVal("Visuals", GroupBox, "Health Bar", "color1", true),
+											color = menu:GetVal("Visuals", GroupBox, "Health Bar", COLOR1, true),
 										},
 										[2] = {
 											start = 100,
-											color = menu:GetVal("Visuals", GroupBox, "Health Bar", "color2", true),
+											color = menu:GetVal("Visuals", GroupBox, "Health Bar", COLOR2, true),
 										},
 									})
 
-									--debug.profileend("renderVisuals Player ESP Render Health Bar " .. ply.Name)
+									debug.profileend("renderVisuals Player ESP Render Health Bar " .. plyname)
 								elseif menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1]
 								then
-									--debug.profilebegin("renderVisuals Player ESP Render Health Number " .. ply.Name)
+									debug.profilebegin("renderVisuals Player ESP Render Health Number " .. plyname)
 
 									local hptext = allesp[3][3][curplayer]
 
@@ -12373,14 +12404,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									local tb = hptext.TextBounds
 
 									hptext.Position = boxPosition + Vector2.new(-tb.x - 2, -4)
-									hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", "color", true)
+									hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", COLOR, true)
 									hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 
-									--debug.profileend("renderVisuals Player ESP Render Health Number " .. ply.Name)
+									debug.profileend("renderVisuals Player ESP Render Health Number " .. plyname)
 								end
 
 								if menu.options["Visuals"][GroupBox]["Held Weapon"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. ply.Name)
+									debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. plyname)
 
 									local charWeapon = _3pweps[ply]
 									local wepname = charWeapon and charWeapon or "???"
@@ -12401,11 +12432,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									weptext.Visible = true
 									weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
 
-									--debug.profileend("renderVisuals Player ESP Render Held Weapon " .. ply.Name)
+									debug.profileend("renderVisuals Player ESP Render Held Weapon " .. plyname)
 								end
 
 								if menu.options["Visuals"][GroupBox]["Distance"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Distance " .. ply.Name)
+									debug.profilebegin("renderVisuals Player ESP Render Distance " .. plyname)
 
 									local disttext = allesp[4][3][curplayer]
 
@@ -12416,26 +12447,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										boxPosition.y + boxSize.y + spoty
 									)
 
-									--debug.profileend("renderVisuals Player ESP Render Distance " .. ply.Name)
+									debug.profileend("renderVisuals Player ESP Render Distance " .. plyname)
 								end
 
 								if menu.options["Visuals"][GroupBox]["Skeleton"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. ply.Name)
+									debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. plyname)
 
 									local torso = Camera:WorldToViewportPoint(ply.Character.Torso.Position)
-									for k2, v2 in ipairs(skelparts) do
-										local line = allesp[1][k2][curplayer]
+									for i = 1, #skelparts do
+										
+										local line = allesp[1][i][curplayer]
 
-										local posie = Camera:WorldToViewportPoint(ply.Character:FindFirstChild(v2).Position)
+										local posie = Camera:WorldToViewportPoint(ply.Character:FindFirstChild(skelparts[i]).Position)
 										line.From = Vector2.new(posie.x, posie.y)
 										line.To = Vector2.new(torso.x, torso.y)
 										line.Visible = true
 									end
-									--debug.profileend("renderVisuals Player ESP Render Skeleton" .. ply.Name)
+									debug.profileend("renderVisuals Player ESP Render Skeleton" .. plyname)
 								end
 								--da colourz !!! :D 🔥🔥🔥🔥
 
-								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, ply.Name) then
+								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, plyname) then
 									allesp[4][1][curplayer].Color = priority_color
 									allesp[4][1][curplayer].Transparency = priority_alpha
 
@@ -12448,12 +12480,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[4][3][curplayer].Color = priority_color
 									allesp[4][3][curplayer].Transparency = priority_alpha
 
-									for k2, v2 in ipairs(skelparts) do
-										local line = allesp[1][k2][curplayer]
+									for i = 1, #skelparts do
+										local line = allesp[1][i][curplayer]
 										line.Color = priority_color
 										line.Transparency = priority_alpha
 									end
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, ply.Name)
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, plyname)
 								then
 									allesp[4][1][curplayer].Color = friend_color
 									allesp[4][1][curplayer].Transparency = friend_alpha
@@ -12467,8 +12499,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[4][3][curplayer].Color = friend_color
 									allesp[4][3][curplayer].Transparency = friend_alpha
 
-									for k2, v2 in ipairs(skelparts) do
-										local line = allesp[1][k2][curplayer]
+									for i = 1, #skelparts do
+										local line = allesp[1][i][curplayer]
 										line.Color = friend_color
 										line.Transparency = friend_alpha
 									end
@@ -12488,52 +12520,52 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[4][3][curplayer].Color = target_color
 									allesp[4][3][curplayer].Transparency = target_alpha
 
-									for k2, v2 in ipairs(skelparts) do
-										local line = allesp[1][k2][curplayer]
+									for i = 1, #skelparts do
+										local line = allesp[1][i][curplayer]
 										line.Color = target_color
 										line.Transparency = target_alpha
 									end
 								else
-									allesp[4][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Name", "color", true) -- RGB(menu.options["Visuals"][GroupBox]["Name"][5][1][1], menu.options["Visuals"][GroupBox]["Name"][5][1][2], menu.options["Visuals"][GroupBox]["Name"][5][1][3])
-									allesp[4][1][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Name", "color")[4] / 255
+									allesp[4][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Name", COLOR, true) -- RGB(menu.options["Visuals"][GroupBox]["Name"][5][1][1], menu.options["Visuals"][GroupBox]["Name"][5][1][2], menu.options["Visuals"][GroupBox]["Name"][5][1][3])
+									allesp[4][1][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Name", COLOR)[4] / 255
 
-									allesp[2][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", "color", true)
-									allesp[2][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Filled Box", "color", true)
+									allesp[2][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", COLOR, true)
+									allesp[2][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Filled Box", COLOR, true)
 
-									allesp[4][2][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color", true)
-									allesp[4][2][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", "color")[4] / 255
+									allesp[4][2][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR, true)
+									allesp[4][2][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR)[4] / 255
 
-									allesp[4][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Distance", "color", true)
-									allesp[4][3][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Distance", "color")[4] / 255
+									allesp[4][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Distance", COLOR, true)
+									allesp[4][3][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Distance", COLOR)[4] / 255
 
-									for k2, v2 in ipairs(skelparts) do
-										local line = allesp[1][k2][curplayer]
-										line.Color = menu:GetVal("Visuals", GroupBox, "Skeleton", "color", true)
-										line.Transparency = menu:GetVal("Visuals", GroupBox, "Skeleton", "color")[4] / 255
+									for i = 1, #skelparts do
+										local line = allesp[1][i][curplayer]
+										line.Color = menu:GetVal("Visuals", GroupBox, "Skeleton", COLOR, true)
+										line.Transparency = menu:GetVal("Visuals", GroupBox, "Skeleton", COLOR)[4] / 255
 									end
 								end
 							elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View")
 							then
-								--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. ply.Name)
-								local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color", true)
+								debug.profilebegin("renderVisuals Player ESP Render Out of View " .. plyname)
+								local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR, true)
 								local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
-								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, ply.Name)
+								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, plyname)
 								then
 									color = menu:GetVal(
 											"Visuals",
 											"ESP Settings",
 											"Highlight Priority",
-											"color",
+											COLOR,
 											true
 										)
 									color2 = bColor:Mult(color, 0.6)
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", "color") and table.find(menu.friends, ply.Name)
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR) and table.find(menu.friends, plyname)
 								then
 									color = menu:GetVal(
 											"Visuals",
 											"ESP Settings",
 											"Highlight Friends",
-											"color",
+											COLOR,
 											true
 										)
 									color2 = bColor:Mult(color, 0.6)
@@ -12545,7 +12577,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										"Visuals",
 										"ESP Settings",
 										"Highlight Aimbot Target",
-										"color",
+										COLOR,
 										true
 									)
 									color2 = bColor:Mult(color, 0.6)
@@ -12575,9 +12607,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
 
 									Tri.Color = i == 1 and color or color2
-									Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", "color")[4] / 255
+									Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR)[4] / 255
 								end
-								--debug.profileend("renderVisuals Player ESP Render Out of View " .. ply.Name)
+								debug.profileend("renderVisuals Player ESP Render Out of View " .. plyname)
 							end
 						end
 					end
@@ -12585,9 +12617,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					--ANCHOR weapon esp
 					if menu:GetVal("Visuals", "Dropped ESP", "Weapon Names") or menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo")
 					then
-						--debug.profilebegin("renderVisuals Dropped 1ESP")
+						debug.profilebegin("renderVisuals Dropped 1ESP")
 						local gunnum = 0
-						for k, v in pairs(workspace.Ignore.GunDrop:GetChildren()) do
+						local dropped = workspace.Ignore.GunDrop:GetChildren()
+						for k = 1, #dropped do
+							local v = dropped[k]
 							if not client then
 								return
 							end
@@ -12601,7 +12635,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								if gun_dist < 80 then
 									local hasgun = false
 									local gunpos2d, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(gunpos)
-									for k1, v1 in pairs(v:GetChildren()) do
+									local children = v:GetChildren()
+									for k1 = 1, #v do
+										local v1 = children[k1]
 										if tostring(v1) == "Gun" then
 											hasgun = true
 											break
@@ -12623,28 +12659,28 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 													"Visuals",
 													"Dropped ESP",
 													"Weapon Names",
-													"color1",
+													COLOR1,
 													true
 												)
 												wepesp[1][gunnum].Transparency = menu:GetVal(
 														"Visuals",
 														"Dropped ESP",
 														"Weapon Names",
-														"color1"
+														COLOR1
 													)[4]  * gunclearness / 255
 											else
 												wepesp[1][gunnum].Color = menu:GetVal(
 													"Visuals",
 													"Dropped ESP",
 													"Weapon Names",
-													"color2",
+													COLOR2,
 													true
 												)
 												wepesp[1][gunnum].Transparency = menu:GetVal(
 														"Visuals",
 														"Dropped ESP",
 														"Weapon Names",
-														"color2"
+														COLOR2
 													)[4]  * gunclearness / 255
 											end
 											wepesp[1][gunnum].Text = v.Gun.Value
@@ -12659,10 +12695,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 													"Visuals",
 													"Dropped ESP",
 													"Weapon Ammo",
-													"color",
+													COLOR,
 													true
 												)
-											wepesp[2][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", "color")[4]  * gunclearness / 255
+											wepesp[2][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo", COLOR)[4]  * gunclearness / 255
 											wepesp[2][gunnum].Visible = true
 											wepesp[2][gunnum].Position = Vector2.new(math.floor(gunpos2d.x), math.floor(gunpos2d.y + 36))
 										end
@@ -12670,13 +12706,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							end
 						end
-						--debug.profileend("renderVisuals Dropped ESP")
+						debug.profileend("renderVisuals Dropped ESP")
 					end
 					if menu:GetVal("Visuals", "FOV", "Enabled") then -- fov circles
 						local fovcircles = allesp[9]
 						if menu:GetVal("Visuals", "FOV", "Aim Assist") then
-							local col = menu:GetVal("Visuals", "FOV", "Aim Assist", "color", true)
-							local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist", "color")[4] / 255
+							local col = menu:GetVal("Visuals", "FOV", "Aim Assist", COLOR, true)
+							local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist", COLOR)[4] / 255
 							for i = 1, 2 do
 								local circle = fovcircles[1][i]
 								circle.Color = i == 2 and col or Color3.new(0, 0, 0)
@@ -12693,8 +12729,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 						if menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone") then
-							local col = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", "color", true)
-							local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", "color")[4] / 255
+							local col = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", COLOR, true)
+							local transparency = menu:GetVal("Visuals", "FOV", "Aim Assist Deadzone", COLOR)[4] / 255
 							for i = 1, 2 do
 								local circle = fovcircles[2][i]
 								circle.Color = i == 2 and col or Color3.new(0, 0, 0)
@@ -12711,8 +12747,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 						if menu:GetVal("Visuals", "FOV", "Bullet Redirection") then
-							local col = menu:GetVal("Visuals", "FOV", "Bullet Redirection", "color", true)
-							local transparency = menu:GetVal("Visuals", "FOV", "Bullet Redirection", "color")[4] / 255
+							local col = menu:GetVal("Visuals", "FOV", "Bullet Redirection", COLOR, true)
+							local transparency = menu:GetVal("Visuals", "FOV", "Bullet Redirection", COLOR)[4] / 255
 							for i = 1, 2 do
 								local circle = fovcircles[3][i]
 								circle.Color = i == 2 and col or Color3.new(0, 0, 0)
@@ -12730,8 +12766,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 						local circle = fovcircles[4]
 						if menu:GetVal("Visuals", "FOV", "Ragebot") then
-							local col = menu:GetVal("Visuals", "FOV", "Ragebot", "color", true)
-							local transparency = menu:GetVal("Visuals", "FOV", "Ragebot", "color")[4] / 255
+							local col = menu:GetVal("Visuals", "FOV", "Ragebot", COLOR, true)
+							local transparency = menu:GetVal("Visuals", "FOV", "Ragebot", COLOR)[4] / 255
 							for i = 1, 2 do
 								local circle = fovcircles[4][i]
 								circle.Color = i == 2 and col or Color3.new(0, 0, 0)
@@ -12749,14 +12785,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 					end
 
-					--debug.profilebegin("renderVisuals Dropped ESP Grenade Warning")
+					debug.profilebegin("renderVisuals Dropped ESP Grenade Warning")
 					if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
 						local health = client.char:gethealth()
-						local color1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color", true)
+						local color1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", COLOR, true)
 						local color2 = RGB(
-							menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[1] - 20,
-							menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[2] - 20,
-							menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", "color")[3] - 20
+							menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", COLOR)[1] - 20,
+							menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", COLOR)[2] - 20,
+							menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", COLOR)[3] - 20
 						)
 						for i = 1, #menu.activenades do
 							local nade = menu.activenades[i]
@@ -12866,10 +12902,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 					end
 
-					--debug.profileend("renderVisuals Dropped ESP Grenade Warning")
+					debug.profileend("renderVisuals Dropped ESP Grenade Warning")
 
-					--debug.profilebegin("renderVisuals Local Visuals")
-
+					debug.profilebegin("renderVisuals Local Visuals")
+					misc.setvis = misc.setvis or {} -- this is for caching the weapons and shit so that when you switche weapons it will execute this code :3
 					-- hand chams and such
 					if not client then
 						return
@@ -12882,14 +12918,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						if v.Name == "Left Arm" or v.Name == "Right Arm" then
 							for k1, v1 in pairs(v:GetChildren()) do
 								if armcham then
-									v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color2", true)
+									v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", COLOR2, true)
 								end
 								if v1.Transparency ~= 1 then
 									if armcham then
 										if not client.fakecharacter then
 											
 											v1.Transparency = 0.999999 + (
-													menu:GetVal("Visuals", "Local", "Arm Chams", "color2")[4] / -255
+													menu:GetVal("Visuals", "Local", "Arm Chams", COLOR2)[4] / -255
 												)
 										else
 											v1.Transparency = 0.999999
@@ -12905,13 +12941,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								v1.Material = mats[armmaterial]
 								if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
 									if armcham then
-										v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", "color1", true)
+										v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", COLOR1, true)
 									end
 									if v1.Transparency ~= 1 then
 										if armcham then
 											if not client.fakecharacter then
 												v1.Transparency = 0.999999 + (
-														menu:GetVal("Visuals", "Local", "Arm Chams", "color1")[4] / -255
+														menu:GetVal("Visuals", "Local", "Arm Chams", COLOR1)[4] / -255
 													)
 											else
 												v1.Transparency = 0.999999
@@ -12942,13 +12978,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						if v.Name ~= "Left Arm" and v.Name ~= "Right Arm" and v.Name ~= "FRAG" then
 							for k1, v1 in pairs(v:GetChildren()) do
 								if wepcham then
-									v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color1", true)
+									v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", COLOR1, true)
 								end
 								if v1.Transparency ~= 1 then
 									if wepcham then
 										if not client.fakecharacter then
 											v1.Transparency = 0.999999 + (
-													menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4] / -255
+													menu:GetVal("Visuals", "Local", "Weapon Chams", COLOR1)[4] / -255
 												)
 										else
 											v1.Transparency = 0.999999
@@ -12962,7 +12998,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									end
 								end
 								-- if v1.Transparency ~= 1 then
-								-- 	v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", "color1")[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
+								-- 	v1.Transparency = 0.99999 + (menu:GetVal("Visuals", "Local", "Weapon Chams", COLOR1)[4]/-255) --- it works shut up + i don't wanna make a fucking table for this shit
 								-- end
 								if menu:GetVal("Visuals", "Local", "Remove Weapon Skin") and wepcham then
 									for i2, v2 in pairs(v1:GetChildren()) do
@@ -12987,16 +13023,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 								if v1.Name == "LaserLight" and wepcham then
 									local transparency = 1 + (
-											menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4] / -255
+											menu:GetVal("Visuals", "Local", "Weapon Chams", COLOR2)[4] / -255
 										)
-									v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
+									v1.Color = menu:GetVal("Visuals", "Local", "Weapon Chams", COLOR2, true)
 									v1.Transparency = (transparency / 2) + 0.5
 									v1.Material = "ForceField"
 								elseif v1.Name == "SightMark" and wepcham then
 									if v1:FindFirstChild("SurfaceGui") then
-										local color = menu:GetVal("Visuals", "Local", "Weapon Chams", "color2", true)
+										local color = menu:GetVal("Visuals", "Local", "Weapon Chams", COLOR2, true)
 										local transparency = 1 + (
-												menu:GetVal("Visuals", "Local", "Weapon Chams", "color2")[4] / -255
+												menu:GetVal("Visuals", "Local", "Weapon Chams", COLOR2)[4] / -255
 											)
 										v1.SurfaceGui.Border.Scope.ImageColor3 = color
 										v1.SurfaceGui.Border.Scope.ImageTransparency = transparency
@@ -13014,127 +13050,127 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-					--debug.profileend("renderVisuals Local Visuals")
+					debug.profileend("renderVisuals Local Visuals")
 				end
-				if menu:GetVal("Visuals", "Keybinds", "Enabled") then
-					local texts = allesp[10]
-					local listsizes = menu:GetVal("Visuals", "Keybinds", "Use List Sizes")
-					local posy = math.ceil(SCREEN_SIZE.y * menu:GetVal("Visuals", "Keybinds", "Keybinds List Y") / 100)
-					local margin = posy
-					local posx = math.ceil(math.max(menu.stat_menu and 330 or 10, SCREEN_SIZE.x * menu:GetVal("Visuals", "Keybinds", "Keybinds List X") / 100))
-					local col = menu:GetVal("Visuals", "Keybinds", "Enabled", "color", true)
-					local transparency = menu:GetVal("Visuals", "Keybinds", "Enabled", "color")[4] / 255
-					local newtexts = {}
-					for i = 1, #menu.keybinds do
-						local keybind = menu.keybinds[i]
-						local box1 = texts[1][i]
-						local box = texts[2][i]
-						local box2 = texts[3][i]
-						local box3 = texts[5][i]
-						local text = texts[4][i]
-						if keybind and keybind[1] and menu:GetVal(keybind[4], keybind[3], keybind[2]) and menu:GetKey(keybind[4], keybind[3], keybind[2])
-						then
-							table.insert(newtexts, keybind[3] .. ": " .. keybind[2])
-						end
-						text.Visible = false
-						if box then
-							box.Visible = false
-						end
-						box1.Visible = false
-						box2.Visible = false
-						box3.Visible = false
-					end
-					table.sort(newtexts, function(s, s1)
-						return #s > #s1
-					end) -- i hate this shit
-					table.insert(newtexts, 1, "Keybinds")
-					local maxwidth = Vector2.new(0, 0)
-					local maxwidth2 = Vector2.new(0, 0)
-					for i = 1, #newtexts do
-						local text = texts[4][i]
-						text.Center = false
-						text.Text = newtexts[i]
-						if i <= 1 then
-							local newthing = Vector2.new(text.TextBounds.x + 4, text.TextBounds.y)
-							if newthing.x > maxwidth.x then
-								maxwidth = newthing
-							end
-						end
-						if i <= 2 then
-							local newthing = Vector2.new(text.TextBounds.x + 4, text.TextBounds.y)
-							if newthing.x > maxwidth2.x then
-								maxwidth2 = newthing - maxwidth
-							end
-						end
-					end
-					for i = 1, #newtexts do
-						local box1 = texts[1][i]
-						local box3 = texts[5][i]
-						local box = texts[3][i]
-						local text = texts[4][i]
-						text.Position = Vector2.new(posx + 2, margin)
-
-						text.Color = i ~= 1 and col or Color3.new(1, 1, 1)
-						text.Transparency = transparency
-						text.Visible = true
-						box.Position = Vector2.new(posx, margin)
-						box.Visible = true
-
-						box1.Position = Vector2.new(posx - 1, margin - 3)
-						box1.Visible = true
-
-						box1.Color = Color3.new(0, 0, 0)
-
-					
-
-						box3.Visible = true
-						box3.Color = Color3.new(0, 0, 0)
-						box3.Transparency = 0.4
-
-						if listsizes then
-							box.Size = text.TextBounds + Vector2.new(4, 3)
-							box1.Size = text.TextBounds + Vector2.new(6, 7)
-							box3.Size = text.TextBounds + Vector2.new(i == 2 and -maxwidth.x + 6 or 8, (i == #newtexts and i == 1) and 9 or i == 1 and 21 or i == 2 and 6 or 5) -- this is fucking stupid i hate this. why did i do this
-							box3.Position = Vector2.new(i == 2 and posx + maxwidth.x or posx - 2, (i == 1 or i == 2) and margin - 4 or margin) -- this is fucking stupid i hate this. why did i do this
-						else
-							box.Size = maxwidth + maxwidth2 + Vector2.new(0, 3)
-							box1.Size = maxwidth + maxwidth2 + Vector2.new(2, 7)
-							box3.Size = maxwidth + maxwidth2 + Vector2.new(4, (i == #newtexts and i == 1) and 9 or i == #newtexts and 4 or i == 1 and 6 or 3) -- this is fucking stupid i hate this. why did i do this
-							box3.Position = Vector2.new(posx - 2, (i == 1) and margin - 4 or i == #newtexts and margin + 1 or margin) -- this is fucking stupid i hate this. why did i do this
-						end
-						margin += 15
-					end
-					for i = 1, 15 do
-						local box = texts[2][i]
-						box.Position = Vector2.new(posx, posy + i - 1)
-						box.Size = Vector2.new(maxwidth.x+((not listsizes) and maxwidth2.x or 0), 1)
-						box.Visible = true
-					end
-					for i = 1, 2 do
-						local k = i + 15
-						local box = texts[2][k]
-						local color = (menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color", true) or Color3.fromRGB(127, 72, 163))
-						color = i == 1 and color or Color3.fromRGB(color.R * 255 - 40, color.G * 255 - 40, color.B * 255 - 40) -- super shit
-						box.Color = color
-						box.Position = Vector2.new(posx, posy + i - 3)
-						box.Size = Vector2.new(maxwidth.x+((not listsizes) and maxwidth2.x or 0), 1)
-						box.Visible = true
-					end
-					if listsizes then
-						for i = 1, 2 do
-							local k = i + 17
-							local box = texts[2][k]
-							local color = (menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and menu:GetVal("Settings", "Cheat Settings", "Menu Accent", "color", true) or Color3.fromRGB(127, 72, 163))
-							color = i == 1 and color or Color3.fromRGB(color.R * 255 - 40, color.G * 255 - 40, color.B * 255 - 40) -- super shit
-							box.Color = color
-							box.Position = Vector2.new(posx+maxwidth.x + 1, posy + i + 12)
-							box.Size = Vector2.new(maxwidth2.x - 1, 1)
-							box.Visible = maxwidth2.x ~= 0
-						end
-					end
+				if menu:GetVal("Visuals", "Keybinds", "Enabled") then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local texts = allesp[10]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local listsizes = menu:GetVal("Visuals", "Keybinds", "Use List Sizes")-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local posy = math.ceil(SCREEN_SIZE.y * menu:GetVal("Visuals", "Keybinds", "Keybinds List Y") / 100)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local margin = posy-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local posx = math.ceil(math.max(menu.stat_menu and 330 or 10, SCREEN_SIZE.x * menu:GetVal("Visuals", "Keybinds", "Keybinds List X") / 100))-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local col = menu:GetVal("Visuals", "Keybinds", "Enabled", COLOR, true)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local transparency = menu:GetVal("Visuals", "Keybinds", "Enabled", COLOR)[4] / 255-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local newtexts = {}-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					for i = 1, #menu.keybinds do-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local keybind = menu.keybinds[i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local box1 = texts[1][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local box = texts[2][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local box2 = texts[3][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local box3 = texts[5][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local text = texts[4][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						if keybind and keybind[1] and menu:GetVal(keybind[4], keybind[3], keybind[2]) and menu:GetKey(keybind[4], keybind[3], keybind[2])-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							table.insert(newtexts, keybind[3] .. ": " .. keybind[2])-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						text.Visible = false-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						if box then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box.Visible = false-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box1.Visible = false-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box2.Visible = false-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box3.Visible = false-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					table.sort(newtexts, function(s, s1)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						return #s > #s1-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					end) -- i hate this shit-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					table.insert(newtexts, 1, "Keybinds")-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local maxwidth = Vector2.new(0, 0)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					local maxwidth2 = Vector2.new(0, 0)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					for i = 1, #newtexts do-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local text = texts[4][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						text.Center = false-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						text.Text = newtexts[i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						if i <= 1 then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							local newthing = Vector2.new(text.TextBounds.x + 4, text.TextBounds.y)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							if newthing.x > maxwidth.x then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+								maxwidth = newthing-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						if i <= 2 then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							local newthing = Vector2.new(text.TextBounds.x + 4, text.TextBounds.y)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							if newthing.x > maxwidth2.x then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+								maxwidth2 = newthing - maxwidth-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					for i = 1, #newtexts do-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local box1 = texts[1][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local box3 = texts[5][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local box = texts[3][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local text = texts[4][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						text.Position = Vector2.new(posx + 2, margin)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						text.Color = i ~= 1 and col or Color3.new(1, 1, 1)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						text.Transparency = transparency-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						text.Visible = true-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box.Position = Vector2.new(posx, margin)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box.Visible = true-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box1.Position = Vector2.new(posx - 1, margin - 3)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box1.Visible = true-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box1.Color = Color3.new(0, 0, 0)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box3.Visible = true-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box3.Color = Color3.new(0, 0, 0)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box3.Transparency = 0.4-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						if listsizes then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box.Size = text.TextBounds + Vector2.new(4, 3)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box1.Size = text.TextBounds + Vector2.new(6, 7)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box3.Size = text.TextBounds + Vector2.new(i == 2 and -maxwidth.x + 6 or 8, (i == #newtexts and i == 1) and 9 or i == 1 and 23 or i == 2 and 10 or 2) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box3.Position = Vector2.new(i == 2 and posx + maxwidth.x or posx - 2, (i == 1 or i == 2) and margin - 4 or margin + 2) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						else-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box.Size = maxwidth + maxwidth2 + Vector2.new(0, 3)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box1.Size = maxwidth + maxwidth2 + Vector2.new(2, 7)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box3.Size = maxwidth + maxwidth2 + Vector2.new(4, (i == #newtexts and i == 1) and 9 or i == #newtexts and 4 or i == 1 and 6 or 3) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box3.Position = Vector2.new(posx - 2, (i == 1) and margin - 4 or i == #newtexts and margin + 1 or margin) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						margin += 15-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					for i = 1, 15 do-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local box = texts[2][i] -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box.Position = Vector2.new(posx, posy + i - 1) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box.Size = Vector2.new(maxwidth.x + ((not listsizes) and maxwidth2.x or 0), 1) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box.Visible = true -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					for i = 1, 2 do-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local k = i + 15 -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local box = texts[2][k] -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						local color = (menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and menu:GetVal("Settings", "Cheat Settings", "Menu Accent", COLOR, true) or Color3.fromRGB(127, 72, 163))-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						color = i == 1 and color or Color3.fromRGB(color.R * 255 - 40, color.G * 255 - 40, color.B * 255 - 40) -- super shit-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box.Color = color -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box.Position = Vector2.new(posx, posy + i - 3) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box.Size = Vector2.new(maxwidth.x+((not listsizes) and maxwidth2.x or 0), 1) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box.Visible = true -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					if listsizes then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						for i = 1, 2 do -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							local k = i + 17 -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							local box = texts[2][k] -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							local color = (menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and menu:GetVal("Settings", "Cheat Settings", "Menu Accent", COLOR, true) or Color3.fromRGB(127, 72, 163))-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							color = i == 1 and color or Color3.fromRGB(color.R * 255 - 40, color.G * 255 - 40, color.B * 255 - 40) -- super shit-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box.Color = color -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box.Position = Vector2.new(posx+maxwidth.x + 1, posy + i + 12) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box.Size = Vector2.new(maxwidth2.x - 1, 1) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box.Visible = maxwidth2.x ~= 0 -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+					end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 				end
-				--debug.profileend("renderVisuals Main")
-				--debug.profilebegin("renderVisuals No Scope")
+				debug.profileend("renderVisuals Main")
+				debug.profilebegin("renderVisuals No Scope")
 				do -- no scope pasted from v1 lol
 					local gui = LOCAL_PLAYER.PlayerGui
 					local frame = gui.MainGui.ScopeFrame
@@ -13165,7 +13201,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 					end
 				end
-				--debug.profileend("renderVisuals No Scope")
+				debug.profileend("renderVisuals No Scope")
 			end
 
 			menu.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild)
@@ -13179,7 +13215,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 							curvalue.Material = Enum.Material[matname]
 
-							curvalue.Color = menu:GetVal("Visuals", "Misc", "Ragdoll Chams", "color", true)
+							curvalue.Color = menu:GetVal("Visuals", "Misc", "Ragdoll Chams", COLOR, true)
 							local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
 							local mesh = curvalue:FindFirstChild("Mesh")
 							if mesh then
@@ -13213,7 +13249,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 						if not curvalue:IsA("Model") and curvalue.Name ~= "Humanoid" and curvalue.ClassName == "Part"
 						then
-							curvalue.Color = menu:GetVal("Visuals", "Dropped ESP", "Dropped Weapon Chams", "color", true)
+							curvalue.Color = menu:GetVal("Visuals", "Dropped ESP", "Dropped Weapon Chams", COLOR, true)
 							local vertexcolor = Vector3.new(curvalue.Color.R, curvalue.Color.G, curvalue.Color.B)
 							local mesh = curvalue:FindFirstChild("Mesh")
 
@@ -13230,7 +13266,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end)
 
 			local chat_game = LOCAL_PLAYER.PlayerGui.ChatGame
-			local chat_box = chat_game:FindFirstChild("TextBox")
+			local chat_box = chat_game:FindFirstChild(TEXTBOX)
 			local oldpos = nil
 
 			local function pfkeycheck(actionName, inputState, inputObject)
@@ -13246,7 +13282,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						------------"TOGGLES AND SHIT"------------
 						------------------------------------------
 
-						-- if menu:GetVal("Misc", "Exploits", "Fake Position") and client.char.alive and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Fake Position", "keybind") then
+						-- if menu:GetVal("Misc", "Exploits", "Fake Position") and client.char.alive and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Fake Position", KEYBIND) then
 						-- 	keybindtoggles.superaa = not keybindtoggles.superaa
 						-- 	if keybindtoggles.superaa then
 						-- 		client.char.rootpart.CustomPhysicalProperties = PhysicalProperties.new(1000, 1000, 0, 1000, 1000)
@@ -13259,7 +13295,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						-- 	end
 						-- 	return Enum.ContextActionResult.Sink
 						-- end
-						-- if menu:GetVal("Rage", "Extra", "Teleport Up") and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Teleport Up", "keybind") and client.char.alive then
+						-- if menu:GetVal("Rage", "Extra", "Teleport Up") and inputObject.KeyCode == menu:GetVal("Rage", "Extra", "Teleport Up", KEYBIND) and client.char.alive then
 						-- 	setfpscap(8)
 						-- 	wait()
 						-- 	client.char.rootpart.Position += Vector3.new(0, 38, 0) -- frame tp cheat tp up 38 studs wtf'
@@ -13267,7 +13303,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						-- 	wait()
 						-- 	return Enum.ContextActionResult.Sink
 						-- end
-						-- if menu:GetVal("Misc", "Exploits", "Noclip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Noclip", "keybind") and client.char.alive then
+						-- if menu:GetVal("Misc", "Exploits", "Noclip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Noclip", KEYBIND) and client.char.alive then
 						-- 	local ray = Ray.new(client.char.head.Position, Vector3.new(0, -90, 0) * 20)
 
 						-- 	local hit, hitpos = workspace:FindPartOnRayWithWhitelist(ray, {workspace.Map})
@@ -13282,7 +13318,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						-- 	return Enum.ContextActionResult.Sink
 						-- end
 						if shitting_my_pants == false then
-							if menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", "keybind") and client.char.alive
+							if menu:GetVal("Misc", "Exploits", "Vertical Floor Clip") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Vertical Floor Clip", KEYBIND) and client.char.alive
 							then
 								local sign = not menu:modkeydown("alt", "left")
 								local forward = menu:modkeydown("shift", "left")
@@ -13311,13 +13347,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 
-						if menu:GetVal("Misc", "Exploits", "Rapid Kill") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", "keybind")
+						if menu:GetVal("Misc", "Exploits", "Rapid Kill") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", KEYBIND)
 						then
 							misc:RapidKill()
 							return Enum.ContextActionResult.Sink
 						end
 						
-						if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", "keybind")
+						if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", KEYBIND)
 						then
 							local thing1, thing2 = misc:Invisibility()
 							return Enum.ContextActionResult.Sink
@@ -13330,7 +13366,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					
 					if shitting_my_pants == false then
 
-						--[[ if menu:GetVal("Misc", "Exploits", "Super Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", "keybind") then
+						--[[ if menu:GetVal("Misc", "Exploits", "Super Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Super Invisibility", KEYBIND) then
 					CreateNotification("Attempting to make you invisible, may need multiple attempts to fully work.")
 					for i = 1, 50 do
 						local num = i % 2 == 0 and 2 ^ 127 + 1 or -(2 ^ 127 + 1)
@@ -13348,8 +13384,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			game:service("ContextActionService"):BindAction("BB PF check", pfkeycheck, false, Enum.UserInputType.Keyboard)
 
 			--[[ menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
-		if chat_box.Active then return end
-	end) ]]
+				if chat_box.Active then return end
+			end) ]]
 
 			menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function(dt)
 				if menu.lastActive ~= menu.windowactive then
@@ -13363,12 +13399,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						-- client.net:send("changeclass", "Recon")
 						-- local other = i % 2 == 0 and "FLASHLIGHT" or ""
 						-- local under = math.random() > 0.5 and "FLASHLIGHT" or ""
-						client.net:send("changeclass", "Scout")
-						client.net:send("changewep", "Primary", "COLT LMG")
-						client.net:send("changecamo","Primary","COLT LMG","Slot2","",{ TextureId = "", StudsPerTileU = 1, StudsPerTileV=1, OffsetStudsV=0, Transparency=0, OffsetStudsU=0 },{ DefaultColor=true, Material="SmoothPlastic", BrickColor="Black", Reflectance=0 })
-						client.net:send("changewep", "Primary", "MP5K")
-						client.net:send("changeatt", "Primary", "MP5K", { Underbarrel = under, Other = other, Ammo = nil, Barrel = nil, Optics = nil })
-
+						-- client.net:send("changeclass", "Scout")
+						-- client.net:send("changewep", "Primary", "COLT LMG")
+						-- client.net:send("changecamo","Primary","COLT LMG","Slot2","",{ TextureId = "", StudsPerTileU = 1, StudsPerTileV=1, OffsetStudsV=0, Transparency=0, OffsetStudsU=0 },{ DefaultColor=true, Material="SmoothPlastic", BrickColor="Black", Reflectance=0 })
+						-- client.net:send("changewep", "Primary", "MP5K")
+						client.net:send("changeatt", "Primary", "MP5K", { Underbarrel = nil, Other = nil, Ammo = nil, Barrel = nil, Optics = nil })
+						client.net:send("changeatt", "Primary", "MP5K", { Underbarrel = "",  Other = "",  Ammo = "",  Barrel = "",  Optics = ""  })
 					end
 					-- client.net:send("getunlockstats")
 				end
@@ -13388,8 +13424,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 
 				MouseUnlockHook()
-				--debug.profilebegin("Main BB Loop")
-				--debug.profilebegin("Noclip Cheat check")
+				debug.profilebegin("Main BB Loop")
+				debug.profilebegin("Noclip Cheat check")
 				if client.char.alive and menu:GetVal("Misc", "Exploits", "Rapid Kill") and menu:GetVal("Misc", "Exploits", "Auto Rapid Kill")
 				then
 					if misc:RapidKill() then
@@ -13409,9 +13445,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						NETWORK:SetOutgoingKBPSLimit(0)
 					end
 				end
-				--debug.profileend("Noclip Cheat check")
+				debug.profileend("Noclip Cheat check")
 
-				--debug.profilebegin("BB Rendering")
+				debug.profilebegin("BB Rendering")
 				do --rendering
 					renderVisuals(dt)
 					if menu.open then
@@ -13422,27 +13458,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						)
 					end
 				end
-				--debug.profileend("BB Rendering")
-				--debug.profilebegin("BB Legitbot")
+				debug.profileend("BB Rendering")
+				debug.profilebegin("BB Legitbot")
 				do --legitbot
 					legitbot:TriggerBot()
 					legitbot:MainLoop()
 				end
-				--debug.profileend("BB Legitbot")
-				--debug.profilebegin("BB Misc.")
+				debug.profileend("BB Legitbot")
+				debug.profilebegin("BB Misc.")
 				do --misc
 					misc:MainLoop()
-					--debug.profilebegin("BB Ragebot KnifeBot")
+					debug.profilebegin("BB Ragebot KnifeBot")
 					ragebot:KnifeBotMain()
-					--debug.profileend("BB Ragebot KnifeBot")
+					debug.profileend("BB Ragebot KnifeBot")
 				end
-				--debug.profileend("BB Misc.")
+				debug.profileend("BB Misc.")
 				if not menu:GetVal("Rage", "Settings", "Aimbot Performance Mode") then
-					--debug.profilebegin("BB Ragebot (Non Performance)")
+					debug.profilebegin("BB Ragebot (Non Performance)")
 					do --ragebot
 						ragebot:MainLoop()
 					end
-					--debug.profileend("BB Ragebot (Non Performance)")
+					debug.profileend("BB Ragebot (Non Performance)")
 				else
 					ragebot.flip = not ragebot.flip
 					if ragebot.flip then
@@ -13464,22 +13500,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					menu.spectating = false
 				end
 
-				--debug.profileend("Main BB Loop")
-			end)
-
-			CreateThread(function() -- ragebot performance
-				while wait() do
-					if not menu then
-						return
-					end
-					--renderChams()
-
-					--[[if menu:GetVal("Rage", "Extra", "Aimbot Performance Mode") then
-				do--ragebot
-					ragebot:MainLoop()
-				end
-			end]]
-				end
+				debug.profileend("Main BB Loop")
 			end)
 
 			client.nextchamsupdate = tick()
@@ -13526,7 +13547,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					bulletcheckresolution = menu:GetVal("Rage", "Aimbot", "Autowall FPS (Standard)") / 1000
 				end
 
-				--debug.profilebegin("BB No Gun Bob or Sway")
+				debug.profilebegin("BB No Gun Bob or Sway")
 
 				if client.char.alive then
 					for id, gun in next, client.loadedguns do
@@ -13594,12 +13615,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 
-				--debug.profileend()
+				debug.profileend()
 
 				if menu:GetVal("Visuals", "Local", "Third Person") and menu:GetKey("Visuals", "Local", "Third Person") and client.char.alive
 				then -- do third person model
 					if client.char.alive then
-						--debug.profilebegin("Third Person")
+						debug.profilebegin("Third Person")
 						if not client.fakecharacter then
 							client.fakecharacter = true
 							local localchar = LOCAL_PLAYER.Character:Clone()
@@ -13642,8 +13663,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 								local lchams = menu:GetVal("Visuals", "Local", "Local Player Chams")
 								if lchams then
-									local lchamscolor = menu:GetVal("Visuals", "Local", "Local Player Chams", "color", true)
-									local lchamstransparency = menu:GetVal("Visuals", "Local", "Local Player Chams", "color")[4] / 255
+									local lchamscolor = menu:GetVal("Visuals", "Local", "Local Player Chams", COLOR, true)
+									local lchamstransparency = menu:GetVal("Visuals", "Local", "Local Player Chams", COLOR)[4] / 255
 
 									local lchamsmat = mats[menu:GetVal("Visuals", "Local", "Local Player Material")]
 
@@ -13672,7 +13693,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								if client.logic.currentgun then
 									if client.logic.currentgun.type ~= "KNIFE" then
 										local bool = client.logic.currentgun:isaiming()
-										local transparency = 1 + menu:GetVal("Visuals", "Local", "Local Player Chams", "color")[4] / -255
+										local transparency = 1 + menu:GetVal("Visuals", "Local", "Local Player Chams", COLOR)[4] / -255
 										fakeupdater.setaim(bool)
 										for k, v in next, client.fake3pchar:GetChildren() do -- this is probably going to cause a 1 fps drop or some shit lmao
 											if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
@@ -13699,7 +13720,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							end
 						end
-						--debug.profileend("Third Person")
+						debug.profileend("Third Person")
 					end
 				else
 					if client.fakecharacter then
@@ -13742,12 +13763,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autopos = "left",
 							content = {
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Enabled",
 									value = true,
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Aimbot FOV",
 									value = 20,
 									minvalue = 0,
@@ -13755,7 +13776,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = "°",
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Smoothing",
 									value = 20,
 									minvalue = 0,
@@ -13763,13 +13784,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = "%",
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Smoothing Type",
 									value = 2,
 									values = { "Exponential", "Linear" },
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Randomization",
 									value = 5,
 									minvalue = 0,
@@ -13777,7 +13798,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									custom = { [0] = "Off" },
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Deadzone FOV",
 									value = 1,
 									minvalue = 0,
@@ -13787,34 +13808,34 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									custom = { [0] = "Off" },
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Aimbot Key",
 									value = 1,
 									values = { "Mouse 1", "Mouse 2", "Always" },
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Hitscan Priority",
 									value = 1,
 									values = { "Head", "Body", "Closest" },
 								},
 								{
-									type = "combobox",
+									type = COMBOBOX,
 									name = "Hitscan Points",
 									values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Adjust for Bullet Drop",
 									value = false,
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Target Prediction",
 									value = false,
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Enlarge Enemy Hitboxes",
 									value = 0,
 									minvalue = 0,
@@ -13828,26 +13849,26 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autopos = "right",
 							content = {
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Enabled",
 									value = false,
 									extra = {
-										type = "keybind",
+										type = KEYBIND,
 										key = Enum.KeyCode.M,
 									},
 								},
 								{
-									type = "combobox",
+									type = COMBOBOX,
 									name = "Trigger Bot Hitboxes",
 									values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Trigger When Aiming",
 									value = false,
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Aim Percentage",
 									minvalue = 0,
 									maxvalue = 100,
@@ -13856,12 +13877,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								},
 								--[[
 						{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Magnet Triggerbot",
 							value = false
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Magnet FOV",
 							value = 80,
 							minvalue = 0,
@@ -13869,7 +13890,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							stradd = "°"
 						},
 						{
-							type = "slider",
+							type = SLIDER,
 							name = "Magnet Smoothing Factor",
 							value = 20,
 							minvalue = 0,
@@ -13877,7 +13898,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							stradd = "%"
 						},
 						{
-							type = "dropbox",
+							type = DROPBOX,
 							name = "Magnet Priority",
 							value = 1,
 							values = {"Head", "Body"}
@@ -13890,12 +13911,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autofill = true,
 							content = {
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Silent Aim",
 									value = false,
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Silent Aim FOV",
 									value = 5,
 									minvalue = 0.1,
@@ -13904,7 +13925,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									decimal = 0.1,
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Hit Chance",
 									value = 30,
 									minvalue = 0,
@@ -13912,7 +13933,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = "%",
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Accuracy",
 									value = 90,
 									minvalue = 0,
@@ -13920,13 +13941,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = "%",
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Hitscan Priority",
 									value = 1,
 									values = { "Head", "Body", "Closest" },
 								},
 								{
-									type = "combobox",
+									type = COMBOBOX,
 									name = "Hitscan Points",
 									values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
 								},
@@ -13938,12 +13959,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autofill = true,
 							content = {
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Weapon RCS",
 									value = false,
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Recoil Control X",
 									value = 10,
 									minvalue = 0,
@@ -13951,7 +13972,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = "%",
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Recoil Control Y",
 									value = 10,
 									minvalue = 0,
@@ -13970,29 +13991,29 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autopos = "left",
 							content = {
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Enabled",
 									value = false,
 									extra = {
-										type = "keybind",
+										type = KEYBIND,
 										toggletype = 4,
 									},
 									unsafe = true,
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Silent Aim",
 									value = false,
 									tooltip = "Stops the camera from rotating toward targetted players.",
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Rotate Viewmodel",
 									value = false,
 									tooltip = "Rotates weapon viewmodel toward the targetted player."
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Aimbot FOV",
 									value = 180,
 									minvalue = 0,
@@ -14001,13 +14022,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									custom = { [181] = "Ignored" },
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Auto Wall",
 									value = 1,
 									values = { "Off", "Standard", "Legacy" },
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Autowall FPS (Standard)",
 									value = 30,
 									minvalue = 10,
@@ -14015,19 +14036,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = "fps",
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Auto Shoot",
 									value = false,
 									tooltip = "Automatically shoots players when a target is found."
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Double Tap",
 									value = false,
 									tooltip = "Shoots twice when target is found when Auto Shoot is enabled."
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Hitscan Priority",
 									value = 1,
 									values = { "Head", "Body" },
@@ -14039,12 +14060,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autopos = "right",
 							content = {
 								--[[{
-							type = "toggle",
+							type = TOGGLE,
 							name = "Extend Penetration",
 							value = false
 						},]]
 								-- {
-								-- 	type = "slider",
+								-- 	type = SLIDER,
 								-- 	name = "Extra Penetration",
 								-- 	value = 11,
 								-- 	minvalue = 1,
@@ -14053,14 +14074,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								-- 	tooltip = "does nothing",
 								-- }, -- fuck u json
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Autowall Hitscan",
 									value = false,
 									unsafe = true,
 									tooltip = "While using Auto Wall, this will hitscan multiple points\nto increase penetration and help for peeking.",
 								},
 								{
-									type = "combobox",
+									type = COMBOBOX,
 									name = "Hitscan Points",
 									values = {
 										{ "Up", true },
@@ -14074,13 +14095,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Hitbox Shifting",
 									value = false,
 									tooltip = "Increases possible penetration with Autowall. The higher\nthe Hitbox Shift Distance the more likely it is to miss shots.\nWhen it misses it will try disable this.",
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Hitbox Shift Distance",
 									value = 16,
 									minvalue = 1,
@@ -14088,25 +14109,25 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = " studs",
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Force Player Stances",
 									value = false,
 									tooltip = "Changes the stance of other players to the selected Stance Choice.",
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Stance Choice",
 									value = 1,
 									values = { "Stand", "Crouch", "Prone" },
 								},
 								{
-									type = "toggle", 
+									type = TOGGLE, 
 									name = "Backtracking",
 									value = false,
 									tooltip = "Attempts to abuse lag compensation and shoot players where they were in the past.\nUsing Visuals->Enemy ESP->Show Backtracked Position will help illustrate this."
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Backtracking Time",
 									value = 4000,
 									minvalue = 0,
@@ -14114,11 +14135,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = " ms",
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Freestanding",
 									value = false,
 									extra = {
-										type = "keybind",
+										type = KEYBIND,
 									},
 								},
 							},
@@ -14130,26 +14151,26 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[1] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Knife Bot",
 										value = false,
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 										},
 										unsafe = true,
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Knife Bot Type",
 										value = 2,
 										values = { "Assist", "Multi Aura", "Flight Aura" },
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Auto Peek",
 										value = false,
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 											toggletype = 1,
 										},
 										tooltip = "Hitscans from in front of your camera,\nif a target is found it will move you towards the point automatically",
@@ -14159,19 +14180,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[2] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Aimbot Performance Mode",
 										value = true,
 										tooltip = "Lowers polling rate for targetting in Rage Aimbot.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Aimbot Damage Prediction",
 										value = true,
 										tooltip = "Predicts damage done to enemies as to prevent wasting ammo and time on certain players.\nHelps for users, and against players with high latency.",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Damage Prediction Limit",
 										value = 100,
 										minvalue = 0,
@@ -14179,7 +14200,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "hp",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Damage Prediction Time",
 										value = 200,
 										minvalue = 100,
@@ -14187,7 +14208,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "%",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Max Hitscan Points",
 										value = 30,
 										minvalue = 0,
@@ -14204,13 +14225,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[1] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Enabled",
 										value = false,
 										tooltip = "When this is enabled, your server-side yaw, pitch and stance are set to the values in this tab.",
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Pitch",
 										value = 4,
 										values = {
@@ -14227,13 +14248,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										},
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Yaw",
 										value = 2,
 										values = { "Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin" },
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Spin Rate",
 										value = 10,
 										minvalue = -100,
@@ -14241,25 +14262,25 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "°/s",
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Force Stance",
 										value = 4,
 										values = { "Off", "Stand", "Crouch", "Prone" },
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Hide in Floor",
 										value = true,
 										tooltip = "Shifts your body slightly under the ground\nso as to hide it when Force Stance is set to Prone.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Lower Arms",
 										value = false,
 										tooltip = "Lowers your arms on the server.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Tilt Neck",
 										value = false,
 										tooltip = "Forces the replicated aiming state so that it appears as though your head is tilted.",
@@ -14269,12 +14290,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[2] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Enabled",
 										value = false,
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Fake Lag Amount",
 										value = 1,
 										minvalue = 1,
@@ -14282,7 +14303,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = " kbps",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Fake Lag Distance",
 										value = 1,
 										minvalue = 1,
@@ -14290,14 +14311,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = " studs",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Manual Choke",
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Release Packets on Shoot",
 										value = false,
 									},
@@ -14316,118 +14337,118 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[1] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Enabled",
 										value = true,
 										tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Name",
 										value = true,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Enemy Name",
 											color = { 255, 255, 255, 200 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Rank",
 										value = false,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Box",
 										value = true,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Enemy Box",
 											color = { 255, 0, 0, 150 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Filled Box",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Enemy Filled Box",
 											color = { 255, 0, 0, 90 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Health Bar",
 										value = true,
 										extra = {
-											type = "double colorpicker",
+											type = DOUBLE_COLORPICKER,
 											name = { "Enemy Low Health", "Enemy Max Health" },
 											color = { { 255, 0, 0 }, { 0, 255, 0 } },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Health Number",
 										value = true,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Enemy Health Number",
 											color = { 255, 255, 255, 255 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Held Weapon",
 										value = true,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Enemy Held Weapon",
 											color = { 255, 255, 255, 200 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Distance",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Enemy Distance",
 											color = { 255, 255, 255, 200 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Chams",
 										value = true,
 										extra = {
-											type = "double colorpicker",
+											type = DOUBLE_COLORPICKER,
 											name = { "Visible Enemy Chams", "Invisible Enemy Chams" },
 											color = { { 255, 0, 0, 200 }, { 100, 0, 0, 100 } },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Skeleton",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Enemy skeleton",
 											color = { 255, 255, 255, 120 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Out of View",
 										value = true,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Arrow Color",
 											color = { 255, 255, 255, 255 },
 										},
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Arrow Distance",
 										value = 50,
 										minvalue = 10,
@@ -14435,25 +14456,25 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "%",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Dynamic Arrow Size",
 										value = true,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Show Resolved Flag",
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Resolved Flag Color",
 											color = { 255, 255, 0, 255 },
 										},
 										value = false,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Show Backtrack Position",
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Backtracking Color",
 											color = { 255, 255, 255, 255 },
 										},
@@ -14464,102 +14485,102 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[2] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Enabled",
 										value = false,
 										tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Name",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Team Name",
 											color = { 255, 255, 255, 200 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Rank",
 										value = false,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Box",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Team Box",
 											color = { 0, 255, 0, 150 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Filled Box",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Team Filled Box",
 											color = { 0, 255, 0, 90 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Health Bar",
 										value = false,
 										extra = {
-											type = "double colorpicker",
+											type = DOUBLE_COLORPICKER,
 											name = { "Team Low Health", "Team Max Health" },
 											color = { { 255, 0, 0 }, { 0, 255, 0 } },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Health Number",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Team Health Number",
 											color = { 255, 255, 255, 255 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Held Weapon",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Team Held Weapon",
 											color = { 255, 255, 255, 200 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Distance",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Team Distance",
 											color = { 255, 255, 255, 200 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Chams",
 										value = false,
 										extra = {
-											type = "double colorpicker",
+											type = DOUBLE_COLORPICKER,
 											name = { "Visible Team Chams", "Invisible Team Chams" },
 											color = { { 0, 255, 0, 200 }, { 0, 100, 0, 100 } },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Skeleton",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Team skeleton",
 											color = { 255, 255, 255, 120 },
 										},
@@ -14569,79 +14590,79 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[3] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Arm Chams",
 										value = false,
 										extra = {
-											type = "double colorpicker",
+											type = DOUBLE_COLORPICKER,
 											name = { "Sleeve Color", "Hand Color" },
 											color = { { 106, 136, 213, 255 }, { 181, 179, 253, 255 } },
 										},
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Arm Material",
 										value = 1,
 										values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Weapon Chams",
 										value = false,
 										extra = {
-											type = "double colorpicker",
+											type = DOUBLE_COLORPICKER,
 											name = { "Weapon Color", "Laser Color" },
 											color = { { 106, 136, 213, 255 }, { 181, 179, 253, 255 } },
 										},
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Weapon Material",
 										value = 1,
 										values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Animate Ghost Material",
 										value = false,
 										tooltip = "Toggles whether or not the 'Ghost' material will be animated or not.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Remove Weapon Skin",
 										value = false,
 										tooltip = "If a loaded weapon has a skin, it will remove it.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Third Person",
 										value = false,
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 											key = nil,
 											toggletype = 2,
 										},
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Third Person Distance",
 										value = 60,
 										minvalue = 1,
 										maxvalue = 150,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Local Player Chams",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Local Player Chams",
 											color = { 106, 136, 213, 255 },
 										},
 										tooltip = "Changes the color and material of the local third person body when it is on.",
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Local Player Material",
 										value = 1,
 										values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
@@ -14655,7 +14676,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autofill = true,
 							content = {
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Max HP Visibility Cap",
 									value = 90,
 									minvalue = 50,
@@ -14663,13 +14684,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = "hp",
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Text Case",
 									value = 2,
 									values = { "lowercase", "Normal", "UPPERCASE" },
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Max Text Length",
 									value = 0,
 									minvalue = 0,
@@ -14677,37 +14698,37 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									custom = { [0] = "Unlimited" },
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Highlight Aimbot Target",
 									value = false,
 									extra = {
-										type = "single colorpicker",
+										type = COLORPICKER,
 										name = "Aimbot Target",
 										color = { 255, 0, 0, 255 },
 									},
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Highlight Friends",
 									value = true,
 									extra = {
-										type = "single colorpicker",
+										type = COLORPICKER,
 										name = "Friended Players",
 										color = { 0, 255, 255, 255 },
 									},
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Highlight Priority",
 									value = true,
 									extra = {
-										type = "single colorpicker",
+										type = COLORPICKER,
 										name = "Priority Players",
 										color = { 255, 210, 0, 255 },
 									},
 								},
 								-- {
-								-- 	type = "slider",
+								-- 	type = SLIDER,
 								-- 	name = "Max Player Text",
 								-- 	value = 0,
 								-- 	minvalue = 0,
@@ -14723,7 +14744,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[1] = {
 								content = {
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Camera FOV",
 										value = 85,
 										minvalue = 60,
@@ -14731,45 +14752,45 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "°",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "No Camera Bob",
 										value = false,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "No Scope Sway",
 										value = false,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Disable ADS FOV",
 										value = false,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "No Scope Border",
 										value = false,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "No Visual Suppression",
 										value = false,
 										tooltip = "Removes the suppression of enemies' bullets.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "No Gun Bob or Sway",
 										value = false,
 										tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving the mouse.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Reduce Camera Recoil",
 										value = false,
 										tooltip = "Reduces camera recoil by X%. Does not affect visible weapon recoil or kick.",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Camera Recoil Reduction",
 										value = 10,
 										minvalue = 0,
@@ -14781,12 +14802,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[2] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Enabled",
 										value = false,
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Offset X",
 										value = 0,
 										minvalue = -3,
@@ -14795,7 +14816,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = " studs",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Offset Y",
 										value = 0,
 										minvalue = -3,
@@ -14804,7 +14825,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = " studs",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Offset Z",
 										value = 0,
 										minvalue = -3,
@@ -14813,7 +14834,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = " studs",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Pitch",
 										value = 0,
 										minvalue = -360,
@@ -14821,7 +14842,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "°",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Yaw",
 										value = 0,
 										minvalue = -360,
@@ -14829,7 +14850,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "°",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Roll",
 										value = 0,
 										minvalue = -360,
@@ -14847,24 +14868,24 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[1] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Ambience",
 										value = false,
 										extra = {
-											type = "double colorpicker",
+											type = DOUBLE_COLORPICKER,
 											name = { "Inside Ambience", "Outside Ambience" },
 											color = { { 117, 76, 236 }, { 117, 76, 236 } },
 										},
 										tooltip = "Changes the map's ambient colors to your defined colors.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Force Time",
 										value = false,
 										tooltip = "Forces the time to the time set by your below.",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Custom Time",
 										value = 0,
 										minvalue = 0,
@@ -14872,18 +14893,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										decimal = 0.1,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Custom Saturation",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Saturation Tint",
 											color = { 255, 255, 255 },
 										},
 										tooltip = "Adds custom saturation the image of the game.",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Saturation Density",
 										value = 0,
 										minvalue = 0,
@@ -14895,47 +14916,47 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[2] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Crosshair Color",
 										value = false,
 										extra = {
-											type = "double colorpicker",
+											type = DOUBLE_COLORPICKER,
 											name = { "Inline", "Outline" },
 											color = { { 127, 72, 163 }, { 25, 25, 25 } },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Laser Pointer",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Laser Pointer Color",
 											color = { 255, 255, 255, 255 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Ragdoll Chams",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Ragdoll Chams",
 											color = { 106, 136, 213, 255 },
 										},
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Ragdoll Material",
 										value = 1,
 										values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Bullet Tracers",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Bullet Tracers",
 											color = { 201, 69, 54 },
 										},
@@ -14945,27 +14966,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[3] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Enabled",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Text Color",
 											color = { 127, 72, 163, 255 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Use List Sizes",
 										value = false,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Log Keybinds",
 										value = false
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Keybinds List X",
 										value = 0,
 										minvalue = 0,
@@ -14973,7 +14994,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "%",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Keybinds List Y",
 										value = 50,
 										minvalue = 0,
@@ -14985,46 +15006,46 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[4] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Enabled",
 										value = false,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Aim Assist",
 										value = true,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Aim Assist FOV",
 											color = { 127, 72, 163, 255 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Aim Assist Deadzone",
 										value = true,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Deadzone FOV",
 											color = { 50, 50, 50, 255 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Bullet Redirection",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Bullet Redirection FOV",
 											color = { 163, 72, 127, 255 },
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Ragebot",
 										value = false,
 										extra = {
-											type = "single colorpicker",
+											type = COLORPICKER,
 											name = "Ragebot FOV",
 											color = { 255, 210, 0, 255 },
 										},
@@ -15038,53 +15059,53 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autofill = true,
 							content = {
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Weapon Names",
 									value = false,
 									extra = {
-										type = "double colorpicker",
+										type = DOUBLE_COLORPICKER,
 										name = { "Highlighted Weapons", "Weapon Names" },
 										color = { { 255, 125, 255, 255 }, { 255, 255, 255, 255 } },
 									},
 									tooltip = "Displays dropped weapons as you get closer to them,\nHighlights the weapon you are holding in the second color.",
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Weapon Ammo",
 									value = false,
 									extra = {
-										type = "single colorpicker",
+										type = COLORPICKER,
 										name = "Weapon Ammo",
 										color = { 61, 168, 235, 150 },
 									},
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Dropped Weapon Chams",
 									value = false,
 									extra = {
-										type = "single colorpicker",
+										type = COLORPICKER,
 										name = "Dropped Weapon Color",
 										color = { 3, 252, 161, 150 },
 									},
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Grenade Warning",
 									value = true,
 									extra = {
-										type = "single colorpicker",
+										type = COLORPICKER,
 										name = "Slider Color",
 										color = { 68, 92, 227 },
 									},
 									tooltip = "Displays where grenades that will deal\ndamage to you will land and the damage they will deal.",
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Grenade ESP",
 									value = false,
 									extra = {
-										type = "double colorpicker",
+										type = DOUBLE_COLORPICKER,
 										name = { "Inner Color", "Outer Color" },
 										color = { { 195, 163, 255 }, { 123, 69, 224 } },
 									},
@@ -15104,19 +15125,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[1] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Fly",
 										value = false,
 										unsafe = true,
 										tooltip = "Manipulates your velocity to make you fly.\nUse 60 speed or below to never get flagged.",
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 											key = Enum.KeyCode.B,
 											toggletype = 2,
 										},
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Fly Speed",
 										value = 60,
 										minvalue = 1,
@@ -15124,30 +15145,30 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = " stud/s",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Auto Jump",
 										value = false,
 										tooltip = "When you hold the spacebar, it will automatically jump repeatedly, ignoring jump delay.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Speed",
 										value = false,
 										unsafe = true,
 										tooltip = "Manipulates your velocity to make you move faster, unlike fly it doesn't make you fly.\nUse 60 speed or below to never get flagged.",
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 											toggletype = 4,
 										},
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Speed Type",
 										value = 1,
 										values = { "Always", "In Air", "On Hop" },
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Speed Factor",
 										value = 40,
 										minvalue = 1,
@@ -15155,17 +15176,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = " stud/s",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Avoid Collisions",
 										value = false,
 										tooltip = "Attempts to stops you from running into obstacles\nfor Speed and Circle Strafe.",
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 											toggletype = 4,
 										}
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Avoid Collisions Scale",
 										value = 100,
 										minvalue = 0,
@@ -15173,16 +15194,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "%",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Circle Strafe",
 										value = false,
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 										},
 										tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed Factor.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Bypass Speed Checks",
 										value = false,
 										unsafe = true,
@@ -15193,13 +15214,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[2] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Gravity Shift",
 										value = false,
 										tooltip = "Shifts movement gravity by X%. (Does not affect bullet acceleration.)",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Gravity Shift Percentage",
 										value = -50,
 										minvalue = -500,
@@ -15207,13 +15228,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "%",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Jump Power",
 										value = false,
 										tooltip = "Shifts movement jump power by X%.",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Jump Power Percentage",
 										value = 150,
 										minvalue = 0,
@@ -15221,7 +15242,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "%",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Prevent Fall Damage",
 										value = false,
 									},
@@ -15234,13 +15255,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autofill = true,
 							content = {
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Enabled",
 									value = false,
 									tooltip = "Allows Bitch Bot to modify weapons.",
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Fire Rate Scale",
 									value = 150,
 									minvalue = 50,
@@ -15249,7 +15270,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									tooltip = "Scales all weapons' firerate by X%.\n100% = Normal firerate",
 								},
 								{
-									type = "slider",
+									type = SLIDER,
 									name = "Recoil Scale",
 									value = 10,
 									minvalue = 0,
@@ -15258,23 +15279,23 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									tooltip = "Scales all weapons' recoil by X%.\n0% = No recoil | 50% = Halved recoil",
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Remove Animations",
 									value = true,
 									tooltip = "Removes all animations from any gun.\nThis will also completely remove the equipping animations.",
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Instant Equip",
 									value = true,
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Fully Automatic",
 									value = true,
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Run and Gun",
 									value = false,
 									tooltip = "Makes it so that your weapon does not\nsway due to mouse movement, or turns over while sprinting.",
@@ -15288,72 +15309,72 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							[1] = {
 								content = {
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Ignore Friends",
 										value = true,
 										tooltip = "When turned on, bullets do not deal damage to friends,\nand Rage modules won't target friends.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Target Only Priority Players",
 										value = false,
 										tooltip = "When turned on, all modules except for Aim Assist that target players\nwill ignore anybody that isn't on the Priority list.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Disable 3D Rendering",
 										value = false,
 										tooltip = "When turned on, all 3D rendering will be disabled.\nThis helps with running multiple instances at once."
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Suppress Only",
 										value = false,
 										tooltip = "When turned on, bullets do not deal damage.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Auto Respawn",
 										value = false,
 										tooltip = "Automatically respawns after deaths.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Disable Team Sounds",
 										value = false,
 										tooltip = "Disables sounds from all teammates and local player.",
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Vote Friends",
 										value = 1,
 										values = { "Off", "Yes", "No" },
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Vote Priority",
 										value = 1,
 										values = { "Off", "Yes", "No" },
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Default Vote",
 										value = 1,
 										values = { "Off", "Yes", "No" },
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Kill Sound",
 										value = false,
 									},
 									{
-										type = "textbox",
+										type = TEXTBOX,
 										name = "killsoundid",
 										text = "6229978482",
 										tooltip = "The Roblox sound ID or file inside of synapse\n workspace to play when Kill Sound is on.",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Kill Sound Volume",
 										value = 20,
 										minvalue = 0,
@@ -15361,13 +15382,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = "%",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Kill Say",
 										value = false,
 										tooltip = "Kill say messages, located in bitchbot/killsay.txt \n[name] is the target's name\n[weapon] is the weapon used\n[hitbox] says head or body depending on where you shot the player",
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Chat Spam",
 										value = 1,
 										values = {
@@ -15384,13 +15405,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										tooltip = "Spams chat, Custom options are located in the bitchbot/chatspam.txt",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Chat Spam Repeat",
 										value = false,
 										tooltip = "Repeats the same Chat Spam message in chat.",
 									},
 									{
-										type = "slider",
+										type = SLIDER,
 										name = "Chat Spam Delay",
 										minvalue = 1,
 										maxvalue = 10,
@@ -15398,19 +15419,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										stradd = " seconds",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Auto Martyrdom",
 										value = false,
 										tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position. If Grenade Teleport is on, it will place the grenade at the enemy.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Break Windows",
 										value = false,
 										tooltip = "Breaks all windows in the map when you spawn."
 									},
 									{
-										type = "button",
+										type = BUTTON,
 										name = "Join New Game",
 										value = false,
 										unsafe = false,
@@ -15423,149 +15444,149 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								content = {
 
 									--[[{
-								type = "toggle",
-								name = "Super Invisibility",
-								value = false,
-								extra = {
-									type = "keybind"
-								}
-							},]]
+										type = TOGGLE,
+										name = "Super Invisibility",
+										value = false,
+										extra = {
+											type = KEYBIND
+										}
+									},]]
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Stress Server",
 										tooltip = "Attempts to overwhelm the server so that users are kicked\nfor internet connection problems.\nUsually needs multiple instances running to cause a crash.",
 									},
 									{
-										type = "slider", 
+										type = SLIDER, 
 										name = "Stress Amount",
 										minvalue = 1, 
 										maxvalue = 10,
 										value = 5
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Invisibility",
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 											toggletype = 0,
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Rapid Kill",
 										value = false,
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 											toggletype = 0,
 										},
 										tooltip = "Throws 3 grenades instantly on random enemies.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Auto Rapid Kill",
 										value = false,
 										tooltip = "Throws 3 grenades instantly on random enemies,\nthen respawns to do it again.\nWorks only when Rapid Kill is enabled.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Grenade Teleport",
 										value = false,
 										tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Crimwalk",
 										value = false,
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 										},
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Teleport",
 										value = false,
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 											toggletype = 1,
 										},
 										tooltip = "When key released you will teleport to the mouse position",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Disable Crimwalk on Shot",
 										value = true,
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Vertical Floor Clip",
 										value = false,
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 											toggletype = 0,
 										},
 										tooltip = "Teleports you 19 studs under the ground. Must be over glass or non-collidable parts to work. \nHold Alt to go up, and Shift to go forwards.",
 									},
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Fake Equip",
 										value = false,
 										unsafe = true,
 									},
 									{
-										type = "dropbox",
+										type = DROPBOX,
 										name = "Fake Slot",
 										values = { "Primary", "Secondary", "Melee" },
 										value = 1,
 									},
 
 									-- {
-									-- 	type = "toggle",
+									-- 	type = TOGGLE,
 									-- 	name = "Noclip",
 									-- 	value = false,
 									-- 	extra = {
-									-- 		type = "keybind",
+									-- 		type = KEYBIND,
 									-- 		key = nil
 									-- 	},
 									-- 	unsafe = true,
 									-- 	tooltip = "Allows you to noclip through most parts of the map. Must be over glass or non-collidable parts to work."
 									-- },
 									-- {
-									-- 	type = "toggle",
+									-- 	type = TOGGLE,
 									-- 	name = "Fake Position",
 									-- 	value = false,
 									-- 	extra = {
-									-- 		type = "keybind"
+									-- 		type = KEYBIND
 									-- 	},
 									-- 	unsafe = true,
 									-- 	tooltip = "Fakes your server-side position. Works best when stationary, and allows you to be unhittable."
 									-- },
 									{
-										type = "toggle",
+										type = TOGGLE,
 										name = "Lock Player Positions",
 										value = false,
 										extra = {
-											type = "keybind",
+											type = KEYBIND,
 										},
 										tooltip = "Locks all other players' positions.",
 									},
 									-- {
-									-- 	type = "toggle",
+									-- 	type = TOGGLE,
 									-- 	name = "Skin Changer",
 									-- 	value = false,
 									-- 	tooltip = "While this is enabled, all custom skins will apply with the custom settings below.",
 									-- 	extra = {
-									-- 		type = "single colorpicker",
+									-- 		type = COLORPICKER,
 									-- 		name = "Weapon Skin Color",
 									-- 		color = { 127, 72, 163, 255 },
 									-- 	},
 									-- },
 									-- {
-									-- 	type = "textbox",
+									-- 	type = TEXTBOX,
 									-- 	name = "skinchangerTexture",
 									-- 	text = "6156783684",
 									-- },
 									-- {
-									-- 	type = "slider",
+									-- 	type = SLIDER,
 									-- 	name = "Scale X",
 									-- 	value = 10,
 									-- 	minvalue = 1,
@@ -15573,7 +15594,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									-- 	stradd = "%",
 									-- },
 									-- {
-									-- 	type = "slider",
+									-- 	type = SLIDER,
 									-- 	name = "Scale Y",
 									-- 	value = 10,
 									-- 	minvalue = 1,
@@ -15581,7 +15602,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									-- 	stradd = "%",
 									-- },
 									-- {
-									-- 	type = "dropbox",
+									-- 	type = DROPBOX,
 									-- 	name = "Skin Material",
 									-- 	value = 1,
 									-- 	values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
@@ -15609,13 +15630,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									columns = 3,
 								},
 								{
-									type = "image",
+									type = IMAGE,
 									name = "Player Info",
 									text = "No Player Selected",
 									size = 72,
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Player Status",
 									x = 307,
 									y = 314,
@@ -15624,7 +15645,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									values = { "None", "Friend", "Priority" },
 								},
 								{
-									type = "button",
+									type = BUTTON,
 									name = "Votekick",
 									doubleclick = true,
 									x = 307,
@@ -15632,7 +15653,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									w = 76,
 								},
 								{
-									type = "button",
+									type = BUTTON,
 									name = "Spectate",
 									x = 391,
 									y = 356,
@@ -15648,41 +15669,41 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							height = 182,
 							content = {
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Menu Accent",
 									value = false,
 									extra = {
-										type = "single colorpicker",
+										type = COLORPICKER,
 										name = "Accent Color",
 										color = { 127, 72, 163 },
 									},
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Watermark",
 									value = true,
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Custom Menu Name",
 									value = MenuName and true or false,
 								},
 								{
-									type = "textbox",
+									type = TEXTBOX,
 									name = "MenuName",
 									text = MenuName or "Bitch Bot",
 								},
 								{
-									type = "button",
+									type = BUTTON,
 									name = "Set Clipboard Game ID",
 								},
 								{
-									type = "button",
+									type = BUTTON,
 									name = "Unload Cheat",
 									doubleclick = true,
 								},
 								{
-									type = "toggle",
+									type = TOGGLE,
 									name = "Allow Unsafe Features",
 									value = false,
 								},
@@ -15696,29 +15717,29 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							height = 182,
 							content = {
 								{
-									type = "textbox",
+									type = TEXTBOX,
 									name = "ConfigName",
 									file = true,
 									text = "",
 								},
 								{
-									type = "dropbox",
+									type = DROPBOX,
 									name = "Configs",
 									value = 1,
 									values = GetConfigs(),
 								},
 								{
-									type = "button",
+									type = BUTTON,
 									name = "Load Config",
 									doubleclick = true,
 								},
 								{
-									type = "button",
+									type = BUTTON,
 									name = "Save Config",
 									doubleclick = true,
 								},
 								{
-									type = "button",
+									type = BUTTON,
 									name = "Delete Config",
 									doubleclick = true,
 								},
@@ -15727,6 +15748,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					},
 				},
 			})
+
 			do
 				local plistinfo = menu.options["Settings"]["Player List"]["Player Info"][1]
 				local plist = menu.options["Settings"]["Player List"]["Players"]
@@ -15914,7 +15936,7 @@ K/D: %d/%d
 
 				menu.connections.playerleft = Players.PlayerRemoving:Connect(function(player)
 					updateplist()
-					repupdates[player] = nil
+					ragebot.repupdates[player] = nil
 				end)
 			end
 		end --!SECTION PF END
