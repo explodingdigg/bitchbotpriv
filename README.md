@@ -1,2 +1,2 @@
-# Bitch Bot
-made by nate, json, and bitch with <3
+# Bitch Bot (for synapse beta)
+Made by nate, and bitch
