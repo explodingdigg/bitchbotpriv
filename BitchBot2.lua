@@ -268,33 +268,33 @@ end
 --validity check
 --SECTION commented these out for development
 
--- make_synreadonly(syn)
--- make_synreadonly(Drawing)
--- protectfunction(getgenv)
--- protectfunction(getgc)
+make_synreadonly(syn)
+make_synreadonly(Drawing)
+protectfunction(getgenv)
+protectfunction(getgc)
 
--- local init
--- if syn then
--- 	init = getfenv(saveinstance).script
--- end
+local init
+if syn then
+	init = getfenv(saveinstance).script
+end
 
--- script.Name = "\1"
--- local function search_hookfunc(tbl)
--- 	for i,v in pairs(tbl) do
--- 		local s = getfenv(v).script
--- 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
--- 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
--- 				writefile("poop.text", "did the funny")
--- 				SX_CRASH()
--- 				break
--- 			end
--- 		end
--- 	end
--- end
--- search_hookfunc(getgc())
--- search_hookfunc = nil
+script.Name = "\1"
+local function search_hookfunc(tbl)
+	for i,v in pairs(tbl) do
+		local s = getfenv(v).script
+		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+				writefile("poop.text", "did the funny")
+				SX_CRASH()
+				break
+			end
+		end
+	end
+end
+search_hookfunc(getgc())
+search_hookfunc = nil
 
--- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
 --!SECTION
 local menuWidth, menuHeight = 500, 600
@@ -2402,14 +2402,31 @@ function menu.Initialize(menutable)
 			v.Visible = visible
 		end
 
-		dropboxthingy[1].Position = Vector2.new(x, y)
+		local size = Vector2.new(length, 21 * (#values + 1) + 3)
+		-- if y + size.y > SCREEN_SIZE.y then
+		-- 	y = SCREEN_SIZE.y - size.y
+		-- end
+		-- if x + size.x > SCREEN_SIZE.x then
+		-- 	x = SCREEN_SIZE.x - size.x
+		-- end
+		-- if y < 0 then
+		-- 	y = 0
+		-- end
+		-- if x < 0 then
+		-- 	x = 0
+		-- end
+
+		local pos = Vector2.new(x, y)
+		dropboxthingy[1].Position = pos
 		dropboxthingy[2].Position = Vector2.new(x + 1, y + 1)
 		dropboxthingy[3].Position = Vector2.new(x + 2, y + 22)
 
-		dropboxthingy[1].Size = Vector2.new(length, 21 * (#values + 1) + 3)
+		dropboxthingy[1].Size = size
 		dropboxthingy[2].Size = Vector2.new(length - 2, (21 * (#values + 1)) + 1)
 		dropboxthingy[3].Size = Vector2.new(length - 4, (21 * #values) + 1 - 1)
 
+
+		
 		if visible then
 			for i = 1, #values do
 				dropboxtexty[i].Position = Vector2.new(x + 6, y + 26 + ((i - 1) * 21))
@@ -2426,18 +2443,33 @@ function menu.Initialize(menutable)
 				v.Visible = false
 			end
 		end
+		return pos
 	end
 
 	local function set_comboboxthingy(visible, x, y, length, values)
 		for k, v in pairs(dropboxthingy) do
 			v.Visible = visible
 		end
+		local size = Vector2.new(length, 22 * (#values + 1) + 2)
 
-		dropboxthingy[1].Position = Vector2.new(x, y)
+		if y + size.y > SCREEN_SIZE.y then
+			y = SCREEN_SIZE.y - size.y
+		end
+		if x + size.x > SCREEN_SIZE.x then
+			x = SCREEN_SIZE.x - size.x
+		end
+		if y < 0 then
+			y = 0
+		end
+		if x < 0 then
+			x = 0
+		end
+		local pos = Vector2.new(x,y)
+		dropboxthingy[1].Position = pos
 		dropboxthingy[2].Position = Vector2.new(x + 1, y + 1)
 		dropboxthingy[3].Position = Vector2.new(x + 2, y + 22)
 
-		dropboxthingy[1].Size = Vector2.new(length, 22 * (#values + 1) + 2)
+		dropboxthingy[1].Size = size
 		dropboxthingy[2].Size = Vector2.new(length - 2, (22 * (#values + 1)))
 		dropboxthingy[3].Size = Vector2.new(length - 4, (22 * #values))
 
@@ -2457,6 +2489,7 @@ function menu.Initialize(menutable)
 				v.Visible = false
 			end
 		end
+		return pos
 	end
 
 	menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
@@ -2869,6 +2902,7 @@ function menu.Initialize(menutable)
 		{ 0, 0, 0, 255 },
 		bbmouse
 	)
+	Draw:OutlinedText("", 2, false, 0, 0, 13, false, { 255, 255, 255, 255 }, { 15, 15, 15 }, bbmouse)
 	Draw:OutlinedText("?", 2, false, 0, 0, 13, false, { 255, 255, 255, 255 }, { 15, 15, 15 }, bbmouse)
 
 	local lastMousePos = Vector2.new()
@@ -2876,7 +2910,7 @@ function menu.Initialize(menutable)
 		FireEvent("bb_mousemoved", lastMousePos ~= Vector2.new(x, y))
 		for k = 1, #bbmouse do
 			local v = bbmouse[k]
-			if k ~= #bbmouse then
+			if k ~= #bbmouse and k ~= #bbmouse - 1 then
 				v.PointA = Vector2.new(x, y + 36)
 				v.PointB = Vector2.new(x, y + 36 + 15)
 				v.PointC = Vector2.new(x + 10, y + 46)
@@ -3206,15 +3240,17 @@ function menu.Initialize(menutable)
 
 	function menu:GetKey(tab, groupbox, name)
 		local option = self.options[tab][groupbox][name][5]
+		local return1, return2, return3
 		if self:GetVal(tab, groupbox, name) then
 			if option.toggletype ~= 0 then
 				if option.lastvalue == nil then
 					option.lastvalue = option.relvalue
 				end
-				return option.relvalue, option.lastvalue, option.event
+				return1, return2, return3 = option.relvalue, option.lastvalue, option.event
+				option.lastvalue = option.relvalue
 			end
 		end
-		return false
+		return return1, return2, return3
 	end
 
 	function menu:SetKey(tab, groupbox, name, val)
@@ -3234,7 +3270,7 @@ function menu.Initialize(menutable)
 	local buttonsInQue = {}
 
 	local function SaveCurSettings() --ANCHOR figgies
-		local figgy = "BitchBot v2\nmade with <3 by nata and bitch\n\n" -- screw zarzel XD (and json and classy)
+		local figgy = "BitchBot v2\nmade with <3 by nata and bitch\n\n" -- screw zarzel XD (and json and classy) 
 
 		for k, v in next, menuElementTypes do
 			figgy ..= v .. "s {\n"
@@ -4260,7 +4296,7 @@ function menu.Initialize(menutable)
 									end
 									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 36) then
 										if not v2[5] then
-											menu:SetDropBox(
+											v2[5] = menu:SetDropBox(
 												true,
 												v2[3][1] + menu.x + 1,
 												v2[3][2] + menu.y + 13,
@@ -4268,7 +4304,6 @@ function menu.Initialize(menutable)
 												v2[1],
 												v2[6]
 											)
-											v2[5] = true
 											newdropbox_open = v2
 										else
 											menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
@@ -4308,7 +4343,8 @@ function menu.Initialize(menutable)
 									end
 									if menu:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 36) then
 										if not v2[5] then
-											set_comboboxthingy(
+											
+											v2[5] = set_comboboxthingy(
 												true,
 												v2[3][1] + menu.x + 1,
 												v2[3][2] + menu.y + 13,
@@ -4316,7 +4352,6 @@ function menu.Initialize(menutable)
 												v2[1],
 												v2[6]
 											)
-											v2[5] = true
 											newdropbox_open = v2
 										else
 											menu:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
@@ -4582,6 +4617,14 @@ function menu.Initialize(menutable)
 			return
 		end
 		SCREEN_SIZE = Camera.ViewportSize
+		if bbmouse[#bbmouse-1] then
+			if menu.inmenu and not menu.inmiddlemenu and not menu.intabs then
+				bbmouse[#bbmouse-1].Visible = true
+				bbmouse[#bbmouse-1].Transparency = 1
+			else
+				bbmouse[#bbmouse-1].Visible = false
+			end
+		end
 		-- i pasted the old menu working ingame shit from the old source nate pls fix ty
 		-- this is the really shitty alive check that we've been using since day one
 		-- removed it :DDD
@@ -4802,14 +4845,16 @@ function menu.Initialize(menutable)
 					end
 				end
 			end
-			menu.inmenu = LOCAL_MOUSE.x > menu.x and LOCAL_MOUSE.x < menu.x + menu.w and LOCAL_MOUSE.y > menu.y - 32 and LOCAL_MOUSE.y < menu.y + menu.h
-			menu.inmiddlemenu = LOCAL_MOUSE.x > menu.x + 9 and LOCAL_MOUSE.x < menu.x + menu.w - 9 and LOCAL_MOUSE.y > menu.y - 9 and LOCAL_MOUSE.y < menu.y + menu.h - 47
+			menu.inmenu = LOCAL_MOUSE.x > menu.x and LOCAL_MOUSE.x < menu.x + menu.w and LOCAL_MOUSE.y > menu.y - 32 and LOCAL_MOUSE.y < menu.y + menu.h - 34
+			menu.intabs = LOCAL_MOUSE.x > menu.x + 9 and LOCAL_MOUSE.x < menu.x + menu.w - 9 and LOCAL_MOUSE.y > menu.y - 9 and LOCAL_MOUSE.y < menu.y + 24
+			menu.inmiddlemenu = LOCAL_MOUSE.x > menu.x + 18 and LOCAL_MOUSE.x < menu.x + menu.w - 18 and LOCAL_MOUSE.y > menu.y + 33 and LOCAL_MOUSE.y < menu.y + menu.h - 56
 			if (
 					--[[(
 						LOCAL_MOUSE.x > menu.x and LOCAL_MOUSE.x < menu.x + menu.w and LOCAL_MOUSE.y > menu.y - 32 and LOCAL_MOUSE.y < menu.y - 11
 					)]]
 					(
 						menu.inmenu and 
+						not menu.intabs and
 						not menu.inmiddlemenu
 					) or menu.dragging
 				) and not menu.dontdrag
@@ -5003,7 +5048,7 @@ function menu.Initialize(menutable)
 					end
 				end
 			end
-			if input.KeyCode == Enum.KeyCode.Home then
+			if input.KeyCode == Enum.KeyCode.F2 then
 				menu.stat_menu = not menu.stat_menu
 
 				for k, v in pairs(graphs) do
@@ -5104,21 +5149,23 @@ local avgfps = 100
 -- fixed ur shitty fps counter
 local StatMenuRendered = event.new("StatMenuRendered")
 menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --ANCHOR MENU HEARTBEAT
-	if menu.y < 0 then
-		menu.y = 0
-		menu:SetMenuPos(menu.x, 0)
-	end
-	if menu.x < -menu.w / 4 * 3 then
-		menu.x = -menu.w / 4 * 3
-		menu:SetMenuPos(-menu.w / 4 * 3, menu.y)
-	end
-	if menu.x + menu.w / 4 > SCREEN_SIZE.x then
-		menu.x = SCREEN_SIZE.x - menu.w / 4
-		menu:SetMenuPos(SCREEN_SIZE.x - menu.w / 4, menu.y)
-	end
-	if menu.y > SCREEN_SIZE.y - 20 then
-		menu.y = SCREEN_SIZE.y - 20
-		menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
+	if menu.open then
+		if menu.y < 0 then
+			menu.y = 0
+			menu:SetMenuPos(menu.x, 0)
+		end
+		if menu.x < -menu.w / 4 * 3 then
+			menu.x = -menu.w / 4 * 3
+			menu:SetMenuPos(-menu.w / 4 * 3, menu.y)
+		end
+		if menu.x + menu.w / 4 > SCREEN_SIZE.x then
+			menu.x = SCREEN_SIZE.x - menu.w / 4
+			menu:SetMenuPos(SCREEN_SIZE.x - menu.w / 4, menu.y)
+		end
+		if menu.y > SCREEN_SIZE.y - 20 then
+			menu.y = SCREEN_SIZE.y - 20
+			menu:SetMenuPos(menu.x, SCREEN_SIZE.y - 20)
+		end
 	end
 	if menu.stat_menu == false then
 		return
@@ -7737,7 +7784,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				client.updateplayernames = garbage
 			end
 			if getfenv(garbage).script then
-				if islclosure(garbage) and table.find(debug.getconstants(garbage), "menu.parts.indicator") then
+				if islclosure(garbage) and table.find(debug.getconstants(garbage), "Frag") then
 					client.newgrenade = garbage
 				end
 			end
@@ -8001,6 +8048,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	local CommandInfo = {
 		targetbelowrank = "<number> rank",
 		friendaboverank = "<number> rank",
+		say = "says message in chat",
 		annoy = "player name",
 		mute = "player name",
 		clearannoylist = "clear the annoy list, if anyone exists in it",
@@ -8011,6 +8059,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	}
 
 	local CommandFunctions = {
+		say = function(...)
+			local message = { ... }
+			local newmes = ""
+			for k, v in next, message do
+				newmes ..= " " .. v
+			end
+			client.net:send("say", newmes)
+		end,
 		targetbelowrank = function(min)
 			local targetted = 0
 			for k, player in pairs(Players:GetPlayers()) do
@@ -8527,7 +8583,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		"vw HACK", "Anti Votekick", "Speed", "Fly", "Big Head", "Knife Hack", "No Clip", "Auto", "Rapid Fire",
 		"Fire Rate Hack", "Fire Rate", "God Mode", "God", "Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma", "And", "LEAKED",
 		"🥳🥳🥳", "RELEASE", "IP RESOLVER", "Infinite Wall Bang", "Wall Bang", "Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱", "Free Download EHUB", "Taps", "Owns",
-		"Owns All", "Trolling", "Troll", "Grief", "Kill", "弗吉艾尺艾杰开", "Nate", "Alan", "JSON", "Classy", "BBOT Developers", "Logic", "And", "and", "Glitch", 
+		"Owns All", "Trolling", "Troll", "Grief", "Kill", "弗吉艾尺艾杰开", "Nata", "Alan", "JSON", "BBOT Developers", "Logic", "And", "and", "Glitch", 
 		"Server Hack", "Babies", "Children", "TAP", "Meme", "MEME", "Laugh", "LOL!", "Lol!", "ROFLSAUCE", "Rofl", ";p", ":D", "=D", "xD", "XD", "=>", "₽", "$", "8=>", "😹😹😹", "🎮🎮🎮", "🎱", "⭐", "✝", 
 		"Ransomware", "Malware", "SKID", "Pasted vw", "Encrypted", "Brute Force", "Cheat Code", "Hack Code", ";v", "No Ban", "Bot", "Editing", "Modification", "injection", "Bypass Anti Cheat",
 		"铜色类别创意", "Cheat Exploit", "Hitbox Expansion", "Cheating AI", "Auto Wall Shoot", "Konami Code", "Debug", "Debug Menu", "🗿", "£", "¥", "₽", "₭", "€", "₿", "Meow", "MEOW", "meow",
@@ -8589,7 +8645,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	end
 
 	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK -- fuk json
-		debug.profilebegin("render chams")
+		--debug.profilebegin("render chams")
 		local PlayerList = Players:GetPlayers()
 		for k = 1, #PlayerList do
 			local player = PlayerList[k]
@@ -8623,7 +8679,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local Parts = player.Character:GetChildren()
 				for k1 = 1, #Parts do
 					Part = Parts[k1]
-					debug.profilebegin("renderChams " .. player.Name)
+					--debug.profilebegin("renderChams " .. player.Name)
 					if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
 						local helmet = Part:FindFirstChild("HELMET")
 						if helmet then
@@ -8700,11 +8756,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-					debug.profileend("renderChams " .. player.Name)
+					--debug.profileend("renderChams " .. player.Name)
 				end
 			end
 		end
-		debug.profileend("render chams")
+		--debug.profileend("render chams")
 	end
 
 	local send = client.net.send
@@ -8778,7 +8834,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				elseif self == client.char.rootpart then
 					if id == "CFrame" then
-						-- if menu:GetVal("Misc", "Movement", "Bypass Speed Checks") then
+						-- if menu:GetVal("Misc", "Exploits", "Bypass Speed Checks") then
 						-- 	oldNewIndex(self, id, LOCAL_MOUSE.Hit)
 						-- 	oldNewIndex(self, "Position", LOCAL_MOUSE.Hit.p)
 						-- 	oldNewIndex(self, "Velocity", Vector3.new(0, 0, 0))
@@ -9236,7 +9292,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			lastHitboxPriority = hitboxPriority or lastHitboxPriority
 			self.intersection = nil
 
-			debug.profilebegin("BB self GetTarget")
+			--debug.profilebegin("BB self GetTarget")
 			--local hitscan = hitscan or {}
 			local partPreference = hitboxPriority
 				or "you know who i am? well you about to find out, your barbecue boy"
@@ -9334,7 +9390,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											continue
 										end
 									elseif autowall ~= 1 then
-										debug.profilebegin("BB self Penetration Check " .. player.Name)
+										--debug.profilebegin("BB self Penetration Check " .. player.Name)
 										local directionVector = camera:GetTrajectory(newbone.Position, camposv3)
 										-- self:CanPenetrate(LOCAL_PLAYER, player, directionVector, newbone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
 										-- self:CanPenetrate(origin, target, velocity, penetration)
@@ -9345,7 +9401,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										self:CanPenetrate(
 												camposv3,
 												newbone,
-												client.logic.currentgun.data.penetrationdepth+1
+												client.logic.currentgun.data.penetrationdepth
 											)
 										then
 											cpart = realbone
@@ -9369,7 +9425,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 												end
 											end
 										end
-										debug.profileend("BB self Penetration Check " .. player.Name)
+										--debug.profileend("BB self Penetration Check " .. player.Name)
 									end
 								end
 							end
@@ -9386,7 +9442,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				CreateNotification("Crimwalk disabled due to ragebot")
 				LOCAL_PLAYER.Character.HumanoidRootPart.Position = client.lastrepupdate
 			end
-			debug.profileend("BB self GetTarget")
+			--debug.profileend("BB self GetTarget")
 			
 			return cpart, theplayer, closest, firepos, head, backtrackFrame
 		end
@@ -9573,14 +9629,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		local hitboxShiftAmount = { 0, 0 }
 		if BBOT.username == "dev" then
 			StatMenuRendered:connect(function(text)
+				text.Text ..= string.format("\n--menu-- %d %d %d", menu.inmenu and 1 or 0, menu.inmiddlemenu and 1 or 0, menu.intabs and 1 or 0)
 				text.Text ..= string.format("\n--hitscan-- %d %d %d %d %d %d %d %d", unpack(hitscanPoints))
 				text.Text ..= string.format("\n--hitbox shift method-- %d %d %d %d %d", unpack(hitboxShiftPoints))
 				text.Text ..= string.format("\n--hitbox-- %d %d", unpack(hitboxShiftAmount))
+				text.Text ..= ("%s %s %s"):format(menu.inmenu and "true" or "false", menu.inmiddlemenu and "true" or "false", menu.intabs and "true" or "false")
 				if ragebot.lasthittick and ragebot.lasthittime then
 					text.Text ..= string.format("\n--backtracking-- %dms", (ragebot.lasthittick - ragebot.lasthittime) * 1000)
 				end
-				text.Text ..= string.format("\n--avoid collisions-- %0.2f %0.2f %0.2f %0.2f", misc.normalPositive, misc.normal.x, misc.normal.y, misc.normal.z)
-				text.Text ..= string.format("\n--circle strafe-- %0.2f %0.2f", misc.circleStrafeDirection.x, misc.circleStrafeDirection.z)
+				if misc.normalPositive and misc.circleStrafeDirection then
+					text.Text ..= string.format("\n--avoid collisions-- %0.2f %0.2f %0.2f %0.2f", misc.normalPositive, misc.normal.x, misc.normal.y, misc.normal.z)
+					text.Text ..= string.format("\n--circle strafe-- %0.2f %0.2f", misc.circleStrafeDirection.x, misc.circleStrafeDirection.z)
+				end
 			end)
 		end
 		local shiftmode = 1
@@ -9599,7 +9659,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end,
 			function(part, position, localpart)
 				return -localpart.Velocity.Unit
-			end,
+			end
 		}
 		-- local function GetHitBoxShift(person, bodypart, position)
 		-- 	local misses = ragebot.predictedMisses[person] or 0
@@ -9905,21 +9965,24 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		if client.sound then
 			local playsound = client.sound.PlaySound
 			client.sound.PlaySound = function(...)
-				local args = {...}
+				local args = { ... }
 				if menu and menu:GetVal("Misc", "Extra", "Disable Team Sounds") then
-					if not args[1]:match("friendly") then
-						return playsound(unpack(args))
-					else
-						print("yeah what")
+					if args[1]:match("friendly") then
+						return 
 					end
-				else
-					return playsound(unpack(args))
+					if args[1]:match("equip[A-Z]") then
+						return
+					end
 				end
+				-- if menu and menu:GetVal("Misc", "Extra", "Disable Team Sounds") then
+				-- else
+				return playsound(unpack(args))
+				-- end
 			end
 		end
-		if client.newgrenade then
-			local oldgrenade = client.newgrenade
-			oldnewgrenade = hookfunction(client.newgrenade, function(thrower, gtype, gdata)
+		if client.newgrenade and false then
+			local oldgrenade
+			local hooked = function(thrower, gtype, gdata)
 				if menu and gdata.blowuptime > 0 and thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER
 				then
 					local lastrealpos
@@ -9995,7 +10058,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 				return oldnewgrenade(thrower, gtype, gdata)
-			end)
+			end
+			oldnewgrenade = hookfunction(client.newgrenade, hooked)
+		else
+			-- rconsoleprint("GRENADE FUNCTION NOT FOUND")
 		end
 		for hash, func in next, clienteventfuncs do
 			local curconstants = getconstants(func)
@@ -10216,10 +10282,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local bp = client.replication.getbodyparts(args[1])
 						for i = 1, menu:GetVal("Misc", "Exploits", "Grenade Teleport") and 3 or 1 do
 							send(nil, "newgrenade", unpack(fragargs))
-							if not bp.rootpart then
-								break
+							if bp and bp.rootpart then
+								fragargs[2].frames[2].p0 += bp.rootpart.Velocity * 0.5
 							end
-							fragargs[2].frames[2].p0 += bp.rootpart.Velocity * 0.5
 						end
 					end
 
@@ -10652,7 +10717,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 		function misc:Teleport(newpos)
 			if not client.char.alive then return end
-			misc:BypassSpeedCheck(false)
+			local rootparts = { LOCAL_PLAYER.Character and client.char.rootpart, self.invisroot, self.newroot }
 			local start = Camera.CFrame.p
 			if not newpos then
 				local part, newpos_ = workspace:FindPartOnRayWithWhitelist(
@@ -10663,8 +10728,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			local unit = (newpos - start).Unit
 			local dist = (newpos - start).Magnitude
-			for i = 1, dist - 2 do
-				rootpart.Position += unit
+			for i = 1, dist, 2 do
+				for j = 1, #rootparts do
+					local rootpart = rootparts[j]
+					if not rootpart then continue end
+					rootpart.Position += unit
+				end
 				if not menu:GetKey("Misc", "Exploits", "Crimwalk") then
 					client.net:send("repupdate", rootpart.Position + Vector3.new(0, client.char.headheight, 0), ragebot.angles)
 				end
@@ -11139,21 +11208,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 
 		function misc:MainLoop()
+
 			if menu:GetKey("Misc", "Exploits", "Lock Player Positions") then
 				NETWORK_SETTINGS.IncomingReplicationLag = 9e9
 			else
 				NETWORK_SETTINGS.IncomingReplicationLag = 0
 			end
-			local newval, lastval = menu:GetKey("Misc", "Exploits", "Teleport")
-			if not newval and lastval then
-				misc:Teleport()
-			end
+			
 			
 			rootpart = LOCAL_PLAYER.Character and client.char.rootpart
 			rootpart = self.invisroot or self.newroot or rootpart
 			humanoid = LOCAL_PLAYER.Character and LOCAL_PLAYER.Character:FindFirstChild("Humanoid")
-			local tpval, lastval = menu:GetKey("Misc", "Exploits", "Teleport")
-			misc:BypassSpeedCheck(menu:GetVal("Misc", "Movement", "Bypass Speed Checks") and not tpval and not lastval)
+			misc:BypassSpeedCheck(menu:GetVal("Misc", "Exploits", "Bypass Speed Checks") and not tpval and not lastval)
 			if rootpart and humanoid then
 				if not CHAT_BOX.Active then
 					misc:SpeedHack()
@@ -11183,7 +11249,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 		do --ANCHOR send hook
 			client.net.send = function(self, ...)
-				debug.profilebegin("netsend")
 
 				local args = { ... }
 				-- if menu and menu:GetVal("Misc", "Exploits", "Skin Changer") and args[1] == "changecamo" then
@@ -11196,7 +11261,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				-- 	args[6].BrickProperties.Material = mats[menu:GetVal("Misc", "Exploits", "Skin Material")]
 				-- end
 				if args[1] == "spawn" then
-					
+					UnpackRelations()
 					if menu:GetVal("Misc", "Extra", "Break Windows") then
 						CreateThread(function()
 							local parts = workspace.Map:GetDescendants() 
@@ -11214,9 +11279,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 				if args[1] == "logmessage" or args[1] == "debug" then
 					local message = ""
-					for i = 1, #args do
+					for i = 1, #args - 1 do
 						message ..= tostring(args[i]) .. ", "
 					end
+					message ..= tostring(args[#args])
 					return CreateNotification(message)
 				end
 				if args[1] == "repupdate" then
@@ -11577,8 +11643,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						ragebot.angles = args[3]
 					end
 				end
-
-				debug.profileend("netsend")
 				return send(self, unpack(args))
 			end
 			-- Legitbot definition defines legit functions
@@ -11611,7 +11675,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 					if not menu.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun
 					then
-						debug.profilebegin("Legitbot Main")
+						--debug.profilebegin("Legitbot Main")
 						if menu:GetVal("Legit", "Aim Assist", "Enabled") then
 							local keybind = menu:GetVal("Legit", "Aim Assist", "Aimbot Key") - 1
 							local fov = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV")
@@ -11673,12 +11737,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							end
 						end
-						debug.profileend("Legitbot Main")
+						--debug.profileend("Legitbot Main")
 					end
 				end
 
 				function legitbot:AimAtTarget(targetPart, smoothing, smoothtype)
-					debug.profilebegin("Legitbot AimAtTarget")
+					--debug.profilebegin("Legitbot AimAtTarget")
 					if not targetPart then
 						return
 					end
@@ -11748,11 +11812,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 						Move_Mouse(newMovement / smoothing * 100)
 					end
-					debug.profileend("Legitbot AimAtTarget")
+					--debug.profileend("Legitbot AimAtTarget")
 				end
 
 				function legitbot:SilentAimAtTarget(targetPart)
-					debug.profilebegin("Legitbot SilentAimAtTarget")
+					--debug.profilebegin("Legitbot SilentAimAtTarget")
 
 					if not targetPart or not targetPart.Position or not client.logic.currentgun then
 						return
@@ -11806,7 +11870,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
 					dir += offset * offsetMult
 
-					debug.profileend("Legitbot SilentAimAtTarget")
+					--debug.profileend("Legitbot SilentAimAtTarget")
 					if client.logic.currentgun.type == "SHOTGUN" then
 						local x, y, z = CFrame.lookAt(Vector3.new(), dir.Unit):ToOrientation()
 						client.logic.currentgun.barrel.Orientation = Vector3.new(math.deg(x), math.deg(y), math.deg(z))
@@ -11835,7 +11899,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				]]
 				function legitbot:GetTargetLegit(partPreference, hitscan, players, maxfov, minfov)
 					minfov = minfov or 0
-					debug.profilebegin("Legitbot GetTargetLegit")
+					--debug.profilebegin("Legitbot GetTargetLegit")
 					local closest, closestPart, player = math.huge
 					partPreference = partPreference or "what"
 					hitscan = hitscan or {}
@@ -11902,7 +11966,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-					debug.profileend("Legitbot GetTargetLegit")
+					--debug.profileend("Legitbot GetTargetLegit")
 					return closestPart, closest, player
 				end
 
@@ -11919,7 +11983,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local dsrgposrdjiogjaiogjaoeihjoaiest = "data" -- it loves it
 
 						local thebarrel = gun.barrel
-						debug.profilebegin("Legitbot Triggerbot")
+						--debug.profilebegin("Legitbot Triggerbot")
 						local bulletspeed = gun.data.bulletspeed
 						local isaiming = gun:isaiming()
 						local zoomval = menu:GetVal("Legit", "Trigger Bot", "Aim Percentage") / 100
@@ -12005,7 +12069,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							client.logic.currentgun:shoot(false)
 							legitbot.triggerbotShooting = false
 						end]]
-						debug.profileend("Legitbot Triggerbot")
+						--debug.profileend("Legitbot Triggerbot")
 					end
 				end
 			end
@@ -12049,7 +12113,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				misc:UpdateBeams()
 				client.char.unaimedfov = menu.options["Visuals"]["Camera Visuals"]["Camera FOV"][1]
 				if menu.open then
-					debug.profilebegin("renderVisuals Char")
+					--debug.profilebegin("renderVisuals Char")
 					local crosshud = PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()
 					for i = 1, #crosshud do
 						local frame = crosshud[i]
@@ -12065,10 +12129,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
 						frame.BorderColor3 = enabled and outline or crosshairColors.outline
 					end
-					debug.profileend("renderVisuals Char")
+					--debug.profileend("renderVisuals Char")
 				end -- fun end!
 				--------------------------------------world funnies
-				debug.profilebegin("renderVisuals World")
+				--debug.profilebegin("renderVisuals World")
 				if menu.options["Visuals"]["World"]["Force Time"][1] then
 					game.Lighting.ClockTime = menu.options["Visuals"]["World"]["Custom Time"][1]
 				end
@@ -12098,9 +12162,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					game.Lighting.MapSaturation.TintColor = RGB(170, 170, 170)
 					game.Lighting.MapSaturation.Saturation = -0.25
 				end
-				debug.profileend("renderVisuals World")
+				--debug.profileend("renderVisuals World")
 
-				debug.profilebegin("renderVisuals Player ESP Reset")
+				--debug.profilebegin("renderVisuals Player ESP Reset")
 				-- TODO this reset may need to be improved to a large extent, it's taking up some time but idk if the frame times are becoming worse because of this
 				for i = 1, #allesp do
 					local drawclass = allesp[i]
@@ -12112,10 +12176,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 
-				debug.profileend("renderVisuals Player ESP Reset")
+				--debug.profileend("renderVisuals Player ESP Reset")
 
 				----------
-				debug.profilebegin("renderVisuals Main")
+				--debug.profilebegin("renderVisuals Main")
 				if client.logic.currentgun and client.logic.currentgun.barrel and client.char.alive and menu:GetVal("Visuals", "Misc", "Laser Pointer")
 				then
 					menu.crosshair.outline[1].Visible = true
@@ -12207,7 +12271,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 								position = newpos or position
 							end
-							debug.profilebegin("renderVisuals Player ESP Box Calculation " .. plyname)
+							--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. plyname)
 
 							local vTop = position + (torso.UpVector * 1.8) + cam.UpVector
 							local vBottom = position - (torso.UpVector * 2.5) - cam.UpVector
@@ -12241,7 +12305,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								math.floor(math.min(top.y, bottom.y))
 							)
 
-							debug.profileend("renderVisuals Player ESP Box Calculation " .. plyname)
+							--debug.profileend("renderVisuals Player ESP Box Calculation " .. plyname)
 
 							local GroupBox = ply.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 							local health = math.ceil(client.hud:getplayerhealth(ply))
@@ -12261,7 +12325,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									math.floor(boxPosition.y) - 4
 								)
 								if nameon or rankon then
-									debug.profilebegin("renderVisuals Player ESP Render Name " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Name " .. plyname)
 									local namestring = ""
 
 									if rankon then
@@ -12298,7 +12362,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 
 								if menu.options["Visuals"][GroupBox]["Box"][1] then
-									debug.profilebegin("renderVisuals Player ESP Render Box " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Box " .. plyname)
 									for i = -1, 1 do
 										local box = allesp[2][i + 3][curplayer]
 										box.Visible = true
@@ -12311,10 +12375,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										end
 										--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 									end
-									debug.profileend("renderVisuals Player ESP Render Box " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Box " .. plyname)
 								end
 								if menu.options["Visuals"][GroupBox]["Filled Box"][1] then
-									debug.profilebegin("renderVisuals Player ESP Render Box " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Box " .. plyname)
 
 									local box = allesp[2][1][curplayer]
 									box.Visible = true
@@ -12332,12 +12396,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									end
 									--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 
-									debug.profileend("renderVisuals Player ESP Render Box " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Box " .. plyname)
 								end
 								
 
 								if menu.options["Visuals"][GroupBox]["Health Bar"][1] then
-									debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. plyname)
 
 									local ySizeBar = -math.floor(boxSize.y * health / 100)
 									if menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1]
@@ -12391,10 +12455,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										},
 									})
 
-									debug.profileend("renderVisuals Player ESP Render Health Bar " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Health Bar " .. plyname)
 								elseif menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1]
 								then
-									debug.profilebegin("renderVisuals Player ESP Render Health Number " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Health Number " .. plyname)
 
 									local hptext = allesp[3][3][curplayer]
 
@@ -12407,11 +12471,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", COLOR, true)
 									hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 
-									debug.profileend("renderVisuals Player ESP Render Health Number " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Health Number " .. plyname)
 								end
 
 								if menu.options["Visuals"][GroupBox]["Held Weapon"][1] then
-									debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. plyname)
 
 									local charWeapon = _3pweps[ply]
 									local wepname = charWeapon and charWeapon or "???"
@@ -12432,11 +12496,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									weptext.Visible = true
 									weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
 
-									debug.profileend("renderVisuals Player ESP Render Held Weapon " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Held Weapon " .. plyname)
 								end
 
 								if menu.options["Visuals"][GroupBox]["Distance"][1] then
-									debug.profilebegin("renderVisuals Player ESP Render Distance " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Distance " .. plyname)
 
 									local disttext = allesp[4][3][curplayer]
 
@@ -12447,11 +12511,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										boxPosition.y + boxSize.y + spoty
 									)
 
-									debug.profileend("renderVisuals Player ESP Render Distance " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Distance " .. plyname)
 								end
 
 								if menu.options["Visuals"][GroupBox]["Skeleton"][1] then
-									debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. plyname)
 
 									local torso = Camera:WorldToViewportPoint(ply.Character.Torso.Position)
 									for i = 1, #skelparts do
@@ -12463,7 +12527,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										line.To = Vector2.new(torso.x, torso.y)
 										line.Visible = true
 									end
-									debug.profileend("renderVisuals Player ESP Render Skeleton" .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Skeleton" .. plyname)
 								end
 								--da colourz !!! :D 🔥🔥🔥🔥
 
@@ -12546,7 +12610,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View")
 							then
-								debug.profilebegin("renderVisuals Player ESP Render Out of View " .. plyname)
+								--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. plyname)
 								local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR, true)
 								local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
 								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, plyname)
@@ -12609,7 +12673,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									Tri.Color = i == 1 and color or color2
 									Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR)[4] / 255
 								end
-								debug.profileend("renderVisuals Player ESP Render Out of View " .. plyname)
+								--debug.profileend("renderVisuals Player ESP Render Out of View " .. plyname)
 							end
 						end
 					end
@@ -12617,7 +12681,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					--ANCHOR weapon esp
 					if menu:GetVal("Visuals", "Dropped ESP", "Weapon Names") or menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo")
 					then
-						debug.profilebegin("renderVisuals Dropped 1ESP")
+						--debug.profilebegin("renderVisuals Dropped 1ESP")
 						local gunnum = 0
 						local dropped = workspace.Ignore.GunDrop:GetChildren()
 						for k = 1, #dropped do
@@ -12636,7 +12700,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									local hasgun = false
 									local gunpos2d, gun_on_screen = workspace.CurrentCamera:WorldToScreenPoint(gunpos)
 									local children = v:GetChildren()
-									for k1 = 1, #v do
+									for k1 = 1, #children do
 										local v1 = children[k1]
 										if tostring(v1) == "Gun" then
 											hasgun = true
@@ -12706,7 +12770,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							end
 						end
-						debug.profileend("renderVisuals Dropped ESP")
+						--debug.profileend("renderVisuals Dropped ESP")
 					end
 					if menu:GetVal("Visuals", "FOV", "Enabled") then -- fov circles
 						local fovcircles = allesp[9]
@@ -12785,7 +12849,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 					end
 
-					debug.profilebegin("renderVisuals Dropped ESP Grenade Warning")
+					--debug.profilebegin("renderVisuals Dropped ESP Grenade Warning")
 					if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
 						local health = client.char:gethealth()
 						local color1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning", COLOR, true)
@@ -12902,9 +12966,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 					end
 
-					debug.profileend("renderVisuals Dropped ESP Grenade Warning")
+					--debug.profileend("renderVisuals Dropped ESP Grenade Warning")
 
-					debug.profilebegin("renderVisuals Local Visuals")
+					--debug.profilebegin("renderVisuals Local Visuals")
 					misc.setvis = misc.setvis or {} -- this is for caching the weapons and shit so that when you switche weapons it will execute this code :3
 					-- hand chams and such
 					if not client then
@@ -13050,7 +13114,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-					debug.profileend("renderVisuals Local Visuals")
+					--debug.profileend("renderVisuals Local Visuals")
 				end
 				if menu:GetVal("Visuals", "Keybinds", "Enabled") then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 					local texts = allesp[10]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
@@ -13128,10 +13192,25 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						box3.Transparency = 0.4-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 -- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						if listsizes then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							local w = 8
+							local h = 15
+							if i == 1 then
+								h = 9 * #newtexts
+								w = 8 
+							end
+							if i == #newtexts then
+								h += 7
+							end
+							local x = posx - 2
+							local y = margin - 4
+							-- if i == 2 then
+							-- 	x += 4
+							-- 	w -= 4
+							-- end
 							box.Size = text.TextBounds + Vector2.new(4, 3)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 							box1.Size = text.TextBounds + Vector2.new(6, 7)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
-							box3.Size = text.TextBounds + Vector2.new(i == 2 and -maxwidth.x + 6 or 8, (i == #newtexts and i == 1) and 9 or i == 1 and 23 or i == 2 and 10 or 2) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
-							box3.Position = Vector2.new(i == 2 and posx + maxwidth.x or posx - 2, (i == 1 or i == 2) and margin - 4 or margin + 2) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box3.Size = Vector2.new(text.TextBounds.x + w, h) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+							box3.Position = Vector2.new(x, y) -- this is fucking stupid i hate this. why did i do this-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						else-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 							box.Size = maxwidth + maxwidth2 + Vector2.new(0, 3)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 							box1.Size = maxwidth + maxwidth2 + Vector2.new(2, 7)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
@@ -13169,8 +13248,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 					end-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 				end
-				debug.profileend("renderVisuals Main")
-				debug.profilebegin("renderVisuals No Scope")
+				--debug.profileend("renderVisuals Main")
+				--debug.profilebegin("renderVisuals No Scope")
 				do -- no scope pasted from v1 lol
 					local gui = LOCAL_PLAYER.PlayerGui
 					local frame = gui.MainGui.ScopeFrame
@@ -13201,7 +13280,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 					end
 				end
-				debug.profileend("renderVisuals No Scope")
+				--debug.profileend("renderVisuals No Scope")
 			end
 
 			menu.connections.deadbodychildadded = workspace.Ignore.DeadBody.ChildAdded:Connect(function(newchild)
@@ -13278,6 +13357,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 				if actionName == "BB PF check" then
 					if inputState == Enum.UserInputState.Begin then
+						
 						------------------------------------------
 						------------"TOGGLES AND SHIT"------------
 						------------------------------------------
@@ -13345,6 +13425,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 								return Enum.ContextActionResult.Sink
 							end
+							local key = menu:GetVal("Misc", "Exploits", "Teleport", KEYBIND)
+							if key == inputObject.KeyCode then
+								if not menu:GetVal("Misc", "Exploits", "Bypass Speed Checks") then
+									misc:Teleport()
+									return Enum.ContextActionResult.Sink
+								end
+							end
 						end
 
 						if menu:GetVal("Misc", "Exploits", "Rapid Kill") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", KEYBIND)
@@ -13386,13 +13473,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			--[[ menu.connections.keycheck = INPUT_SERVICE.InputBegan:Connect(function(key)
 				if chat_box.Active then return end
 			end) ]]
-
 			menu.connections.renderstepped_pf = game.RunService.RenderStepped:Connect(function(dt)
 				if menu.lastActive ~= menu.windowactive then
-					setfpscap((menu.windowactive or menu:GetVal("Misc", "Exploits", "Stress Server")) and (getgenv().maxfps or 144) or 15)
+					setfpscap((menu.windowactive or menu:GetVal("Misc", "Exploits", "Crash Server")) and (getgenv().maxfps or 144) or 15)
 				end
-				if menu:GetVal("Misc", "Exploits", "Stress Server") then
-					for i = 1, menu:GetVal("Misc", "Exploits", "Stress Amount") ^ 2 do
+				if menu:GetVal("Misc", "Exploits", "Crash Server") then
+					for i = 1, menu:GetVal("Misc", "Exploits", "Crash Intensity") ^ 2 do
 						-- client.net:send("getrounddata")
 						-- client.net:send("changeclass", "Assault")
 						-- client.net:send("changeclass", "Support")
@@ -13424,8 +13510,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 
 				MouseUnlockHook()
-				debug.profilebegin("Main BB Loop")
-				debug.profilebegin("Noclip Cheat check")
+				--debug.profilebegin("Main BB Loop")
+				--debug.profilebegin("Noclip Cheat check")
 				if client.char.alive and menu:GetVal("Misc", "Exploits", "Rapid Kill") and menu:GetVal("Misc", "Exploits", "Auto Rapid Kill")
 				then
 					if misc:RapidKill() then
@@ -13445,9 +13531,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						NETWORK:SetOutgoingKBPSLimit(0)
 					end
 				end
-				debug.profileend("Noclip Cheat check")
+				--debug.profileend("Noclip Cheat check")
 
-				debug.profilebegin("BB Rendering")
+				--debug.profilebegin("BB Rendering")
 				do --rendering
 					renderVisuals(dt)
 					if menu.open then
@@ -13458,27 +13544,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						)
 					end
 				end
-				debug.profileend("BB Rendering")
-				debug.profilebegin("BB Legitbot")
+				--debug.profileend("BB Rendering")
+				--debug.profilebegin("BB Legitbot")
 				do --legitbot
 					legitbot:TriggerBot()
 					legitbot:MainLoop()
 				end
-				debug.profileend("BB Legitbot")
-				debug.profilebegin("BB Misc.")
+				--debug.profileend("BB Legitbot")
+				--debug.profilebegin("BB Misc.")
 				do --misc
 					misc:MainLoop()
-					debug.profilebegin("BB Ragebot KnifeBot")
+					--debug.profilebegin("BB Ragebot KnifeBot")
 					ragebot:KnifeBotMain()
-					debug.profileend("BB Ragebot KnifeBot")
+					--debug.profileend("BB Ragebot KnifeBot")
 				end
-				debug.profileend("BB Misc.")
+				--debug.profileend("BB Misc.")
 				if not menu:GetVal("Rage", "Settings", "Aimbot Performance Mode") then
-					debug.profilebegin("BB Ragebot (Non Performance)")
+					--debug.profilebegin("BB Ragebot (Non Performance)")
 					do --ragebot
 						ragebot:MainLoop()
 					end
-					debug.profileend("BB Ragebot (Non Performance)")
+					--debug.profileend("BB Ragebot (Non Performance)")
 				else
 					ragebot.flip = not ragebot.flip
 					if ragebot.flip then
@@ -13500,7 +13586,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					menu.spectating = false
 				end
 
-				debug.profileend("Main BB Loop")
+				--debug.profileend("Main BB Loop")
 			end)
 
 			client.nextchamsupdate = tick()
@@ -13547,7 +13633,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					bulletcheckresolution = menu:GetVal("Rage", "Aimbot", "Autowall FPS (Standard)") / 1000
 				end
 
-				debug.profilebegin("BB No Gun Bob or Sway")
+				--debug.profilebegin("BB No Gun Bob or Sway")
 
 				if client.char.alive then
 					for id, gun in next, client.loadedguns do
@@ -13615,12 +13701,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 
-				debug.profileend()
+				--debug.profileend()
 
 				if menu:GetVal("Visuals", "Local", "Third Person") and menu:GetKey("Visuals", "Local", "Third Person") and client.char.alive
 				then -- do third person model
 					if client.char.alive then
-						debug.profilebegin("Third Person")
+						--debug.profilebegin("Third Person")
 						if not client.fakecharacter then
 							client.fakecharacter = true
 							local localchar = LOCAL_PLAYER.Character:Clone()
@@ -13720,7 +13806,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							end
 						end
-						debug.profileend("Third Person")
+						--debug.profileend("Third Person")
 					end
 				else
 					if client.fakecharacter then
@@ -15202,13 +15288,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										},
 										tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed Factor.",
 									},
-									{
-										type = TOGGLE,
-										name = "Bypass Speed Checks",
-										value = false,
-										unsafe = true,
-										tooltip = "Attempts to bypass maximum speed limit on the server.",
-									},
 								},
 							},
 							[2] = {
@@ -15453,18 +15532,20 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},]]
 									{
 										type = TOGGLE,
-										name = "Stress Server",
-										tooltip = "Attempts to overwhelm the server so that users are kicked\nfor internet connection problems.\nUsually needs multiple instances running to cause a crash.",
+										unsafe = true,
+										name = "Crash Server",
+										tooltip = "Attempts to overwhelm the server so that users are kicked\nfor internet connection problems.\nThe higher the Crash Intensity the faster it will be,\nbut the higher the chance for it to fail.",
 									},
 									{
 										type = SLIDER, 
-										name = "Stress Amount",
+										name = "Crash Intensity",
 										minvalue = 1, 
 										maxvalue = 10,
-										value = 5
+										value = 8
 									},
 									{
 										type = TOGGLE,
+										unsafe = true,
 										name = "Invisibility",
 										extra = {
 											type = KEYBIND,
@@ -15473,6 +15554,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = TOGGLE,
+										unsafe = true,
 										name = "Rapid Kill",
 										value = false,
 										extra = {
@@ -15483,18 +15565,21 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = TOGGLE,
+										unsafe = true,
 										name = "Auto Rapid Kill",
 										value = false,
 										tooltip = "Throws 3 grenades instantly on random enemies,\nthen respawns to do it again.\nWorks only when Rapid Kill is enabled.",
 									},
 									{
 										type = TOGGLE,
+										unsafe = true,
 										name = "Grenade Teleport",
 										value = false,
 										tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes.",
 									},
 									{
 										type = TOGGLE,
+										unsafe = true,
 										name = "Crimwalk",
 										value = false,
 										extra = {
@@ -15503,23 +15588,33 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = TOGGLE,
-										name = "Teleport",
-										value = false,
-										extra = {
-											type = KEYBIND,
-											toggletype = 1,
-										},
-										tooltip = "When key released you will teleport to the mouse position",
+										name = "Disable Crimwalk on Shot",
+										value = true,
+										unsafe = true,
 									},
 									{
 										type = TOGGLE,
-										name = "Disable Crimwalk on Shot",
-										value = true,
+										name = "Bypass Speed Checks",
+										value = false,
+										unsafe = true,
+										tooltip = "Attempts to bypass maximum speed limit on the server.",
+									},
+									{
+										type = TOGGLE,
+										name = "Teleport",
+										value = false,
+										unsafe = true,
+										extra = {
+											type = KEYBIND,
+											toggletype = 0,
+										},
+										tooltip = "When key pressed you will teleport to the mouse position.\nDoes not work when Bypass Speed Checks is enabled.",
 									},
 									{
 										type = TOGGLE,
 										name = "Vertical Floor Clip",
 										value = false,
+										unsafe = true,
 										extra = {
 											type = KEYBIND,
 											toggletype = 0,
@@ -15564,6 +15659,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = TOGGLE,
 										name = "Lock Player Positions",
 										value = false,
+										unsafe = true,
 										extra = {
 											type = KEYBIND,
 										},
@@ -16005,8 +16101,13 @@ textbox[4].Text = textbox[1]
 menu.load_time = math.floor((tick() - loadstart) * 1000)
 CreateNotification(string.format("Done loading the " .. menu.game .. " cheat. (%d ms)", menu.load_time))
 CreateNotification("Press DELETE to open and close the menu!")
-
-loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
+CreateThread(function()
+	for i = 1, 20 do
+		loadingthing.Transparency = 1-i/20
+		wait()
+	end
+	loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
+end)
 if not menu.open then
 	menu.fading = true
 	menu.fadestart = tick()
