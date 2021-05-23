@@ -267,6 +267,7 @@ end
 
 --validity check
 --SECTION commented these out for development
+--[[
 
 make_synreadonly(syn)
 make_synreadonly(Drawing)
@@ -295,7 +296,7 @@ search_hookfunc(getgc())
 search_hookfunc = nil
 
 if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
-
+--]]
 --!SECTION
 local menuWidth, menuHeight = 500, 600
 menu = { -- this is for menu stuffs n shi
@@ -4859,7 +4860,7 @@ function menu.Initialize(menutable)
 					) or menu.dragging
 				) and not menu.dontdrag
 			then
-				if menu.mousedown then
+				if menu.mousedown and not menu.colorPickerOpen and not dropbox_open then
 					if not menu.dragging then
 						clickspot_x = LOCAL_MOUSE.x
 						clickspot_y = LOCAL_MOUSE.y - 36 original_menu_X = menu.x original_menu_y = menu.y
@@ -5034,10 +5035,11 @@ function menu.Initialize(menutable)
 			menu:InputBeganKeybinds(input)
 			if menu.open then
 				if menu.tabnames[menu.activetab] == "Settings" then
-					bbmenu[27].Text = menu:GetVal("Settings", "Cheat Settings", "Custom Menu Name") and menu:GetVal("Settings", "Cheat Settings", "MenuName") or "Bitch Bot"
+					local menutext = menu:GetVal("Settings", "Cheat Settings", "Custom Menu Name") and menu:GetVal("Settings", "Cheat Settings", "MenuName") or "Bitch Bot"
 
-					menu.watermark.text[1].Text = menu.options["Settings"]["Cheat Settings"]["MenuName"][1]
-						.. menu.watermark.textString
+					bbmenu[27].Text = menutext
+
+					menu.watermark.text[1].Text = menutext.. menu.watermark.textString
 
 					for i, v in ipairs(menu.watermark.rect) do
 						local len = #menu.watermark.text[1].Text * 7 + 10
