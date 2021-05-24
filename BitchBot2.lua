@@ -2922,7 +2922,7 @@ function menu.Initialize(menutable)
 		lastMousePos = Vector2.new(x, y)
 	end
 
-	function menu:setMenuclr(r, g, b)
+	function menu:SetColor(r, g, b)
 		menu.watermark.rect[1].Color = RGB(r - 40, g - 40, b - 40)
 		menu.watermark.rect[2].Color = RGB(r, g, b)
 
@@ -4485,13 +4485,13 @@ function menu.Initialize(menutable)
 			end
 		end
 		if menu.open then
-			if menu.options["Settings"]["Cheat Settings"]["Menu Accent"][1] then
-				local clr = menu.options["Settings"]["Cheat Settings"]["Menu Accent"][5][1]
-				menu.mc = { clr[1], clr[2], clr[3] }
+			if menu:GetVal("Settings", "Cheat Settings", "Menu Accent") then
+				local clr = menu:GetVal("Settings", "Cheat Settings", "Menu Accent", COLOR, true)
+				menu.mc = { clr.R * 255, clr.G * 255, clr.B * 255 }
 			else
 				menu.mc = { 127, 72, 163 }
 			end
-			menu:setMenuclr(menu.mc[1], menu.mc[2], menu.mc[3])
+			menu:SetColor(menu.mc[1], menu.mc[2], menu.mc[3])
 
 			local wme = menu:GetVal("Settings", "Cheat Settings", "Watermark")
 			for k, v in pairs(menu.watermark.rect) do
@@ -9965,22 +9965,22 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			debris:AddItem(ending_att, destroydelay)
 		end
 		if client.sound then
-			local playsound = client.sound.PlaySound
-			client.sound.PlaySound = function(...)
-				local args = { ... }
-				if menu and menu:GetVal("Misc", "Extra", "Disable Team Sounds") then
-					if args[1]:match("friendly") then
-						return 
-					end
-					if args[1]:match("equip[A-Z]") then
-						return
-					end
-				end
-				-- if menu and menu:GetVal("Misc", "Extra", "Disable Team Sounds") then
-				-- else
-				return playsound(unpack(args))
-				-- end
-			end
+			-- local playsound = client.sound.PlaySound
+			-- client.sound.PlaySound = function(...)
+			-- 	local args = { ... }
+			-- 	if menu and menu:GetVal("Misc", "Extra", "Disable Team Sounds") then
+			-- 		if args[1]:match("friendly") then
+			-- 			return 
+			-- 		end
+			-- 		if args[1]:match("equip[A-Z]") then
+			-- 			return
+			-- 		end
+			-- 	end
+			-- 	-- if menu and menu:GetVal("Misc", "Extra", "Disable Team Sounds") then
+			-- 	-- else
+			-- 	return playsound(unpack(args))
+			-- 	-- end
+			-- end
 		end
 		if client.newgrenade and false then
 			local oldgrenade
@@ -15419,12 +15419,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										value = false,
 										tooltip = "Automatically respawns after deaths.",
 									},
-									{
-										type = TOGGLE,
-										name = "Disable Team Sounds",
-										value = false,
-										tooltip = "Disables sounds from all teammates and local player.",
-									},
+									-- {
+									-- 	type = TOGGLE,
+									-- 	name = "Disable Team Sounds",
+									-- 	value = false,
+									-- 	tooltip = "Disables sounds from all teammates and local player.",
+									-- },
 									{
 										type = DROPBOX,
 										name = "Vote Friends",
