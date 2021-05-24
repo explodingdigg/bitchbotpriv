@@ -114,10 +114,11 @@ local function MultiThreadList(obj, ...)
 	end
 end
 
+ -- SECTION Drawing shit start
 local Draw = {
     allrender = {},
 	fonts = {}
-} -- SECTION Drawing shit start
+}
 
 function Draw:UnRender()
     for k, v in pairs(self.allrender) do
@@ -149,6 +150,7 @@ function Draw:Text(visible, text, font, pos, centered, color, transparency, outl
 
 	if centered then
 		temptable.XAlignment = XAlignment.Center
+		temptable.YAlignment = YAlignment.Center
 	else
 		temptable.XAlignment = XAlignment.Left
     	temptable.YAlignment = YAlignment.Top
@@ -252,18 +254,6 @@ function Draw:Poly(visible, points, color, transparency, outline, tablename)
 end
 --!SECTION Drawing shit end
 
-
-
---[[
-	pos = Vec2(10, 10),
-	point2d = Point2D.new(Vec2(10, 10)),
-	open = true,
-	fading = false,
-	dragging = false,
-	clickspot = Vec2(0, 0),
-	w = 500,
-	h = 600,
-]]
 local Menu = { --ANCHOR Menu table
 	Funcs = {},
 	windows = {},
@@ -288,14 +278,18 @@ table.insert(Menu.clrs.norm, Draw:Poly(true, {PointOffset.new(Menu.CursorPoint2D
 Menu.Cursor[1].ZIndex = 10000 --lol
 
 
-function Menu:MouseInMenu(window)
+function Menu:MouseInsideMenu(window)
 	local tabbie = Menu.windows[window]
-	return (LOCAL_MOUSE.x > tabbie.pos.x and LOCAL_MOUSE.x < tabbie.pos.x + tabbie.w and LOCAL_MOUSE.y > tabbie.pos.y - 32 and LOCAL_MOUSE.y < tabbie.pos.y + tabbie.h)
+	return (LOCAL_MOUSE.x > tabbie.pos.x and LOCAL_MOUSE.x < tabbie.pos.x + tabbie.w and LOCAL_MOUSE.y > tabbie.pos.y - 36 and LOCAL_MOUSE.y < tabbie.pos.y + tabbie.h  - 36)
 end
 
 function Menu:MouseInMenuCenter(window)
 	local tabbie = Menu.windows[window]
 	return (LOCAL_MOUSE.x > tabbie.pos.x + 9 and LOCAL_MOUSE.x < tabbie.pos.x + tabbie.w - 9 and LOCAL_MOUSE.y > tabbie.pos.y - 9 and LOCAL_MOUSE.y < tabbie.pos.y + tabbie.h - 47)
+end
+
+function Menu:MouseInMenu(x, y, width, height)
+	return LOCAL_MOUSE.x > Menu.Curmenu.pos.x + x and LOCAL_MOUSE.x < Menu.Curmenu.pos.x + x + width and LOCAL_MOUSE.y > Menu.Curmenu.pos.y - 36 + y and LOCAL_MOUSE.y < Menu.Curmenu.pos.y - 36 + y + height
 end
 
 function Menu:SetPos(x, y)
@@ -306,17 +300,13 @@ end
 function Menu:SetVisible(visible)
 	Menu.Cursor[1].Visible = visible
 	for window_name, window_val in pairs(Menu.windows) do
-		for k, v in pairs(window_val.bbmenu) do
+		for k, v in ipairs(window_val.bbmenu) do
 			v.Visible = visible
 		end
-	end
-end
-
-function Menu:SetVisible(visible)
-	Menu.Cursor[1].Visible = visible
-	for window_name, window_val in pairs(Menu.windows) do
-		for k, v in pairs(window_val.bbmenu) do
-			v.Visible = visible
+		for k, v in pairs(window_val.drawing.tabs) do
+			for k1, v1 in pairs(v.content) do
+				v1.Visible = visible
+			end
 		end
 	end
 end
@@ -334,6 +324,42 @@ function Menu:SetOpacity(transparency)
 				v.OutlineOpacity = opacity
 			end
 		end
+		for k, v in pairs(window_val.drawing.tabs) do
+			for k1, v1 in pairs(v.content) do
+				v1.Opacity = opacity
+				if v1.Outlined then
+					v1.OutlineOpacity = opacity 
+				end
+			end
+		end
+	end
+end
+
+function Menu:SetActiveTab(window, tab)
+
+	local tabbie = Menu.windows[window]
+	local drawin = tabbie.drawing
+	
+	drawin.tab_bar.Position = PointOffset.new(tabbie.point2d, 11 + ((tab - 1) * tabbie.tabsize), 58)
+	for k, v in ipairs(drawin.tabs) do
+		if k == tab then
+			v.background.Visible = false
+			v.text.Color = RGB(255, 255, 255)
+		else
+			v.background.Visible = true
+			v.text.Color = RGB(170, 170, 170)
+		end
+
+		for k1, v1 in ipairs(v.content) do
+			v1.Visible = k == tab
+		end
+	end
+	tabbie.activetab = tab
+end
+
+function Menu:SetAllActiveTab()
+	for k, v in pairs(self.windows) do
+		Menu:SetActiveTab(k, v.activetab)
 	end
 end
 
@@ -386,11 +412,22 @@ end
 
 
 function Menu.Funcs:MouseButton1Down()
-	if Menu:MouseInMenu(Menu.selected_window) and not Menu:MouseInMenuCenter(Menu.selected_window) then
+	if Menu:MouseInsideMenu(Menu.selected_window) then
+		if not Menu:MouseInMenuCenter(Menu.selected_window) then
+			Menu.Curmenu.clickspot = Vec2(Menu.Curmenu.pos.x - LOCAL_MOUSE.x, Menu.Curmenu.pos.y - (LOCAL_MOUSE.y - 36))
+			Menu.Curmenu.dragging = true
+		end
 
-		Menu.Curmenu.clickspot = Vec2(Menu.Curmenu.pos.x - LOCAL_MOUSE.x, Menu.Curmenu.pos.y - (LOCAL_MOUSE.y - 36))
-		Menu.Curmenu.dragging = true
-		
+		for tab_num, tab in ipairs(Menu.Curmenu.hitboxes) do
+			local pos = tab.main.pos
+			local size = tab.main.size 
+			if Menu:MouseInMenu(pos.x, pos.y, size.x, size.y) then
+				if Menu.Curmenu.activetab ~= tab_num then
+					Menu:SetActiveTab(Menu.selected_window, tab_num)
+				end
+				return
+			end
+		end
 	end
 end
 
@@ -412,6 +449,7 @@ Menu.connections["menu input"] = INPUT_SERVICE.InputBegan:Connect(function(input
 				Menu.Curmenu.dragging = false
 				if Menu.open == false then
 					Menu:SetVisible(true)
+					Menu:SetAllActiveTab()
 				end
 			end
 		end
@@ -420,7 +458,7 @@ Menu.connections["menu input"] = INPUT_SERVICE.InputBegan:Connect(function(input
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then	
 
 			for window_index, window_name in ipairs(reverse_table(Menu.window_order)) do
-				if Menu:MouseInMenu(window_name) then
+				if Menu:MouseInsideMenu(window_name) then
 
 					if window_name ~= Menu.selected_window then
 						Menu:SetSelectedWindow(window_name)
@@ -485,12 +523,20 @@ function Menu:Create(menuname, menuprops, menutable)
 		w = menuprops.w,
 		h = menuprops.h,
 		bbmenu = {},
+		activetab = menuprops.activetab == nil and 1 or menuprops.activetab,
+		hitboxes = {},
+		drawing = {
+			tabs = {},
+		},
+		values = {},
 	}
 
 	table.insert(self.window_order, menuname)
 
 	local curmenu = self.windows[menuname]
 	
+	print(menuname, curmenu.activetab)
+
 	self.selected_window = menuname
 	self.Curmenu = curmenu
 
@@ -525,6 +571,29 @@ function Menu:Create(menuname, menuprops, menutable)
 		table.insert(curmenu.zindexs[mDraw.zindex], drawnobj)
 		return drawnobj
 	end
+
+	function mDraw:CoolBox(name, x, y, width, height, tab)
+		--[[
+		Draw:MenuOutlinedRect(true, x, y, width, height, { 0, 0, 0, 255 }, tab)
+		Draw:MenuOutlinedRect(true, x + 1, y + 1, width - 2, height - 2, { 20, 20, 20, 255 }, tab)
+		Draw:MenuOutlinedRect(true, x + 2, y + 2, width - 3, 1, { 127, 72, 163, 255 }, tab)
+		table.insert(menu.clrs.norm, tab[#tab])
+		Draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, { 87, 32, 123, 255 }, tab)
+		table.insert(menu.clrs.dark, tab[#tab])
+		Draw:MenuOutlinedRect(true, x + 2, y + 4, width - 3, 1, { 20, 20, 20, 255 }, tab)
+
+		for i = 0, 7 do
+			Draw:MenuFilledRect(true, x + 2, y + 5 + (i * 2), width - 4, 2, { 45, 45, 45, 255 }, tab)
+			tab[#tab].Color = ColorRange(
+				i,
+				{ [1] = { start = 0, color = RGB(45, 45, 45) }, [2] = { start = 7, color = RGB(35, 35, 35) } }
+			)
+		end
+
+		Draw:MenuBigText(name, true, false, x + 6, y + 5, tab)--]]
+
+		mDraw:OutlinedRect(true, Vec2(x, y), Vec2(width, height), RGB(0, 0, 0), 255, tab)
+	end
 	
 	bbmenu = curmenu.bbmenu
 	mDraw:OutlinedRect(true, Vec2(0, 0), Vec2(curmenu.w, curmenu.h), RGB(0, 0, 0), 255, bbmenu)
@@ -556,28 +625,136 @@ function Menu:Create(menuname, menuprops, menutable)
 	end
 	mDraw:FilledRect(true, Vec2(10, 57), Vec2(curmenu.w - 20, curmenu.h -67), RGB(35, 35, 35), 255, bbmenu)
 
+	--[[
+	Draw:MenuFilledRect(true, 10 + ((k - 1) * ((menu.w - 20) / #menutable)), 27, ((menu.w - 20) / #menutable), 32, { 30, 30, 30, 255 }, bbmenu)
+	Draw:MenuOutlinedRect(true, 10 + ((k - 1) * ((menu.w - 20) / #menutable)), 27, ((menu.w - 20) / #menutable), 32, { 20, 20, 20, 255 }, bbmenu)
+	Draw:MenuBigText(v.name, true, true, math.floor(10 + ((k - 1) * ((menu.w - 20) / #menutable)) + (((menu.w - 20) / #menutable) * 0.5)), 35, bbmenu)
+	--]]
+
+	local tabsize = menuprops.tabsize or math.floor((curmenu.w - 20) / #menutable)
+	curmenu.tabsize = tabsize
+	for tab_num, tab in ipairs(menutable) do
+		local background = mDraw:FilledRect(true, Vec2(10 + ((tab_num - 1) * tabsize), 27), Vec2(tabsize, 32), RGB(30, 30, 30), 255, bbmenu)
+		mDraw:OutlinedRect(true, Vec2(10 + ((tab_num - 1) * tabsize), 27), Vec2(tabsize, 32), RGB(20, 20, 20), 255, bbmenu)
+		local text = mDraw:Text(true, tab.name, "norm", Vec2(math.floor(10 + ((tab_num - 1) * tabsize + (tabsize * 0.5))), 40), true, tab_num == curmenu.activetab and RGB(255, 255, 255) or RGB(170, 170, 170), 255, true, bbmenu)
+		mDraw:OutlinedRect(true, Vec2(10, 59), Vec2(curmenu.w - 20, curmenu.h - 69), RGB(20, 20, 20), 255, bbmenu)
+
+		curmenu.hitboxes[tab_num] = {
+			name = tab.name,
+			main = {
+				pos = Vec2(10 + ((tab_num - 1) * tabsize), 27), 
+				size = Vec2(tabsize, 32)
+			},
+			content = {},
+		}
+
+		curmenu.values[tab.name] = {}
+
+		curmenu.drawing.tabs[tab_num] = {
+			background = background,
+			text = text,
+			content = {},
+		}
+
+		local drawtab = curmenu.drawing.tabs[tab_num].content
+		--14 63
+		local y_pos ={
+			0,
+			0,
+		}
+		local inner_width = curmenu.w - 28
+		local inner_height = curmenu.h - 77
+		for cont_num, content in ipairs(tab.content) do
+			mDraw:CoolBox(content.name, ((content.pos - 1) * (inner_width/2)) + 17, 66 + math.ceil(y_pos[content.pos] * (inner_height/8)), inner_width/2 - 6, math.floor(content.size/8 * inner_height) - 6, drawtab)
+			y_pos[content.pos] += content.size
+		end
+	end
+
+	mDraw.zindex = 1
+	curmenu.drawing.tab_bar = mDraw:OutlinedRect(true, Vec2(11 + ((curmenu.activetab - 1) * tabsize), 58), Vec2(tabsize - 2, 2), RGB(35, 35, 35), 255, bbmenu)
+
+	mDraw = nil
 end
 
 Menu:Create("main", {
-	tabstyle = 1,
+	activetab = 2,
 	name = "Bitch Bot",
 	pos = Vec2(10, 100),
 	w = 500,
-	h = 600,
-}, {
-
+	h = 597,
+}, 
+{
+	{
+		name = "Legit",
+		content = {
+			{
+				name = "Aim Assist",
+				pos = 1,
+				size = 4,
+				content = {},
+			},
+			{
+				name = "Aim Assist",
+				pos = 1,
+				size = 4,
+				content = {},
+			},
+			{
+				name = "Aim Assist",
+				pos = 2,
+				size = 2,
+				content = {},
+			},
+			{
+				name = "Aim Assist",
+				pos = 2,
+				size = 6,
+				content = {},
+			},
+		},
+	},
+	{
+		name = "Rage",
+		content = {},
+	},
+	{
+		name = "Visuals",
+		content = {},
+	},
+	{
+		name = "Misc",
+		content = {},
+	},
+	{
+		name = "Settings",
+		content = {},
+	},
 })
 
 Menu:Create("plyrlist", {
-	tabstyle = 1,
+
 	name = "Player List",
 	pos = Vec2(520, 100),
-	w = 600,
-	h = 500,
-}, {
-
+	w = 599,
+	h = 501,
+}, 
+{
+	{
+		name = "Players",
+		content = {},
+	},
+	{
+		name = "Priorties And Friends",
+		content = {},
+	},
+	{
+		name = "Bitch Bot Users",
+		content = {},
+	},
 })
--- Menu:SetVisible(false)
+
+Menu:SetVisible(true)
+Menu:SetAllActiveTab()
 Menu:SetOpacity(0)
 Menu.fading = true
 Menu.fadestart = tick()
