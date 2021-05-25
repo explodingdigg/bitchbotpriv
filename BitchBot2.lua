@@ -3849,7 +3849,23 @@ function menu.Initialize(menutable)
 			end
 		end
 	end
+	local function menucolor()
+		if menu.open then
+			if menu:GetVal("Settings", "Cheat Settings", "Menu Accent") then
+				local clr = menu:GetVal("Settings", "Cheat Settings", "Menu Accent", COLOR, true)
+				menu.mc = { clr.R * 255, clr.G * 255, clr.B * 255 }
+			else
+				menu.mc = { 127, 72, 163 }
+			end
+			menu:SetColor(menu.mc[1], menu.mc[2], menu.mc[3])
 
+			local wme = menu:GetVal("Settings", "Cheat Settings", "Watermark")
+			for k, v in pairs(menu.watermark.rect) do
+				v.Visible = wme
+			end
+			menu.watermark.text[1].Visible = wme
+		end
+	end
 	local function MouseButton1Event() --ANCHOR menu mouse down func
 		menu.dropbox_open = nil
 		menu.textboxopen = false
@@ -4484,22 +4500,10 @@ function menu.Initialize(menutable)
 				end
 			end
 		end
-		if menu.open then
-			if menu:GetVal("Settings", "Cheat Settings", "Menu Accent") then
-				local clr = menu:GetVal("Settings", "Cheat Settings", "Menu Accent", COLOR, true)
-				menu.mc = { clr.R * 255, clr.G * 255, clr.B * 255 }
-			else
-				menu.mc = { 127, 72, 163 }
-			end
-			menu:SetColor(menu.mc[1], menu.mc[2], menu.mc[3])
-
-			local wme = menu:GetVal("Settings", "Cheat Settings", "Watermark")
-			for k, v in pairs(menu.watermark.rect) do
-				v.Visible = wme
-			end
-			menu.watermark.text[1].Visible = wme
-		end
+		menucolor()
 	end
+
+	
 
 	local function mousebutton1upfunc()
 		cp.dragging_m = false
@@ -4613,6 +4617,9 @@ function menu.Initialize(menutable)
 	end)
 
 	local function renderSteppedMenu(fdt)
+		if cp.dragging_m or cp.dragging_r or cp.dragging_b then
+			menucolor()
+		end
 		menu.dt = fdt
 		if menu.unloaded then
 			return
