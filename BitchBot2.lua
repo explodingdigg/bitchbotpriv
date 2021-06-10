@@ -131,9 +131,9 @@ function Draw:UnRender()
     self = nil
 end
 
-function Draw:RegisterFont(name, font, size, pixel_scale)
+function Draw:RegisterFont(name, font_, size, args)
 	self.fonts[name] = {
-		font = DrawFont.Register(font, pixel_scale == nil and size or pixel_scale),
+		font = Font.Register(font_, args),
 		size = size,
 	}
 end
@@ -152,14 +152,14 @@ function Draw:Text(visible, text, font, pos, centered, color, transparency, outl
 		temptable.XAlignment = XAlignment.Center
 		temptable.YAlignment = YAlignment.Center
 	else
-		temptable.XAlignment = XAlignment.Left
-    	temptable.YAlignment = YAlignment.Top
+		temptable.XAlignment = XAlignment.Right
+    	temptable.YAlignment = YAlignment.Bottom
 	end 
 
 	if outline then
 		temptable.Outlined = true
 		temptable.OutlineColor = RGB(0, 0, 0)
-		temptable.OutlineThickness = 1
+		temptable.OutlineThickness = 0.5
 		temptable.OutlineOpacity = transparency/255
 	end
     
@@ -174,14 +174,27 @@ function Draw:Text(visible, text, font, pos, centered, color, transparency, outl
     return temptable
 end
 
-Draw:RegisterFont("smallest", readfile("smallest_pixel-7.ttf"), 10)
-Draw:RegisterFont("small", readfile("ProggyTinySZ.ttf"), 16)
-Draw:RegisterFont("norm", readfile("ProggyCleanSZ.ttf"), 16)
+Draw:RegisterFont("smallest", readfile("smallest_pixel-7.ttf"), 10, {
+	Scale = false,
+	Bold = false,
+	PixelSize = 10,
+})
+Draw:RegisterFont("small", readfile("ProggyTinySZ.ttf"), 16, {
+	Scale = false,
+	Bold = false,
+	PixelSize = 16,
+})
+Draw:RegisterFont("norm", readfile("ProggyCleanSZ.ttf"), 16, {
+	Scale = false,
+	Bold = false,
+	PixelSize = 16,
+})
 
 function Draw:OutlinedRect(visible, pos, size, color, transparency, tablename)
     local temptable = RectDynamic.new()
     temptable.Visible = visible
     temptable.Filled = false
+	temptable.Rounding = 0
     temptable.Thickness = 1
     temptable.Size = size
     temptable.Color = color
@@ -226,11 +239,11 @@ function Draw:FilledRect(visible, pos, size, color, transparency, tablename)
     return temptable
 end
 
-function Draw:Poly(visible, points, color, transparency, outline, tablename)
+function Draw:Poly(visible, points, color, transparency, outline, filled, tablename)
 	local temptable = PolyLineDynamic.new()
     temptable.Visible = visible
-	temptable.FillType = PolyLineFillType.Filled
-    temptable.Thickness = 1
+	temptable.FillType = filled and PolyLineFillType.Triangulated or PolyLineFillType.Closed
+    temptable.Thickness = 2
     temptable.Color = color
     temptable.Opacity = transparency/255
     temptable.Points = points
@@ -238,7 +251,7 @@ function Draw:Poly(visible, points, color, transparency, outline, tablename)
 	if outline ~= false then
 		temptable.Outlined = true
 		temptable.OutlineColor = outline
-		temptable.OutlineThickness = 1.5
+		temptable.OutlineThickness = 2
 		temptable.OutlineOpacity = transparency/255
 	end
     
@@ -250,6 +263,9 @@ function Draw:Poly(visible, points, color, transparency, outline, tablename)
         table.insert(tablename, temptable)
     end
     
+	if filled then
+		temptable:ReTriangulate()
+	end
     return temptable
 end
 --!SECTION Drawing shit end
@@ -265,7 +281,7 @@ local Menu = { --ANCHOR Menu table
 	fadestart = tick(),
 	mc = {127, 72, 163},
 	Cursor = {},
-	CursorPoint2D = PointMouse.new(),
+	CursorPoint2D = PointOffset.new(PointMouse.new(), 0, -23),
 	connections = {},
 	clrs = {
 		norm = {},
@@ -274,9 +290,11 @@ local Menu = { --ANCHOR Menu table
 	},
 }
 
-table.insert(Menu.clrs.norm, Draw:Poly(true, {PointOffset.new(Menu.CursorPoint2D, 1, 1), PointOffset.new(Menu.CursorPoint2D, 1, 16), PointOffset.new(Menu.CursorPoint2D, 5, 11), PointOffset.new(Menu.CursorPoint2D, 11, 11)}, RGB(Menu.mc[1], Menu.mc[2], Menu.mc[3]), 255, RGB(0, 0, 0), Menu.Cursor))
+table.insert(Menu.clrs.norm, Draw:Poly(true, {PointOffset.new(Menu.CursorPoint2D, 1, 1), PointOffset.new(Menu.CursorPoint2D, 1, 16), PointOffset.new(Menu.CursorPoint2D, 6, 11), PointOffset.new(Menu.CursorPoint2D, 11, 11)}, RGB(Menu.mc[1], Menu.mc[2], Menu.mc[3]), 255, false, true, Menu.Cursor))
 Menu.Cursor[1].ZIndex = 10000 --lol
 
+Draw:Poly(true, {PointOffset.new(Menu.CursorPoint2D, 1, 1), PointOffset.new(Menu.CursorPoint2D, 1, 16), PointOffset.new(Menu.CursorPoint2D, 6, 11), PointOffset.new(Menu.CursorPoint2D, 11, 11)}, RGB(0, 0, 0), 255, false, false, Menu.Cursor)
+Menu.Cursor[2].ZIndex = 10001 --lol
 
 function Menu:MouseInsideMenu(window)
 	local tabbie = Menu.windows[window]
@@ -299,6 +317,7 @@ end
 
 function Menu:SetVisible(visible)
 	Menu.Cursor[1].Visible = visible
+	Menu.Cursor[2].Visible = visible
 	for window_name, window_val in pairs(Menu.windows) do
 		for k, v in ipairs(window_val.bbmenu) do
 			v.Visible = visible
@@ -315,7 +334,7 @@ function Menu:SetOpacity(transparency)
 
 	local opacity = transparency/255
 	Menu.Cursor[1].Opacity = opacity
-	Menu.Cursor[1].OutlineOpacity = opacity
+	Menu.Cursor[2].Opacity = opacity
 
 	for window_name, window_val in pairs(Menu.windows) do
 		for k, v in pairs(window_val.bbmenu) do
@@ -534,8 +553,6 @@ function Menu:Create(menuname, menuprops, menutable)
 	table.insert(self.window_order, menuname)
 
 	local curmenu = self.windows[menuname]
-	
-	print(menuname, curmenu.activetab)
 
 	self.selected_window = menuname
 	self.Curmenu = curmenu
@@ -543,8 +560,6 @@ function Menu:Create(menuname, menuprops, menutable)
 	for i = 1, 10 do
 		table.insert(curmenu.zindexs, {})
 	end
-
-	
 
 	local mDraw = {
 		addindex = 10 * #self.window_order - 10,
@@ -590,17 +605,30 @@ function Menu:Create(menuname, menuprops, menutable)
 			)
 		end
 
-		Draw:MenuBigText(name, true, false, x + 6, y + 5, tab)--]]
+		Draw:MenuBigText(name, true, false, x + 6, y + 5, tab)
+		--]]
 
 		mDraw:OutlinedRect(true, Vec2(x, y), Vec2(width, height), RGB(0, 0, 0), 255, tab)
+		mDraw:OutlinedRect(true, Vec2(x + 1, y + 1), Vec2(width - 2, height -2), RGB(20, 20, 20), 255, tab)
+		mDraw:FilledRect(true, Vec2(x + 2, y + 2), Vec2(width - 4, 1), RGB(unpack(Menu.mc)), 255, tab)
+		mDraw:FilledRect(true, Vec2(x + 2, y + 3), Vec2(width - 4, 1), RGB(Menu.mc[1] - 40, Menu.mc[2] - 40, Menu.mc[3] - 40), 255, tab)
+		mDraw:FilledRect(true, Vec2(x + 2, y + 4), Vec2(width - 4, 1), RGB(20, 20, 20), 255, tab)
+
+		for i = 0, 7 do
+			local tempdrawing = mDraw:FilledRect(true, Vec2(x + 2, y + 5 + (i * 2)), Vec2(width - 4, 2), RGB(45, 45, 45), 255, tab)
+
+			tempdrawing.Color = ColorRange(i, { [1] = { start = 0, color = RGB(45, 45, 45) }, [2] = { start = 7, color = RGB(35, 35, 35) } })
+		end
+
+		mDraw:Text(true, name, "norm", Vec2(x + 6, y + 6), false, RGB(255, 255, 255), 255, true, tab)
 	end
 	
 	bbmenu = curmenu.bbmenu
 	mDraw:OutlinedRect(true, Vec2(0, 0), Vec2(curmenu.w, curmenu.h), RGB(0, 0, 0), 255, bbmenu)
 	mDraw:OutlinedRect(true, Vec2(1, 1), Vec2(curmenu.w - 2, curmenu.h - 2), RGB(20, 20, 20), 255, bbmenu)
-	table.insert(Menu.clrs.norm, mDraw:OutlinedRect(true, Vec2(2, 2), Vec2(curmenu.w - 4, 1), RGB(self.mc[1], self.mc[2], self.mc[3]), 255, bbmenu))
-	table.insert(Menu.clrs.dark, mDraw:OutlinedRect(true, Vec2(2, 3), Vec2(curmenu.w - 4, 1), RGB(self.mc[1] - 40, self.mc[2] - 40, self.mc[3] - 40), 255, bbmenu))
-	mDraw:OutlinedRect(true, Vec2(2, 4), Vec2(curmenu.w - 4, 1), RGB(20, 20, 20), 255, bbmenu)
+	table.insert(Menu.clrs.norm, mDraw:FilledRect(true, Vec2(2, 2), Vec2(curmenu.w - 4, 1), RGB(self.mc[1], self.mc[2], self.mc[3]), 255, bbmenu))
+	table.insert(Menu.clrs.dark, mDraw:FilledRect(true, Vec2(2, 3), Vec2(curmenu.w - 4, 1), RGB(self.mc[1] - 40, self.mc[2] - 40, self.mc[3] - 40), 255, bbmenu))
+	mDraw:FilledRect(true, Vec2(2, 4), Vec2(curmenu.w - 4, 1), RGB(20, 20, 20), 255, bbmenu)
 
 	for i = 0, 19 do
 		local tempdrawing = mDraw:FilledRect(true, Vec2(2, 5 + i), Vec2(curmenu.w - 4, 1), RGB(20, 20, 20), 255, bbmenu)
@@ -610,13 +638,13 @@ function Menu:Create(menuname, menuprops, menutable)
 
 	mDraw:FilledRect(true, Vec2(2, 25), Vec2(curmenu.w - 4, curmenu.h -27), RGB(35, 35, 35), 255, bbmenu)
 
-	mDraw:Text(true, menuprops.name, "norm", Vec2(6, 4), false, RGB(255, 255, 255), 255, true, bbmenu)
+	mDraw:Text(true, menuprops.name, "norm", Vec2(6, 6), false, RGB(255, 255, 255), 255, true, bbmenu)
 
 	mDraw:OutlinedRect(true, Vec2(8, 22), Vec2(curmenu.w - 16, curmenu.h - 30), RGB(0, 0, 0), 255, bbmenu)
 	mDraw:OutlinedRect(true, Vec2(9, 23), Vec2(curmenu.w - 18, curmenu.h - 32), RGB(20, 20, 20), 255, bbmenu)
-	table.insert(Menu.clrs.norm, mDraw:OutlinedRect(true, Vec2(10, 24), Vec2(curmenu.w - 20, 1), RGB(self.mc[1], self.mc[2], self.mc[3]), 255, bbmenu))
-	table.insert(Menu.clrs.dark, mDraw:OutlinedRect(true, Vec2(10, 25), Vec2(curmenu.w - 20, 1), RGB(self.mc[1] - 40, self.mc[2] - 40, self.mc[3] - 40), 255, bbmenu))
-	mDraw:OutlinedRect(true, Vec2(10, 26), Vec2(curmenu.w - 20, 1), RGB(20, 20, 20), 255, bbmenu)
+	table.insert(Menu.clrs.norm, mDraw:FilledRect(true, Vec2(10, 24), Vec2(curmenu.w - 20, 1), RGB(self.mc[1], self.mc[2], self.mc[3]), 255, bbmenu))
+	table.insert(Menu.clrs.dark, mDraw:FilledRect(true, Vec2(10, 25), Vec2(curmenu.w - 20, 1), RGB(self.mc[1] - 40, self.mc[2] - 40, self.mc[3] - 40), 255, bbmenu))
+	mDraw:FilledRect(true, Vec2(10, 26), Vec2(curmenu.w - 20, 1), RGB(20, 20, 20), 255, bbmenu)
 
 	for i = 0, 14 do
 		local tempdrawing = mDraw:FilledRect(true, Vec2(10, 27 + (i * 2)), Vec2(curmenu.w - 20, 2), RGB(35, 35, 35), 255, bbmenu)
@@ -634,9 +662,10 @@ function Menu:Create(menuname, menuprops, menutable)
 	local tabsize = menuprops.tabsize or math.floor((curmenu.w - 20) / #menutable)
 	curmenu.tabsize = tabsize
 	for tab_num, tab in ipairs(menutable) do
+		mDraw.zindex = 1
 		local background = mDraw:FilledRect(true, Vec2(10 + ((tab_num - 1) * tabsize), 27), Vec2(tabsize, 32), RGB(30, 30, 30), 255, bbmenu)
 		mDraw:OutlinedRect(true, Vec2(10 + ((tab_num - 1) * tabsize), 27), Vec2(tabsize, 32), RGB(20, 20, 20), 255, bbmenu)
-		local text = mDraw:Text(true, tab.name, "norm", Vec2(math.floor(10 + ((tab_num - 1) * tabsize + (tabsize * 0.5))), 40), true, tab_num == curmenu.activetab and RGB(255, 255, 255) or RGB(170, 170, 170), 255, true, bbmenu)
+		local text = mDraw:Text(true, tab.name, "norm", Vec2(math.floor(10 + ((tab_num - 1) * tabsize + (tabsize * 0.5))), 44), true, tab_num == curmenu.activetab and RGB(255, 255, 255) or RGB(170, 170, 170), 255, true, bbmenu)
 		mDraw:OutlinedRect(true, Vec2(10, 59), Vec2(curmenu.w - 20, curmenu.h - 69), RGB(20, 20, 20), 255, bbmenu)
 
 		curmenu.hitboxes[tab_num] = {
@@ -665,8 +694,24 @@ function Menu:Create(menuname, menuprops, menutable)
 		local inner_width = curmenu.w - 28
 		local inner_height = curmenu.h - 77
 		for cont_num, content in ipairs(tab.content) do
-			mDraw:CoolBox(content.name, ((content.pos - 1) * (inner_width/2)) + 17, 66 + math.ceil(y_pos[content.pos] * (inner_height/8)), inner_width/2 - 6, math.floor(content.size/8 * inner_height) - 6, drawtab)
-			y_pos[content.pos] += content.size
+			mDraw.zindex = 10
+			if content.pos == 3 then
+				if content.autofill then
+					mDraw:CoolBox(content.name, 17, 66 + math.ceil(y_pos[1]), inner_width - 6, (curmenu.h - 17) - 66 - math.ceil(y_pos[1]), drawtab)
+					
+				else
+					mDraw:CoolBox(content.name, 17, 66 + math.ceil(y_pos[1]), inner_width - 6, math.floor(content.size), drawtab)
+					y_pos[1] += content.size + 6
+					y_pos[2] += content.size + 6
+				end
+			else
+				if content.autofill then
+					mDraw:CoolBox(content.name, ((content.pos - 1) * (inner_width/2)) + 17, 66 + math.ceil(y_pos[content.pos]), inner_width/2 - 6, (curmenu.h - 17) - 66 - math.ceil(y_pos[content.pos]), drawtab)
+				else
+					mDraw:CoolBox(content.name, ((content.pos - 1) * (inner_width/2)) + 17, 66 + math.ceil(y_pos[content.pos]), inner_width/2 - 6, math.floor(content.size), drawtab)
+					y_pos[content.pos] += content.size + 6
+				end
+			end 
 		end
 	end
 
@@ -677,38 +722,39 @@ function Menu:Create(menuname, menuprops, menutable)
 end
 
 Menu:Create("main", {
-	activetab = 2,
+	activetab = 1,
 	name = "Bitch Bot",
 	pos = Vec2(10, 100),
 	w = 500,
-	h = 597,
+	h = 600,
 }, 
 {
 	{
 		name = "Legit",
 		content = {
 			{
-				name = "Aim Assist",
+				name = "Camera",
 				pos = 1,
-				size = 4,
+				size = 100,
 				content = {},
 			},
 			{
 				name = "Aim Assist",
 				pos = 1,
-				size = 4,
+				size = 100,
 				content = {},
 			},
 			{
 				name = "Aim Assist",
 				pos = 2,
-				size = 2,
+				size = 100,
 				content = {},
 			},
 			{
 				name = "Aim Assist",
 				pos = 2,
-				size = 6,
+				autofill = true,
+				size = 100,
 				content = {},
 			},
 		},
@@ -733,7 +779,7 @@ Menu:Create("main", {
 
 Menu:Create("plyrlist", {
 
-	name = "Player List",
+	name = "Environment List",
 	pos = Vec2(520, 100),
 	w = 599,
 	h = 501,
@@ -741,15 +787,54 @@ Menu:Create("plyrlist", {
 {
 	{
 		name = "Players",
-		content = {},
+		content = {
+			{
+				name = "Player List",
+				pos = 3,
+				size = 270,
+				content = {},
+			},
+			{
+				name = "Player Control",
+				pos = 3,
+				autofill = true,
+				content = {},
+			},
+		},
 	},
 	{
 		name = "Priorties And Friends",
-		content = {},
+		content = {
+			{
+				name = "Saved Players",
+				pos = 3,
+				size = 270,
+				content = {},
+			},
+			{
+				name = "Player Control",
+				pos = 3,
+				autofill = true,
+				content = {},
+			},
+		},
 	},
 	{
 		name = "Bitch Bot Users",
-		content = {},
+		content = {
+			{
+				name = "Bitch Bot Users Online",
+				pos = 3,
+				size = 270,
+				content = {},
+			},
+			{
+				name = "Selected User Actions",
+				pos = 3,
+				autofill = true,
+				content = {},
+			},
+		},
 	},
 })
 
