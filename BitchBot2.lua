@@ -11377,77 +11377,78 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						return
 					end
 				end
-				if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
-					local closest = math.huge
-					local part
-					for i, player in pairs(Players:GetPlayers()) do
-						if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
-						then
-							continue
-						end
-						if not table.find(menu.priority, player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
-						then
-							continue
-						end
-						if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
-							local bodyparts = client.replication.getbodyparts(player)
-							if bodyparts then
-								local fovToBone = camera:GetFOV(bodyparts.head)
-								if fovToBone < closest then
-									closest = fovToBone
-									part = bodyparts.head
-								end
-							end
-						end
-					end
+				-- if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
+				-- 	local closest = math.huge
+				-- 	local part
+				-- 	for i, player in pairs(Players:GetPlayers()) do
+				-- 		if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
+				-- 		then
+				-- 			continue
+				-- 		end
+				-- 		if not table.find(menu.priority, player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
+				-- 		then
+				-- 			continue
+				-- 		end
+				-- 		if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
+				-- 			local bodyparts = client.replication.getbodyparts(player)
+				-- 			if bodyparts then
+				-- 				local fovToBone = camera:GetFOV(bodyparts.head)
+				-- 				if fovToBone < closest then
+				-- 					closest = fovToBone
+				-- 					part = bodyparts.head
+				-- 				end
+				-- 			end
+				-- 		end
+				-- 	end
 
-					if (closest and part) then
-						local args = {
-							"FRAG",
-							{
-								frames = {
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(0 / 0),
-										p0 = client.lastrepupdate or client.char.head.Position,
-										rotv = Vector3.new(),
-									},
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(0 / 0),
-										p0 = Vector3.new(0 / 0),
-										rotv = Vector3.new(),
-									},
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(),
-										p0 = part.Position + Vector3.new(0, 3, 0),
-										rotv = Vector3.new(),
-									},
-								},
-								time = tick(),
-								curi = 1,
-								blowuptime = 0,
-							},
-						}
+				-- 	if (closest and part) then
+				-- 		local args = {
+				-- 			"FRAG",
+				-- 			{
+				-- 				frames = {
+				-- 					{
+				-- 						v0 = Vector3.new(),
+				-- 						glassbreaks = {},
+				-- 						t0 = 0,
+				-- 						offset = Vector3.new(),
+				-- 						rot0 = CFrame.new(),
+				-- 						a = Vector3.new(0 / 0),
+				-- 						p0 = client.lastrepupdate or client.char.head.Position,
+				-- 						rotv = Vector3.new(),
+				-- 					},
+				-- 					{
+				-- 						v0 = Vector3.new(),
+				-- 						glassbreaks = {},
+				-- 						t0 = 0,
+				-- 						offset = Vector3.new(),
+				-- 						rot0 = CFrame.new(),
+				-- 						a = Vector3.new(0 / 0),
+				-- 						p0 = Vector3.new(0 / 0),
+				-- 						rotv = Vector3.new(),
+				-- 					},
+				-- 					{
+				-- 						v0 = Vector3.new(),
+				-- 						glassbreaks = {},
+				-- 						t0 = 0,
+				-- 						offset = Vector3.new(),
+				-- 						rot0 = CFrame.new(),
+				-- 						a = Vector3.new(),
+				-- 						p0 = part.Position + Vector3.new(0, 3, 0),
+				-- 						rotv = Vector3.new(),
+				-- 					},
+				-- 				},
+				-- 				time = tick(),
+				-- 				curi = 1,
+				-- 				blowuptime = 0,
+				-- 			},
+				-- 		}
 
-						send(client.net, "newgrenade", unpack(args))
-						client.hud:updateammo("GRENADE")
-						return
-					end
-				elseif args[1] == "newbullets" then
+				-- 		send(client.net, "newgrenade", unpack(args))
+				-- 		client.hud:updateammo("GRENADE")
+				-- 		return
+				-- 	end
+				-- else
+				if args[1] == "newbullets" then
 					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
 						send(self, "equip", client.logic.currentgun.id)
 					end
