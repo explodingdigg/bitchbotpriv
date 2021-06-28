@@ -13472,11 +13472,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 
-						if menu:GetVal("Misc", "Exploits", "Rapid Kill") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", KEYBIND)
-						then
-							misc:RapidKill()
-							return Enum.ContextActionResult.Sink
-						end
+						-- if menu:GetVal("Misc", "Exploits", "Rapid Kill") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", KEYBIND)
+						-- then
+						-- 	misc:RapidKill()
+						-- 	return Enum.ContextActionResult.Sink
+						-- end
 						
 						if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", KEYBIND)
 						then
@@ -13550,12 +13550,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				MouseUnlockHook()
 				--debug.profilebegin("Main BB Loop")
 				--debug.profilebegin("Noclip Cheat check")
-				if client.char.alive and menu:GetVal("Misc", "Exploits", "Rapid Kill") and menu:GetVal("Misc", "Exploits", "Auto Rapid Kill")
-				then
-					if misc:RapidKill() then
-						client.net:send("forcereset")
-					end
-				else
+				-- if client.char.alive and menu:GetVal("Misc", "Exploits", "Rapid Kill") and menu:GetVal("Misc", "Exploits", "Auto Rapid Kill")
+				-- then
+				-- 	if misc:RapidKill() then
+				-- 		client.net:send("forcereset")
+				-- 	end
+				if not client.char.alive then
 					if menu:GetVal("Misc", "Extra", "Auto Respawn") then
 						client.menu:deploy() -- this is uber ass
 					end
@@ -15594,31 +15594,31 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											toggletype = 0,
 										},
 									},
-									{
-										type = TOGGLE,
-										unsafe = true,
-										name = "Rapid Kill",
-										value = false,
-										extra = {
-											type = KEYBIND,
-											toggletype = 0,
-										},
-										tooltip = "Throws 3 grenades instantly on random enemies.",
-									},
-									{
-										type = TOGGLE,
-										unsafe = true,
-										name = "Auto Rapid Kill",
-										value = false,
-										tooltip = "Throws 3 grenades instantly on random enemies,\nthen respawns to do it again.\nWorks only when Rapid Kill is enabled.",
-									},
-									{
-										type = TOGGLE,
-										unsafe = true,
-										name = "Grenade Teleport",
-										value = false,
-										tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes.",
-									},
+									-- {
+									-- 	type = TOGGLE,
+									-- 	unsafe = true,
+									-- 	name = "Rapid Kill",
+									-- 	value = false,
+									-- 	extra = {
+									-- 		type = KEYBIND,
+									-- 		toggletype = 0,
+									-- 	},
+									-- 	tooltip = "Throws 3 grenades instantly on random enemies.",
+									-- },
+									-- {
+									-- 	type = TOGGLE,
+									-- 	unsafe = true,
+									-- 	name = "Auto Rapid Kill",
+									-- 	value = false,
+									-- 	tooltip = "Throws 3 grenades instantly on random enemies,\nthen respawns to do it again.\nWorks only when Rapid Kill is enabled.",
+									-- },
+									-- {
+									-- 	type = TOGGLE,
+									-- 	unsafe = true,
+									-- 	name = "Grenade Teleport",
+									-- 	value = false,
+									-- 	tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes.",
+									-- },
 									{
 										type = TOGGLE,
 										unsafe = true,
