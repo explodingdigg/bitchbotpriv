@@ -267,36 +267,36 @@ end
 
 --validity check
 --SECTION commented these out for development
---[[
 
-make_synreadonly(syn)
-make_synreadonly(Drawing)
-protectfunction(getgenv)
-protectfunction(getgc)
 
-local init
-if syn then
-	init = getfenv(saveinstance).script
-end
+-- make_synreadonly(syn)
+-- make_synreadonly(Drawing)
+-- protectfunction(getgenv)
+-- protectfunction(getgc)
 
-script.Name = "\1"
-local function search_hookfunc(tbl)
-	for i,v in pairs(tbl) do
-		local s = getfenv(v).script
-		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
-			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
-				writefile("poop.text", "did the funny")
-				SX_CRASH()
-				break
-			end
-		end
-	end
-end
-search_hookfunc(getgc())
-search_hookfunc = nil
+-- local init
+-- if syn then
+-- 	init = getfenv(saveinstance).script
+-- end
 
-if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
---]]
+-- script.Name = "\1"
+-- local function search_hookfunc(tbl)
+-- 	for i,v in pairs(tbl) do
+-- 		local s = getfenv(v).script
+-- 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+-- 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+-- 				writefile("poop.text", "did the funny")
+-- 				SX_CRASH()
+-- 				break
+-- 			end
+-- 		end
+-- 	end
+-- end
+-- search_hookfunc(getgc())
+-- search_hookfunc = nil
+
+-- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+
 --!SECTION
 local menuWidth, menuHeight = 500, 600
 menu = { -- this is for menu stuffs n shi
@@ -762,6 +762,7 @@ local LOCAL_PLAYER = Players.LocalPlayer
 local LOCAL_MOUSE = LOCAL_PLAYER:GetMouse()
 local TEAMS = game:GetService("Teams")
 local INPUT_SERVICE = game:GetService("UserInputService")
+local TELEPORT_SERVICE = game:GetService("TeleportService")
 --local GAME_SETTINGS = UserSettings():GetService("UserGameSettings")
 local CACHED_VEC3 = Vector3.new()
 local Camera = workspace.CurrentCamera
@@ -7792,11 +7793,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			elseif name == "updateplayernames" then
 				client.updateplayernames = garbage
 			end
-			if getfenv(garbage).script then
-				if islclosure(garbage) and table.find(debug.getconstants(garbage), "Frag") then
-					client.newgrenade = garbage
-				end
-			end
 		end
 
 		if garbagetype == "table" then
@@ -8436,7 +8432,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			"bbot > all ",
 			"BBOT > ALL🧠 ",
 			"WHAT SCRIPT IS THAT???? BBOT! ",
-			"日工tch 日ot",
+			"日工tch ",
+			".gg/bbot",
 		},
 		[3] = {
 			"but doctor prognosis: OWNED ",
@@ -8484,10 +8481,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			"how does it feel to not have bbot 🤣🤣🤣😂😂😹😹😹 ",
 			"im a firing my laza! 🙀🙀🙀 ",
 			"😂😂😂😂😂GAMING CHAIR😂😂😂😂😂",
-			"NEXUS ",
-			"NEXUS ON TOP ",
-			"ｎｅｘｕｓ ｄｏｅｓｎ＇ｔ ｃａｒｅ 🤏",
-			"ｈ���ｔｐｓ_ｇｅｔｕｇｔ_ｃｏｍ 🔥",
 			"retardheadass",
 			"can't hear you over these kill sounds ",
 			"i'm just built different yo 🧱🧱🧱 ",
@@ -8497,13 +8490,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			"THE AMOUNT THAT I CARE --> 🤏 ",
 			"🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏",
 			"SORRY I HURT YOUR ROBLOX EGO BUT LOOK -> 🤏 I DON'T CARE ",
-			'table.find(charts, "any other script other than nexus and bbot") -> nil 💵💵💵',
+			'table.find(charts, "any other script other than bbot") -> nil 💵💵💵',
 			"LOL WHAT ARE YOU SHOOTING AT BRO ",
 			"🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥",
 			"BRO UR SHOOTING AT LIKE NOTHING LOL UR A CLOWN",
 			"🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡",
 			"ARE U USING EHUB? 🤡🤡🤡🤡🤡",
-			"'EHUB IS THE BEST' 🤡 PASTED LINES OF CODE WITH UNREFERENCED AND UNINITIALIZED VARIABLES AND PEOPLE HAVE NO IDEA WHY IT'S NOT WORKING",
+			"'EHUB IS THE BEST' 🤡 PASTED LINES OF CODE WITH UNREFERENCED AND UNINITIALIZED VARIABLES AND PEOPLE HAVE NO IDEA WHY IT'S NOT WORKING ",
 			"LOL",
 			"GIVE UP ",
 			"GIVE UP BECAUSE YOU'RE NOT GOING TO BE ABLE TO KILL ME OR WIN LOL",
@@ -8590,7 +8583,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		"Secret", "SECRET", "Unleaked", "Not Leaked", "Method", "Minecraft Steve", "Steve", "Minecraft", "Sponge Hook", "Squid Hook", "Script", "Squid Hack",
 		"Sponge Hack", "(OP)", "Verified", "All Clean", "Program", "Hook", "有毁灭", "desu", "hook", "Gato Hack", "Blaze Hack", "Fuego Hack", "Nat Hook",
 		"vw HACK", "Anti Votekick", "Speed", "Fly", "Big Head", "Knife Hack", "No Clip", "Auto", "Rapid Fire",
-		"Fire Rate Hack", "Fire Rate", "God Mode", "God", "Speed Fly", "Cuteware", "Nexus", "Knife Range", "Infinite XRay", "Kill All", "Sigma", "And", "LEAKED",
+		"Fire Rate Hack", "Fire Rate", "God Mode", "God", "Speed Fly", "Cuteware", "Knife Range", "Infinite XRay", "Kill All", "Sigma", "And", "LEAKED",
 		"🥳🥳🥳", "RELEASE", "IP RESOLVER", "Infinite Wall Bang", "Wall Bang", "Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱", "Free Download EHUB", "Taps", "Owns",
 		"Owns All", "Trolling", "Troll", "Grief", "Kill", "弗吉艾尺艾杰开", "Nata", "Alan", "JSON", "BBOT Developers", "Logic", "And", "and", "Glitch", 
 		"Server Hack", "Babies", "Children", "TAP", "Meme", "MEME", "Laugh", "LOL!", "Lol!", "ROFLSAUCE", "Rofl", ";p", ":D", "=D", "xD", "XD", "=>", "₽", "$", "8=>", "😹😹😹", "🎮🎮🎮", "🎱", "⭐", "✝", 
@@ -9646,9 +9639,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if ragebot.lasthittick and ragebot.lasthittime then
 					text.Text ..= string.format("\n--backtracking-- %dms", (ragebot.lasthittick - ragebot.lasthittime) * 1000)
 				end
-				if misc.normalPositive and misc.circleStrafeDirection then
+				if misc.normalPositive and misc.speedDirection then
 					text.Text ..= string.format("\n--avoid collisions-- %0.2f %0.2f %0.2f %0.2f", misc.normalPositive, misc.normal.x, misc.normal.y, misc.normal.z)
-					text.Text ..= string.format("\n--circle strafe-- %0.2f %0.2f", misc.circleStrafeDirection.x, misc.circleStrafeDirection.z)
+					text.Text ..= string.format("\n--circle strafe-- %0.2f %0.2f", misc.speedDirection.x, misc.speedDirection.z)
 				end
 			end)
 		end
@@ -9989,92 +9982,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			-- 	-- end
 			-- end
 		end
-		if client.newgrenade and false then
-			local oldgrenade
-			local hooked = function(thrower, gtype, gdata)
-				if menu and gdata.blowuptime > 0 and thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER
-				then
-					local lastrealpos
-
-					local frames = gdata.frames
-					local blowup, st = gdata.blowuptime, gdata.time
-					local inc = 0.016666666666666666
-
-					local curtick = tick()
-					local dst = st - curtick
-					local realtime = curtick + dst * (st + blowup - curtick) / (blowup + dst)
-					local err = realtime - curtick
-
-					local j = 1
-
-					for dt = 0, blowup / inc do
-						local t = inc * dt
-
-						do
-							local realtime = tick() + t
-							local time = realtime + dst * (st + blowup - realtime) / (blowup + dst)
-
-							local rtnext = tick() + (inc * (dt + 1))
-							local next_time = rtnext + dst * (st + blowup - rtnext) / (blowup + dst)
-
-							local frame = frames[j]
-							local nextframe = j + 1 <= #frames and frames[j + 1] or nil
-
-							if nextframe and time > st + nextframe.t0 then
-								j += 1
-								frame = nextframe
-							end
-
-							local t = time - (st + frame.t0)
-							local next_t = next_time - (st + frame.t0)
-
-							local pos = frame.p0 + t * frame.v0 + t * t / 2 * frame.a + frame.offset
-							local nextpos = frame.p0 + next_t * frame.v0 + next_t * next_t / 2 * frame.a + frame.offset
-							--local rot = client.cframe.fromaxisangle(t * frame.rotv) * frame.rot0
-							lastrealpos = pos
-
-							if menu and menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP") then
-								local c1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", COLOR1, true)
-								local c2 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", COLOR2, true)
-								local colorz = { c1, c2 }
-								if nextpos then
-									--local mag = (nextpos - pos).magnitude
-									-- magnitude stuff wont work because the line will just end for no reason
-									create_outlined_square(pos, blowup, colorz)
-									local a1 = Instance.new("Attachment", workspace.Terrain)
-									a1.Position = pos
-									local a2 = Instance.new("Attachment", workspace.Terrain)
-									a2.Position = nextpos
-
-									create_line(a1, a2, blowup, colorz)
-								else
-									create_outlined_square(pos, blowup, colorz)
-								end
-							end
-						end
-					end
-
-					if menu and menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
-						local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
-						if curtick < btick then
-							table.insert(menu.activenades, {
-								thrower = thrower.Name,
-								blowupat = lastrealpos,
-								blowuptick = btick, -- might need to be tested more
-								start = curtick,
-							})
-						end
-					end
-				end
-				return oldnewgrenade(thrower, gtype, gdata)
-			end
-			oldnewgrenade = hookfunction(client.newgrenade, hooked)
-		else
-			-- rconsoleprint("GRENADE FUNCTION NOT FOUND")
-		end
+		
 		for hash, func in next, clienteventfuncs do
 			local curconstants = getconstants(func)
-			local found = table.find(curconstants, "Frag")
+			local found = table.find(curconstants, "Trigger")
 			local found1 = table.find(curconstants, "removecharacterhash")
 			local found2 = getinfo(func).name == "swapgun"
 			local found3 = table.find(curconstants, "updatecharacter")
@@ -10090,6 +10001,84 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local found13 = table.find(curconstants, "Msg")
 			local found14 = table.find(curconstants, "[Console]: ")
 
+			if found then
+				clienteventfuncs[hash] = function(thrower, gtype, gdata, displaytrail)
+					if gdata.blowuptime > 0 and thrower.team ~= LOCAL_PLAYER.Team or thrower == LOCAL_PLAYER then
+						local lastrealpos
+						
+						local frames = gdata.frames
+						local blowup, st = gdata.blowuptime, gdata.time
+						local inc = 0.016666666666666666
+						
+						local curtick = tick()
+						local dst = st - curtick
+						local realtime = curtick + dst * (st + blowup - curtick) / (blowup + dst)
+						local err = realtime - curtick
+						
+						local j = 1
+						
+						for dt = 0, blowup / inc do
+							local t = inc * dt
+							
+							do
+								local realtime = tick() + t
+								local time = realtime + dst * (st + blowup - realtime) / (blowup + dst)
+								
+								local rtnext = tick() + (inc * (dt + 1))
+								local next_time = rtnext + dst * (st + blowup - rtnext) / (blowup + dst)
+								
+								local frame = frames[j]
+								local nextframe = j + 1 <= #frames and frames[j + 1] or nil
+								
+								if nextframe and time > st + nextframe.t0 then
+									j += 1
+									frame = nextframe
+								end
+								
+								local t = time - (st + frame.t0)
+								local next_t = next_time - (st + frame.t0)
+								
+								local pos = frame.p0 + t * frame.v0 + t * t / 2 * frame.a + frame.offset
+								local nextpos = frame.p0 + next_t * frame.v0 + next_t * next_t / 2 * frame.a + frame.offset
+								--local rot = client.cframe.fromaxisangle(t * frame.rotv) * frame.rot0
+								lastrealpos = pos
+								
+								if menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP") then
+									local c1 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", COLOR1, true)
+									local c2 = menu:GetVal("Visuals", "Dropped ESP", "Grenade ESP", COLOR2, true)
+									local colorz = {c1, c2}
+									if nextpos then
+										--local mag = (nextpos - pos).magnitude
+										-- magnitude stuff wont work because the line will just end for no reason
+										create_outlined_square(pos, blowup, colorz)
+										local a1 = Instance.new("Attachment", workspace.Terrain)
+										a1.Position = pos
+										local a2 = Instance.new("Attachment", workspace.Terrain)
+										a2.Position = nextpos
+										
+										create_line(a1, a2, blowup, colorz)
+									else
+										create_outlined_square(pos, blowup, colorz)
+									end
+								end
+							end
+						end
+						
+						if menu:GetVal("Visuals", "Dropped ESP", "Grenade Warning") then
+							local btick = curtick + (math.abs((curtick + gdata.blowuptime) - curtick) - math.abs(err))
+							if curtick < btick then
+								table.insert(menu.activenades, {
+									thrower = thrower.Name,
+									blowupat = lastrealpos,
+									blowuptick = btick, -- might need to be tested more
+									start = curtick
+								})
+							end
+						end
+					end
+					return func(thrower, gtype, gdata, displaytrail)
+				end
+			end
 			if found1 then
 				clienteventfuncs[hash] = function(charhash, bodyparts)
 					local modparts = bodyparts
@@ -10466,9 +10455,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 		end)
 		misc.beams = {}
-		function misc:CreateBeam(origin_att, ending_att)
+		function misc:CreateBeam(origin_att, ending_att, texture)
 			local beam = Instance.new("Beam")
-			beam.Texture = "http://www.roblox.com/asset/?id=446111271"
+			beam.Texture = texture or "http://www.roblox.com/asset/?id=446111271"
 			beam.TextureMode = Enum.TextureMode.Wrap
 			beam.TextureSpeed = 8
 			beam.LightEmission = 1
@@ -10601,6 +10590,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local nadesent = false
 			for k, v in next, team:GetPlayers() do
 				if client.logic.gammo <= 0 then
+					nadesent = true
 					break
 				end
 				if table.find(menu.priority, v.Name) and client.hud:isplayeralive(v) then
@@ -10652,7 +10642,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					}
 
 					send(client.net, "newgrenade", unpack(args))
-					nadesent = true
 					client.hud:updateammo("GRENADE")
 				end
 			end
@@ -10938,7 +10927,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			
 
 			if name == "Join New Game" then
-				game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer)
+				TELEPORT_SERVICE:Teleport(game.PlaceId, game.Players.LocalPlayer)
 			end
 
 			if name == "Votekick" then
@@ -11079,7 +11068,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				rootpart.Anchored = false
 			end
 		end
-		misc.circleStrafeDirection = Vector3.new(1,0,0)
+		misc.speedDirection = Vector3.new(1,0,0)
 		function misc:SpeedHack()
 			if menu:GetKey("Misc", "Movement", "Fly") then
 				return
@@ -11091,6 +11080,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				local travel = CACHED_VEC3
 				local looking = Camera.CFrame.LookVector
 				local rightVector = Camera.CFrame.RightVector
+				local moving = false
 				if not menu:GetKey("Misc", "Movement", "Circle Strafe") then
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.W) then
 						travel += looking
@@ -11104,40 +11094,70 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
 						travel -= rightVector
 					end
-					misc.circleStrafeDirection = Vector3.new(looking.x, 0, looking.z).Unit
+					misc.speedDirection = Vector3.new(travel.x, 0, travel.z).Unit
+					-- if misc.speedDirection.x ~= misc.speedDirection.x then 
+					-- 	misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
+					-- end
+					misc.circleStrafeAngle = -0.1
 				else
-					travel = misc.circleStrafeDirection
-					local angle = -0.1
+					if misc.speedDirection.x ~= misc.speedDirection.x then 
+						misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
+					end
+					travel = misc.speedDirection
+					misc.circleStrafeAngle = -0.1
 					
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.D) then
-						angle = 0.1
+						misc.circleStrafeAngle = 0.1
 					end
 					if INPUT_SERVICE:IsKeyDown(Enum.KeyCode.A) then
-						angle = -0.1
+						misc.circleStrafeAngle = -0.1
 					end
-					local cd = Vector2.new(misc.circleStrafeDirection.x, misc.circleStrafeDirection.z)
-					cd = bVector2:getRotate(cd, angle)
-					misc.circleStrafeDirection = Vector3.new(cd.x, 0, cd.y)
+					local cd = Vector2.new(misc.speedDirection.x, misc.speedDirection.z)
+					cd = bVector2:getRotate(cd, misc.circleStrafeAngle)
+					misc.speedDirection = Vector3.new(cd.x, 0, cd.y)
 				end
 
-				travel = travel.Unit
+				travel = misc.speedDirection
 				if menu:GetKey("Misc", "Movement", "Avoid Collisions") then
-					local scale = menu:GetVal("Misc", "Movement", "Avoid Collisions Scale") / 1000
-					local position = client.char.rootpart.CFrame.p
-					for i = 1, 10 do
+					if menu:GetKey("Misc", "Movement", "Circle Strafe") then
+						local scale = menu:GetVal("Misc", "Movement", "Avoid Collisions Scale") / 1000
+						local position = client.char.rootpart.CFrame.p
 						local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-							Ray.new(position, (travel * speed * scale) + Vector3.new(0,rootpart.Velocity.y/10,0)),
+							Ray.new(position, (travel * speed * scale)),
 							client.roundsystem.raycastwhitelist
 						) 
-						misc.normal = normal
-						if part then 
-							local dot = normal.Unit:Dot((client.char.rootpart.CFrame.p - position).Unit)
-							misc.normalPositive = dot
-							if dot > 0 then
-								travel += normal.Unit * dot
-								travel = travel.Unit
-								if travel.x == travel.x then
-									misc.circleStrafeDirection = travel
+						if part then
+							for i = -10, 10 do
+								local cd = Vector2.new(travel.x, travel.z)
+								cd = bVector2:getRotate(cd, misc.circleStrafeAngle * i * -1)
+								cd = Vector3.new(cd.x, 0, cd.y)
+								local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+									Ray.new(position, (cd * speed * scale)),
+									client.roundsystem.raycastwhitelist
+								) 
+								misc.normal = normal
+								if not part then 
+									travel = cd
+								end
+							end
+						end
+					else
+						local position = client.char.rootpart.CFrame.p
+						for i = 1, 10 do
+							local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+								Ray.new(position, (travel * speed / 10) + Vector3.new(0,rootpart.Velocity.y/10,0)),
+								client.roundsystem.raycastwhitelist
+							) 
+							misc.normal = normal
+							if part then 
+								local dot = normal.Unit:Dot((client.char.rootpart.CFrame.p - position).Unit)
+								misc.normalPositive = dot
+								if dot > 0 then
+									travel += normal.Unit * dot
+									travel = travel.Unit
+									if travel.x == travel.x then
+										misc.circleStrafeDirection = travel
+									end
 								end
 							end
 						end
@@ -11289,9 +11309,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if args[1] == "logmessage" or args[1] == "debug" then
 					local message = ""
 					for i = 1, #args - 1 do
+						
 						message ..= tostring(args[i]) .. ", "
 					end
 					message ..= tostring(args[#args])
+					if message:find("Kick") then
+						if menu:GetVal("Misc", "Extra", "Join New Game On Kick") then
+							TELEPORT_SERVICE:Teleport(game.PlaceId)
+						end
+						return
+					end
 					return CreateNotification(message)
 				end
 				if args[1] == "repupdate" then
@@ -12256,8 +12283,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local backtrackedPosition = ragebot:GetBacktrackedPosition(ply, parts, menu:GetVal("Rage", "Hack vs. Hack", "Backtracking Time")/1000)
 
 							local GroupBox = "Team ESP"
+							local enemy = false
 							if ply.Team ~= LOCAL_PLAYER.Team then
 								GroupBox = "Enemy ESP"
+								enemy = true
 								client.aliveplayers += 1
 							end
 
@@ -12288,7 +12317,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 							local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 							
-							if backtrackedPosition and menu:GetVal("Visuals", "Enemy ESP", "Show Backtrack Position") then 
+							if backtrackedPosition and menu:GetVal("Visuals", "Enemy ESP", "Show Backtrack Position") and enemy then 
 								backtrackedPosition, btRendered = Camera:WorldToViewportPoint(backtrackedPosition.pos)
 								if btRendered then
 									allesp[11][1][curplayer].Position = Vector2.new(backtrackedPosition.x, backtrackedPosition.y)
@@ -12296,8 +12325,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[11][1][curplayer].Radius = 1 / backtrackedPosition.z * 100 + 3
 									allesp[11][1][curplayer].Thickness = 1
 									allesp[11][1][curplayer].Visible = true
-									allesp[11][1][curplayer].Transparency = 1
-									allesp[11][1][curplayer].Color = Color3.new(1,1,1)
+									allesp[11][1][curplayer].Transparency = menu:GetVal("Visuals", "Enemy ESP", "Show Backtrack Position", COLOR)[4]/255
+									allesp[11][1][curplayer].Color = menu:GetVal("Visuals", "Enemy ESP", "Show Backtrack Position", COLOR, true)
 								end
 							end
 
@@ -15519,9 +15548,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										tooltip = "Breaks all windows in the map when you spawn."
 									},
 									{
+										type = TOGGLE,
+										name = "Join New Game On Kick",
+										value = false,
+									},
+									{
 										type = BUTTON,
 										name = "Join New Game",
-										value = false,
 										unsafe = false,
 										doubleclick = true,
 									},
@@ -15549,7 +15582,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = SLIDER, 
 										name = "Crash Intensity",
 										minvalue = 1, 
-										maxvalue = 10,
+										maxvalue = 16,
 										value = 8
 									},
 									{
@@ -16111,8 +16144,10 @@ menu.load_time = math.floor((tick() - loadstart) * 1000)
 CreateNotification(string.format("Done loading the " .. menu.game .. " cheat. (%d ms)", menu.load_time))
 CreateNotification("Press DELETE to open and close the menu!")
 CreateThread(function()
+	local x = loadingthing.Position.x
 	for i = 1, 20 do
 		loadingthing.Transparency = 1-i/20
+		loadingthing.Position -= Vector2.new(x/10, 0)
 		wait()
 	end
 	loadingthing.Visible = false -- i do it this way because otherwise it would fuck up the Draw:UnRender function, it doesnt cause any lag sooooo
@@ -16127,3 +16162,4 @@ menu.Initialize = nil -- let me freeeeee
 -- i meant the program memory, alan...............  fuckyouAlan_iHateYOU from v1
 -- im changing all the var names that had typos by me back to what they were now because of this.... enjoy hieght....
 -- wut
+_G.CreateNotification = CreateNotification
