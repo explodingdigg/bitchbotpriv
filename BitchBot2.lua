@@ -10561,11 +10561,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			local nadesent = false
 			for k, v in next, team:GetPlayers() do
 				if client.logic.gammo <= 0 then
-					nadesent = true
 					break
 				end
 				if table.find(menu.priority, v.Name) and client.hud:isplayeralive(v) then
-					client.logic.gammo -= 1
 					local curbodyparts = client.replication.getbodyparts(v)
 					if not curbodyparts then
 						return
@@ -10602,7 +10600,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									offset = Vector3.new(),
 									rot0 = CFrame.new(),
 									a = Vector3.new(),
-									p0 = part.Position + Vector3.new(0, 3, 0),
+									p0 = chosenpos + Vector3.new(0, 3, 0),
 									rotv = Vector3.new(),
 								},
 							},
@@ -10612,6 +10610,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					}
 
 					send(client.net, "newgrenade", unpack(args))
+					nadesent = true
+					client.logic.gammo -= 1
 					client.hud:updateammo("GRENADE")
 				end
 			end
@@ -10663,7 +10663,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									offset = Vector3.new(),
 									rot0 = CFrame.new(),
 									a = Vector3.new(),
-									p0 = part.Position + Vector3.new(0, 3, 0),
+									p0 = chosenpos + Vector3.new(0, 3, 0),
 									rotv = Vector3.new(),
 								},
 							},
@@ -10679,7 +10679,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 			end
 
-			return nadesent
+			return client.logic.gammo <= 0
 		end
 
 		function misc:Teleport(newpos)
