@@ -268,33 +268,33 @@ end
 --validity check
 --SECTION commented these out for development
 
--- make_synreadonly(syn)
--- make_synreadonly(Drawing)
--- protectfunction(getgenv)
--- protectfunction(getgc)
+make_synreadonly(syn)
+make_synreadonly(Drawing)
+protectfunction(getgenv)
+protectfunction(getgc)
 
--- local init
--- if syn then
--- 	init = getfenv(saveinstance).script
--- end
+local init
+if syn then
+	init = getfenv(saveinstance).script
+end
 
--- script.Name = "\1"
--- local function search_hookfunc(tbl)
--- 	for i,v in pairs(tbl) do
--- 		local s = getfenv(v).script
--- 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
--- 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
--- 				writefile("poop.text", "did the funny")
--- 				SX_CRASH()
--- 				break
--- 			end
--- 		end
--- 	end
--- end
--- search_hookfunc(getgc())
--- search_hookfunc = nil
+script.Name = "\1"
+local function search_hookfunc(tbl)
+	for i,v in pairs(tbl) do
+		local s = getfenv(v).script
+		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+				writefile("poop.text", "did the funny")
+				SX_CRASH()
+				break
+			end
+		end
+	end
+end
+search_hookfunc(getgc())
+search_hookfunc = nil
 
--- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
 --!SECTION
 local menuWidth, menuHeight = 500, 600
@@ -1464,9 +1464,7 @@ do
 				end
 			end
 		end
-		if string.len(textthing) > 25 then
-			textthing = string_cut(textthing, 25)
-		end
+		textthing = string_cut(textthing, 25)
 		textthing = textthing ~= "" and textthing or "None"
 		Draw:MenuBigText(textthing, true, false, x + 6, y + 16, tab)
 		table.insert(temptable, tab[#tab])
@@ -3719,9 +3717,7 @@ function menu.Initialize(menutable)
 								end
 							end
 							textthing = textthing ~= "" and textthing or "None"
-							if string.len(textthing) > 25 then
-								textthing = string_cut(textthing, 25)
-							end
+							textthing = string_cut(textthing, 25)
 							v2[4][1].Text = textthing
 						elseif v2[2] == TEXTBOX then
 							v2[4].Text = v2[1]
@@ -4409,9 +4405,7 @@ function menu.Initialize(menutable)
 													end
 												end
 												textthing = textthing ~= "" and textthing or "None"
-												if string.len(textthing) > 25 then
-													textthing = string_cut(textthing, 25)
-												end
+												textthing = string_cut(textthing, 25)
 												v2[4][1].Text = textthing
 												set_comboboxthingy(
 													true,
@@ -11966,16 +11960,21 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					
 					if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS")
 					then
-						local sight = client:GetToggledSight(client.logic.currentgun).sightpart
-						local gunpos2d = Camera:WorldToScreenPoint(sight.Position)
+						local sniping = (menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[1] and client.logic.currentgun.type ~= "SNIPER") or (not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[1])
+						local scoping = menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2] and client:GetToggledSight(client.logic.currentgun).sightspring.p > 0.8 or not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2]
+						local shooting = menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3] and INPUT_SERVICE:IsMouseButtonPressed(0) or not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3]
+						if sniping and scoping and shooting then
+							local sight = client:GetToggledSight(client.logic.currentgun).sightpart
+							local gunpos2d = Camera:WorldToScreenPoint(sight.Position)
 
-						local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
-						if client.logic.currentgun.data.blackscope and isPlayerScoped or client.logic.currentgun.data.blackscope
-						then
-							local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
-							local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-							local rcsdelta = Vector3.new(rcs.x * xo / 100, rcs.y * yo / 100, 0)  --* client:GetToggledSight(client.logic.currentgun).sightspring.p
-							Pos += rcsdelta
+							local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
+							if client.logic.currentgun.data.blackscope and isPlayerScoped or client.logic.currentgun.data.blackscope
+							then
+								local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
+								local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
+								local rcsdelta = Vector3.new(rcs.x * xo / 100, rcs.y * yo / 100, 0)  --* client:GetToggledSight(client.logic.currentgun).sightspring.p
+								Pos += rcsdelta
+							end
 						end
 					end
 					local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, Pos.y - LOCAL_MOUSE.y)
@@ -12489,17 +12488,25 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Box", COLOR1)[4] / 255
 							local espflags = menu:GetVal("Visuals", GroupBox, "Flags")
 							local distance = math.floor((parts.rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
-
+							local flag_text_size = menu:GetVal("Visuals", "ESP Settings", "Large Flag Text")
 							if (topIsRendered or bottomIsRendered) then
 								if espflags[1] then
 									local playerdata = teamdata[1]:FindFirstChild(plyname) or teamdata[2]:FindFirstChild(plyname)
 									allesp[3][5][curplayer].Visible = true
 									allesp[3][5][curplayer].Text = "lv".. playerdata.Rank.Text
+									allesp[3][5][curplayer].Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 									allesp[3][5][curplayer].Position = Vector2.new(
 										math.floor(boxPosition.x) + boxSize.x + 2,
 										math.floor(boxPosition.y) - 4 + spoty
 									)
-									spoty += 10
+									if flag_text_size then
+										allesp[3][5][curplayer].Font = 2
+										allesp[3][5][curplayer].Size = 13
+										spoty += 13
+									else
+										allesp[3][5][curplayer].Font = 1
+										spoty += 10
+									end
 								end
 
 
@@ -12507,21 +12514,38 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									
 									allesp[3][6][curplayer].Visible = true
 									allesp[3][6][curplayer].Text = tostring(distance).. "m"
+									allesp[3][6][curplayer].Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 									allesp[3][6][curplayer].Position = Vector2.new(
 										math.floor(boxPosition.x) + boxSize.x + 2,
 										math.floor(boxPosition.y) - 4 + spoty
 									)
-									spoty += 10
+									if flag_text_size then
+										allesp[3][6][curplayer].Font = 2
+										allesp[3][6][curplayer].Size = 13
+										spoty += 13
+									else
+										allesp[3][6][curplayer].Font = 1
+										spoty += 10
+									end
 
 								end
 
 								if GroupBox == "Enemy ESP" then
 									if espflags[3] then
 										allesp[3][4][curplayer].Visible = resolved
+										allesp[3][4][curplayer].Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 										allesp[3][4][curplayer].Position = Vector2.new(
 											math.floor(boxPosition.x) + boxSize.x + 2,
 											math.floor(boxPosition.y) - 4 + spoty
 										)
+										if flag_text_size then
+											allesp[3][4][curplayer].Font = 2
+											allesp[3][4][curplayer].Size = 13
+											spoty += 13
+										else
+											allesp[3][4][curplayer].Font = 1
+											spoty += 10
+										end
 									end
 								end
 								if menu.options["Visuals"][GroupBox]["Name"][1] then
@@ -12535,7 +12559,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										name = string.upper(name)
 									end
 
-									allesp[4][1][curplayer].Text = name
+									allesp[4][1][curplayer].Text = string_cut(name, menu:GetVal("Visuals", "ESP Settings", "Max Text Length"))
 									allesp[4][1][curplayer].Visible = true
 									allesp[4][1][curplayer].Transparency = 1
 
@@ -12579,6 +12603,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										local hptext = allesp[3][3][curplayer]
 										hptext.Visible = true
 										hptext.Text = tostring(health)
+										if flag_text_size then
+											hptext.Font = 2
+											hptext.Size = 13
+										else
+											hptext.Font = 1
+										end
 
 										local tb = hptext.TextBounds
 
@@ -12587,6 +12617,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											-tb.x - 7,
 											clamp(ySizeBar + boxSize.y - tb.y * 0.5, -4, boxSize.y - 10)
 										)
+										
 										--hptext.Position = Vector2.new(boxPosition.x - 7 - tb.x, boxPosition.y + clamp(boxSize.y + ySizeBar - 8, -4, boxSize.y - 10))
 										hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", COLOR, true)
 										hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
@@ -12867,8 +12898,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									local direction = math.atan2(-relativePos.y, relativePos.x)
 
 									local distance = dot(relativePos.Unit, relativePos)
-									local arrow_size = menu:GetVal("Visuals", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, 50, 15) or 15
-									arrow_size = arrow_size > 50 and 50 or arrow_size < 15 and 15 or arrow_size
+									local use_extra_size = menu:GetVal("Visuals", "ESP Settings", "Large Flag Text")
+									local big_size = use_extra_size and 100 or 50
+									local size = use_extra_size and 30 or 15
+									local arrow_size = menu:GetVal("Visuals", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, big_size, size) or size
+									arrow_size = arrow_size > big_size and big_size or arrow_size < size and size or arrow_size
 
 									direction = Vector2.new(math.cos(direction), math.sin(direction))
 
@@ -13128,7 +13162,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							if nade_dist <= 80 then
 								local nadepos, nade_on_screen = workspace.CurrentCamera:WorldToScreenPoint(Vector3.new(nade.blowupat.x, nade.blowupat.y, nade.blowupat.z))
 
-								if not nade_on_screen then
+								if not nade_on_screen or nadepos.x > SCREEN_SIZE.x - 36 or nadepos.y > SCREEN_SIZE.y - 72 then
 									local relativePos = Camera.CFrame:PointToObjectSpace(nade.blowupat)
 									local angle = math.atan2(-relativePos.y, relativePos.x)
 									local ox = math.cos(angle)
@@ -14108,6 +14142,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						{
 							name = "Aim Assist",
 							autopos = "left",
+							autofill = true,
 							content = {
 								{
 									type = TOGGLE,
@@ -14255,7 +14290,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						{
 							name = "Bullet Redirection",
 							autopos = "right",
-							autofill = true,
 							content = {
 								{
 									type = TOGGLE,
@@ -14302,13 +14336,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						},
 						{
 							name = "Recoil Control",
-							autopos = "left",
+							autopos = "right",
 							autofill = true,
 							content = {
 								{
 									type = TOGGLE,
 									name = "Weapon RCS",
 									value = false,
+								},
+								{
+									type = COMBOBOX,
+									name = "Disable RCS While",
+									values = { { "Holding Sniper", false }, { "Scoping In", false }, { "Not Shooting", false } }
 								},
 								{
 									type = SLIDER,
@@ -14997,6 +15036,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = "hp",
 								},
 								{
+									type = TOGGLE,
+									name = "Large Flag Text",
+									value = false,
+								}, 
+								{
 									type = DROPBOX,
 									name = "Text Case",
 									value = 2,
@@ -15009,6 +15053,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									minvalue = 0,
 									maxvalue = 32,
 									custom = { [0] = "Unlimited" },
+									stradd = " letters",
 								},
 								{
 									type = TOGGLE,
