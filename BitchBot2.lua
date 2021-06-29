@@ -15039,6 +15039,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = TOGGLE,
 									name = "Large Flag Text",
 									value = false,
+									tooltip = "Changes the font/size of the Flags combobox.\nAlso affects the size of the Out Of View arrows.",
 								}, 
 								{
 									type = DROPBOX,
