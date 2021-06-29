@@ -268,33 +268,33 @@ end
 --validity check
 --SECTION commented these out for development
 
-make_synreadonly(syn)
-make_synreadonly(Drawing)
-protectfunction(getgenv)
-protectfunction(getgc)
+-- make_synreadonly(syn)
+-- make_synreadonly(Drawing)
+-- protectfunction(getgenv)
+-- protectfunction(getgc)
 
-local init
-if syn then
-	init = getfenv(saveinstance).script
-end
+-- local init
+-- if syn then
+-- 	init = getfenv(saveinstance).script
+-- end
 
-script.Name = "\1"
-local function search_hookfunc(tbl)
-	for i,v in pairs(tbl) do
-		local s = getfenv(v).script
-		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
-			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
-				writefile("poop.text", "did the funny")
-				SX_CRASH()
-				break
-			end
-		end
-	end
-end
-search_hookfunc(getgc())
-search_hookfunc = nil
+-- script.Name = "\1"
+-- local function search_hookfunc(tbl)
+-- 	for i,v in pairs(tbl) do
+-- 		local s = getfenv(v).script
+-- 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+-- 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+-- 				writefile("poop.text", "did the funny")
+-- 				SX_CRASH()
+-- 				break
+-- 			end
+-- 		end
+-- 	end
+-- end
+-- search_hookfunc(getgc())
+-- search_hookfunc = nil
 
-if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+-- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
 --!SECTION
 local menuWidth, menuHeight = 500, 600
@@ -7676,8 +7676,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		["STEYR SCOUT"] = {"iVBORw0KGgoAAAANSUhEUgAAAMgAAAAuAQAAAABFPmusAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAnRSTlMAAHaTzTgAAAACYktHRAAB3YoTpAAAAAlwSFlzAAAOwgAADsIBFShKgAAAAAd0SU1FB+UGDAwBBFinZrUAAADNSURBVDjLxdM7DsIwDAZgI4YsiI6w9Si5FHt7tNyAK0RiYeiQ0YNVk74ISWxBJ/6hQz7FdhIV4JcggA3VasMOCAxLwo46lmXOX8URWVHu8UBHQaJNR229IPES1l6+LJeSi+U841u6QtJGrqRlFGVc6gMcPldD6uziVllCPhomwbwNpmkpa7NWW85hVMnjFFFupYfqvqjZqpQymPLBNnmeFfHDSRF3uyrSW1QEGi/LCHW+Ce2Saf3BKEov/tKTxI8RZR7LqSKlI00uCHvzArY6rLXzFDHTAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDIxLTA2LTI5VDAwOjE4OjIxLTA0OjAw4B9wjwAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyMS0wNi0xMlQxNjowMTowNC0wNDowMIhvWnEAAAAASUVORK5CYII=", 200, 46},
 		["TRG-42"] = {"iVBORw0KGgoAAAANSUhEUgAAAMgAAAAgAQAAAAB/NArcAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAnRSTlMAAHaTzTgAAAACYktHRAAB3YoTpAAAAAlwSFlzAAAOwgAADsIBFShKgAAAAAd0SU1FB+UGDAwBFEUQdtEAAACqSURBVCjPjdJNCsMgEAXgkUBceoQcxaPpkXqEQi/irluXFkpe1cZU4wz0LUT8cPwlatEAIjFRGZA4WR3GnGIhiAIjtiysZzGl9eRm2UobqBtqG6ySFCN1T2mRJPYSB9HSnGD+klatHiRsolhJopPkBdxOCb2gSR5d6Sq58x7e8pDY1/mmFccTO7FiH+OMn8x/5pA7J95IUm9VEC2K4mWvj+Rn2YoYTmoWRj4paIhatmwtEAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMS0wNi0yOVQwMDoxODoyMS0wNDowMOAfcI8AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjEtMDYtMTJUMTY6MDE6MjAtMDQ6MDA+BXkfAAAAAElFTkSuQmCC", 200, 32},
 		["WA2000"] = {"iVBORw0KGgoAAAANSUhEUgAAAMgAAABIAQAAAACbk4frAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAnRSTlMAAHaTzTgAAAACYktHRAAB3YoTpAAAAAlwSFlzAAAOwgAADsIBFShKgAAAAAd0SU1FB+UGDAwBJo3HJ1EAAADxSURBVDjL7dNLDoIwEADQduXGWA9g7FF6Fm/hwojRi/UoNfEANS5sDGEcShugH6IE4sbZAH2ZdhgYQv7RCXEiFHRGRE4ogAlXGVQoPCG41sTPhA2IKQAuXrY9PBDue8AhkoXftCdHFJYUPKeMBaQVOO+b56p9E7ytL9KJzRE+HbohWwlCTyLSFkBtAyNZN1Jmdptbbu6nTOXU3xaecdUuHtN0ZxYpyQeiORieFgZ6VUDVm1srCmUZTrTLuZtNRq454SoaKpQX9pyrcNjsMGGZIiWK2uoiIbt6LSlE2rFKCRkUMUL4CGFucr6T3G40Kz+MN0ytoaI7RH2/AAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDIxLTA2LTI5VDAwOjE4OjIxLTA0OjAw4B9wjwAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyMS0wNi0xMlQxNjowMTozOC0wNDowMMFAN+YAAAAASUVORK5CYII=", 200, 72},
-	
 	}
+
+	local function NameToIcon(name)
+
+		local tempimage = gunicons[name]
+
+		if tempimage ~= nil then
+			local aspect_ratio = (tempimage[2]/4)/(tempimage[3]/4)
+			local new_h = 19
+			local new_w = new_h * aspect_ratio
+
+			if new_w > 80 then
+				local aspect_ratio = (tempimage[3]/4)/(tempimage[2]/4)
+				new_w = 80
+				new_h = new_w * aspect_ratio
+			end
+
+			return {data = tempimage[1], w = new_w, h = new_h}
+		end
+		return nil
+	end
 
 	menu.activetab = 5
 	menu.annoylist = table.create(game.Players.MaxPlayers - 1)
@@ -12707,14 +12726,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 									local tempicon = allesp[3][7][curplayer]
 
-									local tempimage = gunicons[wepname]
+									
+									local tempimage = NameToIcon(wepname)
 
 									if (setwepicons[curplayer] ~= nil or wepname ~= "???") and tempimage ~= nil then
-									
-										local aspect_ratio = (tempimage[2]/4)/(tempimage[3]/4)
-										local new_w = 19 * aspect_ratio
+	
 										tempicon.Visible = true
-										tempicon.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5 - (new_w/2), boxPosition.y + boxSize.y + yaddpos + 2)
+										tempicon.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5 - (tempimage.w/2), boxPosition.y + boxSize.y + yaddpos + 2)
 										tempicon.Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR)[4]/255
 									
 									elseif not menu:GetVal("Visuals", GroupBox, "Held Weapon") then
@@ -12739,13 +12757,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									
 
 									if setwepicons[curplayer] ~= wepname then
-										print(wepname, tostring(tempimage))
 										if tempimage ~= nil then
-											local aspect_ratio = (tempimage[2]/4)/(tempimage[3]/4)
-											local new_w = 19 * aspect_ratio
+											
 
-											tempicon.Data = syn.crypt.base64.decode(tempimage[1])
-											tempicon.Size = Vector2.new(new_w, 19)
+											tempicon.Data = syn.crypt.base64.decode(tempimage.data)
+											tempicon.Size = Vector2.new(tempimage.w, tempimage.h)
 										end
 										setwepicons[curplayer] = wepname
 									end
@@ -12961,17 +12977,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										end
 
 										if menu:GetVal("Visuals", "Dropped ESP", "Weapon Icons") then
-											local tempimage = gunicons[v.Gun.Value]
+											
+											local tempimage = NameToIcon(v.Gun.Value)
 
 											if tempimage ~= nil then
-												local aspect_ratio = (tempimage[2]/4)/(tempimage[3]/4)
-												local new_w = 19 * aspect_ratio
 
-												wepesp[3][gunnum].Data = syn.crypt.base64.decode(tempimage[1])
-												wepesp[3][gunnum].Size = Vector2.new(new_w, 19)
+												wepesp[3][gunnum].Data = syn.crypt.base64.decode(tempimage.data)
+												wepesp[3][gunnum].Size = Vector2.new(tempimage.w, tempimage.h)
 												wepesp[3][gunnum].Visible = true
-												wepesp[3][gunnum].Position = Vector2.new(math.floor(gunpos2d.x) - new_w/2, math.floor(gunpos2d.y + (wepadd) ))
-												wepesp[3][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Names", COLOR1)[4] * gunclearness / 255
+												wepesp[3][gunnum].Position = Vector2.new(math.floor(gunpos2d.x) - tempimage.w/2, math.floor(gunpos2d.y + (wepadd) ))
+												wepesp[3][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Names", COLOR2)[4] * gunclearness / 255
 											elseif not menu:GetVal("Visuals", "Dropped ESP", "Weapon Names") then
 												if client.logic.currentgun and client.logic.currentgun and client.logic.currentgun.data and v.Gun.Value == client.logic.currentgun.data.name
 												then
