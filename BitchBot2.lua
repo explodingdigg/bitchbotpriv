@@ -3200,7 +3200,7 @@ function menu.Initialize(menutable)
 		local args = { ... }
 
 		local option = menu.options[tab][groupbox][name]
-
+		if not option then print(tab, groupbox, name) end
 		if args[1] == nil then
 			if option[2] == TOGGLE then
 				local lastval = option[7]
@@ -11697,7 +11697,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local hitboxPriority = menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 2 and "torso" or "closey :)"
 							local hitscan = misc:GetParts(menu:GetVal("Legit", "Aim Assist", "Hitscan Points"))
 
-							if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind >= 2
+							if client.logic.currentgun.type ~= "KNIFE" and keybind >= 2 or INPUT_SERVICE:IsMouseButtonPressed(keybind) 
 							then
 								local speed = 1
 								if keybind == 3 then
@@ -12343,7 +12343,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									print("hi")
 									local playerdata = teamdata[1]:FindFirstChild(plyname) or teamdata[2]:FindFirstChild(plyname)
 									allesp[3][5][curplayer].Visible = true
-									allesp[3][5][curplayer].Text = "lvl ".. playerdata.Rank.Text
+									allesp[3][5][curplayer].Text = "lv".. playerdata.Rank.Text
 									allesp[3][5][curplayer].Position = Vector2.new(
 										math.floor(boxPosition.x) + boxSize.x + 2,
 										math.floor(boxPosition.y) - 4 + spoty
@@ -13447,11 +13447,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							return Enum.ContextActionResult.Sink
 						end
 						
-						if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", KEYBIND)
-						then
-							local thing1, thing2 = misc:Invisibility()
-							return Enum.ContextActionResult.Sink
-						end
+						-- if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", KEYBIND)
+						-- then
+						-- 	local thing1, thing2 = misc:Invisibility()
+						-- 	return Enum.ContextActionResult.Sink
+						-- end
 					end
 					-----------------------------------------
 					------------"HELD KEY ACTION"------------
@@ -14500,7 +14500,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									{
 										type = COMBOBOX,
 										name = "Flags",
-										values = { { "Level", true }, { "Distance", true }, { "Resolver", false } },
+										values = { { "Level", true }, { "Distance", true }, { "Resolved", false } },
 									},
 									{
 										type = TOGGLE,
