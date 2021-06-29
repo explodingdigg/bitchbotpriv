@@ -3585,6 +3585,9 @@ function menu.Initialize(menutable)
 				then
 					local subs = string.split(tt[4], ",")
 
+					if type(menu.options[tt[1]][tt[2]][tt[3]][5][1][1]) == "table" then
+						continue
+					end
 					for i, v in ipairs(subs) do
 						if menu.options[tt[1]][tt[2]][tt[3]][5][1][i] == nil then
 							break
@@ -3595,6 +3598,7 @@ function menu.Initialize(menutable)
 							break
 						end
 					end
+				
 				end
 			end
 
@@ -3619,7 +3623,12 @@ function menu.Initialize(menutable)
 					local subs = { string.split(tt[4], ","), string.split(tt[5], ",") }
 
 					for i, v in ipairs(subs) do
+						if type(menu.options[tt[1]][tt[2]][tt[3]][5][1][i]) == "number" then
+							break
+						end
 						for i1, v1 in ipairs(v) do
+							
+								
 							if menu.options[tt[1]][tt[2]][tt[3]][5][1][i][1][i1] == nil then
 								break
 							end
@@ -3665,10 +3674,12 @@ function menu.Initialize(menutable)
 										v2[5][4][i].Color = RGB(v2[5][1][1] - 40, v2[5][1][2] - 40, v2[5][1][3] - 40)
 									end
 								elseif v2[5][2] == DOUBLE_COLORPICKER then
-									for i, v3 in ipairs(v2[5][1]) do
-										v3[4][1].Color = RGB(v3[1][1], v3[1][2], v3[1][3])
-										for i1 = 2, 3 do
-											v3[4][i1].Color = RGB(v3[1][1] - 40, v3[1][2] - 40, v3[1][3] - 40)
+									if type(v2[5][1][1]) == "table" then 
+										for i, v3 in ipairs(v2[5][1]) do
+											v3[4][1].Color = RGB(v3[1][1], v3[1][2], v3[1][3])
+											for i1 = 2, 3 do
+												v3[4][i1].Color = RGB(v3[1][1] - 40, v3[1][2] - 40, v3[1][3] - 40)
+											end
 										end
 									end
 								end
@@ -7623,12 +7634,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			[2] = {},
 			[3] = {},
 			[4] = {}, -- resolver flag
+			[5] = {}, -- dist
+			[6] = {}, -- lvl
 		},
 		[4] = { -- text
 			[1] = {},
 			[2] = {},
-			[3] = {},
-			[4] = {},
 		},
 		[5] = { -- arrows
 			[1] = {},
@@ -7736,6 +7747,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		Draw:FilledRect(false, 20, 20, 20, 20, { 10, 10, 10, 255 }, hp[2])
 		Draw:OutlinedText("", 1, false, 20, 20, 13, false, { 255, 255, 255, 255 }, { 0, 0, 0 }, hp[3])
 		Draw:OutlinedText("R", 1, false, 20, 20, 13, false, { 255, 255, 0, 255 }, { 0, 0, 0 }, hp[4])
+		Draw:OutlinedText("", 1, false, 20, 20, 13, false, { 255, 255, 255, 255 }, { 0, 0, 0 }, hp[5])
+		Draw:OutlinedText("", 1, false, 20, 20, 13, false, { 255, 255, 255, 255 }, { 0, 0, 0 }, hp[6])
 
 		for i = 1, #text do
 			local drawobj = text[i]
@@ -12274,9 +12287,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local rootpart = parts.rootpart.CFrame
 							local position = torso.Position
 							local resolved = false
-							local resolvedColor = menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag", COLOR, true)
-							local resolvedTransparency = menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag", COLOR)[4]/255
-							if menu:GetVal("Visuals", "Enemy ESP", "Show Resolved Flag") then
+							if menu:GetVal("Visuals", "Enemy ESP", "Flags")[3] then
 								local newpos = ragebot:GetResolvedPosition(ply, parts)
 								if newpos then
 									resolved = true
@@ -12322,53 +12333,61 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local GroupBox = ply.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 							local health = math.ceil(client.hud:getplayerhealth(ply))
 							local spoty = 0
-							local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", COLOR)[4] / 255
-							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Filled Box", COLOR)[4] / 255
-
+							local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", COLOR2)[4] / 255
+							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Box", COLOR1)[4] / 255
+							local espflags = menu:GetVal("Visuals", GroupBox, "Flags")
 							local distance = math.floor((parts.rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
 
 							if (topIsRendered or bottomIsRendered) then
-								local nameon = menu.options["Visuals"][GroupBox]["Name"][1]
-								local rankon = menu.options["Visuals"][GroupBox]["Rank"][1]
-								allesp[3][4][curplayer].Visible = resolved
-								allesp[3][4][curplayer].Center = false
-								allesp[3][4][curplayer].Position = Vector2.new(
-									math.floor(boxPosition.x) + boxSize.x + 1,
-									math.floor(boxPosition.y) - 4
-								)
-								if nameon or rankon then
+								if espflags[1] then
+									print("hi")
+									local playerdata = teamdata[1]:FindFirstChild(plyname) or teamdata[2]:FindFirstChild(plyname)
+									allesp[3][5][curplayer].Visible = true
+									allesp[3][5][curplayer].Text = "lvl ".. playerdata.Rank.Text
+									allesp[3][5][curplayer].Position = Vector2.new(
+										math.floor(boxPosition.x) + boxSize.x + 2,
+										math.floor(boxPosition.y) - 4 + spoty
+									)
+									spoty += 10
+
+								end
+
+
+								if espflags[2] then
+									
+									allesp[3][6][curplayer].Visible = true
+									allesp[3][6][curplayer].Text = tostring(distance).. "m"
+									allesp[3][6][curplayer].Position = Vector2.new(
+										math.floor(boxPosition.x) + boxSize.x + 2,
+										math.floor(boxPosition.y) - 4 + spoty
+									)
+									spoty += 10
+
+								end
+
+								if GroupBox == "Enemy ESP" then
+									if espflags[3] then
+										allesp[3][4][curplayer].Visible = resolved
+										allesp[3][4][curplayer].Position = Vector2.new(
+											math.floor(boxPosition.x) + boxSize.x + 2,
+											math.floor(boxPosition.y) - 4 + spoty
+										)
+									end
+								end
+								if menu.options["Visuals"][GroupBox]["Name"][1] then
 									--debug.profilebegin("renderVisuals Player ESP Render Name " .. plyname)
-									local namestring = ""
 
-									if rankon then
-										local playerdata = teamdata[1]:FindFirstChild(plyname) or teamdata[2]:FindFirstChild(plyname)
-										namestring = "[" .. playerdata.Rank.Text .. "]"
-									end
-									if nameon then
-										local name = tostring(plyname)
-										if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
-											name = string.lower(name)
-										elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
-											name = string.upper(name)
-										end
-
-										if rankon then
-											namestring ..= " " .. string_cut(
-												name,
-												menu:GetVal("Visuals", "ESP Settings", "Max Text Length")
-											)
-										else
-											namestring = string_cut(
-												name,
-												menu:GetVal("Visuals", "ESP Settings", "Max Text Length")
-											)
-										end
+								
+									local name = tostring(plyname)
+									if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
+										name = string.lower(name)
+									elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
+										name = string.upper(name)
 									end
 
-									allesp[4][1][curplayer].Text = namestring
+									allesp[4][1][curplayer].Text = name
 									allesp[4][1][curplayer].Visible = true
 									allesp[4][1][curplayer].Transparency = 1
-									allesp[4][1][curplayer].Color = resolvedColor
 
 									allesp[4][1][curplayer].Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y - 15)
 								end
@@ -12387,30 +12406,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										end
 										--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
 									end
+
+									if boxtransparencyfilled ~= 0 then
+										local box = allesp[2][1][curplayer]
+										box.Visible = true
+										box.Position = boxPosition
+										box.Size = boxSize
+										
+										box.Transparency = boxtransparencyfilled
+										box.Filled = true
+									end
 									--debug.profileend("renderVisuals Player ESP Render Box " .. plyname)
 								end
-								if menu.options["Visuals"][GroupBox]["Filled Box"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Box " .. plyname)
 
-									local box = allesp[2][1][curplayer]
-									box.Visible = true
-									box.Position = boxPosition
-									box.Size = boxSize
-									if not menu.options["Visuals"][GroupBox]["Box"][1] then
-										box.Position -= Vector2.new(1,1)
-										box.Size += Vector2.new(2,2)
-									end
-									box.Transparency = boxtransparencyfilled
-									box.Filled = true
-
-									if i ~= 0 then
-										box.Color = RGB(20, 20, 20)
-									end
-									--box.Color = i == 0 and color or bColor:Add(bColor:Mult(color, 0.2), 0.1)
-
-									--debug.profileend("renderVisuals Player ESP Render Box " .. plyname)
-								end
-								
 
 								if menu.options["Visuals"][GroupBox]["Health Bar"][1] then
 									--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. plyname)
@@ -12499,8 +12507,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									end
 
 									local weptext = allesp[4][2][curplayer]
-
-									spoty += 12
+									
 									weptext.Text = string_cut(
 										wepname,
 										menu:GetVal("Visuals", "ESP Settings", "Max Text Length")
@@ -12511,20 +12518,20 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									--debug.profileend("renderVisuals Player ESP Render Held Weapon " .. plyname)
 								end
 
-								if menu.options["Visuals"][GroupBox]["Distance"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Distance " .. plyname)
+								-- if menu.options["Visuals"][GroupBox]["Distance"][1] then
+								-- 	--debug.profilebegin("renderVisuals Player ESP Render Distance " .. plyname)
 
-									local disttext = allesp[4][3][curplayer]
+								-- 	local disttext = allesp[4][3][curplayer]
 
-									disttext.Text = tostring(distance) .. "m"
-									disttext.Visible = true
-									disttext.Position = Vector2.new(
-										boxPosition.x + boxSize.x * 0.5,
-										boxPosition.y + boxSize.y + spoty
-									)
+								-- 	disttext.Text = tostring(distance) .. "m"
+								-- 	disttext.Visible = true
+								-- 	disttext.Position = Vector2.new(
+								-- 		boxPosition.x + boxSize.x * 0.5,
+								-- 		boxPosition.y + boxSize.y + spoty
+								-- 	)
 
-									--debug.profileend("renderVisuals Player ESP Render Distance " .. plyname)
-								end
+								-- 	--debug.profileend("renderVisuals Player ESP Render Distance " .. plyname)
+								-- end
 
 								if menu.options["Visuals"][GroupBox]["Skeleton"][1] then
 									--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. plyname)
@@ -12553,9 +12560,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[4][2][curplayer].Color = priority_color
 									allesp[4][2][curplayer].Transparency = priority_alpha
 
-									allesp[4][3][curplayer].Color = priority_color
-									allesp[4][3][curplayer].Transparency = priority_alpha
-
 									for i = 1, #skelparts do
 										local line = allesp[1][i][curplayer]
 										line.Color = priority_color
@@ -12571,9 +12575,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 									allesp[4][2][curplayer].Color = friend_color
 									allesp[4][2][curplayer].Transparency = friend_alpha
-
-									allesp[4][3][curplayer].Color = friend_color
-									allesp[4][3][curplayer].Transparency = friend_alpha
 
 									for i = 1, #skelparts do
 										local line = allesp[1][i][curplayer]
@@ -12593,9 +12594,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[4][2][curplayer].Color = target_color
 									allesp[4][2][curplayer].Transparency = target_alpha
 
-									allesp[4][3][curplayer].Color = target_color
-									allesp[4][3][curplayer].Transparency = target_alpha
-
 									for i = 1, #skelparts do
 										local line = allesp[1][i][curplayer]
 										line.Color = target_color
@@ -12605,14 +12603,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[4][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Name", COLOR, true) -- RGB(menu.options["Visuals"][GroupBox]["Name"][5][1][1], menu.options["Visuals"][GroupBox]["Name"][5][1][2], menu.options["Visuals"][GroupBox]["Name"][5][1][3])
 									allesp[4][1][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Name", COLOR)[4] / 255
 
-									allesp[2][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", COLOR, true)
-									allesp[2][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Filled Box", COLOR, true)
+									allesp[2][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", COLOR2, true)
+									allesp[2][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", COLOR1, true)
 
 									allesp[4][2][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR, true)
 									allesp[4][2][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR)[4] / 255
-
-									allesp[4][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Distance", COLOR, true)
-									allesp[4][3][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Distance", COLOR)[4] / 255
 
 									for i = 1, #skelparts do
 										local line = allesp[1][i][curplayer]
@@ -14459,27 +14454,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = TOGGLE,
-										name = "Rank",
-										value = false,
-									},
-									{
-										type = TOGGLE,
 										name = "Box",
 										value = true,
 										extra = {
-											type = COLORPICKER,
-											name = "Enemy Box",
-											color = { 255, 0, 0, 150 },
-										},
-									},
-									{
-										type = TOGGLE,
-										name = "Filled Box",
-										value = false,
-										extra = {
-											type = COLORPICKER,
-											name = "Enemy Filled Box",
-											color = { 255, 0, 0, 90 },
+											type = DOUBLE_COLORPICKER,
+											name = { "Enemy Box Fill", "Enemy Box" },
+											color = { { 255, 0, 0, 0 }, { 255, 0, 0, 150 } },
 										},
 									},
 									{
@@ -14514,13 +14494,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = TOGGLE,
-										name = "Distance",
+										name = "Held Weapon Icon",
 										value = false,
-										extra = {
-											type = COLORPICKER,
-											name = "Enemy Distance",
-											color = { 255, 255, 255, 200 },
-										},
+									},
+									{
+										type = COMBOBOX,
+										name = "Flags",
+										values = { { "Level", true }, { "Distance", true }, { "Resolver", false } },
 									},
 									{
 										type = TOGGLE,
@@ -14567,16 +14547,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = TOGGLE,
-										name = "Show Resolved Flag",
-										extra = {
-											type = COLORPICKER,
-											name = "Resolved Flag Color",
-											color = { 255, 255, 0, 255 },
-										},
-										value = false,
-									},
-									{
-										type = TOGGLE,
 										name = "Show Backtrack Position",
 										extra = {
 											type = COLORPICKER,
@@ -14607,27 +14577,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = TOGGLE,
-										name = "Rank",
-										value = false,
-									},
-									{
-										type = TOGGLE,
 										name = "Box",
-										value = false,
+										value = true,
 										extra = {
-											type = COLORPICKER,
-											name = "Team Box",
-											color = { 0, 255, 0, 150 },
-										},
-									},
-									{
-										type = TOGGLE,
-										name = "Filled Box",
-										value = false,
-										extra = {
-											type = COLORPICKER,
-											name = "Team Filled Box",
-											color = { 0, 255, 0, 90 },
+											type = DOUBLE_COLORPICKER,
+											name = { "Enemy Box Fill", "Enemy Box" },
+											color = { { 0, 255, 0, 0 }, { 0, 255, 0, 150 } },
 										},
 									},
 									{
@@ -14662,13 +14617,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 									{
 										type = TOGGLE,
-										name = "Distance",
+										name = "Held Weapon Icon",
 										value = false,
-										extra = {
-											type = COLORPICKER,
-											name = "Team Distance",
-											color = { 255, 255, 255, 200 },
-										},
+									},
+									{
+										type = COMBOBOX,
+										name = "Flags",
+										values = { { "Level", false }, { "Distance", false } },
 									},
 									{
 										type = TOGGLE,
@@ -14845,7 +14800,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						{
 							name = { "Camera Visuals", "Viewmodel" },
 							autopos = "right",
-							size = 240,
+							size = 228,
 							[1] = {
 								content = {
 									{
