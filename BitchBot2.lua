@@ -268,7 +268,6 @@ end
 --validity check
 --SECTION commented these out for development
 
-
 -- make_synreadonly(syn)
 -- make_synreadonly(Drawing)
 -- protectfunction(getgenv)
@@ -305,9 +304,9 @@ menu = { -- this is for menu stuffs n shi
 	x = 0,
 	y = 0,
 	columns = {
-		width = (menuWidth - 40) / 2,
+		width = math.floor((menuWidth - 40) / 2),
 		left = 17,
-		right = (menuWidth - 20) / 2 + 13,
+		right = math.floor((menuWidth - 20) / 2) + 13,
 	},
 	activetab = 1,
 	open = true,
@@ -9139,6 +9138,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 
 		function ragebot:GetResolvedPosition(player, curbodyparts)
+			if not menu:GetVal("Rage", "Settings", "Resolve Fake Positions") then return end
 			local resolvedPosition
 			local misses = self.predictedMisses[player]
 			local modmisses = misses and misses % 5
@@ -9635,6 +9635,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				text.Text ..= string.format("\n--hitscan-- %d %d %d %d %d %d %d %d", unpack(hitscanPoints))
 				text.Text ..= string.format("\n--hitbox shift method-- %d %d %d %d %d", unpack(hitboxShiftPoints))
 				text.Text ..= string.format("\n--hitbox-- %d %d", unpack(hitboxShiftAmount))
+				text.Text ..= string.format("\n--smart legitbot-- %0.1f", legitbot.smart)
 				text.Text ..= ("%s %s %s"):format(menu.inmenu and "true" or "false", menu.inmiddlemenu and "true" or "false", menu.intabs and "true" or "false")
 				if ragebot.lasthittick and ragebot.lasthittime then
 					text.Text ..= string.format("\n--backtracking-- %dms", (ragebot.lasthittick - ragebot.lasthittime) * 1000)
@@ -10238,51 +10239,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								blowuptime = 0.2,
 							},
 						}
-						if not (
-								table.find(menu.friends, args[1].Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
-							) and menu:GetVal("Misc", "Exploits", "Grenade Teleport") and args[1] ~= LOCAL_PLAYER
-						then
-							if not table.find(menu.priority, args[1].Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
-							then
-								return
-							end
-							fragargs.blowuptime = 1
-
-							local killerbodyparts = client.replication.getbodyparts(args[1])
-							if not killerbodyparts then
-								return func(...)
-							end
-							local rep = ragebot.repupdates[args[1]][#ragebot.repupdates[args[1]]]
-							local repupdatePosition = rep and rep.position or killerbodyparts.rootpart.Position
-
-							fragargs[2].frames[1].a = Vector3.new(0 / 0)
-							fragargs[2].frames[2] = {
-								v0 = Vector3.new(0 / 0, 0 / 0, 0 / 0),
-								glassbreaks = {},
-								t0 = 0 / 0,
-								offset = Vector3.new(0 / 0, 0 / 0, 0 / 0),
-								rot0 = CFrame.new(0 / 0, 0 / 0, 0 / 0),
-								a = Vector3.new(0 / 0),
-								p0 = Vector3.new(0 / 0),
-								rotv = Vector3.new(),
-							}
-							fragargs[2].frames[3] = {
-								v0 = Vector3.new(),
-								glassbreaks = {},
-								t0 = 0,
-								offset = Vector3.new(),
-								rot0 = CFrame.new(),
-								a = Vector3.new(),
-								p0 = repupdatePosition + Vector3.new(0, 2, 0),
-								rotv = Vector3.new(),
-							}
-						end
-						local bp = client.replication.getbodyparts(args[1])
-						for i = 1, menu:GetVal("Misc", "Exploits", "Grenade Teleport") and 3 or 1 do
+						for i = 1, 3 do
 							send(nil, "newgrenade", unpack(fragargs))
-							if bp and bp.rootpart then
-								fragargs[2].frames[2].p0 += bp.rootpart.Velocity * 0.5
-							end
 						end
 					end
 
@@ -10451,7 +10409,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		client.char.ondied:connect(function()
 			if misc then
 				misc:BypassSpeedCheck(false)
-				misc:Invisibility(true)
+				-- misc:Invisibility(true)
 			end
 		end)
 		misc.beams = {}
@@ -11307,9 +11265,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					misc.autopeektimeout = 100
 				end
 				if args[1] == "logmessage" or args[1] == "debug" then
+					CreateThread(function()
+						wait(1)
+						menu.debugged = true
+					end)
 					local message = ""
 					for i = 1, #args - 1 do
-						
 						message ..= tostring(args[i]) .. ", "
 					end
 					message ..= tostring(args[#args])
@@ -11319,7 +11280,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 						return
 					end
-					return CreateNotification(message)
+					if not menu.debugged then 
+						CreateNotification(message)
+					end
+					return
 				end
 				if args[1] == "repupdate" then
 					if misc.teleporting then
@@ -11377,78 +11341,76 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						return
 					end
 				end
-				-- if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
-				-- 	local closest = math.huge
-				-- 	local part
-				-- 	for i, player in pairs(Players:GetPlayers()) do
-				-- 		if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
-				-- 		then
-				-- 			continue
-				-- 		end
-				-- 		if not table.find(menu.priority, player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
-				-- 		then
-				-- 			continue
-				-- 		end
-				-- 		if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
-				-- 			local bodyparts = client.replication.getbodyparts(player)
-				-- 			if bodyparts then
-				-- 				local fovToBone = camera:GetFOV(bodyparts.head)
-				-- 				if fovToBone < closest then
-				-- 					closest = fovToBone
-				-- 					part = bodyparts.head
-				-- 				end
-				-- 			end
-				-- 		end
-				-- 	end
+				if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
+					local closest = math.huge
+					local part
+					for i, player in pairs(Players:GetPlayers()) do
+						if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
+						then
+							continue
+						end
+						if not table.find(menu.priority, player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
+						then
+							continue
+						end
+						if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
+							local bodyparts = client.replication.getbodyparts(player)
+							if bodyparts then
+								local fovToBone = camera:GetFOV(bodyparts.head)
+								if fovToBone < closest then
+									closest = fovToBone
+									part = bodyparts.head
+								end
+							end
+						end
+					end
 
-				-- 	if (closest and part) then
-				-- 		local args = {
-				-- 			"FRAG",
-				-- 			{
-				-- 				frames = {
-				-- 					{
-				-- 						v0 = Vector3.new(),
-				-- 						glassbreaks = {},
-				-- 						t0 = 0,
-				-- 						offset = Vector3.new(),
-				-- 						rot0 = CFrame.new(),
-				-- 						a = Vector3.new(0 / 0),
-				-- 						p0 = client.lastrepupdate or client.char.head.Position,
-				-- 						rotv = Vector3.new(),
-				-- 					},
-				-- 					{
-				-- 						v0 = Vector3.new(),
-				-- 						glassbreaks = {},
-				-- 						t0 = 0,
-				-- 						offset = Vector3.new(),
-				-- 						rot0 = CFrame.new(),
-				-- 						a = Vector3.new(0 / 0),
-				-- 						p0 = Vector3.new(0 / 0),
-				-- 						rotv = Vector3.new(),
-				-- 					},
-				-- 					{
-				-- 						v0 = Vector3.new(),
-				-- 						glassbreaks = {},
-				-- 						t0 = 0,
-				-- 						offset = Vector3.new(),
-				-- 						rot0 = CFrame.new(),
-				-- 						a = Vector3.new(),
-				-- 						p0 = part.Position + Vector3.new(0, 3, 0),
-				-- 						rotv = Vector3.new(),
-				-- 					},
-				-- 				},
-				-- 				time = tick(),
-				-- 				curi = 1,
-				-- 				blowuptime = 0,
-				-- 			},
-				-- 		}
+					if (closest and part) then
+						local args = {
+							"FRAG",
+							{
+								frames = {
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(0 / 0),
+										p0 = client.lastrepupdate or client.char.head.Position,
+										rotv = Vector3.new(),
+									},
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0.002,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(0 / 0),
+										p0 = Vector3.new(0 / 0),
+										rotv = Vector3.new(),
+									},
+									{
+										v0 = Vector3.new(),
+										glassbreaks = {},
+										t0 = 0.003,
+										offset = Vector3.new(),
+										rot0 = CFrame.new(),
+										a = Vector3.new(),
+										p0 = part.Position + Vector3.new(0, 3, 0),
+										rotv = Vector3.new(),
+									},
+								},
+								time = tick(),
+								blowuptime = 0.003,
+							},
+						}
 
-				-- 		send(client.net, "newgrenade", unpack(args))
-				-- 		client.hud:updateammo("GRENADE")
-				-- 		return
-				-- 	end
-				-- else
-				if args[1] == "newbullets" then
+						send(client.net, "newgrenade", unpack(args))
+						client.hud:updateammo("GRENADE")
+						return
+					end
+				elseif args[1] == "newbullets" then
 					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
 						send(self, "equip", client.logic.currentgun.id)
 					end
@@ -11722,8 +11684,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local hitboxPriority = menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 2 and "torso" or "closey :)"
 							local hitscan = misc:GetParts(menu:GetVal("Legit", "Aim Assist", "Hitscan Points"))
 
-							if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind == 2
+							if client.logic.currentgun.type ~= "KNIFE" and INPUT_SERVICE:IsMouseButtonPressed(keybind) or keybind >= 2
 							then
+								local speed = 1
+								if keybind == 3 then
+									speed = 0.2
+									for i = 0, 1 do
+										if INPUT_SERVICE:IsMouseButtonPressed(i) then
+											speed += 0.4
+										end
+									end
+								end
+								legitbot.smart = speed
 								local priority_list = {}
 								for k, PlayerName in pairs(menu.priority) do
 									if Players:FindFirstChild(PlayerName) then
@@ -11740,7 +11712,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									legitbot:AimAtTarget(
 										targetPart,
 										smoothing,
-										menu:GetVal("Legit", "Aim Assist", "Smoothing Type")
+										menu:GetVal("Legit", "Aim Assist", "Smoothing Type"),
+										speed
 									)
 								end
 							end
@@ -11778,7 +11751,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 
-				function legitbot:AimAtTarget(targetPart, smoothing, smoothtype)
+				function legitbot:AimAtTarget(targetPart, smoothing, smoothtype, speed)
 					--debug.profilebegin("Legitbot AimAtTarget")
 					if not targetPart then
 						return
@@ -11842,12 +11815,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 					local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, Pos.y - LOCAL_MOUSE.y)
 					if smoothtype == 1 then
-						Move_Mouse(aimbotMovement / smoothing)
+						Move_Mouse(aimbotMovement * speed / smoothing)
 					else
 						local unitMovement = aimbotMovement.Unit
-						local newMovement = aimbotMovement.Magnitude > unitMovement.Magnitude and unitMovement or aimbotMovement / 5
+						local newMovement = aimbotMovement.Magnitude > unitMovement.Magnitude and unitMovement or aimbotMovement / 50
 
-						Move_Mouse(newMovement / smoothing * 100)
+						Move_Mouse(newMovement * speed / smoothing * 100)
 					end
 					--debug.profileend("Legitbot AimAtTarget")
 				end
@@ -13473,11 +13446,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 
-						-- if menu:GetVal("Misc", "Exploits", "Rapid Kill") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", KEYBIND)
-						-- then
-						-- 	misc:RapidKill()
-						-- 	return Enum.ContextActionResult.Sink
-						-- end
+						if menu:GetVal("Misc", "Exploits", "Rapid Kill") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Rapid Kill", KEYBIND)
+						then
+							misc:RapidKill()
+							return Enum.ContextActionResult.Sink
+						end
 						
 						if menu:GetVal("Misc", "Exploits", "Invisibility") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Invisibility", KEYBIND)
 						then
@@ -13549,14 +13522,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 
 				MouseUnlockHook()
-				--debug.profilebegin("Main BB Loop")
-				--debug.profilebegin("Noclip Cheat check")
-				-- if client.char.alive and menu:GetVal("Misc", "Exploits", "Rapid Kill") and menu:GetVal("Misc", "Exploits", "Auto Rapid Kill")
-				-- then
-				-- 	if misc:RapidKill() then
-				-- 		client.net:send("forcereset")
-				-- 	end
-				if not client.char.alive then
+				-- debug.profilebegin("Main BB Loop")
+				-- debug.profilebegin("Noclip Cheat check")
+				if client.char.alive and menu:GetVal("Misc", "Exploits", "Rapid Kill") and menu:GetVal("Misc", "Exploits", "Auto Rapid Kill")
+
+				then
+					if misc:RapidKill() then
+						client.net:send("forcereset")
+					end
+				else
 					if menu:GetVal("Misc", "Extra", "Auto Respawn") then
 						client.menu:deploy() -- this is uber ass
 					end
@@ -13936,7 +13910,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = DROPBOX,
 									name = "Aimbot Key",
 									value = 1,
-									values = { "Mouse 1", "Mouse 2", "Always" },
+									values = { "Mouse 1", "Mouse 2", "Always", "Dynamic Always" },
 								},
 								{
 									type = DROPBOX,
@@ -14185,10 +14159,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							autopos = "right",
 							content = {
 								--[[{
-							type = TOGGLE,
-							name = "Extend Penetration",
-							value = false
-						},]]
+									type = TOGGLE,
+									name = "Extend Penetration",
+									value = false
+								},]]
 								-- {
 								-- 	type = SLIDER,
 								-- 	name = "Extra Penetration",
@@ -14309,6 +14283,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										name = "Aimbot Performance Mode",
 										value = true,
 										tooltip = "Lowers polling rate for targetting in Rage Aimbot.",
+									},
+									{
+										type = TOGGLE,
+										name = "Resolve Fake Positions",
+										value = true,
+										tooltip = "Rage aimbot attempts to resolve Crimwalk on other players.\nDisable if you are having issues with resolver.",
 									},
 									{
 										type = TOGGLE,
@@ -15540,7 +15520,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = TOGGLE,
 										name = "Auto Martyrdom",
 										value = false,
-										tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position. If Grenade Teleport is on, it will place the grenade at the enemy.",
+										tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position.",
 									},
 									{
 										type = TOGGLE,
@@ -15586,40 +15566,40 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										maxvalue = 16,
 										value = 8
 									},
-									{
-										type = TOGGLE,
-										unsafe = true,
-										name = "Invisibility",
-										extra = {
-											type = KEYBIND,
-											toggletype = 0,
-										},
-									},
 									-- {
 									-- 	type = TOGGLE,
 									-- 	unsafe = true,
-									-- 	name = "Rapid Kill",
-									-- 	value = false,
+									-- 	name = "Invisibility",
 									-- 	extra = {
 									-- 		type = KEYBIND,
 									-- 		toggletype = 0,
 									-- 	},
-									-- 	tooltip = "Throws 3 grenades instantly on random enemies.",
 									-- },
-									-- {
-									-- 	type = TOGGLE,
-									-- 	unsafe = true,
-									-- 	name = "Auto Rapid Kill",
-									-- 	value = false,
-									-- 	tooltip = "Throws 3 grenades instantly on random enemies,\nthen respawns to do it again.\nWorks only when Rapid Kill is enabled.",
-									-- },
-									-- {
-									-- 	type = TOGGLE,
-									-- 	unsafe = true,
-									-- 	name = "Grenade Teleport",
-									-- 	value = false,
-									-- 	tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes.",
-									-- },
+									{
+										type = TOGGLE,
+										unsafe = true,
+										name = "Rapid Kill",
+										value = false,
+										extra = {
+											type = KEYBIND,
+											toggletype = 0,
+										},
+										tooltip = "Throws 3 grenades instantly on random enemies.",
+									},
+									{
+										type = TOGGLE,
+										unsafe = true,
+										name = "Auto Rapid Kill",
+										value = false,
+										tooltip = "Throws 3 grenades instantly on random enemies,\nthen respawns to do it again.\nWorks only when Rapid Kill is enabled.",
+									},
+									{
+										type = TOGGLE,
+										unsafe = true,
+										name = "Grenade Teleport",
+										value = false,
+										tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes.",
+									},
 									{
 										type = TOGGLE,
 										unsafe = true,
