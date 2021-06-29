@@ -10627,7 +10627,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					then
 						continue
 					end
-					client.logic.gammo -= 1
 					local curbodyparts = client.replication.getbodyparts(v)
 					if not curbodyparts then
 						return
@@ -10650,7 +10649,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								{
 									v0 = Vector3.new(),
 									glassbreaks = {},
-									t0 = 0,
+									t0 = 0.002,
 									offset = Vector3.new(),
 									rot0 = CFrame.new(),
 									a = Vector3.new(0 / 0),
@@ -10660,27 +10659,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								{
 									v0 = Vector3.new(),
 									glassbreaks = {},
-									t0 = 0,
+									t0 = 0.003,
 									offset = Vector3.new(),
 									rot0 = CFrame.new(),
 									a = Vector3.new(),
-									p0 = chosenpos + Vector3.new(0, 3, 0),
+									p0 = part.Position + Vector3.new(0, 3, 0),
 									rotv = Vector3.new(),
 								},
 							},
 							time = tick(),
-							curi = 1,
-							blowuptime = 0,
+							blowuptime = 0.003,
 						},
 					}
 
 					send(client.net, "newgrenade", unpack(args))
+					client.logic.gammo -= 1
 					nadesent = true
 					client.hud:updateammo("GRENADE")
 				end
 			end
 
-			return client.logic.gammo <= 0
+			return nadesent
 		end
 
 		function misc:Teleport(newpos)
