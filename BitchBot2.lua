@@ -12743,7 +12743,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									if (setwepicons[curplayer] ~= nil or wepname ~= "???") and tempimage ~= nil then
 	
 										tempicon.Visible = true
-										tempicon.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5 - (tempimage.w/2), boxPosition.y + boxSize.y + yaddpos + 2)
+										tempicon.Position = Vector2.new(math.floor(boxPosition.x + boxSize.x * 0.5 - (tempimage.w/2)), math.floor(boxPosition.y + boxSize.y + yaddpos + 2))
 										tempicon.Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR)[4]/255
 									
 									elseif not menu:GetVal("Visuals", GroupBox, "Held Weapon") then
