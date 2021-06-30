@@ -16059,7 +16059,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							x = menu.columns.left,
 							y = 400,
 							width = menu.columns.width,
-							height = 182,
+							height = 183,
 							content = {
 								{
 									type = TOGGLE,
@@ -16107,7 +16107,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							x = menu.columns.right,
 							y = 400,
 							width = menu.columns.width,
-							height = 182,
+							height = 183,
 							content = {
 								{
 									type = TEXTBOX,
