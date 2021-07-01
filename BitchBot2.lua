@@ -12488,11 +12488,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							-- local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
 
 							-- local boxSize = Vector2.new(sizeX, sizeY)
-							local _width = math.floor(math.abs(top.x - bottom.x))
-							local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width / 2))
+							local _width = math.max(math.floor(math.abs(top.x - bottom.x)), 3)
+							local _height = math.max(math.floor(math.max(math.abs(bottom.y - top.y), _width / 2)), 3)
 							local boxSize = Vector2.new(math.floor(math.max(_height / 1.5, _width)), _height)
 							local boxPosition = Vector2.new(
-								math.max(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), 3),
+								math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5),
 								math.floor(math.min(top.y, bottom.y))
 							)
 
