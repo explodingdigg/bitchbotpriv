@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "..\\..\\Synapse-X\\scripts\\bitchbotpriv\\bitchbotpriv"
+		},
+		{
+			"path": "..\\..\\Synapse-X\\scripts"
+		},
+		{
+			"path": "..\\..\\Synapse-X\\workspace\\bitchbotpriv\\bitchbotpriv-1"
+		},
+		{
+			"name": "meowbot",
+			"path": "c:\\Program Files (x86)\\Steam\\steamapps\\common\\Counter-Strike Global Offensive\\meowbot"
+		},
+		{
+			"name": "froghook-1",
+			"path": "..\\..\\Synapse-X\\scripts\\froghook-1"
+		},
+		{
+			"name": "froghook-1",
+			"path": "..\\..\\Synapse-X\\scripts\\froghook-1\\froghook-1"
+		}
+	],
+	"settings": {}
+}
