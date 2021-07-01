@@ -899,7 +899,7 @@ local keyNames = {
 	RightAlt = "RAlt",
 	Backspace = "Back",
 	Plus = "+",
-	Multiply = "x",
+	Multiplaye = "x",
 	PageUp = "PgUp",
 	PageDown = "PgDown",
 	Delete = "Del",
@@ -2651,8 +2651,8 @@ function menu.Initialize(menutable)
 	local oldcopy = { cp.drawings[#cp.drawings] }
 
 	--ColorpickerRect(false, 197, cp.h - 25, 75, 20, {30, 30, 30, 255}, cp.drawings)
-	ColorpickerText("[ Apply ]", false, true, 235, cp.h - 23, cp.drawings)
-	local applytext = cp.drawings[#cp.drawings]
+	ColorpickerText("[ Applaye ]", false, true, 235, cp.h - 23, cp.drawings)
+	local applayetext = cp.drawings[#cp.drawings]
 
 	local function set_newcolor(r, g, b, a)
 		newcolor.Color = RGB(r, g, b)
@@ -2754,7 +2754,7 @@ function menu.Initialize(menutable)
 				menu:SetDragBarB(cp.x + 12 + math.floor(156 * (color[4] / 255)), cp.y + 188)
 			end
 
-			applytext.Position = Vector2.new(235 + cp.x, cp.y + cp.h - 23)
+			applayetext.Position = Vector2.new(235 + cp.x, cp.y + cp.h - 23)
 			maincolor.Color = Color3.fromHSV(h, 1, 1)
 			cp.drawings[7].Text = text
 		end
@@ -4018,7 +4018,7 @@ function menu.Initialize(menutable)
 		end
 		if menu.colorPickerOpen then
 			if menu:MouseInColorPicker(197, cp.h - 25, 75, 20) then
-				--apply newcolor to oldcolor
+				--applaye newcolor to oldcolor
 				local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 				menu.colorPickerOpen[4][1].Color = tempclr
 				for i = 2, 3 do
@@ -5965,25 +5965,25 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 
 		local templist = {}
 		for k, v in pairs(playerz) do
-			local plyrname = { v.Name, RGB(255, 255, 255) }
+			local playername = { v.Name, RGB(255, 255, 255) }
 			local teamtext = { "None", RGB(255, 255, 255) }
-			local plyrstatus = { "None", RGB(255, 255, 255) }
+			local playerstatus = { "None", RGB(255, 255, 255) }
 			if v.Team ~= nil then
 				teamtext[1] = v.Team.Name
 				teamtext[2] = v.TeamColor.Color
 			end
 			if v == LOCAL_PLAYER then
-				plyrstatus[1] = "Local Player"
-				plyrstatus[2] = RGB(66, 135, 245)
+				playerstatus[1] = "Local Player"
+				playerstatus[2] = RGB(66, 135, 245)
 			elseif table.find(menu.friends, v.Name) then
-				plyrstatus[1] = "Friend"
-				plyrstatus[2] = RGB(0, 255, 0)
+				playerstatus[1] = "Friend"
+				playerstatus[2] = RGB(0, 255, 0)
 			elseif table.find(menu.priority, v.Name) then
-				plyrstatus[1] = "Priority"
-				plyrstatus[2] = RGB(255, 210, 0)
+				playerstatus[1] = "Priority"
+				playerstatus[2] = RGB(255, 210, 0)
 			end
 
-			table.insert(templist, { plyrname, teamtext, plyrstatus })
+			table.insert(templist, { playername, teamtext, playerstatus })
 		end
 		plist[5] = templist
 		if playerlistval ~= nil then
@@ -6162,7 +6162,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 
 				if travel.Unit.x == travel.Unit.x then
 					rootpart.Anchored = false
-					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
+					rootpart.Velocity = travel.Unit * speed --multiplaye the unit by the speed to make
 				else
 					rootpart.Velocity = Vector3.new(0, 0, 0)
 					rootpart.Anchored = true
@@ -6243,7 +6243,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		end
 	end
 
-	local oldslectedplyr = nil
+	local oldslectedplayer = nil
 	menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			if menu.open then
@@ -6286,8 +6286,8 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						end
 
 						for k, table_ in pairs({ menu.friends, menu.priority }) do
-							for index, plyrname in pairs(table_) do
-								if selectedPlayer.Name == plyrname then
+							for index, playername in pairs(table_) do
+								if selectedPlayer.Name == playername then
 									table.remove(table_, index)
 								end
 							end
@@ -6311,9 +6311,9 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					updateplist()
 
 					if plist[1] ~= nil then
-						if oldslectedplyr ~= selectedPlayer then
+						if oldslectedplayer ~= selectedPlayer then
 							setplistinfo(selectedPlayer)
-							oldslectedplyr = selectedPlayer
+							oldslectedplayer = selectedPlayer
 						end
 					else
 						setplistinfo(nil)
@@ -6648,9 +6648,9 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 		distance = {},
 	}
 
-	local maxplyrs = Players.MaxPlayers
+	local maxplayers = Players.MaxPlayers
 
-	for i = 1, maxplyrs do
+	for i = 1, maxplayers do
 		Draw:OutlinedRect(false, 20, 20, 20, 20, { 0, 0, 0, 220 }, allesp.outerbox)
 		Draw:OutlinedRect(false, 20, 20, 20, 20, { 0, 0, 0, 220 }, allesp.innerbox)
 		Draw:OutlinedRect(false, 20, 20, 20, 20, { 255, 255, 255, 255 }, allesp.box)
@@ -7367,25 +7367,25 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 
 		local templist = {}
 		for k, v in pairs(playerz) do
-			local plyrname = { v.Name, RGB(255, 255, 255) }
+			local playername = { v.Name, RGB(255, 255, 255) }
 			local teamtext = { "None", RGB(255, 255, 255) }
-			local plyrstatus = { "None", RGB(255, 255, 255) }
+			local playerstatus = { "None", RGB(255, 255, 255) }
 			if v.Team ~= nil then
 				teamtext[1] = v.Team.Name
 				teamtext[2] = v.TeamColor.Color
 			end
 			if v == LOCAL_PLAYER then
-				plyrstatus[1] = "Local Player"
-				plyrstatus[2] = RGB(66, 135, 245)
+				playerstatus[1] = "Local Player"
+				playerstatus[2] = RGB(66, 135, 245)
 			elseif table.find(menu.friends, v.Name) then
-				plyrstatus[1] = "Friend"
-				plyrstatus[2] = RGB(0, 255, 0)
+				playerstatus[1] = "Friend"
+				playerstatus[2] = RGB(0, 255, 0)
 			elseif table.find(menu.priority, v.Name) then
-				plyrstatus[1] = "Priority"
-				plyrstatus[2] = RGB(255, 210, 0)
+				playerstatus[1] = "Priority"
+				playerstatus[2] = RGB(255, 210, 0)
 			end
 
-			table.insert(templist, { plyrname, teamtext, plyrstatus })
+			table.insert(templist, { playername, teamtext, playerstatus })
 		end
 		plist[5] = templist
 		if playerlistval ~= nil then
@@ -7470,8 +7470,8 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 						end
 
 						for k, table_ in pairs({ menu.friends, menu.priority }) do
-							for index, plyrname in pairs(table_) do
-								if selectedPlayer.Name == plyrname then
+							for index, playername in pairs(table_) do
+								if selectedPlayer.Name == playername then
 									table.remove(table_, index)
 								end
 							end
@@ -7495,9 +7495,9 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 					updateplist()
 
 					if plist[1] ~= nil then
-						if oldslectedplyr ~= selectedPlayer then
+						if oldslectedplayer ~= selectedPlayer then
 							setplistinfo(selectedPlayer)
-							oldslectedplyr = selectedPlayer
+							oldslectedplayer = selectedPlayer
 						end
 					else
 						setplistinfo(nil)
@@ -7558,7 +7558,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		["AUG HBAR"] = {"iVBORw0KGgoAAAANSUhEUgAAADEAAAAPCAYAAABN7CfBAAACDUlEQVR4nLXWO2uUQRQG4Gc1qy6KEu8oCGqTgPYWNqKFgrWXH+AFhCjWotgoiJhK8AekNIWVgiKxULERNAZsVLzgLfFCNDGSsGMxs2bYfCab3fWFYWbeOWe+c+Y758yUQghawCm8w4M0X4IJLMR3dGAKF/Aal1v52L/Q0aL+HSxGFzbhIioYw4dMbgMeo4p+0aG2oRRCKOM8jrdpz6W4jqcZV8EvHMEKnEAtBMbxO5MtY7JgXMOyxP3VKYUQBrGtPfY3hIBSNn+EbixvQHcUi/AcI/iE4VJoMSmawISYO6dxA2+TYWMN6q8X822iRnTgvRiz88UX3MIwfuJMtvYQvejEJVzFkBgGozgrht3LJF8fMrPh4wwmhPAmzI1qAbc/hCC17owfCiGcTPyOEEJPJldrUyGEmwV8U2226vRC/MX9GMC9uvXx1C9IJ13T2S5WITgkltcclaSzsrGDnxtFTkziHK6YrgCrCuTWpX4fdqVxn2kHymI4fa7T2yom9o/mTJ6JIid6cK2O+yZeWrn82tQfzri+bLxXzJl6lFNfLVhrCkVOVAq4qljONmbc5tR31RnVKZ70QRwt2OsVDqT92oJSCGGnWPKINfy+rHxluI092fwuduOYaYdyDCj+E21HaR7XRK/4VqphBGvabVAzWDAP2cG6+WpsaaMtTWM+D8BBfBUvrWd4ovFb9r/iD1BPGUL5VqhSAAAAAElFTkSuQmCC", 49, 15},
 		["AUTO 9"] = {"iVBORw0KGgoAAAANSUhEUgAAAB0AAAAPCAYAAAAYjcSfAAABPklEQVR4nL3UPUtcQRjF8d8uuwYiKVTWQlzBRkk6Y5UUAVPapQvJJ7HTzsoqYG3hV4gG89JKlmAZEQKGVCoqmBgtlMdids1wUUHXm383Z+6dM8+cZ6YSETI+YAR72MEPzOHE9YxhGNuZ1ovjbDyKASxiqpKZNvEFgzjLfviKoxtMX6CBjUzrw2E2/o0ePMFaJSKamMVjPLth8W74iSrqWBIRgxHxPv4PrYhQwwP8ko60VtjhjpTNHym3/vsoO890GW+yuQW8wzhW25trSU0yIzXZbfmL73llE4UPGlIWQ1IW51J3z2P/DoaXdCp9im+FuWns+nfsPVhH6JJOpW8L+hZWul38Oqp4iNcF/VNZhh3TV1JuOQdlm768Qt8t23RSauUOp/hYpmklIh5JV6De1jalJ7E0qnieGcLnMg3hAkvWtlcmHbfCAAAAAElFTkSuQmCC", 29, 15},
 		["AWS"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAICAYAAAC73qx6AAABHElEQVR4nMXTsUpcYRDF8d/qEhWxEkQWQTAGMUKKVKnS2MXSR7Cy9SGshDxBLKxMo5YWQlJoUgVCithskY2VlUVEFHFPinurZdds9or+YaqZM9+Z4ZtaEhVYw4ceuQbmcFzlgX6pDTjIO7zFK/zoUdNAHX8Gs/ZfpJZkBTNY7kie430X0Tg+YvEBjVzhSwV9aklamFQYfCqaeFGlQf0f+TY2cITn2McQ1hVfagHbHZpr7OFEcR+Xffi47d9yD5K0klylO+0k40kkGUlyk+RbkpdJ5pO8SXLQoflV1j9q1DGKsXKuTWxhFrvlxr/iFEt4hkP8LOub2MFnnOE3WpW3OwB1hfFPGMYdLsp4jVVMYRoTijv63tFj75G83stfjl3YXlWyhK8AAAAASUVORK5CYII=", 50, 8},
-		["BEOWULF ECR"] = {"iVBORw0KGgoAAAANSUhEUgAAACwAAAAPCAYAAACfvC2ZAAABv0lEQVR4nLXWv48NURQH8M/w/MrGJmQLkfiVrGYL0YiGhEIl4Q/gf1BJFBLR6VWUQii3ZiOiUCCEKERkC4pHgbWxll3vHcW97Ji3nnlvnm9ykjv3/JhzvnPuPVNEhAbYj2942STIKpjEKVysKloNAy9hAicwjusN443hMNbh+WoGRQOGL2FKSnQn9uA2nmEZa7MsYDbbLmMRnbz+gi4+Yz7H3Iw7OCMR0pPwxyGSDWytadvFmgHiFniNu1LCC2WDFrbUDFYNXBfFALZvJPbnpLyWsL5s0LSH6+ApbuFATiTwHV9zcvN5r40b0hf5K4oYrInf4onUp21ctlL0jywbKz4H8XCAd/RH/BtzEXE1Ig5FRBERSvIu2zyKiNMRMR4R7yv++yo+jaRlpdHL6Egn9RqmpZNdxV5/HrxZbNPb351REPsbEdEtsfEiIs5GxPYa1U5nn25ETJX2L1QYnhw1wx9wM7P5uGadR3Eyr6/gVUnXrtjukq6p0SAixoao9EFmbzEiJiq6IxWGz4+S4WEn3Q4cx26cq+g24RM25OcZHBuSzx40Gc39cF/6JyDdt7+GQGP8r8Exk2Pfy9J3GAyCn1DyDO+30BjQAAAAAElFTkSuQmCC", 44, 15},
+		["BEOWULF ECR"] = {"iVBORw0KGgoAAAANSUhEUgAAACwAAAAPCAYAAACfvC2ZAAABv0lEQVR4nLXWv48NURQH8M/w/MrGJmQLkfiVrGYL0YiGhEIl4Q/gf1BJFBLR6VWUQii3ZiOiUCCEKERkC4pHgbWxll3vHcW97Ji3nnlvnm9ykjv3/JhzvnPuPVNEhAbYj2942STIKpjEKVysKloNAy9hAicwjusN443hMNbh+WoGRQOGL2FKSnQn9uA2nmEZa7MsYDbbLmMRnbz+gi4+Yz7H3Iw7OCMR0pPwxyGSDWytadvFmgHiFniNu1LCC2WDFrbUDFYNXBfFALZvJPbnplayeWsL5s0LSH6+ApbuFATiTwHV9zcvN5r40b0hf5K4oYrInf4onUp21ctlL0jywbKz4H8XCAd/RH/BtzEXE1Ig5FRBERSvIu2zyKiNMRMR4R7yv++yo+jaRlpdHL6Egn9RqmpZNdxV5/HrxZbNPb351REPsbEdEtsfEiIs5GxPYa1U5nn25ETJX2L1QYnhw1wx9wM7P5uGadR3Eyr6/gVUnXrtjukq6p0SAixoao9EFmbzEiJiq6IxWGz4+S4WEn3Q4cx26cq+g24RM25OcZHBuSzx40Gc39cF/6JyDdt7+GQGP8r8Exk2Pfy9J3GAyCn1DyDO+30BjQAAAAAElFTkSuQmCC", 44, 15},
 		["BEOWULF TCR"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAOCAYAAABth09nAAABx0lEQVR4nL3Wv29OURjA8c/bvrQEibQhIhITkf4Bfqw2f4FIJEQwWInJYDAYTRYWk4VFTLRDYxCLRCTUUJJSIaJSSVstHsO5jdPbt+99e/u23+Qk9zznnOfnee69jYiwRq7gEd6uVVELTuIlxqo29nTBWG8XdKzEbmztZGOzpoGDOIu/OIe9+CYlJgp5j/+J+lPIn2MCjQr9RzGI8xiXqtKWRkRMor/Nnnf4mc03YwgDVcpb8GLRbiaLYh6WB9iPSUxjBr+ytQFcwAHMNbGnwvjhwsgIvkuBzK/C+WmpIvAD27GpmJedK7MFn/Glhb7Zwq85zIvEWEQ8iYjfsZTXEbEjIpTG9eiMiYjYVzq7PyIORcRQROxsobvWaOIr+nBcukJ3sFBEer/IQJmbRSZvZJl9jGNSvyzyQOqJnA9tKlCbpnQvhzGFu3jTwbkZvM/mV3EPp3A7k/d1x81qmrgoBdIq8yvRi8vF8ycp+EEpGTnlaqwfNe/kpawPzmTyZkQsZGu3utUDVaPOoV0RMVU4OtxifTwLZHSjAqnzZZ/FNTyUXgxlRrPnI9hWw8bqWYfsnI6lnNiIitT9RWnHU3zEs2K8Wgcby/gH8jbLOOESHgwAAAAASUVORK5CYII=", 50, 14},
 		["BFG 50"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAKCAYAAAD2Fg1xAAABWElEQVR4nMXUv0vVYRTH8dc3b5ZpZC3lUIKLINHi6N/R4B+QTu7N4daug3+C0tTQGIgKDkFTQRimqEMgopbJtU7D+V66onjzfq37hsP3+cJ5nud8zo+niAht0oVHOMEeDjCKVxgsfa5jCH0IvGv3slYUFYQM42O5/oY6DnEfW7iDXnSXPvWm9ZVTq7B3GxOyIoFJzMvgr2EEc1JwH35WirQFRUSsYQNvKpzzBI/xyx9hdSzKanXjSArax218xw0psAefS/sbvuJH0//dIir0Vgd5iSUUMmnPGkI+SYU1OcC7eIh1zMh22ZetNHzOwe/xXFajXS5TkTM0ZuRAlr4ft7CCKbyWpR/AMRbwATexis1y/4R8uTpGQ8gDGchbPJXBNrNTfsdkP69iGsu4p8MiQCSzETEaES6woYjYjYiNiBhs4fvfrSYzeuT0K3Ae43JOXuDLP87vpfkNyofv/8tF7+MAAAAASUVORK5CYII=", 50, 10},
 		["C7A2"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAANCAYAAADrEz3JAAABtklEQVR4nMXWO2sVQRTA8d/1LqiND9B0ESPYRAsjchsbBfEj2NrZKH4GUwjiB9DCxlYEay0EQfFJLkgI+IwSIUFFFCXRxOSOxYy43Ozl7kPxD4ednTl7zsw5Z2a2FULQgC/4igl8amJoAHtxBUeGKW5o4OQstmIUIw3sDGIEO/C+jHKG85hFwNMCnQXM9/UdxikxI9twBy/TWD7FGaawD6tYEzMY8CPJTyyn5woWU7uDccyVWUgrhDCLsTLK/4ke3hb0r4hB2YL5DN/xBm3s6lN+hxkxKp9xW4zmBC6WnEgXBytM/Bs+JJ/78QCX8ahgIYvYiV4mpruLjQULOYYXBc4e4xBODJnUVZzBgSRtcV+u4SFei4FZxtIQW4P4SCyt59iNa9gjRmBazMSMWMeDWMJm3MB1bMel3PgkztWcYCUy3MQFcVOPiWVWhg42pfar9N1qkiz1NzrbKxFCqCPtEMJUiDwLIWS5sbnwh8ma9itL3XvktLiBezgpZuE3+eNyvKb9ytRdSFu8H+5Zf5rcz7WPNvBRiVbDX5QijuNW7r2DJ3/bST/ZcJXK3BXLq5vaC//Axzp+Ac7nBz2s99AmAAAAAElFTkSuQmCC", 50, 13},
@@ -7626,10 +7626,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		["MAC10"] = {"iVBORw0KGgoAAAANSUhEUgAAAA4AAAAPCAYAAADUFP50AAAAxUlEQVR4nOXQzyqEARQF8N+MqcmGKAtbJAsZr2Cn7OQZPIEXsbL0CtZewl6xQf4MhYUUOTY3ps/m+9ZOnbp17/nT7SXZxQhTeMU9HrCJU7+YwzYOQJKtJCdph5sk60mWBrphEft46yU5wgyWMY2NOvqo2s+1P8cXdvApyTjJShJJZpM8Va1xkr0k/SRrtf/hAAsTVV5wgfl61DVWcfendMNpmOS9Es+aKZPsN3xGGLb5UlP4iOOab7sIL3FY81UXYWv8B+E3bBmtOuCg9UQAAAAASUVORK5CYII=", 14, 15},
 		["MATEBA 6"] = {"iVBORw0KGgoAAAANSUhEUgAAABoAAAAPCAYAAAD6Ud/mAAABO0lEQVR4nLXUMWtUQRiF4Wd1A4kWFhLFQAq1sLUMJFbptJOgEEhIZWXrD0lhLaSw0jJtinRWQZAUKQKiEAsLQY2CMSfFzsJlvDery3rgMsz5hu89c5mZXhKV1rBUm0Vb2O+o1bqDh3iGhV4L6AU2RjR5g7eN+SPs4lOZT2O9UX9Sg+ZwgMstzT9gHkf4Ubyp4o3SZh99XMMlvOqAwPcy3viLxrXuSbKR5GuSn/mPGv66+9geI+lQ3/DrnPpHSSSZ6QhynOQwyWqSx0n2W9a8TjJf+nR+/UJcbEkR3MRTvCze+5bkezgdteUhaLWltoOrBkd5uUCOyvjP6iWZNjj/Vxr+O9zF7ZL2M76MAxiqjwcVBJ7jt8GdmoguYKXF35kUoAm6VXknJriTJuh65f3x+E0KNFt5F3U/Q2PrDBP/+u9+r6RCAAAAAElFTkSuQmCC", 26, 15},
 		["MC51SD"] = {"iVBORw0KGgoAAAANSUhEUgAAACwAAAAPCAYAAACfvC2ZAAABiUlEQVR4nM3VP2sVQRQF8N9uFtQuCgkRG0FB/AMBSzuLpLGwMYWF30Bs7C20ljTxC1gpQiAgCCJYpAoShWARiGAEwWdERFGCmpexmAlM1rc8eL59eGCZe++ZuXv27p2ZIoSghgM4ik/4USdHhFsIuFMnqsw+jhJXcRtLeI5VdBoSnxU/7tmQhG7jQ7LP9ZpQpAofw/shvfRf0cWOWLxTeJuTFZ7iyOh1NWIsPfAEkxnXLUIIuyhGLmtAVNjEG8wMKecjse8v4GIWL7Gb+XtFCrXYnv8bL2u5uxW+YxY3MZGIGzg0oOAHWBxwbV9UYpMXuJvF57GAK8kPYvMfxpcUO4jPOG3/adPqfiixgfFa/COWM/8VTuB6Gs/gMi75+8ib1CJK3G/gTmb2Sho74t+Yxpp4Zm7V1rUquMLjhvhc5m+Jm+grzuMnfmVcjtYF98IMppK9jXviVd0LdcETPWcNCWVD/Fpmv9MslhFXuEnwC6wn+2GfHP9FS8ynZwrf+uToiBfPGl6nsTX8AR7pUnTliEKNAAAAAElFTkSuQmCC", 44, 15},
-		["MG36"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAALCAYAAAA9St7UAAABvElEQVR4nMXUv2/NURjH8dfVplqlpCREVCJ+RcSfYDKIFKPNZOjAYmDpPyAd7CY6iY3E77EJAyFiEZF0EA2DoH5cpE0/hnOa3EjruqW8k5PvOec5zznP5znP+TaSWAL9GMEkrnboO1a/Z5dy8GJ0L9HvHE5hGk+xAo3av44uBHMtfXXNVxzA4br2r9CpkK04huE6Xov9LfY+Rdw839HEN0VsD67gFu7jIqbQW317MIu3iuB+vMIzTPwqsEaS2/iIJ/XQZrVNKxk9hO3Yhi1KVpebaXxQhEzhPcaVm52PbxDrauwzjSQvMKRkZSFOKhls4gKOLk/sbRlTbnZeyCqsVITMduONku2BOkmp653Yjb1YXR178Kiu2VfH7ZhRsnkXG7G+ntnuLzOAHUoF7MJlpWoWpLuq7FLqdVKpx894jpu4tojvaZzHa9yogR7B8ZY1c3XuTpug/5hu5RFSsjWiPLR29OBE7V/CQzzAHnzCmmpLy/7LS5KJJM0km5P4zTaawrska5P01fnBJPeq7UuSl0nOdLDvkpskj5OMd+A0VIWnCvrZvinJhn8RfGtrJOlV3kknDGMUB5VS+u/8ANPhlY/CBHGDAAAAAElFTkSuQmCC", 50, 11},
+		["MG36"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAALCAYAAAA9St7UAAABvElEQVR4nMXUv2/NURjH8dfVplqlpCREVCJ+RcSfYDKIFKPNZOjAYmDpPyAd7CY6iY3E77EJAyFiEZF0EA2DoH5cpE0/hnOa3EjruqW8k5PvOec5zznP5znP+TaSWAL9GMEkrnboO1a/Z5dy8GJ0L9HvHE5hGk+xAo3av44uBHMtfXXNVxzA4br2r9CpkK04huE6Xov9LfY+Rdw839HEN0VsD67gFu7jIqbQW317MIu3iuB+vMIzTPwqsEaS2/iIJ/XQZrVNKxk9hO3Yhi1KVpebaXxQhEzhPcaVm52PbxDrauwzjSQvMKRkZSFOKhls4gKOLk/sbRlTbnZeyCqsVITMduONku2BOkmp653Yjb1YXR178Kiu2VfH7ZhRsnkXG7G+ntnuLzOAHUoF7MJlpWoWpLuq7FLqdVKpx894jpu4tojvaZzHa9yogR7B8ZY1c3XuTpug/5hu5RFSsjWiPLR29OBE7V/CQzzAHnzCmmplaye/7LS5KJJM0km5P4zTaawrska5P01fnBJPeq7UuSl0nOdLDvkpskj5OMd+A0VIWnCvrZvinJhn8RfGtrJOlV3kknDGMUB5VS+u/8ANPhlY/CBHGDAAAAAElFTkSuQmCC", 50, 11},
 		["MG3KWS"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAJCAYAAABwgn/fAAABnUlEQVR4nLXUu2pVURAG4O+cHI05Bg1iEAneUvgAgo3BR7BSsBAEtbDRzlvlA9j6BoKIaGMVJKiFhYqFgqA2WlioEUlMvCZexmJNcGeDes7x+MOw1541M2v++dfejYiQGMB3/cUY3mKhD7UO4sLvNlu4gW14iFncwxPcRlsh2Eo7iyN4hlVYjyH8UIbwOHM+4SQ24ShmMJiEzmMFPlTqfsHqzGtgTfbXxH28Sv/ejHmJ6VzPQyMirmZAFfNZZLiTUeFzHjbeYXy3+KgQHsz311irDGQKoy1FiTqRy1jEHr8mtz33FioFlzBkOYlZRZ2JWtw0ruX+oqL2gDLZNr4p6q6s+AJbsRNfcRcPsFFRcXKJSBVzOJFE3uNY+sdwPNcvcBqbcVORfjd2VepM4jCuY102NIoN2dgZ/UZEHIiIWxFxJSK2RIS/WDMinkfB/ogYj4gdsRwXK7HNSm47IhodnNG19ZK0L5t9VGlquEbk0v9o9k/W7EHEQ/k8p1wTGKnFvOvxgvSM+jfSCWYUAncqvjc4pfy55vD031vrDj8BuOiKGiBTnAEAAAAASUVORK5CYII=", 50, 9},
 		["MG42"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAICAYAAAC73qx6AAABU0lEQVR4nLXUT4uOURzG8c/d3CMmMU2YbCQLeQNegCI7S9PsrKwtZusNsDR5C9hSLOyU1CSFEpPMSjQaZphJw4zL4pxy9yiexz2+9ev+c851ndN1Or8myVWFW3js/3AMy1jv6TOj7PM32rrAFczhBRawiCV8wjZWMI1d2I+PmMJBHKp1uPqtYw/G8B0P8QYX6/yv1X8e49ionp+xGz+q7kD1Xa7rNziDo3iHD9jCIzRNktO43yOlQVYxuYN+f2IF3zDVKkkMsonzeFu/t3FSORG4piT0EicGtJOd93u4oZxKl7HqOQqnqu4L7ta9HMFTbElyIb/YSPI8yYMkE0n8pZoka0k2k8wk2ZvkVcfv+hAeO1ItzuIm7uC20S7kOeyrCS0o9+Y1jtfx8RFT/2dazPbQX6rPy0pzgInOeN8uNTRtT32UrvKk829eaZHv8ayn/9D8BNb65Uw6yMdEAAAAAElFTkSuQmCC", 50, 8},
-		["MICRO UZI"] = {"iVBORw0KGgoAAAANSUhEUgAAABQAAAAPCAYAAADkmO9VAAABBklEQVR4nKXTvy6EQRQF8N+ysd1qiRAV0SglVB5AoqVXeglPoPMMNLK1klLlT6IjUZIgdIKj+L7Nbta3+xEnuZnJvXPO3DkzI4kyxpLsJzlJ0urLV8VOOU4n6SRpd2uNJErM466cn+ILc6oxgwtMYhErOIdGklUcYXYI+Te4xR7Gm7jBxz/EYAob3Q63EHziBevYVRxnFJ6xXfIecNkVrFrcxho6aPXlN7GMKzzhbJDYHLL7q8Lk1kD+tKy9oVFFHCZIYUM/PrCkuP1H3FezRr+34/TwXrNWEmMjOoSFmvoP1AnW1f9MONTzsoGJWsVf+HJQenidpPlfDyluleIB1/6oP3tUh2/zbeu7PlyXMQAAAABJRU5ErkJggg==", 20, 15},
+		["MICRO UZI"] = {"iVBORw0KGgoAAAANSUhEUgAAABQAAAAPCAYAAADkmO9VAAABBklEQVR4nKXTvy6EQRQF8N+ysd1qiRAV0SglVB5AoqVXeglPoPMMNLK1klLlT6IjUZIgdIKj+L7Nbta3+xEnuZnJvXPO3DkzI4kyxpLsJzlJ0urLV8VOOU4n6SRpd2uNJErM466cn+ILc6oxgwtMYhErOIdGklUcYXYI+Te4xR7Gm7jBxz/EYAob3Q63EHziBevYVRxnFJ6xXfIecNkVrFrcxho6aPXlN7GMKzzhbJDYHLL7q8Lk1kD+tKy9oVFFHCZIYUM/PrCkuP1H3FezRr+34/TwXrNWEmMjOoSFmvoP1AnW1f9MONTzsoGJWsVf+HJQenidpPlfDyluleIB1/6oP3tUh2/zbeu7playeXMQAAAABJRU5ErkJggg==", 20, 15},
 		["MK11"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAMCAYAAAAgT+5sAAABkElEQVR4nL3VO2uUURAG4Cd7ySpeIAREUbC2EGz8ERZBKy3SWomFjYU/QLSztLXVQtA/kYiCYuEFYyGKhaKRhYR42W8s5ixslmzcb7PuC8M3MPOe751z5swRESa0axHR3gO/rt3YLd4wOU7i8h74U0ULCzU5l3Adi9iHK2hgDj00EajQxhr240iJ9Upuo/j9zaxKvCr85sB6K/iym6i5iIiahfwvBLaKNWWBv3EA83iLl0OcbziE7iwK+VFEHd4htomfxW9iXZ5CDx38kkU8wy18H+L31223agjq4ik2sCTb41+4i6s4Ktv4T/lGscH2CnyqoWcbRhUS8ihXZX+u4FX5KdzHxeK/xmOcwPLQOu9lz3+eVOC46BfSxRMpeLXY+gjOPE4VP3BHFraF8zg4kNuZst6RaOG03O1qTM7twoGb+CpbpyMn1JmB3HdTUTkOaj5K5yKiisTziFgYij+I7Via1YNZ50E8hnvykm/igtHtR06jjUk3uC7qTK3jeISz+IgPO+Q8lBf/Bd7IKTUT/AXKuom/Yr6sdwAAAABJRU5ErkJggg==", 50, 12},
 		["MOSIN NAGANT"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAHCAYAAABKiB6vAAAA/0lEQVR4nNXSTSuEYRTG8d+TYVZsSYqlwdJiyoLvIB/IR1B2ylpJWVCWFkrJTjKL2XgLeRdCdCyeezGMxcyzEP86m+t0zt117iuLCAUoYxyjOMdpQ28MfXjCW9L6MYAeHOESD/ho890S3vH67c1qVsBIBbOYaXewIJuY+kE/w5zcWL2EXoxgOFUFQ+jAFWqooxMTmEy9Voi04xqHOEj7athX/EcayXCTRcQDultc9IwlnMiNLWJVHrEn7GALC7hNWqHstksWEduoftMv5BkexAvWsIINuZmuNPMoz/4x9jRf6/eIiPlo5i4iliNiOiLKEeGvVwm7ydM91n29/L/hE8EM4YhbYPVlAAAAAElFTkSuQmCC", 50, 7},
 		["MP10"] = {"iVBORw0KGgoAAAANSUhEUgAAACEAAAAPCAYAAABqQqYpAAABkElEQVR4nLXUz4vNURgG8M8d94pIkZqdzZRSFrJQfm9MVv4ByUJhISuhSLKwsLCymVKSf2BqNiILI4vZWbixG42NhSipIYzX4ryX63bvnXtuPPV2vue8z3nf9zzf9xwRodImI+JIRLTG2NuxOxGxoTNvqsM2nMcFXMUWNLr8gQk8x9sBMdZiBw7hITQi4vIIyTflpv09SWvwGp+75g+wgMVGRPzAFD7iKfbiWxd5HR7j4JjJB+EDPlGk+46lrHIG53rIXzvkCtzFNM4O4VxSDj/VzEJaWcx9vMA7RYGfivz3cFFR6AZOrFLEKzzJ2DexdRi5iXlcwyJWcBptf/+/biznOIs5PMN25Z9fwZlck4c4gI194iz9/qq8Wq2IeB8FtyLicERsjojd6T+VvpM1cWuv6FF/pJ1RmmsNXuZaO8edNUFrizie45u0XrSVvtlXE3SisoiFTDQ/wL+cnD3690F/jPnsrh/iu559cWzUeLVKdPBliG9Web5735t/rsRq9ijV2PU/bseouK3028oo5F9aKtp9IuT0cQAAAABJRU5ErkJggg==", 33, 15},
@@ -7642,7 +7642,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		["MP5SD"] = {"iVBORw0KGgoAAAANSUhEUgAAACkAAAAPCAYAAAB5lebdAAABlElEQVR4nLXWPWsUURTG8d/EBCQaBDVELIKkDCkExVIUA4pfwE6wsPQTWFj5EawsRLC2UgxuFFEbbW0SLISoGNOIL+RFF4/FvcJs2Mnu3k3+cJm5c84855mZew9TRYQC9uEMPuFjiUCNBVzFWlPC6ABiJ3EFFdq4idd4lOMTOIDVPB/DCLawgc1tem3pYY/hFJ40Fa4i4nZO3ok5XOojr5QHeNUQiyoiVjG1R8V3hVF8tXcmH0qf/D9/G+YbWKld38J63WTjgs208SaPPzXxGzjY494F3O2R05Mmk0tYRAsv8GNbfATXJZMtvMQyjksPchrXMDmswbrJNTzLBRf1bivncDSf38EXvJU6wHt8zibndsOkiDgUEVVEGGDci8RmRMxHxGxEzETEiRyfyfF3A+p2HVVBMx+XeuEEnuNCl5wK37Efh/FriPfYsdP65bxkkLQ0uhFS3xvD2YIaHZSYfIxZ3MLTHfJa+Xi5oEYHJZ+7X6bxAd+kXf+7VKjkTfbLitSajuDiMEKD/GCUcF9anz+HEfkHQgfUlgZnscIAAAAASUVORK5CYII=", 41, 15},
 		["MP7"] = {"iVBORw0KGgoAAAANSUhEUgAAABwAAAAPCAYAAAD3T6+hAAABNElEQVR4nL3UT0uUURgF8J/jtAoiFKx14sJFgrgewm8QuIr2QR9AoX1LdwotRfDrOAtRDCpoEyiCRJRQM3pavHdkGKZ3/gRz4OFw33Of53DPe7lzSYyBh3iBBezgHTq4RQN3Q7iFU5zj7H5SkmdJ5pOoqVf5P2z2ZjXxBfv4VXPClXFiqEEL12jOpcr0KS5rGl7jaMj3LoKfeKCKGebxCL9xgzb20FWOvDgi0qUkb0q9T3LXF9dh2bPWt3+laFtl3WOSdJI0RhgOVrsM/J7kbZKNJMt9+vOivxzsbeJKdasmwUesq27gh0kaG7iY0Izqv9Xhqs5wbwrDUbjGLr4NCk0cTDHwc+GTf+h/sD1MaExhBl8LH0/aOK3hj8KPZ2XYeySezMrwU+HVWRleFtMb1ZM2Nv4CumVMM5mtS2kAAAAASUVORK5CYII=", 28, 15},
 		["MSG90"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAJCAYAAABwgn/fAAABNElEQVR4nL3UzSpFURQH8N/RIeVSRDEzMFEGxooHYGbmBUw9gJkpA0/gNXwUSgzExMxEknwNhOujENtgb8WV2z23y79W+5y11n/1X2vtdhZCUADtGMcyykWIBTGESczVSshqaKQN8xhDEwZxjXO8fMlrRheuatcLAm4rfCUMYBSHtRTJQgiLiTTxS04ZHQXFNQqrOKnwtYgD7Ejf1wi5OMGZKsXqaeIm2See8YR3casveEyxd7ym+Nf8B6zh4JdG2tP/PeS4qyJoHbM4wlvyNWEf/ThDlmLP4maJ12GkSt2GI0cfLtIpCdrFBpZwWsHpRK84gGF0i1O9xAqOsf3Hun8gF9e0gB5R/I7va67EFFqxJTaVpfyyf97CN4QQitpeiJiug/tnlhfsOxdfkhI2Gz/W+vEBSIjfes9qxc0AAAAASUVORK5CYII=", 50, 9},
-		["OBREZ"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAKCAYAAAD2Fg1xAAABd0lEQVR4nLXVz0tUURQH8M+LoR8LS/FHRW3btzQEcScIupPaFq2ittEf0Lply1qq5NJFbRRBq4WKhWa2iqYQbAqSSErzurh3aJKZ3mhvvnDg3XfOvd/v97zLeVkIwRHQj7M169dYz9kzhIs169/YqlO3m3J3sY0zuIT2lF/HA3SkeIdH2SGN3EEfrh54v4W9RLzdYO8FnDgMWQ4CMuxgo1kj53EbN3CuQDFFYBX3SzlFXbiHWzhVIPkejhV0Vhnj9YycxjBGMYiTBRHW4n9MlPEWaykWoGqkDSNaK75Z/EIlxXt/BK+JBuoNCCVxmjxGTw5B9Tp8xTcsid0ZwOUmRQaMYSIJbhOHQ1X4ZiOhechCCBV0NshXEumT9DyLa2IDnqaaAcz8g+M7XmIOU1g8itA8lPDB30Z2MC2KnxS7X8VDvMJNUfxP/DhwZhnP8QLzWBb/DS1FFkLowXXxs3/EM3xpUN+LK/gsXrVddOM43mAFn1qsuS72AT7eZ3QJztt/AAAAAElFTkSuQmCC", 50, 10},
+		["OBREZ"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAKCAYAAAD2Fg1xAAABd0lEQVR4nLXVz0tUURQH8M+LoR8LS/FHRW3btzQEcScIupPaFq2ittEf0Lplaye1qq5NJFbRRBq4WKhWa2iqYQbAqSSErzurh3aJKZ3mhvvnDg3XfOvd/v97zLeVkIwRHQj7M169dYz9kzhIs169/YqlO3m3J3sY0zuIT2lF/HA3SkeIdH2SGN3EEfrh54v4W9RLzdYO8FnDgMWQ4CMuxgo1kj53EbN3CuQDFFYBX3SzlFXbiHWzhVIPkejhV0Vhnj9YycxjBGMYiTBRHW4n9MlPEWaykWoGqkDSNaK75Z/EIlxXt/BK+JBuoNCCVxmjxGTw5B9Tp8xTcsid0ZwOUmRQaMYSIJbhOHQ1X4ZiOhechCCBV0NshXEumT9DyLa2IDnqaaAcz8g+M7XmIOU1g8itA8lPDB30Z2MC2KnxS7X8VDvMJNUfxP/DhwZhnP8QLzWBb/DS1FFkLowXXxs3/EM3xpUN+LK/gsXrVddOM43mAFn1qsuS72AT7eZ3QJztt/AAAAAElFTkSuQmCC", 50, 10},
 		["P90"] = {"iVBORw0KGgoAAAANSUhEUgAAACYAAAAPCAYAAACInr1QAAABvElEQVR4nM3WTUtXURAG8N/fBGlRWZC9kiG9Y4sWQUH7Fq0K2kYEEbVtWW0k/AJFH6CgTUS0DKJtUIEISWBGGpHYohKyTejT4h7rclHRzGpgOOfMPDPzcO7cuVcSK6CdSY4vAT+YZG3d1m5l5BTOoQutmj1lbdo2YB+ezRpXitg33MZV7FlkzEl/gdgV9OIahrGr6O6im+aI6a0f2tHzh0mtwt6yH8QQXjQwa1RE9+MyOnGgDmgliX8rY+jGOLbOGn+H2AwmF/C3YV3Zf15Evln8Z1VfTmPof7ixpkxh5E80/3c8wgdVnxybA/MEo6o3b/08eZ6jD6sxI8uT+0m6GsPyegPzJUlH8Z1OMl3zfUoykGQmyWg9T9syb+sWPjZsY43zDLaX/T1cqPn6cQgDfg1fVI03hcdFF9OsdTmrGg/Keh43a/7hUnAEO4vtVc3/tqzTzcStJH14X85bVM+4KW/wDpdwokYGPpUC27C5Zp/AUdzFETzFHVzEQdVNbizx+1Qz9eXP6CV8aGe1O0l/kokFeu9rksNJWkkm58E8XKjOcv4gOpI8aBR7neRGkp6C2TEHofEkZwrpefP/AOBlSTxrU6/FAAAAAElFTkSuQmCC", 38, 15},
 		["PP-19 BIZON"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAANCAYAAADrEz3JAAAB7klEQVR4nL3VvWuUQRAG8N9dLipR9DQWgjGSWkUkECWIIGiRRktBxNJWsfYPsPJPsAj2BkSxUAs/UdFEECMookGFiBiMwc/kxmL3zCV4l+Ry+sCw+87uzszzzsxuISK0CGvxHe2YRhsqea2YddW1IgIl9OAQXmIfTuPHAr62YBgbq4pSCwgUcA4n83y5GJBIzkcHypjEBK7ULhZb4PgqTmkNCVKGOnENL/Auz39iEG+xwVyy5UJEDGG8CYclKcUHm4+5LioYkUqnHe+xHaNZ14UZPMEKRCEinmNoCU7K2Ik9LQq6iik8wq8Gey5hBz7hjdRvHVhXiIhbUpMtpus34wh6cbTOnml8kUphHN3SRfBZ+tOddc6N5bMLoTPb65UaHqk8VmE/bsw70IZt2Iv+PHbhKe7jDC5jDW6a7ZG7OC7V8TAuZvsT2NogwO5FkKhFaf7Ht0xiNfpqAu/PZB7gNi7kICf/YvQ6DuT5lJT2aoafZTKDeIxdSwy4HuZcLoWIeIWP2cEH3KmREYtL9z2pZ8akLK40+4ZU8FWq/WGNs7KY4Mt53oeHf1Yi4nxEHIuInojQhGyKiJlIOLvA3oEmfdRKOSLWR0SxVr9coyLiRMxidwvsNSWteBAP53F8Tqr/M1pBZBSvpT6oNN767/AbCJKhK/ppxRkAAAAASUVORK5CYII=", 50, 13},
 		["PPK12"] = {"iVBORw0KGgoAAAANSUhEUgAAACkAAAAPCAYAAAB5lebdAAAB6UlEQVR4nL3WTYhOURgH8N87mBkkyqTUmKKUyMeeElmxwUaxUBZkpWZnoVgoH2VlyYYoGytZisWsLEQ+8lVSzKRZIFNGM/O3uGeaG6+Zeedt/Ot0zzn3ec75n//znOfeRhItohsX8AOf8A4NBBM1u47ybJT5idJvYAl68B5jxe4JXmMfntU3XNiExCJcrY0/4nxtvBmnWjrW7PAWvc1eLFSd5ptKkQmM4FjNZhh9pb8cG+aBIHzAepxRRWgUP/GykWQM1/C1kPyOtTXn0eIE/Vg1TyQHVKm0EYvL3DCGGklGsHQa5y4cxAlsw2Psqb2/hE7cVSlxvckaz3C5EAkWmMrjyfZZJUgvxku/G4OSjCTRpK1PcjnJlyQPkhxK0plkUZKfmcLRJPuKz8ok4/kbp/+xx6zanxenE/txHFtwAzvwpmazvag7GaKHRZl1WFH8J8N2VlUFbk4TqZmR5FeSk0kuJhlK8ijJkSRd/zjZxZpCV6ZRYHXNrqcdJTtK7Peqbvpu7MStMt8Mu2r9p9Ocf1CV+LC1XSVbbQeS3Ct5uWYG2/tFyXPtKDlnxyTLZmHTX0gOtEOykdY/i61gE56r6m+fqXrbEjpmNmkLL1Q1sgOH57rIfJNkqvwcnesC/4PkbbzCHc1/aGbEbzIYXZKpnhe5AAAAAElFTkSuQmCC", 41, 15},
@@ -8095,9 +8095,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	client.fakelagpos = Vector3.new()
 	client.fakelagtime = 0
 
-	for _, ply in next, Players:GetPlayers() do
-		if ply == LOCAL_PLAYER then continue end
-		local updater = client.getupdater(ply)
+	for _, player in next, Players:GetPlayers() do
+		if player == LOCAL_PLAYER then continue end
+		local updater = client.getupdater(player)
 		if updater then
 			local step = updater.step
 			updater.step = function(what, what1)
@@ -8113,7 +8113,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 			end
-			if not client.updatersteps[ply] then client.updatersteps[ply] = step end
+			if not client.updatersteps[player] then client.updatersteps[player] = step end
 		end
 	end
 
@@ -9215,9 +9215,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		ragebot.spin = 0
 		ragebot.angles = Vector2.new(0, 0)
 		do
-			local function GetPartTable(ply)
+			local function GetPartTable(player)
 				local tbl = {}
-				for k, v in pairs(ply) do
+				for k, v in pairs(player) do
 					tbl[v] = true
 				end
 				return tbl
@@ -9634,17 +9634,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		function ragebot:GetKnifeTargets()
 			local results = {}
 
-			for i, ply in ipairs(Players:GetPlayers()) do
-				if table.find(menu.friends, ply.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then
+			for i, player in ipairs(Players:GetPlayers()) do
+				if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends") then
 					continue
 				end
-				if not table.find(menu.priority, ply.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
+				if not table.find(menu.priority, player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
 				then
 					continue
 				end
 
-				if ply.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(ply) then
-					local parts = client.replication.getbodyparts(ply)
+				if player.Team ~= LOCAL_PLAYER.Team and client.hud:isplayeralive(player) then
+					local parts = client.replication.getbodyparts(player)
 					if not parts then
 						continue
 					end
@@ -9662,7 +9662,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 					local ray_distance = (target_pos - ray_pos).Magnitude
 					table.insert(results, {
-						player = ply,
+						player = player,
 						part = parts.head,
 						tppos = ray_pos,
 						direction = target_direction,
@@ -9768,7 +9768,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				"what are you trying to do young man, this is illegal.  you do know that you have to provide us with shit to use to calculate this, you do realize this right?"
 			) -- end
 			assert( origin,
-				"just like before, we need information to even apply this to our things we made to provide you with ease of p100 hits 🤡"
+				"just like before, we need information to even applaye this to our things we made to provide you with ease of p100 hits 🤡"
 			)
 			assert(
 				selectedpart,
@@ -10913,7 +10913,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			return send("spotplayers", players)
 		end
 
-		function misc:ApplyGunMods()
+		function misc:ApplayeGunMods()
 			local mods_enabled = menu:GetVal("Misc", "Weapon Modifications", "Enabled")
 			local firerate_scale = menu:GetVal("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
 			--local recoil_scale = menu:GetVal("Misc", "Weapon Modifications", "Recoil Scale") / 100
@@ -11196,7 +11196,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 				if travel.Unit.x == travel.Unit.x then
 					rootpart.Anchored = false
-					rootpart.Velocity = travel.Unit * speed --multiply the unit by the speed to make
+					rootpart.Velocity = travel.Unit * speed --multiplaye the unit by the speed to make
 				else
 					rootpart.Velocity = Vector3.new(0, 0, 0)
 					rootpart.Anchored = true
@@ -11441,7 +11441,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end)
 					end
 					misc.model = nil
-					misc:ApplyGunMods()
+					misc:ApplayeGunMods()
 					misc.autopeektimeout = 100
 				end
 				if args[1] == "logmessage" or args[1] == "debug" then
@@ -12300,7 +12300,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 			--ADS Fov hook
 			local crosshairColors
-			menu.lastPlayerPositions = {}
+			client.lastPlayerPositions = {}
 			local function renderVisuals(dt)
 				local _new, _last = menu:GetVal("Misc", "Extra", "Disable 3D Rendering")
 				if _new ~= _last then
@@ -12432,19 +12432,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					for curplayer = 1, #players do
 						
 						
-						local ply = players[curplayer]
-						local plyname = ply.Name
-						if client.hud:isplayeralive(ply) then
-							local parts = client.replication.getbodyparts(ply)
-
-							
-							if not parts then
-								continue
-							end
+						local player = players[curplayer]
+						local playename = player.Name
+						if client.hud:isplayeralive(player) then
 
 							local GroupBox = "Team ESP"
 							local enemy = false
-							if ply.Team ~= LOCAL_PLAYER.Team then
+							if player.Team ~= LOCAL_PLAYER.Team then
 								GroupBox = "Enemy ESP"
 								enemy = true
 								client.aliveplayers += 1
@@ -12453,21 +12447,34 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							if not menu:GetVal("Visuals", GroupBox, "Enabled") then
 								continue
 							end
-							
-							ply.Character = parts.rootpart.Parent
 
-							local torso = parts.torso.CFrame
-							local rootpart = parts.rootpart.CFrame
-							local position = torso.Position
-							local resolved = false
+							local parts = client.replication.getbodyparts(player)
+
+
+							local torso, rootpart, position, resolved
+
+							if not parts then
+								torso = client.lastPlayerPositions[player]
+								rootpart = torso
+							else
+								player.Character = parts.rootpart.Parent
+
+								torso = parts.torso.CFrame
+								rootpart = parts.rootpart.CFrame
+							end
+							if not torso then continue end
+							client.lastPlayerPositions[player] = torso
+							
+							position = torso.Position
+							resolved = false
 							if menu:GetVal("Visuals", "Enemy ESP", "Flags")[3] then
-								local newpos = ragebot:GetResolvedPosition(ply, parts.torso.CFrame, parts.rootpart.CFrame)
+								local newpos = ragebot:GetResolvedPosition(player, parts.torso.CFrame, parts.rootpart.CFrame)
 								if newpos then
 									resolved = true
 								end
 								position = newpos or position
 							end
-							--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. plyname)
+							--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. playename)
 
 							local vTop = position + (torso.UpVector * 1.8) + cam.UpVector
 							local vBottom = position - (torso.UpVector * 2.5) - cam.UpVector
@@ -12489,19 +12496,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								math.max(math.floor(math.min(top.y, bottom.y)), 3)
 							)
 
-							--debug.profileend("renderVisuals Player ESP Box Calculation " .. plyname)
+							--debug.profileend("renderVisuals Player ESP Box Calculation " .. playename)
 
-							local GroupBox = ply.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
-							local health = math.ceil(client.hud:getplayerhealth(ply))
+							local GroupBox = player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
+							local health = math.ceil(client.hud:getplayerhealth(player))
 							local spoty = 0
 							local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", COLOR2)[4] / 255
 							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Box", COLOR1)[4] / 255
 							local espflags = menu:GetVal("Visuals", GroupBox, "Flags")
-							local distance = math.floor((parts.rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
+							local distance = math.floor((rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
 							local flag_text_size = GroupBox == "Enemy ESP" and espflags[5] or espflags[3]
 							if (topIsRendered or bottomIsRendered) then
 								if espflags[1] then
-									local playerdata = teamdata[1]:FindFirstChild(plyname) or teamdata[2]:FindFirstChild(plyname)
+									local playerdata = teamdata[1]:FindFirstChild(playename) or teamdata[2]:FindFirstChild(playename)
 									allesp[3][5][curplayer].Visible = true
 									allesp[3][5][curplayer].Text = "lv".. playerdata.Rank.Text
 									allesp[3][5][curplayer].Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
@@ -12557,8 +12564,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											spoty += 10
 										end
 									end
-									if espflags[4] then
-										local backtrackedPosition = ragebot:GetBacktrackedPosition(ply, parts, menu:GetVal("Rage", "Hack vs. Hack", "Backtracking Time")/1000)
+									if espflags[4] and parts then
+										local backtrackedPosition = ragebot:GetBacktrackedPosition(player, parts, menu:GetVal("Rage", "Hack vs. Hack", "Backtracking Time")/1000)
 										backtrackedPosition, btRendered = Camera:WorldToViewportPoint(backtrackedPosition.pos)
 										if btRendered then
 											allesp[11][1][curplayer].Position = Vector2.new(backtrackedPosition.x, backtrackedPosition.y)
@@ -12570,10 +12577,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									end
 								end
 								if menu.options["Visuals"][GroupBox]["Name"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Name " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Name " .. playename)
 
 								
-									local name = tostring(plyname)
+									local name = tostring(playename)
 									if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
 										name = string.lower(name)
 									elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
@@ -12588,7 +12595,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 
 								if menu.options["Visuals"][GroupBox]["Box"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Box " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Box " .. playename)
 									for i = -1, 1 do
 										local box = allesp[2][i + 3][curplayer]
 										box.Visible = true
@@ -12611,12 +12618,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										box.Transparency = boxtransparencyfilled
 										box.Filled = true
 									end
-									--debug.profileend("renderVisuals Player ESP Render Box " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Box " .. playename)
 								end
 
 
 								if menu.options["Visuals"][GroupBox]["Health Bar"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. playename)
 
 									local ySizeBar = -math.floor(boxSize.y * health / 100)
 									if menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1]
@@ -12677,10 +12684,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										},
 									})
 
-									--debug.profileend("renderVisuals Player ESP Render Health Bar " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Health Bar " .. playename)
 								elseif menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1]
 								then
-									--debug.profilebegin("renderVisuals Player ESP Render Health Number " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Health Number " .. playename)
 
 									local hptext = allesp[3][3][curplayer]
 
@@ -12693,14 +12700,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", COLOR, true)
 									hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
 
-									--debug.profileend("renderVisuals Player ESP Render Health Number " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Health Number " .. playename)
 								end
 
 								local yaddpos = 0
 								if menu.options["Visuals"][GroupBox]["Held Weapon"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. playename)
 
-									local charWeapon = _3pweps[ply]
+									local charWeapon = _3pweps[player]
 									local wepname = charWeapon and charWeapon or "???"
 
 									if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
@@ -12719,11 +12726,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
 
 									yaddpos += 12
-									--debug.profileend("renderVisuals Player ESP Render Held Weapon " .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Held Weapon " .. playename)
 								end
 
 								if menu:GetVal("Visuals", GroupBox, "Held Weapon Icon") then
-									local charWeapon = _3pweps[ply]
+									local charWeapon = _3pweps[player]
 									local wepname = charWeapon and charWeapon or "???"
 
 									local tempicon = allesp[3][7][curplayer]
@@ -12771,7 +12778,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 
 								-- if menu.options["Visuals"][GroupBox]["Distance"][1] then
-								-- 	--debug.profilebegin("renderVisuals Player ESP Render Distance " .. plyname)
+								-- 	--debug.profilebegin("renderVisuals Player ESP Render Distance " .. playename)
 
 								-- 	local disttext = allesp[4][3][curplayer]
 
@@ -12782,27 +12789,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								-- 		boxPosition.y + boxSize.y + spoty
 								-- 	)
 
-								-- 	--debug.profileend("renderVisuals Player ESP Render Distance " .. plyname)
+								-- 	--debug.profileend("renderVisuals Player ESP Render Distance " .. playename)
 								-- end
 
 								if menu.options["Visuals"][GroupBox]["Skeleton"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. plyname)
+									--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. playename)
 
-									local torso = Camera:WorldToViewportPoint(ply.Character.Torso.Position)
+									local torso = Camera:WorldToViewportPoint(player.Character.Torso.Position)
 									for i = 1, #skelparts do
 										
 										local line = allesp[1][i][curplayer]
 
-										local posie = Camera:WorldToViewportPoint(ply.Character:FindFirstChild(skelparts[i]).Position)
+										local posie = Camera:WorldToViewportPoint(player.Character:FindFirstChild(skelparts[i]).Position)
 										line.From = Vector2.new(posie.x, posie.y)
 										line.To = Vector2.new(torso.x, torso.y)
 										line.Visible = true
 									end
-									--debug.profileend("renderVisuals Player ESP Render Skeleton" .. plyname)
+									--debug.profileend("renderVisuals Player ESP Render Skeleton" .. playename)
 								end
 								--da colourz !!! :D 🔥🔥🔥🔥
 
-								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, plyname) then
+								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, playename) then
 									allesp[4][1][curplayer].Color = priority_color
 									allesp[4][1][curplayer].Transparency = priority_alpha
 
@@ -12817,7 +12824,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										line.Color = priority_color
 										line.Transparency = priority_alpha
 									end
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, plyname)
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, playename)
 								then
 									allesp[4][1][curplayer].Color = friend_color
 									allesp[4][1][curplayer].Transparency = friend_alpha
@@ -12834,7 +12841,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										line.Transparency = friend_alpha
 									end
 								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (
-										ply == legitbot.target or ply == ragebot.target
+										player == legitbot.target or player == ragebot.target
 									)
 								then
 									allesp[4][1][curplayer].Color = target_color
@@ -12871,10 +12878,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							then
 								local size = size
 								local big_size = big_size
-								--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. plyname)
+								--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. playename)
 								local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR, true)
 								local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
-								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, plyname)
+								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, playename)
 								then
 									size *= 1.5
 									big_size *= 1.5
@@ -12886,7 +12893,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											true
 										)
 									color2 = bColor:Mult(color, 0.6)
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR) and table.find(menu.friends, plyname)
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR) and table.find(menu.friends, playename)
 								then
 									color = menu:GetVal(
 											"Visuals",
@@ -12897,7 +12904,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										)
 									color2 = bColor:Mult(color, 0.6)
 								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (
-										ply == legitbot.target or ply == ragebot.target
+										player == legitbot.target or player == ragebot.target
 									)
 								then
 									color = menu:GetVal(
@@ -12912,7 +12919,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								for i = 1, 2 do
 									local Tri = allesp[5][i][curplayer]
 
-									local rootpartpos = ply.Character.HumanoidRootPart.Position -- these HAVE to move now theres no way
+									local rootpartpos = player.Character.HumanoidRootPart.Position -- these HAVE to move now theres no way
 
 									Tri.Visible = true
 
@@ -12936,7 +12943,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									Tri.Color = i == 1 and color or color2
 									Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR)[4] / 255
 								end
-								--debug.profileend("renderVisuals Player ESP Render Out of View " .. plyname)
+								--debug.profileend("renderVisuals Player ESP Render Out of View " .. playename)
 							end
 						end
 					end
@@ -13486,24 +13493,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local box = texts[3][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						local text = texts[4][i]-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						text.Position = Vector2.new(posx + 2, margin)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
--- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						text.Color = i ~= 1 and col or Color3.new(1, 1, 1)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						text.Transparency = transparency-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						text.Visible = true-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						box.Position = Vector2.new(posx, margin)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						box.Visible = true-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
--- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						box1.Position = Vector2.new(posx - 1, margin - 3)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						box1.Visible = true-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
--- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
-						box1.Color = Color3.new(0, 0, 0)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
--- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
-					-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
--- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
+						box1.Color = Color3.new(0, 0, 0)-- THIS IS FUCKING STUPID
 						box3.Visible = true-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						box3.Color = Color3.new(0, 0, 0)-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						box3.Transparency = 0.4-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
--- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 						if listsizes then-- THIS IS FUCKING STUPID I HATE THIS. WHY DID I DO THIS
 							local w = 8
 							local h = 15
@@ -15954,7 +15954,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									-- 	type = TOGGLE,
 									-- 	name = "Skin Changer",
 									-- 	value = false,
-									-- 	tooltip = "While this is enabled, all custom skins will apply with the custom settings below.",
+									-- 	tooltip = "While this is enabled, all custom skins will applaye with the custom settings below.",
 									-- 	extra = {
 									-- 		type = COLORPICKER,
 									-- 		name = "Weapon Skin Color",
@@ -16152,25 +16152,25 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 					local templist = table.create(#players)
 					for k, v in ipairs(players) do
-						local plyrname = { v.Name, RGB(255, 255, 255) }
+						local playername = { v.Name, RGB(255, 255, 255) }
 						local teamtext = { "None", RGB(255, 255, 255) }
-						local plyrstatus = { "None", RGB(255, 255, 255) }
+						local playerstatus = { "None", RGB(255, 255, 255) }
 						if v.Team ~= nil then
 							teamtext[1] = v.Team.Name
 							teamtext[2] = v.TeamColor.Color
 						end
 						if v == LOCAL_PLAYER then
-							plyrstatus[1] = "Local Player"
-							plyrstatus[2] = RGB(66, 135, 245)
+							playerstatus[1] = "Local Player"
+							playerstatus[2] = RGB(66, 135, 245)
 						elseif table.find(menu.friends, v.Name) then
-							plyrstatus[1] = "Friend"
-							plyrstatus[2] = RGB(0, 255, 0)
+							playerstatus[1] = "Friend"
+							playerstatus[2] = RGB(0, 255, 0)
 						elseif table.find(menu.priority, v.Name) then
-							plyrstatus[1] = "Priority"
-							plyrstatus[2] = RGB(255, 210, 0)
+							playerstatus[1] = "Priority"
+							playerstatus[2] = RGB(255, 210, 0)
 						end
 
-						table.insert(templist, { plyrname, teamtext, plyrstatus })
+						table.insert(templist, { playername, teamtext, playerstatus })
 					end
 					plist[5] = templist
 					if playerlistval ~= nil then
@@ -16237,7 +16237,7 @@ K/D: %d/%d
 				updateplist()
 				setplistinfo()
 
-				local oldslectedplyr = nil
+				local oldslectedplayer = nil
 				menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
 					if input.UserInputType == Enum.UserInputType.MouseButton1 then
 						if menu.tabnames[menu.activetab] == "Settings" and menu.open then
@@ -16260,8 +16260,8 @@ K/D: %d/%d
 								end
 
 								for k, table_ in pairs({ menu.friends, menu.priority }) do
-									for index, plyrname in pairs(table_) do
-										if selectedPlayer.Name == plyrname then
+									for index, playername in pairs(table_) do
+										if selectedPlayer.Name == playername then
 											table.remove(table_, index)
 										end
 									end
@@ -16285,9 +16285,9 @@ K/D: %d/%d
 							updateplist()
 
 							if plist[1] ~= nil then
-								if oldslectedplyr ~= selectedPlayer then
+								if oldslectedplayer ~= selectedPlayer then
 									setplistinfo(selectedPlayer)
-									oldslectedplyr = selectedPlayer
+									oldslectedplayer = selectedPlayer
 								end
 							else
 								setplistinfo(nil)
