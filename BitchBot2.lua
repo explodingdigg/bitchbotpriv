@@ -6500,8 +6500,8 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 3) - cam.UpVector)
 
 				local minY = math.abs(bottom.y - top.y)
-				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
-				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
+				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2, 3))
+				local sizeY = math.ceil(math.max(minY, sizeX * 0.5, 3))
 
 				if top_isrendered or bottom_isrendered then
 					local boxtop = Vector2.new(
@@ -7694,15 +7694,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		if tempimage ~= nil then
 			local new_w = tempimage[2]
 			local new_h = tempimage[3]
-			-- local aspect_ratio = (tempimage[2]/4)/(tempimage[3]/4)
-			-- local new_h = 19
-			-- local new_w = new_h * aspect_ratio
-
-			-- if new_w > 80 then
-			-- 	local aspect_ratio = (tempimage[3]/4)/(tempimage[2]/4)
-			-- 	new_w = 80
-			-- 	new_h = new_w * aspect_ratio
-			-- end
 
 			return {data = tempimage[1], w = new_w, h = new_h}
 		end
@@ -12483,18 +12474,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local top, topIsRendered = Camera:WorldToViewportPoint(vTop)
 							local bottom, bottomIsRendered = Camera:WorldToViewportPoint(vBottom)
 							
-							if backtrackedPosition and menu:GetVal("Visuals", "Enemy ESP", "Show Backtrack Position") and enemy then 
-								backtrackedPosition, btRendered = Camera:WorldToViewportPoint(backtrackedPosition.pos)
-								if btRendered then
-									allesp[11][1][curplayer].Position = Vector2.new(backtrackedPosition.x, backtrackedPosition.y)
-									allesp[11][1][curplayer].NumSides = 12
-									allesp[11][1][curplayer].Radius = 1 / backtrackedPosition.z * 100 + 3
-									allesp[11][1][curplayer].Thickness = 1
-									allesp[11][1][curplayer].Visible = true
-									allesp[11][1][curplayer].Transparency = menu:GetVal("Visuals", "Enemy ESP", "Show Backtrack Position", COLOR)[4]/255
-									allesp[11][1][curplayer].Color = menu:GetVal("Visuals", "Enemy ESP", "Show Backtrack Position", COLOR, true)
-								end
-							end
 
 							-- local minY = math.abs(bottom.y - top.y)
 							-- local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
@@ -12575,6 +12554,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										else
 											allesp[3][4][curplayer].Font = 1
 											spoty += 10
+										end
+									end
+									if espflags[4] then
+										backtrackedPosition, btRendered = Camera:WorldToViewportPoint(backtrackedPosition.pos)
+										if btRendered then
+											allesp[11][1][curplayer].Position = Vector2.new(backtrackedPosition.x, backtrackedPosition.y)
+											allesp[11][1][curplayer].NumSides = 12
+											allesp[11][1][curplayer].Radius = 1 / backtrackedPosition.z * 100 + 3
+											allesp[11][1][curplayer].Thickness = 1
+											allesp[11][1][curplayer].Visible = true
 										end
 									end
 								end
@@ -14752,7 +14741,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						{
 							name = { "Enemy ESP", "Team ESP", "Local" },
 							autopos = "left",
-							size = 316,
+							size = 300,
 							[1] = {
 								content = {
 									{
@@ -14819,7 +14808,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									{
 										type = COMBOBOX,
 										name = "Flags",
-										values = { { "Level", true }, { "Distance", true }, { "Resolved", false } },
+										values = { { "Level", true }, { "Distance", true }, { "Resolved", false }, { "Backtrack", false } },
 									},
 									{
 										type = TOGGLE,
@@ -14863,16 +14852,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = TOGGLE,
 										name = "Dynamic Arrow Size",
 										value = true,
-									},
-									{
-										type = TOGGLE,
-										name = "Show Backtrack Position",
-										extra = {
-											type = COLORPICKER,
-											name = "Backtracking Color",
-											color = { 255, 255, 255, 255 },
-										},
-										value = false,
 									},
 								},
 							},
