@@ -6723,8 +6723,8 @@ elseif menu.game == "dust" then --SECTION DUST BEGIN
 				
 
 				local minY = math.abs(bottom.y - top.y)
-				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2))
-				local sizeY = math.ceil(math.max(minY, sizeX * 0.5))
+				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2, 3))
+				local sizeY = math.ceil(math.max(minY, sizeX * 0.5, 3))
 
 				local down, health, maxhealth = GetPlayerHealth(player)
 
@@ -9319,27 +9319,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			return penetrated, exited, step_pos
 		end
 
-		function ragebot:GetResolvedPosition(player, curbodyparts)
+		function ragebot:GetResolvedPosition(player, torso_cframe, root_cframe)
 			if not menu:GetVal("Rage", "Settings", "Resolve Fake Positions") then return end
 			local resolvedPosition
 			local misses = self.predictedMisses[player]
 			local modmisses = misses and misses % 5
 
 			curbodyparts = curbodyparts or client.replication.getbodyparts(player)
-			if not curbodyparts or not client.hud:isplayeralive(player) or not curbodyparts.torso then
+			if not torso_cframe or not client.hud:isplayeralive(player) or not torso_cframe then
 				return
 			end
 			local rep = ragebot.repupdates[player] 
-			if rep and rep.position and rep.position and (rep.position - curbodyparts.torso.Position).Magnitude > 18  then
+			if rep and rep.position and rep.position and (rep.position - torso_cframe.Position).Magnitude > 18  then
 				resolvedPosition = rep.position
 			end
-			if (curbodyparts.rootpart.Position - curbodyparts.torso.Position).Magnitude > 18 then
-				resolvedPosition = curbodyparts.rootpart.Position
+			if (root_cframe.Position - torso_cframe.Position).Magnitude > 18 then
+				resolvedPosition = root_cframe.Position
 			end
 			if modmisses and modmisses > 3 then
 				local rep = self.fakePositionsResolved[player]
 				
-				if rep and (rep - curbodyparts.torso.Position).Magnitude > 18 then
+				if rep and (rep - torso_cframe.Position).Magnitude > 18 then
 					resolvedPosition = rep
 				end
 			end
@@ -9525,7 +9525,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local curbodyparts = client.replication.getbodyparts(player)
 						if curbodyparts and client.hud:isplayeralive(player) then
 							local newhitboxshift = hitboxshift
-							resolvedPosition = self:GetResolvedPosition(player, curbodyparts)
+							resolvedPosition = self:GetResolvedPosition(player, curbodyparts.torso.CFrame, curbodyparts.rootpart.CFrame)
 							local resolved = false
 
 							if resolvedPosition then
@@ -12300,6 +12300,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 			--ADS Fov hook
 			local crosshairColors
+			menu.lastPlayerPositions = {}
 			local function renderVisuals(dt)
 				local _new, _last = menu:GetVal("Misc", "Extra", "Disable 3D Rendering")
 				if _new ~= _last then
@@ -12426,6 +12427,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local target_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", COLOR, true)
 					local target_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target", COLOR)[4] / 255
 					client.aliveplayers = 0
+					local size = math.floor(SCREEN_SIZE.x * 0.0078125)
+					local big_size = math.floor(SCREEN_SIZE.x * 0.0260416666667)
 					for curplayer = 1, #players do
 						
 						
@@ -12438,8 +12441,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							if not parts then
 								continue
 							end
-							local resolvedPosition = ragebot:GetResolvedPosition(ply)
-							local backtrackedPosition = ragebot:GetBacktrackedPosition(ply, parts, menu:GetVal("Rage", "Hack vs. Hack", "Backtracking Time")/1000)
 
 							local GroupBox = "Team ESP"
 							local enemy = false
@@ -12460,7 +12461,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local position = torso.Position
 							local resolved = false
 							if menu:GetVal("Visuals", "Enemy ESP", "Flags")[3] then
-								local newpos = ragebot:GetResolvedPosition(ply, parts)
+								local newpos = ragebot:GetResolvedPosition(ply, parts.torso.CFrame, parts.rootpart.CFrame)
 								if newpos then
 									resolved = true
 								end
@@ -12484,8 +12485,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local _height = math.floor(math.max(math.abs(bottom.y - top.y), _width / 2))
 							local boxSize = Vector2.new(math.floor(math.max(_height / 1.5, _width)), _height)
 							local boxPosition = Vector2.new(
-								math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5),
-								math.floor(math.min(top.y, bottom.y))
+								math.max(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), 3),
+								math.max(math.floor(math.min(top.y, bottom.y)), 3)
 							)
 
 							--debug.profileend("renderVisuals Player ESP Box Calculation " .. plyname)
@@ -12497,7 +12498,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Box", COLOR1)[4] / 255
 							local espflags = menu:GetVal("Visuals", GroupBox, "Flags")
 							local distance = math.floor((parts.rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
-							local flag_text_size = menu:GetVal("Visuals", "ESP Settings", "Large Flag Text")
+							local flag_text_size = GroupBox == "Enemy ESP" and espflags[5] or espflags[3]
 							if (topIsRendered or bottomIsRendered) then
 								if espflags[1] then
 									local playerdata = teamdata[1]:FindFirstChild(plyname) or teamdata[2]:FindFirstChild(plyname)
@@ -12557,6 +12558,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										end
 									end
 									if espflags[4] then
+										local backtrackedPosition = ragebot:GetBacktrackedPosition(ply, parts, menu:GetVal("Rage", "Hack vs. Hack", "Backtracking Time")/1000)
 										backtrackedPosition, btRendered = Camera:WorldToViewportPoint(backtrackedPosition.pos)
 										if btRendered then
 											allesp[11][1][curplayer].Position = Vector2.new(backtrackedPosition.x, backtrackedPosition.y)
@@ -12867,11 +12869,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 							elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View")
 							then
+								local size = size
+								local big_size = big_size
 								--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. plyname)
 								local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR, true)
 								local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
 								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, plyname)
 								then
+									size *= 1.5
+									big_size *= 1.5
 									color = menu:GetVal(
 											"Visuals",
 											"ESP Settings",
@@ -12914,9 +12920,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									local direction = math.atan2(-relativePos.y, relativePos.x)
 
 									local distance = dot(relativePos.Unit, relativePos)
-									local use_extra_size = menu:GetVal("Visuals", "ESP Settings", "Large Flag Text")
-									local big_size = use_extra_size and 100 or 50
-									local size = use_extra_size and 30 or 15
 									local arrow_size = menu:GetVal("Visuals", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, big_size, size) or size
 									arrow_size = arrow_size > big_size and big_size or arrow_size < size and size or arrow_size
 
@@ -14808,7 +14811,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									{
 										type = COMBOBOX,
 										name = "Flags",
-										values = { { "Level", true }, { "Distance", true }, { "Resolved", false }, { "Backtrack", false } },
+										values = { { "Level", true }, { "Distance", true }, { "Resolved", false }, { "Backtrack", false }, { "Use Large Text", false } },
 									},
 									{
 										type = TOGGLE,
@@ -14921,7 +14924,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									{
 										type = COMBOBOX,
 										name = "Flags",
-										values = { { "Level", false }, { "Distance", false } },
+										values = { { "Level", false }, { "Distance", false }, { "Use Large Text", false } },
 									},
 									{
 										type = TOGGLE,
@@ -15041,12 +15044,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									maxvalue = 100,
 									stradd = "hp",
 								},
-								{
-									type = TOGGLE,
-									name = "Large Flag Text",
-									value = false,
-									tooltip = "Changes the font/size of the Flags combobox.\nAlso affects the size of the Out Of View arrows.",
-								}, 
 								{
 									type = DROPBOX,
 									name = "Text Case",
