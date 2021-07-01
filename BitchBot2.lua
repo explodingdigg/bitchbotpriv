@@ -12493,7 +12493,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local boxSize = Vector2.new(math.floor(math.max(_height / 1.5, _width)), _height)
 							local boxPosition = Vector2.new(
 								math.max(math.floor(top.x * 0.5 + bottom.x * 0.5 - boxSize.x * 0.5), 3),
-								math.max(math.floor(math.min(top.y, bottom.y)), 3)
+								math.floor(math.min(top.y, bottom.y))
 							)
 
 							--debug.profileend("renderVisuals Player ESP Box Calculation " .. playename)
