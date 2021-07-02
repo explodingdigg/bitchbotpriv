@@ -10267,10 +10267,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local err = realtime - curtick
 						
 						local j = 1
-						
 						for dt = 0, blowup / inc do
 							local t = inc * dt
 							
+							local total_time = t
 							do
 								local realtime = tick() + t
 								local time = realtime + dst * (st + blowup - realtime) / (blowup + dst)
@@ -10301,7 +10301,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									if nextpos then
 										--local mag = (nextpos - pos).magnitude
 										-- magnitude stuff wont work because the line will just end for no reason
-										create_outlined_square(pos, t, colorz)
+										create_outlined_square(pos, total_time, colorz)
 										local a1 = Instance.new("Attachment", workspace.Terrain)
 										a1.Position = pos
 										local a2 = Instance.new("Attachment", workspace.Terrain)
@@ -12485,7 +12485,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					-- 	return table.find(menu.priority, p2.Name) ~= table.find(menu.priority, p1.Name) and table.find(menu.priority, p2.Name) == true and table.find(menu.priority, p1.Name) == false
 					-- end)
 					local cam = client.cam.cframe
-
+					local current_time = tick()
 					local priority_color = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", COLOR, true)
 					local priority_alpha = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", COLOR)[4] / 255
 
@@ -12502,7 +12502,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						
 						local player = players[curplayer]
 						local playename = player.Name
-						if client.hud:isplayeralive(player) then
+						do --if client.hud:isplayeralive(player) then
 
 							local GroupBox = "Team ESP"
 							local enemy = false
@@ -12520,19 +12520,23 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 
 							local torso, rootpart, position, resolved
-
-							if not parts then
-								torso = client.lastPlayerPositions[player]
-								rootpart = torso
+							local opacity_mult = 1
+							if not parts and menu:GetVal("Visuals", "ESP Settings", "ESP Fading") then
+								local log_position = client.lastPlayerPositions[player] 
+								if log_position then
+									torso = log_position.cframe
+									opacity_mult = clamp((log_position.time - current_time + 0.5) * 2, 0, 1)
+									rootpart = torso
+								end
 							else
 								player.Character = parts.rootpart.Parent
 
 								torso = parts.torso.CFrame
 								rootpart = parts.rootpart.CFrame
+								client.lastPlayerPositions[player] = {cframe = torso, time = current_time} 
 							end
+							if opacity_mult == 0 then continue end
 							if not torso then continue end
-							client.lastPlayerPositions[player] = torso
-							
 							position = torso.Position
 							resolved = false
 							if menu:GetVal("Visuals", "Enemy ESP", "Flags")[3] then
@@ -12569,8 +12573,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local GroupBox = player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 							local health = math.ceil(client.hud:getplayerhealth(player))
 							local spoty = 0
-							local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", COLOR2)[4] / 255
-							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Box", COLOR1)[4] / 255
+							local boxtransparency = menu:GetVal("Visuals", GroupBox, "Box", COLOR2)[4] / 255 * opacity_mult
+							local boxtransparencyfilled = menu:GetVal("Visuals", GroupBox, "Box", COLOR1)[4] / 255 * opacity_mult
+							local health_number_transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255 * opacity_mult
+							local name_transparency = menu:GetVal("Visuals", GroupBox, "Name", COLOR)[4] / 255 * opacity_mult
 							local espflags = menu:GetVal("Visuals", GroupBox, "Flags")
 							local distance = math.floor((rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
 							local flag_text_size = GroupBox == "Enemy ESP" and espflags[5] or espflags[3]
@@ -12579,7 +12585,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									local playerdata = teamdata[1]:FindFirstChild(playename) or teamdata[2]:FindFirstChild(playename)
 									allesp[3][5][curplayer].Visible = true
 									allesp[3][5][curplayer].Text = "lv".. playerdata.Rank.Text
-									allesp[3][5][curplayer].Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
+									allesp[3][5][curplayer].Transparency = health_number_transparency
 									allesp[3][5][curplayer].Position = Vector2.new(
 										math.floor(boxPosition.x) + boxSize.x + 2,
 										math.floor(boxPosition.y) - 4 + spoty
@@ -12599,7 +12605,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									
 									allesp[3][6][curplayer].Visible = true
 									allesp[3][6][curplayer].Text = tostring(distance).. "m"
-									allesp[3][6][curplayer].Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
+									allesp[3][6][curplayer].Transparency = health_number_transparency
 									allesp[3][6][curplayer].Position = Vector2.new(
 										math.floor(boxPosition.x) + boxSize.x + 2,
 										math.floor(boxPosition.y) - 4 + spoty
@@ -12618,7 +12624,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								if GroupBox == "Enemy ESP" then
 									if espflags[3] then
 										allesp[3][4][curplayer].Visible = resolved
-										allesp[3][4][curplayer].Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
+										allesp[3][4][curplayer].Transparency = health_number_transparency
 										allesp[3][4][curplayer].Position = Vector2.new(
 											math.floor(boxPosition.x) + boxSize.x + 2,
 											math.floor(boxPosition.y) - 4 + spoty
@@ -12694,14 +12700,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. playename)
 
 									local ySizeBar = -math.floor(boxSize.y * health / 100)
-									if menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1]
+									if menu.options["Visuals"][GroupBox]["Health Number"][1] 
+										and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1] 
+										and health > 0 
 									then
 										local hptext = allesp[3][3][curplayer]
 										hptext.Visible = true
 										hptext.Text = tostring(health)
 										if flag_text_size then
 											hptext.Font = 2
-											hptext.Size = 13
 										else
 											hptext.Font = 1
 										end
@@ -12716,7 +12723,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										
 										--hptext.Position = Vector2.new(boxPosition.x - 7 - tb.x, boxPosition.y + clamp(boxSize.y + ySizeBar - 8, -4, boxSize.y - 10))
 										hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", COLOR, true)
-										hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
+										hptext.Transparency = health_number_transparency
 
 
 										--[[
@@ -12732,6 +12739,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									allesp[3][1][curplayer].Visible = true
 									allesp[3][1][curplayer].Position = Vector2.new(math.floor(boxPosition.x) - 6, math.floor(boxPosition.y) - 1)
 									allesp[3][1][curplayer].Size = Vector2.new(4, boxSize.y + 2)
+									allesp[3][1][curplayer].Transparency = opacity_mult
 
 									allesp[3][2][curplayer].Visible = true
 									allesp[3][2][curplayer].Position = Vector2.new(
@@ -12751,6 +12759,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											color = menu:GetVal("Visuals", GroupBox, "Health Bar", COLOR2, true),
 										},
 									})
+									allesp[3][2][curplayer].Transparency = opacity_mult
 
 									--debug.profileend("renderVisuals Player ESP Render Health Bar " .. playename)
 								elseif menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1]
@@ -12766,7 +12775,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 									hptext.Position = boxPosition + Vector2.new(-tb.x - 2, -4)
 									hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", COLOR, true)
-									hptext.Transparency = menu.options["Visuals"][GroupBox]["Health Number"][5][1][4] / 255
+									hptext.Transparency = health_number_transparency
 
 									--debug.profileend("renderVisuals Player ESP Render Health Number " .. playename)
 								end
@@ -12810,7 +12819,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	
 										tempicon.Visible = true
 										tempicon.Position = Vector2.new(math.floor(boxPosition.x + boxSize.x * 0.5 - (tempimage.w/2)), math.floor(boxPosition.y + boxSize.y + yaddpos + 2))
-										tempicon.Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR)[4]/255
+										tempicon.Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR)[4]/255 * opacity_mult
 									
 									elseif not menu:GetVal("Visuals", GroupBox, "Held Weapon") then
 
@@ -12895,51 +12904,51 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, playename)
 								then
 									allesp[4][1][curplayer].Color = friend_color
-									allesp[4][1][curplayer].Transparency = friend_alpha
+									allesp[4][1][curplayer].Transparency = friend_alpha * opacity_mult
 
 									allesp[2][1][curplayer].Color = friend_color
 									allesp[2][3][curplayer].Color = friend_color
 
 									allesp[4][2][curplayer].Color = friend_color
-									allesp[4][2][curplayer].Transparency = friend_alpha
+									allesp[4][2][curplayer].Transparency = friend_alpha * opacity_mult
 
 									for i = 1, #skelparts do
 										local line = allesp[1][i][curplayer]
 										line.Color = friend_color
-										line.Transparency = friend_alpha
+										line.Transparency = friend_alpha * opacity_mult
 									end
 								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (
 										player == legitbot.target or player == ragebot.target
 									)
 								then
 									allesp[4][1][curplayer].Color = target_color
-									allesp[4][1][curplayer].Transparency = target_alpha
+									allesp[4][1][curplayer].Transparency = target_alpha * opacity_mult
 
 									allesp[2][3][curplayer].Color = target_color
 									allesp[2][1][curplayer].Color = target_color
 
 									allesp[4][2][curplayer].Color = target_color
-									allesp[4][2][curplayer].Transparency = target_alpha
+									allesp[4][2][curplayer].Transparency = target_alpha * opacity_mult
 
 									for i = 1, #skelparts do
 										local line = allesp[1][i][curplayer]
 										line.Color = target_color
-										line.Transparency = target_alpha
+										line.Transparency = target_alpha * opacity_mult
 									end
 								else
 									allesp[4][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Name", COLOR, true) -- RGB(menu.options["Visuals"][GroupBox]["Name"][5][1][1], menu.options["Visuals"][GroupBox]["Name"][5][1][2], menu.options["Visuals"][GroupBox]["Name"][5][1][3])
-									allesp[4][1][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Name", COLOR)[4] / 255
+									allesp[4][1][curplayer].Transparency = name_transparency
 
 									allesp[2][3][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", COLOR2, true)
 									allesp[2][1][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Box", COLOR1, true)
 
 									allesp[4][2][curplayer].Color = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR, true)
-									allesp[4][2][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR)[4] / 255
+									allesp[4][2][curplayer].Transparency = menu:GetVal("Visuals", GroupBox, "Held Weapon", COLOR)[4] / 255 * opacity_mult
 
 									for i = 1, #skelparts do
 										local line = allesp[1][i][curplayer]
 										line.Color = menu:GetVal("Visuals", GroupBox, "Skeleton", COLOR, true)
-										line.Transparency = menu:GetVal("Visuals", GroupBox, "Skeleton", COLOR)[4] / 255
+										line.Transparency = menu:GetVal("Visuals", GroupBox, "Skeleton", COLOR)[4] / 255 * opacity_mult
 									end
 								end
 							elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View")
@@ -13009,7 +13018,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
 
 									Tri.Color = i == 1 and color or color2
-									Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR)[4] / 255
+									Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR)[4] / 255 * opacity_mult
 								end
 								--debug.profileend("renderVisuals Player ESP Render Out of View " .. playename)
 							end
@@ -15126,6 +15135,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									maxvalue = 32,
 									custom = { [0] = "Unlimited" },
 									stradd = " letters",
+								},
+								{
+									type = TOGGLE,
+									name = "ESP Fading", 
+									value = true
 								},
 								{
 									type = TOGGLE,
