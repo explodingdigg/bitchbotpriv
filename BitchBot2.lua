@@ -8893,122 +8893,125 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 		end
 	end
+	local function renderChamsOnPlayer(player, parts)
+		local Body = parts or client.replication.getbodyparts(player)
+		if Body then
+			local enabled
+			local col
+			local vTransparency
+
+			local xqz
+			local ivTransparency
+
+			if player.Team ~= Players.LocalPlayer.Team then
+				enabled = menu:GetVal("Visuals", "Enemy ESP", "Chams")
+				col = menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR2, true)
+				vTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR2)[4] / 255
+				xqz = menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR1, true)
+				ivTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR1)[4] / 255
+			else
+				enabled = menu:GetVal("Visuals", "Team ESP", "Chams")
+				col = menu:GetVal("Visuals", "Team ESP", "Chams", COLOR2, true)
+				vTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", COLOR2)[4] / 255
+				xqz = menu:GetVal("Visuals", "Team ESP", "Chams", COLOR1, true)
+				ivTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", COLOR1)[4] / 255
+			end
+
+			player.Character = Body.rootpart.Parent
+			local Parts = player.Character:GetChildren()
+			for k1 = 1, #Parts do
+				Part = Parts[k1]
+				--debug.profilebegin("renderChams " .. player.Name)
+				if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
+					local helmet = Part:FindFirstChild("HELMET")
+					if helmet then
+						helmet.Slot1.Transparency = enabled and 1 or 0
+						helmet.Slot2.Transparency = enabled and 1 or 0
+					end
+
+					if not Part:FindFirstChild("c88") then
+						for i = 0, 1 do
+							local box
+
+							if Part.Name ~= "Head" then
+								box = Instance.new("BoxHandleAdornment", Part)
+								box.Size = Part.Size + Vector3.new(0.1, 0.1, 0.1)
+								if i == 0 then
+									box.Size -= Vector3.new(0.25, 0.25, 0.25)
+								end
+								table.insert(misc.adornments, box)
+							else
+								box = Instance.new("CylinderHandleAdornment", Part)
+								box.Height = Part.Size.y + 0.3
+								box.Radius = Part.Size.x * 0.5 + 0.2
+								if i == 0 then
+									box.Height -= 0.2
+									box.Radius -= 0.2
+								end
+								box.CFrame = CFrame.new(CACHED_VEC3, Vector3.new(0, 1, 0))
+								table.insert(misc.adornments, box)
+							end
+
+							box.Name = i == 0 and "c88" or "c99"
+							box.Adornee = Part
+							box.ZIndex = 1
+
+							box.AlwaysOnTop = i == 0 -- ternary sex
+							box.Color3 = i == 0 and col or xqz
+							box.Transparency = i == 0 and vTransparency or ivTransparency
+
+							box.Visible = enabled
+						end
+					end
+					for i = 0, 1 do
+						local adorn = i == 0 and Part.c88 or Part.c99
+						if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, player.Name)
+						then
+							xqz = menu:GetVal(
+									"Visuals",
+									"ESP Settings",
+									"Highlight Priority",
+									COLOR,
+									true
+								)
+							col = bColor:Mult(xqz, 0.6)
+						elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR) and table.find(menu.friends, player.Name)
+						then
+							xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR, true)
+							col = bColor:Mult(xqz, 0.6)
+						elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (
+								player == legitbot.target or player == ragebot.target
+							)
+						then
+							xqz = menu:GetVal(
+								"Visuals",
+								"ESP Settings",
+								"Highlight Aimbot Target",
+								COLOR,
+								true
+							)
+							col = bColor:Mult(xqz, 0.6)
+						end
+						adorn.Color3 = i == 0 and col or xqz
+						adorn.Visible = enabled
+						adorn.Transparency = i == 0 and vTransparency or ivTransparency
+					end
+				end
+				--debug.profileend("renderChams " .. player.Name)
+			end
+		end
+	end
 
 	local function renderChams() -- this needs to be optimized a fucking lot i legit took this out and got 100 fps -- FUCK YOU JSON FROM MONTHS AGO YOU UDCK -- fuk json
 		--debug.profilebegin("render chams")
+
 		local PlayerList = Players:GetPlayers()
 		for k = 1, #PlayerList do
 			local player = PlayerList[k]
 			if player == LOCAL_PLAYER then
 				continue
 			end -- doing this for now, i'll have to change the way the third person model will end up working
-			local Body = client.replication.getbodyparts(player)
-			if Body then
-				local enabled
-				local col
-				local vTransparency
-
-				local xqz
-				local ivTransparency
-
-				if player.Team ~= Players.LocalPlayer.Team then
-					enabled = menu:GetVal("Visuals", "Enemy ESP", "Chams")
-					col = menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR2, true)
-					vTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR2)[4] / 255
-					xqz = menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR1, true)
-					ivTransparency = 1 - menu:GetVal("Visuals", "Enemy ESP", "Chams", COLOR1)[4] / 255
-				else
-					enabled = menu:GetVal("Visuals", "Team ESP", "Chams")
-					col = menu:GetVal("Visuals", "Team ESP", "Chams", COLOR2, true)
-					vTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", COLOR2)[4] / 255
-					xqz = menu:GetVal("Visuals", "Team ESP", "Chams", COLOR1, true)
-					ivTransparency = 1 - menu:GetVal("Visuals", "Team ESP", "Chams", COLOR1)[4] / 255
-				end
-
-				player.Character = Body.rootpart.Parent
-				local Parts = player.Character:GetChildren()
-				for k1 = 1, #Parts do
-					Part = Parts[k1]
-					--debug.profilebegin("renderChams " .. player.Name)
-					if Part.ClassName ~= "Model" and Part.Name ~= "HumanoidRootPart" then
-						local helmet = Part:FindFirstChild("HELMET")
-						if helmet then
-							helmet.Slot1.Transparency = enabled and 1 or 0
-							helmet.Slot2.Transparency = enabled and 1 or 0
-						end
-
-						if not Part:FindFirstChild("c88") then
-							for i = 0, 1 do
-								local box
-
-								if Part.Name ~= "Head" then
-									box = Instance.new("BoxHandleAdornment", Part)
-									box.Size = Part.Size + Vector3.new(0.1, 0.1, 0.1)
-									if i == 0 then
-										box.Size -= Vector3.new(0.25, 0.25, 0.25)
-									end
-									table.insert(misc.adornments, box)
-								else
-									box = Instance.new("CylinderHandleAdornment", Part)
-									box.Height = Part.Size.y + 0.3
-									box.Radius = Part.Size.x * 0.5 + 0.2
-									if i == 0 then
-										box.Height -= 0.2
-										box.Radius -= 0.2
-									end
-									box.CFrame = CFrame.new(CACHED_VEC3, Vector3.new(0, 1, 0))
-									table.insert(misc.adornments, box)
-								end
-
-								box.Name = i == 0 and "c88" or "c99"
-								box.Adornee = Part
-								box.ZIndex = 1
-
-								box.AlwaysOnTop = i == 0 -- ternary sex
-								box.Color3 = i == 0 and col or xqz
-								box.Transparency = i == 0 and vTransparency or ivTransparency
-
-								box.Visible = enabled
-							end
-						else
-							for i = 0, 1 do
-								local adorn = i == 0 and Part.c88 or Part.c99
-								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, player.Name)
-								then
-									xqz = menu:GetVal(
-											"Visuals",
-											"ESP Settings",
-											"Highlight Priority",
-											COLOR,
-											true
-										)
-									col = bColor:Mult(xqz, 0.6)
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR) and table.find(menu.friends, player.Name)
-								then
-									xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR, true)
-									col = bColor:Mult(xqz, 0.6)
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (
-										player == legitbot.target or player == ragebot.target
-									)
-								then
-									xqz = menu:GetVal(
-										"Visuals",
-										"ESP Settings",
-										"Highlight Aimbot Target",
-										COLOR,
-										true
-									)
-									col = bColor:Mult(xqz, 0.6)
-								end
-								adorn.Color3 = i == 0 and col or xqz
-								adorn.Visible = enabled
-								adorn.Transparency = i == 0 and vTransparency or ivTransparency
-							end
-						end
-					end
-					--debug.profileend("renderChams " .. player.Name)
-				end
-			end
+			renderChamsOnPlayer(player)
 		end
 		--debug.profileend("render chams")
 	end
@@ -9462,21 +9465,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			if not whitelist then
 				whitelist = { [target] = true }
 			end
-			local autowallchoice = menu:GetVal("Rage", "Aimbot", "Auto Wall")
-			if autowallchoice ~= 1 and autowallchoice == 2 then
-				local d, t = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed)
-				if not t then
-					return
-				end
-				if not d then
-					return ragebot:bulletcheck_legacy(origin, target.Position, penetration, whitelist)
-				end
-				local z = d.Unit * client.logic.currentgun.data.bulletspeed -- bullet speed cheat --PATCHED. :(
-				-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
-				return ragebot.bulletcheck(origin, target.Position, z, GRAVITY, penetration, whitelist)
-			else
+
+			local d, t = client.trajectory(origin, GRAVITY, target.Position, client.logic.currentgun.data.bulletspeed)
+			if not t then
+				return
+			end
+			if not d then
 				return ragebot:bulletcheck_legacy(origin, target.Position, penetration, whitelist)
 			end
+			local z = d.Unit * client.logic.currentgun.data.bulletspeed -- bullet speed cheat --PATCHED. :(
+			-- bulletcheck dumps if you fucking do origin + traj idk why you do it but i didnt do it and it fixed the dumping
+			return ragebot.bulletcheck(origin, target.Position, z, GRAVITY, penetration, whitelist)
 		end
 
 		function ragebot:AimAtTarget(part, target, head, origin, resolved, backtrack_frame)
@@ -9552,7 +9551,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				players = { self.firsttarget, table.unpack(Players:GetPlayers()) } --= this is so much fucking ebtter but it's still ultra shit
 			end
 
-			local autowall = menu:GetVal("Rage", "Aimbot", "Auto Wall")
+			local autowall = menu:GetVal("Rage", "Aimbot", "Auto Wallbang")
 			local aw_resolve = menu:GetVal("Rage", "Hack vs. Hack", "Autowall Hitscan")
 			local hitboxshift = menu:GetVal("Rage", "Hack vs. Hack", "Hitbox Shifting")
 			--local campos = client.cam.basecframe
@@ -9640,7 +9639,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										else
 											continue
 										end
-									elseif autowall ~= 1 then
+									elseif autowall then
 										--debug.profilebegin("BB self Penetration Check " .. player.Name)
 										local directionVector = camera:GetTrajectory(newbone.Position, camposv3)
 										-- self:CanPenetrate(LOCAL_PLAYER, player, directionVector, newbone.Position, barrel, menu:GetVal("Rage", "Hack vs. Hack", "Extend Penetration"))
@@ -10343,16 +10342,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			if found3 then
 				clienteventfuncs[hash] = function(player, parts)
-					if player.Team ~= LOCAL_PLAYER.Team then
-						for k, v in next, parts:GetChildren() do
-							if v:IsA("Part") then
-								local formattedval = (
-										menu:GetVal("Legit", "Aim Assist", "Enlarge Enemy Hitboxes") / 95
-									) + 1
-								v.Size *= v.Name == "Head" and Vector3.new(formattedval, v.Size.y * (1 + formattedval / 100), formattedval) or formattedval -- hitbox expander
-							end
-						end
-					end
+					local new_parts = {head = parts["Head"], torso = parts["Torso"], larm = parts["Left Arm"], rarm = parts["Right Arm"], lleg = parts["Left Leg"], rleg = parts["Right Leg"], rootpart = parts["HumanoidRootPart"]}
+					renderChamsOnPlayer(player, new_parts)
 					return func(player, parts)
 				end
 			end
@@ -12050,8 +12041,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS")
 					then
 						local sniping = (menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[1] and client.logic.currentgun.type ~= "SNIPER") or (not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[1])
-						local scoping = menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2] and client:GetToggledSight(client.logic.currentgun).sightspring.p > 0.8 or not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2]
-						local shooting = menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3] and INPUT_SERVICE:IsMouseButtonPressed(0) or not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3]
+						local scoping = menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2] and client:GetToggledSight(client.logic.currentgun).sightspring.p > 0.5 or (not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2])
+						local shooting = menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3] and INPUT_SERVICE:IsMouseButtonPressed(0) or (not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3])
 						if sniping and scoping and shooting then
 							local sight = client:GetToggledSight(client.logic.currentgun).sightpart
 							local gunpos2d = Camera:WorldToScreenPoint(sight.Position)
@@ -12643,13 +12634,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									end
 									if espflags[4] and parts then
 										local backtrackedPosition = ragebot:GetBacktrackedPosition(player, parts, menu:GetVal("Rage", "Hack vs. Hack", "Backtracking Time")/1000)
-										backtrackedPosition, btRendered = Camera:WorldToViewportPoint(backtrackedPosition.pos)
-										if btRendered then
-											allesp[11][1][curplayer].Position = Vector2.new(backtrackedPosition.x, backtrackedPosition.y)
-											allesp[11][1][curplayer].NumSides = 12
-											allesp[11][1][curplayer].Radius = 1 / backtrackedPosition.z * 100 + 3
-											allesp[11][1][curplayer].Thickness = 1
-											allesp[11][1][curplayer].Visible = true
+										if backtrackedPosition then
+											backtrackedPosition, btRendered = Camera:WorldToViewportPoint(backtrackedPosition.pos)
+											if btRendered then
+												allesp[11][1][curplayer].Position = Vector2.new(backtrackedPosition.x, backtrackedPosition.y)
+												allesp[11][1][curplayer].NumSides = 12
+												allesp[11][1][curplayer].Radius = 1 / backtrackedPosition.z * 100 + 3
+												allesp[11][1][curplayer].Thickness = 1
+												allesp[11][1][curplayer].Visible = true
+											end
 										end
 									end
 								end
@@ -14024,7 +14017,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 
 				if menu.open then
-					bulletcheckresolution = menu:GetVal("Rage", "Aimbot", "Autowall FPS (Standard)") / 1000
+					bulletcheckresolution = 30 / 1000
 				end
 
 				--debug.profilebegin("BB No Gun Bob or Sway")
@@ -14315,14 +14308,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									name = "Target Prediction",
 									value = false,
 								},
-								{
-									type = SLIDER,
-									name = "Enlarge Enemy Hitboxes",
-									value = 0,
-									minvalue = 0,
-									maxvalue = 100,
-									stradd = "%",
-								},
 							},
 						},
 						{
@@ -14506,18 +14491,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									custom = { [181] = "Ignored" },
 								},
 								{
-									type = DROPBOX,
-									name = "Auto Wall",
-									value = 1,
-									values = { "Off", "Standard", "Legacy" },
-								},
-								{
-									type = SLIDER,
-									name = "Autowall FPS (Standard)",
-									value = 30,
-									minvalue = 10,
-									maxvalue = 30,
-									stradd = "fps",
+									type = TOGGLE,
+									name = "Auto Wallbang",
+									value = false
 								},
 								{
 									type = TOGGLE,
@@ -14541,7 +14517,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						},
 						{
 							name = "Hack vs. Hack",
-							autopos = "right",
+							autopos = "left",
+							autofill = true,
 							content = {
 								--[[{
 									type = TOGGLE,
@@ -14562,7 +14539,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									name = "Autowall Hitscan",
 									value = false,
 									unsafe = true,
-									tooltip = "While using Auto Wall, this will hitscan multiple points\nto increase penetration and help for peeking.",
+									tooltip = "While using Auto Wallbang, this will hitscan multiple points\nto increase penetration and help for peeking.",
 								},
 								{
 									type = COMBOBOX,
@@ -14608,7 +14585,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = TOGGLE, 
 									name = "Backtracking",
 									value = false,
-									tooltip = "Attempts to abuse lag compensation and shoot players where they were in the past.\nUsing Visuals->Enemy ESP->Show Backtracked Position will help illustrate this."
+									tooltip = "Attempts to abuse lag compensation and shoot players where they were in the past.\nUsing Visuals->Enemy ESP->Flags->Backtrack will help illustrate this."
 								},
 								{
 									type = SLIDER,
@@ -14629,89 +14606,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							},
 						},
 						{
-							name = { "Extra", "Settings" },
-							autopos = "left",
-							autofill = true,
-							[1] = {
-								content = {
-									{
-										type = TOGGLE,
-										name = "Knife Bot",
-										value = false,
-										extra = {
-											type = KEYBIND,
-										},
-										unsafe = true,
-									},
-									{
-										type = DROPBOX,
-										name = "Knife Bot Type",
-										value = 2,
-										values = { "Assist", "Multi Aura", "Flight Aura" },
-									},
-									{
-										type = TOGGLE,
-										name = "Auto Peek",
-										value = false,
-										extra = {
-											type = KEYBIND,
-											toggletype = 1,
-										},
-										tooltip = "Hitscans from in front of your camera,\nif a target is found it will move you towards the point automatically",
-									},
-								},
-							},
-							[2] = {
-								content = {
-									{
-										type = TOGGLE,
-										name = "Aimbot Performance Mode",
-										value = true,
-										tooltip = "Lowers polling rate for targetting in Rage Aimbot.",
-									},
-									{
-										type = TOGGLE,
-										name = "Resolve Fake Positions",
-										value = true,
-										tooltip = "Rage aimbot attempts to resolve Crimwalk on other players.\nDisable if you are having issues with resolver.",
-									},
-									{
-										type = TOGGLE,
-										name = "Aimbot Damage Prediction",
-										value = true,
-										tooltip = "Predicts damage done to enemies as to prevent wasting ammo and time on certain players.\nHelps for users, and against players with high latency.",
-									},
-									{
-										type = SLIDER,
-										name = "Damage Prediction Limit",
-										value = 100,
-										minvalue = 0,
-										maxvalue = 300,
-										stradd = "hp",
-									},
-									{
-										type = SLIDER,
-										name = "Damage Prediction Time",
-										value = 200,
-										minvalue = 100,
-										maxvalue = 500,
-										stradd = "%",
-									},
-									{
-										type = SLIDER,
-										name = "Max Hitscan Points",
-										value = 30,
-										minvalue = 0,
-										maxvalue = 300,
-										stradd = " points",
-									},
-								},
-							},
-						},
-						{
 							name = { "Anti Aim", "Fake Lag" },
-							autopos = "right",
-							autofill = true,
+							x = menu.columns.right,
+							y = 66,
+							width = menu.columns.width,
+							height = 253,
 							[1] = {
 								content = {
 									{
@@ -14811,6 +14710,88 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = TOGGLE,
 										name = "Release Packets on Shoot",
 										value = false,
+									},
+								},
+							},
+						},
+						{
+							name = { "Extra", "Settings" },
+							y = 325,
+							x = menu.columns.right,
+							width = menu.columns.width,
+							height = 258,
+							[1] = {
+								content = {
+									{
+										type = TOGGLE,
+										name = "Knife Bot",
+										value = false,
+										extra = {
+											type = KEYBIND,
+										},
+										unsafe = true,
+									},
+									{
+										type = DROPBOX,
+										name = "Knife Bot Type",
+										value = 2,
+										values = { "Assist", "Multi Aura", "Flight Aura" },
+									},
+									{
+										type = TOGGLE,
+										name = "Auto Peek",
+										value = false,
+										extra = {
+											type = KEYBIND,
+											toggletype = 1,
+										},
+										tooltip = "Hitscans from in front of your camera,\nif a target is found it will move you towards the point automatically",
+									},
+								},
+							},
+							[2] = {
+								content = {
+									{
+										type = TOGGLE,
+										name = "Aimbot Performance Mode",
+										value = true,
+										tooltip = "Lowers polling rate for targetting in Rage Aimbot.",
+									},
+									{
+										type = TOGGLE,
+										name = "Resolve Fake Positions",
+										value = true,
+										tooltip = "Rage aimbot attempts to resolve Crimwalk on other players.\nDisable if you are having issues with resolver.",
+									},
+									{
+										type = TOGGLE,
+										name = "Aimbot Damage Prediction",
+										value = true,
+										tooltip = "Predicts damage done to enemies as to prevent wasting ammo and time on certain players.\nHelps for users, and against players with high latency.",
+									},
+									{
+										type = SLIDER,
+										name = "Damage Prediction Limit",
+										value = 100,
+										minvalue = 0,
+										maxvalue = 300,
+										stradd = "hp",
+									},
+									{
+										type = SLIDER,
+										name = "Damage Prediction Time",
+										value = 200,
+										minvalue = 100,
+										maxvalue = 500,
+										stradd = "%",
+									},
+									{
+										type = SLIDER,
+										name = "Max Hitscan Points",
+										value = 30,
+										minvalue = 0,
+										maxvalue = 300,
+										stradd = " points",
 									},
 								},
 							},
