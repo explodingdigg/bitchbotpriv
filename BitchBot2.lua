@@ -2651,8 +2651,8 @@ function menu.Initialize(menutable)
 	local oldcopy = { cp.drawings[#cp.drawings] }
 
 	--ColorpickerRect(false, 197, cp.h - 25, 75, 20, {30, 30, 30, 255}, cp.drawings)
-	ColorpickerText("[ Applaye ]", false, true, 235, cp.h - 23, cp.drawings)
-	local applayetext = cp.drawings[#cp.drawings]
+	ColorpickerText("[ Apply ]", false, true, 235, cp.h - 23, cp.drawings)
+	local applytext = cp.drawings[#cp.drawings]
 
 	local function set_newcolor(r, g, b, a)
 		newcolor.Color = RGB(r, g, b)
@@ -2754,7 +2754,7 @@ function menu.Initialize(menutable)
 				menu:SetDragBarB(cp.x + 12 + math.floor(156 * (color[4] / 255)), cp.y + 188)
 			end
 
-			applayetext.Position = Vector2.new(235 + cp.x, cp.y + cp.h - 23)
+			applytext.Position = Vector2.new(235 + cp.x, cp.y + cp.h - 23)
 			maincolor.Color = Color3.fromHSV(h, 1, 1)
 			cp.drawings[7].Text = text
 		end
@@ -4018,7 +4018,7 @@ function menu.Initialize(menutable)
 		end
 		if menu.colorPickerOpen then
 			if menu:MouseInColorPicker(197, cp.h - 25, 75, 20) then
-				--applaye newcolor to oldcolor
+				--apply newcolor to oldcolor
 				local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
 				menu.colorPickerOpen[4][1].Color = tempclr
 				for i = 2, 3 do
@@ -9835,7 +9835,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				"what are you trying to do young man, this is illegal.  you do know that you have to provide us with shit to use to calculate this, you do realize this right?"
 			) -- end
 			assert( origin,
-				"just like before, we need information to even applaye this to our things we made to provide you with ease of p100 hits 🤡"
+				"just like before, we need information to even apply this to our things we made to provide you with ease of p100 hits 🤡"
 			)
 			assert(
 				selectedpart,
@@ -10981,7 +10981,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			return send("spotplayers", players)
 		end
 
-		function misc:ApplayeGunMods()
+		function misc:ApplyGunMods()
 			local mods_enabled = menu:GetVal("Misc", "Weapon Modifications", "Enabled")
 			local firerate_scale = menu:GetVal("Misc", "Weapon Modifications", "Fire Rate Scale") / 100
 			--local recoil_scale = menu:GetVal("Misc", "Weapon Modifications", "Recoil Scale") / 100
@@ -11509,7 +11509,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end)
 					end
 					misc.model = nil
-					misc:ApplayeGunMods()
+					misc:ApplyGunMods()
 					misc.autopeektimeout = 100
 				end
 				if args[1] == "logmessage" or args[1] == "debug" then
@@ -12521,12 +12521,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 							local torso, rootpart, position, resolved
 							local opacity_mult = 1
-							if not parts and menu:GetVal("Visuals", "ESP Settings", "ESP Fading") then
-								local log_position = client.lastPlayerPositions[player] 
-								if log_position then
-									torso = log_position.cframe
-									opacity_mult = clamp((log_position.time - current_time + 0.5) * 2, 0, 1)
-									rootpart = torso
+							if not parts then
+								if menu:GetVal("Visuals", "ESP Settings", "ESP Fading") ~= 0 then
+									local log_position = client.lastPlayerPositions[player] 
+									if log_position then
+										torso = log_position.cframe
+										opacity_mult = clamp((log_position.time - current_time + 0.5) * 2, 0, 1)
+										rootpart = torso
+									end
 								end
 							else
 								player.Character = parts.rootpart.Parent
@@ -16036,7 +16038,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									-- 	type = TOGGLE,
 									-- 	name = "Skin Changer",
 									-- 	value = false,
-									-- 	tooltip = "While this is enabled, all custom skins will applaye with the custom settings below.",
+									-- 	tooltip = "While this is enabled, all custom skins will apply with the custom settings below.",
 									-- 	extra = {
 									-- 		type = COLORPICKER,
 									-- 		name = "Weapon Skin Color",
