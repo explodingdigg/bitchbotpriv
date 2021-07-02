@@ -15139,9 +15139,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									stradd = " letters",
 								},
 								{
-									type = TOGGLE,
+									type = SLIDER,
 									name = "ESP Fading", 
-									value = true
+									value = 0.5,
+									minvalue = 0,
+									maxvalue = 2,
+									stradd = "s",
+									custom = { [0] = "Off" }
 								},
 								{
 									type = TOGGLE,
