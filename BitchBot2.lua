@@ -12522,7 +12522,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local torso, rootpart, position, resolved
 							local opacity_mult = 1
 							if not parts then
-								if menu:GetVal("Visuals", "ESP Settings", "ESP Fading") ~= 0 then
+								if menu:GetVal("Visuals", "ESP Settings", "ESP Fade Time") ~= 0 then
 									local log_position = client.lastPlayerPositions[player] 
 									if log_position then
 										torso = log_position.cframe
@@ -14398,10 +14398,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = SLIDER,
 									name = "Silent Aim FOV",
 									value = 5,
-									minvalue = 0.1,
+									minvalue = 0,
 									maxvalue = 180,
 									stradd = "°",
-									decimal = 0.1,
 								},
 								{
 									type = SLIDER,
@@ -15140,11 +15139,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								},
 								{
 									type = SLIDER,
-									name = "ESP Fading", 
+									name = "ESP Fade Time", 
 									value = 0.5,
 									minvalue = 0,
 									maxvalue = 2,
 									stradd = "s",
+									decimal = 0.1,
 									custom = { [0] = "Off" }
 								},
 								{
