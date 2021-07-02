@@ -12522,11 +12522,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local torso, rootpart, position, resolved
 							local opacity_mult = 1
 							if not parts then
-								if menu:GetVal("Visuals", "ESP Settings", "ESP Fade Time") ~= 0 then
+								local fade_time = menu:GetVal("Visuals", "ESP Settings", "ESP Fade Time")
+								if fade_time ~= 0 then
 									local log_position = client.lastPlayerPositions[player] 
 									if log_position then
 										torso = log_position.cframe
-										opacity_mult = clamp((log_position.time - current_time + 0.5) * 2, 0, 1)
+										opacity_mult = clamp((log_position.time - current_time + fade_time) * 1/fade_time, 0, 1)
 										rootpart = torso
 									end
 								end
