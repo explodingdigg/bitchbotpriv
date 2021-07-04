@@ -9188,6 +9188,31 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	end
 
 	do --ANCHOR camera function definitions.
+		function camera:AngleToEdge(angle, inset) -- pasted from the grenade indicators lmao
+			local pos
+			local ox = math.cos(angle)
+			local oy = math.sin(angle)
+			local slope = oy / ox
+			
+			local h_edge = SCREEN_SIZE.x - inset
+			local v_edge = SCREEN_SIZE.y - inset
+			if oy < 0 then
+				v_edge = inset
+			end
+			if ox < 0 then
+				h_edge = inset
+			end
+			local y = (slope * h_edge) + (SCREEN_SIZE.y / 2) - slope * (SCREEN_SIZE.x / 2)
+			if y > 0 and y < SCREEN_SIZE.y - inset then
+				pos = Vector2.new(h_edge, y)
+			else
+				pos = Vector2.new(
+					(v_edge - SCREEN_SIZE.y / 2 + slope * (SCREEN_SIZE.x / 2)) / slope,
+					v_edge
+				)
+			end
+			return pos
+		end
 		function camera:SetArmsVisible(flag)
 			local larm, rarm = Camera:FindFirstChild("Left Arm"), Camera:FindFirstChild("Right Arm")
 			assert(larm, "arms are missing")
@@ -9909,7 +9934,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				text.Text ..= string.format("\n--hitbox shift method-- %d %d %d %d %d", unpack(hitboxShiftPoints))
 				text.Text ..= string.format("\n--hitbox-- %d %d", unpack(hitboxShiftAmount))
 				text.Text ..= string.format("\n--smart legitbot-- %0.1f", legitbot.smart)
-				text.Text ..= ("%s %s %s"):format(menu.inmenu and "true" or "false", menu.inmiddlemenu and "true" or "false", menu.intabs and "true" or "false")
 				if ragebot.lasthittick and ragebot.lasthittime then
 					text.Text ..= string.format("\n--backtracking-- %dms", (ragebot.lasthittick - ragebot.lasthittime) * 1000)
 				end
@@ -11610,7 +11634,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					if menu:GetVal("Misc", "Extra", "Impact Grenade") then
 						local data = args[3]
 						local frames = data.frames
-						data.blowuptime = frames[2].t0
+						data.blowuptime = frames[2].t0 + 0.1
 						frames = {
 							frames[1],
 							frames[2]
@@ -11642,7 +11666,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 						if (closest and part) then
 							local args = {
-
 								"FRAG",
 								{
 									frames = {
@@ -11966,6 +11989,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local fov = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV")
 							local sFov = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV")
 							local dzFov = menu:GetVal("Legit", "Aim Assist", "Deadzone FOV")
+							if menu:GetVal("Legit", "Aim Assist", "Dynamic FOV") then
+								fov = Camera.FieldOfView / client.char.unaimedfov * fov
+								dzFov = Camera.FieldOfView / client.char.unaimedfov * dzFov
+								sFov = Camera.FieldOfView / client.char.unaimedfov * sFov
+							end
 
 							local hitboxPriority = menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 1 and "head" or menu:GetVal("Legit", "Aim Assist", "Hitscan Priority") == 2 and "torso" or "closey :)"
 							local hitscan = misc:GetParts(menu:GetVal("Legit", "Aim Assist", "Hitscan Points"))
@@ -12097,7 +12125,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 							local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
 
-							local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
+							local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X") / 2
 							local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
 							local rcsdelta = Vector3.new(rcs.x * xo / 100, rcs.y * yo / 100, 0)  --* client:GetToggledSight(client.logic.currentgun).sightspring.p
 							Pos += rcsdelta
@@ -12205,7 +12233,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					hitscan = hitscan or {}
 					players = players or game.Players:GetPlayers()
 
-					if legitbot.target then
+					if legitbot.target and client.hud:isplayeralive(legitbot.target) then
 						local Parts = client.replication.getbodyparts(legitbot.target)
 						if Parts then
 							new_closest = closest
@@ -12232,7 +12260,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							continue
 						end
 
-						if Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
+						if client.hud:isplayeralive(Player) and Player.Team ~= LOCAL_PLAYER.Team and Player ~= LOCAL_PLAYER then
 							local Parts = client.replication.getbodyparts(Player)
 							if Parts then
 								new_closest = closest
@@ -12551,7 +12579,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							client.aliveplayers += 1
 						end
 						
-						do --if client.hud:isplayeralive(player) then
+						do 
 
 							
 
@@ -12576,8 +12604,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										rootpart = torso
 									end
 								end
-							else
-								if parts.torso.Transparency > 0 then continue end -- idk this should work against like floating dead peopluee
+							elseif client.hud:isplayeralive(player) then
+								if parts.head.Transparency > 0 then continue end -- idk this should work against like floating dead peopluee
 								player.Character = parts.rootpart.Parent
 
 								torso = parts.torso.CFrame
@@ -13057,18 +13085,23 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									Tri.Visible = true
 
 									local relativePos = Camera.CFrame:PointToObjectSpace(rootpartpos)
-									local direction = math.atan2(-relativePos.y, relativePos.x)
+									local angle = math.atan2(-relativePos.y, relativePos.x)
 
 									local distance = dot(relativePos.Unit, relativePos)
 									local arrow_size = menu:GetVal("Visuals", "Enemy ESP", "Dynamic Arrow Size") and map(distance, 1, 100, big_size, size) or size
 									arrow_size = arrow_size > big_size and big_size or arrow_size < size and size or arrow_size
 
-									direction = Vector2.new(math.cos(direction), math.sin(direction))
-
-									local pos = (
-											direction  * SCREEN_SIZE.y  * menu:GetVal("Visuals", "Enemy ESP", "Arrow Distance") / 200
-										) + (SCREEN_SIZE * 0.5)
-
+									direction = Vector2.new(math.cos(angle), math.sin(angle))
+									local dist = menu:GetVal("Visuals", "Enemy ESP", "Arrow Distance")
+									local pos
+									if dist ~= 101 then
+										pos = (
+												direction * SCREEN_SIZE.x * dist / 200
+											) + (SCREEN_SIZE * 0.5)
+									end
+									if not pos or pos.y > SCREEN_SIZE.y - 5 or pos.y < 5 then
+										pos = camera:AngleToEdge(angle, 5)
+									end
 									Tri.PointA = pos
 									Tri.PointB = pos - bVector2:getRotate(direction, 0.5) * arrow_size
 									Tri.PointC = pos - bVector2:getRotate(direction, -0.5) * arrow_size
@@ -13235,7 +13268,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								circle.Color = i == 2 and col or Color3.new(0, 0, 0)
 								circle.Transparency = transparency / (i == 1 and 2 or 1)
 								circle.Thickness = i == 2 and 1 or 3
-								circle.Radius = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV") / workspace.CurrentCamera.FieldOfView  * SCREEN_SIZE.y
+								local fov = menu:GetVal("Legit", "Aim Assist", "Aimbot FOV")
+								if menu:GetVal("Legit", "Aim Assist", "Dynamic FOV") then
+									fov = Camera.FieldOfView / client.char.unaimedfov * fov
+								end
+								circle.Radius = fov / workspace.CurrentCamera.FieldOfView * SCREEN_SIZE.y
 								circle.Visible = true
 								circle.Position = SCREEN_SIZE / 2
 							end
@@ -13253,7 +13290,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								circle.Color = i == 2 and col or Color3.new(0, 0, 0)
 								circle.Transparency = transparency / (i == 1 and 2 or 1)
 								circle.Thickness = i == 2 and 1 or 3
-								circle.Radius = menu:GetVal("Legit", "Aim Assist", "Deadzone FOV") / workspace.CurrentCamera.FieldOfView  * SCREEN_SIZE.y
+								local fov = menu:GetVal("Legit", "Aim Assist", "Deadzone FOV")
+								if menu:GetVal("Legit", "Aim Assist", "Dynamic FOV") then
+									fov = Camera.FieldOfView / client.char.unaimedfov * fov
+								end
+								circle.Radius = fov / workspace.CurrentCamera.FieldOfView  * SCREEN_SIZE.y
 								circle.Position = SCREEN_SIZE / 2
 								circle.Visible = true
 							end
@@ -13271,7 +13312,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								circle.Color = i == 2 and col or Color3.new(0, 0, 0)
 								circle.Transparency = transparency / (i == 1 and 2 or 1)
 								circle.Thickness = i == 2 and 1 or 3
-								circle.Radius = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV") / workspace.CurrentCamera.FieldOfView  * SCREEN_SIZE.y
+								local fov = menu:GetVal("Legit", "Bullet Redirection", "Silent Aim FOV")
+								if menu:GetVal("Legit", "Aim Assist", "Dynamic FOV") then
+									fov = Camera.FieldOfView / client.char.unaimedfov * fov
+								end
+								circle.Radius = fov / workspace.CurrentCamera.FieldOfView  * SCREEN_SIZE.y
 								circle.Position = SCREEN_SIZE / 2
 								circle.Visible = true
 							end
@@ -14049,7 +14094,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 
-				if client.nextchamsupdate and curTick > client.nextchamsupdate then
+				if client.nextchamsupdate and curTick > client.nextchamsupdate and menu.open then
 					client.nextchamsupdate = curTick + 2
 					CreateThread(renderChams)
 					local enemyesp = menu.options["Visuals"]["Enemy ESP"]["Enabled"][1]
@@ -14074,10 +14119,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-				end
-
-				if menu.open then
-					bulletcheckresolution = 30 / 1000
 				end
 
 				--debug.profilebegin("BB No Gun Bob or Sway")
@@ -14304,10 +14345,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								{
 									type = SLIDER,
 									name = "Aimbot FOV",
-									value = 20,
+									value = 10,
 									minvalue = 0,
 									maxvalue = 180,
 									stradd = "°",
+								},
+								{
+									type = TOGGLE,
+									name = "Dynamic FOV",
+									value = false,
+									tooltip = "Changes all FOV settings in the Legit tab\nto change depending on the magnification.",
 								},
 								{
 									type = SLIDER,
@@ -14361,12 +14408,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								{
 									type = TOGGLE,
 									name = "Adjust for Bullet Drop",
-									value = false,
+									value = true,
 								},
 								{
 									type = TOGGLE,
 									name = "Target Prediction",
-									value = false,
+									value = true,
 								},
 							},
 						},
@@ -14485,17 +14532,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								{
 									type = TOGGLE,
 									name = "Weapon RCS",
-									value = false,
+									value = true,
 								},
 								{
 									type = COMBOBOX,
 									name = "Disable RCS While",
-									values = { { "Holding Sniper", false }, { "Scoping In", false }, { "Not Shooting", false } }
+									values = { { "Holding Sniper", false }, { "Scoping In", false }, { "Not Shooting", true } }
 								},
 								{
 									type = SLIDER,
 									name = "Recoil Control X",
-									value = 10,
+									value = 45,
 									minvalue = 0,
 									maxvalue = 100,
 									stradd = "%",
@@ -14503,9 +14550,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								{
 									type = SLIDER,
 									name = "Recoil Control Y",
-									value = 10,
+									value = 80,
 									minvalue = 0,
-									maxvalue = 1000,
+									maxvalue = 150,
 									stradd = "%",
 								},
 							},
@@ -14653,7 +14700,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									value = 4000,
 									minvalue = 0,
 									maxvalue = 5000,
-									stradd = " ms",
+									stradd = "ms",
 								},
 								{
 									type = TOGGLE,
@@ -14989,7 +15036,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										name = "Arrow Distance",
 										value = 50,
 										minvalue = 10,
-										maxvalue = 100,
+										maxvalue = 101,
+										custom = { [101] = "Max" },
 										stradd = "%",
 									},
 									{
@@ -15404,6 +15452,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										minvalue = 0,
 										maxvalue = 24,
 										decimal = 0.1,
+										stradd = "hr",
 									},
 									{
 										type = TOGGLE,
@@ -15929,7 +15978,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										minvalue = 1,
 										maxvalue = 10,
 										value = 5,
-										stradd = " seconds",
+										stradd = "s",
 									},
 									{
 										type = TOGGLE,
