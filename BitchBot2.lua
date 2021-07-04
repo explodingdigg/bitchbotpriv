@@ -472,6 +472,11 @@ function Menu:SetElement(element, value)
 	end
 end
 
+function Menu:CreateConnection(signal, name, func)
+	assert(self.connections[name] == nil, "A menu connection by the name of \"".. name.. "\" already exists")
+	self.connections[name] = signal:Connect(func)
+end
+
 function Menu:Unload()
 	for k, conn in next, self.connections do
 		if not getrawmetatable(conn) then
@@ -510,6 +515,26 @@ function Menu.Funcs:MouseButton1Down() --ANCHOR MOUSE 1 INPUT
 			end
 		end
 
+		for group_box, gb_val in pairs(Menu.Curmenu.hitboxes[Menu.Curmenu.activetab].content) do
+			if gb_val.multigroup then
+				if Menu.Curmenu:MouseInMenu(gb_val.props.click_pos.x, gb_val.props.click_pos.y, gb_val.props.click_pos.width, gb_val.props.click_pos.height) then
+					if not gb_val.active then
+						gb_val.active = true
+
+						for index, name in pairs(gb_val.family) do
+							if group_box ~= name then
+								Menu.Curmenu.hitboxes[Menu.Curmenu.activetab].content[name].active = false
+							end
+						end
+						Menu.Curmenu:SetActiveTab(Menu.Curmenu.activetab)
+
+						return
+					end
+				end
+
+			end
+		end
+
 		for group_box, group_box_content in pairs(Menu.Curmenu.values[Menu.Curmenu:GetTabName()]) do
 			
 			local gb_values = Menu.Curmenu.hitboxes[Menu.Curmenu.activetab].content[group_box]
@@ -541,12 +566,10 @@ function Menu.Funcs:KeyPressed(key) --ANCHOR KEY INPUT
 	end
 end
 
-Menu.connections["menu input"] = INPUT_SERVICE.InputBegan:Connect(function(input) --ANCHOR INPUT HANDLER
+Menu:CreateConnection(INPUT_SERVICE.InputBegan, "menu input", function(input) --ANCHOR INPUT HANDLER
 	if not Menu.fading then
 		if input.KeyCode == Enum.KeyCode.Delete then
-
 			if Menu.fading == false then
-	
 				Menu.fadestart = tick()
 				Menu.fading = true
 				Menu.Curmenu.dragging = false
@@ -559,18 +582,14 @@ Menu.connections["menu input"] = INPUT_SERVICE.InputBegan:Connect(function(input
 	end
 	if Menu.open and not Menu.fading and Menu.selected_window ~= nil then
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then	
-
 			for window_index, window_name in ipairs(reverse_table(Menu.window_order)) do
 				if Menu.windows[window_name]:MouseInsideMenu() then
-
 					if window_name ~= Menu.selected_window then
 						Menu:SetSelectedWindow(window_name)
 					end
-
 					break
 				end
 			end
-
 			Menu.Funcs:MouseButton1Down()
 		else
 			Menu.Funcs:KeyPressed(input)
@@ -578,7 +597,7 @@ Menu.connections["menu input"] = INPUT_SERVICE.InputBegan:Connect(function(input
 	end
 end)
 
-Menu.connections["menu render stepped"] = game.RunService.RenderStepped:Connect(function(fdt) --ANCHOR MENU FADE
+Menu:CreateConnection(game.RunService.RenderStepped, "menu render stepped", function(fdt) --ANCHOR MENU FADE
 	if Menu.fading then
 		if Menu.open then
 			local timesincefade = tick() - Menu.fadestart
@@ -679,6 +698,36 @@ function Menu:Create(menuname, menuprops, menutable)
 				v1.Visible = k == tab
 			end
 		end
+		
+		for k, v in pairs(self.hitboxes[tab].content) do
+			if v.multigroup then
+				if v.active then
+					for k1, v1 in pairs(v.drawn) do -- visibility
+						v1.Visible = true
+					end
+
+					for k1, v1 in ipairs(v.family) do
+						if v1 ~= k then
+							local familygroup = self.hitboxes[tab].content[v1]
+
+							for k2, v2 in pairs(familygroup.drawn) do
+								v2.Visible = false
+							end
+							familygroup.active = false
+						end
+					end
+
+					for k1, v1 in pairs(v.props.bar) do
+						v1.drawn.Position = PointOffset.new(self.point2d, v.props.barpos.pos, v.props.barpos.old_y + (k1 * 2) - 2)
+						v1.drawn.Size = Vector2.new(v.props.barpos.length, 2)
+					end
+
+					for k1, v1 in pairs(v.props.nametext) do
+						v1.Color = v1.Text == k and RGB(255, 255, 255) or RGB(170, 170, 170)
+					end
+				end
+			end
+		end
 		self.activetab = tab
 	end
 
@@ -691,8 +740,6 @@ function Menu:Create(menuname, menuprops, menutable)
 	end
 	--!SECTION
 
-
-
 	for i = 1, 10 do
 		table.insert(curmenu.zindexs, {})
 	end
@@ -701,11 +748,17 @@ function Menu:Create(menuname, menuprops, menutable)
 		addindex = 10 * #self.window_order - 10,
 		zindex = 1
 	}
+
+	local logtotable = nil -- super lazy sorry
 	
 	function mDraw:Text(visible, text, font, pos, centered, color, transparency, outline, tablename)
 		local drawnobj = Draw:Text(visible, text, font, PointOffset.new(curmenu.point2d, pos.X, pos.Y), centered, color, transparency, outline, tablename)
 		drawnobj.ZIndex = mDraw.zindex + mDraw.addindex
 		table.insert(curmenu.zindexs[mDraw.zindex], drawnobj)
+
+		if logtotable ~= nil then
+			table.insert(logtotable, drawnobj)
+		end
 		return drawnobj
 	end
 	
@@ -713,6 +766,10 @@ function Menu:Create(menuname, menuprops, menutable)
 		local drawnobj = Draw:OutlinedRect(visible, PointOffset.new(curmenu.point2d, pos.X, pos.Y), size, color, transparency, tablename)
 		drawnobj.ZIndex = mDraw.zindex + mDraw.addindex
 		table.insert(curmenu.zindexs[mDraw.zindex], drawnobj)
+
+		if logtotable ~= nil then
+			table.insert(logtotable, drawnobj)
+		end
 		return drawnobj
 	end
 	
@@ -720,6 +777,10 @@ function Menu:Create(menuname, menuprops, menutable)
 		local drawnobj = Draw:FilledRect(visible, PointOffset.new(curmenu.point2d, pos.X, pos.Y), size, color, transparency, tablename)
 		drawnobj.ZIndex = mDraw.zindex + mDraw.addindex
 		table.insert(curmenu.zindexs[mDraw.zindex], drawnobj)
+
+		if logtotable ~= nil then
+			table.insert(logtotable, drawnobj)
+		end
 		return drawnobj
 	end
 
@@ -738,6 +799,53 @@ function Menu:Create(menuname, menuprops, menutable)
 		end
 
 		mDraw:Text(true, name, "norm", Vec2(x + 6, y + 6), false, RGB(255, 255, 255), 255, true, tab)
+	end
+
+	function mDraw:CoolMultiBox(names, x, y, width, height, tab)
+		mDraw:OutlinedRect(true, Vec2(x, y), Vec2(width, height), RGB(0, 0, 0), 255, tab)
+		mDraw:OutlinedRect(true, Vec2(x + 1, y + 1), Vec2(width - 2, height -2), RGB(20, 20, 20), 255, tab)
+		table.insert(Menu.clrs.norm, mDraw:FilledRect(true, Vec2(x + 2, y + 2), Vec2(width - 4, 1), RGB(unpack(Menu.mc)), 255, tab))
+		table.insert(Menu.clrs.dark, mDraw:FilledRect(true, Vec2(x + 2, y + 3), Vec2(width - 4, 1), RGB(addunpack(Menu.mc, - 40)), 255, tab))
+		mDraw:FilledRect(true, Vec2(x + 2, y + 4), Vec2(width - 4, 1), RGB(20, 20, 20), 255, tab)
+
+		mDraw:FilledRect(true, Vec2(x + 2, y + 5), Vec2(width - 4, 18), RGB(30, 30, 30), 255, tab)
+		mDraw:FilledRect(true, Vec2(x + 2, y + 21), Vec2(width - 4, 2), RGB(20, 20, 20), 255, tab)
+
+		local selected = {}
+		for i = 0, 8 do
+			local tempdrawing = mDraw:FilledRect(true, Vec2(x + 2, y + 5 + (i * 2)), Vec2(width - 100, 2), RGB(30, 30, 30), 255, tab)
+			tempdrawing.Color = ColorRange(i, { [1] = { start = 0, color = RGB(45, 45, 45) }, [2] = { start = 7, color = RGB(35, 35, 35) } })
+			table.insert(selected, { point = tempdrawing.Position, drawn = tempdrawing })
+		end
+
+		local length = 2
+		local selected_pos = {}
+		local click_pos = {}
+		local nametext = {}
+		for i, v in ipairs(names) do
+			local namedrawn = mDraw:Text(true, v, "norm", Vec2(x + 4 + length, y + 6), false, i == 1 and RGB(255, 255, 255) or RGB(170, 170, 170), 255, true, tab)
+			table.insert(nametext, namedrawn)
+
+			mDraw:FilledRect(true, Vec2(x + length + Draw:FontSize("norm", v).x + 8, y + 5), Vec2(2, 16), RGB(20, 20, 20), 255, tab)
+			table.insert(selected_pos, { pos = x + length, length = Draw:FontSize("norm", v).x + 8, old_y = y + 5})
+			table.insert(click_pos, {
+				x = x + length,
+				y = y + 5,
+				width = Draw:FontSize("norm", v).x + 8,
+				height = 18,
+				name = v,
+				num = i,
+			})
+			length += Draw:FontSize("norm", v).x + 10
+		end
+
+		local settab = 1
+		for k, v in pairs(selected) do
+			v.point = PointOffset.new(curmenu.point2d, selected_pos[settab].pos, selected_pos[settab].old_y)
+			v.drawn.Size = Vector2.new(selected_pos[settab].length, 2)
+		end
+
+		return { bar = selected, barpos = selected_pos, click_pos = click_pos, nametext = nametext }
 	end
 
 	function mDraw:Toggle(name, value, unsafe, x, y, tab)
@@ -791,6 +899,8 @@ function Menu:Create(menuname, menuprops, menutable)
 	local tabsize = menuprops.tabsize or math.floor((curmenu.w - 20) / #menutable)
 	curmenu.tabsize = tabsize
 	for tab_num, tab in ipairs(menutable) do
+		logtotable = nil
+
 		table.insert(curmenu.tab2name, tab.name)
 		mDraw.zindex = 1
 		local background = mDraw:FilledRect(true, Vec2(10 + ((tab_num - 1) * tabsize), 27), Vec2(tabsize, 32), RGB(30, 30, 30), 255, bbmenu)
@@ -824,7 +934,8 @@ function Menu:Create(menuname, menuprops, menutable)
 		local inner_width = curmenu.w - 28
 		local inner_height = curmenu.h - 77
 		for group_num, group_box in ipairs(tab.content) do
-			curmenu.values[tab.name][group_box.name] = {}
+			logtotable = nil
+
 			mDraw.zindex = 10
 
 			if group_box.pos == 3 then
@@ -863,38 +974,79 @@ function Menu:Create(menuname, menuprops, menutable)
 					y_pos[group_box.pos] += group_box.size + 6
 				end
 			end
-			mDraw:CoolBox(group_box.name, group_box.relval.x, group_box.relval.y, group_box.relval.w, group_box.relval.h, drawtab)
+
+			local groups = {}
+
+			if type(group_box.name) == "table" then
+				local props = mDraw:CoolMultiBox(group_box.name, group_box.relval.x, group_box.relval.y, group_box.relval.w, group_box.relval.h, drawtab)
+
+				for name_index, group_name in ipairs(group_box.name) do
+					groups[group_name] = group_box[name_index].content
+
+					curmenu.hitboxes[tab_num].content[group_name] = {
+						multigroup = true,
+						active = name_index == 1,
+						family = group_box.name,
+						props = {
+							bar = props.bar,
+							barpos = props.barpos[name_index],
+							click_pos = props.click_pos[name_index],
+							nametext = props.nametext,
+						},
+						drawn = {},
+
+						visible = true,
+						scrolled = 0,
+						pos = group_box.relval
+					}	
+				end
+			else
+				groups[group_box.name] = group_box.content
+
+				mDraw:CoolBox(group_box.name, group_box.relval.x, group_box.relval.y, group_box.relval.w, group_box.relval.h, drawtab)
+
+				curmenu.hitboxes[tab_num].content[group_box.name] = {
+					active = true,
+					visible = true,
+					scrolled = 0,
+					pos = group_box.relval
+				}	
+			end
 			
-			curmenu.hitboxes[tab_num].content[group_box.name] = {
-				active = true,
-				visible = true,
-				scrolled = 0,
-				pos = group_box.relval
-			}
+			for group_name, group_content in pairs(groups) do
+				local y_add = 24
+				if type(group_box.name) == "table" then
+					y_add += 4
+					logtotable = curmenu.hitboxes[tab_num].content[group_name].drawn
+				else
+					logtotable = nil
+				end
 
-			curmenu.values[tab.name][group_box.name] = {}
-			local curgroup_value = curmenu.values[tab.name][group_box.name]
+				curmenu.values[tab.name][group_name] = {}
+				local curgroup_value = curmenu.values[tab.name][group_name]
 
-			local curhitbox_group = curmenu.hitboxes[tab_num].content[group_box.name]
-			mDraw.zindex = group_num + 1
-			local y_add = 24 
-			for element_num, element in ipairs(group_box.content) do
-				if element.type == TOGGLE then
-					curgroup_value[element.name] = {
-						type = element.type,
-						value = element.value,
-						unsafe = element.unsafe and true or false,
-						drawn = mDraw:Toggle(element.name, element.value, element.unsafe, group_box.relval.x + 8, group_box.relval.y + y_add, drawtab),
-						hitbox = {
-							x = 8, 
-							y = y_add,
-							w = 18 + Draw:FontSize("norm", element.name).x,
-							h = 12
+				local curhitbox_group = curmenu.hitboxes[tab_num].content[group_name] -- ALAN ADD A USE TO THIS L8R
+
+				mDraw.zindex = group_num + 1
+				
+				for element_num, element in ipairs(group_content) do
+					if element.type == TOGGLE then
+						curgroup_value[element.name] = {
+							type = element.type,
+							value = element.value,
+							unsafe = element.unsafe and true or false,
+							drawn = mDraw:Toggle(element.name, element.value, element.unsafe, group_box.relval.x + 8, group_box.relval.y + y_add, drawtab),
+							hitbox = {
+								x = 8, 
+								y = y_add,
+								w = 18 + Draw:FontSize("norm", element.name).x,
+								h = 12
+							}
 						}
-					}
 
-					y_add += 18
+						y_add += 18
 
+					end
 				end
 			end
 		end
@@ -951,19 +1103,72 @@ local Main = Menu:Create("main", {
 				},
 			},
 			{
-				name = "test 2",
+				name = {"group test 1", "group test 2", "poop"},
 				pos = 1,
-				size = 100,
-				content = {},
+				size = 300,
+				[1] = {
+					content = {
+						{
+							type = TOGGLE,
+							name = "pooper XD",
+							value = true,
+						},
+						{
+							type = TOGGLE,
+							name = "TEST 1",
+							value = false,
+						},
+						{
+							type = TOGGLE,
+							name = "TEST 2",
+							value = true,
+						},
+					}
+				},
+				[2] = {
+					content = {
+						{
+							type = TOGGLE,
+							name = "Enabled",
+							value = true,
+							unsafe = true
+						},
+						{
+							type = TOGGLE,
+							name = "TEST 1",
+							value = false,
+						},
+						{
+							type = TOGGLE,
+							name = "TEST 2",
+							value = true,
+						},
+					}
+				},
+				[3] = {
+					content = {
+						{
+							type = TOGGLE,
+							name = "Enabled",
+							value = true,
+							unsafe = true
+						},
+						{
+							type = TOGGLE,
+							name = "fuck",
+							value = false,
+						},
+					}
+				},
 			},
 			{
-				name = "test 3",
+				name = "test 2",
 				pos = 2,
 				size = 100,
 				content = {},
 			},
 			{
-				name = "test 4",
+				name = "test 3",
 				pos = 2,
 				autofill = true,
 				size = 100,
