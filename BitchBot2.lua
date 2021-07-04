@@ -11606,74 +11606,81 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						return
 					end
 				end
-				if args[1] == "newgrenade" and menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
-					local closest = math.huge
-					local part
-					for i, player in pairs(Players:GetPlayers()) do
-						if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
-						then
-							continue
-						end
-						if not table.find(menu.priority, player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
-						then
-							continue
-						end
-						if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
-							local bodyparts = client.replication.getbodyparts(player)
-							if bodyparts then
-								local fovToBone = camera:GetFOV(bodyparts.head)
-								if fovToBone < closest then
-									closest = fovToBone
-									part = bodyparts.head
+				if args[1] == "newgrenade" then
+					if menu:GetVal("Misc", "Extra", "Impact Grenade") then
+						local data = args[3]
+						local frames = data.frames
+						data.blowuptime = frames[2].t0
+					end
+					if menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
+						local closest = math.huge
+						local part
+						for i, player in pairs(Players:GetPlayers()) do
+							if table.find(menu.friends, player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
+							then
+								continue
+							end
+							if not table.find(menu.priority, player.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
+							then
+								continue
+							end
+							if player.Team ~= LOCAL_PLAYER.Team and player ~= LOCAL_PLAYER then
+								local bodyparts = client.replication.getbodyparts(player)
+								if bodyparts then
+									local fovToBone = camera:GetFOV(bodyparts.head)
+									if fovToBone < closest then
+										closest = fovToBone
+										part = bodyparts.head
+									end
 								end
 							end
 						end
-					end
 
-					if (closest and part) then
-						local args = {
-							"FRAG",
-							{
-								frames = {
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(0 / 0),
-										p0 = client.lastrepupdate or client.char.head.Position,
-										rotv = Vector3.new(),
+						if (closest and part) then
+							local args = {
+								"FRAG",
+								{
+									frames = {
+										{
+											v0 = Vector3.new(),
+											glassbreaks = {},
+											t0 = 0,
+											offset = Vector3.new(),
+											rot0 = CFrame.new(),
+											a = Vector3.new(0 / 0),
+											p0 = client.lastrepupdate or client.char.head.Position,
+											rotv = Vector3.new(),
+										},
+										{
+											v0 = Vector3.new(),
+											glassbreaks = {},
+											t0 = 0.002,
+											offset = Vector3.new(),
+											rot0 = CFrame.new(),
+											a = Vector3.new(0 / 0),
+											p0 = Vector3.new(0 / 0),
+											rotv = Vector3.new(),
+										},
+										{
+											v0 = Vector3.new(),
+											glassbreaks = {},
+											t0 = 0.003,
+											offset = Vector3.new(),
+											rot0 = CFrame.new(),
+											a = Vector3.new(),
+											p0 = part.Position + Vector3.new(0, 3, 0),
+											rotv = Vector3.new(),
+										},
 									},
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0.002,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(0 / 0),
-										p0 = Vector3.new(0 / 0),
-										rotv = Vector3.new(),
-									},
-									{
-										v0 = Vector3.new(),
-										glassbreaks = {},
-										t0 = 0.003,
-										offset = Vector3.new(),
-										rot0 = CFrame.new(),
-										a = Vector3.new(),
-										p0 = part.Position + Vector3.new(0, 3, 0),
-										rotv = Vector3.new(),
-									},
+									time = tick(),
+									blowuptime = 0.003,
 								},
-								time = tick(),
-								blowuptime = 0.003,
-							},
-						}
+							}
 
-						send(client.net, "newgrenade", unpack(args))
-						client.hud:updateammo("GRENADE")
-						return
+							send(client.net, "newgrenade", unpack(args))
+							client.hud:updateammo("GRENADE")
+							return
+						end
 					end
 				elseif args[1] == "newbullets" then
 					if menu:GetKey("Misc", "Exploits", "Crimwalk") then return end
@@ -14612,9 +14619,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								{
 									type = SLIDER,
 									name = "Hitbox Shift Distance",
-									value = 16,
+									value = 4,
 									minvalue = 1,
-									maxvalue = 30,
+									maxvalue = 12,
 									stradd = " studs",
 								},
 								{
@@ -15918,6 +15925,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										maxvalue = 10,
 										value = 5,
 										stradd = " seconds",
+									},
+									{
+										type = TOGGLE,
+										name = "Impact Grenade",
+										value = false,
+										tooltip = "Explodes grenades on impact."
 									},
 									{
 										type = TOGGLE,
