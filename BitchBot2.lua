@@ -2128,6 +2128,7 @@ function menu.Initialize(menutable)
 								menu.options[v.name][g_name][v2.name][7] = { v1.x + 7 + v1.width - 38, v1.y + y_pos - 1 }
 								menu.options[v.name][g_name][v2.name].decimal = v2.decimal == nil and nil or v2.decimal
 								menu.options[v.name][g_name][v2.name].stepsize = v2.stepsize
+								menu.options[v.name][g_name][v2.name].shift_stepsize = v2.shift_stepsize
 								menu.options[v.name][g_name][v2.name].custom = v2.custom or {}
 
 								y_pos += 30
@@ -4285,7 +4286,7 @@ function menu.Initialize(menutable)
 											stepval = v2.stepsize
 										end
 										if menu:modkeydown("shift", "left") then
-											stepval = 0.1
+											stepval = v2.shift_stepsize or 0.1
 										end
 										if menu:MouseInMenu(v2[7][1], v2[7][2], 11, 13) then
 											v2[1] -= stepval
@@ -8893,7 +8894,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 		end
 	end
-	local function renderChamsOnPlayer(player, parts)
+	local function renderChamsOnPlayer(player, parts, show_target)
+		if show_target == nil then show_target = true end
 		local Body = parts or client.replication.getbodyparts(player)
 		if Body then
 			local enabled
@@ -8979,7 +8981,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						then
 							xqz = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR, true)
 							col = bColor:Mult(xqz, 0.6)
-						elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (
+						elseif show_target and menu:GetVal("Visuals", "ESP Settings", "Highlight Aimbot Target") and (
 								player == legitbot.target or player == ragebot.target
 							)
 						then
@@ -9486,6 +9488,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				--[[ if ragebot.shooting and menu:GetVal("Rage", "Aimbot", "Auto Shoot") then
 					client.logic.currentgun:shoot(false)
 				end ]]
+				if ragebot.target then
+					renderChamsOnPlayer(ragebot.target)
+				end
 				ragebot.target = nil
 				ragebot.shooting = false
 				return
@@ -9500,6 +9505,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			ragebot.silentVector = dir.unit
 			ragebot.target = target
+			if ragebot.target then
+				renderChamsOnPlayer(ragebot.target)
+			end
 			ragebot.targetpart = part
 			ragebot.firepos = origin
 			ragebot.shooting = true
@@ -9698,6 +9706,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 
 		function ragebot:GetKnifeTargets()
+			local hitscan = menu:GetVal("Rage", "Extra", "Knife Hitscan")
+			hitscan = hitscan == 1 and "head" or hitscan == 2 and "torso" or "rleg"
+			local sightlines = menu:GetVal("Rage", "Extra", "Knife Visible Only")
+			local range = menu:GetVal("Rage", "Extra", "Knife Range")
 			local results = {}
 
 			for i, player in ipairs(Players:GetPlayers()) do
@@ -9715,12 +9727,25 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						continue
 					end
 
+
+					
 					local target_pos = parts.rootpart.Position
 					local target_direction = target_pos - client.cam.cframe.p
 					local target_dist = (target_pos - client.cam.cframe.p).Magnitude
+
+					if range ~= 26 and target_dist > range then
+						continue
+					end
+					
 					local ignore = { LOCAL_PLAYER, Camera, workspace.Ignore, workspace.Players }
 
 					local part1, ray_pos = workspace:FindPartOnRayWithIgnoreList(Ray.new(client.cam.cframe.p, target_direction), ignore)
+
+					if part and sightlines then 
+						continue -- if this ignores workspace.Players actually then this should work
+						-- voila it wrks
+					end
+
 					local part2, ray_pos = workspace:FindPartOnRayWithIgnoreList(
 							Ray.new(client.cam.cframe.p - Vector3.new(0, 2, 0), target_direction),
 							ignore
@@ -9729,7 +9754,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local ray_distance = (target_pos - ray_pos).Magnitude
 					table.insert(results, {
 						player = player,
-						part = parts.head,
+						part = parts[hitscan],
 						tppos = ray_pos,
 						direction = target_direction,
 						dist = target_dist,
@@ -10331,12 +10356,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			if found1 then
 				clienteventfuncs[hash] = function(charhash, bodyparts)
-					local modparts = bodyparts
-					for k, v in next, modparts:GetChildren() do
-						if not v:IsA("Model") and not v:IsA("Humanoid") then
-							v.Size = bodysize[v.Name] -- reset the ragdolls to their defaulted size defined at bodysize, in case of hitbox expansion
-						end
-					end
+					-- local modparts = bodyparts
+					-- for k, v in next, modparts:GetChildren() do
+					-- 	if not v:IsA("Model") and not v:IsA("Humanoid") then
+					-- 		v.Size = bodysize[v.Name] -- reset the ragdolls to their defaulted size defined at bodysize, in case of hitbox expansion
+					-- 	end
+					-- end
 					return func(charhash, modparts)
 				end
 			end
@@ -11562,6 +11587,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					return
 				end
 				if args[1] == "bullethit" or args[1] == "knifehit" then
+					if menu:GetVal("Misc", "Exploits", "Crimwalk") then return end
 					if table.find(menu.friends, args[2].Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
 					then
 						return
@@ -11650,6 +11676,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						return
 					end
 				elseif args[1] == "newbullets" then
+					if menu:GetKey("Misc", "Exploits", "Crimwalk") then return end
 					if menu:GetVal("Misc", "Exploits", "Fake Equip") then
 						send(self, "equip", client.logic.currentgun.id)
 					end
@@ -11757,6 +11784,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					then
 						if menu:GetVal("Rage", "Extra", "Knife Bot Type") == 1 then
 							ragebot:KnifeTarget(ragebot:GetKnifeTargets()[1])
+						end
+						if menu:GetVal("Rage", "Extra", "Knife Bot Type") == 4 then
+							local target = ragebot:GetKnifeTargets()[1]
+							ragebot:KnifeTarget(target)
+							ragebot:KnifeTarget(target)
 						end
 					end
 				elseif args[1] == "equip" then
@@ -11909,6 +11941,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 
 				function legitbot:MainLoop()
+					if legitbot.target then
+						renderChamsOnPlayer(legitbot.target, nil, false)
+					end 
 					legitbot.target = nil
 
 					if not menu.open and INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.Default and client.logic.currentgun
@@ -11946,6 +11981,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									targetPart, closest, player = legitbot:GetTargetLegit(hitboxPriority, hitscan, nil, fov, dzFov)
 								end
 								legitbot.target = player
+								renderChamsOnPlayer(legitbot.target)
 								local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") * 5 + 10
 								if targetPart then
 									legitbot:AimAtTarget(
@@ -12040,21 +12076,19 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					
 					if client.logic.currentgun and client.logic.currentgun.type ~= "KNIFE" and client.logic.currentgun:isaiming() and menu:GetVal("Legit", "Recoil Control", "Weapon RCS")
 					then
-						local sniping = (menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[1] and client.logic.currentgun.type ~= "SNIPER") or (not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[1])
-						local scoping = menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2] and client:GetToggledSight(client.logic.currentgun).sightspring.p > 0.5 or (not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2])
-						local shooting = menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3] and INPUT_SERVICE:IsMouseButtonPressed(0) or (not menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3])
+						local sniping = (menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[1] and client.logic.currentgun.type ~= "SNIPER") or (menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[1] == false)
+						local scoping = (menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2] and client:GetToggledSight(client.logic.currentgun).sightspring.p > 0.5) or (menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[2] == false)
+						local shooting = (menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3] and INPUT_SERVICE:IsMouseButtonPressed(0)) or (menu:GetVal("Legit", "Recoil Control", "Disable RCS While")[3] == false)
 						if sniping and scoping and shooting then
 							local sight = client:GetToggledSight(client.logic.currentgun).sightpart
 							local gunpos2d = Camera:WorldToScreenPoint(sight.Position)
 
 							local rcs = Vector2.new(LOCAL_MOUSE.x - gunpos2d.x, LOCAL_MOUSE.y - gunpos2d.y)
-							if client.logic.currentgun.data.blackscope and isPlayerScoped or client.logic.currentgun.data.blackscope
-							then
-								local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
-								local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
-								local rcsdelta = Vector3.new(rcs.x * xo / 100, rcs.y * yo / 100, 0)  --* client:GetToggledSight(client.logic.currentgun).sightspring.p
-								Pos += rcsdelta
-							end
+
+							local xo = menu:GetVal("Legit", "Recoil Control", "Recoil Control X")
+							local yo = menu:GetVal("Legit", "Recoil Control", "Recoil Control Y")
+							local rcsdelta = Vector3.new(rcs.x * xo / 100, rcs.y * yo / 100, 0)  --* client:GetToggledSight(client.logic.currentgun).sightspring.p
+							Pos += rcsdelta
 						end
 					end
 					local aimbotMovement = Vector2.new(Pos.x - LOCAL_MOUSE.x, Pos.y - LOCAL_MOUSE.y)
@@ -12383,6 +12417,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local enabled = menu:GetVal("Visuals", "Misc", "Crosshair Color")
 						frame.BackgroundColor3 = enabled and inline or crosshairColors.inline
 						frame.BorderColor3 = enabled and outline or crosshairColors.outline
+						frame.Shot.BackgroundColor3 = enabled and inline or crosshairColors.inline
+						frame.Shot.BorderColor3 = enabled and outline or crosshairColors.outline
 					end
 					--debug.profileend("renderVisuals Char")
 				end -- fun end!
@@ -12490,18 +12526,22 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					local big_size = math.floor(SCREEN_SIZE.x * 0.0260416666667)
 					for curplayer = 1, #players do
 						
-						
 						local player = players[curplayer]
-						local playename = player.Name
+						local playername = player.Name
+
+						local enemy = false
+
+						local GroupBox = "Team ESP"
+
+						if player.Team ~= LOCAL_PLAYER.Team then
+							GroupBox = "Enemy ESP"
+							enemy = true
+							client.aliveplayers += 1
+						end
+						
 						do --if client.hud:isplayeralive(player) then
 
-							local GroupBox = "Team ESP"
-							local enemy = false
-							if player.Team ~= LOCAL_PLAYER.Team then
-								GroupBox = "Enemy ESP"
-								enemy = true
-								client.aliveplayers += 1
-							end
+							
 
 							if not menu:GetVal("Visuals", GroupBox, "Enabled") then
 								continue
@@ -12512,6 +12552,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 							local torso, rootpart, position, resolved
 							local opacity_mult = 1
+							local skel_parts = {}
 							if not parts then
 								local fade_time = menu:GetVal("Visuals", "ESP Settings", "ESP Fade Time")
 								if fade_time ~= 0 then
@@ -12519,28 +12560,36 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									if log_position then
 										torso = log_position.cframe
 										opacity_mult = clamp((log_position.time - current_time + fade_time) * 1/fade_time, 0, 1)
+										skel_parts = client.lastPlayerPositions[player].parts
 										rootpart = torso
 									end
 								end
 							else
+								if parts.torso.Transparency > 0 then continue end -- idk this should work against like floating dead peopluee
 								player.Character = parts.rootpart.Parent
 
 								torso = parts.torso.CFrame
 								rootpart = parts.rootpart.CFrame
-								client.lastPlayerPositions[player] = {cframe = torso, time = current_time} 
+								client.lastPlayerPositions[player] = {cframe = torso, time = current_time}
+								for i = 1, #skelparts do
+									local part = player.Character:FindFirstChild(skelparts[i])
+									client.lastPlayerPositions[player].parts = {} -- this is fucking dumb but it works whatever
+									client.lastPlayerPositions[player].parts[skelparts[i]] = {Position = part.Position}
+									skel_parts[skelparts[i]] = part
+								end
 							end
 							if opacity_mult == 0 then continue end
 							if not torso then continue end
 							position = torso.Position
 							resolved = false
-							if menu:GetVal("Visuals", "Enemy ESP", "Flags")[3] then
+							if menu:GetVal("Visuals", "Enemy ESP", "Flags")[4] and parts then
 								local newpos = ragebot:GetResolvedPosition(player, parts.torso.CFrame, parts.rootpart.CFrame)
 								if newpos then
 									resolved = true
 								end
 								position = newpos or position
 							end
-							--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. playename)
+							--debug.profilebegin("renderVisuals Player ESP Box Calculation " .. playername)
 
 							local vTop = position + (torso.UpVector * 1.8) + cam.UpVector
 							local vBottom = position - (torso.UpVector * 2.5) - cam.UpVector
@@ -12562,7 +12611,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								math.floor(math.min(top.y, bottom.y))
 							)
 
-							--debug.profileend("renderVisuals Player ESP Box Calculation " .. playename)
+							--debug.profileend("renderVisuals Player ESP Box Calculation " .. playername)
 
 							local GroupBox = player.Team == LOCAL_PLAYER.Team and "Team ESP" or "Enemy ESP"
 							local health = math.ceil(client.hud:getplayerhealth(player))
@@ -12573,12 +12622,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local name_transparency = menu:GetVal("Visuals", GroupBox, "Name", COLOR)[4] / 255 * opacity_mult
 							local espflags = menu:GetVal("Visuals", GroupBox, "Flags")
 							local distance = math.floor((rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
-							local flag_text_size = GroupBox == "Enemy ESP" and espflags[5] or espflags[3]
+							local flag_text_size = espflags[1]
 							if (topIsRendered or bottomIsRendered) then
-								if espflags[1] then
-									local playerdata = teamdata[1]:FindFirstChild(playename) or teamdata[2]:FindFirstChild(playename)
+								if espflags[2] then
+									local playerdata = teamdata[1]:FindFirstChild(playername) or teamdata[2]:FindFirstChild(playername)
 									allesp[3][5][curplayer].Visible = true
-									allesp[3][5][curplayer].Text = "lv".. playerdata.Rank.Text
+									allesp[3][5][curplayer].Text = "lv" .. playerdata.Rank.Text
 									allesp[3][5][curplayer].Transparency = health_number_transparency
 									allesp[3][5][curplayer].Position = Vector2.new(
 										math.floor(boxPosition.x) + boxSize.x + 2,
@@ -12595,7 +12644,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 
 
-								if espflags[2] then
+								if espflags[3] then
 									
 									allesp[3][6][curplayer].Visible = true
 									allesp[3][6][curplayer].Text = tostring(distance).. "m"
@@ -12615,8 +12664,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 								end
 
-								if GroupBox == "Enemy ESP" then
-									if espflags[3] then
+								if enemy then
+									if espflags[4] then
 										allesp[3][4][curplayer].Visible = resolved
 										allesp[3][4][curplayer].Transparency = health_number_transparency
 										allesp[3][4][curplayer].Position = Vector2.new(
@@ -12632,7 +12681,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											spoty += 10
 										end
 									end
-									if espflags[4] and parts then
+									if espflags[5] and parts then
 										local backtrackedPosition = ragebot:GetBacktrackedPosition(player, parts, menu:GetVal("Rage", "Hack vs. Hack", "Backtracking Time")/1000)
 										if backtrackedPosition then
 											backtrackedPosition, btRendered = Camera:WorldToViewportPoint(backtrackedPosition.pos)
@@ -12642,15 +12691,15 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 												allesp[11][1][curplayer].Radius = 1 / backtrackedPosition.z * 100 + 3
 												allesp[11][1][curplayer].Thickness = 1
 												allesp[11][1][curplayer].Visible = true
+												allesp[11][1][curplayer].Transparency = 1
+												allesp[11][1][curplayer].Color = Color3.new(1,1,1)
 											end
 										end
 									end
 								end
 								if menu.options["Visuals"][GroupBox]["Name"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Name " .. playename)
-
-								
-									local name = tostring(playename)
+									--debug.profilebegin("renderVisuals Player ESP Render Name " .. playername)
+									local name = tostring(playername)
 									if menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 1 then
 										name = string.lower(name)
 									elseif menu.options["Visuals"]["ESP Settings"]["Text Case"][1] == 3 then
@@ -12665,7 +12714,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 
 								if menu.options["Visuals"][GroupBox]["Box"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Box " .. playename)
+									--debug.profilebegin("renderVisuals Player ESP Render Box " .. playername)
 									for i = -1, 1 do
 										local box = allesp[2][i + 3][curplayer]
 										box.Visible = true
@@ -12688,12 +12737,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										box.Transparency = boxtransparencyfilled
 										box.Filled = true
 									end
-									--debug.profileend("renderVisuals Player ESP Render Box " .. playename)
+									--debug.profileend("renderVisuals Player ESP Render Box " .. playername)
 								end
 
 
 								if menu.options["Visuals"][GroupBox]["Health Bar"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. playename)
+									--debug.profilebegin("renderVisuals Player ESP Render Health Bar " .. playername)
 
 									local ySizeBar = -math.floor(boxSize.y * health / 100)
 									if menu.options["Visuals"][GroupBox]["Health Number"][1] 
@@ -12757,10 +12806,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									})
 									allesp[3][2][curplayer].Transparency = opacity_mult
 
-									--debug.profileend("renderVisuals Player ESP Render Health Bar " .. playename)
+									--debug.profileend("renderVisuals Player ESP Render Health Bar " .. playername)
 								elseif menu.options["Visuals"][GroupBox]["Health Number"][1] and health <= menu.options["Visuals"]["ESP Settings"]["Max HP Visibility Cap"][1]
 								then
-									--debug.profilebegin("renderVisuals Player ESP Render Health Number " .. playename)
+									--debug.profilebegin("renderVisuals Player ESP Render Health Number " .. playername)
 
 									local hptext = allesp[3][3][curplayer]
 
@@ -12773,12 +12822,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									hptext.Color = menu:GetVal("Visuals", GroupBox, "Health Number", COLOR, true)
 									hptext.Transparency = health_number_transparency
 
-									--debug.profileend("renderVisuals Player ESP Render Health Number " .. playename)
+									--debug.profileend("renderVisuals Player ESP Render Health Number " .. playername)
 								end
 
 								local yaddpos = 0
 								if menu.options["Visuals"][GroupBox]["Held Weapon"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. playename)
+									--debug.profilebegin("renderVisuals Player ESP Render Held Weapon " .. playername)
 
 									local charWeapon = _3pweps[player]
 									local wepname = charWeapon and charWeapon or "???"
@@ -12799,7 +12848,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									weptext.Position = Vector2.new(boxPosition.x + boxSize.x * 0.5, boxPosition.y + boxSize.y)
 
 									yaddpos += 12
-									--debug.profileend("renderVisuals Player ESP Render Held Weapon " .. playename)
+									--debug.profileend("renderVisuals Player ESP Render Held Weapon " .. playername)
 								end
 
 								if menu:GetVal("Visuals", GroupBox, "Held Weapon Icon") then
@@ -12851,7 +12900,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 
 								-- if menu.options["Visuals"][GroupBox]["Distance"][1] then
-								-- 	--debug.profilebegin("renderVisuals Player ESP Render Distance " .. playename)
+								-- 	--debug.profilebegin("renderVisuals Player ESP Render Distance " .. playername)
 
 								-- 	local disttext = allesp[4][3][curplayer]
 
@@ -12862,15 +12911,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								-- 		boxPosition.y + boxSize.y + spoty
 								-- 	)
 
-								-- 	--debug.profileend("renderVisuals Player ESP Render Distance " .. playename)
+								-- 	--debug.profileend("renderVisuals Player ESP Render Distance " .. playername)
 								-- end
 
 								if menu.options["Visuals"][GroupBox]["Skeleton"][1] then
-									--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. playename)
+									--debug.profilebegin("renderVisuals Player ESP Render Skeleton" .. playername)
 
 									local torso = Camera:WorldToViewportPoint(player.Character.Torso.Position)
 									for i = 1, #skelparts do
-										
 										local line = allesp[1][i][curplayer]
 
 										local posie = Camera:WorldToViewportPoint(player.Character:FindFirstChild(skelparts[i]).Position)
@@ -12878,26 +12926,26 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										line.To = Vector2.new(torso.x, torso.y)
 										line.Visible = true
 									end
-									--debug.profileend("renderVisuals Player ESP Render Skeleton" .. playename)
+									--debug.profileend("renderVisuals Player ESP Render Skeleton" .. playername)
 								end
 								--da colourz !!! :D 🔥🔥🔥🔥
 
-								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, playename) then
+								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, playername) then
 									allesp[4][1][curplayer].Color = priority_color
-									allesp[4][1][curplayer].Transparency = priority_alpha
+									allesp[4][1][curplayer].Transparency = priority_alpha * opacity_mult
 
 									allesp[2][3][curplayer].Color = priority_color
 									allesp[2][1][curplayer].Color = priority_color
 
 									allesp[4][2][curplayer].Color = priority_color
-									allesp[4][2][curplayer].Transparency = priority_alpha
+									allesp[4][2][curplayer].Transparency = priority_alpha * opacity_mult
 
 									for i = 1, #skelparts do
 										local line = allesp[1][i][curplayer]
 										line.Color = priority_color
-										line.Transparency = priority_alpha
+										line.Transparency = priority_alpha * opacity_mult
 									end
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, playename)
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, playername)
 								then
 									allesp[4][1][curplayer].Color = friend_color
 									allesp[4][1][curplayer].Transparency = friend_alpha * opacity_mult
@@ -12947,14 +12995,14 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										line.Transparency = menu:GetVal("Visuals", GroupBox, "Skeleton", COLOR)[4] / 255 * opacity_mult
 									end
 								end
-							elseif GroupBox == "Enemy ESP" and menu:GetVal("Visuals", "Enemy ESP", "Out of View")
+							elseif enemy and menu:GetVal("Visuals", "Enemy ESP", "Out of View")
 							then
 								local size = size
 								local big_size = big_size
-								--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. playename)
+								--debug.profilebegin("renderVisuals Player ESP Render Out of View " .. playername)
 								local color = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR, true)
 								local color2 = bColor:Add(bColor:Mult(color, 0.2), 0.1)
-								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, playename)
+								if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, playername)
 								then
 									size *= 1.5
 									big_size *= 1.5
@@ -12966,7 +13014,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 											true
 										)
 									color2 = bColor:Mult(color, 0.6)
-								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR) and table.find(menu.friends, playename)
+								elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR) and table.find(menu.friends, playername)
 								then
 									color = menu:GetVal(
 											"Visuals",
@@ -13016,7 +13064,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									Tri.Color = i == 1 and color or color2
 									Tri.Transparency = menu:GetVal("Visuals", "Enemy ESP", "Out of View", COLOR)[4] / 255 * opacity_mult
 								end
-								--debug.profileend("renderVisuals Player ESP Render Out of View " .. playename)
+								--debug.profileend("renderVisuals Player ESP Render Out of View " .. playername)
 							end
 						end
 					end
@@ -13376,6 +13424,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							for k1, v1 in pairs(v:GetChildren()) do
 								if armcham then
 									v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", COLOR2, true)
+									v1.Material = mats[armmaterial]
 								end
 								if v1.Transparency ~= 1 then
 									if armcham then
@@ -13395,7 +13444,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										end
 									end
 								end
-								v1.Material = mats[armmaterial]
 								if v1.ClassName == "MeshPart" or v1.Name == "Sleeve" then
 									if armcham then
 										v1.Color = menu:GetVal("Visuals", "Local", "Arm Chams", COLOR1, true)
@@ -13990,7 +14038,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 
 				if client.nextchamsupdate and curTick > client.nextchamsupdate then
-					client.nextchamsupdate = curTick + 0.8
+					client.nextchamsupdate = curTick + 2
 					CreateThread(renderChams)
 					local enemyesp = menu.options["Visuals"]["Enemy ESP"]["Enabled"][1]
 
@@ -14445,7 +14493,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									name = "Recoil Control Y",
 									value = 10,
 									minvalue = 0,
-									maxvalue = 100,
+									maxvalue = 1000,
 									stradd = "%",
 								},
 							},
@@ -14728,6 +14776,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										value = false,
 										extra = {
 											type = KEYBIND,
+											toggletype = 4,
 										},
 										unsafe = true,
 									},
@@ -14735,7 +14784,27 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										type = DROPBOX,
 										name = "Knife Bot Type",
 										value = 2,
-										values = { "Assist", "Multi Aura", "Flight Aura" },
+										values = { "Assist", "Multi Aura", "Flight Aura", "Assist+" },
+									},
+									{
+										type = DROPBOX,
+										name = "Knife Hitscan",
+										value = 1,
+										values = { "Head", "Torso", "Other" },
+									},
+									{
+										type = TOGGLE,
+										name = "Knife Visible Only",
+										value = false,
+									},
+									{
+										type = SLIDER,
+										name = "Knife Range",
+										value = 26,
+										minvalue = 1,
+										maxvalue = 26,
+										custom = {[26] = "Max"},
+										stradd = " studs",
 									},
 									{
 										type = TOGGLE,
@@ -14871,7 +14940,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									{
 										type = COMBOBOX,
 										name = "Flags",
-										values = { { "Level", true }, { "Distance", true }, { "Resolved", false }, { "Backtrack", false }, { "Use Large Text", false } },
+										values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Resolved", false }, { "Backtrack", false },  },
 									},
 									{
 										type = TOGGLE,
@@ -14984,7 +15053,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									{
 										type = COMBOBOX,
 										name = "Flags",
-										values = { { "Level", false }, { "Distance", false }, { "Use Large Text", false } },
+										values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false },  },
 									},
 									{
 										type = TOGGLE,
@@ -15423,6 +15492,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										value = 0,
 										minvalue = 0,
 										maxvalue = 100,
+										shift_stepsize = 0.05,
 										stradd = "%",
 									},
 									{
@@ -15431,6 +15501,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										value = 50,
 										minvalue = 0,
 										maxvalue = 100,
+										shift_stepsize = 0.05,
 										stradd = "%",
 									},
 								},
@@ -15923,7 +15994,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										unsafe = true,
 										name = "Auto Rapid Kill",
 										value = false,
-										tooltip = "Throws 3 grenades instantly on random enemies,\nthen respawns to do it again.\nWorks only when Rapid Kill is enabled.",
+										tooltip = "Throws 3 grenades instantly on random enemies,\nthen kills itself to do it again.\nWorks only when Rapid Kill is enabled.\nAuto Respawn in Misc->Extra will automate this further.",
 									},
 									{
 										type = TOGGLE,
