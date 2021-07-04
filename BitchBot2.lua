@@ -8262,7 +8262,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		ragebot.nextRagebotShot = shoot and future or ragebot.nextRagebotShot
 
 		if shoot and client.logic.currentgun.burst == 0 then
-			local dt = menu:GetVal("Rage", "Aimbot", "Double Tap")
+			local dt = menu:GetVal("Rage", "Aimbot", "Double Tap") and menu:GetKey("Rage", "Aimbot", "Double Tap")
 			client.logic.currentgun.burst = dt and 2 or 1
 			local damageDealt = damage * (dt and 2 or 1)
 			if not self.predictedDamageDealt[target] then
@@ -10508,7 +10508,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				clienteventfuncs[hash] = function(...)
 					local args = { ... }
 
-					if menu:GetVal("Misc", "Extra", "Auto Martyrdom") then
+					if menu:GetVal("Misc", "Exploits", "Grenade Changes")[1] then
 						local fragargs = {
 							"FRAG",
 							{
@@ -11631,7 +11631,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 				if args[1] == "newgrenade" then
-					if menu:GetVal("Misc", "Extra", "Impact Grenade") then
+					local grenade_exploit = menu:GetVal("Misc", "Exploits", "Grenade Changes")
+					if grenade_exploit[2] then
 						local data = args[3]
 						local frames = data.frames
 						data.blowuptime = frames[2].t0 + 0.1
@@ -12662,7 +12663,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local name_transparency = menu:GetVal("Visuals", GroupBox, "Name", COLOR)[4] / 255 * opacity_mult
 							local espflags = menu:GetVal("Visuals", GroupBox, "Flags")
 							local distance = math.floor((rootpart.Position - Camera.CFrame.Position).Magnitude / 5)
+							local arrow_dist = menu:GetVal("Visuals", "Enemy ESP", "Arrow Distance")
 							local flag_text_size = espflags[1]
+
 							if (topIsRendered or bottomIsRendered) then
 								if espflags[2] then
 									local playerdata = teamdata[1]:FindFirstChild(playername) or teamdata[2]:FindFirstChild(playername)
@@ -13092,11 +13095,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									arrow_size = arrow_size > big_size and big_size or arrow_size < size and size or arrow_size
 
 									direction = Vector2.new(math.cos(angle), math.sin(angle))
-									local dist = menu:GetVal("Visuals", "Enemy ESP", "Arrow Distance")
 									local pos
-									if dist ~= 101 then
+									if arrow_dist ~= 101 then
 										pos = (
-												direction * SCREEN_SIZE.x * dist / 200
+												direction * SCREEN_SIZE.x * arrow_dist / 200
 											) + (SCREEN_SIZE * 0.5)
 									end
 									if not pos or pos.y > SCREEN_SIZE.y - 5 or pos.y < 5 then
@@ -14612,7 +14614,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									type = TOGGLE,
 									name = "Double Tap",
 									value = false,
-									tooltip = "Shoots twice when target is found when Auto Shoot is enabled."
+									tooltip = "Shoots twice when target is found when Auto Shoot is enabled.",
+									extra = {
+										type = KEYBIND,
+										toggletype = 4,
+									},
 								},
 								{
 									type = DROPBOX,
@@ -15980,18 +15986,18 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										value = 5,
 										stradd = "s",
 									},
-									{
-										type = TOGGLE,
-										name = "Impact Grenade",
-										value = false,
-										tooltip = "Explodes grenades on impact."
-									},
-									{
-										type = TOGGLE,
-										name = "Auto Martyrdom",
-										value = false,
-										tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position.",
-									},
+									-- {
+									-- 	type = TOGGLE,
+									-- 	name = "Impact Grenade",
+									-- 	value = false,
+									-- 	tooltip = "Explodes grenades on impact."
+									-- },
+									-- {
+									-- 	type = TOGGLE,
+									-- 	name = "Auto Martyrdom",
+									-- 	value = false,
+									-- 	tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position.",
+									-- },
 									{
 										type = TOGGLE,
 										name = "Break Windows",
@@ -16068,7 +16074,12 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										unsafe = true,
 										name = "Grenade Teleport",
 										value = false,
-										tooltip = "Sets any spawned grenade's position to the nearest enemy to your cursor and instantly explodes.",
+										tooltip = "Teleports grenades to other players when enabled."
+									},
+									{
+										type = COMBOBOX,
+										name = "Grenade Changes",
+										values = { { "Martyrdom", false } , { "Impact", false }, }
 									},
 									{
 										type = TOGGLE,
