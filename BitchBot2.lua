@@ -11611,6 +11611,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local data = args[3]
 						local frames = data.frames
 						data.blowuptime = frames[2].t0
+						frames = {
+							frames[1],
+							frames[2]
+						}
 					end
 					if menu:GetVal("Misc", "Exploits", "Grenade Teleport") then
 						local closest = math.huge
@@ -11638,6 +11642,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 						if (closest and part) then
 							local args = {
+
 								"FRAG",
 								{
 									frames = {
