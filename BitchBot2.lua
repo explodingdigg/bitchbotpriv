@@ -268,33 +268,33 @@ end
 --validity check
 --SECTION commented these out for development
 
--- make_synreadonly(syn)
--- make_synreadonly(Drawing)
--- protectfunction(getgenv)
--- protectfunction(getgc)
+make_synreadonly(syn)
+make_synreadonly(Drawing)
+protectfunction(getgenv)
+protectfunction(getgc)
 
--- local init
--- if syn then
--- 	init = getfenv(saveinstance).script
--- end
+local init
+if syn then
+	init = getfenv(saveinstance).script
+end
 
--- script.Name = "\1"
--- local function search_hookfunc(tbl)
--- 	for i,v in pairs(tbl) do
--- 		local s = getfenv(v).script
--- 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
--- 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
--- 				writefile("poop.text", "did the funny")
--- 				SX_CRASH()
--- 				break
--- 			end
--- 		end
--- 	end
--- end
--- search_hookfunc(getgc())
--- search_hookfunc = nil
+script.Name = "\1"
+local function search_hookfunc(tbl)
+	for i,v in pairs(tbl) do
+		local s = getfenv(v).script
+		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+				writefile("poop.text", "did the funny")
+				SX_CRASH()
+				break
+			end
+		end
+	end
+end
+search_hookfunc(getgc())
+search_hookfunc = nil
 
--- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
 --!SECTION
 local menuWidth, menuHeight = 500, 600
@@ -7900,7 +7900,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			[4] = {}, --text
 			[5] = {}, --shaded outlines
 		}, -- shitty keybinds --keybinds -- keybinds
-		[11] = { {} }, -- backtrack lines
+		[11] = { 
+			{}, -- backtrack lines
+			{}, -- spawn locations
+		}, 
 	}
 
 
@@ -7913,6 +7916,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	local nade_espnum = #nade_esp
 	for i = 1, Players.MaxPlayers do
 		Draw:Circle(false, 0, 0, 0, 1, 32, { 0, 0, 0, 0 }, allesp[11][1])
+		Draw:OutlinedText("", 2, false, 20, 20, 13, true, { 255, 255, 255, 255 }, { 0, 0, 0 }, allesp[11][2])
 	end
 	for i = 1, 50 do
 		Draw:FilledRect(false, 20, 20, 2, 20, { 30, 30, 30, 255 }, allesp[10][5])
@@ -11537,17 +11541,22 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				-- end
 				if args[1] == "spawn" then
 					UnpackRelations()
-					if menu:GetVal("Misc", "Extra", "Break Windows") then
-						CreateThread(function()
-							local parts = workspace.Map:GetDescendants() 
-							for i = 1, #parts do
-								local part = parts[i]
+					client.spawns = { }
+					CreateThread(function()
+						local parts = workspace.Map:GetDescendants() 
+						for i = 1, #parts do
+							local part = parts[i]
+							
+							if menu:GetVal("Misc", "Extra", "Break Windows") then
 								if part.Name == "Window" then
 									client.effects.breakwindow(part, part, nil, true, true, nil, nil, nil)
 								end
 							end
-						end)
-					end
+							if part.Name == "Spawn" then
+								table.insert(client.spawns, part)
+							end
+						end
+					end)
 					misc.model = nil
 					misc:ApplyGunMods()
 					misc.autopeektimeout = 100
@@ -12740,6 +12749,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										end
 									end
 								end
+								
 								if menu.options["Visuals"][GroupBox]["Name"][1] then
 									--debug.profilebegin("renderVisuals Player ESP Render Name " .. playername)
 									local name = tostring(playername)
@@ -13115,7 +13125,20 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 						end
 					end
-
+					if menu:GetVal("Visuals", "Spawn", "Enemy Spawns") then
+						if client.spawns then
+							local spawns = client.spawns
+							for i = 1, #spawns do
+								local position, vis = Camera:WorldToViewportPoint(spawns[i].Position)
+								allesp[11][2][i].Position = Vector2.new(position.x, position.y)
+								allesp[11][2][i].Text = "spawn"
+								allesp[11][2][i].Center = true
+								allesp[11][2][i].Visible = vis
+								allesp[11][2][i].Transparency = menu:GetVal("Visuals", "Spawn", "Enemy Spawns", COLOR)[4]/255
+								allesp[11][2][i].Color = menu:GetVal("Visuals", "Spawn", "Enemy Spawns", COLOR, true)
+							end
+						end
+					end
 					--ANCHOR weapon esp
 					if menu:GetVal("Visuals", "Dropped ESP", "Weapon Names") or menu:GetVal("Visuals", "Dropped ESP", "Weapon Ammo") or menu:GetVal("Visuals", "Dropped ESP", "Weapon Icons") then
 						--debug.profilebegin("renderVisuals Dropped 1ESP")
@@ -13164,7 +13187,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 												wepesp[3][gunnum].Size = Vector2.new(tempimage.w, tempimage.h)
 												wepesp[3][gunnum].Visible = true
 
-												wepesp[3][gunnum].Position = wepadd and Vector2.new(math.floor(gunpos2d.x) - tempimage.w/2, math.ceil(gunpos2d.y + (tempimage.h - 10) )) or Vector2.new(math.floor(gunpos2d.x) - tempimage.w/2, math.ceil(gunpos2d.y + (tempimage.h) ))
+												wepesp[3][gunnum].Position = wepadd and Vector2.new(math.floor(gunpos2d.x - tempimage.w/2), math.ceil(gunpos2d.y + (tempimage.h - 10))) or Vector2.new(math.floor(gunpos2d.x - tempimage.w/2), math.ceil(gunpos2d.y + (tempimage.h)))
 												wepesp[3][gunnum].Transparency = menu:GetVal("Visuals", "Dropped ESP", "Weapon Names", COLOR2)[4] * gunclearness / 255
 											elseif not menu:GetVal("Visuals", "Dropped ESP", "Weapon Names") then
 												if client.logic.currentgun and client.logic.currentgun and client.logic.currentgun.data and v.Gun.Value == client.logic.currentgun.data.name
@@ -14103,9 +14126,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 					for player, nametagupdater in pairs(client.nametagupdaters) do
 						if not client.nametagupdaters_cache[player] then
-							if player.Team ~= LOCAL_PLAYER.Team then
-								client.nametagupdaters_cache[player] = nametagupdater
-							end
+							client.nametagupdaters_cache[player] = nametagupdater
 						else
 							if enemyesp then
 								if client.nametagupdaters[player] == client.nametagupdaters_cache[player] then
@@ -15428,8 +15449,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							},
 						},
 						{
-							name = { "World", "Misc", "Keybinds", "FOV" },
-
+							name = { "World", "Misc", "Keybinds", "FOV", "Spawn" },
+							subtabfill = true,
 							autopos = "right",
 							size = 144,
 							[1] = {
@@ -15622,6 +15643,20 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									},
 								},
 							},
+							[5] = {
+								content = {
+									{
+										type = TOGGLE,
+										name = "Enemy Spawns",
+										value = false,
+										extra = {
+											type = COLORPICKER,
+											name = "Enemy Spawns",
+											color = { 255, 255, 255, 255 }
+										}
+									}
+								}
+							}
 						},
 						{
 							name = "Dropped ESP",
