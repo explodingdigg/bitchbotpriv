@@ -12030,14 +12030,16 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								end
 								legitbot.target = player
 								renderChamsOnPlayer(legitbot.target)
-								local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") * 5 + 10
-								if targetPart then
-									legitbot:AimAtTarget(
-										targetPart,
-										smoothing,
-										menu:GetVal("Legit", "Aim Assist", "Smoothing Type"),
-										speed
-									)
+								if closest > dzFov then
+									local smoothing = menu:GetVal("Legit", "Aim Assist", "Smoothing") * 5 + 10
+									if targetPart then
+										legitbot:AimAtTarget(
+											targetPart,
+											smoothing,
+											menu:GetVal("Legit", "Aim Assist", "Smoothing Type"),
+											speed
+										)
+									end
 								end
 							end
 						end
@@ -12248,7 +12250,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							for k, Bone in pairs(Parts) do
 								if Bone.ClassName == "Part" and hitscan[k] then
 									local fovToBone = camera:GetFOV(Bone)
-									if fovToBone > minfov and fovToBone < maxfov and fovToBone < closest then
+									if fovToBone < maxfov and fovToBone < closest then
 										local validPart = isValidTarget(Bone, Player)
 										if validPart then
 											closest = fovToBone
@@ -12275,7 +12277,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 								for k, Bone in pairs(Parts) do
 									if Bone.ClassName == "Part" and hitscan[k] then
 										local fovToBone = camera:GetFOV(Bone)
-										if fovToBone > minfov and fovToBone < maxfov and fovToBone < closest then
+										if fovToBone < maxfov and fovToBone < closest then
 											local validPart = isValidTarget(Bone, Player)
 											if validPart then
 												closest = fovToBone
