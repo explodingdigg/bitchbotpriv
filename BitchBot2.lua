@@ -268,33 +268,33 @@ end
 --validity check
 --SECTION commented these out for development
 
-make_synreadonly(syn)
-make_synreadonly(Drawing)
-protectfunction(getgenv)
-protectfunction(getgc)
+-- make_synreadonly(syn)
+-- make_synreadonly(Drawing)
+-- protectfunction(getgenv)
+-- protectfunction(getgc)
 
-local init
-if syn then
-	init = getfenv(saveinstance).script
-end
+-- local init
+-- if syn then
+-- 	init = getfenv(saveinstance).script
+-- end
 
-script.Name = "\1"
-local function search_hookfunc(tbl)
-	for i,v in pairs(tbl) do
-		local s = getfenv(v).script
-		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
-			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
-				writefile("poop.text", "did the funny")
-				SX_CRASH()
-				break
-			end
-		end
-	end
-end
-search_hookfunc(getgc())
-search_hookfunc = nil
+-- script.Name = "\1"
+-- local function search_hookfunc(tbl)
+-- 	for i,v in pairs(tbl) do
+-- 		local s = getfenv(v).script
+-- 		if is_synapse_function(v) and islclosure(v) and s and s ~= script and s.Name ~= "\1" and s ~= init then
+-- 			if tostring(unpack(debug.getconstants(v))):match("hookfunc") or tostring(unpack(debug.getconstants(v))):match("hookfunction") then
+-- 				writefile("poop.text", "did the funny")
+-- 				SX_CRASH()
+-- 				break
+-- 			end
+-- 		end
+-- 	end
+-- end
+-- search_hookfunc(getgc())
+-- search_hookfunc = nil
 
-if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
+-- if syn.crypt.derive(BBOT.username, 32) ~= BBOT.check then SX_CRASH() end
 
 --!SECTION
 local menuWidth, menuHeight = 500, 600
@@ -8046,9 +8046,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			elseif name == "updateplayernames" then
 				client.updateplayernames = garbage
 			end
-		end
-
-		if garbagetype == "table" then
+		elseif garbagetype == "table" then
 			if rawget(garbage, "deploy") then
 				client.menu = garbage
 			elseif rawget(garbage, "breakwindow") then
@@ -11620,7 +11618,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					return
 				end
 				if args[1] == "bullethit" or args[1] == "knifehit" then
-					if menu:GetVal("Misc", "Exploits", "Crimwalk") then return end
+					if menu:GetVal("Misc", "Exploits", "Crimwalk") and menu:GetKey("Misc", "Exploits", "Crimwalk") then return end
 					if table.find(menu.friends, args[2].Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
 					then
 						return
@@ -12319,6 +12317,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							return
 						end
 						local dsrgposrdjiogjaiogjaoeihjoaiest = "data" -- it loves it
+						if not gun.data then 
+							return 
+						end
 
 						local thebarrel = gun.barrel
 						--debug.profilebegin("Legitbot Triggerbot")
@@ -14119,7 +14120,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					end
 				end
 
-				if client.nextchamsupdate and curTick > client.nextchamsupdate and menu.open then
+				if client.nextchamsupdate and curTick > client.nextchamsupdate or menu.open then
 					client.nextchamsupdate = curTick + 2
 					CreateThread(renderChams)
 					local enemyesp = menu.options["Visuals"]["Enemy ESP"]["Enabled"][1]
