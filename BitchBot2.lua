@@ -12237,6 +12237,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				]]
 				function legitbot:GetTargetLegit(partPreference, hitscan, players, maxfov, minfov)
 					minfov = minfov or 0
+
 					--debug.profilebegin("Legitbot GetTargetLegit")
 					local closest, closestPart, player = math.huge
 					partPreference = partPreference or "what"
@@ -12247,7 +12248,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						local Parts = client.replication.getbodyparts(legitbot.target)
 						if Parts then
 							new_closest = closest
-							for k, Bone in pairs(Parts) do
+							
+							for k = 1, #Parts do
+								local Bone = Parts[k]
 								if Bone.ClassName == "Part" and hitscan[k] then
 									local fovToBone = camera:GetFOV(Bone)
 									if fovToBone < maxfov and fovToBone < closest then
@@ -12264,7 +12267,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 					end
 
-					for i, Player in pairs(players) do
+					for i = 1, #players players do
+						local Player = players[i]
 						if table.find(menu.friends, Player.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
 						then
 							continue
@@ -12274,7 +12278,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							local Parts = client.replication.getbodyparts(Player)
 							if Parts then
 								new_closest = closest
-								for k, Bone in pairs(Parts) do
+								for k = 1, #Parts do
+									local Bone = Parts[k]
 									if Bone.ClassName == "Part" and hitscan[k] then
 										local fovToBone = camera:GetFOV(Bone)
 										if fovToBone < maxfov and fovToBone < closest then
