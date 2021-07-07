@@ -14,6 +14,7 @@ local BUTTON = 11
 local LIST = 12
 local IMAGE = 13
 local TEXTBOX = 14 -- menu type enums and shit 
+local IMAGE_LAYOUT = 15
 
 local Vec2 = Vector2.new
 local RGB = Color3.fromRGB
@@ -350,6 +351,49 @@ function Draw:Gradient(visible, pos, size, direction, color1, transparency1, col
     return temptable
 end
 
+function Draw:Image(visible, imgdata, pos, centered, size, color, transparency, tablename)
+
+	local temptable = ImageDynamic.new()
+    temptable.Visible = visible
+    temptable.Data = imgdata
+	temptable.Color = color
+	temptable.Opacity = transparency/255
+    temptable.Position = pos
+
+	if size ~= nil then
+		temptable.Size = size
+	else
+		temptable.Size = temptable.ImageSize
+	end
+
+	if centered then
+		temptable.XAlignment = XAlignment.Center
+		temptable.YAlignment = YAlignment.Center
+	else
+		temptable.XAlignment = XAlignment.Right
+    	temptable.YAlignment = YAlignment.Bottom
+	end 
+    
+    if not table.find(self.allrender, tablename) then
+        table.insert(self.allrender, tablename)
+    end
+
+    if tablename ~= nil then
+        table.insert(tablename, temptable)
+    end
+    
+    return temptable
+end
+
+--TODO ALAN MOVE THIS TO ITS OWN FILE WHEN U MAKE A COMPILER SYSTEM OR SMTH
+local MenuImages = {
+	["PISTOL"] = {"iVBORw0KGgoAAAANSUhEUgAAADQAAAAeCAYAAABjTz27AAACXUlEQVR4nNXYS6hNURzH8c9xLzeSR6SQgVIXA4k8SkhKSlHKAKUMjDBRZkZGSibKwISJUkqMiEylJMr7NZC886Z78/wbrHvrdJxz7ln77utc39qd3Vl7/fb/t57/tSsRYQAm4Dm24mzV/90Y26DOD9wcSLhEZuAovnYO8GAHdmEMTuEwRmEpFjWp18jQKxzHJzzGtD7tXHrwArMwHvswH58rTXqoE6exvsALW6EXXRhRoO4vfMfo2oJmho5he4GXtZVGhibjtWKt11aqA96A5X33q/2HZkjzpAM7cRCBHdjUzqAGwcdKRGyUJn8/gd+S0f+NA/1zaCwWYz+WtTWk4nzDzE5swx7MQ+UfB9BTgs5XvMFFvKxExBlpp+2nC3MMbsidwzOMxBpMryp7jL04L5kql4iod3VHxPXI43dE9EbE/YjoqNKaFBF3+555GBFTGryzlKvR0vwAm/Ezo20uSF1/UtrJ+3knDWl9v28y2zyLZnvNA1zL0LojDdP3dcqu4ItkekgZaPP8kqG1AJexsE7ZT6mnfmToFaKZoRHSytcqq/BUyp6n1pRNlI4hQ06z5HQ+bmTqPZGGXu1yPBsfsDJTL5tm56HcTHs3jkiZRtto1EPduCXtI61wDuvKCmowNJpDh7RuBi6VEEsp1DM0V35r3y4hllKoZ2hNAZ1bgw2kLOoZWp2p8Vb6+DEsqDXUiRWZGsOmd/jb0BKMy9QYNvOHvw3NLqAxrA0VOeA9LyOQsqg19KiAxpIyAimLWkNX5af4W/zbo3tTag31Yq20F51oof496Vt1W/O3av4ARjQk0oC+k4cAAAAASUVORK5CYII=", 52, 30},
+	["RIFLE"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAdCAYAAABcz8ldAAAD+klEQVR4nO3aS2hcVRjA8d+MRqTahqj4bIUujIKPBitasQsfUXHTouhGMKLiTjeCoKCIDwTduPIFKoq1IFQXFS2iLVGoaNWmlmqVKloNihvTGG0yscm4+O4wk8nMeCfzTOofLpd7zp1zzpzvfI/znZvJ5/OWGMdgLfqxH3/hZKzBCchiM86ro80pjODvpo6UIbyGa/EhHNvkDtJyC64Sk9cKVuBqRWH0ltRNY1BMQlryeAkHMF6hfiy578LBOtq9Ibn3FAoyHdCQIbyKTLs7bjJTigu6cH8LN6f8fRZbMYMXsI32CuTEpNN1OqeZxGqfwSHsKSk/E2ck5T+UlJ8rtCwvhFBNQ87C6bgLr6QYxyVYhb3CvG6jvRPTj8va3GclMskYehVNDaxEHybLypcl1294TvifShwvVvzLwhw+jZ9qjGM9HkUOjwm/l83kG1eRI/hMOKVfS8p7xOo6HxfhlAb7OSpohkCOFnZgVJitSsyKBTiF1cnzOzXaW4EbhZn7GL/zv0Dq4Un1RVBpyArTuRm/0Hl73my24A/heCdxGNeLEJswr59iJ35M6qeSe07sM6ZFuPwPJpLf5JJ3Wk67NCQn/MwELsdJFd75Do/gXuHsxsRkDeB1fI2fFWP3SqxL+iklK4SyDNtFFNW1tFJDvsf7IpwbVtzljqgskAN4Exfgg5Ly0+roc8B8gcwmY1gUZJvUzhGxgjeJFX5Oct2Dd81NOTxcpY2Cpo6IFEc5U5L0Qg3Wpxxv17JQkzUmVv0OsSL3CZudhuX4s6xsAk/gRWH/+xT3AgO4Iulnt9C6wSptjwuNyqUcS9eRViCTwhFuT67dYre7EC4Uu9NShoSfWIVTy+oOik3XaPK8Fl/UaH+D2uFmV1NNIDP4UlEAO1WPv+vlITxe8jyKsxVN1n+REamN1VXqhxWjqkVHqVPfryiAYa2LRjaWPW+VXhiSd7fg/ir1V+J2kdZedGTy+fwgvjE37dEqVorQtTTTe525UVUaLhYaXI0xEa214z81laz5OahWstFcYRwS2lgvu9UWYh+eX0C7HadZYW9ays3Ve2JHvBDuUzua2oC7F9h2x2inQJYL+17Krgba2ydC5Vo8q3qI3JW0UyCHxQR+IjaSRAjcCE+JjWQ1esQp3jUN9tM2OnGES2hLP77V+IcDa/C5knPpCkzjTrzRYF8tp90+pMCEiJKa8RXHVyIZWYvjxMbzAV1+lt8pDWk2GZFHu1XsU6pN+iwuVTtk7iid0pBmkxcm6SO1NeAZXSwMlo6GFOjF2+KbrHL2Cu3o6sTjUtGQAuPiAGtTWXkOt+lyYbD0BEJEVEPmOvoHzc8wdyVLzWSVc4fIDtwkHHrX8y9c6Q6XYJwubQAAAABJRU5ErkJggg==", 100, 29},
+	["SHOTGUN"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAbCAYAAACKlipAAAADgklEQVR4nO3aS2hcZRTA8V/StKYtEbGxLdr6QFsfUBHRhWhRqCiI2qAVXLkRurG4EVwpiK66caGg+Ni5UxeiFJQqiAaUFotB8bGoRRc+sLRFm1eT9Lg495rJdCaZZKYzaTt/uMw333fud8+d853vnHPv9ESEs8Q27MQQrscvuLkYGyn6+nEEa7Eex/E3ttaYbwx/NnjtF/DO0tTuMBHRqmNFRNwdES9HxOGYy1Ah81ZEvF60d0XEzxGxMiIGI2IiIrZERE9EDEdz7GnhfbX16GvSnmtwv/SEB7Gujtzl6JNeMI0VRd9aXIwNFX1/4Oom9Vpu9OASjGNiXsklWHF9RDwZER9GxNgiVu1onfZkREwX7ZmIGK8YOxkRuyPi9CKuE7H8PGSw0OuNhWQb9ZAtMhbsxB3obeCcGQzjAE4vIPtIcY1eGVdKLsJuucJqcQpf4WBxvZJR3NuAjovhS0wu8dyVxed9Cwn2xNygvglXSLfql0Z4GDctUZHzia9xcpHnrMFGDOCyom8Eq6ntDJUGGcDjCDwts6Qubaa00g687fwLpuccpYcM484O67LcGcOLcuuZlBnlqMwaDy9innVyN6qMw98Xc3YNsky4VhbODWVLXdpIGUNGO6rFucW/+EdmUKcwhb+anPP/dLo0yOcayJEr+AS/Fu3tuLGGzF68N88cq2R1Pyir/asqxo7gR7MevFHm8jfIir6TPIEPivZqWX23jDKGbMAreEz9ImxK5uLHZCFXFntXmjVOye/YbOGCsORRXNeA3Etmi6xOsV3G3LNCdWF4Fz6Sz12qmcYzsmh8s2psUq74kldlLdNqRqU3f4wfpHH65TZSPi86XsheKhdP2VbIbJNp/u3OLM7G5Y/9mSLIVjGGfU3fxTxUKzSM/dJTasmecGatMiT30oP4Bofwfgt1rGSH9NJmeBfPy63ylqLvkCyIR+W9dIxqgwxIL6nFAbkiT8i9/Cf5SKVPrsyZOue1kmaNUclRfNrC+VpC9Za1F8/WkJvBbfi2+H4rrsFv0jO6tIhKg2zFd+bGgpLX8FS7lLqQqTTIPjxQQ+aYfN16tF1KXciUef5DahsDntM1RtvoiYhVcquq9ceCCZkytrT46VKfXuxR2xjwha4x2kovds0zvr9dinRJeiJiSp3XibJwGmmfOl16zR+wN7VLkS5JL+6RDwNrsbl9qnSB/wBF8j6LJlmzYQAAAABJRU5ErkJggg==", 100, 27},
+	["SMG"] = {"iVBORw0KGgoAAAANSUhEUgAAAE0AAAAeCAYAAABpE5PpAAADmklEQVR4nO3ZS4iVZRgH8N+Mk6FRNpXlQrPLBEVN2WUhJSUkXSgs6EZBSG0KWrQJIlu00YKgRSuJdrbKkDYVU9pNi2rRZVBrkyGWKQ4U5oxMXs7T4v2mvnPmO9+cc2bOnDnhH154r8/zfM/7fu9zeXsiQpdhJUaxuw20v8At6EVdxfS2gXE7sRAP4vZOCtHTZSdtOfZhf1afaTR00vrawLiduB4V9OOrrO/vmjl9mJdrV3CiZs589OTap3Ayow/v4v56QnSb0hZifa79Aha1gc+KssFuU9oqDOOPrH2yTXwuljbjSNFgN91pZ0pWM7/Rb0n320CuzNTJW4Uviwa66aRdZbK8b2JnTd9iXC4p8IpcfQDnN8Fv0P9AaYMFfbsK+kay8nXBWL/qUzmAtTi3QX5ISltTLuucwZ017T9xU4u0JhS7Ax9iE45hSW7OZfUW92Fbi4w7jX4zJ/sxHFCttLqOf7dFBHMCs3mn7cH4NNZfivNy7VEcnpZE/2Gx5APWYgkWqHaED/dEF/kcs4zfcIHk6gzjWilJsLmbrOdsY2mu3iudth4Mnj5pzeO70yetGJ/hI5wj+XB5gzk+V5RWwafYLBkM0q+wFs+oNgBleAnvZ/UBvCIZkGaxWopvHygcjc5iLCLWR8SyiFCnnB0ROxqg9UnB2sGIqLQo29Z6MnXaT3scL+PXkjlH8aySpGCG9wr6dmFryZrAB3gHQ1PQ/xed/D1/l5J9jWDP1FMmJRon8BAextsFYztxT679OW7N6nPyjeCsJuY+p9rBLMK9Uhy9omBsixRj1mKspj2aq89JpS2SLvoyzMPr2NgAvTukWPSNOuP7CvoOlNCb8o3gR8ly5bFSSZ68Diqa24hNOIRvCsZuxAbcVbL+IB6T7qUFWd91UuZ1f25eb0avFttLaNdV2oRzOyKFCnksxZUlRIswJJn5pyVzPb/Bdb9IL0Hj0m94M66eYs1fuA0/4KcaWYewTopNz5BckRdr1lek2HIk13c3lmX1vfi4iHE7090X4kk8hUtmmPZx6QLfLm3MUZM36Ah+xkWqQ6IJfI8bWuJe4h/NVOmNiDURsSUiTrToM+VRiYh1OfqDLdJ5NVr8ptlQWr4sj4iNEXGoxQ+NiHi+huajLdAYymTpCqVNlPkR8UhEHGziQ4cjYnUBrQ1N0NgbEfdNV/5OObfHJWfzCSlfVYRT+FYKnLcpfkSBaxrgNyYZqNdMLxEK/gEIMckYAgwqoQAAAABJRU5ErkJggg==", 77, 30},
+	["SNIPER"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAXCAYAAAD9VOo7AAADIklEQVR4nO3ZS2hdVRSA4e/mYa310VajlapYRQRtFScOfEFFcCIojhw4kIoVrQhSHSmIUwURHPmYqAOhA3HgQBQFURR0YBRRaw0+20SDL6y9sU27HKx9yU1Nbm5ubu4j6Q+bs/c+Z+29DuuctdZZpxIReph78DyOYA/u7K46y89AtxVYgH3lOFzXX9EMdXCvYTyJU8r4CMZxFH/jOZxWrvu1XDNWJ1/fP7vI/1FkLsc2bC3tDBwz+4Hbgc/bdjfLRKWDLmstDjU4/wPW42R8UeZOxaWlvx8Tpb8VU/gdF6LSxP7X4sPFKNwNeskgy01fGKTXY8iqo5MxZBovmYkh09LlrEcVj+Jl6aK2lGtOxyWlP44Dpf89vsIdZuLGFeW4DRvK+p28v7bQSZc1H7fLwAwP4HzsRMjAXM+ADNjP4kc8VebH8NGya9oBumGQs3CXfAtGcLN8E2ocw6fzyA7hyuPmpvC1zNbgHxyuO/+X/xu2Z+mGQZ7GQ53etF/ohI89D7fgGvl0b+zAnt3kM7zaqvB8b8ganItN0q2MlHGtv0m6lYcbrD2IR/AETmpVwT7kE1zdqvBcBhmWQfPeBWRDZjVfznFui8yYrmtVsT7mkExSWopbQ3gFF+McmcGc2aRsBbtx93HzO/CMmcxptVGVHqbainAlIl7HrS1ufhgXybLGCF5osNZv0uBLjVsTeF9+a9yEP+Xb2gtMyZT9jZZXiIhdsTTei4j7I2KiwTVjEXFBRGyOiD0R8VhEbIyIDXXtxYj4ron93owIEbEmIh6PiEoZr4g2hI+X+FTcUNp8jGE7firjD/AOLiv9GuN4V7q8ZvhXJgwrigEzFdTl4FuzjQF7sVkaoEZFftDVl9hXJZWIqAWgZkrYi2EfbsTPc5y7TVZ/p8t4EKO4Dw8usO4ormqHgr1ILe2tyv8Q7eIbaYz9i5S7Xn7jNOIoXmtFqX6gEhHrcLBF+arMt9fVze2Vxjgwp8QJGjKk8XfH27JwN4lfSpssbVwacq0sFu4u6203Oz6cYBHUXNZbss40KaujB+U/h11m/PxCDMp/EaPtVnI18R9vKf2ssOnBPwAAAABJRU5ErkJggg==", 100, 23},
+}
+
 --!SECTION Drawing shit end
 
 local Menu = { --ANCHOR Menu table
@@ -549,6 +593,25 @@ function Menu.Funcs:MouseButton1Down() --ANCHOR MOUSE 1 INPUT
 							Menu:SetElement(element, element.value)
 							return
 						end
+					elseif element.type == IMAGE_LAYOUT then
+						for img_group, group_conts in pairs(element.hitboxes) do
+							local hitbox = group_conts.hitbox
+
+							if Menu.Curmenu:MouseInMenu(offset.x + hitbox.x, offset.y + hitbox.y + element.y_add, hitbox.w, hitbox.h) then
+								if element.value ~= img_group then
+									element.value = img_group
+									
+									for img_name, img_drawn in pairs(element.hitboxes) do
+										img_drawn.drawn.Color = img_name == img_group and RGB(255, 255, 255) or RGB(150, 150, 150)
+									end
+									
+									if element.event ~= nil then
+										element.event(element.value)
+									end
+								end
+							end
+
+						end
 					end
 				end
 
@@ -700,30 +763,39 @@ function Menu:Create(menuname, menuprops, menutable)
 		end
 		
 		for k, v in pairs(self.hitboxes[tab].content) do
-			if v.multigroup then
-				if v.active then
-					for k1, v1 in pairs(v.drawn) do -- visibility
-						v1.Visible = true
-					end
-
-					for k1, v1 in ipairs(v.family) do
-						if v1 ~= k then
-							local familygroup = self.hitboxes[tab].content[v1]
-
-							for k2, v2 in pairs(familygroup.drawn) do
-								v2.Visible = false
-							end
-							familygroup.active = false
+			if not v.visible then
+				for k1, v1 in pairs(v.drawn) do
+					v1.Visible = false
+				end
+				for k1, v1 in pairs(v.group_drawn) do
+					v1.Visible = false
+				end
+			else
+				if v.multigroup then
+					if v.active then
+						for k1, v1 in pairs(v.drawn) do -- visibility
+							v1.Visible = true
 						end
-					end
 
-					for k1, v1 in pairs(v.props.bar) do
-						v1.drawn.Position = PointOffset.new(self.point2d, v.props.barpos.pos, v.props.barpos.old_y + (k1 * 2) - 2)
-						v1.drawn.Size = Vector2.new(v.props.barpos.length, 2)
-					end
+						for k1, v1 in ipairs(v.family) do
+							if v1 ~= k then
+								local familygroup = self.hitboxes[tab].content[v1]
 
-					for k1, v1 in pairs(v.props.nametext) do
-						v1.Color = v1.Text == k and RGB(255, 255, 255) or RGB(170, 170, 170)
+								for k2, v2 in pairs(familygroup.drawn) do
+									v2.Visible = false
+								end
+								familygroup.active = false
+							end
+						end
+
+						for k1, v1 in pairs(v.props.bar) do
+							v1.drawn.Position = PointOffset.new(self.point2d, v.props.barpos.pos, v.props.barpos.old_y + (k1 * 2) - 2)
+							v1.drawn.Size = Vector2.new(v.props.barpos.length, 2)
+						end
+
+						for k1, v1 in pairs(v.props.nametext) do
+							v1.Color = v1.Text == k and RGB(255, 255, 255) or RGB(170, 170, 170)
+						end
 					end
 				end
 			end
@@ -775,6 +847,17 @@ function Menu:Create(menuname, menuprops, menutable)
 	
 	function mDraw:FilledRect(visible, pos, size, color, transparency, tablename)
 		local drawnobj = Draw:FilledRect(visible, PointOffset.new(curmenu.point2d, pos.X, pos.Y), size, color, transparency, tablename)
+		drawnobj.ZIndex = mDraw.zindex + mDraw.addindex
+		table.insert(curmenu.zindexs[mDraw.zindex], drawnobj)
+
+		if logtotable ~= nil then
+			table.insert(logtotable, drawnobj)
+		end
+		return drawnobj
+	end
+
+	function mDraw:Image(visible, imgdata, pos, centered, size, color, transparency, tablename)
+		local drawnobj = Draw:Image(visible, imgdata, PointOffset.new(curmenu.point2d, pos.X, pos.Y), centered, size, color, transparency, tablename)
 		drawnobj.ZIndex = mDraw.zindex + mDraw.addindex
 		table.insert(curmenu.zindexs[mDraw.zindex], drawnobj)
 
@@ -848,6 +931,36 @@ function Menu:Create(menuname, menuprops, menutable)
 		return { bar = selected, barpos = selected_pos, click_pos = click_pos, nametext = nametext }
 	end
 
+	function mDraw:ImageLayout(images, imageorder, resize, x, y, width, tab)
+
+		local smallness = 1
+		if resize ~= nil then
+			smallness = resize
+		end
+
+		local totalwidth = 0
+		for index, imgname in ipairs(imageorder) do
+			totalwidth += images[imgname][2] * smallness
+		end
+		local widthadd = math.floor((width - totalwidth)/(#imageorder - 1))
+
+		local temptable = {}
+
+		local x_add = 2
+		for index, imgname in ipairs(imageorder) do
+			local drawn = mDraw:Image(true, syn.crypt.base64.decode(images[imgname][1]), Vec2(x + x_add, y + 6), false, Vec2(images[imgname][2] * smallness, images[imgname][3] * smallness), index == 1 and RGB(255, 255, 255) or RGB(150, 150, 150), 255, tab)
+			temptable[imgname] = {drawn = drawn, hitbox = {
+				x = 8 + x_add,
+				y = 6,
+				w = math.ceil(images[imgname][2] * smallness),
+				h = math.ceil(images[imgname][3] * smallness),
+			}}
+			x_add += images[imgname][2] * smallness + widthadd
+		end
+
+		return temptable
+	end
+
 	function mDraw:Toggle(name, value, unsafe, x, y, tab)
 		mDraw:OutlinedRect(true, Vec2(x, y), Vec2(12, 12), RGB(30, 30, 30), 255, tab)
 		mDraw:OutlinedRect(true, Vec2(x + 1, y + 1), Vec2(10, 10), RGB(0, 0, 0), 255, tab)
@@ -905,7 +1018,7 @@ function Menu:Create(menuname, menuprops, menutable)
 		mDraw.zindex = 1
 		local background = mDraw:FilledRect(true, Vec2(10 + ((tab_num - 1) * tabsize), 27), Vec2(tabsize, 32), RGB(30, 30, 30), 255, bbmenu)
 		mDraw:OutlinedRect(true, Vec2(10 + ((tab_num - 1) * tabsize), 27), Vec2(tabsize, 32), RGB(20, 20, 20), 255, bbmenu)
-		local text = mDraw:Text(true, tab.name, "norm", Vec2(math.floor(10 + ((tab_num - 1) * tabsize + (tabsize * 0.5))), 44), true, tab_num == curmenu.activetab and RGB(255, 255, 255) or RGB(170, 170, 170), 255, true, bbmenu)
+		local text = mDraw:Text(true, tab.name, "norm", Vec2(math.floor(10 + ((tab_num - 1) * tabsize + (tabsize * 0.5))), 44), true, tab_num == curmenu.activetab and RGB(255, 255, 255) or RGB(160, 160, 160), 255, true, bbmenu)
 		mDraw:OutlinedRect(true, Vec2(10, 59), Vec2(curmenu.w - 20, curmenu.h - 69), RGB(20, 20, 20), 255, bbmenu)
 
 		curmenu.hitboxes[tab_num] = {
@@ -936,20 +1049,18 @@ function Menu:Create(menuname, menuprops, menutable)
 		for group_num, group_box in ipairs(tab.content) do
 			logtotable = nil
 
-			mDraw.zindex = 10
-
 			if group_box.pos == 3 then
 				if group_box.autofill then
 					group_box.relval = {
 						x = 17, 
-						y = 66 + math.ceil(y_pos[1]), 
+						y = group_box.y or 66 + math.ceil(y_pos[1]), 
 						w = inner_width - 6, 
 						h = (curmenu.h - 17) - 66 - math.ceil(y_pos[1])
 					}
 				else
 					group_box.relval = {
 						x = 17, 
-						y = 66 + math.ceil(y_pos[1]), 
+						y = group_box.y or 66 + math.ceil(y_pos[1]), 
 						w = inner_width - 6, 
 						h = math.floor(group_box.size)
 					}
@@ -960,14 +1071,14 @@ function Menu:Create(menuname, menuprops, menutable)
 				if group_box.autofill then
 					group_box.relval = {
 						x = ((group_box.pos - 1) * (inner_width/2)) + 17, 
-						y = 66 + math.ceil(y_pos[group_box.pos]), 
+						y = group_box.y or 66 + math.ceil(y_pos[group_box.pos]), 
 						w = inner_width/2 - 6, 
 						h = (curmenu.h - 17) - 66 - math.ceil(y_pos[group_box.pos])
 					}
 				else
 					group_box.relval = {
 						x = ((group_box.pos - 1) * (inner_width/2)) + 17, 
-						y = 66 + math.ceil(y_pos[group_box.pos]), 
+						y = group_box.y or 66 + math.ceil(y_pos[group_box.pos]), 
 						w = inner_width/2 - 6, 
 						h = math.floor(group_box.size)
 					}
@@ -977,8 +1088,14 @@ function Menu:Create(menuname, menuprops, menutable)
 
 			local groups = {}
 
+			mDraw.zindex = 10
+
 			if type(group_box.name) == "table" then
+				local temptable = {}
+
+				logtotable = temptable 
 				local props = mDraw:CoolMultiBox(group_box.name, group_box.relval.x, group_box.relval.y, group_box.relval.w, group_box.relval.h, drawtab)
+				logtotable = nil 
 
 				for name_index, group_name in ipairs(group_box.name) do
 					groups[group_name] = group_box[name_index].content
@@ -995,41 +1112,55 @@ function Menu:Create(menuname, menuprops, menutable)
 						},
 						drawn = {},
 
+						group_drawn = temptable,
 						visible = true,
 						scrolled = 0,
 						pos = group_box.relval
-					}	
+					}
 				end
+				temptable = nil 
 			else
 				groups[group_box.name] = group_box.content
 
-				mDraw:CoolBox(group_box.name, group_box.relval.x, group_box.relval.y, group_box.relval.w, group_box.relval.h, drawtab)
-
 				curmenu.hitboxes[tab_num].content[group_box.name] = {
 					active = true,
-					visible = true,
+					visible = group_box.visible == nil and true or group_box.visible,
+					
+					drawn = {},
+					group_drawn = {},
 					scrolled = 0,
 					pos = group_box.relval
-				}	
+				}
+
+				logtotable = curmenu.hitboxes[tab_num].content[group_box.name].group_drawn
+				mDraw:CoolBox(group_box.noname and " " or group_box.name, group_box.relval.x, group_box.relval.y, group_box.relval.w, group_box.relval.h, drawtab)
+				logtotable = nil
 			end
 			
 			for group_name, group_content in pairs(groups) do
 				local y_add = 24
 				if type(group_box.name) == "table" then
 					y_add += 4
-					logtotable = curmenu.hitboxes[tab_num].content[group_name].drawn
 				else
-					logtotable = nil
+					if group_box.noname then
+						y_add -= 16
+					end
 				end
+				logtotable = curmenu.hitboxes[tab_num].content[group_name].drawn
 
 				curmenu.values[tab.name][group_name] = {}
 				local curgroup_value = curmenu.values[tab.name][group_name]
 
-				local curhitbox_group = curmenu.hitboxes[tab_num].content[group_name] -- ALAN ADD A USE TO THIS L8R
+				local curhitbox_group = curmenu.hitboxes[tab_num].content[group_name] --TODO ALAN ADD A USE TO THIS L8R
 
-				mDraw.zindex = group_num + 1
+				if group_box.zindex == nil then
+					mDraw.zindex = group_num + 1
+				else
+					mDraw.zindex = 1 + group_box.zindex
+				end
 				
 				for element_num, element in ipairs(group_content) do
+
 					if element.type == TOGGLE then
 						curgroup_value[element.name] = {
 							type = element.type,
@@ -1043,9 +1174,19 @@ function Menu:Create(menuname, menuprops, menutable)
 								h = 12
 							}
 						}
-
 						y_add += 18
 
+					elseif element.type == IMAGE_LAYOUT then
+						mDraw.zindex = 10 -- this is so bad
+						curgroup_value[element.name] = {
+							type = element.type,
+							value = element.order[1],
+							y_add = y_add,
+							hitboxes = mDraw:ImageLayout(element.images, element.order, element.resize, group_box.relval.x + 8, group_box.relval.y + y_add, group_box.relval.w - 16, drawtab),
+							event = element.event
+						}
+						y_add += 30
+						mDraw.zindex = group_num + 1
 					end
 				end
 			end
@@ -1060,6 +1201,94 @@ function Menu:Create(menuname, menuprops, menutable)
 	return curmenu
 end
 
+--ANCHOR MENU CREATION
+
+local wepgroupsmenu = {}
+
+local wepgroups = {"PISTOL", "SMG", "RIFLE", "SHOTGUN", "SNIPER"}
+for i, v in ipairs(wepgroups) do
+	table.insert(wepgroupsmenu, {
+		name = "Aim Assist ".. v,
+		pos = 1,
+		size = 300,
+		y = 126,
+		visible = i == 1,
+		zindex = 1,
+		content = {
+			{
+				type = TOGGLE,
+				name = "Enabled",
+				value = true,
+				unsafe = true
+			},
+			{
+				type = TOGGLE,
+				name = "TEST 1",
+				value = false,
+			},
+			{
+				type = TOGGLE,
+				name = "TEST 2",
+				value = true,
+			},
+			{
+				type = SLIDER,
+				name = "Aimbot FOV",
+				value = 20,
+				minvalue = 0,
+				maxvalue = 180,
+				stradd = "°",
+			},
+		},
+	})
+	table.insert(wepgroupsmenu, {
+		name = "Trigger Bot ".. v,
+		pos = 1,
+		size = 151,
+		y = 432,
+		visible = i == 1,
+		zindex = 2,
+		content = {
+			{
+				type = TOGGLE,
+				name = "pooper XD",
+				value = true,
+			},
+			{
+				type = TOGGLE,
+				name = "TEST 1",
+				value = false,
+			},
+			{
+				type = TOGGLE,
+				name = "TEST 2",
+				value = true,
+			},
+		}
+	})
+	table.insert(wepgroupsmenu, {
+		name = "Bullet Redirection ".. v,
+		pos = 2,
+		size = 225,
+		y = 126,
+		visible = i == 1,
+		zindex = 3,
+		content = {},
+	})
+	table.insert(wepgroupsmenu, {
+		name = "Recoil Control ".. v,
+		pos = 2,
+		size = 226,
+		y = 357,
+		visible = i == 1,
+		zindex = 4,
+		content = {},
+	})
+end
+
+print(wepgroupsmenu[1].name)
+
+
 local Main = Menu:Create("main", {
 	activetab = 1,
 	name = "Bitch Bot",
@@ -1072,40 +1301,109 @@ local Main = Menu:Create("main", {
 		name = "Legit",
 		content = {
 			{
-				name = "test 1",
-				pos = 1,
-				size = 200,
+				name = "Weapon Groups",
+				noname = true,
+				pos = 3,
+				size = 54,
 				content = {
 					{
-						type = TOGGLE,
-						name = "Enabled",
-						value = true,
-						unsafe = true
-					},
-					{
-						type = TOGGLE,
-						name = "TEST 1",
-						value = false,
-					},
-					{
-						type = TOGGLE,
-						name = "TEST 2",
-						value = true,
-					},
-					{
-						type = SLIDER,
-						name = "Aimbot FOV",
-						value = 20,
-						minvalue = 0,
-						maxvalue = 180,
-						stradd = "°",
-					},
-				},
+						type = IMAGE_LAYOUT,
+						name = "Weapon Group",
+						images = MenuImages,
+						order = {"PISTOL", "SMG", "RIFLE", "SHOTGUN", "SNIPER"},
+						resize = 0.9,
+						event = function(wep_group)
+							for i, v in ipairs({"PISTOL", "SMG", "RIFLE", "SHOTGUN", "SNIPER"}) do
+								Menu.windows["main"].hitboxes[1].content["Aim Assist ".. v].visible = v == wep_group
+								Menu.windows["main"].hitboxes[1].content["Trigger Bot ".. v].visible = v == wep_group
+								Menu.windows["main"].hitboxes[1].content["Bullet Redirection ".. v].visible = v == wep_group
+								Menu.windows["main"].hitboxes[1].content["Recoil Control ".. v].visible = v == wep_group
+							end
+							Menu.windows["main"]:SetActiveTab(1)
+							print(wep_group)
+						end
+					}
+				}
 			},
+			unpack(wepgroupsmenu)
+			-- {
+			-- 	name = "Aim Assist ",
+			-- 	pos = 1,
+			-- 	size = 300,
+			-- 	y = 126,
+			-- 	content = {
+			-- 		{
+			-- 			type = TOGGLE,
+			-- 			name = "Enabled",
+			-- 			value = true,
+			-- 			unsafe = true
+			-- 		},
+			-- 		{
+			-- 			type = TOGGLE,
+			-- 			name = "TEST 1",
+			-- 			value = false,
+			-- 		},
+			-- 		{
+			-- 			type = TOGGLE,
+			-- 			name = "TEST 2",
+			-- 			value = true,
+			-- 		},
+			-- 		{
+			-- 			type = SLIDER,
+			-- 			name = "Aimbot FOV",
+			-- 			value = 20,
+			-- 			minvalue = 0,
+			-- 			maxvalue = 180,
+			-- 			stradd = "°",
+			-- 		},
+			-- 	},
+			-- },
+			-- {
+			-- 	name = "Trigger Bot ",
+			-- 	pos = 1,
+			-- 	size = 151,
+			-- 	y = 432,
+			-- 	content = {
+			-- 		{
+			-- 			type = TOGGLE,
+			-- 			name = "pooper XD",
+			-- 			value = true,
+			-- 		},
+			-- 		{
+			-- 			type = TOGGLE,
+			-- 			name = "TEST 1",
+			-- 			value = false,
+			-- 		},
+			-- 		{
+			-- 			type = TOGGLE,
+			-- 			name = "TEST 2",
+			-- 			value = true,
+			-- 		},
+			-- 	}
+			-- },
+			-- {
+			-- 	name = "Bullet Redirection ",
+			-- 	pos = 2,
+			-- 	size = 225,
+			-- 	y = 126,
+			-- 	content = {},
+			-- },
+			-- {
+			-- 	name = "Recoil Control ",
+			-- 	pos = 2,
+			-- 	size = 226,
+			-- 	y = 357,
+			-- 	content = {},
+			-- }
+		},
+	},
+	{
+		name = "Rage",
+		content = {
 			{
 				name = {"group test 1", "group test 2", "poop"},
 				pos = 1,
-				size = 300,
+				autofill = true,
 				[1] = {
 					content = {
 						{
@@ -1162,23 +1460,18 @@ local Main = Menu:Create("main", {
 				},
 			},
 			{
-				name = "test 2",
+				name = "test 1",
 				pos = 2,
 				size = 100,
 				content = {},
 			},
 			{
-				name = "test 3",
+				name = "test 2",
 				pos = 2,
 				autofill = true,
-				size = 100,
 				content = {},
 			},
 		},
-	},
-	{
-		name = "Rage",
-		content = {},
 	},
 	{
 		name = "Visuals",
