@@ -6048,36 +6048,6 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		FlyToggle = false,
 	}
 
-	function menu:SetVisualsColor()
-		if menu.unloaded == true then
-			return
-		end
-		for i = 1, Players.MaxPlayers do
-			local hdt = menu:GetVal("Visuals", "Player ESP", "Head Dot", COLOR)[4]
-			allesp.headdot[i].Color = menu:GetVal("Visuals", "Player ESP", "Head Dot", COLOR, true)
-			allesp.headdot[i].Transparency = hdt / 255
-			allesp.headdotoutline[i].Transparency = (hdt - 40) / 255
-
-			local boxt = menu:GetVal("Visuals", "Player ESP", "Box", COLOR)[4]
-			allesp.box[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", COLOR, true)
-			allesp.box[i].Transparency = boxt
-			allesp.innerbox[i].Transparency = boxt
-			allesp.outerbox[i].Transparency = boxt
-
-			allesp.hptext[i].Color = menu:GetVal("Visuals", "Player ESP", "Health Number", COLOR, true)
-			allesp.hptext[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Health Number", COLOR)[4] / 255
-
-			allesp.name[i].Color = menu:GetVal("Visuals", "Player ESP", "Name", COLOR, true)
-			allesp.name[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Name", COLOR)[4] / 255
-
-			allesp.team[i].Color = menu:GetVal("Visuals", "Player ESP", "Team", COLOR, true)
-			allesp.team[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Team", COLOR)[4] / 255
-
-			allesp.distance[i].Color = menu:GetVal("Visuals", "Player ESP", "Distance", COLOR, true)
-			allesp.distance[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Distance", COLOR)[4] / 255
-		end
-	end
-
 	menu.tickbase_manip_added = false
 	menu.tickbaseadd = 0
 
@@ -6294,14 +6264,15 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						if menu:GetVal("Settings", "Player List", "Player Status") == 2 then
 							if not table.find(menu.friends, selectedPlayer.Name) then
 								table.insert(menu.friends, selectedPlayer.Name)
-								WriteRelations()
+								
 							end
 						elseif menu:GetVal("Settings", "Player List", "Player Status") == 3 then
 							if not table.find(menu.priority, selectedPlayer.Name) then
 								table.insert(menu.priority, selectedPlayer.Name)
-								WriteRelations()
+								
 							end
 						end
+						WriteRelations()
 					else
 						menu.options["Settings"]["Player List"]["Player Status"][1] = 1
 						menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
@@ -6341,19 +6312,6 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					menu.fovcircle[1].Visible = false
 					menu.fovcircle[2].Visible = false
 				end
-				if menu:GetVal("Visuals", "Misc", "Custom Crosshair") then
-					local size = menu:GetVal("Visuals", "Misc", "Crosshair Size")
-					local color = menu:GetVal("Visuals", "Misc", "Custom Crosshair", COLOR, true)
-					menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
-					menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
-
-					menu.crosshair.inner[1].Color = color
-					menu.crosshair.inner[2].Color = color
-
-					menu.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
-					menu.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
-				end
-				menu:SetVisualsColor()
 			end
 		end
 	end)
@@ -6405,6 +6363,19 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					setplistinfo(selectedPlayer, true)
 				end
 			end
+
+			if menu:GetVal("Visuals", "Misc", "Custom Crosshair") then
+				local size = menu:GetVal("Visuals", "Misc", "Crosshair Size")
+				local color = menu:GetVal("Visuals", "Misc", "Custom Crosshair", COLOR, true)
+				menu.crosshair.inner[1].Size = Vector2.new(size * 2 + 1, 1)
+				menu.crosshair.inner[2].Size = Vector2.new(1, size * 2 + 1)
+
+				menu.crosshair.inner[1].Color = color
+				menu.crosshair.inner[2].Color = color
+
+				menu.crosshair.outline[1].Size = Vector2.new(size * 2 + 3, 3)
+				menu.crosshair.outline[2].Size = Vector2.new(3, size * 2 + 3)
+			end
 		end
 
 		if menu:GetVal("Visuals", "Misc", "Custom Crosshair") then
@@ -6443,7 +6414,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 
-		CreateThread(function()
+		
 			for k, v in pairs(allesp) do
 				for k1, v1 in ipairs(v) do
 					if v1.Visible then
@@ -6486,133 +6457,216 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				end)
 			end
 
+			local priority_c = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", COLOR, true)
+			local priority_t = menu:GetVal("Visuals", "ESP Settings", "Highlight Priority", COLOR)[4]/255
+
+			local friend_c = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR, true)
+			local friend_t = menu:GetVal("Visuals", "ESP Settings", "Highlight Friends", COLOR)[4]/255
+
 			for i, v in ipairs(organizedPlayers) do
-				local humanoid = v.Character:FindFirstChild("Humanoid")
-				local rootpart = v.Character.HumanoidRootPart.Position
+				pcall(function()
+					local humanoid = v.Character:FindFirstChild("Humanoid")
+					local rootpart = v.Character.HumanoidRootPart.Position
 
-				local cam = Camera.CFrame
-				local torso = v.Character.PrimaryPart.CFrame
-				local head = v.Character.Head.CFrame
-				-- local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
-				-- local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
-				local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1.3) + cam.UpVector)
-				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 3) - cam.UpVector)
+					local cam = Camera.CFrame
+					local torso = v.Character.PrimaryPart.CFrame
+					local head = v.Character.Head.CFrame
+					-- local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
+					-- local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
+					local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1.3) + cam.UpVector)
+					local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 3) - cam.UpVector)
 
-				local minY = math.abs(bottom.y - top.y)
-				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2, 3))
-				local sizeY = math.ceil(math.max(minY, sizeX * 0.5, 3))
+					local minY = math.abs(bottom.y - top.y)
+					local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2, 3))
+					local sizeY = math.ceil(math.max(minY, sizeX * 0.5, 3))
 
-				if top_isrendered or bottom_isrendered then
-					local boxtop = Vector2.new(
-						math.floor(top.x * 0.5 + bottom.x * 0.5 - sizeX * 0.5),
-						math.floor(math.min(top.y, bottom.y))
-					)
-					local boxsize = { w = sizeX, h = sizeY }
+					if top_isrendered or bottom_isrendered then
+						local boxtop = Vector2.new(
+							math.floor(top.x * 0.5 + bottom.x * 0.5 - sizeX * 0.5),
+							math.floor(math.min(top.y, bottom.y))
+						)
+						local boxsize = { w = sizeX, h = sizeY }
 
-					if menu:GetVal("Visuals", "Player ESP", "Head Dot") then
-						local head = v.Character:FindFirstChild("Head")
-						if head then
-							local headpos = head.Position
-							local headdotpos = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y, headpos.z))
-							local headdotpos_b = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y - 0.3, headpos.z))
-							local difference = headdotpos_b.y - headdotpos.y
-							allesp.headdot[i].Visible = true
-							allesp.headdot[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
-							allesp.headdot[i].Radius = difference * 2
+						if menu:GetVal("Visuals", "Player ESP", "Head Dot") then
+							local head = v.Character:FindFirstChild("Head")
+							if head then
+								local headpos = head.Position
+								local headdotpos = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y, headpos.z))
+								local headdotpos_b = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y - 0.3, headpos.z))
+								local difference = headdotpos_b.y - headdotpos.y
+								allesp.headdot[i].Visible = true
+								allesp.headdot[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
+								allesp.headdot[i].Radius = difference * 2
 
-							allesp.headdotoutline[i].Visible = true
-							allesp.headdotoutline[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
-							allesp.headdotoutline[i].Radius = difference * 2
+								allesp.headdotoutline[i].Visible = true
+								allesp.headdotoutline[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
+								allesp.headdotoutline[i].Radius = difference * 2
+							end
 						end
-					end
-					if menu:GetVal("Visuals", "Player ESP", "Box") then
-						allesp.outerbox[i].Position = Vector2.new(boxtop.x - 1, boxtop.y - 1)
-						allesp.outerbox[i].Size = Vector2.new(boxsize.w + 2, boxsize.h + 2)
-						allesp.outerbox[i].Visible = true
+						if menu:GetVal("Visuals", "Player ESP", "Box") then
+							allesp.outerbox[i].Position = Vector2.new(boxtop.x - 1, boxtop.y - 1)
+							allesp.outerbox[i].Size = Vector2.new(boxsize.w + 2, boxsize.h + 2)
+							allesp.outerbox[i].Visible = true
 
-						allesp.innerbox[i].Position = Vector2.new(boxtop.x + 1, boxtop.y + 1)
-						allesp.innerbox[i].Size = Vector2.new(boxsize.w - 2, boxsize.h - 2)
-						allesp.innerbox[i].Visible = true
+							allesp.innerbox[i].Position = Vector2.new(boxtop.x + 1, boxtop.y + 1)
+							allesp.innerbox[i].Size = Vector2.new(boxsize.w - 2, boxsize.h - 2)
+							allesp.innerbox[i].Visible = true
 
-						allesp.box[i].Position = Vector2.new(boxtop.x, boxtop.y)
-						allesp.box[i].Size = Vector2.new(boxsize.w, boxsize.h)
-						allesp.box[i].Visible = true
-					end
-					if humanoid then
-						local health = math.ceil(humanoid.Health)
-						local maxhealth = humanoid.MaxHealth
-						if menu:GetVal("Visuals", "Player ESP", "Health Bar") then
-							allesp.healthouter[i].Position = Vector2.new(boxtop.x - 6, boxtop.y - 1)
-							allesp.healthouter[i].Size = Vector2.new(4, boxsize.h + 2)
-							allesp.healthouter[i].Visible = true
+							allesp.box[i].Position = Vector2.new(boxtop.x, boxtop.y)
+							allesp.box[i].Size = Vector2.new(boxsize.w, boxsize.h)
+							allesp.box[i].Visible = true
+						end
+						if humanoid then
+							local health = math.ceil(humanoid.Health)
+							local maxhealth = humanoid.MaxHealth
+							if menu:GetVal("Visuals", "Player ESP", "Health Bar") then
+								allesp.healthouter[i].Position = Vector2.new(boxtop.x - 6, boxtop.y - 1)
+								allesp.healthouter[i].Size = Vector2.new(4, boxsize.h + 2)
+								allesp.healthouter[i].Visible = true
 
-							local ySizeBar = -math.floor(boxsize.h * health / maxhealth)
+								local ySizeBar = -math.floor(boxsize.h * health / maxhealth)
 
-							allesp.healthinner[i].Position = Vector2.new(boxtop.x - 5, boxtop.y + boxsize.h)
-							allesp.healthinner[i].Size = Vector2.new(2, ySizeBar)
-							allesp.healthinner[i].Visible = true
-							allesp.healthinner[i].Color = ColorRange(health, {
-								[1] = {
-									start = 0,
-									color = menu:GetVal("Visuals", "Player ESP", "Health Bar", COLOR1, true),
-								},
-								[2] = {
-									start = 100,
-									color = menu:GetVal("Visuals", "Player ESP", "Health Bar", COLOR2, true),
-								},
-							})
+								allesp.healthinner[i].Position = Vector2.new(boxtop.x - 5, boxtop.y + boxsize.h)
+								allesp.healthinner[i].Size = Vector2.new(2, ySizeBar)
+								allesp.healthinner[i].Visible = true
+								allesp.healthinner[i].Color = ColorRange(health, {
+									[1] = {
+										start = 0,
+										color = menu:GetVal("Visuals", "Player ESP", "Health Bar", COLOR1, true),
+									},
+									[2] = {
+										start = 100,
+										color = menu:GetVal("Visuals", "Player ESP", "Health Bar", COLOR2, true),
+									},
+								})
 
-							if menu:GetVal("Visuals", "Player ESP", "Health Number") then
+								if menu:GetVal("Visuals", "Player ESP", "Health Number") then
+									allesp.hptext[i].Text = tostring(health)
+									local textsize = allesp.hptext[i].TextBounds
+									allesp.hptext[i].Position = Vector2.new(
+										boxtop.x - 7 - textsize.x,
+										boxtop.y + clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10)
+									)
+									allesp.hptext[i].Visible = true
+									allesp.hptext[i].Color = menu:GetVal("Visuals", "Player ESP", "Health Number", COLOR, true)
+									allesp.hptext[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Health Number", COLOR)[4] / 255
+								end
+							elseif menu:GetVal("Visuals", "Player ESP", "Health Number") then
 								allesp.hptext[i].Text = tostring(health)
 								local textsize = allesp.hptext[i].TextBounds
-								allesp.hptext[i].Position = Vector2.new(
-									boxtop.x - 7 - textsize.x,
-									boxtop.y + clamp(boxsize.h + ySizeBar - 8, -4, boxsize.h - 10)
-								)
+								allesp.hptext[i].Position = Vector2.new(boxtop.x - 2 - textsize.x, boxtop.y - 4)
 								allesp.hptext[i].Visible = true
+								allesp.hptext[i].Color = menu:GetVal("Visuals", "Player ESP", "Health Number", COLOR, true)
+								allesp.hptext[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Health Number", COLOR)[4] / 255
 							end
-						elseif menu:GetVal("Visuals", "Player ESP", "Health Number") then
-							allesp.hptext[i].Text = tostring(health)
-							local textsize = allesp.hptext[i].TextBounds
-							allesp.hptext[i].Position = Vector2.new(boxtop.x - 2 - textsize.x, boxtop.y - 4)
-							allesp.hptext[i].Visible = true
 						end
-					end
-					if menu:GetVal("Visuals", "Player ESP", "Name") then
-						local name_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), math.floor(boxtop.y - 15))
-						allesp.name[i].Text = v.Name
-						allesp.name[i].Position = name_pos
-						allesp.name[i].Visible = true
-					end
-					local y_spot = 0
-					if menu:GetVal("Visuals", "Player ESP", "Team") then
-						if v.Team == nil then
-							allesp.team[i].Text = "None"
-						else
-							allesp.team[i].Text = v.Team.Name
+						if menu:GetVal("Visuals", "Player ESP", "Name") then
+							local name_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), math.floor(boxtop.y - 15))
+							allesp.name[i].Text = v.Name
+							allesp.name[i].Position = name_pos
+							allesp.name[i].Visible = true
 						end
-						if menu:GetVal("Visuals", "Player ESP", "Team Color Based") then
+						local y_spot = 0
+						if menu:GetVal("Visuals", "Player ESP", "Team") then
 							if v.Team == nil then
-								allesp.team[i].Color = RGB(255, 255, 255)
+								allesp.team[i].Text = "None"
 							else
-								allesp.team[i].Color = v.TeamColor.Color
+								allesp.team[i].Text = v.Team.Name
 							end
+							if menu:GetVal("Visuals", "Player ESP", "Team Color Based") then
+								if v.Team == nil then
+									allesp.team[i].Color = RGB(255, 255, 255)
+								else
+									allesp.team[i].Color = v.TeamColor.Color
+								end
+							end
+							local team_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h)
+							allesp.team[i].Position = team_pos
+							allesp.team[i].Visible = true
+							y_spot += 14
 						end
-						local team_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h)
-						allesp.team[i].Position = team_pos
-						allesp.team[i].Visible = true
-						y_spot += 14
+						if menu:GetVal("Visuals", "Player ESP", "Distance") then
+							local dist_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
+							allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(rootpart) / 5))
+								.. "m"
+							allesp.distance[i].Position = dist_pos
+							allesp.distance[i].Visible = true
+						end
+
+						
+						if menu:GetVal("Visuals", "ESP Settings", "Highlight Priority") and table.find(menu.priority, v.Name) then
+
+							allesp.headdot[i].Color = priority_c
+							allesp.headdot[i].Transparency = priority_t
+							allesp.headdotoutline[i].Transparency = priority_t * 0.8
+
+							allesp.box[i].Color = priority_c
+							allesp.box[i].Transparency = priority_t
+							allesp.innerbox[i].Transparency = priority_t * 0.8
+							allesp.outerbox[i].Transparency = priority_t * 0.8
+				
+							allesp.name[i].Color = priority_c
+							allesp.name[i].Transparency = priority_t
+							
+							if not menu:GetVal("Visuals", "Player ESP", "Team Color Based") then
+								allesp.team[i].Color = priority_c
+							end
+							allesp.team[i].Transparency = priority_t
+				
+							allesp.distance[i].Color = priority_c
+							allesp.distance[i].Transparency = priority_t
+
+						elseif menu:GetVal("Visuals", "ESP Settings", "Highlight Friends") and table.find(menu.friends, v.Name) then
+
+							allesp.headdot[i].Color = friend_c
+							allesp.headdot[i].Transparency = friend_t
+							allesp.headdotoutline[i].Transparency = friend_t * 0.8
+
+							allesp.box[i].Color = friend_c
+							allesp.box[i].Transparency = friend_t
+							allesp.innerbox[i].Transparency = friend_t * 0.8
+							allesp.outerbox[i].Transparency = friend_t * 0.8
+				
+							allesp.name[i].Color = friend_c
+							allesp.name[i].Transparency = friend_t
+							
+							if not menu:GetVal("Visuals", "Player ESP", "Team Color Based") then
+								allesp.team[i].Color = friend_c
+							end
+							allesp.team[i].Transparency = friend_t
+				
+							allesp.distance[i].Color = friend_c
+							allesp.distance[i].Transparency = friend_t
+
+						else
+							
+							local hdt = menu:GetVal("Visuals", "Player ESP", "Head Dot", COLOR)[4]/255
+							allesp.headdot[i].Color = menu:GetVal("Visuals", "Player ESP", "Head Dot", COLOR, true)
+							allesp.headdot[i].Transparency = hdt
+							allesp.headdotoutline[i].Transparency = hdt * 0.8
+				
+							local boxt = menu:GetVal("Visuals", "Player ESP", "Box", COLOR)[4]/255
+							allesp.box[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", COLOR, true)
+							allesp.box[i].Transparency = boxt
+							allesp.innerbox[i].Transparency = boxt * 0.8
+							allesp.outerbox[i].Transparency = boxt * 0.8
+				
+							allesp.name[i].Color = menu:GetVal("Visuals", "Player ESP", "Name", COLOR, true)
+							allesp.name[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Name", COLOR)[4] / 255
+							
+							if not menu:GetVal("Visuals", "Player ESP", "Team Color Based") then
+								allesp.team[i].Color = menu:GetVal("Visuals", "Player ESP", "Team", COLOR, true)
+							end
+							allesp.team[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Team", COLOR)[4] / 255
+
+							allesp.distance[i].Color = menu:GetVal("Visuals", "Player ESP", "Distance", COLOR, true)
+							allesp.distance[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Distance", COLOR)[4] / 255
+
+						end
 					end
-					if menu:GetVal("Visuals", "Player ESP", "Distance") then
-						local dist_pos = Vector2.new(math.floor(boxtop.x + boxsize.w * 0.5), boxtop.y + boxsize.h + y_spot)
-						allesp.distance[i].Text = tostring(math.ceil(LOCAL_PLAYER:DistanceFromCharacter(rootpart) / 5))
-							.. "m"
-						allesp.distance[i].Position = dist_pos
-						allesp.distance[i].Visible = true
-					end
-				end
+				end)
 			end
-		end)
+		
 	end)
 
 	menu.connections.playerjoined = Players.PlayerAdded:Connect(function(player)
@@ -15634,14 +15688,13 @@ K/D: %d/%d
 								if menu:GetVal("Settings", "Player List", "Player Status") == 2 then
 									if not table.find(menu.friends, selectedPlayer.Name) then
 										table.insert(menu.friends, selectedPlayer.Name)
-										WriteRelations()
 									end
 								elseif menu:GetVal("Settings", "Player List", "Player Status") == 3 then
 									if not table.find(menu.priority, selectedPlayer.Name) then
 										table.insert(menu.priority, selectedPlayer.Name)
-										WriteRelations()
 									end
 								end
+								WriteRelations()
 							else
 								menu.options["Settings"]["Player List"]["Player Status"][1] = 1
 								menu.options["Settings"]["Player List"]["Player Status"][4][1].Text = "None"
