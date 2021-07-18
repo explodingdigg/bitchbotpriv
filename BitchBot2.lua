@@ -5503,18 +5503,14 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							}
 						},
 						{
+							type = DROPBOX,
+							name = "Hitbox",
+							value = 1,
+							values = { "Head", "Torso" },
+						},
+						{
 							type = TOGGLE,
 							name = "Force Angles In First Person",
-							value = false,
-						},
-						{
-							type = TOGGLE,
-							name = "Visibility Check",
-							value = false,
-						},
-						{
-							type = TOGGLE,
-							name = "Auto Shoot",
 							value = false,
 						},
 						{
@@ -5524,12 +5520,22 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						},
 						{
 							type = SLIDER,
-							name = "Smoothing Value",
+							name = "Smoothing Ammount",
 							value = 0,
 							minvalue = 0,
 							maxvalue = 100,
 							stradd = "%",
 						},
+						-- {
+						-- 	type = TOGGLE,
+						-- 	name = "Visibility Check",
+						-- 	value = false,
+						-- },
+						-- {
+						-- 	type = TOGGLE,
+						-- 	name = "Auto Shoot",
+						-- 	value = false,
+						-- },
 					},
 				},
 				{
@@ -5538,14 +5544,14 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					autofill = true,
 					content = {
 						{
-							type = TOGGLE,
-							name = "Enabled",
-							value = false,
-							extra = {
-								type = KEYBIND,
-								key = Enum.KeyCode.J,
-								toggletype = 1,
-							},
+							-- type = TOGGLE,
+							-- name = "Enabled",
+							-- value = false,
+							-- extra = {
+							-- 	type = KEYBIND,
+							-- 	key = Enum.KeyCode.J,
+							-- 	toggletype = 1,
+							-- },
 						},
 					},
 				}
@@ -6324,26 +6330,38 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				end
 				return (aPos - mousePos).Magnitude < (bPos - mousePos).Magnitude
 			end)
-
+			
+			local smoothing = menu:GetVal("Combat", "Aim Assist", "Smoothing") and menu:GetVal("Combat", "Aim Assist", "Smoothing Ammount") * 0.3 + 2 or 1.7
 			for i, v in ipairs(organizedPlayers) do
 				local humanoid = v.Character:FindFirstChild("Humanoid")
 				local rootpart = v.Character.HumanoidRootPart.Position
-				local head = v.Character:FindFirstChild("Head")
+				
+				local hitbox = nil
+				if menu:GetVal("Combat", "Aim Assist", "Hitbox") == 1 then
+					hitbox = v.Character:FindFirstChild("Head")
+				else
+					hitbox = v.Character:FindFirstChild("Torso")
+					if hitbox == nil then
+						hitbox = v.Character:FindFirstChild("UpperTorso")
+					end
+				end
 
-				if head then
-					local pos, onscreen = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
+				if hitbox then
+					local pos, onscreen = workspace.CurrentCamera:WorldToViewportPoint(hitbox.Position)
 
 					if onscreen then
 						menu.aimbot_target = v
 						if INPUT_SERVICE.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
-							mousemoveabs(pos.x, pos.y) --TODO NATE FIX THIS AIMBOT MAKE IT HEAT AND MAKE IT SORT BY FOV
+							mousemoveabs(pos.x, pos.y)
 						else
 							if menu:GetVal("Combat", "Aim Assist", "Force Angles In First Person") then
-								Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
+								Camera.CFrame = CFrame.new(Camera.CFrame.Position, hitbox.Position)
 							else
-								local inc = Vector2.new((pos.X - LOCAL_MOUSE.X) / 1.7, (pos.Y - LOCAL_MOUSE.Y - 36) / 1.7)
+							
+								local inc = Vector2.new((pos.X - LOCAL_MOUSE.X) / smoothing, (pos.Y - LOCAL_MOUSE.Y - 36) / smoothing)
 								local sens = GAME_SETTINGS.MouseSensitivity
 								mousemoverel(inc.X / (sens * 5), inc.Y / (sens * 5))
+							
 							end
 						end
 						return
