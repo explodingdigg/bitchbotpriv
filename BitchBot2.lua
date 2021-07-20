@@ -6448,7 +6448,6 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 
 						elseif menu:GetVal("Misc", "Exploits", "Enable Timer Exploits") and menu:GetKey("Misc", "Exploits", "Timer") then
 							menu.tickbaseadd += menu:GetVal("Misc", "Exploits", "Timer Factor") * 0.001
-							print(shared.tick_ref(), menu.tickbaseadd, shared.tick_ref() + menu.tickbaseadd)
 							return shared.tick_ref() + menu.tickbaseadd
 						else
 							if menu then menu.tickbaseadd = 0 end
@@ -6595,10 +6594,8 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				if menu:GetVal("Misc", "Exploits", "Enable Timer Exploits") then
 					
 					if menu:GetVal("Misc", "Exploits", "Instant Tick Shift") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Instant Tick Shift", KEYBIND) then
-						CreateNotification("0")
 						if menu.tick_shift_que == nil then
 							menu.instant_shift = 0
-							CreateNotification("1")
 							menu.tick_shift_que = tick() + menu:GetVal("Misc", "Exploits", "Instant Tick Shift Delay")
 						end
 					end
