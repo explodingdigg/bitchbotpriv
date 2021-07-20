@@ -5400,6 +5400,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		displayname = {},
 		outerbox = {},
 		box = {},
+		filledbox = {},
 		innerbox = {},
 		healthouter = {},
 		healthinner = {},
@@ -5409,14 +5410,13 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	}
 
 	for i = 1, Players.MaxPlayers do
-		
-		Draw:OutlinedRect(false, 20, 20, 20, 20, { 0, 0, 0, 220 }, allesp.innerbox)
+		Draw:FilledRect(false, 20, 20, 20, 20, { 0, 0, 0, 220 }, allesp.filledbox)
 
 		Draw:Circle(false, 20, 20, 10, 3, 10, { 10, 10, 10, 215 }, allesp.headdotoutline)
 		Draw:Circle(false, 20, 20, 10, 1, 10, { 255, 255, 255, 255 }, allesp.headdot)
 
+		Draw:OutlinedRect(false, 20, 20, 20, 20, { 0, 0, 0, 220 }, allesp.innerbox)
 		Draw:OutlinedRect(false, 20, 20, 20, 20, { 0, 0, 0, 220 }, allesp.outerbox)
-		
 		Draw:OutlinedRect(false, 20, 20, 20, 20, { 255, 255, 255, 255 }, allesp.box)
 
 		Draw:FilledRect(false, 20, 20, 4, 20, { 10, 10, 10, 215 }, allesp.healthouter)
@@ -5458,6 +5458,12 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 								key = Enum.KeyCode.J,
 								toggletype = 1,
 							},
+						},
+						{
+							type = DROPBOX,
+							name = "Use Mouse Keys",
+							value = 1,
+							values = { "Off", "Mouse 1", "Mouse 2" },
 						},
 						{
 							type = TOGGLE,
@@ -5511,6 +5517,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						{
 							type = TOGGLE,
 							name = "Force Angles In First Person",
+							unsafe = true,
 							value = false,
 						},
 						{
@@ -5530,6 +5537,11 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						-- 	type = TOGGLE,
 						-- 	name = "Visibility Check",
 						-- 	value = false,
+						-- },
+						-- {
+						-- 	type = COMBOBOX,
+						-- 	name = "Visibility Check Filters",
+						-- 	values = { { "Transparent", true }, { "Force Feild", false }, { "Collisionless", false }, { "Thickness", false } },
 						-- },
 						-- {
 						-- 	type = TOGGLE,
@@ -5829,6 +5841,11 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							type = TOGGLE,
 							name = "Speed",
 							value = false,
+							extra = {
+								type = KEYBIND,
+								key = Enum.KeyCode.LeftShift,
+								toggletype = 1,
+							},
 						},
 						{
 							type = SLIDER,
@@ -5862,7 +5879,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 							type = DROPBOX,
 							name = "Fly Method",
 							value = 1,
-							values = { "Fly", "Noclip" },
+							values = { "Velocity", "Noclip" },
 						},
 						{
 							type = SLIDER,
@@ -5891,13 +5908,13 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					content = {
 						{
 							type = TOGGLE,
-							name = "Enable Tick Manipulation",
-							value = false,
+							name = "Enable Timer Exploits",
 							unsafe = true,
+							value = false,
 						},
 						{
 							type = TOGGLE,
-							name = "Shift Tick Base",
+							name = "Timer",
 							value = false,
 							extra = {
 								type = KEYBIND,
@@ -5906,11 +5923,40 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						},
 						{
 							type = SLIDER,
-							name = "Shifted Tick Base Add",
+							name = "Timer Factor",
 							value = 20,
 							minvalue = 1,
 							maxvalue = 1000,
 							stradd = "ms",
+						},
+						{
+							type = TOGGLE,
+							name = "Instant Tick Shift",
+							value = false,
+							extra = {
+								type = KEYBIND,
+								key = Enum.KeyCode.R,
+								toggletype = 0,
+							},
+						},
+						{
+							type = SLIDER,
+							name = "Instant Tick Shift Delay",
+							value = 0,
+							minvalue = 0,
+							maxvalue = 30,
+							stradd = "s",
+							custom = {
+								[0] = "Off"
+							}
+						},
+						{
+							type = SLIDER,
+							name = "Instant Tick Shift Factor",
+							value = 5,
+							minvalue = 1,
+							maxvalue = 30,
+							stradd = "s",
 						},
 					},
 				},
@@ -6171,7 +6217,7 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	local function SpeedHack()
 		local speed = menu:GetVal("Misc", "Movement", "Speed Factor")
 
-		if menu:GetVal("Misc", "Movement", "Speed") and LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
+		if menu:GetKey("Misc", "Movement", "Speed") and LOCAL_PLAYER.Character and LOCAL_PLAYER.Character.Humanoid
 		then
 			if menu:GetVal("Misc", "Movement", "Speed Method") == 1 then
 				local rootpart = LOCAL_PLAYER.Character:FindFirstChild("HumanoidRootPart")
@@ -6267,7 +6313,17 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 	end
 
 	local function Aimbot()
-		if menu:GetKey("Combat", "Aim Assist", "Enabled") then
+
+		local enabled = false
+		local aimkey = menu:GetVal("Combat", "Aim Assist", "Use Mouse Keys") - 2
+
+		if aimkey == -1 then
+			enabled = menu:GetKey("Combat", "Aim Assist", "Enabled")
+		else
+			enabled = INPUT_SERVICE:IsMouseButtonPressed(aimkey)
+		end
+
+		if enabled and not menu.open then
 			local organizedPlayers = {}
 			local fovType = menu:GetVal("Combat", "Aim Assist", "FOV Calculation")
 			local fov = menu:GetVal("Combat", "Aim Assist", "Aimbot FOV")
@@ -6371,28 +6427,38 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		end
 	end
 
+	menu.instant_shift = 0
+	menu.tick_shift_que = nil
 	local oldslectedplayer = nil
-	menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input)
+	menu.connections.inputstart2 = INPUT_SERVICE.InputBegan:Connect(function(input) --ANCHOR TICKBASE SHIT
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			if menu.open then
-				if menu.tickbase_manip_added == false and menu:GetVal("Misc", "Exploits", "Enable Tick Manipulation")
-				then
-					shared.tick_ref = hookfunc(tick, function()
+				if menu.tickbase_manip_added == false and menu:GetVal("Misc", "Exploits", "Enable Timer Exploits") then
+					shared.tick_ref = hookfunc(getrenv().tick, function()
 						if checkcaller() then
 							return shared.tick_ref()
 						end
 						if not menu then
 							return shared.tick_ref()
-						elseif menu:GetVal("Misc", "Exploits", "Enable Tick Manipulation") and menu:GetVal("Misc", "Exploits", "Shift Tick Base") and INPUT_SERVICE:IsKeyDown(menu:GetVal("Misc", "Exploits", "Shift Tick Base", KEYBIND))
-						then
-							menu.tickbaseadd += menu:GetVal("Misc", "Exploits", "Shifted Tick Base Add") * 0.001
+						elseif menu.instant_shift ~= 0 then
+							local shiftamm = menu.instant_shift
+							menu.instant_shift = 0
+							CreateNotification("Shifted ".. tostring(shiftamm).. " Ticks")
+							return shared.tick_ref() + shiftamm
+
+						elseif menu:GetVal("Misc", "Exploits", "Enable Timer Exploits") and menu:GetKey("Misc", "Exploits", "Timer") then
+							menu.tickbaseadd += menu:GetVal("Misc", "Exploits", "Timer Factor") * 0.001
+							print(shared.tick_ref(), menu.tickbaseadd, shared.tick_ref() + menu.tickbaseadd)
 							return shared.tick_ref() + menu.tickbaseadd
 						else
+							if menu then menu.tickbaseadd = 0 end
 							return shared.tick_ref()
 						end
 					end)
 					menu.tickbase_manip_added = true
 				end
+
+				
 
 				if menu.tabnames[menu.activetab] == "Settings" and menu.open then
 					game.RunService.Stepped:wait()
@@ -6473,9 +6539,6 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 			end
 		end
 	end)
-
-	-- local function Aimbot()
-	-- 	if -- end
 	
 	menu.connections.button_pressed_uni = ButtonPressed:connect(function(tab, gb, name)
 		if name == "Teleport" then
@@ -6528,17 +6591,24 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 					RP.CFrame = CFrame.new(targetPos + Vector3.new(0, 7, 0))
 					return Enum.ContextActionResult.Sink
 				end
+
+				if menu:GetVal("Misc", "Exploits", "Enable Timer Exploits") then
+					
+					if menu:GetVal("Misc", "Exploits", "Instant Tick Shift") and inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Instant Tick Shift", KEYBIND) then
+						CreateNotification("0")
+						if menu.tick_shift_que == nil then
+							menu.instant_shift = 0
+							CreateNotification("1")
+							menu.tick_shift_que = tick() + menu:GetVal("Misc", "Exploits", "Instant Tick Shift Delay")
+						end
+					end
+				end
 			end
 
 			-----------------------------------------
 			------------"HELD KEY ACTION"------------
 			-----------------------------------------
 			local keyflag = inputState == Enum.UserInputState.Begin
-
-			if inputObject.KeyCode == menu:GetVal("Misc", "Exploits", "Shift Tick Base", KEYBIND) then
-				menu.tickbaseadd = 0
-				return Enum.ContextActionResult.Sink
-			end
 
 			return Enum.ContextActionResult.Pass -- this will let any other keyboard action proceed
 		end
@@ -6550,6 +6620,18 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 		pcall(SpeedHack) -- ????? im tired of errors
 		pcall(FlyHack)
 		pcall(Aimbot)
+
+		if menu.tick_shift_que ~= nil then
+			if menu:GetVal("Misc", "Exploits", "Instant Tick Shift") then
+				if tick() >= menu.tick_shift_que and menu.instant_shift == 0 then
+					menu.instant_shift = menu:GetVal("Misc", "Exploits", "Instant Tick Shift Factor")
+					menu.tick_shift_que = nil 
+				end
+			else
+				menu.tick_shift_que = nil
+				menu.instant_shift = 0 
+			end
+		end
 
 		if menu.open then
 			if menu.tabnames[menu.activetab] == "Settings" then
@@ -6693,11 +6775,11 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 				local head = v.Character.Head.CFrame
 				-- local vTop = torso.Position + (torso.UpVector * 1.8) + cam.UpVector
 				-- local vBottom = torso.Position - (torso.UpVector * 2.5) - cam.UpVector
-				local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1.3) + cam.UpVector)
-				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 3) - cam.UpVector)
+				local top, top_isrendered = workspace.CurrentCamera:WorldToViewportPoint(head.Position + (torso.UpVector * 1) + cam.UpVector)
+				local bottom, bottom_isrendered = workspace.CurrentCamera:WorldToViewportPoint(torso.Position - (torso.UpVector * 2.5) - cam.UpVector)
 
 				local minY = math.abs(bottom.y - top.y)
-				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2, 0, minY), minY / 2, 3))
+				local sizeX = math.ceil(math.max(clamp(math.abs(bottom.x - top.x) * 2.5, 0, minY), minY / 2, 3))
 				local sizeY = math.ceil(math.max(minY, sizeX * 0.5, 3))
 
 				if top_isrendered or bottom_isrendered then
@@ -6711,15 +6793,15 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						local head = v.Character:FindFirstChild("Head")
 						if head then
 							local headpos = head.Position
-							local headdotpos = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y, headpos.z))
-							local headdotpos_b = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y - 0.3, headpos.z))
+							local headdotpos = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y + 0.1, headpos.z))
+							local headdotpos_b = workspace.CurrentCamera:WorldToViewportPoint(Vector3.new(headpos.x, headpos.y - 0.2, headpos.z))
 							local difference = headdotpos_b.y - headdotpos.y
 							allesp.headdot[i].Visible = true
-							allesp.headdot[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
+							allesp.headdot[i].Position = Vector2.new(headdotpos.x, headdotpos_b.y - difference)
 							allesp.headdot[i].Radius = difference * 2
 
 							allesp.headdotoutline[i].Visible = true
-							allesp.headdotoutline[i].Position = Vector2.new(headdotpos.x, headdotpos.y - difference)
+							allesp.headdotoutline[i].Position = Vector2.new(headdotpos.x, headdotpos_b.y - difference)
 							allesp.headdotoutline[i].Radius = difference * 2
 						end
 					end
@@ -6732,11 +6814,15 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						allesp.innerbox[i].Size = Vector2.new(boxsize.w - 2, boxsize.h - 2)
 						allesp.innerbox[i].Visible = true
 
-						allesp.innerbox[i].Filled = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255 > 0
-
 						allesp.box[i].Position = Vector2.new(boxtop.x, boxtop.y)
 						allesp.box[i].Size = Vector2.new(boxsize.w, boxsize.h)
 						allesp.box[i].Visible = true
+
+						if menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255 > 0 then
+							allesp.filledbox[i].Position = Vector2.new(boxtop.x + 2, boxtop.y + 2)
+							allesp.filledbox[i].Size = Vector2.new(boxsize.w - 4, boxsize.h - 4)
+							allesp.filledbox[i].Visible = true
+						end
 					end
 					if humanoid then
 						local health = math.ceil(humanoid.Health)
@@ -6835,15 +6921,11 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						allesp.box[i].Color = priority_c
 						allesp.box[i].Transparency = priority_t
 						allesp.outerbox[i].Transparency = priority_t * 0.8
+						allesp.innerbox[i].Transparency = target_t * 0.8
 						
-						local boxfillt = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255
-						if boxfillt > 0 then
-							allesp.innerbox[i].Transparency = boxfillt
-							allesp.innerbox[i].Color = target_c
-						else
-							allesp.innerbox[i].Transparency = target_t * 0.8
-							allesp.innerbox[i].Color = RGB(0, 0, 0)
-						end
+						allesp.filledbox[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255
+						allesp.filledbox[i].Color = target_c
+						
 
 						allesp.name[i].Color = priority_c
 						allesp.name[i].Transparency = priority_t
@@ -6868,15 +6950,10 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						allesp.box[i].Color = friend_c
 						allesp.box[i].Transparency = friend_t
 						allesp.outerbox[i].Transparency = friend_t * 0.8
+						allesp.innerbox[i].Transparency = friend_t * 0.8
 
-						local boxfillt = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255
-						if boxfillt > 0 then
-							allesp.innerbox[i].Transparency = boxfillt
-							allesp.innerbox[i].Color = friend_c
-						else
-							allesp.innerbox[i].Transparency = friend_t * 0.8
-							allesp.innerbox[i].Color = RGB(0, 0, 0)
-						end
+						allesp.filledbox[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255
+						allesp.filledbox[i].Color = friend_c
 
 						allesp.name[i].Color = friend_c
 						allesp.name[i].Transparency = friend_t
@@ -6901,15 +6978,10 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						allesp.box[i].Color = target_c
 						allesp.box[i].Transparency = target_t
 						allesp.outerbox[i].Transparency = target_t * 0.8
+						allesp.innerbox[i].Transparency = target_t * 0.8
 
-						local boxfillt = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255
-						if boxfillt > 0 then
-							allesp.innerbox[i].Transparency = boxfillt
-							allesp.innerbox[i].Color = target_c
-						else
-							allesp.innerbox[i].Transparency = target_t * 0.8
-							allesp.innerbox[i].Color = RGB(0, 0, 0)
-						end
+						allesp.filledbox[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255
+						allesp.filledbox[i].Color = target_c
 
 						allesp.name[i].Color = target_c
 						allesp.name[i].Transparency = target_t
@@ -6936,16 +7008,11 @@ if menu.game == "uni" then --SECTION UNIVERSAL
 						allesp.box[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", COLOR2, true)
 						allesp.box[i].Transparency = boxt
 						allesp.outerbox[i].Transparency = boxt * 0.8
+						allesp.innerbox[i].Transparency = boxt * 0.8
 
-						local boxfillt = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255
-						if boxfillt > 0 then
-							allesp.innerbox[i].Transparency = boxfillt
-							allesp.innerbox[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1, true)
-						else
-							allesp.innerbox[i].Transparency = boxt * 0.8
-							allesp.innerbox[i].Color = RGB(0, 0, 0)
-						end
-			
+						allesp.filledbox[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1)[4]/255
+						allesp.filledbox[i].Color = menu:GetVal("Visuals", "Player ESP", "Box", COLOR1, true)
+		
 						allesp.name[i].Color = menu:GetVal("Visuals", "Player ESP", "Name", COLOR, true)
 						allesp.name[i].Transparency = menu:GetVal("Visuals", "Player ESP", "Name", COLOR)[4] / 255
 
@@ -7878,7 +7945,22 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end,
 	}
 
+	local crosshairColors
+	local PLAYER_GUI = LOCAL_PLAYER.PlayerGui
+	local old_c_eventfuncs 
+	local clienteventfuncs = getupvalue(client.call, 1)
+
 	menu.pfunload = function(self)
+		local crosshud = PLAYER_GUI.MainGui.GameGui.CrossHud:GetChildren()
+		for i = 1, #crosshud do
+			local frame = crosshud[i]
+			
+			frame.BackgroundColor3 = crosshairColors.inline
+			frame.BorderColor3 = crosshairColors.outline
+			frame.Shot.BackgroundColor3 = crosshairColors.inline
+			frame.Shot.BorderColor3 = crosshairColors.outline
+		end
+
 		for k, v in next, Players:GetPlayers() do
 			local bodyparts = client.replication.getbodyparts(v)
 			if bodyparts and bodyparts.head and bodyparts.head:FindFirstChild("HELMET") then -- idk just keep this here until the april fools shit goes away? -nata april1,21
@@ -7963,26 +8045,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 		workspace.Ignore.DeadBody:ClearAllChildren()
 
-		for k, v in next, client do
-			client[k] = nil
-		end
-
-		for k, v in next, ragebot do
-			ragebot[k] = nil
-		end
-
-		for k, v in next, legitbot do
-			legitbot[k] = nil
-		end
-
-		for k, v in next, misc do
-			misc[k] = nil
-		end
-
-		for k, v in next, camera do
-			camera[k] = nil
-		end
-
+		clienteventfuncs = old_c_eventfuncs
 		client = nil
 		ragebot = nil
 		legitbot = nil
@@ -8069,7 +8132,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	-- 	table.foreach(client.fake_upvs, print)
 	-- end
 
-	local PLAYER_GUI = LOCAL_PLAYER.PlayerGui
+	
 	local CHAT_GAME = LOCAL_PLAYER.PlayerGui.ChatGame
 	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
 
@@ -9677,9 +9740,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 
 		-- client event hooks! for grenade paths... and other shit (idk where to put this)/
-		
-		local clienteventfuncs = getupvalue(client.call, 1)
-
 		local function create_outlined_square(pos, destroydelay, colordata)
 			local newpart = Instance.new("Part", workspace)
 			newpart.CanCollide = false
@@ -10032,6 +10092,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 			if found12 then
 				clienteventfuncs[hash] = function(player, newangles)
+					if client == nil then return end
 					local bodyparts = client.replication.getbodyparts(player)
 					if bodyparts and type(bodyparts) == "table" then
 						local pos = bodyparts.rootpart.Position
@@ -10446,7 +10507,11 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		end
 		local setsway = client.cam.setswayspeed
 		client.cam.setswayspeed = function(self, v)
-			setsway(self, menu:GetVal("Visuals", "Camera Visuals", "No Scope Sway") and 0 or v)
+			if menu then
+				setsway(self, menu:GetVal("Visuals", "Camera Visuals", "No Scope Sway") and 0 or v)
+			else
+				setsway(self, v)
+			end
 		end
 
 		function misc:GetParts(parts)
@@ -10992,6 +11057,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		do --ANCHOR send hook
 			client.net.send = function(self, ...)
 
+				if menu == nil then return end
+
 				local args = { ... }
 				-- if menu and menu:GetVal("Misc", "Exploits", "Skin Changer") and args[1] == "changecamo" then
 				-- 	local tid = menu:GetVal("Misc", "Exploits", "skinchangerTexture")
@@ -11046,7 +11113,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					return
 				end
 				if args[1] == "repupdate" then
-					if misc.teleporting then
+					if misc ~= nil and misc.teleporting then
 						return
 					elseif args[2] ~= args[2] or args[2].Unit.X ~= args[2].Unit.X then
 						return
@@ -11911,7 +11978,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 
 			--ADS Fov hook
-			local crosshairColors
+			local lastsaturtation = game.Lighting.MapSaturation.TintColor
 			client.lastPlayerPositions = {}
 			local function renderVisuals(dt)
 				local _new, _last = menu:GetVal("Misc", "Extra", "Disable 3D Rendering")
@@ -11961,6 +12028,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
 					game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
 				end
+
+				--
 				if menu.options["Visuals"]["World"]["Custom Saturation"][1] then
 					game.Lighting.MapSaturation.TintColor = RGB(
 						menu.options["Visuals"]["World"]["Custom Saturation"][5][1][1],
@@ -11969,9 +12038,9 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					)
 					game.Lighting.MapSaturation.Saturation = menu.options["Visuals"]["World"]["Saturation Density"][1] / 50
 				else
-					game.Lighting.MapSaturation.TintColor = RGB(170, 170, 170)
+					game.Lighting.MapSaturation.TintColor = lastsaturtation
 					game.Lighting.MapSaturation.Saturation = -0.25
-				end
+				end--]]
 				--debug.profileend("renderVisuals World")
 
 				--debug.profilebegin("renderVisuals Player ESP Reset")
@@ -12059,9 +12128,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 						end
 						
 						do 
-
-							
-
 							if not menu:GetVal("Visuals", GroupBox, "Enabled") then
 								continue
 							end
@@ -14806,7 +14872,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 									{
 										type = SLIDER,
 										name = "Camera FOV",
-										value = 85,
+										value = 80,
 										minvalue = 60,
 										maxvalue = 120,
 										stradd = "°",
