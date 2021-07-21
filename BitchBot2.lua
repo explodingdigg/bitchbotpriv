@@ -413,6 +413,11 @@ local MenuImages = {
 	["SMG"] = {"iVBORw0KGgoAAAANSUhEUgAAAE0AAAAeCAYAAABpE5PpAAADmklEQVR4nO3ZS4iVZRgH8N+Mk6FRNpXlQrPLBEVN2WUhJSUkXSgs6EZBSG0KWrQJIlu00YKgRSuJdrbKkDYVU9pNi2rRZVBrkyGWKQ4U5oxMXs7T4v2mvnPmO9+cc2bOnDnhH154r8/zfM/7fu9zeXsiQpdhJUaxuw20v8At6EVdxfS2gXE7sRAP4vZOCtHTZSdtOfZhf1afaTR00vrawLiduB4V9OOrrO/vmjl9mJdrV3CiZs589OTap3Ayow/v4v56QnSb0hZifa79Aha1gc+KssFuU9oqDOOPrH2yTXwuljbjSNFgN91pZ0pWM7/Rb0n320CuzNTJW4Uviwa66aRdZbK8b2JnTd9iXC4p8IpcfQDnN8Fv0P9AaYMFfbsK+kay8nXBWL/qUzmAtTi3QX5ISltTLuucwZ017T9xU4u0JhS7Ax9iE45hSW7OZfUW92Fbi4w7jX4zJ/sxHFCttLqOf7dFBHMCs3mn7cH4NNZfivNy7VEcnpZE/2Gx5APWYgkWqHaED/dEF/kcs4zfcIHk6gzjWilJsLmbrOdsY2mu3iudth4Mnj5pzeO70yetGJ/hI5wj+XB5gzk+V5RWwafYLBkM0q+wFs+oNgBleAnvZ/UBvCIZkGaxWopvHygcjc5iLCLWR8SyiFCnnB0ROxqg9UnB2sGIqLQo29Z6MnXaT3scL+PXkjlH8aySpGCG9wr6dmFryZrAB3gHQ1PQ/xed/D1/l5J9jWDP1FMmJRon8BAextsFYztxT679OW7N6nPyjeCsJuY+p9rBLMK9Uhy9omBsixRj1mKspj2aq89JpS2SLvoyzMPr2NgAvTukWPSNOuP7CvoOlNCb8o3gR8ly5bFSSZ68Diqa24hNOIRvCsZuxAbcVbL+IB6T7qUFWd91UuZ1f25eb0avFttLaNdV2oRzOyKFCnksxZUlRIswJJn5pyVzPb/Bdb9IL0Hj0m94M66eYs1fuA0/4KcaWYewTopNz5BckRdr1lek2HIk13c3lmX1vfi4iHE7090X4kk8hUtmmPZx6QLfLm3MUZM36Ah+xkWqQ6IJfI8bWuJe4h/NVOmNiDURsSUiTrToM+VRiYh1OfqDLdJ5NVr8ptlQWr4sj4iNEXGoxQ+NiHi+huajLdAYymTpCqVNlPkR8UhEHGziQ4cjYnUBrQ1N0NgbEfdNV/5OObfHJWfzCSlfVYRT+FYKnLcpfkSBaxrgNyYZqNdMLxEK/gEIMckYAgwqoQAAAABJRU5ErkJggg==", 77, 30},
 	["SNIPER"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAXCAYAAAD9VOo7AAADIklEQVR4nO3ZS2hdVRSA4e/mYa310VajlapYRQRtFScOfEFFcCIojhw4kIoVrQhSHSmIUwURHPmYqAOhA3HgQBQFURR0YBRRaw0+20SDL6y9sU27HKx9yU1Nbm5ubu4j6Q+bs/c+Z+29DuuctdZZpxIReph78DyOYA/u7K46y89AtxVYgH3lOFzXX9EMdXCvYTyJU8r4CMZxFH/jOZxWrvu1XDNWJ1/fP7vI/1FkLsc2bC3tDBwz+4Hbgc/bdjfLRKWDLmstDjU4/wPW42R8UeZOxaWlvx8Tpb8VU/gdF6LSxP7X4sPFKNwNeskgy01fGKTXY8iqo5MxZBovmYkh09LlrEcVj+Jl6aK2lGtOxyWlP44Dpf89vsIdZuLGFeW4DRvK+p28v7bQSZc1H7fLwAwP4HzsRMjAXM+ADNjP4kc8VebH8NGya9oBumGQs3CXfAtGcLN8E2ocw6fzyA7hyuPmpvC1zNbgHxyuO/+X/xu2Z+mGQZ7GQ53etF/ohI89D7fgGvl0b+zAnt3kM7zaqvB8b8ganItN0q2MlHGtv0m6lYcbrD2IR/AETmpVwT7kE1zdqvBcBhmWQfPeBWRDZjVfznFui8yYrmtVsT7mkExSWopbQ3gFF+McmcGc2aRsBbtx93HzO/CMmcxptVGVHqbainAlIl7HrS1ufhgXybLGCF5osNZv0uBLjVsTeF9+a9yEP+Xb2gtMyZT9jZZXiIhdsTTei4j7I2KiwTVjEXFBRGyOiD0R8VhEbIyIDXXtxYj4ron93owIEbEmIh6PiEoZr4g2hI+X+FTcUNp8jGE7firjD/AOLiv9GuN4V7q8ZvhXJgwrigEzFdTl4FuzjQF7sVkaoEZFftDVl9hXJZWIqAWgZkrYi2EfbsTPc5y7TVZ/p8t4EKO4Dw8usO4ormqHgr1ILe2tyv8Q7eIbaYz9i5S7Xn7jNOIoXmtFqX6gEhHrcLBF+arMt9fVze2Vxjgwp8QJGjKk8XfH27JwN4lfSpssbVwacq0sFu4u6203Oz6cYBHUXNZbss40KaujB+U/h11m/PxCDMp/EaPtVnI18R9vKf2ssOnBPwAAAABJRU5ErkJggg==", 100, 23},
 }
+local MenuSettingsImages = {
+	["SAVE"] = {"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", 100, 100},
+	["LUA"] = {"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", 100, 100},
+	["PLAYERS"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAABVFSURBVHhe7d2Fj2RZFQbwmV3c3d3d3bIBggUIIfyZhCDBncHd3d1h2UVW2OH8Hu+r3HpdXV31pKdmpk9y8qqrXr177/cdu9Ld587ksOR8fz1YuXjxYv/qSF936fvqy710P58/f7jDPrieDQiIXlN67eDqfa9zT8QD6H/762396/aae+hBEXQQPelJSF8C+u1Kb196h9I7ld65V6+916r7I0C/eaD/Kf13r17nffeGJHLxUpNzyVofeEJICPh3Lb176b0avWf/Hg0xd+mvyPMcD721FOj/6q9IuKHX60v/3qj3/lkakloPuiSec+otNkS0JAAY0PcpvX+vD+zV63uX3q00BPgO77ljf03o8nCg3lJ6U3+NhyDoxtK/lf6p9A+9ek3/WoogBLbknCoxp9ZSE5YoiwbmPUrvVwr4h5Q+vFc/I4dnxCMA73uIbDXPpBqJArNVnoOgeAwPQQJSftXrb/uf/1z6j1Kk+l73zNMgZvkWSnoygAdQ4CIC6I8ofWzpo0of1r9331Ik8ISQEA8Y9ndb/7tGGwlRLD/k8Bzk/KUUEb8u/XnpT0p/2b+HGCT6zm1Lk7Lo0xuvACqAhZ4HlyLgcaWP718/qFSOEJJ4DgJa659bQg7PQRBPENLkmN+XIuVHpT/uX/+uVKhDYOcxSxGzyFMbIoCa0IQI3vDU0ieWIoJHCEsJSUuScJy05CSkCWe8Axk/KP1OKa9BTEKZ+2cnZvaBN2QAmMU/oBQRTyl9WukTSh9aiohUSCHiUkuI4QW8ATG/Kf1h6bdLv1uKmD+W8igEzkrKrCD0ZKRyArgEzSOeVYqQR5ZK4spaRGj/EIgYSrwGMcpiSf4XpQj5eimPUQQgrKvI5iJllqc0XoEMXqFUlSOeWfqc0ieVClmSNbIOxSNOkngM0CV/Iev7pV8t/UapHKNk5i1y0WRvmQzKIHGbKwhHQtNzSxGCGF4hT6RautzEIAEuv/AWRCDkK6VCmbBmjjM54U8CZ5AvVElCEhJe1F+FLKErXnG5S7xFqBKykPL5/iqkqdIm5ZXRhAzIUM7yBF6BjKeX8hQek1xxpYiB8wQewTO+VYqUL5dK+Mrj0aSMAmoDGeYTiHhJqSRuXiGXXK4h6iRJCJM7zFsk+c+WIsb8ZTQpe4O1hYyXl8od5hbKWWRc6YIU5bE5i1xyoXQSKWPiuqcLQ3KDMBUyhCmekeR9NYhxGq9xGz8c4MFI4cNo9zL6vQjpvUMnlK8S+AtKX1aqM/GMKyF57yPGa9zGDwd4wOUxpXC6tsdtJ9kZvIYMuUHCfnYpa2jD1NVGRqQlBR5yqfmXKtMkeGdSdgKwf5h7rUtZCtHoC/vr1U5GpCVFYfP8/govuF2zCym7gpi8IYlbi3peKfc0+xZDr3YyInBITmGsvEQ+gdtO5f+JQDahSjy0QitUWZuyl2GecUbGusBDmBKu4AQvuO2UT7aCOQhVcUWsW701M7/SJn1zSKIJfOAEL7jB78TQdZJ15+FKOA+3HCJk2dWzHHJGxmaBC3zgBC+eYooAx61GfCwhjXekqhITLaGfJfHdBD5wkk/gJufapobnsV6yDVQstutU3E7e6GJh6ZmcLO2cDSG8xeGNYyeMGwlpvEPFwDswjJStDzuTIxKjhpuQb18Inl1luslLjvOQ4YPsgTum07lb6ZnsLvBK6IKjGfyxhn0E3J41N2LRPIObPbr0xIQ0UjRon8FCnWXtbuetdGlJu9TrJdtM1aX8hWfmb+eHXnKctXuAkyJin4nNarZZOpfoCQJs+FjGzsE1mzyrAwSlcwsCPDsH5qj29KPb8SudW+CWVQ54whW+cF6TTQDny/bFeYYJzsYvjxQDznaoJWqH05zqcHjgS6XfLHX8BjmWtt07h2gXEQ4t2Af/WalDC5bNLZfbbMrZq7nabCVGDk+4wveIka+Fn959fFH9bC3mLaXXlSrX5pp3GCxQHKWx7dke4WSpXFuHE29ZFfeeUtkZGA9wpspBBYRrW5v6IxyL8apI1jtHm0NJHxjgJ0rfWcoAnZq8NXsmQ0L8jDUde2UpQmzLKn3n6JxwwTNYYw4J8A7A5EiNZQcGoEy0gPmMUjFXYhxjEIAQili/LVaeyAt/WgoMhFgCMr9iBAxxapvHibb0w7gR8rFSR1ZvKkI6bxiGLI3zBKdEkKKTXYlWOofoECt1asPO2oVSVmILVAhhPQHNlqjPWLP9a98dI4yAR3q24zufLP10qTYYg3AlbH2x1Puu+jKlzeMEjvCEK0+E81rkWQHdhys/K225rFg357wjLusYDRBCgngusYrdOWPLcnOME5ABp+vkHtK2+b1SBxEcSmCVchSitMdIklemtrlN4JjphCgA57WZe2v5bhaWhAw3Sjrd5krpHMJSgW7gwBa2ACHROlVu71mvUgUBhHuruhA1BpiESDlKAkeKHIIEcbtrt167D3HaZAzUPXN7CAnG8IVzMO6MfhiKUgm4WaLjTsN7xoqBG7RcwWJ5RVfaFih1+b/0rwOS2E+9HkOI7yCTNzCAnMldO/rZtJkqjBG4zu0hBJ5whS+c1yrYoYdwJzdiTrXj57lk7oHtImkTocA9iVif82KewrOWmpfAFb5whvcqLXSENPlDVaGiwpzKY+VKM0gsQ0ckM4tuXUcSP0nz2v0sh7aGs4+kTYPWJmvskuiGNo3T/fpEM/a5xh/xPM+GL5zhDfcuj7QD9VoFoPN07jrc8zXMKswzJDUAGbzOACkAeE+yQx7ixobOtk1rcgqVeP6wTcRry73W7dYsd2aB6xDrbnwZpEbdpPNAkmhWcW0m0QZgWar1HMv51nbiLdr2OSJUIcpuK8zAWUt8e0jaZInmGOY2JpuJAOZcbZtK0axsL70JB1/jgrexd+NrrS7WpKPxjrk745kslLU6u/TSUhPPJ5cih9cAzMTsxaUmabwJYW1f9xFt+r42TTS16ZCGNpGOcG2nTfcgBFC+u4TA1bPhDG+4d+PrAO/d1gd2Bd9c+oZSnfKFuUmRXFUw+V0+cwKvUwEBgqXyIn2wpMGCp4CjTUlaG+Ya2jXX0K42hQ2k8KK0Ga9cQiQt/TFBfl/pu0tNTm9sCQGEPfO3lr6mVAcxNzchOqOaUY5mtVWZqRxW4TACISVJOO48VZCiTRWU9sxxzDe0yRjlDu3y4Fjs3GOPwEC7DONDpe8otZR0QwjRuI4IH28rfXXpnAuKm0SngKS0VP+bo/gZ+ADRttdjQ9UmadtEDvWz5K1NOWXuNjeJfhgvL/1I6dtLrW9d3zbstU5x1XRsKTKIZ0ts2tKmsCGxugpRXSVUOqe0bcor2kvpuVSbm0Q/4JuxxyPXGvc6lrJUubdJtKNtHQTW0oZA0qb20maLxWmIPgRvfdD+WpVF0tHuQ2+cyWLSYr3iYfXiTA5DhoSkAjppzedMpkuLNe2kJcSbqh3lWLcKWzqXeNblSvBSfffM4L1a0R4S4kOTtpSDUzvimRpT4lEdWFnDgUsMdNj3OcjxDPjCGd5w73AJIW7whoZ96DoFOM9DhNmoyZdNIZtE9kG6zaHSOQa2hASs9F2/03eTyrn6vhHvTSFLR1ynNGpAmDfxsXd9ofRTpV8rtVRiYHN44BICB33PQYz03cTNsosVhan4EN9v8dbu1pDVMTZCfM/3rRMh4MOl7yq1XmOZwL62oz/aGdvGUhIMnIJhSGbR+u2EyPtLHcxwfGiOvgcnzzoSskg6k92ysRbsOZ5hnQb4To84yUE/06uFNAt9U4ifW4xVOLLOZdEv/XV1+iWnYBwfchZgiof7XsIirI4Qkht8oDGs6dy+4jkerKEchBO2HGzI4QZhgOd4bWFRu4cg+m3c+stgnN0SooxD3+URn8klKwAnCHy1B2/P6wgeegggxUgaL5kinukZVOLSuHDlBIjjNofiJdrXD/1xMoXRMJiciskYgDhHXz1riHX33I6Q/tSFNzBlWZpFjEm8WQ6whG7HzYEwS+jWbEhCgsEiJUnS+2Pdf6okOuiX/sgdSIEBknxuTBYCrYgbz5RV8LQHX23Au/M4PLQe4kbWACCWooN+3lc808qpnTi7dH5BJZs92jBIHXFq0MBVM2PIn0sYolJcaa4/VHhK4gY8MhiYLQmbV/ZPpiyCwhW+cIa3n7uxt4QQlspNAebGMfORDMCytt03pGR/mgBe7pBfxGnxGikA8NlpivZCBo/NyXsYwIJYieUVtnvtYjKwKTuY8IQrfOHctnXEQ3QQMElkY0BCSAZhK9a2qNMe9h+8T3TI8x0n/UKpMCFham/VuYWlJcPxUtVUW/2ReLuD134dze922MlkcGO9Ixgbv7aC8bqHNHlEJ90IICf+Vu60h3iudX7boghxoEAIMzifpR0J3gFo5SVS4ilL5pQYXsiQwLWvpOW1wmeiAq9GADIcgrCtzbDGeoe24QlX+MJZP1Z/oLn1EOILrFdpZ0btC6sKYE/R6Zww8dcMkCKMJSECXegSIsyCnTxXDiPJ+zo+pt1t4nnaBXpm4plrmF+I6/FQhYj+O/XirAFS9H+Kd2gfnnCFL5zhvTK+TYTokLimw5IbcMZYrGfrPC9BRizMIBO60hZSTCItU7DU/LVP3hJi9m2/Fd/3HNbouX7lIe0JmX5OciX6xxPkDSdxnCGT0BUnQ8x2lWALT7jCN/ljMyFN2AKEpQ8ubAAp//YVXqIiMRgDc1BNXpFfWlJScrJUv8Ty8VKAAYo1sWiWJNTsQo7PaUsEa+QFQqTfYPpo6edKh2Toc8jwFxic4VKcxJDGeof+pMKEK3zhvPb35I88vD8SJKyI+f5C2ptK/V0slp5KaR8BCjdlEcCwUMcLEDCsZligsKAIAELOZqlsVGrINcdxL2OK6nNLQkgDMjITgnmeCalrQrLP04eWDET4Y2RO4vg5pe5Y0RdrZNbD3lPKO3nKzUWIvnayiRAXDbNiVv36Uue0gDPWZVNZSGTyhHyRJNq6rWcj3eARgAgxPGeBVTshRtEQ1V9tsECTLIMPGRI3zzDvQYQchSCfuR95JGGKMSABGf5wDI8OGUfw2lG0Yfz6YIHVQqWKztjXfzWiv65J7yXiP0B07I2ljliaeY89kQL0kKKikkx5DEsVslpwDB4xDCCn8bXNa5HiPQbj6igPUnzfrJcKUYgRirTHG11bIhBIjCVk8AQkOG7q6mfvTyGDCLe8Ub7iHQxSxFj9bmHkOEJc4iUS2utKHZ5TwqaDYySk6IzaX55gKSxYh32W8EG0wwAYB3LEcaoPrFZJKpQqp4VF8RnoCAGC54WkIRHE8z3bOHmGnOF8r6pwLjIYmbbjHR8o3egd5NiGGi9hkTrpvK8rK/X+mE5iGiAAQ4CEqnM8xiQRUSl5W+CSK5BDWXRCG9C89h3fRUIKAOQmfA2J8JyQKiwxPKEqf7VnapgixqsvwibveG+pyCB3HPEOso0QFx0yYPnjVaVyiY4LFUAZK8BhrUKVUIIMcxHLF342cYqVJ0FH9DmqDxRZ7kOAZ7ffydX9yVG8TagDvKLBHIM6eS80+nwqGUR/hE3js1Fnw0tRwXA2/keFrQ32XsKSxHAxVeh6Ran5RGbdYyUAsmgWJOH6zwNcW8xnRQYjFCGGlftOK8Bux9CCH/E6RLB6RQEvVygwNMpDsjLN+92/FZsdRF8ZlTnWhVKhitEJq7ds8g6ytdHeS3ROqanTEvxrS7m2AYwNXRENsOgkYGWhJC+UUSFMTnDYQMxN4ve9EEr9rB+smsfEuvOe/vNqRPACa1Ku8oQcJC8Zi3unGFlEf/TVeJDwwVKJXFXZrXxs8g5yIpg9KQap09zan9rwVx6ELm7vsxOfc4IEXMQAnhXxmqgwZiLV5hf3+pn6rn4kp6QUpoDW95BhKUeo4vXu9XnC3hwCMP0RdoUqE10TUd7fLc0cRwbZCchB6LKuI58IXeJvKpGpYiAZDOvi7sCO5yDJz8KXe1QueZ/VISHlsT7FU0IIT7CXIWSFCJ8b21SDaoWx6KcQbBJsRcCa2dZQFdmVEBcWZNDmJn4dTRlsBs/apuaTVkJMvAYBAEdQylbqZ6FMSOMtAAa2qkl/4rkMyWfeE7rkEkTM1d9Wkjd4tBm5JG45SOjVx2NDVWRny+hJMRBhQUL057SFLrV7/lDL3INsyUGCK/EeshBFvdY3gFMkZGz61OrOY95T9A3oQqwyXqhyUkWBwpt3+j9Ve3VukE8kRqQIXVZyhYolSIl0jTcSoqjXxnIc6EuREAkZQqhdR6EKGf6my4l5o5W9O9rkE7/ppGRs/13F0qRskpaopYHfJC0ZVh+UuMKV8l3+OzFvtDKGEJeQopTkKSHFYmRIEUKudEm1hwwrDiFj9D90GWVRW0g5+5dHE8ggo8HaQIoS2IQRMcKXakwBkGrnShEDT9mdRVJEZENtNBlkElADUiR6s3nzFKS4WkGVa5Sap5lXlhL5QhkuN9hXMb9AhqtZuAQ+mgwy2XIbUngCj+AZcglvQQrPMTdQjl6uISwhSolt3mPShwTLInIHT+ExPGc0GWQWcBpSAC53mDEjAiEWJS25mKuYIcdbLgdiDCxeYfZtjnHY/3q1lZ4YpABdqBKyJHmTx7N/TryDzA7GIK/wFmtIFvQQIpSZuwhrCFMeI+ZQPCYegQjlrJwgHNnDEJoQInHbXOMVk/LFJlkEhIYUQFtHss8gZCGGx9gKtqdizoKYLHeEmNMkJ96ACADLEywf6LxCiOIRwpOQtbYNMCcZZNGBDxI+b1AeIwYZcoz5i9fmLYjhUcJdG86W6GNIoLxB2GHxiDCvsKmUPRlrUbxEOctrJifubbLMUwfSE8P6Ac0beAzvsEHEayxWyjeIsceiWuNZvMZ3Up0N+7ut/12jjYQAyReovIGlq47sXSBCXkCAQxc5tyVsIct3TlytnSqnQghpvIUCOaFMkkeEZXwEyS/yDm/iNSqzhDTfQ2x0E1Et8MJKNCQISdlnYfVA5wEIyEaYJO6elUfQpckgy7cwkJ4YEkCFKICbWGY/gyKFFymhkcNrhDShD5m+Fy/yrEhyAesXilwBy8p5AxKUqtafkAF8am+FNyCsq5xKPevcaRAROXVCIg0x+gBQ1g9kgAOeZ/CQKMK8R32OROWz+4eEIEC5ClxEsHYKcJ4R9Z7P3Y+ELiyVdp07TSIil4yQVppwRuI5CGL9IQkBtPUQr93TjsPDeEhAjocgh+b9eMHKE0pOJSxtk4MgpJWB50RDUnttdSgAbjWg56qR6CXxhOPk4AgZyoCgVnbp++rLvRwcAWdy0HLu3P8Afexwu2iTADIAAAAASUVORK5CYII=", 100, 100},
+}
 
 --!SECTION Drawing shit end
 
@@ -432,7 +437,7 @@ local Menu = { --ANCHOR Menu table
 	clrs = {
 		norm = {},
 		dark = {},
-		togs = {},
+		gradients = {},
 	},
 	TabbedIn = true,
 	
@@ -485,11 +490,11 @@ function Menu:SetOpacity(transparency)
 			end
 		end
 		for k, v in pairs(window_val.customopacity) do
-			v[1].OpacityUpperLeft = v[2]
-			v[1].OpacityUpperRight = v[2]
+			v[1].OpacityUpperLeft = v[2] * opacity
+			v[1].OpacityUpperRight = v[2] * opacity
 	
-			v[1].OpacityBottomLeft = v[3]
-			v[1].OpacityBottomRight = v[3]
+			v[1].OpacityBottomLeft = v[3] * opacity
+			v[1].OpacityBottomRight = v[3] * opacity
 		end
 	end
 end
@@ -517,6 +522,7 @@ function Menu:SetSelectedWindow(window)
 		local curwindow = Menu.windows[windowname]
 
 		local indexadd = 10 * g_index - 10
+		curwindow.start_zindex = indexadd
 		for zindex, menuobjs in ipairs(curwindow.zindexs) do
 			
 			local setindex = indexadd + zindex
@@ -532,29 +538,20 @@ end
 
 function Menu:SetElement(element, value)
 	if element.type == TOGGLE then
-		if value then
-			for i = 1, 4 do
-				element.drawn[i].Color = ColorRange(i, {
-					[1] = { start = 0, color = RGB(unpack(Menu.mc)) },
-					[2] = { start = 3, color = RGB(addunpack(Menu.mc, -40)) },
-				})
-			end
-		else
-			for i = 1, 4 do
-				element.drawn[i].Color = ColorRange(i, {
-					[1] = { start = 0, color = RGB(50, 50, 50) },
-					[2] = { start = 3, color = RGB(30, 30, 30) },
-				})
-			end
-		end
+
+		element.drawn[1].ColorUpperLeft = value and RGB(unpack(Menu.mc)) or RGB(50, 50, 50)
+		element.drawn[1].ColorUpperRight = value and RGB(unpack(Menu.mc)) or RGB(50, 50, 50)
+		element.drawn[1].ColorBottomLeft = value and RGB(addunpack(Menu.mc, -40)) or RGB(30, 30, 30)
+		element.drawn[1].ColorBottomRight = value and RGB(addunpack(Menu.mc, -40)) or RGB(30, 30, 30)
+
 	elseif element.type == SLIDER then
+
 		local decplaces = element.decimal and string.rep("0", math.log(1 / element.decimal) / math.log(10))
 
-		element.drawn[5].Text = element.custom[value] or (value == math.floor(value) and element.decimal) and tostring(value).. ".".. decplaces.. element.stradd or tostring(value).. element.stradd
+		element.drawn[2].Text = element.custom[value] or (value == math.floor(value) and element.decimal) and tostring(value).. ".".. decplaces.. element.stradd or tostring(value).. element.stradd
 
-		for i = 1, 4 do
-			element.drawn[i].Size = Vec2((element.hitbox.w - 4) * ( (value - element.minvalue) / (element.maxvalue - element.minvalue) ), 2)
-		end
+		element.drawn[1].Size = Vec2((element.hitbox.w - 4) * ( (value - element.minvalue) / (element.maxvalue - element.minvalue) ), 8)
+
 	end
 end
 
@@ -602,7 +599,7 @@ function Menu.Funcs:MouseButton1Down() --ANCHOR MOUSE 1 INPUT
 		end
 
 		for group_box, gb_val in pairs(Menu.Curmenu.hitboxes[Menu.Curmenu.activetab].content) do
-			if gb_val.multigroup then
+			if gb_val.multigroup and gb_val.visible then
 				if Menu.Curmenu:MouseInMenu(gb_val.props.click_pos.x, gb_val.props.click_pos.y, gb_val.props.click_pos.width, gb_val.props.click_pos.height) then
 					if not gb_val.active then
 						gb_val.active = true
@@ -637,7 +634,6 @@ function Menu.Funcs:MouseButton1Down() --ANCHOR MOUSE 1 INPUT
 						end
 					elseif element.type == SLIDER then
 						if Menu.Curmenu:MouseInMenu(offset.x + element.hitbox.x, offset.y + element.hitbox.y, element.hitbox.w, element.hitbox.h) then
-							print("start")
 							Menu.ActiveSlider = {element = element, offset = offset}
 						end
 					elseif element.type == IMAGE_LAYOUT then
@@ -782,6 +778,7 @@ end)
 
 function Menu:Create(menuname, menuprops, menutable)
 	self.windows[menuname] = {
+		start_zindex = 0,
 		zindexs = {},
 		pos = Vec2(menuprops.pos.x, menuprops.pos.y),
 		point2d = Point2D.new(menuprops.pos),
@@ -798,6 +795,7 @@ function Menu:Create(menuname, menuprops, menutable)
 			tabs = {},
 		},
 		values = {},
+		clips = {},
 	}
 
 	table.insert(self.window_order, menuname)
@@ -844,7 +842,6 @@ function Menu:Create(menuname, menuprops, menutable)
 				v1.Visible = k == tab
 			end
 		end
-		
 		for k, v in pairs(self.hitboxes[tab].content) do
 			if not v.visible then
 				for k1, v1 in pairs(v.drawn) do
@@ -871,10 +868,8 @@ function Menu:Create(menuname, menuprops, menutable)
 							end
 						end
 
-						for k1, v1 in pairs(v.props.bar) do
-							v1.drawn.Position = PointOffset.new(self.point2d, v.props.barpos.pos, v.props.barpos.old_y + (k1 * 2) - 2)
-							v1.drawn.Size = Vector2.new(v.props.barpos.length, 2)
-						end
+						v.props.bar.Position = PointOffset.new(self.point2d, v.props.barpos.pos, v.props.barpos.old_y)
+						v.props.bar.Size = Vector2.new(v.props.barpos.length, 18)
 
 						for k1, v1 in pairs(v.props.nametext) do
 							v1.Color = v1.Text == k and RGB(255, 255, 255) or RGB(170, 170, 170)
@@ -899,10 +894,12 @@ function Menu:Create(menuname, menuprops, menutable)
 		table.insert(curmenu.zindexs, {})
 	end
 
+	curmenu.start_zindex = 10 * #self.window_order - 10
 	local mDraw = {
 		addindex = 10 * #self.window_order - 10,
 		zindex = 1
 	}
+
 
 	local logtotable = nil -- super lazy sorry
 	
@@ -972,11 +969,7 @@ function Menu:Create(menuname, menuprops, menutable)
 		table.insert(Menu.clrs.dark, mDraw:FilledRect(true, Vec2(x + 2, y + 3), Vec2(width - 4, 1), RGB(addunpack(Menu.mc, - 40)), 255, tab))
 		mDraw:FilledRect(true, Vec2(x + 2, y + 4), Vec2(width - 4, 1), RGB(20, 20, 20), 255, tab)
 
-		for i = 0, 7 do
-			local tempdrawing = mDraw:FilledRect(true, Vec2(x + 2, y + 5 + (i * 2)), Vec2(width - 4, 2), RGB(45, 45, 45), 255, tab)
-
-			tempdrawing.Color = ColorRange(i, { [1] = { start = 0, color = RGB(45, 45, 45) }, [2] = { start = 7, color = RGB(35, 35, 35) } })
-		end
+		mDraw:Gradient(true, Vec2(x + 2, y + 5), Vec2(width - 4, 16), RGB(45, 45, 45), 255, RGB(35, 35, 35), 255, tab)
 
 		mDraw:Text(true, name, "norm", Vec2(x + 6, y + 6), false, RGB(255, 255, 255), 255, true, tab)
 	end
@@ -991,12 +984,7 @@ function Menu:Create(menuname, menuprops, menutable)
 		mDraw:FilledRect(true, Vec2(x + 2, y + 5), Vec2(width - 4, 18), RGB(30, 30, 30), 255, tab)
 		mDraw:FilledRect(true, Vec2(x + 2, y + 21), Vec2(width - 4, 2), RGB(20, 20, 20), 255, tab)
 
-		local selected = {}
-		for i = 0, 8 do
-			local tempdrawing = mDraw:FilledRect(true, Vec2(x + 2, y + 5 + (i * 2)), Vec2(width - 100, 2), RGB(30, 30, 30), 255, tab)
-			tempdrawing.Color = ColorRange(i, { [1] = { start = 0, color = RGB(45, 45, 45) }, [2] = { start = 7, color = RGB(35, 35, 35) } })
-			table.insert(selected, { point = tempdrawing.Position, drawn = tempdrawing })
-		end
+		local selected = mDraw:Gradient(true, Vec2(x + 2, y + 5), Vec2(width - 100, 18), RGB(45, 45, 45), 255, RGB(35, 35, 35), 255, tab)
 
 		local length = 2
 		local selected_pos = {}
@@ -1020,42 +1008,65 @@ function Menu:Create(menuname, menuprops, menutable)
 		end
 
 		local settab = 1
-		for k, v in pairs(selected) do
-			v.point = PointOffset.new(curmenu.point2d, selected_pos[settab].pos, selected_pos[settab].old_y)
-			v.drawn.Size = Vector2.new(selected_pos[settab].length, 2)
-		end
+		selected.Position = PointOffset.new(curmenu.point2d, selected_pos[settab].pos, selected_pos[settab].old_y)
+		selected.Size = Vector2.new(selected_pos[settab].length, 2)
 
 		return { bar = selected, barpos = selected_pos, click_pos = click_pos, nametext = nametext }
 	end
 
-	function mDraw:ImageLayout(images, imageorder, resize, x, y, width, tab)
+	function mDraw:ImageLayout(images, imageorder, resize, even_spacing, x, y, width, tab)
 
 		local smallness = 1
 		if resize ~= nil then
 			smallness = resize
 		end
 
-		local totalwidth = 0
-		for index, imgname in ipairs(imageorder) do
-			totalwidth += images[imgname][2] * smallness
+		if even_spacing then
+			local totalwidth = 0
+			for index, imgname in ipairs(imageorder) do
+				totalwidth += images[imgname][2] * smallness
+			end
+			local widthadd = math.floor(((width - totalwidth)/(#imageorder - 1))/2)
+
+			local temptable = {}
+
+			local x_add = 2 + widthadd
+			for index, imgname in ipairs(imageorder) do
+				
+				local drawn = mDraw:Image(true, syn.crypt.base64.decode(images[imgname][1]), Vec2(x + x_add, y + 6), false, Vec2(images[imgname][2] * smallness, images[imgname][3] * smallness), index == 1 and RGB(255, 255, 255) or RGB(150, 150, 150), 255, tab)
+				temptable[imgname] = {drawn = drawn, hitbox = {
+					x = 8 + x_add,
+					y = 6,
+					w = math.ceil(images[imgname][2] * smallness),
+					h = math.ceil(images[imgname][3] * smallness),
+				}}
+				x_add += images[imgname][2] * smallness + widthadd
+			end
+
+			return temptable
+		else
+			local totalwidth = 0
+			for index, imgname in ipairs(imageorder) do
+				totalwidth += images[imgname][2] * smallness
+			end
+			local widthadd = math.floor((width - totalwidth)/(#imageorder - 1))
+
+			local temptable = {}
+
+			local x_add = 2
+			for index, imgname in ipairs(imageorder) do
+				local drawn = mDraw:Image(true, syn.crypt.base64.decode(images[imgname][1]), Vec2(x + x_add, y + 6), false, Vec2(images[imgname][2] * smallness, images[imgname][3] * smallness), index == 1 and RGB(255, 255, 255) or RGB(150, 150, 150), 255, tab)
+				temptable[imgname] = {drawn = drawn, hitbox = {
+					x = 8 + x_add,
+					y = 6,
+					w = math.ceil(images[imgname][2] * smallness),
+					h = math.ceil(images[imgname][3] * smallness),
+				}}
+				x_add += images[imgname][2] * smallness + widthadd
+			end
+
+			return temptable
 		end
-		local widthadd = math.floor((width - totalwidth)/(#imageorder - 1))
-
-		local temptable = {}
-
-		local x_add = 2
-		for index, imgname in ipairs(imageorder) do
-			local drawn = mDraw:Image(true, syn.crypt.base64.decode(images[imgname][1]), Vec2(x + x_add, y + 6), false, Vec2(images[imgname][2] * smallness, images[imgname][3] * smallness), index == 1 and RGB(255, 255, 255) or RGB(150, 150, 150), 255, tab)
-			temptable[imgname] = {drawn = drawn, hitbox = {
-				x = 8 + x_add,
-				y = 6,
-				w = math.ceil(images[imgname][2] * smallness),
-				h = math.ceil(images[imgname][3] * smallness),
-			}}
-			x_add += images[imgname][2] * smallness + widthadd
-		end
-
-		return temptable
 	end
 
 	function mDraw:Toggle(name, value, unsafe, x, y, tab)
@@ -1063,13 +1074,8 @@ function Menu:Create(menuname, menuprops, menutable)
 		mDraw:OutlinedRect(true, Vec2(x + 1, y + 1), Vec2(10, 10), RGB(0, 0, 0), 255, tab)
 
 		local temptable = {}
-		for i = 0, 3 do
-			local tempdrawing = mDraw:FilledRect(true, Vec2(x + 2, y + 2 + (i * 2)), Vec2(8, 2), RGB(45, 45, 45), 255, tab)
 
-			tempdrawing.Color = ColorRange(i, { [1] = { start = 0, color = value and RGB(unpack(Menu.mc)) or RGB(50, 50, 50) }, [2] = { start = 3, color = value and RGB(addunpack(Menu.mc, - 40)) or RGB(30, 30, 30) } })
-
-			table.insert(temptable, tempdrawing)
-		end
+		table.insert(temptable, mDraw:Gradient(true, Vec2(x + 2, y + 2), Vec2(8, 8), value and RGB(unpack(Menu.mc)) or RGB(50, 50, 50), 255, value and RGB(addunpack(Menu.mc, - 40)) or RGB(30, 30, 30), 255, tab))
 
 		table.insert(temptable, mDraw:Text(true, name, "norm", Vec2(x + 16, y), false, unsafe and RGB(245, 239, 120) or RGB(255, 255, 255), 255, true, tab))
 		return temptable
@@ -1078,17 +1084,13 @@ function Menu:Create(menuname, menuprops, menutable)
 	function mDraw:Slider(name, stradd, value, minvalue, maxvalue, customvals, rounded, x, y, length, tab) -- this code is so shit,,,, but it works :)
 		mDraw:Text(true, name, "norm", Vec2(x + 1, y - 3), false, RGB(255, 255, 255), 255, true, tab)
 
-		for i = 0, 3 do
-			local tempdrawing = mDraw:FilledRect(true, Vec2(x + 2, y + 14 + (i * 2)), Vec2(length - 4, 2), RGB(0, 0, 0), 255, tab)
-			tempdrawing.Color = ColorRange(i, { [1] = { start = 0, color = RGB(50, 50, 50) }, [2] = { start = 3, color = RGB(30, 30, 30) } } )
-		end
+		mDraw:Gradient(true, Vec2(x + 2, y + 14), Vec2(length - 4, 8), RGB(50, 50, 50), 255, RGB(30, 30, 30), 255, tab)
 
 		local temptable = {}
-		for i = 0, 3 do
-			local tempdrawing = mDraw:FilledRect(true, Vec2(x + 2, y + 14 + (i * 2)), Vec2((length - 4) * ((value - minvalue) / (maxvalue - minvalue)), 2), RGB(0, 0, 0), 255, tab)
-			table.insert(temptable, tempdrawing)
-			tempdrawing.Color = ColorRange(i, {[1] = { start = 0, color = RGB(unpack(Menu.mc)) }, [2] = { start = 3, color = RGB(addunpack(Menu.mc, -40)) } } )
-		end
+		local slida = mDraw:Gradient(true, Vec2(x + 2, y + 14), Vec2((length - 4) * ((value - minvalue) / (maxvalue - minvalue)), 8), RGB(unpack(Menu.mc)), 255, RGB(addunpack(Menu.mc, -40)), 255, tab)
+		table.insert(temptable, slida)
+		table.insert(Menu.clrs.gradients, slida)
+
 
 		mDraw:OutlinedRect(true, Vec2(x, y + 12), Vec2(length, 12), RGB(30, 30, 30), 255, tab)
 		mDraw:OutlinedRect(true, Vec2(x + 1, y + 13), Vec2(length - 2, 10), RGB(0, 0, 0), 255, tab)
@@ -1124,12 +1126,7 @@ function Menu:Create(menuname, menuprops, menutable)
 	table.insert(Menu.clrs.dark, mDraw:FilledRect(true, Vec2(2, 3), Vec2(curmenu.w - 4, 1), RGB(addunpack(Menu.mc, - 40)), 255, bbmenu))
 	mDraw:FilledRect(true, Vec2(2, 4), Vec2(curmenu.w - 4, 1), RGB(20, 20, 20), 255, bbmenu)
 
-	--mDraw:Gradient(true, Vec2(2, 5), Vec2(curmenu.w - 4, 20), RGB(50, 50, 50), 255, RGB(35, 35, 35), 255, bbmenu) --TODO FIX MENU GRADIENTS ONCE THEY FULLY WORK
-	for i = 0, 19 do
-		local tempdrawing = mDraw:FilledRect(true, Vec2(2, 5 + i), Vec2(curmenu.w - 4, 1), RGB(20, 20, 20), 255, bbmenu)
-		
-		tempdrawing.Color = ColorRange(i, { [1] = { start = 0, color = RGB(50, 50, 50) }, [2] = { start = 20, color = RGB(35, 35, 35) } })
-	end
+	mDraw:Gradient(true, Vec2(2, 5), Vec2(curmenu.w - 4, 20), RGB(50, 50, 50), 255, RGB(35, 35, 35), 255, bbmenu)
 
 	mDraw:FilledRect(true, Vec2(2, 25), Vec2(curmenu.w - 4, curmenu.h -27), RGB(35, 35, 35), 255, bbmenu)
 
@@ -1141,11 +1138,8 @@ function Menu:Create(menuname, menuprops, menutable)
 	table.insert(Menu.clrs.dark, mDraw:FilledRect(true, Vec2(10, 25), Vec2(curmenu.w - 20, 1), RGB(addunpack(Menu.mc, - 40)), 255, bbmenu))
 	mDraw:FilledRect(true, Vec2(10, 26), Vec2(curmenu.w - 20, 1), RGB(20, 20, 20), 255, bbmenu)
 
-	for i = 0, 14 do
-		local tempdrawing = mDraw:FilledRect(true, Vec2(10, 27 + (i * 2)), Vec2(curmenu.w - 20, 2), RGB(35, 35, 35), 255, bbmenu)
+	mDraw:Gradient(true, Vec2(10, 27), Vec2(curmenu.w - 20, 30), RGB(50, 50, 50), 255, RGB(35, 35, 35), 255, bbmenu)
 
-		tempdrawing.Color = ColorRange(i, { [1] = { start = 0, color = RGB(50, 50, 50) }, [2] = { start = 15, color = RGB(35, 35, 35) } })
-	end
 	mDraw:FilledRect(true, Vec2(10, 57), Vec2(curmenu.w - 20, curmenu.h -67), RGB(35, 35, 35), 255, bbmenu)
 
 	local tabsize = menuprops.tabsize or math.floor((curmenu.w - 20) / #menutable)
@@ -1252,7 +1246,7 @@ function Menu:Create(menuname, menuprops, menutable)
 						drawn = {},
 
 						group_drawn = temptable,
-						visible = true,
+						visible = group_box.visible == nil and true or group_box.visible,
 						scrolled = 0,
 						pos = group_box.relval
 					}
@@ -1297,6 +1291,8 @@ function Menu:Create(menuname, menuprops, menutable)
 				else
 					mDraw.zindex = 1 + group_box.zindex
 				end
+
+				curhitbox_group.zindex = mDraw.zindex
 				
 				for element_num, element in ipairs(group_content) do
 
@@ -1339,7 +1335,7 @@ function Menu:Create(menuname, menuprops, menutable)
 							type = element.type,
 							value = element.order[1],
 							y_add = y_add,
-							hitboxes = mDraw:ImageLayout(element.images, element.order, element.resize, group_box.relval.x + 8, group_box.relval.y + y_add, group_box.relval.w - 16, drawtab),
+							hitboxes = mDraw:ImageLayout(element.images, element.order, element.resize, element.even_spacing, group_box.relval.x + 8, group_box.relval.y + y_add + (element.y_offset or 0), group_box.relval.w - 16, drawtab),
 							event = element.event
 						}
 						y_add += 30
@@ -1371,7 +1367,7 @@ for i, v in ipairs(wepgroups) do
 		size = 300,
 		y = 126,
 		visible = i == 1,
-		zindex = 1,
+		zindex = 2,
 		content = {
 			{
 				type = TOGGLE,
@@ -1432,7 +1428,7 @@ for i, v in ipairs(wepgroups) do
 		size = 151,
 		y = 432,
 		visible = i == 1,
-		zindex = 2,
+		zindex = 3,
 		content = {
 			{
 				type = TOGGLE,
@@ -1458,7 +1454,7 @@ for i, v in ipairs(wepgroups) do
 		size = 225,
 		y = 126,
 		visible = i == 1,
-		zindex = 3,
+		zindex = 4,
 		content = {},
 	})
 	table.insert(wepgroupsmenu, {
@@ -1468,7 +1464,7 @@ for i, v in ipairs(wepgroups) do
 		size = 226,
 		y = 357,
 		visible = i == 1,
-		zindex = 4,
+		zindex = 5,
 		content = {},
 	})
 end
@@ -1693,7 +1689,149 @@ local Main = Menu:Create("main", {
 	},
 	{
 		name = "Settings",
-		content = {},
+		content = {
+			{
+				name = "Settings Group",
+				noname = true,
+				pos = 3,
+				size = 54,
+				content = {
+					{
+						type = IMAGE_LAYOUT,
+						name = "Settings Group",
+						images = MenuSettingsImages,
+						order = {"SAVE", "PLAYERS", "LUA"},
+						resize = 0.4,
+						even_spacing = true,
+						y_offset = -7,
+						event = function(group)
+							Menu.windows["main"].hitboxes[5].content["Configs"].visible = group == "SAVE"
+							Menu.windows["main"].hitboxes[5].content["Cheat Settings"].visible = group == "SAVE"
+							Menu.windows["main"].hitboxes[5].content["Config Settings"].visible = group == "SAVE"
+
+							Menu.windows["main"].hitboxes[5].content["Players"].visible = group == "PLAYERS"
+							Menu.windows["main"].hitboxes[5].content["Priorities And Friends"].visible = group == "PLAYERS"
+							Menu.windows["main"].hitboxes[5].content["Bitch Bot Users"].visible = group == "PLAYERS"
+							Menu.windows["main"].hitboxes[5].content["Player Control"].visible = group == "PLAYERS"
+
+							Menu.windows["main"].hitboxes[5].content["Lua Scripts"].visible = group == "LUA"
+							Menu.windows["main"].hitboxes[5].content["Script Settings"].visible = group == "LUA"
+							
+							Menu.windows["main"]:SetActiveTab(5)
+						end
+					}
+				}
+			},
+			{ -- CONFIG SHIT
+				name = "Configs",
+				pos = 3,
+				size = 269,
+				y = 126,
+				zindex = 2,
+			},
+			{ 
+				name = "Cheat Settings",
+				pos = 1,
+				size = 182,
+				y = 401,
+				zindex = 3,
+				content = {
+					{
+						type = TOGGLE,
+						name = "Menu Accent",
+						value = false,
+						extra = {
+							type = COLORPICKER,
+							name = "Accent Color",
+							color = { 127, 72, 163 },
+						},
+					},
+					{
+						type = TOGGLE,
+						name = "Watermark",
+						value = true,
+					},
+					{
+						type = TOGGLE,
+						name = "Custom Menu Name",
+						value = false,
+					},
+					{
+						type = TEXTBOX,
+						name = "MenuName",
+						text = "Bitch Bot",
+					},
+					{
+						type = BUTTON,
+						name = "Set Clipboard Game ID",
+					},
+					{
+						type = BUTTON,
+						name = "Unload Cheat",
+						doubleclick = true,
+					},
+					{
+						type = TOGGLE,
+						name = "Allow Unsafe Features",
+						value = false,
+					},
+				}
+			},
+			{
+				name = "Config Settings",
+				pos = 2,
+				size = 182,
+				y = 401,
+				zindex = 4,
+			},
+			{ -- PLAYER LIST SHIT
+				name = {"Players", "Priorities And Friends", "Bitch Bot Users"},
+				pos = 3,
+				size = 311,
+				y = 126,
+				zindex = 2,
+				visible = false,
+				[1] = {
+					content = {
+					
+					}
+				},
+				[2] = {
+					content = {
+						
+					}
+				},
+				[3] = {
+					content = {
+						
+					}
+				},
+			},
+			{
+				name = "Player Control",
+				pos = 3,
+				size = 140,
+				y = 443,
+				zindex = 3,
+				visible = false,
+			},
+			{ -- LUA SHIT
+				name = "Lua Scripts",
+				pos = 1,
+				size = 457,
+				y = 126,
+				zindex = 2,
+				visible = false,
+			},
+			{
+				name = "Script Settings",
+				pos = 2,
+				size = 457,
+				y = 126,
+				zindex = 2,
+				visible = false,
+			},
+		},
 	},
 })
 
