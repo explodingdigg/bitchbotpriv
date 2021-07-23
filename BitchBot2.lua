@@ -10638,7 +10638,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 				setrawmetatable(spring, newMetatable)
 			end
-			local swingspring = debug.getupvalue(client.char.step, 15)
+			local swingspring = debug.getupvalue(client.char.step, 14)
 			local sprintspring = debug.getupvalue(client.char.setsprint, 10)
 			local zoommodspring = debug.getupvalue(client.char.step, 1) -- sex.
 
@@ -12130,7 +12130,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 							end
 
 							local parts = client.replication.getbodyparts(player)
-
 
 							local torso, rootpart, position, resolved
 							local opacity_mult = 1
