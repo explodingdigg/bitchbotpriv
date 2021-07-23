@@ -76,6 +76,16 @@ end
 local function map(N, OldMin, OldMax, Min, Max)
 	return (N - OldMin) / (OldMax - OldMin) * (Max - Min) + Min
 end
+
+local function reverse_table(tbl) -- THANKS FINI <33333
+    local new_tbl = {}
+    for i = 1, #tbl do
+        new_tbl[#tbl + 1 - i] = tbl[i]
+    end
+    return new_tbl
+end
+
+local NotifLogs = {}
 local CreateNotification
 do
 	local notes = {}
@@ -114,6 +124,7 @@ do
 	end
 
 	CreateNotification = function(t, customcolor) -- TODO i want some kind of prioritized message to the notification list, like a warning or something. warnings have icons too maybe? idk??
+		table.insert(NotifLogs, string.format("[%s]: %s", os.date("%X"), t))
 		local gap = 25
 		local width = 18
 
@@ -1879,6 +1890,19 @@ Draw:OutlinedText(
 	false,
 	35,
 	infopos + 180,
+	13,
+	false,
+	{ 255, 255, 255, 255 },
+	{ 10, 10, 10 },
+	graphs.other
+)
+
+Draw:OutlinedText(
+	"[DEBUG LOGS]",
+	2,
+	false,
+	35,
+	infopos - 200,
 	13,
 	false,
 	{ 255, 255, 255, 255 },
@@ -5310,6 +5334,13 @@ menu.connections.heartbeatmenu = game.RunService.Heartbeat:Connect(function() --
 		)
 		lasttick = tick()
 		StatMenuRendered:fire(graphs.other[1])
+
+		local logsstr = "[DEBUG LOGS]\n"
+		for i, v in ipairs(reverse_table(NotifLogs)) do
+			logsstr = logsstr.. v.. "\n"
+			if i >= 13 then break end
+		end
+		graphs.other[2].Text = logsstr
 	end
 end)
 
@@ -7276,6 +7307,10 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
         ["ZIRCON TRIDENT"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAICAYAAAC73qx6AAABG0lEQVR4nM2UsS5FQRCGvz3u2StUwhuISqH0BgrxAirvQELFO5B4A4ncXiWhVBGFUqsVHXEc51ecf282N/eIgjiTTHZ3/szszsz+EyTRI1kCRsA+cGfbBrAHDAEB79Yr4GTsKakvWkq6VysvkpYlbUp6U7fsJP+B84nAFrAIPAMXwKexmSmVa6yDKZiAGig7qv5hvzBhz23R+yNg1vFOgQKYM14Cl95XQdIhsA2sOFgNPHpNiURrDVR+DA4cadve0La8MhYyjAxrJrAiw1azxJ6AeWDB54cs4ZRIbd/zoqNqP5HvyPXXxAvW8T3BZO/L17oB1oBXr2fAOt1fa9fvrf6b4L9G9tSRvkgavwfArW1p/Eaf0/i9Bo6T4xdM44pWBHcfuQAAAABJRU5ErkJggg==", 50, 8},
         ["ZWEIHANDER"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAOCAYAAABth09nAAAA7ElEQVR4nM3UPUpDQRTF8Z8mRBQUrBKwiJDWHdi4DXtrV+HCbFxBasFSLRIRMX4gz+I9IYYRfXcmPP8wMHOGC+cwc+9GVVVaMsIZLtoWrpPNQM0YR6WN5BIJcofb0kZyiQa5L20kl0iQBa5LG8klEmSA44Q+yfSSRR8n2G/2sIUd7KHXrI/mbhcznKqn1xcHzXm+pD0u1f1EhYeE/ornhP6OJ7yof8Zc/c2nqRf5yyutzuzfDK+dPi5b1gxwiPMVfaLD3on0yBuuEnqnAyASZFvHjZ0iEmSEYWkjuUSCDH2fWP+CSJAbTAv7yOYTCAcjy7oQ9i0AAAAASUVORK5CYII=", 50, 14},
     }
+
+	for k, v in pairs(gunicons) do --TODO FIX THIS SHIT ALAN - from alan
+		gunicons[k][1] = syn.crypt.base64.decode(v[1])
+	end
 
 	local function NameToIcon(name)
 
@@ -9895,17 +9930,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					return func(thrower, gtype, gdata, displaytrail)
 				end
 			end
-			if found1 then
-				clienteventfuncs[hash] = function(charhash, bodyparts)
-					-- local modparts = bodyparts
-					-- for k, v in next, modparts:GetChildren() do
-					-- 	if not v:IsA("Model") and not v:IsA("Humanoid") then
-					-- 		v.Size = bodysize[v.Name] -- reset the ragdolls to their defaulted size defined at bodysize, in case of hitbox expansion
-					-- 	end
-					-- end
-					return func(charhash, modparts)
-				end
-			end
+			-- if found1 then
+			-- 	clienteventfuncs[hash] = function(charhash, bodyparts)
+			-- 		-- local modparts = bodyparts
+			-- 		-- for k, v in next, modparts:GetChildren() do
+			-- 		-- 	if not v:IsA("Model") and not v:IsA("Humanoid") then
+			-- 		-- 		v.Size = bodysize[v.Name] -- reset the ragdolls to their defaulted size defined at bodysize, in case of hitbox expansion
+			-- 		-- 	end
+			-- 		-- end
+			-- 		return func(charhash, modparts)
+			-- 	end
+			-- end
 			if found3 then
 				clienteventfuncs[hash] = function(player, parts)
 					local new_parts = {head = parts["Head"], torso = parts["Torso"], larm = parts["Left Arm"], rarm = parts["Right Arm"], lleg = parts["Left Leg"], rleg = parts["Right Leg"], rootpart = parts["HumanoidRootPart"]}
@@ -10414,12 +10449,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				if client.logic.gammo <= 0 then
 					break
 				end
-				if not (
-						table.find(menu.friends, v.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")
-					) and client.hud:isplayeralive(v)
-				then
-					if not table.find(menu.friends, v.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players")
-					then
+				if not (table.find(menu.friends, v.Name) and menu:GetVal("Misc", "Extra", "Ignore Friends")) and client.hud:isplayeralive(v) then
+					if not table.find(menu.friends, v.Name) and menu:GetVal("Misc", "Extra", "Target Only Priority Players") then
 						continue
 					end
 					local curbodyparts = client.replication.getbodyparts(v)
@@ -12475,7 +12506,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										if tempimage ~= nil then
 											
 
-											tempicon.Data = syn.crypt.base64.decode(tempimage.data)
+											tempicon.Data = tempimage.data
 											tempicon.Size = Vector2.new(tempimage.w, tempimage.h)
 										end
 										setwepicons[curplayer] = wepname
@@ -12714,7 +12745,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 											if tempimage ~= nil then
 
-												wepesp[3][gunnum].Data = syn.crypt.base64.decode(tempimage.data)
+												wepesp[3][gunnum].Data = tempimage.data
 												wepesp[3][gunnum].Size = Vector2.new(tempimage.w, tempimage.h)
 												wepesp[3][gunnum].Visible = true
 
@@ -13681,15 +13712,13 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					for id, gun in next, client.loadedguns do
 						if not gun.fucku then
 							local upvs = getupvalues(gun.step)
-							local hopefullyfireroundupvs = getupvalues(upvs[#upvs]) -- tell json fuck u when this breaks next major pf update (war bonds) if not hes FUCKING GENIUS... 🧠🧠🧠🧠🧠
+							local hopefullyfireroundupvs = getupvalues(upvs[#upvs]) 
 							for i = 1, #upvs do
 								local curv = upvs[i]
 								if type(curv) == "function" and getinfo(curv).name:match("bob") then
-									gun.fucku = true
+									--gun.fucku = true TODO ALAN FIX THIS IT FUCKING SUCKS - from alan
 									setupvalue(client.loadedguns[id].step, i, function(...)
-										return (
-													menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")
-												) and CFrame.new() or curv(...)
+										return (menu and menu:GetVal("Visuals", "Camera Visuals", "No Gun Bob or Sway")) and CFrame.new() or curv(...) --TODO FIX THIS
 									end)
 								end
 							end
