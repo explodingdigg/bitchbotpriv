@@ -7507,6 +7507,7 @@ do
     end
 
     hook:Add("AliasChanged", "BBOT:WaterMark", function(old, new)
+        bbmenu[27].Text = new
         menu.watermark.text[1].Text = new.. menu.watermark.textString
         for i=1, #menu.watermark.rect do
             local v = menu.watermark.rect[i]
