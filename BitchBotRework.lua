@@ -7719,6 +7719,7 @@ do
     -- From wholecream
     -- configs aren't done so they are default to screw-pf aka my stuff...
     -- this weapon module allows complete utter freedom of the gun's functions
+    -- this is also exactly why a skin changer client-side works fantasticly well...
     local weapons = {}
     BBOT.weapons = weapons
     local hook = BBOT.hook
@@ -7731,7 +7732,7 @@ do
 
     local receivers = BBOT.network.receivers
     local upvaluemods = {} -- testing? no problem reloading the script...
-    hook:Add("Unload", "UndoWeaponMods", function()
+    hook:Add("Unload", "BBOT:WeaponModifications", function()
         for i=1, #upvaluemods do
             local v = upvaluemods[i]
             debug.setupvalue(unpack(v))
@@ -7777,7 +7778,7 @@ do
     local function DetourModifyData(related_func, index, modifydata)
         local newfunc = function(...)
             local modifications = modifydata(...)
-            hook:CallP("ApplyGunModifications", modifications)
+            hook:CallP("WeaponModifyData", modifications)
             return modifications
         end
         upvaluemods[#upvaluemods+1] = {related_func, index, modifydata}
@@ -8061,7 +8062,7 @@ do
 
     -- @nata and @bitch, here is how your new modifications will now work, this is a sample from screw-pf
 
-    hook:Add("ApplyGunModifications", "BBOT:ModifyWeapon.Recoil", function(modifications)
+    hook:Add("WeaponModifyData", "BBOT:ModifyWeapon.Recoil", function(modifications)
         if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
         local rot = config:GetValue("Weapons", "Stat Modifications", "Recoil", "RotationFactor")
         local trans = config:GetValue("Weapons", "Stat Modifications", "Recoil", "TransitionFactor")
