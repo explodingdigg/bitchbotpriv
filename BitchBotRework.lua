@@ -8097,6 +8097,13 @@ do
         modifications.modelrecoverspeed = modifications.modelrecoverspeed * mrs;
         modifications.modelkickdamper = modifications.modelkickdamper * mkd;
     end)
+
+    -- You can also use a gun's stepper function now, with pre and post calls like so
+    hook:Add("PostWeaponStep", "BBOT:Aimbot.Post", function(gundata)
+        if not weapons.Firing then
+            gundata:shoot(false)
+        end
+    end)
 end
 
 -- Init
