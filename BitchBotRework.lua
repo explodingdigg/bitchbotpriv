@@ -1,13 +1,18 @@
 --[[
     Hi, this is WholeCream further known as NiceCream
-    I've decided to completely rework it to use my libraries.
-    For future reference these libraries can be separated in the future!\
+    I've decided to completely rework it to use some of my libraries.
+    For future reference these libraries can be separated in the future!
 
     Your welcome - WholeCream
+
+    !!READ!!
+    Seems that synapse X has another bug with drawings
+    They tend to... Crash... A lot...
+    Reloading is still fine thought...
 ]]
 
 local _BBOT = _G.BBOT
-local BBOT = BBOT or { username = "dev", alias = "Bitch Bot" } -- I... um... fuck off ok?
+local BBOT = BBOT or { username = "dev", alias = "Bitch Bot", version = "IN-DEV" } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
 -- Locals/Upvalues
@@ -69,7 +74,7 @@ do
     local bbot = Color3.fromRGB(127, 72, 163)
 
     function log.menu_display(...)
-        if BBOT.menu and BBOT.menu.console then
+        if BBOT.menu and BBOT.menu.Log then
             BBOT.menu:Log(...)
         end
     end
@@ -189,6 +194,7 @@ end
 -- for now
 local function ISOLATION(BBOT)
 local BBOT = BBOT
+local loadstart = tick()
 
 do
     local function round( num, idp )
@@ -236,16 +242,54 @@ do
 
     local _table = dcopy(table)
     BBOT.table = _table
+    local table = _table
 
-    _table.deepcopy = dcopy
+    table.deepcopy = dcopy
 
     -- reverses a numerical table
-    function _table.reverse(tbl)
+    function table.reverse(tbl)
         local new_tbl = {}
         for i = 1, #tbl do
             new_tbl[#tbl + 1 - i] = tbl[i]
         end
         return new_tbl
+    end
+
+    function table.deeprestore(tbl)
+        for k, v in next, tbl do
+            if type(v) == "function" and is_synapse_function(v) then
+                for k1, v1 in next, getupvalues(v) do
+                    if type(v1) == "function" and islclosure(v1) and not is_synapse_function(v1) then
+                        tbl[k] = v1
+                    end
+                end
+            end
+            if type(v) == "table" then
+                table.deeprestore(v)
+            end
+        end
+    end
+
+    function table.deepcleanup(tbl)
+        local numTable = #tbl
+        local isTableArray = numTable > 0
+        if isTableArray then
+            for i = 1, numTable do
+                local entry = tbl[i]
+                local entryType = type(entry)
+                if entryType == "table" then
+                    table.deepcleanup(tbl)
+                end
+                tbl[i] = nil
+            end
+        else
+            for k, v in next, tbl do
+                if type(v) == "table" then
+                    table.deepcleanup(tbl)
+                end
+            end
+            tbl[k] = nil
+        end
     end
 end
 
@@ -263,9 +307,27 @@ do
         local mult = 10 ^ ( idp or 0 )
         return math.floor( num * mult + 0.5 ) / mult
     end
+
+    function math.average(t)
+        local sum = 0
+        for _, v in pairs(t) do -- Get the sum of all numbers in t
+            sum = sum + v
+        end
+        return sum / #t
+    end
+
+    function math.clamp(a, lowerNum, higher) -- DONT REMOVE this clamp is better then roblox's because it doesnt error when its not lower or heigher
+        if a > higher then
+            return higher
+        elseif a < lowerNum then
+            return lowerNum
+        else
+            return a
+        end
+    end
 end
 
-BBOT.service = {}
+-- Services
 do
     local service = {
         registry = {}
@@ -288,6 +350,45 @@ do
     service:AddToServices("CurrentCamera", service:GetService("Workspace").CurrentCamera)
     service:AddToServices("PlayerGui", localplayer:FindFirstChild("PlayerGui") or localplayer:WaitForChild("PlayerGui"))
     service:AddToServices("Mouse", localplayer:GetMouse())
+end
+
+-- Threading
+do
+    local thread = {}
+    BBOT.thread = thread
+
+    function thread:Create(func, ...) -- improved... yay.
+        local thread = coroutine.create(func)
+        coroutine.resume(thread, ...)
+        return thread
+    end
+
+    function thread:CreateMulti(obj, ...)
+        local n = #obj
+        if n > 0 then
+            for i = 1, n do
+                local t = obj[i]
+                if type(t) == "table" then
+                    local d = #t
+                    assert(d ~= 0, "table inserted was not an array or was empty")
+                    assert(d < 3, ("invalid number of arguments (%d)"):format(d))
+                    local thetype = type(t[1])
+                    assert(
+                        thetype == "function",
+                        ("invalid argument #1: expected 'function', got '%s'"):format(tostring(thetype))
+                    )
+
+                    self:Create(t[1], unpack(t[2]))
+                else
+                    self:Create(t, ...)
+                end
+            end
+        else
+            for i, v in pairs(obj) do
+                self:Create(v, ...)
+            end
+        end
+    end
 end
 
 -- Hooks
@@ -452,6 +553,7 @@ do
         runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Camera")
         runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Character")
         runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Last")
+        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-R")
     end)
 
     hook:bindEvent(userinputservice.InputBegan, "InputBegan")
@@ -479,6 +581,7 @@ do
     runservice:BindToRenderStep("FW0a9kf0w2of0-Last", Enum.RenderPriority.Last.Value, function(...)
         hook:CallP("RenderStep.Last", ...)
     end)
+    hook:bindEvent(runservice.RenderStepped, "RenderStepped")
 
     local players = BBOT.service:GetService("Players")
     hook:bindEvent(players.PlayerAdded, "PlayerAdded")
@@ -695,10 +798,6 @@ do
         return t.repetitions - t.timesran
     end
 
-    function timer.HandleError()
-
-    end
-    
     function timer:Async(f)
         self:Simple(0,f)
     end
@@ -757,15 +856,643 @@ do
     end, runservice.RenderStepped)
 end
 
+-- Draw
+do
+    local hook = BBOT.hook
+    local draw = {}
+    BBOT.draw = draw
+    local allrender = {}
+    local RGB = Color3.fromRGB
+	function draw:UnRender()
+		for k, v in pairs(allrender) do
+			for k1, v1 in pairs(v) do
+				if v1 and type(v1) ~= "number" and v1.__OBJECT_EXISTS then
+					v1:Remove()
+                end
+			end
+		end
+	end
+    
+    hook:Add("Unload", "BBOT:Draw.Unload", function()
+        draw:UnRender()
+    end)
+
+	function draw:OutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		local temptable = Drawing.new("Square")
+		temptable.Visible = visible
+		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Size = Vector2.new(width, height)
+		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		temptable.Filled = false
+		temptable.Thickness = 0
+		temptable.Transparency = clr[4] / 255
+		table.insert(tablename, temptable)
+		if not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+	end
+
+	function draw:FilledRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		local temptable = Drawing.new("Square")
+		temptable.Visible = visible
+		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Size = Vector2.new(width, height)
+		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		temptable.Filled = true
+		temptable.Thickness = 0
+		temptable.Transparency = clr[4] / 255
+		table.insert(tablename, temptable)
+		if not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+	end
+
+	function draw:Line(visible, thickness, start_x, start_y, end_x, end_y, clr, tablename)
+		temptable = Drawing.new("Line")
+		temptable.Visible = visible
+		temptable.Thickness = thickness
+		temptable.From = Vector2.new(start_x, start_y)
+		temptable.To = Vector2.new(end_x, end_y)
+		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		temptable.Transparency = clr[4] / 255
+		table.insert(tablename, temptable)
+		if not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+	end
+
+	function draw:Image(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+		local temptable = Drawing.new("Image")
+		temptable.Visible = visible
+		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Size = Vector2.new(width, height)
+		temptable.Transparency = transparency
+		temptable.Data = imagedata or placeholderImage
+		table.insert(tablename, temptable)
+		if not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+	end
+
+	function draw:Text(text, font, visible, pos_x, pos_y, size, centered, clr, tablename)
+		local temptable = Drawing.new("Text")
+		temptable.Text = text
+		temptable.Visible = visible
+		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Size = size
+		temptable.Center = centered
+		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		temptable.Transparency = clr[4] / 255
+		temptable.Outline = false
+		temptable.Font = font
+		table.insert(tablename, temptable)
+		if not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+	end
+
+	function draw:OutlinedText(text, font, visible, pos_x, pos_y, size, centered, clr, clr2, tablename)
+		local temptable = Drawing.new("Text")
+		temptable.Text = text
+		temptable.Visible = visible
+		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Size = size
+		temptable.Center = centered
+		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		temptable.Transparency = clr[4] / 255
+		temptable.Outline = true
+		temptable.OutlineColor = RGB(clr2[1], clr2[2], clr2[3])
+		temptable.Font = font
+		if not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+		if tablename then
+			table.insert(tablename, temptable)
+		end
+		return temptable
+	end
+
+	function draw:Triangle(visible, filled, pa, pb, pc, clr, tablename)
+		clr = clr or { 255, 255, 255, 1 }
+		local temptable = Drawing.new("Triangle")
+		temptable.Visible = visible
+		temptable.Transparency = clr[4] or 1
+		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		temptable.Thickness = 4.1
+		if pa and pb and pc then
+			temptable.PointA = Vector2.new(pa[1], pa[2])
+			temptable.PointB = Vector2.new(pb[1], pb[2])
+			temptable.PointC = Vector2.new(pc[1], pc[2])
+		end
+		temptable.Filled = filled
+		table.insert(tablename, temptable)
+		if tablename and not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+	end
+
+	function draw:Circle(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
+		local temptable = Drawing.new("Circle")
+		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Visible = visible
+		temptable.Radius = size
+		temptable.Thickness = thickness
+		temptable.NumSides = sides
+		temptable.Transparency = clr[4]
+		temptable.Filled = false
+		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		table.insert(tablename, temptable)
+		if not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+	end
+
+	function draw:FilledCircle(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
+		local temptable = Drawing.new("Circle")
+		temptable.Position = Vector2.new(pos_x, pos_y)
+		temptable.Visible = visible
+		temptable.Radius = size
+		temptable.Thickness = thickness
+		temptable.NumSides = sides
+		temptable.Transparency = clr[4]
+		temptable.Filled = true
+		temptable.Color = RGB(clr[1], clr[2], clr[3])
+		table.insert(tablename, temptable)
+		if not table.find(allrender, tablename) then
+			table.insert(allrender, tablename)
+		end
+	end
+
+	--ANCHOR MENU ELEMENTS
+
+	function draw:MenuOutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		draw:OutlinedRect(visible, pos_x + menu.x, pos_y + menu.y, width, height, clr, tablename)
+		table.insert(menu.postable, { tablename[#tablename], pos_x, pos_y })
+
+		if menu.log_multi ~= nil then
+			table.insert(menu.mgrouptabz[menu.log_multi[1]][menu.log_multi[2]], tablename[#tablename])
+		end
+	end
+
+	function draw:MenuFilledRect(visible, pos_x, pos_y, width, height, clr, tablename)
+		draw:FilledRect(visible, pos_x + menu.x, pos_y + menu.y, width, height, clr, tablename)
+		table.insert(menu.postable, { tablename[#tablename], pos_x, pos_y })
+
+		if menu.log_multi ~= nil then
+			table.insert(menu.mgrouptabz[menu.log_multi[1]][menu.log_multi[2]], tablename[#tablename])
+		end
+	end
+
+	function draw:MenuImage(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+		draw:Image(visible, imagedata, pos_x + menu.x, pos_y + menu.y, width, height, transparency, tablename)
+		table.insert(menu.postable, { tablename[#tablename], pos_x, pos_y })
+
+		if menu.log_multi ~= nil then
+			table.insert(menu.mgrouptabz[menu.log_multi[1]][menu.log_multi[2]], tablename[#tablename])
+		end
+	end
+
+	function draw:MenuBigText(text, visible, centered, pos_x, pos_y, tablename)
+		local text = draw:OutlinedText(
+			text,
+			2,
+			visible,
+			pos_x + menu.x,
+			pos_y + menu.y,
+			13,
+			centered,
+			{ 255, 255, 255, 255 },
+			{ 0, 0, 0 },
+			tablename
+		)
+		table.insert(menu.postable, { tablename[#tablename], pos_x, pos_y })
+
+		if menu.log_multi ~= nil then
+			table.insert(menu.mgrouptabz[menu.log_multi[1]][menu.log_multi[2]], tablename[#tablename])
+		end
+
+		return text
+	end
+
+	function draw:CoolBox(name, x, y, width, height, tab)
+		draw:MenuOutlinedRect(true, x, y, width, height, { 0, 0, 0, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 1, width - 2, height - 2, { 20, 20, 20, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 2, y + 2, width - 3, 1, { 127, 72, 163, 255 }, tab)
+		table.insert(menu.clrs.norm, tab[#tab])
+		draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, { 87, 32, 123, 255 }, tab)
+		table.insert(menu.clrs.dark, tab[#tab])
+		draw:MenuOutlinedRect(true, x + 2, y + 4, width - 3, 1, { 20, 20, 20, 255 }, tab)
+
+		for i = 0, 7 do
+			draw:MenuFilledRect(true, x + 2, y + 5 + (i * 2), width - 4, 2, { 45, 45, 45, 255 }, tab)
+			tab[#tab].Color = ColorRange(
+				i,
+				{ [1] = { start = 0, color = RGB(45, 45, 45) }, [2] = { start = 7, color = RGB(35, 35, 35) } }
+			)
+		end
+
+		draw:MenuBigText(name, true, false, x + 6, y + 5, tab)
+	end
+
+	function draw:CoolMultiBox(names, x, y, width, height, tab)
+		draw:MenuOutlinedRect(true, x, y, width, height, { 0, 0, 0, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 1, width - 2, height - 2, { 20, 20, 20, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 2, y + 2, width - 3, 1, { 127, 72, 163, 255 }, tab)
+		table.insert(menu.clrs.norm, tab[#tab])
+		draw:MenuOutlinedRect(true, x + 2, y + 3, width - 3, 1, { 87, 32, 123, 255 }, tab)
+		table.insert(menu.clrs.dark, tab[#tab])
+		draw:MenuOutlinedRect(true, x + 2, y + 4, width - 3, 1, { 20, 20, 20, 255 }, tab)
+
+		--{35, 35, 35, 255}
+
+		draw:MenuFilledRect(true, x + 2, y + 5, width - 4, 18, { 30, 30, 30, 255 }, tab)
+		draw:MenuFilledRect(true, x + 2, y + 21, width - 4, 2, { 20, 20, 20, 255 }, tab)
+
+		local selected = {}
+		for i = 0, 8 do
+			draw:MenuFilledRect(true, x + 2, y + 5 + (i * 2), width - 159, 2, { 45, 45, 45, 255 }, tab)
+			tab[#tab].Color = ColorRange(
+				i,
+				{ [1] = { start = 0, color = RGB(50, 50, 50) }, [2] = { start = 8, color = RGB(35, 35, 35) } }
+			)
+			table.insert(selected, { postable = #menu.postable, drawn = tab[#tab] })
+		end
+
+		local length = 2
+		local selected_pos = {}
+		local click_pos = {}
+		local nametext = {}
+		for i, v in ipairs(names) do
+			draw:MenuBigText(v, true, false, x + 4 + length, y + 5, tab)
+			if i == 1 then
+				tab[#tab].Color = RGB(255, 255, 255)
+			else
+				tab[#tab].Color = RGB(170, 170, 170)
+			end
+			table.insert(nametext, tab[#tab])
+
+			draw:MenuFilledRect(true, x + length + tab[#tab].TextBounds.X + 8, y + 5, 2, 16, { 20, 20, 20, 255 }, tab)
+			table.insert(selected_pos, { pos = x + length, length = tab[#tab - 1].TextBounds.X + 8 })
+			table.insert(click_pos, {
+				x = x + length,
+				y = y + 5,
+				width = tab[#tab - 1].TextBounds.X + 8,
+				height = 18,
+				name = v,
+				num = i,
+			})
+			length += tab[#tab - 1].TextBounds.X + 10
+		end
+
+		local settab = 1
+		for k, v in pairs(selected) do
+			menu.postable[v.postable][2] = selected_pos[settab].pos
+			v.drawn.Size = Vector2.new(selected_pos[settab].length, 2)
+		end
+
+		return { bar = selected, barpos = selected_pos, click_pos = click_pos, nametext = nametext }
+
+		--draw:MenuBigText(str, true, false, x + 6, y + 5, tab)
+	end
+
+	function draw:Toggle(name, value, unsafe, x, y, tab)
+		draw:MenuOutlinedRect(true, x, y, 12, 12, { 30, 30, 30, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 1, 10, 10, { 0, 0, 0, 255 }, tab)
+
+		local temptable = {}
+		for i = 0, 3 do
+			draw:MenuFilledRect(true, x + 2, y + 2 + (i * 2), 8, 2, { 0, 0, 0, 255 }, tab)
+			table.insert(temptable, tab[#tab])
+			if value then
+				tab[#tab].Color = ColorRange(i, {
+					[1] = { start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3]) },
+					[2] = { start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40) },
+				})
+			else
+				tab[#tab].Color = ColorRange(i, {
+					[1] = { start = 0, color = RGB(50, 50, 50) },
+					[2] = { start = 3, color = RGB(30, 30, 30) },
+				})
+			end
+		end
+
+		draw:MenuBigText(name, true, false, x + 16, y - 1, tab)
+		if unsafe == true then
+			tab[#tab].Color = RGB(245, 239, 120)
+		end
+		table.insert(temptable, tab[#tab])
+		return temptable
+	end
+
+	function draw:Keybind(key, x, y, tab)
+		local temptable = {}
+		draw:MenuFilledRect(true, x, y, 44, 16, { 25, 25, 25, 255 }, tab)
+		draw:MenuBigText(KeyEnumToName(key), true, true, x + 22, y + 1, tab)
+		table.insert(temptable, tab[#tab])
+		draw:MenuOutlinedRect(true, x, y, 44, 16, { 30, 30, 30, 255 }, tab)
+		table.insert(temptable, tab[#tab])
+		draw:MenuOutlinedRect(true, x + 1, y + 1, 42, 14, { 0, 0, 0, 255 }, tab)
+
+		return temptable
+	end
+
+	function draw:ColorPicker(color, x, y, tab)
+		local temptable = {}
+
+		draw:MenuOutlinedRect(true, x, y, 28, 14, { 30, 30, 30, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 1, 26, 12, { 0, 0, 0, 255 }, tab)
+
+		draw:MenuFilledRect(true, x + 2, y + 2, 24, 10, { color[1], color[2], color[3], 255 }, tab)
+		table.insert(temptable, tab[#tab])
+		draw:MenuOutlinedRect(true, x + 2, y + 2, 24, 10, { color[1] - 40, color[2] - 40, color[3] - 40, 255 }, tab)
+		table.insert(temptable, tab[#tab])
+		draw:MenuOutlinedRect(true, x + 3, y + 3, 22, 8, { color[1] - 40, color[2] - 40, color[3] - 40, 255 }, tab)
+		table.insert(temptable, tab[#tab])
+
+		return temptable
+	end
+
+	function draw:Slider(name, stradd, value, minvalue, maxvalue, customvals, rounded, x, y, length, tab)
+		draw:MenuBigText(name, true, false, x, y - 3, tab)
+
+		for i = 0, 3 do
+			draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), length - 4, 2, { 0, 0, 0, 255 }, tab)
+			tab[#tab].Color = ColorRange(
+				i,
+				{ [1] = { start = 0, color = RGB(50, 50, 50) }, [2] = { start = 3, color = RGB(30, 30, 30) } }
+			)
+		end
+
+		local temptable = {}
+		for i = 0, 3 do
+			draw:MenuFilledRect(
+				true,
+				x + 2,
+				y + 14 + (i * 2),
+				(length - 4) * ((value - minvalue) / (maxvalue - minvalue)),
+				2,
+				{ 0, 0, 0, 255 },
+				tab
+			)
+			table.insert(temptable, tab[#tab])
+			tab[#tab].Color = ColorRange(i, {
+				[1] = { start = 0, color = RGB(menu.mc[1], menu.mc[2], menu.mc[3]) },
+				[2] = { start = 3, color = RGB(menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40) },
+			})
+		end
+		draw:MenuOutlinedRect(true, x, y + 12, length, 12, { 30, 30, 30, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 10, { 0, 0, 0, 255 }, tab)
+
+		local textstr = ""
+
+		if stradd == nil then
+			stradd = ""
+		end
+
+		local decplaces = rounded and string.rep("0", math.log(1 / rounded) / math.log(10)) or 1
+		if rounded and value == math.floor(value * decplaces) then
+			textstr = tostring(value) .. "." .. decplaces .. stradd
+		else
+			textstr = tostring(value) .. stradd
+		end
+
+		draw:MenuBigText(customvals[value] or textstr, true, true, x + (length * 0.5), y + 11, tab)
+		table.insert(temptable, tab[#tab])
+		table.insert(temptable, stradd)
+		return temptable
+	end
+
+	function draw:Dropbox(name, value, values, x, y, length, tab)
+		local temptable = {}
+		draw:MenuBigText(name, true, false, x, y - 3, tab)
+
+		for i = 0, 7 do
+			draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), length - 4, 2, { 0, 0, 0, 255 }, tab)
+			tab[#tab].Color = ColorRange(
+				i,
+				{ [1] = { start = 0, color = RGB(50, 50, 50) }, [2] = { start = 7, color = RGB(35, 35, 35) } }
+			)
+		end
+
+		draw:MenuOutlinedRect(true, x, y + 12, length, 22, { 30, 30, 30, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 20, { 0, 0, 0, 255 }, tab)
+
+		draw:MenuBigText(tostring(values[value]), true, false, x + 6, y + 16, tab)
+		table.insert(temptable, tab[#tab])
+
+		draw:MenuBigText("-", true, false, x - 17 + length, y + 16, tab)
+		table.insert(temptable, tab[#tab])
+
+		return temptable
+	end
+
+	function draw:Combobox(name, values, x, y, length, tab)
+		local temptable = {}
+		draw:MenuBigText(name, true, false, x, y - 3, tab)
+
+		for i = 0, 7 do
+			draw:MenuFilledRect(true, x + 2, y + 14 + (i * 2), length - 4, 2, { 0, 0, 0, 255 }, tab)
+			tab[#tab].Color = ColorRange(
+				i,
+				{ [1] = { start = 0, color = RGB(50, 50, 50) }, [2] = { start = 7, color = RGB(35, 35, 35) } }
+			)
+		end
+
+		draw:MenuOutlinedRect(true, x, y + 12, length, 22, { 30, 30, 30, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 20, { 0, 0, 0, 255 }, tab)
+		local textthing = ""
+		for k, v in pairs(values) do
+			if v[2] then
+				if textthing == "" then
+					textthing = v[1]
+				else
+					textthing ..= ", " .. v[1]
+				end
+			end
+		end
+		textthing = string_cut(textthing, 25)
+		textthing = textthing ~= "" and textthing or "None"
+		draw:MenuBigText(textthing, true, false, x + 6, y + 16, tab)
+		table.insert(temptable, tab[#tab])
+
+		draw:MenuBigText("...", true, false, x - 27 + length, y + 16, tab)
+		table.insert(temptable, tab[#tab])
+
+		return temptable
+	end
+
+	function draw:Button(name, x, y, length, tab)
+		local temptable = {}
+
+		for i = 0, 8 do
+			draw:MenuFilledRect(true, x + 2, y + 2 + (i * 2), length - 4, 2, { 0, 0, 0, 255 }, tab)
+			tab[#tab].Color = ColorRange(
+				i,
+				{ [1] = { start = 0, color = RGB(50, 50, 50) }, [2] = { start = 8, color = RGB(35, 35, 35) } }
+			)
+			table.insert(temptable, tab[#tab])
+		end
+
+		draw:MenuOutlinedRect(true, x, y, length, 22, { 30, 30, 30, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 1, length - 2, 20, { 0, 0, 0, 255 }, tab)
+		temptable.text = draw:MenuBigText(name, true, true, x + math.floor(length * 0.5), y + 4, tab)
+
+		return temptable
+	end
+
+	function draw:List(name, x, y, length, maxamount, columns, tab)
+		local temptable = { uparrow = {}, downarrow = {}, liststuff = { rows = {}, words = {} } }
+
+		for i, v in ipairs(name) do
+			draw:MenuBigText(
+				v,
+				true,
+				false,
+				(math.floor(length / columns) * i) - math.floor(length / columns) + 30,
+				y - 3,
+				tab
+			)
+		end
+
+		draw:MenuOutlinedRect(true, x, y + 12, length, 22 * maxamount + 4, { 30, 30, 30, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 13, length - 2, 22 * maxamount + 2, { 0, 0, 0, 255 }, tab)
+
+		draw:MenuFilledRect(true, x + length - 7, y + 16, 1, 1, { menu.mc[1], menu.mc[2], menu.mc[3], 255 }, tab)
+		table.insert(temptable.uparrow, tab[#tab])
+		table.insert(menu.clrs.norm, tab[#tab])
+		draw:MenuFilledRect(true, x + length - 8, y + 17, 3, 1, { menu.mc[1], menu.mc[2], menu.mc[3], 255 }, tab)
+		table.insert(temptable.uparrow, tab[#tab])
+		table.insert(menu.clrs.norm, tab[#tab])
+		draw:MenuFilledRect(true, x + length - 9, y + 18, 5, 1, { menu.mc[1], menu.mc[2], menu.mc[3], 255 }, tab)
+		table.insert(temptable.uparrow, tab[#tab])
+		table.insert(menu.clrs.norm, tab[#tab])
+
+		draw:MenuFilledRect(
+			true,
+			x + length - 7,
+			y + 16 + (22 * maxamount + 4) - 9,
+			1,
+			1,
+			{ menu.mc[1], menu.mc[2], menu.mc[3], 255 },
+			tab
+		)
+		table.insert(temptable.downarrow, tab[#tab])
+		table.insert(menu.clrs.norm, tab[#tab])
+		draw:MenuFilledRect(
+			true,
+			x + length - 8,
+			y + 16 + (22 * maxamount + 4) - 10,
+			3,
+			1,
+			{ menu.mc[1], menu.mc[2], menu.mc[3], 255 },
+			tab
+		)
+		table.insert(temptable.downarrow, tab[#tab])
+		table.insert(menu.clrs.norm, tab[#tab])
+		draw:MenuFilledRect(
+			true,
+			x + length - 9,
+			y + 16 + (22 * maxamount + 4) - 11,
+			5,
+			1,
+			{ menu.mc[1], menu.mc[2], menu.mc[3], 255 },
+			tab
+		)
+		table.insert(temptable.downarrow, tab[#tab])
+		table.insert(menu.clrs.norm, tab[#tab])
+
+		for i = 1, maxamount do
+			temptable.liststuff.rows[i] = {}
+			if i ~= maxamount then
+				draw:MenuOutlinedRect(true, x + 4, (y + 13) + (22 * i), length - 8, 2, { 20, 20, 20, 255 }, tab)
+				table.insert(temptable.liststuff.rows[i], tab[#tab])
+			end
+
+			if columns ~= nil then
+				for i1 = 1, columns - 1 do
+					draw:MenuOutlinedRect(
+						true,
+						x + math.floor(length / columns) * i1,
+						(y + 13) + (22 * i) - 18,
+						2,
+						16,
+						{ 20, 20, 20, 255 },
+						tab
+					)
+					table.insert(temptable.liststuff.rows[i], tab[#tab])
+				end
+			end
+
+			temptable.liststuff.words[i] = {}
+			if columns ~= nil then
+				for i1 = 1, columns do
+					draw:MenuBigText(
+						"",
+						true,
+						false,
+						(x + math.floor(length / columns) * i1) - math.floor(length / columns) + 5,
+						(y + 13) + (22 * i) - 16,
+						tab
+					)
+					table.insert(temptable.liststuff.words[i], tab[#tab])
+				end
+			else
+				draw:MenuBigText("", true, false, x + 5, (y + 13) + (22 * i) - 16, tab)
+				table.insert(temptable.liststuff.words[i], tab[#tab])
+			end
+		end
+
+		return temptable
+	end
+
+	function draw:ImageWithText(size, image, text, x, y, tab)
+		local temptable = {}
+		draw:MenuOutlinedRect(true, x, y, size + 4, size + 4, { 30, 30, 30, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 1, size + 2, size + 2, { 0, 0, 0, 255 }, tab)
+		draw:MenuFilledRect(true, x + 2, y + 2, size, size, { 40, 40, 40, 255 }, tab)
+
+		draw:MenuBigText(text, true, false, x + size + 8, y, tab)
+		table.insert(temptable, tab[#tab])
+
+		draw:MenuImage(true, BBOT_IMAGES[5], x + 2, y + 2, size, size, 1, tab)
+		table.insert(temptable, tab[#tab])
+
+		return temptable
+	end
+
+	function draw:TextBox(name, text, x, y, length, tab)
+		for i = 0, 8 do
+			draw:MenuFilledRect(true, x + 2, y + 2 + (i * 2), length - 4, 2, { 0, 0, 0, 255 }, tab)
+			tab[#tab].Color = ColorRange(
+				i,
+				{ [1] = { start = 0, color = RGB(50, 50, 50) }, [2] = { start = 8, color = RGB(35, 35, 35) } }
+			)
+		end
+
+		draw:MenuOutlinedRect(true, x, y, length, 22, { 30, 30, 30, 255 }, tab)
+		draw:MenuOutlinedRect(true, x + 1, y + 1, length - 2, 20, { 0, 0, 0, 255 }, tab)
+		draw:MenuBigText(text, true, false, x + 6, y + 4, tab)
+
+		return tab[#tab]
+	end
+end
+
 --! POST LIBRARIES !--
 
 -- Setup
 do
+    local thread = BBOT.thread
+    local NetworkClient = BBOT.service:GetService("NetworkClient")
     if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459 then
         BBOT.game = "pf"
     else
         BBOT.game = "universal"
     end
+
+    BBOT.networksettings = settings().Network
+    NetworkClient:SetOutgoingKBPSLimit(0)
+
+    setfpscap(getgenv().maxfps or 144)
 
     if not isfolder("bitchbot") then
         makefolder("bitchbot")
@@ -782,12 +1509,93 @@ do
     if not isfolder("bitchbot/" .. BBOT.game) then
         makefolder("bitchbot/" .. BBOT.game)
     end
+
+    local BBOT_IMAGES = {}
+    thread:CreateMulti({
+        function()
+            BBOT_IMAGES[1] = game:HttpGet("https://i.imgur.com/9NMuFcQ.png")
+        end,
+        function()
+            BBOT_IMAGES[2] = game:HttpGet("https://i.imgur.com/jG3NjxN.png")
+        end,
+        function()
+            BBOT_IMAGES[3] = game:HttpGet("https://i.imgur.com/2Ty4u2O.png")
+        end,
+        function()
+            BBOT_IMAGES[4] = game:HttpGet("https://i.imgur.com/kNGuTlj.png")
+        end,
+        function()
+            BBOT_IMAGES[5] = game:HttpGet("https://i.imgur.com/OZUR3EY.png")
+        end,
+        function()
+            BBOT_IMAGES[6] = game:HttpGet("https://i.imgur.com/3HGuyVa.png")
+        end,
+    })
+
+    -- I am so baffled about this part - wholecream
+    local loaded = {}
+    do
+        local function Loopy_Image_Checky()
+            for i = 1, 6 do
+                local v = BBOT_IMAGES[i]
+                if v == nil then
+                    return true
+                elseif not loaded[i] then
+                    loaded[i] = true
+                end
+            end
+            return false
+        end
+        while Loopy_Image_Checky() do
+            wait(0)
+        end
+    end
+
+	do
+		local net
+
+		repeat
+			local gc = getgc(true)
+
+			for i = 1, #gc do
+				local garbage = gc[i]
+
+				local garbagetype = type(garbage)
+
+				if garbagetype == "table" then
+					net = rawget(garbage, "fetch")
+					if net then
+						break
+					end
+				end
+			end
+
+			gc = nil
+			game.RunService.RenderStepped:Wait()
+		until net
+
+		net = nil
+
+		local annoyingFuckingMusic = workspace:FindFirstChild("memes")
+		if annoyingFuckingMusic then
+			annoyingFuckingMusic:Destroy()
+		end
+	end -- wait for framwork to load
+end
+
+-- Configs
+do
+    -- To do, add a config verification system
+    -- To do, menu shouldn't be tied together wirh config
+        -- Configs should have it's own dedicated handle
+    -- To do, I don't want to have to do this, but I might make an entirely new config system
+        -- Cause why not... and also right now things are just all over the place...
 end
 
 -- Notifications
 do
     local hook = BBOT.hook
-    local workspace = BBOT.service:GetService("Workspace")
+    local math = BBOT.math
     local notification = {
         registry = {},
     }
@@ -831,7 +1639,7 @@ do
         local meta = {}
         notification.meta = meta
 
-        meta.Remove = function(self, d)
+        function meta:Remove(d)
             if d.Position.x < d.Size.x then
                 for k, drawing in pairs(self.drawings) do
                     drawing:Remove()
@@ -841,29 +1649,29 @@ do
             end
         end
 
-        meta.Update = function(self, num, listLength, dt)
+        function meta:Update(num, listLength, dt)
             local pos = self.targetPos
 
-            local indexOffset = (listLength - num) * gap
-            if insety < indexOffset then
-                insety -= (insety - indexOffset) * 0.2
+            local indexOffset = (listLength - num) * self.gap
+            if self.insety < indexOffset then
+                self.insety -= (self.insety - indexOffset) * 0.2
             else
-                insety = indexOffset
+                self.insety = indexOffset
             end
             local size = self.size
 
-            local tpos = Vector2.new(pos.x - size.x / time - map(alpha, 0, 255, size.x, 0), pos.y + insety)
+            local tpos = Vector2.new(pos.x - size.x / self.time - math.remap(self.alpha, 0, 255, size.x, 0), pos.y + self.insety)
             self.pos = tpos
 
             local locRect = {
                 x = math.ceil(tpos.x),
                 y = math.ceil(tpos.y),
-                w = math.floor(size.x - map(255 - alpha, 0, 255, 0, 70)),
+                w = math.floor(size.x - math.remap(255 - self.alpha, 0, 255, 0, 70)),
                 h = size.y,
             }
-            --pos.set(-size.x / fc - map(alpha, 0, 255, size.x, 0), pos.y)
+            --pos.set(-size.x / fc - math.remap(self.alpha, 0, 255, size.x, 0), pos.y)
 
-            local fade = math.min(time * 12, alpha)
+            local fade = math.min(self.time * 12, self.alpha)
             fade = fade > 255 and 255 or fade < 0 and 0 or fade
 
             if self.enabled then
@@ -899,49 +1707,44 @@ do
                     end
                 end
 
-                time += estep * dt * 128 -- TODO need to do the duration
-                estep += eestep * dt * 64
+                self.time += self.estep * dt * 128 -- TODO need to do the duration
+                self.estep += self.eestep * dt * 64
             end
         end
 
-        meta.Fade = function(self, num, len, dt)
+        function meta:Fade(num, len, dt)
             if self.pos.x > self.targetPos.x - 0.2 * len or self.fading then
                 if not self.fading then
-                    estep = 0
+                    self.estep = 0
                 end
                 self.fading = true
-                alpha -= estep / 4 * len * dt * 50
-                eestep += 0.01 * dt * 100
+                self.alpha -= self.estep / 4 * len * dt * 50
+                self.eestep += 0.01 * dt * 100
             end
-            if alpha <= 0 then
+            if self.alpha <= 0 then
                 self:Remove(self.drawings[1])
             end
         end
     end
 
     function notification:Create(t, customcolor)
-        local gap = 25
-        local width = 18
-
-        local alpha = 255
-        local time = 0
-        local estep = 0
-        local eestep = 0.02
-
-        local insety = 0
+		local width = 18
 
         local Note = {
-
             enabled = true,
-
             targetPos = Vector2.new(50, 33),
-
             size = Vector2.new(200, width),
-
             drawings = {
                 outline = Rectangle(202, width + 2, false, Color3.new(0, 0, 0)),
                 fade = Rectangle(202, width + 2, false, Color3.new(0, 0, 0)),
             },
+            gap = 25,
+            width = width,
+            alpha = 255,
+            time = 0,
+            estep = 0,
+            eestep = 0.02,
+            insety = 0
         }
 
         setmetatable(Note, {__index = self.meta})
@@ -952,7 +1755,7 @@ do
         end
 
         local menu = BBOT.menu
-        local color = (menu and menu.GetVal) and customcolor or menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", COLOR))) or Color3.fromRGB(127, 72, 163)
+        local color = (menu and menu.GetVal) and (customcolor or menu:GetVal("Settings", "Cheat Settings", "Menu Accent") and Color3.fromRGB(unpack(menu:GetVal("Settings", "Cheat Settings", "Menu Accent", COLOR)))) or (customcolor or Color3.fromRGB(127, 72, 163))
 
         Note.drawings.text = Text(t)
         if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
@@ -1000,9 +1803,124 @@ end
 
 -- Menu
 do
-    local menu = {}
-    BBOT.menu = {}
+    local draw = BBOT.draw
+    local hook = BBOT.hook
+    local menuWidth, menuHeight = 500, 600
+    -- What in the fuck - WholeCream
+    -- I am going to have so much fun splitting the menu and the config apart
+    local menu = { -- this is for menu stuffs n shi
+        w = menuWidth,
+        h = menuHeight,
+        x = 0,
+        y = 0,
+        columns = {
+            width = math.floor((menuWidth - 40) / 2),
+            left = 17,
+            right = math.floor((menuWidth - 20) / 2) + 13,
+        },
+        activetab = 1,
+        open = true,
+        fadestart = 0,
+        fading = false,
+        mousedown = false,
+        postable = {},
+        options = {},
+        clrs = {
+            norm = {},
+            dark = {},
+            togz = {},
+        },
+        mc = { 127, 72, 163 },
+        watermark = {},
+        connections = {},
+        list = {},
+        unloaded = false,
+        copied_clr = nil,
+        game = "uni",
+        tabnames = {}, -- its used to change the tab num to the string (did it like this so its dynamic if u add or remove tabs or whatever :D)
+        friends = {},
+        priority = {},
+        muted = {},
+        spectating = false,
+        stat_menu = false,
+        load_time = 0,
+        log_multi = nil,
+        mgrouptabz = {},
+        backspaceheld = false,
+        backspacetime = -1,
+        backspaceflags = 0,
+        selectall = false,
+        modkeys = {
+            alt = {
+                direction = nil,
+            },
+            shift = {
+                direction = nil,
+            },
+        },
+        modkeydown = function(self, key, direction)
+            local keydata = self.modkeys[key]
+            return keydata.direction and keydata.direction == direction or false
+        end,
+        keybinds = {},
+        values = {}
+    }
+    BBOT.menu = menu
 
+    do -- Watermark setup
+        local wm = menu.watermark
+        wm.textString = " | " .. BBOT.username .. " | " .. os.date("%b. %d, %Y") .. " | Ver " .. BBOT.version
+        wm.pos = Vector2.new(50, 9)
+        wm.text = {}
+        local fulltext = "Bitch Bot" .. wm.textString
+        wm.width = #fulltext * 7 + 10
+        wm.height = 19
+        wm.rect = {}
+
+        draw:FilledRect(
+            false,
+            wm.pos.x,
+            wm.pos.y + 1,
+            wm.width,
+            2,
+            { menu.mc[1] - 40, menu.mc[2] - 40, menu.mc[3] - 40, 255 },
+            wm.rect
+        )
+        draw:FilledRect(false, wm.pos.x, wm.pos.y, wm.width, 2, { menu.mc[1], menu.mc[2], menu.mc[3], 255 }, wm.rect)
+        draw:FilledRect(false, wm.pos.x, wm.pos.y + 3, wm.width, wm.height - 5, { 50, 50, 50, 255 }, wm.rect)
+        for i = 0, wm.height - 4 do
+            draw:FilledRect(
+                false,
+                wm.pos.x,
+                wm.pos.y + 3 + i,
+                wm.width,
+                1,
+                { 50 - i * 1.7, 50 - i * 1.7, 50 - i * 1.7, 255 },
+                wm.rect
+            )
+        end
+        draw:OutlinedRect(false, wm.pos.x, wm.pos.y, wm.width, wm.height, { 0, 0, 0, 255 }, wm.rect)
+        draw:OutlinedRect(false, wm.pos.x - 1, wm.pos.y - 1, wm.width + 2, wm.height + 2, { 0, 0, 0, 255 * 0.4 }, wm.rect)
+        draw:OutlinedText(
+            fulltext,
+            2,
+            false,
+            wm.pos.x + 5,
+            wm.pos.y + 3,
+            13,
+            false,
+            { 255, 255, 255, 255 },
+            { 0, 0, 0, 255 },
+            wm.text
+        )
+    end
+
+    hook:Add("PostInitialize", "BBOT:WaterMark", function()
+        for k, v in pairs(menu.watermark.rect) do
+            v.Visible = true
+        end
+        menu.watermark.text[1].Visible = true
+    end)
 end
 
 -- Auxillary - Responsible for fetching and modifying phantom forces
@@ -1194,9 +2112,18 @@ end
 
 -- Init
 do
-    BBOT.hook:Call("PreInitalize")
-    BBOT.hook:Call("Initalize")
-    BBOT.hook:Call("PostInitalize")
+    BBOT.hook:Call("PreInitialize")
+    BBOT.hook:Call("Initialize")
+    BBOT.hook:Call("PostInitialize")
+end
+
+-- The Moment
+do
+    local loadtime = (BBOT.math.round(tick()-loadstart, 6))
+    BBOT.timer:Async(function()
+        BBOT.notification:Create(string.format("Done loading the " .. BBOT.game .. " cheat. (%d ms)", loadtime*1000))
+        BBOT.notification:Create("Press DELETE to open and close the menu!")
+    end)
 end
 end
 
