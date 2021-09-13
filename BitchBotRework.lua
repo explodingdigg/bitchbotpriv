@@ -4040,7 +4040,7 @@ do
                     return
                 end
             end
-            FireEvent("bb_buttonpressed", bp.tab, bp.groupbox, bp.name)
+           -- FireEvent("bb_buttonpressed", bp.tab, bp.groupbox, bp.name)
             --ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
             if bp == self.options["Settings"]["Cheat Settings"]["Unload Cheat"] then
                 self.fading = true
@@ -4470,7 +4470,7 @@ do
                                                 end
                                             end
                                             --TogglePressed:Fire(k1, k2, v2)
-                                            FireEvent("bb_togglepressed", k1, k2, v2)
+                                            --FireEvent("bb_togglepressed", k1, k2, v2)
                                         end
                                         if v2[5] ~= nil then
                                             if v2[5][2] == KEYBIND then
@@ -7712,6 +7712,391 @@ do
     for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
         table.insert(chat.spam_kill, s)
     end
+end
+
+-- Weapon Modifications
+do
+    -- From wholecream
+    -- configs aren't done so they are default to screw-pf aka my stuff...
+    -- this weapon module allows complete utter freedom of the gun's functions
+    local weapons = {}
+    BBOT.weapons = weapons
+    local hook = BBOT.hook
+    local char = BBOT.aux.char
+    local config = BBOT.config
+
+    -- Welcome to my hell.
+    -- ft. debug.setupvalue
+    local profiling_tick = tick()
+
+    local receivers = BBOT.network.receivers
+    local upvaluemods = {} -- testing? no problem reloading the script...
+    hook:Add("Unload", "UndoWeaponMods", function()
+        for i=1, #upvaluemods do
+            local v = upvaluemods[i]
+            debug.setupvalue(unpack(v))
+        end
+    end)
+
+    local function DetourKnifeLoader(related_func, index, knifeloader)
+        local newfunc = function(...)
+            hook:CallP("PreLoadKnife", ...)
+            local knifedata = knifeloader(...)
+            hook:CallP("PostLoadKnife", knifedata, ...)
+            return knifedata
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, knifeloader}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local function DetourGunLoader(related_func, index, gunloader)
+        local newfunc = function(...)
+            hook:CallP("PreLoadGun", ...)
+            local gundata = gunloader(...)
+            hook:CallP("PostLoadGun", gundata, ...)
+            return gundata
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, gunloader}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local done = false -- Causes synapse to crash LOL
+    local function DetourWeaponRequire(related_func, index, getweapoondata)
+        --[[if done then return end
+        done = true
+        local newfunc = function(...)
+            local modifications = getweapoondata(...)
+            modifications = BBOT.CopyTable(modifications)
+            hook:Call("GetWeaponData", modifications)
+            return modifications
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, getweapoondata}
+        debug.setupvalue(related_func, index, newfunc)]]
+    end
+
+    local function DetourModifyData(related_func, index, modifydata)
+        local newfunc = function(...)
+            local modifications = modifydata(...)
+            hook:CallP("ApplyGunModifications", modifications)
+            return modifications
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, modifydata}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local done = false
+    local function DetourGunSway(related_func, index, gunmovement)
+        if done then return end
+        done = true
+        local newfunc = function(...)
+            local cf = gunmovement(...)
+            mul = config:GetValue("Weapons", "Stat Modifications", "Movement", "SwayFactor")
+            if mul == 0 then
+                return CFrame.new()
+            end
+            local x, y, z = cf:GetComponents()
+            x = x * mul
+            y = y * mul
+            z = z * mul
+            local pitch, yaw, roll = cf:ToEulerAnglesYXZ()
+            pitch, yaw, roll = pitch * mul, yaw * mul, roll * mul
+            cf = CFrame.Angles(pitch, yaw, roll) + Vector3.new(x, y, z)
+            return cf
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, gunmovement}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local function DetourGunBob(related_func, index, gunmovement)
+        local newfunc = function(...)
+            local cf = gunmovement(...)
+            mul = config:GetValue("Weapons", "Stat Modifications", "Movement", "BobFactor")
+            if mul == 0 then
+                return CFrame.new()
+            end
+            local x, y, z = cf:GetComponents()
+            x = x * mul
+            y = y * mul
+            z = z * mul
+            local pitch, yaw, roll = cf:ToEulerAnglesYXZ()
+            pitch, yaw, roll = pitch * mul, yaw * mul, roll * mul
+            cf = CFrame.Angles(pitch, yaw, roll) + Vector3.new(x, y, z)
+            return cf
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, gunmovement}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local function hasvalue(tbl, value)
+        for i=1, #tbl do
+            local v = tbl[i]
+            if v == value then
+                return true
+            end
+        end
+    end
+
+    local workspace = BBOT.service:GetService("Workspace")
+    for k, v in pairs(receivers) do
+        local ups = debug.getupvalues(v)
+        for upperindex, related_func in pairs(ups) do
+            if typeof(related_func) == "function" then
+                local funcname = debug.getinfo(related_func).name
+                if funcname == "loadgun" then
+                    local _ups = debug.getupvalues(related_func)
+                    for index, modifydata in pairs(_ups) do
+                        if typeof(modifydata) == "function" then
+                            -- this also contains "gunbob" and "gunsway"
+                            -- we can change these as well...
+                            local name = debug.getinfo(modifydata).name
+                            if name == "gunrequire" then
+                                DetourWeaponRequire(related_func, index, modifydata)
+                            elseif name == "modifydata" then
+                                DetourModifyData(related_func, index, modifydata) -- Stats modification
+                            elseif name == "gunbob" then
+                                DetourGunBob(related_func, index, modifydata)
+                            elseif name == "gunsway" then
+                                DetourGunSway(related_func, index, modifydata)
+                            end
+                        end
+                    end
+
+                    DetourGunLoader(v, upperindex, related_func) -- this will allow us to modify before and after events of gun loading
+                    -- Want rainbow guns? well there ya go
+                elseif funcname == "loadknife" then
+                    local _ups = debug.getupvalues(related_func)
+                    for index, modifydata in pairs(_ups) do
+                        if typeof(modifydata) == "function" then
+                            -- this also contains "gunbob" and "gunsway"
+                            -- we can change these as well...
+                            local name = debug.getinfo(modifydata).name
+                            if name == "gunbob" then
+                                DetourGunBob(related_func, index, modifydata)
+                            elseif name == "gunsway" then
+                                DetourGunSway(related_func, index, modifydata)
+                            end
+                        end
+                    end
+
+                    DetourKnifeLoader(v, upperindex, related_func)
+                end
+            end
+        end
+    end
+
+    do
+        local ogrenadeloader = rawget(char, "loadgrenade")
+        hook:Add("Unload", "UndoWeaponDetourGrenades", function()
+            rawset(char, "loadgrenade", ogrenadeloader)
+        end)
+        local function loadgrenadee(self, ...)
+            hook:CallP("PreLoadGrenade", ...)
+            local gundata = ogrenadeloader(self, ...)
+            hook:CallP("PostLoadGrenade", gundata)
+            return gundata
+        end
+        rawset(char, "loadgrenade", newcclosure(loadgrenadee))
+    end
+
+    -- setup of our detoured controllers
+    hook:Add("PostLoadKnife", "PostLoadKnife", function(gundata, gunname)
+        local ups = debug.getupvalues(gundata.destroy)
+        for k, v in pairs(ups) do
+            local t = typeof(v)
+            if t == "Instance" and v.ClassName == "Model" then
+                gundata._model = v
+            end
+        end
+
+        local oldhide = gundata.hide
+        function gundata.hide(...)
+            hook:Call("PreHideKnife", gundata, ...)
+            return oldhide(...), hook:Call("PostHideKnife", gundata, ...)
+        end
+
+        local oldshow = gundata.show
+        function gundata.show(...)
+            hook:Call("PreShowKnife", gundata, ...)
+            return oldshow(...), hook:Call("PostShowKnife", gundata, ...)
+        end
+
+        local olddestroy = gundata.destroy
+        function gundata.show(...)
+            hook:Call("PreDestroyKnife", gundata, ...)
+            return olddestroy(...), hook:Call("PostDestroyKnife", gundata, ...)
+        end
+
+        local oldsetequipped = gundata.setequipped
+        function gundata.show(...)
+            hook:Call("PreEquippedKnife", gundata, ...)
+            return oldsetequipped(...), hook:Call("PostEquippedKnife", gundata, ...)
+        end
+
+        local ups = debug.getupvalues(gundata.playanimation)
+        for k, v in pairs(ups) do
+            local t = typeof(v)
+            if t == "table" and v.camodata and typeof(v.larm) == "table" and v.larm.basec0 then
+                gundata._anims = v
+            end
+        end
+
+        local oldstep = gundata.step
+        function gundata.step(...)
+            if core.gamelogic.currentgun == gundata then
+                hook:Call("PreKnifeThink", gundata)
+            end
+            local a, b, c, d = oldstep(...)
+            if core.gamelogic.currentgun == gundata then
+                hook:Call("PostKnifeThink", gundata)
+            end
+            return a, b, c, d
+        end
+    end)
+
+    hook:Add("PostLoadGun", "PostLoadGun", function(gundata, gunname)
+        local oldstep = gundata.step
+        local ups = debug.getupvalues(oldstep)
+        local partdata
+        for k, v in pairs(ups) do
+            if typeof(v) == "function" then
+                local sups = debug.getupvalues(v)
+                for kk, vv in pairs(sups) do
+                    local t = typeof(vv)
+                    if t == "table" and vv.sightpart and vv.sight then
+                        partdata = vv
+                    end
+                end
+            end
+        end
+
+        local ups = debug.getupvalues(gundata.playanimation)
+        for k, v in pairs(ups) do
+            local t = typeof(v)
+            if t == "table" and v.camodata and typeof(v.larm) == "table" and v.larm.basec0 then
+                gundata._anims = v
+            end
+        end
+
+        local ups = debug.getupvalues(gundata.destroy)
+        for k, v in pairs(ups) do
+            local t = typeof(v)
+            if t == "Instance" and v.ClassName == "Model" then
+                gundata._model = v
+            end
+        end
+
+        local oldreloadcancel = gundata.reloadcancel
+        function gundata.reloadcancel(self, force, ...)
+            if force then
+                gundata._lastreloadcancel = tick()
+            end
+            return oldreloadcancel(self, force, ...)
+        end
+
+        local oldhide = gundata.hide
+        function gundata.hide(...)
+            hook:Call("PreHideWeapon", gundata, ...)
+            return oldhide(...), hook:Call("PostHideWeapon", gundata, ...)
+        end
+
+        local oldshow = gundata.show
+        function gundata.show(...)
+            hook:Call("PreShowWeapon", gundata, ...)
+            return oldshow(...), hook:Call("PostShowWeapon", gundata, ...)
+        end
+
+        local olddestroy = gundata.destroy
+        function gundata.destroy(...)
+            hook:Call("PreDestroyWeapon", gundata, ...)
+            return olddestroy(...), hook:Call("PostDestroyWeapon", gundata, ...)
+        end
+
+        local oldsetequipped = gundata.setequipped
+        function gundata.setequipped(...)
+            hook:Call("PreEquippedWeapon", gundata, ...)
+            return oldsetequipped(...), hook:Call("PostEquippedWeapon", gundata, ...)
+        end
+
+        local ups = debug.getupvalues(oldsetequipped)
+        for k, v in pairs(ups) do
+            if typeof(v) == "function" then
+                local name = debug.getinfo(v).name
+                if name == "updatefiremodestability" then
+                    local ups = debug.getupvalues(v)
+                    for kk, vv in pairs(ups) do
+                        if typeof(vv) == "number" then
+                            if kk == 4 and vv == 1 then
+                                function gundata:getfiremode()
+                                    local mode = debug.getupvalue(v, kk) or 1
+                                    local rate
+                                    if typeof(self.data.firerate) == "table" then
+                                        rate = self.data.firerate[mode]
+                                    else
+                                        rate = self.data.firerate
+                                    end
+                                    return self.data.firemodes[mode], rate
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        function gundata.step(...)
+            -- this is where the aimbot controller will be
+            if core.gamelogic.currentgun == gundata then
+                if not gundata.partdata then
+                    gundata.partdata = partdata
+                end
+                hook:Call("PreWeaponThink", gundata, partdata)
+            end
+            local a, b, c, d = oldstep(...)
+            if core.gamelogic.currentgun == gundata then
+                hook:Call("PostWeaponThink", gundata, partdata)
+            end
+            return a, b, c, d
+        end
+    end)
+
+    -- @nata and @bitch, here is how your new modifications will now work, this is a sample from screw-pf
+
+    hook:Add("ApplyGunModifications", "BBOT:ModifyWeapon.Recoil", function(modifications)
+        if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
+        local rot = config:GetValue("Weapons", "Stat Modifications", "Recoil", "RotationFactor")
+        local trans = config:GetValue("Weapons", "Stat Modifications", "Recoil", "TransitionFactor")
+        local cam = config:GetValue("Weapons", "Stat Modifications", "Recoil", "CameraFactor")
+        local aim = config:GetValue("Weapons", "Stat Modifications", "Recoil", "AimFactor")
+        modifications.rotkickmin = modifications.rotkickmin * rot;
+        modifications.rotkickmax = modifications.rotkickmax * rot;
+        
+        modifications.transkickmin = modifications.transkickmin * trans;
+        modifications.transkickmax = modifications.transkickmax * trans;
+        
+        modifications.camkickmin = modifications.camkickmin * cam;
+        modifications.camkickmax = modifications.camkickmax * cam;
+        
+        modifications.aimrotkickmin = modifications.aimrotkickmin * rot * aim;
+        modifications.aimrotkickmax = modifications.aimrotkickmax * rot * aim;
+        
+        modifications.aimtranskickmin = modifications.aimtranskickmin * trans * aim;
+        modifications.aimtranskickmax = modifications.aimtranskickmax * trans * aim;
+        
+        modifications.aimcamkickmin = modifications.aimcamkickmin * cam * aim;
+        modifications.aimcamkickmax = modifications.aimcamkickmax * cam * aim;
+
+        local cks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "CamKickSpeed")
+        local acks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "AimCamKickSpeed")
+        local mks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "ModelKickSpeed")
+        local mrs = config:GetValue("Weapons", "Stat Modifications", "Recoil", "ModelRecoverSpeed")
+        local mkd = config:GetValue("Weapons", "Stat Modifications", "Recoil", "ModelKickDamper")
+
+        modifications.camkickspeed = modifications.camkickspeed * cks;
+        modifications.aimcamkickspeed = modifications.aimcamkickspeed * acks;
+        modifications.modelkickspeed = modifications.modelkickspeed * mks;
+        modifications.modelrecoverspeed = modifications.modelrecoverspeed * mrs;
+        modifications.modelkickdamper = modifications.modelkickdamper * mkd;
+    end)
 end
 
 -- Init
