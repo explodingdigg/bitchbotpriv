@@ -6,10 +6,9 @@
     Your welcome - WholeCream
 ]]
 
-if not BBOT then
-	BBOT = { username = "dev" }
-end
-local BBOT = BBOT -- I... um... fuck off ok?
+local _BBOT = _G.BBOT
+local BBOT = BBOT or { username = "dev", alias = "Bitch Bot" } -- I... um... fuck off ok?
+_G.BBOT = BBOT
 
 -- Locals/Upvalues
 -- Critical for quick stuff
@@ -26,8 +25,12 @@ do
 
     -- fallback on synapse x v2.9.1
     -- note: this is disabled due to problems with synapse's second console being all fucky wucky
-    --rconsoleclear()
-    local function rconsoleprint() end
+    local _rconsoleprint = rconsoleprint
+    local rconsoleprint = function() end
+    if BBOT.username == "dev" then
+        rconsoleclear()
+        rconsoleprint = _rconsoleprint
+    end
 
     log.async_registery = {}
     local printingvaluetypes = {
@@ -63,6 +66,7 @@ do
     local yellow = Color3.fromRGB(240,240,0)
     local red = Color3.fromRGB(240,0,0)
     local blue = Color3.fromRGB(0,120,240)
+    local bbot = Color3.fromRGB(127, 72, 163)
 
     function log.menu_display(...)
         if BBOT.menu and BBOT.menu.console then
@@ -85,7 +89,7 @@ do
     end
 
     function log.printdebug(...)
-        if not log.debug then return end
+        if BBOT.username ~= "dev" then return end
         scheduler[#scheduler+1] = {4, {...}}
     end
 
@@ -104,7 +108,7 @@ do
     -- This allows you to do this
     -- BBOT.log(LOG_NORMAL, "Hello world!")
     setmetatable(log, {
-        __call = function(type, ...)
+        __call = function(self, type, ...)
             if log.types[type] then
                 log.types[type](...)
             end
@@ -124,8 +128,8 @@ do
                 local text = valuetoprintable(unpack(v[2]))
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('[')
-                rconsoleprint('@@GREEN@@')
-                rconsoleprint(log.alias)
+                rconsoleprint('@@MAGENTA@@')
+                rconsoleprint(BBOT.alias)
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('] ' .. text .. "\n")
                 log.menu_display(white, "[", green, "System", white, "] ", unpack(makereadable(unpack(v[2]))))
@@ -133,8 +137,8 @@ do
                 local text = valuetoprintable(unpack(v[2]))
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('[')
-                rconsoleprint('@@GREEN@@')
-                rconsoleprint(log.alias)
+                rconsoleprint('@@MAGENTA@@')
+                rconsoleprint(BBOT.alias)
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('] [')
                 rconsoleprint('@@YELLOW@@')
@@ -146,8 +150,8 @@ do
                 local text = valuetoprintable(unpack(v[2]))
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('[')
-                rconsoleprint('@@GREEN@@')
-                rconsoleprint(log.alias)
+                rconsoleprint('@@MAGENTA@@')
+                rconsoleprint(BBOT.alias)
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('] [')
                 rconsoleprint('@@CYAN@@')
@@ -159,8 +163,8 @@ do
                 local text = valuetoprintable(unpack(v[2]))
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('[')
-                rconsoleprint('@@GREEN@@')
-                rconsoleprint(log.alias)
+                rconsoleprint('@@MAGENTA@@')
+                rconsoleprint(BBOT.alias)
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('] [')
                 rconsoleprint('@@RED@@')
@@ -178,12 +182,62 @@ do
         log.printwarn("Process has been halted")
         error()
     end
+
+    log(LOG_NORMAL, "Loading up Bitch Bot...")
+end
+
+-- for now
+local function ISOLATION(BBOT)
+local BBOT = BBOT
+
+do
+    local function round( num, idp )
+        local mult = 10 ^ ( idp or 0 )
+        return math.floor( num * mult + 0.5 ) / mult
+    end
+
+    if _BBOT and BBOT.username == "dev" then
+        BBOT.log(3, "Bitch Bot is already running")
+        if _BBOT.hook and _BBOT.hook.CallP then
+            BBOT.log(3, "Unloading...")
+            local t = tick()
+            _BBOT.hook:CallP("Unload")
+            t = tick() - t
+            BBOT.log(3, "Unloading took " .. round(t, 5) .. "s")
+        end
+        _BBOT.Unloaded = true
+    end
 end
 
 -- Table
 do
-    local _table = {}
+    local dcopy = function( t, lookup_table )
+        if ( t == nil ) then return nil end
+    
+        local copy = {}
+        setmetatable( copy, debug.getmetatable( t ) )
+        for i, v in pairs( t ) do
+            if ( typeof( v ) ~= "table" ) then
+                if v ~= nil then
+                    rawset(copy, i, v)
+                end
+            else
+                lookup_table = lookup_table or {}
+                lookup_table[ t ] = copy
+                if ( lookup_table[ v ] ) then
+                    rawset(copy, i, lookup_table[ v ])
+                else
+                    rawset(copy, i, dcopy( v, lookup_table ))
+                end
+            end
+        end
+        return copy
+    end
+
+    local _table = dcopy(table)
     BBOT.table = _table
+
+    _table.deepcopy = dcopy
 
     -- reverses a numerical table
     function _table.reverse(tbl)
@@ -197,12 +251,17 @@ end
 
 -- Math
 do
-    local math = {}
+    local math = BBOT.table.deepcopy(math)
     BBOT.math = math
 
     -- Remaps a value to new min and max
     function math.remap( value, inMin, inMax, outMin, outMax ) -- ty gmod
         return outMin + ( ( ( value - inMin ) / ( inMax - inMin ) ) * ( outMax - outMin ) )
+    end
+
+    function math.round( num, idp ) -- ty gmod again
+        local mult = 10 ^ ( idp or 0 )
+        return math.floor( num * mult + 0.5 ) / mult
     end
 end
 
@@ -233,7 +292,7 @@ end
 
 -- Hooks
 do
-    BBOT.printdebug("Hook library...")
+    BBOT.log(LOG_DEBUG, "Hook library...")
     local hook = {
         registry = {},
         _registry_qa = {}
@@ -242,7 +301,7 @@ do
     function hook:Add(name, ident, func) -- Adds a function to a hook array
         local hooks = self.registry
         
-        BBOT.printdebug('Added hook "' .. name .. '" with identity "' .. ident .. '"')
+        BBOT.log(LOG_DEBUG, 'Added hook "' .. name .. '" with identity "' .. ident .. '"')
 
         hooks[name] = hooks[name] or {}
         hooks[name][ident] = func
@@ -257,7 +316,7 @@ do
         local hooks = self.registry
         if not hooks[name] then return end
 
-        BBOT.printdebug('Removed hook "' .. name .. '" with identity "' .. ident .. '"')
+        BBOT.log(LOG_DEBUG, 'Removed hook "' .. name .. '" with identity "' .. ident .. '"')
 
         hooks[name][ident] = nil
     
@@ -270,7 +329,7 @@ do
     function hook:Clear(name) -- Clears an entire array of hooks
         local hooks = self.registry
 
-        BBOT.printdebug('Cleared hook "' .. name .. '" callbacks')
+        BBOT.log(LOG_DEBUG, 'Cleared hook "' .. name .. '" callbacks')
 
         hooks[name] = nil
         self._registry_qa[name] = {}
@@ -371,8 +430,7 @@ do
         table.insert(connections, con)
         return con
     end
-    hook:Add("Unload", "Unload", function() -- Reloading the cheat? no problem.
-        BBOT.Destroyed = true
+    hook:Add("Unload", "Unload", function() -- Reloading the cheat? no problem.\
         for i=1, #connections do
             connections[i]:Disconnect()
         end
@@ -429,16 +487,16 @@ end
 
 -- Loops
 do
-    BBOT.printdebug("Loops library...")
+    BBOT.log(LOG_DEBUG, "Loops library...")
     local loop = {
         registry = {}
     }
     BBOT.loop = loop
     local hook = BBOT.hook
     hook:Add("Unload", "KillLoops", function()
-        BBOT.printdebug("Purging old loops...")
+        BBOT.log(LOG_DEBUG, "Purging old loops...")
         BBOT.loop:KillAll()
-        BBOT.printdebug("Done")
+        BBOT.log(LOG_DEBUG, "Done")
     end)
     function loop:KillAll()
         local tbl = self:GetTable()
@@ -453,7 +511,7 @@ do
         local loops = self.registry
         if loops[name] ~= nil then return end
 
-        BBOT.printdebug('Creating loop "' .. name .. '"')
+        BBOT.log(LOG_DEBUG, 'Creating loop "' .. name .. '"')
 
         loops[name] = { }
         loops[name].Running = false
@@ -489,7 +547,7 @@ do
             end
         end
         
-        BBOT.printdebug('Running loop "' .. name .. '"')
+        BBOT.log(LOG_DEBUG, 'Running loop "' .. name .. '"')
 
         loops[name].Running = true
         local succ, out = coroutine.resume(loops[name].Loop)
@@ -501,7 +559,7 @@ do
         local loops = self.registry
         if loops[name] == nil then return end
 
-        BBOT.printdebug('Stopping loop "' .. name .. '"')
+        BBOT.log(LOG_DEBUG, 'Stopping loop "' .. name .. '"')
 
         loops[name].Running = false
     end
@@ -509,7 +567,7 @@ do
         local loops = self.registry
         if loops[name] == nil then return end
         self:Stop(name)
-        BBOT.printdebug('Removing loop "' .. name .. '"')
+        BBOT.log(LOG_DEBUG, 'Removing loop "' .. name .. '"')
         loops[name].Destroy = true
         loops[name] = nil
     end
@@ -520,7 +578,7 @@ end
 
 -- Timers
 do
-    BBOT.printdebug("Timer library...")
+    BBOT.log(LOG_DEBUG, "Timer library...")
     local timer = {
         registry = {}
     }
@@ -545,7 +603,7 @@ do
         else
             local reg = self.registry
             local index = #reg+1
-            BBOT.printdebug("Created timer '" .. ident .. "'")
+            BBOT.log(LOG_DEBUG, "Created timer '" .. ident .. "'")
             reg[index] = {
                 identifier = ident,
                 delay = delay,
@@ -566,7 +624,7 @@ do
             local t, index = timer:Get(timer.ToRemove[i])
             if t then
                 table.remove(timer.registry, index)
-                BBOT.printdebug("Removed timer '" .. identifier .. "'")
+                BBOT.log(LOG_DEBUG, "Removed timer '" .. identifier .. "'")
             end
         end
     end
@@ -667,10 +725,10 @@ do
                     else
                         local errlog = BBOT.stringExplode("\n", err, false)
                         BBOT.log(LOG_ERROR, "Error in timer library! - ", errlog[1])
-                        BBOT.anonprint("Call stack,")
+                        BBOT.log(LOG_ANON, "Call stack,")
                         if #errlog > 1 then
                             for i=2, #errlog do
-                                BBOT.anonprint(errlog[i])
+                                BBOT.log(LOG_ANON, errlog[i])
                             end
                         end
                         table.remove(timers, i-c)
@@ -685,7 +743,7 @@ do
             local t, index = timer:Get(timer.ToRemove[i])
             if t then
                 table.remove(timer.registry, index)
-                BBOT.printdebug("Removed timer '" .. t.identifier .. "'")
+                BBOT.log(LOG_DEBUG, "Removed timer '" .. t.identifier .. "'")
             end
         end
 
@@ -721,8 +779,8 @@ do
         writefile("bitchbot/debuglog.bb", "")
     end
 
-    if not isfolder("bitchbot/" .. menu.game) then
-        makefolder("bitchbot/" .. menu.game)
+    if not isfolder("bitchbot/" .. BBOT.game) then
+        makefolder("bitchbot/" .. BBOT.game)
     end
 end
 
@@ -926,6 +984,18 @@ do
 			end
 		end
     end)
+
+    hook:Add("Unload", "BBOT:Notifications", function()
+        local notes = notification.registry
+		for k = 1, #notes do
+			local v = notes[k]
+            for index, drawing in pairs(v.drawings) do
+                drawing:Remove()
+                drawing = false
+            end
+        end
+        notification.registry = {}
+    end)
 end
 
 -- Menu
@@ -937,6 +1007,7 @@ end
 
 -- Auxillary - Responsible for fetching and modifying phantom forces
 do
+    local math = BBOT.math
     local aux = {}
     BBOT.aux = aux
 
@@ -967,6 +1038,8 @@ do
         ["trajectory"] = "physics",
         ["getupdater"] = "replication",
 
+        -- Not sure where this is supposed to go but ok...
+        -- TODO: Nata/Bitch
         ["call"] = true,
         ["gunbob"] = true,
         ["gunsway"] = true,
@@ -977,112 +1050,114 @@ do
         ["updateplayernames"] = true,
     }
 
-    local core_aux, core_aux_sub = {}, {}
+    function aux:_Scan()
+        local core_aux, core_aux_sub = {}, {}
 
-    local function CheckNGet(result)
-        for k, v in next, aux_tables do
-            local failed = false
-            for i=1, #v do
-                if not result[v[i]] then
-                    failed = true
-                    break
-                end
-            end
-            if not failed then
-                if core_aux[k] ~= result then
-                    if core_aux[k] ~= nil then
-                        return k
-                    else
-                        core_aux[k] = result
-                        BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. k .. '"')
+        function self._CheckTable(result) -- for now...
+            for k, v in next, aux_tables do
+                local failed = false
+                for i=1, #v do
+                    if not rawget(result, v[i]) then
+                        failed = true
+                        break
                     end
                 end
-            end
-        end
-    end
-
-    BBOT.log(LOG_DEBUG, "Scanning debug.getregistry...")
-    local profiling_tick = tick()
-    local reg = debug.getregistry()
-    for _,v in next, reg do
-        if(typeof(v) == 'table')then
-            local aux = CheckNGet(v)
-            if aux then
-                BBOT.log(LOG_ERROR, "Duplicate auxillary \"" .. aux .. "\"")
-                BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
-                return
-            end
-        elseif(typeof(v) == 'function')then
-            local ups = debug.getupvalues(v)
-            for k, v in pairs(ups) do
-                if typeof(v) == "table" then
-                    local succ, aux = pcall(CheckNGet, v)
-                    if succ and aux ~= nil then
-                        BBOT.log(LOG_ERROR, "Duplicate auxillary \"" .. aux .. "\"")
-                        BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
-                        return
-                    end
-                end
-            end
-
-            local name = debug.getinfo(v).name
-            if aux_functions[name] then
-                core_aux_sub[name] = v
-            end
-        end
-    end
-
-    BBOT.log(LOG_DEBUG, "Scanning auxillaries...")
-    for k, v in next, core_aux do
-        for kk, vv in next, v do
-            if typeof(vv) == "function" then
-                local ups = debug.getupvalues(vv)
-                for kkk, vvv in pairs(ups) do
-                    if typeof(vvv) == "table" then
-                        local aux = CheckNGet(vvv)
-                        if aux then
-                            BBOT.log(LOG_ERROR, "Duplicate auxillary \"" .. aux .. "\"")
-                            BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
-                            return
+                if not failed then
+                    if core_aux[k] ~= result then
+                        if core_aux[k] ~= nil then
+                            return k
+                        else
+                            core_aux[k] = result
+                            BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. k .. '"')
                         end
                     end
                 end
             end
         end
-    end
 
-    BBOT.log(LOG_DEBUG, "Checking auxillaries...")
-    for k, v in next, aux_tables do
-        if not core_aux[k] then
-            BBOT.log(LOG_ERROR, "Couldn't find auxillary \"" .. k ..  "\"")
-            BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
-            return
-        end
-    end
+        BBOT.log(LOG_DEBUG, "Scanning...")
+        local reg = getgc(true)
+        for _,v in next, reg do
+            if(typeof(v) == 'table')then
+                local ax = self._CheckTable(v)
+                if ax then
+                    return "Duplicate auxillary \"" .. ax .. "\""
+                end
+            elseif(typeof(v) == 'function')then
+                local ups = debug.getupvalues(v)
+                for k, v in pairs(ups) do
+                    if typeof(v) == "table" then
+                        local succ, ax = pcall(self._CheckTable, v)
+                        if succ and ax ~= nil then
+                            return "Duplicate auxillary \"" .. ax .. "\""
+                        end
+                    end
+                end
 
-    for k, v in next, core_aux_sub do
-        if not aux_functions[k] then
-            BBOT.log(LOG_ERROR, "Couldn't find auxillary \"" .. k ..  "\"")
-            BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
-            return
-        end
-    end
-
-    for k, v in next, core_aux do
-        aux[k] = v
-    end
-
-    for k, v in next, core_aux_sub do
-        local saveas = aux_functions[k]
-        if saveas == true then
-            aux[k] = v
-        else
-            if not aux[saveas] then
-                aux[saveas] = {}
+                local name = debug.getinfo(v).name
+                if aux_functions[name] then
+                    BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"')
+                    core_aux_sub[name] = v
+                end
             end
-            aux[saveas][k] = v
+        end
+
+        BBOT.log(LOG_DEBUG, "Scanning auxillaries...")
+        for k, v in next, core_aux do
+            for kk, vv in next, v do
+                if typeof(vv) == "function" then
+                    local ups = debug.getupvalues(vv)
+                    for kkk, vvv in pairs(ups) do
+                        if typeof(vvv) == "table" then
+                            local ax = self._CheckTable(vvv)
+                            if ax then
+                                return "Duplicate auxillary \"" .. ax .. "\""
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        BBOT.log(LOG_DEBUG, "Checking auxillaries...")
+        for k, v in next, aux_tables do
+            if not core_aux[k] then
+                return "Couldn't find auxillary \"" .. k ..  "\""
+            end
+        end
+
+        for k, v in next, core_aux_sub do
+            if not aux_functions[k] then
+                return "Couldn't find auxillary \"" .. k ..  "\""
+            end
+        end
+
+        for k, v in next, core_aux do
+            self[k] = v
+        end
+
+        for k, v in next, core_aux_sub do
+            local saveas = aux_functions[k]
+            if saveas == true then
+                self[k] = v
+            else
+                if not self[saveas] then
+                    self[saveas] = {}
+                end
+                self[saveas][k] = v
+            end
         end
     end
+
+    local profiling_tick = tick()
+    local error = aux:_Scan()
+    if error then
+        BBOT.log(LOG_ERROR, error)
+        BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
+        return
+    end
+    local dt = tick() - profiling_tick
+    BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
 end
 
 -- Chat
@@ -1115,8 +1190,6 @@ do
     for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
         table.insert(chat.spam_kill, s)
     end
-
-
 end
 
 -- Init
@@ -1124,4 +1197,10 @@ do
     BBOT.hook:Call("PreInitalize")
     BBOT.hook:Call("Initalize")
     BBOT.hook:Call("PostInitalize")
+end
+end
+
+local ran, err = xpcall(ISOLATION, debug.traceback, BBOT)
+if not ran then
+    BBOT.log(LOG_ERROR, "Error loading Bitch Bot -", err)
 end
