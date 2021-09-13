@@ -639,9 +639,15 @@ do
     hook:bindEvent(userinputservice.InputBegan, "InputBegan")
     hook:bindEvent(userinputservice.InputEnded, "InputEnded")
 
-    mouse.Move:Connect(function()
-        hook:CallP("Mouse.Move", mouse.X, mouse.Y)
+    local lastMousePos = Vector2.new()
+    hook:Add("RenderStep.First", "Mouse.Move", function()
+        local x, y = mouse.X, mouse.Y
+        hook:Call("Mouse.Move", lastMousePos ~= Vector2.new(x, y), x, y)
+        lastMousePos = Vector2.new(x, y)
     end)
+
+    hook:bindEvent(mouse.WheelForward, "WheelForward")
+    hook:bindEvent(mouse.WheelBackward, "WheelBackward")
 
     hook:bindEvent(runservice.Stepped, "Step")
     hook:bindEvent(runservice.Heartbeat, "Heartbeat")
@@ -1435,6 +1441,7 @@ do
     local hook = BBOT.hook
     local string = BBOT.string
     local LOCAL_MOUSE = BBOT.service:GetService("Mouse")
+    
     local color = BBOT.color
     local menuWidth, menuHeight = 500, 600
     -- What in the fuck - WholeCream
@@ -1497,6 +1504,7 @@ do
         values = {}
     }
     BBOT.menu = menu
+    menu.mousebehavior = Enum.MouseBehavior.Default -- wtf?
 
     local textBoxLetters = {
         "A",
@@ -2144,6 +2152,12 @@ do
         end
         return result
     end
+
+    local Camera = BBOT.service:GetService("CurrentCamera")
+    local SCREEN_SIZE = Camera.ViewportSize
+
+    menu.x = math.floor((SCREEN_SIZE.x / 2) - (menu.w / 2))
+    menu.y = math.floor((SCREEN_SIZE.y / 2) - (menu.h / 2))
 
     local RGB = Color3.fromRGB
     function menu:Initialize(menutable)
@@ -3149,10 +3163,8 @@ do
         )
         draw:OutlinedText("", 2, false, 0, 0, 13, false, { 255, 255, 255, 255 }, { 15, 15, 15 }, bbmouse)
         draw:OutlinedText("?", 2, false, 0, 0, 13, false, { 255, 255, 255, 255 }, { 15, 15, 15 }, bbmouse)
-    
-        local lastMousePos = Vector2.new()
-        function self:SetMousePosition(x, y)
-            FireEvent("bb_mousemoved", lastMousePos ~= Vector2.new(x, y))
+
+        hook:Add("Mouse.Move", "BBOT:Menu.Cursor", function(b, x, y)
             for k = 1, #bbmouse do
                 local v = bbmouse[k]
                 if k ~= #bbmouse and k ~= #bbmouse - 1 then
@@ -3163,8 +3175,7 @@ do
                     v.Position = Vector2.new(x + 10, y + 46)
                 end
             end
-            lastMousePos = Vector2.new(x, y)
-        end
+        end)
     
         function self:SetColor(r, g, b)
             self.watermark.rect[1].Color = RGB(r - 40, g - 40, b - 40)
@@ -3237,7 +3248,7 @@ do
         local isPlayerScoped = false
     
         function self:InputBeganMenu(key) --ANCHOR self input
-            if key.KeyCode == Enum.KeyCode.Delete and not loadingthing.Visible then
+            if key.KeyCode == Enum.KeyCode.Delete then
                 cp.dragging_m = false
                 cp.dragging_r = false
                 cp.dragging_b = false
@@ -3372,7 +3383,8 @@ do
                 end
             end
         end
-    
+        
+        local INPUT_SERVICE = BBOT.service:GetService("UserInputService")
         function self:InputBeganKeybinds(key) -- this is super shit because once we add mouse we need to change all this shit to be the contextaction stuff
             if INPUT_SERVICE:GetFocusedTextBox() or self.textboxopen then
                 return
@@ -4785,7 +4797,9 @@ do
     
         local clickspot_x, clickspot_y, original_menu_x, original_menu_y = 0, 0, 0, 0
         
-        self.connections.mwf = LOCAL_MOUSE.WheelForward:Connect(function()
+        -- Ya wana know what ur missing?
+        -- Mouse Move Delta!
+        hook:Add("WheelForward", "BBOT:Menu", function()
             if self.open then
                 for k, v in pairs(self.options) do
                     if self.tabnames[self.activetab] == k then
@@ -4802,8 +4816,8 @@ do
                 end
             end
         end)
-    
-        self.connections.mwb = LOCAL_MOUSE.WheelBackward:Connect(function()
+
+        hook:Add("WheelBackward", "BBOT:Menu", function()
             if self.open then
                 for k, v in pairs(self.options) do
                     if self.tabnames[self.activetab] == k then
@@ -4864,10 +4878,11 @@ do
         self.lastActive = true
         self.open = false
         self.windowactive = true
-        self.connections.mousemoved = MouseMoved:connect(function(b)
-            self.windowactive = iswindowactive() or b
+        hook:Add("Mouse.Move", "Menu.WindowActivity", function(moved, x, y)
+            self.windowactive = iswindowactive() or moved
         end)
-    
+        
+        local Camera = BBOT.service:GetService("CurrentCamera")
         local function renderSteppedMenu(fdt)
             if cp.dragging_m or cp.dragging_r or cp.dragging_b then
                 menucolor()
@@ -4955,7 +4970,6 @@ do
                     end
                 end
             end
-            self:SetMousePosition(LOCAL_MOUSE.x, LOCAL_MOUSE.y)
             local settooltip = true
             if self.open or self.fading then
                 self:SetPlusMinus(0, 20, 20)
@@ -5262,8 +5276,8 @@ do
             end
         end
     
-        self.connections.inputstart = INPUT_SERVICE.InputBegan:Connect(function(input)
-            if self then
+        hook:Add("InputBegan", "BBOT:Menu", function(input)
+            if self then -- wat?
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
                     self.mousedown = true
                     if self.open and not self.fading then
@@ -5330,8 +5344,8 @@ do
                 end
             end
         end)
-    
-        self.connections.inputended = INPUT_SERVICE.InputEnded:Connect(function(input)
+
+        hook:Add("InputEnded", "BBOT:Menu", function(input)
             self:InputEndedKeybinds(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 self.mousedown = false
@@ -5348,8 +5362,10 @@ do
                 end
             end
         end)
-    
-        self.connections.renderstepped = game.RunService.RenderStepped:Connect(renderSteppedMenu) -- fucking asshole 🖕🖕🖕
+
+        -- fucking asshole 🖕🖕🖕
+        -- who now? - WholeCream
+        hook:Add("RenderStepped", "BBOT:Menu", renderSteppedMenu)
     
         function self:unload()
             getgenv().v2 = nil
@@ -5387,6 +5403,8 @@ do
                 --TODO nate do this please
                 -- remember to store any "game" metatable hooks PLEASE PLEASE because this will ensure it replaces the meta so that it UNLOADS properly
                 -- rconsoleerr("fatal error: no old game meta found! (UNLOAD PROBABLY WON'T WORK AS EXPECTED)")
+
+                -- How about fuck that and I just make it hook related - WholeCream
             end
     
             setreadonly(mt, true)
