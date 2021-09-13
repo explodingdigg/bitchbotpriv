@@ -12,7 +12,11 @@
 ]]
 
 local _BBOT = _G.BBOT
-local BBOT = BBOT or { username = "dev", alias = "Bitch Bot", version = "¯\\_(ツ)_/¯" } -- I... um... fuck off ok?
+local username = (BBOT and BBOT.username or nil)
+if BBOT and BBOT.__init then
+    BBOT = nil
+end
+local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "¯\\_(?)_/¯", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
 -- Locals/Upvalues
@@ -1441,7 +1445,7 @@ do
     local hook = BBOT.hook
     local string = BBOT.string
     local LOCAL_MOUSE = BBOT.service:GetService("Mouse")
-    
+    local INPUT_SERVICE = BBOT.service:GetService("UserInputService")
     local color = BBOT.color
     local menuWidth, menuHeight = 500, 600
     -- What in the fuck - WholeCream
@@ -1504,7 +1508,59 @@ do
         values = {}
     }
     BBOT.menu = menu
-    menu.mousebehavior = Enum.MouseBehavior.Default -- wtf?
+
+    if BBOT.game == "pf" then
+        function menu:MouseCapture()
+            if self.open then
+                if BBOT.aux and BBOT.aux.char.alive then
+                    INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
+                else
+                    INPUT_SERVICE.MouseIconEnabled = false
+                end
+            else
+                if BBOT.aux and BBOT.aux.char.alive then
+                    INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.LockCenter
+                    INPUT_SERVICE.MouseIconEnabled = false
+                else
+                    INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
+                    INPUT_SERVICE.MouseIconEnabled = true
+                end
+            end
+        end
+    else
+        -- I swear to christ I will throw a temper tantrum
+        menu.mousebehavior = Enum.MouseBehavior.Default
+        local mt = getrawmetatable(game)
+        local newindex = mt.__newindex
+        setreadonly(mt, false)
+        mt.__newindex = newcclosure(function(t, p, v)
+            if not checkcaller() then
+                if t == INPUT_SERVICE then
+                    if p == "MouseBehavior" then
+                        menu.mousebehavior = v
+                        if menu.open then
+                            newindex(t, p, Enum.MouseBehavior.Default)
+                            return
+                        end
+                    end
+                end
+            end
+            return newindex(t, p, v)
+        end)
+        menu.oldmt = {
+            __newindex = newindex,
+        }
+        setreadonly(mt, true)
+        function menu:MouseCapture()
+            if self.open then
+                INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
+            else
+                if INPUT_SERVICE.MouseBehavior ~= self.mousebehavior then
+                    INPUT_SERVICE.MouseBehavior = self.mousebehavior
+                end
+            end
+        end
+    end
 
     local textBoxLetters = {
         "A",
@@ -3384,7 +3440,6 @@ do
             end
         end
         
-        local INPUT_SERVICE = BBOT.service:GetService("UserInputService")
         function self:InputBeganKeybinds(key) -- this is super shit because once we add mouse we need to change all this shit to be the contextaction stuff
             if INPUT_SERVICE:GetFocusedTextBox() or self.textboxopen then
                 return
@@ -4961,15 +5016,7 @@ do
                     end
                 end
             end
-            if self.game == "uni" then
-                if self.open then
-                    INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
-                else
-                    if INPUT_SERVICE.MouseBehavior ~= self.mousebehavior then
-                        INPUT_SERVICE.MouseBehavior = self.mousebehavior
-                    end
-                end
-            end
+            self:MouseCapture()
             local settooltip = true
             if self.open or self.fading then
                 self:SetPlusMinus(0, 20, 20)
@@ -7618,7 +7665,8 @@ do
 
                 local name = debug.getinfo(v).name
                 if aux_functions[name] then
-                    BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"')
+                    local path = aux_functions[name]
+                    BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"' .. (path ~= true and " sorted into " .. path or ""))
                     core_aux_sub[name] = v
                 end
             end
@@ -7667,6 +7715,23 @@ do
                     self[saveas] = {}
                 end
                 self[saveas][k] = v
+            end
+        end
+
+        for _,v in next, reg do
+            if typeof(v) == "function" then
+                local dbg = debug.getinfo(v)
+                if string.find(dbg.short_src, "network", 1, true) and dbg.name ~= "call" then
+                    local ups = debug.getupvalues(v)
+                    for k, vv in pairs(ups) do
+                        if typeof(vv) == "table" then
+                            if #vv > 10 then
+                                rawset(aux.network, "receivers", vv)
+                                BBOT.log(LOG_DEBUG, "Found network receivers")
+                            end
+                        end
+                    end
+                end
             end
         end
     end
@@ -7724,13 +7789,14 @@ do
     BBOT.weapons = weapons
     local hook = BBOT.hook
     local char = BBOT.aux.char
+    local gamelogic = BBOT.aux.gamelogic
     local config = BBOT.config
 
     -- Welcome to my hell.
     -- ft. debug.setupvalue
     local profiling_tick = tick()
 
-    local receivers = BBOT.network.receivers
+    local receivers = BBOT.aux.network.receivers
     local upvaluemods = {} -- testing? no problem reloading the script...
     hook:Add("Unload", "BBOT:WeaponModifications", function()
         for i=1, #upvaluemods do
@@ -7791,7 +7857,7 @@ do
         done = true
         local newfunc = function(...)
             local cf = gunmovement(...)
-            mul = config:GetValue("Weapons", "Stat Modifications", "Movement", "SwayFactor")
+            mul = 1 -- sway factor config here
             if mul == 0 then
                 return CFrame.new()
             end
@@ -7811,7 +7877,7 @@ do
     local function DetourGunBob(related_func, index, gunmovement)
         local newfunc = function(...)
             local cf = gunmovement(...)
-            mul = config:GetValue("Weapons", "Stat Modifications", "Movement", "BobFactor")
+            mul = 1 -- bob factor config here
             if mul == 0 then
                 return CFrame.new()
             end
@@ -7943,11 +8009,11 @@ do
 
         local oldstep = gundata.step
         function gundata.step(...)
-            if core.gamelogic.currentgun == gundata then
+            if gamelogic.currentgun == gundata then
                 hook:CallP("PreKnifeStep", gundata)
             end
             local a, b, c, d = oldstep(...)
-            if core.gamelogic.currentgun == gundata then
+            if gamelogic.currentgun == gundata then
                 hook:CallP("PostKnifeStep", gundata)
             end
             return a, b, c, d
@@ -8046,14 +8112,14 @@ do
 
         function gundata.step(...)
             -- this is where the aimbot controller will be
-            if core.gamelogic.currentgun == gundata then
+            if gamelogic.currentgun == gundata then
                 if not gundata.partdata then
                     gundata.partdata = partdata
                 end
                 hook:CallP("PreWeaponStep", gundata, partdata)
             end
             local a, b, c, d = oldstep(...)
-            if core.gamelogic.currentgun == gundata then
+            if gamelogic.currentgun == gundata then
                 hook:CallP("PostWeaponStep", gundata, partdata)
             end
             return a, b, c, d
@@ -8062,7 +8128,7 @@ do
 
     -- @nata and @bitch, here is how your new modifications will now work, this is a sample from screw-pf
 
-    hook:Add("WeaponModifyData", "BBOT:ModifyWeapon.Recoil", function(modifications)
+    --[[hook:Add("WeaponModifyData", "BBOT:ModifyWeapon.Recoil", function(modifications)
         if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
         local rot = config:GetValue("Weapons", "Stat Modifications", "Recoil", "RotationFactor")
         local trans = config:GetValue("Weapons", "Stat Modifications", "Recoil", "TransitionFactor")
@@ -8104,7 +8170,7 @@ do
         if not weapons.Firing then
             gundata:shoot(false)
         end
-    end)
+    end)]]
 end
 
 -- Init
@@ -8118,8 +8184,14 @@ end
 do
     local loadtime = (BBOT.math.round(tick()-loadstart, 6))
     BBOT.timer:Async(function()
+        if _BBOT then
+            BBOT.notification:Create("There was an already active version of bbot running, this has been unloaded")
+        end
         BBOT.notification:Create(string.format("Done loading the " .. BBOT.game .. " cheat. (%d ms)", loadtime*1000))
         BBOT.notification:Create("Press DELETE to open and close the menu!")
+        if BBOT.username == "dev" then
+            BBOT.notification:Create("So what are we doin today? mr.dev")
+        end
     end)
 end
 end
