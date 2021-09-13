@@ -7857,7 +7857,7 @@ do
         done = true
         local newfunc = function(...)
             local cf = gunmovement(...)
-            mul = 1 -- sway factor config here
+            local mul = 1 -- sway factor config here
             if mul == 0 then
                 return CFrame.new()
             end
@@ -7877,7 +7877,7 @@ do
     local function DetourGunBob(related_func, index, gunmovement)
         local newfunc = function(...)
             local cf = gunmovement(...)
-            mul = 1 -- bob factor config here
+            local mul = 1 -- bob factor config here
             if mul == 0 then
                 return CFrame.new()
             end
