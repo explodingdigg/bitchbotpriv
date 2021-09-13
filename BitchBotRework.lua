@@ -7943,11 +7943,11 @@ do
         local oldstep = gundata.step
         function gundata.step(...)
             if core.gamelogic.currentgun == gundata then
-                hook:Call("PreKnifeThink", gundata)
+                hook:CallP("PreKnifeStep", gundata)
             end
             local a, b, c, d = oldstep(...)
             if core.gamelogic.currentgun == gundata then
-                hook:Call("PostKnifeThink", gundata)
+                hook:CallP("PostKnifeStep", gundata)
             end
             return a, b, c, d
         end
@@ -8049,11 +8049,11 @@ do
                 if not gundata.partdata then
                     gundata.partdata = partdata
                 end
-                hook:Call("PreWeaponThink", gundata, partdata)
+                hook:CallP("PreWeaponStep", gundata, partdata)
             end
             local a, b, c, d = oldstep(...)
             if core.gamelogic.currentgun == gundata then
-                hook:Call("PostWeaponThink", gundata, partdata)
+                hook:CallP("PostWeaponStep", gundata, partdata)
             end
             return a, b, c, d
         end
