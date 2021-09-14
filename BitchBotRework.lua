@@ -4266,77 +4266,33 @@ do
         return result
     end
 
+    -- Why did this have to be so difficult to do?
     hook:Add("Menu.ToggleChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
-        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(metadata[1], a, b, c)
-        local val = config:GetValue(a, b, c)
-        if typeof(val) == "table" then
-            BBOT.log(LOG_NORMAL, "aftermath,")
-            BBOT.log.printtable(val)
-        else
-            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
-        end
     end)
 
     hook:Add("Menu.SliderChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
-        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(metadata[1], a, b, c)
-        local val = config:GetValue(a, b, c)
-        if typeof(val) == "table" then
-            BBOT.log(LOG_NORMAL, "aftermath,")
-            BBOT.log.printtable(val)
-        else
-            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
-        end
     end)
 
     hook:Add("Menu.KeyBindChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
-        BBOT.log.printtable(metadata)
-        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(config.enums.KeyCode.inverseId[metadata[1]], a, b, c)
-        local val = config:GetValue(a, b, c)
-        if typeof(val) == "table" then
-            BBOT.log(LOG_NORMAL, "aftermath,")
-            BBOT.log.printtable(val)
-        else
-            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
-        end
     end)
 
     hook:Add("Menu.TextBoxChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
-        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(metadata[1], a, b, c)
-        local val = config:GetValue(a, b, c)
-        if typeof(val) == "table" then
-            BBOT.log(LOG_NORMAL, "aftermath,")
-            BBOT.log.printtable(val)
-        else
-            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
-        end
     end)
 
     hook:Add("Menu.DropBoxChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
-        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[6][metadata[1]])
         config:SetValue(metadata[6][metadata[1]], a, b, c)
-        local val = config:GetValue(a, b, c)
-        if typeof(val) == "table" then
-            BBOT.log(LOG_NORMAL, "aftermath,")
-            BBOT.log.printtable(val)
-        else
-            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
-        end
     end)
 
     hook:Add("Menu.ComboBoxChanged", "BBOT:Config.Handle", function(a, b, c, metadata, i)
-        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1][i][1], " - ", metadata[1][i][2])
         config:SetValue(metadata[1], a, b, c)
-        local val = config:GetValue(a, b, c)
-        if typeof(val) == "table" then
-            BBOT.log(LOG_NORMAL, "aftermath,")
-            BBOT.log.printtable(val)
-        else
-            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
-        end
+    end)
+
+    hook:Add("Menu.ColorPickerChanged", "BBOT:Config.Handle", function(metadata, a, b, c, d)
+        config:SetValue(Color3.fromRGB(unpack(metadata[1])), a, b, c, d)
     end)
 end
 
@@ -7379,6 +7335,7 @@ do
                                                     }
                                                 end
                                             end
+                                            hook:Call("Menu.ColorPickerChanged", v3, k, k1, k2)
                                             self:SetColorPicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
                                             v2[5][5] = false
                                             self.colorPickerOpen = nil -- close colorpicker
@@ -7413,6 +7370,7 @@ do
                                                         }
                                                     end
                                                 end
+                                                hook:Call("Menu.ColorPickerChanged", v3, k, k1, k2, v3[6])
                                                 self:SetColorPicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
                                                 v3[5] = false
                                                 self.colorPickerOpen = nil -- close colorpicker
@@ -7471,6 +7429,7 @@ do
                             math.floor(tempclr.B * 255),
                         }
                     end
+                    hook:Call("Menu.ColorPickerChanged", self.colorPickerOpen, unpack(self.colorPickerOpen.path))
                     self.colorPickerOpen = nil
                     self:SetColorPicker(false, { 255, 0, 0 }, nil, false, "hahaha", 400, 200)
                 end
@@ -7655,6 +7614,7 @@ do
                                                     v2[5][5] = true
                                                     self.colorPickerOpen = v2[5]
                                                     self.colorPickerOpen = v2[5]
+                                                    v2.path = {k, k1, k2}
                                                     if v2[5][1][4] ~= nil then
                                                         self:SetColorPicker(
                                                             true,
@@ -7681,6 +7641,7 @@ do
                                                 for k3, v3 in pairs(v2[5][1]) do
                                                     if self:MouseInMenu(v3[3][1], v3[3][2], 28, 14) then
                                                         v3[5] = true
+                                                        v3.path = {k, k1, k2, v3[6]}
                                                         self.colorPickerOpen = v3
                                                         self.colorPickerOpen = v3
                                                         if v3[1][4] ~= nil then
@@ -8367,6 +8328,7 @@ do
                                 math.floor(tempclr.B * 255),
                             }
                         end
+                        hook:Call("Menu.ColorPickerChanged", self.colorPickerOpen, unpack(self.colorPickerOpen.path))
                     elseif cp.dragging_r then
                         self:SetDragBarR(cp.x + 175, math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178))
     
@@ -8401,6 +8363,7 @@ do
                                 math.floor(tempclr.B * 255),
                             }
                         end
+                        hook:Call("Menu.ColorPickerChanged", self.colorPickerOpen, unpack(self.colorPickerOpen.path))
                     elseif cp.dragging_b then
                         local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
                         self.colorPickerOpen[4][1].Color = tempclr
@@ -8428,6 +8391,7 @@ do
                         self:SetDragBarB(math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168), cp.y + 188)
                         newcolor.Transparency = (math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168) - cp.x - 10) / 158
                         cp.hsv.a = math.floor(((math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168) - cp.x - 10) / 158) * 255)
+                        hook:Call("Menu.ColorPickerChanged", self.colorPickerOpen, unpack(self.colorPickerOpen.path))
                     else
                         local setvisnew = self:MouseInColorPicker(197, 37, 75, 40)
                         for i, v in ipairs(newcopy) do
