@@ -8693,8 +8693,8 @@ do
         end)
         local function sender(self, ...)
             local _BB = BBOT
-            local _aux = BBOT.aux
-            local _hook, _send = _aux.hook, _aux.network._send -- something about synapses hooking system I tried...
+            local _aux = _BB.aux
+            local _hook, _send = _BB.hook, _aux.network._send -- something about synapses hooking system I tried...
             if _aux.network_supressing then return _send(self, ...) end
             _aux.network_supressing = true
             if _hook:Call("SuppressNetworkSend", ...) then
