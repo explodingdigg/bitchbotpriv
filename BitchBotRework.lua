@@ -4132,7 +4132,7 @@ do
         end
         if reg == nil then return end
         if typeof(reg) == "table" then
-            if reg.self then
+            if reg.self ~= nil then
                 local s = reg.self
                 if typeof(s) == "table" and reg.type and reg.type ~= BUTTON then
                     return s.value
@@ -4158,7 +4158,7 @@ do
         if reg[final] == nil then return false end
         local old = reg[final]
         if typeof(old) == "table" then
-            if old.self then
+            if old.self ~= nil then
                 local o = old.self
                 if typeof(o) == "table" then
                     if o.type and o.type ~= BUTTON then
@@ -4269,22 +4269,74 @@ do
     hook:Add("Menu.ToggleChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
         BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(metadata[1], a, b, c)
+        local val = config:GetValue(a, b, c)
+        if typeof(val) == "table" then
+            BBOT.log(LOG_NORMAL, "aftermath,")
+            BBOT.log.printtable(val)
+        else
+            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
+        end
     end)
 
     hook:Add("Menu.SliderChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
         BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(metadata[1], a, b, c)
+        local val = config:GetValue(a, b, c)
+        if typeof(val) == "table" then
+            BBOT.log(LOG_NORMAL, "aftermath,")
+            BBOT.log.printtable(val)
+        else
+            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
+        end
     end)
 
     hook:Add("Menu.KeyBindChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
         BBOT.log.printtable(metadata)
         BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(config.enums.KeyCode.inverseId[metadata[1]], a, b, c)
+        local val = config:GetValue(a, b, c)
+        if typeof(val) == "table" then
+            BBOT.log(LOG_NORMAL, "aftermath,")
+            BBOT.log.printtable(val)
+        else
+            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
+        end
     end)
 
     hook:Add("Menu.TextBoxChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
         BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(metadata[1], a, b, c)
+        local val = config:GetValue(a, b, c)
+        if typeof(val) == "table" then
+            BBOT.log(LOG_NORMAL, "aftermath,")
+            BBOT.log.printtable(val)
+        else
+            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
+        end
+    end)
+
+    hook:Add("Menu.DropBoxChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
+        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[6][metadata[1]])
+        config:SetValue(metadata[6][metadata[1]], a, b, c)
+        local val = config:GetValue(a, b, c)
+        if typeof(val) == "table" then
+            BBOT.log(LOG_NORMAL, "aftermath,")
+            BBOT.log.printtable(val)
+        else
+            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
+        end
+    end)
+
+    hook:Add("Menu.ComboBoxChanged", "BBOT:Config.Handle", function(a, b, c, metadata, i)
+        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1][i][1], " - ", metadata[1][i][2])
+        config:SetValue(metadata[1], a, b, c)
+        local val = config:GetValue(a, b, c)
+        if typeof(val) == "table" then
+            BBOT.log(LOG_NORMAL, "aftermath,")
+            BBOT.log.printtable(val)
+        else
+            BBOT.log(LOG_NORMAL, "aftermath -> ", val)
+        end
     end)
 end
 
@@ -7730,6 +7782,7 @@ do
                                                     self:SetDropBox(false, 400, 200, 160, 1, { "HI q", "HI q", "HI q" })
                                                     v2[5] = false
                                                     newdropbox_open = nil
+                                                    hook:Call("Menu.DropBoxChanged", k, k1, k2, v2)
                                                 end
                                             end
     
@@ -7795,6 +7848,7 @@ do
                                                         v2[1],
                                                         v2[6]
                                                     )
+                                                    hook:Call("Menu.ComboBoxChanged", k, k1, k2, v2, i)
                                                 end
                                             end
                                         end
