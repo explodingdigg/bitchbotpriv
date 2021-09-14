@@ -4257,10 +4257,20 @@ do
         end
         return result
     end
+
+    hook:Add("Menu.ToggleChanged", "Test", function(a, b, c, metadata)
+        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
+        config:SetValue(metadata[1], a, b, c)
+    end)
+
+    hook:Add("Menu.SliderChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
+        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
+        config:SetValue(metadata[1], a, b, c)
+    end)
 end
 
 -- Notifications
-do
+--[[do
     -- I kinda like how this can run standalone
     local hook = BBOT.hook
     local math = BBOT.math
@@ -4467,12 +4477,23 @@ do
         end
         notification.registry = {}
     end)
+end]]
+
+do
+    local notification = {
+        registry = {},
+    }
+    BBOT.notification = notification
+    function notification:Create(t, customcolor)
+    end
 end
 
 -- Menu
 do
     local draw = BBOT.draw
     local hook = BBOT.hook
+    local config = BBOT.config
+    local timer = BBOT.timer
     local string = BBOT.string
     local LOCAL_MOUSE = BBOT.service:GetService("Mouse")
     local INPUT_SERVICE = BBOT.service:GetService("UserInputService")
@@ -6060,8 +6081,8 @@ do
             end
             cp.oldalpha = alpha
             if visible then
-                cp.x = clamp(x, 0, SCREEN_SIZE.x - cp.w)
-                cp.y = clamp(y, 0, SCREEN_SIZE.y - cp.h)
+                cp.x = math.clamp(x, 0, SCREEN_SIZE.x - cp.w)
+                cp.y = math.clamp(y, 0, SCREEN_SIZE.y - cp.h)
                 for k, v in pairs(cp.postable) do
                     v[1].Position = Vector2.new(cp.x + v[2], cp.y + v[3])
                 end
@@ -7125,6 +7146,7 @@ do
                     return
                 end
             end
+            hook:Call("Menu.ButtonPressed", bp.tab, bp.groupbox, bp.name)
            -- FireEvent("bb_buttonpressed", bp.tab, bp.groupbox, bp.name)
             --ButtonPressed:Fire(bp.tab, bp.groupbox, bp.name)
             if bp == self.options["Settings"]["Cheat Settings"]["Unload Cheat"] then
@@ -7556,6 +7578,7 @@ do
                                             end
                                             --TogglePressed:Fire(k1, k2, v2)
                                             --FireEvent("bb_togglepressed", k1, k2, v2)
+                                            hook:Call("Menu.ToggleChanged", k, k1, k2, v2)
                                         end
                                         if v2[5] ~= nil then
                                             if v2[5][2] == KEYBIND then
@@ -7653,6 +7676,8 @@ do
                                                     2
                                                 )
                                             end
+
+                                            hook:Call("Menu.SliderChanged", k, k1, k2, v2)
                                         elseif self:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
                                             v2[5] = true
                                         end
@@ -8086,6 +8111,7 @@ do
                                         end
                                     elseif v2[2] == SLIDER then
                                         if v2[5] then
+                                            local last = v2[1]
                                             local new_val = (v2[6][2] - v2[6][1])  * (
                                                     (
                                                         LOCAL_MOUSE.x
@@ -8114,6 +8140,9 @@ do
                                                 )
                                             end
                                             self:SetPlusMinus(1, v2[7][1], v2[7][2])
+                                            if last ~= v2[1] then
+                                                hook:Call("Menu.SliderChanged", k, k1, k2, v2)
+                                            end
                                         else
                                             if not self.dropbox_open then
                                                 if self:MouseInMenu(v2[3][1], v2[3][2], v2[3][3], 28) then
@@ -8242,12 +8271,12 @@ do
                 if self.colorPickerOpen then
                     if cp.dragging_m then
                         self:SetDragBarM(
-                            clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - 2,
-                            clamp(LOCAL_MOUSE.y + 36, cp.y + 25, cp.y + 180) - 2
+                            math.clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - 2,
+                            math.clamp(LOCAL_MOUSE.y + 36, cp.y + 25, cp.y + 180) - 2
                         )
     
-                        cp.hsv.s = (clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - cp.x - 12) / 155
-                        cp.hsv.v = 1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155)
+                        cp.hsv.s = (math.clamp(LOCAL_MOUSE.x, cp.x + 12, cp.x + 167) - cp.x - 12) / 155
+                        cp.hsv.v = 1 - ((math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155)
                         newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
                         local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
                         self.colorPickerOpen[4][1].Color = tempclr
@@ -8273,15 +8302,15 @@ do
                             }
                         end
                     elseif cp.dragging_r then
-                        self:SetDragBarR(cp.x + 175, clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178))
+                        self:SetDragBarR(cp.x + 175, math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178))
     
                         maincolor.Color = Color3.fromHSV(
-                                1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155),
+                                1 - ((math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155),
                                 1,
                                 1
                             )
     
-                        cp.hsv.h = 1 - ((clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155)
+                        cp.hsv.h = 1 - ((math.clamp(LOCAL_MOUSE.y + 36, cp.y + 23, cp.y + 178) - cp.y - 23) / 155)
                         newcolor.Color = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
                         local tempclr = Color3.fromHSV(cp.hsv.h, cp.hsv.s, cp.hsv.v)
                         self.colorPickerOpen[4][1].Color = tempclr
@@ -8330,9 +8359,9 @@ do
                                 math.floor(tempclr.B * 255),
                             }
                         end
-                        self:SetDragBarB(clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168), cp.y + 188)
-                        newcolor.Transparency = (clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168) - cp.x - 10) / 158
-                        cp.hsv.a = math.floor(((clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168) - cp.x - 10) / 158) * 255)
+                        self:SetDragBarB(math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168), cp.y + 188)
+                        newcolor.Transparency = (math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168) - cp.x - 10) / 158
+                        cp.hsv.a = math.floor(((math.clamp(LOCAL_MOUSE.x, cp.x + 10, cp.x + 168) - cp.x - 10) / 158) * 255)
                     else
                         local setvisnew = self:MouseInColorPicker(197, 37, 75, 40)
                         for i, v in ipairs(newcopy) do
