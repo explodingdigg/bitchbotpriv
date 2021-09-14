@@ -8510,6 +8510,7 @@ do
     if BBOT.game ~= "pf" then return end
     local math = BBOT.math
     local table = BBOT.table
+    local hook = BBOT.hook
     local aux = {}
     BBOT.aux = aux
 
@@ -8682,6 +8683,7 @@ do
     if error then
         BBOT.log(LOG_ERROR, error)
         BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
+        messagebox("For safety reasons this process has been halted\nError: " .. error .. "\nPlease contact the Demvolopers!", "BBOT: Critical Error", 0)
         return true
     end
 
@@ -8754,7 +8756,7 @@ do
                 return
             end
             supressing = false
-            return oplay(...) hook:Call("PostSound", ...) 
+            return oplay(...)
         end
         rawset(aux.sound, "PlaySound", newcclosure(newplay))
     end
@@ -8791,7 +8793,7 @@ do
         end
     end
     
-    local players = aux.service:GetService("Players")
+    local players = BBOT.service:GetService("Players")
     hook:Add("Initialize", "BBOT:SetupPlayerReplication", function()
         for i, v in next, players:GetChildren() do
             local controller = aux.replication.getupdater(v)
@@ -8881,19 +8883,13 @@ do
     end
 
     hook:Add("Initialize", "BBOT:ChatDetour", function()
-        local receivers = core.network.receivers
-        local function table.quicksearch(tbl, value)
-            for i=1, #tbl do
-                if tbl[i] == value then return true end
-            end
-            return false
-        end
+        local receivers = network.receivers
 
         for k, v in pairs(receivers) do
             local const = debug.getconstants(v)
             if table.quicksearch(const, "Tag") and table.quicksearch(const, "rbxassetid://") then
                 receivers[k] = function(p20, p21, p22, p23, p24)
-                    core.timer:Async(function() hook:Call("Chatted", p20, p21, p22, p23, p24) end)
+                    timer:Async(function() hook:Call("Chatted", p20, p21, p22, p23, p24) end)
                     return v(p20, p21, p22, p23, p24)
                 end
                 hook:Add("Unload", "ChatDetour." .. tostring(k), function()
@@ -8901,7 +8897,7 @@ do
                 end)
             elseif table.quicksearch(const, "[Console]: ") and table.quicksearch(const, "Tag") then
                 receivers[k] = function(p18)
-                    core.timer:Async(function() hook:Call("Console", p18) end)
+                    timer:Async(function() hook:Call("Console", p18) end)
                     return v(p18)
                 end
                 hook:Add("Unload", "ChatDetour." .. tostring(k), function()
@@ -8959,7 +8955,7 @@ do
     chat:AddToBuffer(message)
     ]]
 
-    core.timer:Create("Chat.Spam", 1.5, 0, function() -- fuck you stylis
+    timer:Create("Chat.Spam", 1.5, 0, function() -- fuck you stylis
         local msg = chat.buffer[1]
         if not msg then return end
         table.remove(chat.buffer, 1)
@@ -9045,7 +9041,7 @@ do
         done = true
         local newfunc = function(...)
             local cf = gunmovement(...)
-            mul = 1 -- sway factor config here
+            local mul = 1 -- sway factor config here
             if mul == 0 then
                 return CFrame.new()
             end
@@ -9065,7 +9061,7 @@ do
     local function DetourGunBob(related_func, index, gunmovement)
         local newfunc = function(...)
             local cf = gunmovement(...)
-            mul = 1 -- bob factor config here
+            local mul = 1 -- bob factor config here
             if mul == 0 then
                 return CFrame.new()
             end
