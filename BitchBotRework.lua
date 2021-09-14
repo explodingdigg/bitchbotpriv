@@ -8659,6 +8659,14 @@ do
                 end
             end
         end
+
+        if not aux.network.receivers then
+            return "Couldn't find auxillary \"network.receivers\""
+        end
+
+        hook:Add("Unload", "BBOT:NetworkReceivers", function()
+            rawset(aux.network, "receivers", nil)
+        end)
     end
 
     local profiling_tick = tick()
@@ -8666,14 +8674,180 @@ do
     if error then
         BBOT.log(LOG_ERROR, error)
         BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
-        return
+        return true
     end
+
+    do -- using rawget just in case...
+        local send = rawget(core.network, "send")
+        local osend = rawget(core.network, "_send")
+        hook:Add("Unload", "BBOT:NetworkOverride", function()
+            rawset(core.network, "send", osend or send)
+        end)
+        local function sender(self, ...)
+            local _core = core
+            local _hook, _send = _core.hook, _core.network._send -- something about synapses hooking system I tried...
+            if _core.network_supressing then return _send(self, ...) end
+            _core.network_supressing = true
+            if _hook:Call("SuppressNetworkSend", ...) then
+                _core.network_supressing = false
+                return
+            end
+            _core.network_supressing = false
+            local override = _hook:Call("PreNetworkSend", ...)
+            if override then
+                if _core.debug then
+                    _core.printdebug(unpack(override))
+                end
+                return _send(self, unpack(override)), _hook:Call("PostNetworkSend", unpack(override))
+            end
+            if _core.debug then
+                _core.printdebug(...)
+            end
+            return _send(self, ...), _hook:Call("PostNetworkSend", ...)
+        end
+        local function newsend(self, netname, ...)
+            local ran, a, b, c, d, e = xpcall(sender, debug.traceback, self, netname, ...)
+            if not ran then
+                core.timer:Async(function() core.printerror("Networking Error - ", netname, " - ", a) end)
+            else
+                return a, b, c, d, e
+            end
+        end
+        rawset(core.network, "_send", send)
+        rawset(core.network, "send", newcclosure(newsend))
+    end
+    
+    do
+        local old = core.char.loadcharacter
+        function core.char.loadcharacter(char, pos, ...)
+            hook:Call("PreLoadCharacter", char, pos, ...)
+            return old(char, pos, ...), hook:Call("PostLoadCharacter", char, pos, ...)
+        end
+        hook:Add("Unload", "BBOT:LoadCharacter", function()
+            core.char.loadcharacter = old
+        end)
+    end
+
+    do
+        function core.sound.playid(p39, p40, p41, p42, p43, p44)
+            core.sound.PlaySoundId(p39, p40, p41, nil, nil, p42, nil, nil, nil, p43, p44);
+        end
+        local oplay = rawget(core.sound, "PlaySound")
+        hook:Add("Unload", "BBOT:SoundDetour", function()
+            rawset(core.sound, "PlaySound", oplay)
+        end)
+        local supressing = false
+        local function newplay(...)
+            if supressing then return oplay(...) end
+            supressing = true
+            if hook:Call("SupressSound", ...) then
+                supressing = false
+                return
+            end
+            supressing = false
+            return oplay(...) hook:Call("PostSound", ...) 
+        end
+        rawset(core.sound, "PlaySound", newcclosure(newplay))
+    end
+
+    local setupvalueundo = {}
+    local ups = debug.getupvalues(core.replication.getupdater)
+    for k, v in pairs(ups) do
+        if typeof(v) == "function" then
+            local name = debug.getinfo(v).name
+            if name == "loadplayer" then
+                local function LoadPlayer(...)
+                    hook:Call("PreLoadPlayer", ...)
+                    local ctlr, a, b = v(...)
+                    if ctlr then
+                        hook:Call("PostLoadPlayer", ctlr)
+                    end
+                    return ctlr, a, b
+                end
+                debug.setupvalue(core.replication.getupdater, k, newcclosure(LoadPlayer))
+                setupvalueundo[#setupvalueundo+1] = {core.replication.getupdater, k, v}
+            end
+        end
+    end
+
+    local ups = debug.getupvalues(core.hud.isplayeralive)
+    for k, v in pairs(ups) do
+        if typeof(v) == "function" then
+            local name = debug.getinfo(v).name -- are you ok pf?
+            if name == "gethealthstate" then
+                core.hud.gethealthstate = newcclosure(function(self, player)
+                    return v(player)
+                end)
+            end
+        end
+    end
+
+    local players = core.service:GetService("Players")
+    hook:Add("Initialize", "BBOT:SetupPlayerReplication", function()
+        for i, v in next, players:GetChildren() do
+            local controller = core.replication.getupdater(v)
+            if controller and not controller.setup then
+                hook:Call("PostLoadPlayer", controller)
+            end
+        end
+    end)
+
+    local old = core.char.step
+    function core.char.step(...)
+        hook:Call("PreCharacterStep")
+        local a, b, c, d = old(...)
+        hook:Call("PostCharacterStep")
+        return a, b, c, d
+    end
+    hook:Add("Unload", "BBOT:CharStepDetour", function()
+        core.char.step = old
+    end)
+
+    local function quickhasvalue(tbl, value)
+        for i=1, #tbl do
+            if tbl[i] == value then return true end
+        end
+        return false
+    end
+
+    hook:Add("FullyLoaded", "BigRewardDetour", function()
+        local receivers = core.network.receivers
+        for k, v in pairs(receivers) do
+            local a = debug.getupvalues(v)[1]
+            if typeof(a) == "function" then
+                local run, consts = pcall(debug.getconstants, a)
+                if run then
+                    if quickhasvalue(consts, "killshot") and quickhasvalue(consts, "kill") then
+                        receivers[k] = function(type, entity, gunname, earnings, ...)
+                            hook:Call("PreBigAward", type, entity, gunname, earnings, ...)
+                            v(type, entity, gunname, earnings, ...)
+                            hook:Call("PostBigAward", type, entity, gunname, earnings, ...)
+                        end
+
+                        hook:Add("Unload", "BBOT:RewardDetour." .. tostring(k), function()
+                            receivers[k] = v
+                        end)
+                    end
+                end
+            end
+        end
+    end)
+
+    hook:Add("Unload", "BBOT:Aux.UpValues.1", function()
+        for i=1, #setupvalueundo do
+            debug.setupvalue(unpack(setupvalueundo[i]))
+        end
+    end)
+
     local dt = tick() - profiling_tick
     BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
 end
 
 -- Chat
 do
+    local network = BBOT.aux.network
+    local hook = BBOT.hook
+    local timer = BBOT.timer
     local chat = {}
     BBOT.chat = chat
     chat.spam_chat = {}
@@ -8702,6 +8876,92 @@ do
     for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
         table.insert(chat.spam_kill, s)
     end
+
+    hook:Add("Initialize", "BBOT:ChatDetour", function()
+        local receivers = core.network.receivers
+        local function quickhasvalue(tbl, value)
+            for i=1, #tbl do
+                if tbl[i] == value then return true end
+            end
+            return false
+        end
+
+        for k, v in pairs(receivers) do
+            local const = debug.getconstants(v)
+            if quickhasvalue(const, "Tag") and quickhasvalue(const, "rbxassetid://") then
+                receivers[k] = function(p20, p21, p22, p23, p24)
+                    core.timer:Async(function() hook:Call("Chatted", p20, p21, p22, p23, p24) end)
+                    return v(p20, p21, p22, p23, p24)
+                end
+                hook:Add("Unload", "ChatDetour." .. tostring(k), function()
+                    receivers[k] = v
+                end)
+            elseif quickhasvalue(const, "[Console]: ") and quickhasvalue(const, "Tag") then
+                receivers[k] = function(p18)
+                    core.timer:Async(function() hook:Call("Console", p18) end)
+                    return v(p18)
+                end
+                hook:Add("Unload", "ChatDetour." .. tostring(k), function()
+                    receivers[k] = v
+                end)
+            end
+        end
+    end)
+
+    function chat:Say(str, un)
+        if string.sub(str, 1, 1) == "/" then
+            network:send("modcmd", str);
+            return
+        end
+        network:send("chatted", str, un or false);
+    end
+
+    chat.buffer = {}
+    local lasttext = ""
+    function chat:AddToBuffer(msg)
+        local spaces = ""
+        if msg == lasttext then
+            for i=1, a do
+                spaces = spaces .. "."
+            end
+            a = a + 1
+            if a > 1 then a = 0 end
+        else
+            a = 0
+            lasttext = msg
+        end
+        msgquery[#msgquery+1] = msg .. spaces
+    end
+    
+    function chat:CheckIfValid(msg)
+        for i=1, #msg do
+            local str = string.sub(msg, i, i)
+            if str ~= "\n" or str ~= " " then
+                return true
+            end
+        end
+    end
+
+    --[[
+    local lastkillsay = ""
+    local killsay = lastkillsay
+    while killsay == lastkillsay do
+        killsay = math.random(#customKillSay)
+    end
+    lastkillsay = killsay
+    local message = customKillSay[killsay]
+    message = message:gsub("%[hitbox%]", head and "head" or "body")
+    message = message:gsub("%[name%]", victim.Name)
+    message = message:gsub("%[weapon%]", weapon)
+    chat:AddToBuffer(message)
+    ]]
+
+    core.timer:Create("Chat.Spam", 1.5, 0, function() -- fuck you stylis
+        local msg = chat.buffer[1]
+        if not msg then return end
+        table.remove(chat.buffer, 1)
+        chat:Say(msg)
+    end)
 end
 
 -- Weapon Modifications
