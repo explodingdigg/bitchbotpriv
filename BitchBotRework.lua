@@ -4032,21 +4032,24 @@ do
 
     do -- key binds
         local enums = Enum.KeyCode:GetEnumItems()
-        local enumstable, enumtoID = {}, {}
+        local enumstable, enumtoID, IDtoenum = {}, {}, {}
         for k, v in table.sortedpairs(enums) do
             local keyname = string.sub(tostring(v), 14)
             if not string.find( keyname, "World", 1, true ) then
                 enumstable[#enumstable+1] = keyname
                 enumtoID[keyname] = v
+                IDtoenum[v] = keyname
             end
         end
 
         enumstable[#enumstable+1] = "MouseButton1"
         enumtoID["MouseButton1"] = Enum.UserInputType.MouseButton1
+        IDtoenum[Enum.UserInputType.MouseButton1] = "MouseButton1"
         enumstable[#enumstable+1] = "MouseButton2"
         enumtoID["MouseButton2"] = Enum.UserInputType.MouseButton2
-
+        IDtoenum[Enum.UserInputType.MouseButton2] = "MouseButton2"
         config.enums.KeyCode = {
+            inverseId = IDtoenum,
             Id = enumtoID,
             List = enumstable
         }
@@ -4199,9 +4202,13 @@ do
     function config:ParseSetupToConfig(tbl, source)
         for i=1, #tbl do
             local v = tbl[i]
-            if v.content then
-                source[v.name] = {}
-                self:ParseSetupToConfig(v.content, source[v.name])
+            if v.content or v[1] then
+                local ismulti = typeof(v.name) == "table"
+                for i=1, (ismulti and #v.name or 1) do
+                    local name = (ismulti and v.name[i] or v.name)
+                    source[name] = {}
+                    self:ParseSetupToConfig((ismulti and v[i].content or v.content), source[name])
+                end
             elseif v.name and (v.value ~= nil or v.values ~= nil or v.color ~= nil) then
                 local conversion = self.parsertovalue[v.type]
                 if conversion then
@@ -4233,6 +4240,7 @@ do
         self.raw = raw
         local reg = {}
         self:ParseSetupToConfig(raw, reg)
+        BBOT.log.printtable(reg)
         self.registry = reg
     end
 
@@ -4258,7 +4266,7 @@ do
         return result
     end
 
-    hook:Add("Menu.ToggleChanged", "Test", function(a, b, c, metadata)
+    hook:Add("Menu.ToggleChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
         BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(metadata[1], a, b, c)
     end)
@@ -4267,10 +4275,21 @@ do
         BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
         config:SetValue(metadata[1], a, b, c)
     end)
+
+    hook:Add("Menu.KeyBindChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
+        BBOT.log.printtable(metadata)
+        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
+        config:SetValue(config.enums.KeyCode.inverseId[metadata[1]], a, b, c)
+    end)
+
+    hook:Add("Menu.TextBoxChanged", "BBOT:Config.Handle", function(a, b, c, metadata)
+        BBOT.log(LOG_NORMAL, a, b, c, " changed to ", metadata[1])
+        config:SetValue(metadata[1], a, b, c)
+    end)
 end
 
 -- Notifications
---[[do
+do
     -- I kinda like how this can run standalone
     local hook = BBOT.hook
     local math = BBOT.math
@@ -4477,15 +4496,6 @@ end
         end
         notification.registry = {}
     end)
-end]]
-
-do
-    local notification = {
-        registry = {},
-    }
-    BBOT.notification = notification
-    function notification:Create(t, customcolor)
-    end
 end
 
 -- Menu
@@ -6456,6 +6466,7 @@ do
                                         else
                                             v2[5][1] = key.KeyCode
                                         end
+                                        hook:Call("Menu.KeyBindChanged", k, k1, k2, v2[5])
                                         v2[5][5] = false
                                     end
                                 end
@@ -6480,6 +6491,7 @@ do
                                             elseif KeyEnumToName(key.KeyCode) == "Back" and v2[1] ~= "" then
                                                 v2[1] = string.sub(v2[1], 0, #v2[1] - 1)
                                             end
+                                            hook:Call("Menu.TextBoxChanged", k, k1, k2, v2)
                                         end
                                         v2[4].Text = v2[1] .. "|"
                                     end
