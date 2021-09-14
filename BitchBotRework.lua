@@ -287,7 +287,7 @@ do
 
     if _BBOT and BBOT.username == "dev" then
         BBOT.log(3, "Bitch Bot is already running")
-        if _BBOT.hook and _BBOT.hook.CallP then
+        if not _BBOT.Unloaded and _BBOT.hook and _BBOT.hook.CallP then
             BBOT.log(3, "Unloading...")
             local t = tick()
             _BBOT.hook:CallP("Unload")
@@ -8488,6 +8488,10 @@ do
         function self:unload()
             getgenv().v2 = nil
             self.unloaded = true
+            BBOT.log(LOG_WARN, "Unloading...")
+            hook:CallP("Unload")
+            BBOT.Unloaded = true
+            BBOT.log(LOG_WARN, "Done.")
         end
     end
 
