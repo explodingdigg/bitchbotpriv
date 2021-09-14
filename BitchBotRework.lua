@@ -24,7 +24,7 @@ _G.BBOT = BBOT
 -- Note: Find a way to put this into an isolated global table
 local LOG_NORMAL, LOG_DEBUG, LOG_WARN, LOG_ERROR, LOG_ANON = 1, 2, 3, 4, 5 -- Logs
 local COLOR, COLOR1, COLOR2 = 1, 2, 3 -- Menu.Colors
-local COMBOBOX, TOGGLE, KEYBIND, DROPBOX, COLORPICKER, DOUBLE_COLORPICKERS, SLIDER, BUTTON, LIST, IMAGE, TEXTBOX = 4,5,6,7,8,9,10,11,12,13,14 -- Menu
+local COMBOBOX, TOGGLE, KEYBIND, DROPBOX, COLORPICKER, DOUBLE_COLORPICKER, SLIDER, BUTTON, LIST, IMAGE, TEXTBOX = 4,5,6,7,8,9,10,11,12,13,14 -- Menu
 
 -- This should always start before hand, this module is responsible for debugging
 -- Example usage: BBOT.log(LOG_NORMAL, "How do I even fucking make this work?")
@@ -43,10 +43,10 @@ do
 
     log.async_registery = {}
     local printingvaluetypes = {
-        ["Vector3"] = {"V(", ")"},
-        ["Vector2"] = {"V(", ")"},
-        ["Color3"] = {"C(", ")"},
-        ["CFrame"] = {"CF(", ")"}
+        ["Vector3"] = {"Vector3.new(", ")"},
+        ["Vector2"] = {"Vector2.new(", ")"},
+        ["Color3"] = {"Color3.fromRGB(", ")"},
+        ["CFrame"] = {"CFrame.new(", ")"}
     }
 
     local function makereadable(...)
@@ -124,6 +124,80 @@ do
         end
     })
 
+    do
+        local _string_rep = string.rep
+        local _string_len = string.len
+        local _string_sub = string.sub
+        local _table_concat = table.concat
+        local _print = print
+        local _tostring = tostring
+        local _pairs = pairs
+        local _type = typeof
+        local _string_find = string.find
+        local function string_Explode(separator, str, withpattern)
+            if ( withpattern == nil ) then withpattern = false end
+
+            local ret = {}
+            local current_pos = 1
+
+            for i = 1, _string_len( str ) do
+                local start_pos, end_pos = _string_find( str, separator, current_pos, not withpattern )
+                if ( not start_pos ) then break end
+                ret[ i ] = _string_sub( str, current_pos, start_pos - 1 )
+                current_pos = end_pos + 1
+            end
+
+            ret[ #ret + 1 ] = _string_sub( str, current_pos )
+
+            return ret
+        end
+
+        local _string_Replace = function( str, tofind, toreplace )
+            local tbl = string_Explode( tofind, str )
+            if ( tbl[ 1 ] ) then return _table_concat( tbl, toreplace ) end
+            return str
+        end
+
+        local PrintTable_Restore = {['\b'] = '\\b', ['\f'] = '\\f', ['\v'] = '\\v', ['\0'] = '\\0', ['\r'] = '\\r', ['\n'] = '\\n', ['\t'] = '\\t'}
+        function log.printtable(t, indent, c)
+            if not indent then indent = 1 end
+            local ind = _string_rep( '\t', indent )
+            if _type(t) == 'table' then
+                log.anonprint('{\n')
+                for k,v in _pairs(t) do
+                    if _type(k) ~= 'number' then
+                        k = _tostring(k)
+                        k = '"'..k..'"'
+                    else
+                        k = valuetoprintable(k)
+                    end
+                    for _k, _v in _pairs(PrintTable_Restore) do
+                        k = _string_Replace(k, _k, _v)
+                    end
+                    log.anonprint(ind .. '['..k..'] = ')
+                    log.printtable(v, indent + 1, true)
+                    log.anonprint(',\n')
+                end
+                if c then
+                    log.anonprint(_string_rep( '\t', (indent-1 > 0 and indent-1 or 0) ) .. '}')
+                    return
+                end
+                log.anonprint('}\n')
+            else
+                if _type(t) == 'string' then
+                    t = _tostring(t)
+                    t = '"'..t..'"'
+                else
+                    t = valuetoprintable(t)
+                end
+                for k, v in _pairs(PrintTable_Restore) do
+                    t = _string_Replace(t, k, v)
+                end
+                log.anonprint(t)
+            end
+        end
+    end
+
     game:GetService("RunService"):UnbindFromRenderStep("FW0a9kf0w2of00-Last")
     game:GetService("RunService"):BindToRenderStep("FW0a9kf0w2of00-Last", Enum.RenderPriority.Last.Value, function(...)
         for i=1, #scheduler do
@@ -131,7 +205,7 @@ do
             if v[1] == 1 then
                 local text = valuetoprintable(unpack(v[2]))
                 rconsoleprint('@@WHITE@@')
-                rconsoleprint(text .. "\n")
+                rconsoleprint(text)
                 log.menu_display(white, text)
             elseif v[1] == 2 then
                 local text = valuetoprintable(unpack(v[2]))
@@ -200,6 +274,11 @@ local function ISOLATION(BBOT)
 local BBOT = BBOT
 local loadstart = tick()
 
+function BBOT.halt() -- use this if u wana but breaks in the code
+    BBOT.log(LOG_WARN, "Halted!")
+    error()
+end
+
 do
     local function round( num, idp )
         local mult = 10 ^ ( idp or 0 )
@@ -221,7 +300,9 @@ end
 
 -- Table
 do
-    local dcopy = function( t, lookup_table )
+    local _rawset = rawset
+    local dcopy
+    dcopy = function( t, lookup_table )
         if ( t == nil ) then return nil end
     
         local copy = {}
@@ -229,15 +310,15 @@ do
         for i, v in pairs( t ) do
             if ( typeof( v ) ~= "table" ) then
                 if v ~= nil then
-                    rawset(copy, i, v)
+                    _rawset(copy, i, v)
                 end
             else
                 lookup_table = lookup_table or {}
                 lookup_table[ t ] = copy
                 if ( lookup_table[ v ] ) then
-                    rawset(copy, i, lookup_table[ v ])
+                    _rawset(copy, i, lookup_table[ v ])
                 else
-                    rawset(copy, i, dcopy( v, lookup_table ))
+                    _rawset(copy, i, dcopy( v, lookup_table ))
                 end
             end
         end
@@ -294,6 +375,31 @@ do
             end
             tbl[k] = nil
         end
+    end
+
+    local function keyValuePairs( state )
+        state.Index = state.Index + 1
+        local keyValue = state.KeyValues[ state.Index ]
+        if ( not keyValue ) then return end
+        return keyValue.key, keyValue.val
+    end
+
+    local function toKeyValues( tbl )
+        local result = {}
+        for k,v in pairs( tbl ) do
+            table.insert( result, { key = k, val = v } )
+        end
+        return result
+    end
+
+    function table.sortedpairs( pTable, Desc )
+        local sortedTbl = toKeyValues( pTable )
+        if ( Desc ) then
+            table.sort( sortedTbl, function( a, b ) return a.key > b.key end )
+        else
+            table.sort( sortedTbl, function( a, b ) return a.key < b.key end )
+        end
+        return keyValuePairs, { Index = 0, KeyValues = sortedTbl }
     end
 end
 
@@ -555,6 +661,7 @@ do
             end
         end
     end
+    local log = BBOT.log
     function hook:CallP(name, ...) -- Same as @hook:Call, put with error isolation
         if not self.registry[name] then return end
         local tbl, tbln = self._registry_qa[name], self.registry[name]
@@ -563,13 +670,13 @@ do
             local func = tbln[name]
             local ran, a, b, c, d, e, f = xpcall(func, debug.traceback, ...)
             if not ran then
-                BBOT.log(LOG_ERROR, "Hook Error - ", name, " - ", name)
-                BBOT.log(LOG_NORMAL, a)
-                BBOT.log(LOG_WARN, "Removing to prevent cascade!")
+                log(LOG_ERROR, "Hook Error - ", name, " - ", name)
+                log(LOG_NORMAL, a)
+                log(LOG_WARN, "Removing to prevent cascade!")
                 for l=1, #tbl do
                     local v = tbl[l]
                     if v[1] == name then
-                        table.remove(tbl, l); c = c + 1; tbln[name] = nil
+                        table.remove(tbl, l); tbln[name] = nil
                         break
                     end
                 end
@@ -578,24 +685,24 @@ do
             end
         end
         
-        local c = 0
+        local _c = 0
         for l=1, #tbl do
-            local k = l-c
+            local k = l-_c
             local v = tbl[k]
             if v[1] ~= name then
                 local _name, func = v[1], v[2]
                 if not func then 
-                    table.remove(tbl, k); c = c + 1; tbln[_name] = nil
+                    table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
                 else
                     if not _name then 
-                        table.remove(tbl, k); c = c + 1; tbln[_name] = nil
+                        table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
                     else
                         local ran, a, b, c, d, e, f = xpcall(func, debug.traceback, ...)
                         if not ran then
-                            BBOT.log(LOG_ERROR, "Hook Error - ", name, " - ", _name)
-                            BBOT.log(LOG_NORMAL, a)
-                            BBOT.log(LOG_WARN, "Removing to prevent cascade!")
-                            table.remove(tbl, k); c = c + 1; tbln[_name] = nil
+                            log(LOG_ERROR, "Hook Error - ", name, " - ", _name)
+                            log(LOG_NORMAL, a)
+                            log(LOG_WARN, "Removing to prevent cascade!")
+                            table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
                         elseif a ~= nil then
                             return a, b, c, d, e, f
                         end
@@ -953,7 +1060,8 @@ do
     BBOT.draw = draw
     local allrender = {}
     local RGB = Color3.fromRGB
-	function draw:UnRender()
+    
+    hook:Add("Unload", "BBOT:Draw.Unload", function()
 		for k, v in pairs(allrender) do
 			for k1, v1 in pairs(v) do
 				if v1 and type(v1) ~= "number" and v1.__OBJECT_EXISTS then
@@ -961,10 +1069,6 @@ do
                 end
 			end
 		end
-	end
-    
-    hook:Add("Unload", "BBOT:Draw.Unload", function()
-        draw:UnRender()
     end)
 
 	function draw:OutlinedRect(visible, pos_x, pos_y, width, height, clr, tablename)
@@ -1119,11 +1223,12 @@ end
 -- Setup
 do
     local thread = BBOT.thread
+    local hook = BBOT.hook
     local NetworkClient = BBOT.service:GetService("NetworkClient")
     if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459 then
         BBOT.game = "pf"
     else
-        BBOT.game = "universal"
+        BBOT.game = "uni"
     end
 
     BBOT.networksettings = settings().Network
@@ -1219,6 +1324,2672 @@ do
 			annoyingFuckingMusic:Destroy()
 		end
 	end -- wait for framwork to load
+
+    hook:Add("PreInitialize", "BBOT:SetupConfigurationScheme", function()
+        local menu = BBOT.menu
+        local config = BBOT.config
+        if BBOT.game == "pf" then
+            BBOT.configuration = {
+                { --ANCHOR stuffs
+                    name = "Legit",
+                    content = {
+                        {
+                            name = "Aim Assist",
+                            autopos = "left",
+                            autofill = true,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Enabled",
+                                    value = true,
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Aimbot FOV",
+                                    value = 10,
+                                    minvalue = 0,
+                                    maxvalue = 180,
+                                    stradd = "°",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Dynamic FOV",
+                                    value = false,
+                                    tooltip = "Changes all FOV settings in the Legit tab\nto change depending on the magnification.",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Smoothing",
+                                    value = 20,
+                                    minvalue = 0,
+                                    maxvalue = 100,
+                                    stradd = "%",
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Smoothing Type",
+                                    value = 2,
+                                    values = { "Exponential", "Linear" },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Randomization",
+                                    value = 5,
+                                    minvalue = 0,
+                                    maxvalue = 20,
+                                    custom = { [0] = "Off" },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Deadzone FOV",
+                                    value = 1,
+                                    minvalue = 0,
+                                    maxvalue = 50,
+                                    stradd = "°",
+                                    decimal = 0.1,
+                                    custom = { [0] = "Off" },
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Aimbot Key",
+                                    value = 1,
+                                    values = { "Mouse 1", "Mouse 2", "Always", "Dynamic Always" },
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Hitscan Priority",
+                                    value = 1,
+                                    values = { "Head", "Body", "Closest" },
+                                },
+                                {
+                                    type = COMBOBOX,
+                                    name = "Hitscan Points",
+                                    values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Adjust for Bullet Drop",
+                                    value = true,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Target Prediction",
+                                    value = true,
+                                },
+                            },
+                        },
+                        {
+                            name = "Trigger Bot",
+                            autopos = "right",
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Enabled",
+                                    value = false,
+                                    extra = {
+                                        type = KEYBIND,
+                                        key = Enum.KeyCode.M,
+                                    },
+                                },
+                                {
+                                    type = COMBOBOX,
+                                    name = "Trigger Bot Hitboxes",
+                                    values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Trigger When Aiming",
+                                    value = false,
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Aim Percentage",
+                                    minvalue = 0,
+                                    maxvalue = 100,
+                                    value = 90,
+                                    stradd = "%",
+                                },
+                            },
+                        },
+                        {
+                            name = "Bullet Redirection",
+                            autopos = "right",
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Silent Aim",
+                                    value = false,
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Silent Aim FOV",
+                                    value = 5,
+                                    minvalue = 0,
+                                    maxvalue = 180,
+                                    stradd = "°",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Hit Chance",
+                                    value = 30,
+                                    minvalue = 0,
+                                    maxvalue = 100,
+                                    stradd = "%",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Accuracy",
+                                    value = 90,
+                                    minvalue = 0,
+                                    maxvalue = 100,
+                                    stradd = "%",
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Hitscan Priority",
+                                    value = 1,
+                                    values = { "Head", "Body", "Closest" },
+                                },
+                                {
+                                    type = COMBOBOX,
+                                    name = "Hitscan Points",
+                                    values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+                                },
+                            },
+                        },
+                        {
+                            name = "Recoil Control",
+                            autopos = "right",
+                            autofill = true,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Weapon RCS",
+                                    value = true,
+                                },
+                                {
+                                    type = COMBOBOX,
+                                    name = "Disable RCS While",
+                                    values = { { "Holding Sniper", false }, { "Scoping In", false }, { "Not Shooting", true } }
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Recoil Control X",
+                                    value = 45,
+                                    minvalue = 0,
+                                    maxvalue = 100,
+                                    stradd = "%",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Recoil Control Y",
+                                    value = 80,
+                                    minvalue = 0,
+                                    maxvalue = 150,
+                                    stradd = "%",
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    name = "Rage",
+                    content = {
+                        {
+                            name = "Aimbot",
+                            autopos = "left",
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Enabled",
+                                    value = false,
+                                    extra = {
+                                        type = KEYBIND,
+                                        toggletype = 4,
+                                    },
+                                    unsafe = true,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Silent Aim",
+                                    value = false,
+                                    tooltip = "Stops the camera from rotating toward targetted players.",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Rotate Viewmodel",
+                                    value = false,
+                                    tooltip = "Rotates weapon viewmodel toward the targetted player."
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Aimbot FOV",
+                                    value = 180,
+                                    minvalue = 0,
+                                    maxvalue = 181,
+                                    stradd = "°",
+                                    custom = { [181] = "Ignored" },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Auto Wallbang",
+                                    value = false
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Auto Shoot",
+                                    value = false,
+                                    tooltip = "Automatically shoots players when a target is found."
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Double Tap",
+                                    value = false,
+                                    tooltip = "Shoots twice when target is found when Auto Shoot is enabled.",
+                                    extra = {
+                                        type = KEYBIND,
+                                        toggletype = 4,
+                                    },
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Hitscan Priority",
+                                    value = 1,
+                                    values = { "Head", "Body" },
+                                },
+                            },
+                        },
+                        {
+                            name = "Hack vs. Hack",
+                            autopos = "left",
+                            autofill = true,
+                            content = {
+                                --[[{
+                                    type = TOGGLE,
+                                    name = "Extend Penetration",
+                                    value = false
+                                },]]
+                                -- {
+                                -- 	type = SLIDER,
+                                -- 	name = "Extra Penetration",
+                                -- 	value = 11,
+                                -- 	minvalue = 1,
+                                -- 	maxvalue = 20,
+                                -- 	stradd = " studs",
+                                -- 	tooltip = "does nothing",
+                                -- }, -- fuck u json
+                                {
+                                    type = TOGGLE,
+                                    name = "Autowall Hitscan",
+                                    value = false,
+                                    unsafe = true,
+                                    tooltip = "While using Auto Wallbang, this will hitscan multiple points\nto increase penetration and help for peeking.",
+                                },
+                                {
+                                    type = COMBOBOX,
+                                    name = "Hitscan Points",
+                                    values = {
+                                        { "Up", true },
+                                        { "Down", true },
+                                        { "Left", false },
+                                        { "Right", false },
+                                        { "Forward", true },
+                                        { "Backward", true },
+                                        { "Origin", true },
+                                        { "Towards", true },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Hitbox Shifting",
+                                    value = false,
+                                    tooltip = "Increases possible penetration with Autowall. The higher\nthe Hitbox Shift Distance the more likely it is to miss shots.\nWhen it misses it will try disable this.",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Hitbox Shift Distance",
+                                    value = 4,
+                                    minvalue = 1,
+                                    maxvalue = 12,
+                                    stradd = " studs",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Force Player Stances",
+                                    value = false,
+                                    tooltip = "Changes the stance of other players to the selected Stance Choice.",
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Stance Choice",
+                                    value = 1,
+                                    values = { "Stand", "Crouch", "Prone" },
+                                },
+                                {
+                                    type = TOGGLE, 
+                                    name = "Backtracking",
+                                    value = false,
+                                    tooltip = "Attempts to abuse lag compensation and shoot players where they were in the past.\nUsing Visuals->Enemy ESP->Flags->Backtrack will help illustrate this."
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Backtracking Time",
+                                    value = 4000,
+                                    minvalue = 0,
+                                    maxvalue = 5000,
+                                    stradd = "ms",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Freestanding",
+                                    value = false,
+                                    extra = {
+                                        type = KEYBIND,
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            name = { "Anti Aim", "Fake Lag" },
+                            x = menu.columns.right,
+                            y = 66,
+                            width = menu.columns.width,
+                            height = 253,
+                            [1] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Enabled",
+                                        value = false,
+                                        tooltip = "When this is enabled, your server-side yaw, pitch and stance are set to the values in this tab.",
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Pitch",
+                                        value = 4,
+                                        values = {
+                                            "Off",
+                                            "Up",
+                                            "Zero",
+                                            "Down",
+                                            "Upside Down",
+                                            "Roll Forward",
+                                            "Roll Backward",
+                                            "Random",
+                                            "Bob",
+                                            "Glitch",
+                                        },
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Yaw",
+                                        value = 2,
+                                        values = { "Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin" },
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Spin Rate",
+                                        value = 10,
+                                        minvalue = -100,
+                                        maxvalue = 100,
+                                        stradd = "°/s",
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Force Stance",
+                                        value = 4,
+                                        values = { "Off", "Stand", "Crouch", "Prone" },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Hide in Floor",
+                                        value = true,
+                                        tooltip = "Shifts your body slightly under the ground\nso as to hide it when Force Stance is set to Prone.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Lower Arms",
+                                        value = false,
+                                        tooltip = "Lowers your arms on the server.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Tilt Neck",
+                                        value = false,
+                                        tooltip = "Forces the replicated aiming state so that it appears as though your head is tilted.",
+                                    },
+                                },
+                            },
+                            [2] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Enabled",
+                                        value = false,
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Fake Lag Amount",
+                                        value = 1,
+                                        minvalue = 1,
+                                        maxvalue = 1000,
+                                        stradd = " kbps",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Fake Lag Distance",
+                                        value = 1,
+                                        minvalue = 1,
+                                        maxvalue = 40,
+                                        stradd = " studs",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Manual Choke",
+                                        extra = {
+                                            type = KEYBIND,
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Release Packets on Shoot",
+                                        value = false,
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            name = { "Extra", "Settings" },
+                            y = 325,
+                            x = menu.columns.right,
+                            width = menu.columns.width,
+                            height = 258,
+                            [1] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Knife Bot",
+                                        value = false,
+                                        extra = {
+                                            type = KEYBIND,
+                                            toggletype = 4,
+                                        },
+                                        unsafe = true,
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Knife Bot Type",
+                                        value = 2,
+                                        values = { "Assist", "Multi Aura", "Flight Aura", "Assist+" },
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Knife Hitscan",
+                                        value = 1,
+                                        values = { "Head", "Torso", "Other" },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Knife Visible Only",
+                                        value = false,
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Knife Range",
+                                        value = 26,
+                                        minvalue = 1,
+                                        maxvalue = 26,
+                                        custom = {[26] = "Max"},
+                                        stradd = " studs",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Auto Peek",
+                                        value = false,
+                                        extra = {
+                                            type = KEYBIND,
+                                            toggletype = 1,
+                                        },
+                                        tooltip = "Hitscans from in front of your camera,\nif a target is found it will move you towards the point automatically",
+                                    },
+                                },
+                            },
+                            [2] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Aimbot Performance Mode",
+                                        value = true,
+                                        tooltip = "Lowers polling rate for targetting in Rage Aimbot.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Resolve Fake Positions",
+                                        value = true,
+                                        tooltip = "Rage aimbot attempts to resolve Crimwalk on other players.\nDisable if you are having issues with resolver.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Aimbot Damage Prediction",
+                                        value = true,
+                                        tooltip = "Predicts damage done to enemies as to prevent wasting ammo and time on certain players.\nHelps for users, and against players with high latency.",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Damage Prediction Limit",
+                                        value = 100,
+                                        minvalue = 0,
+                                        maxvalue = 300,
+                                        stradd = "hp",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Damage Prediction Time",
+                                        value = 200,
+                                        minvalue = 100,
+                                        maxvalue = 500,
+                                        stradd = "%",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Max Hitscan Points",
+                                        value = 30,
+                                        minvalue = 0,
+                                        maxvalue = 300,
+                                        stradd = " points",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    name = "Visuals",
+                    content = {
+                        {
+                            name = { "Enemy ESP", "Team ESP", "Local" },
+                            autopos = "left",
+                            size = 300,
+                            [1] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Enabled",
+                                        value = true,
+                                        tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Name",
+                                        value = true,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Enemy Name",
+                                            color = { 255, 255, 255, 200 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Box",
+                                        value = true,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Enemy Box Fill", "Enemy Box" },
+                                            color = { { 255, 0, 0, 0 }, { 255, 0, 0, 150 } },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Health Bar",
+                                        value = true,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Enemy Low Health", "Enemy Max Health" },
+                                            color = { { 255, 0, 0 }, { 0, 255, 0 } },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Health Number",
+                                        value = true,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Enemy Health Number",
+                                            color = { 255, 255, 255, 255 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Held Weapon",
+                                        value = true,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Enemy Held Weapon",
+                                            color = { 255, 255, 255, 200 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Held Weapon Icon",
+                                        value = false,
+                                    },
+                                    {
+                                        type = COMBOBOX,
+                                        name = "Flags",
+                                        values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Resolved", false }, { "Backtrack", false },  },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Chams",
+                                        value = true,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Visible Enemy Chams", "Invisible Enemy Chams" },
+                                            color = { { 255, 0, 0, 200 }, { 100, 0, 0, 100 } },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Skeleton",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Enemy skeleton",
+                                            color = { 255, 255, 255, 120 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Out of View",
+                                        value = true,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Arrow Color",
+                                            color = { 255, 255, 255, 255 },
+                                        },
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Arrow Distance",
+                                        value = 50,
+                                        minvalue = 10,
+                                        maxvalue = 101,
+                                        custom = { [101] = "Max" },
+                                        stradd = "%",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Dynamic Arrow Size",
+                                        value = true,
+                                    },
+                                },
+                            },
+                            [2] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Enabled",
+                                        value = false,
+                                        tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Name",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Team Name",
+                                            color = { 255, 255, 255, 200 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Box",
+                                        value = true,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Enemy Box Fill", "Enemy Box" },
+                                            color = { { 0, 255, 0, 0 }, { 0, 255, 0, 150 } },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Health Bar",
+                                        value = false,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Team Low Health", "Team Max Health" },
+                                            color = { { 255, 0, 0 }, { 0, 255, 0 } },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Health Number",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Team Health Number",
+                                            color = { 255, 255, 255, 255 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Held Weapon",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Team Held Weapon",
+                                            color = { 255, 255, 255, 200 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Held Weapon Icon",
+                                        value = false,
+                                    },
+                                    {
+                                        type = COMBOBOX,
+                                        name = "Flags",
+                                        values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false },  },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Chams",
+                                        value = false,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Visible Team Chams", "Invisible Team Chams" },
+                                            color = { { 0, 255, 0, 200 }, { 0, 100, 0, 100 } },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Skeleton",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Team skeleton",
+                                            color = { 255, 255, 255, 120 },
+                                        },
+                                    },
+                                },
+                            },
+                            [3] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Arm Chams",
+                                        value = false,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Sleeve Color", "Hand Color" },
+                                            color = { { 106, 136, 213, 255 }, { 181, 179, 253, 255 } },
+                                        },
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Arm Material",
+                                        value = 1,
+                                        values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Weapon Chams",
+                                        value = false,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Weapon Color", "Laser Color" },
+                                            color = { { 106, 136, 213, 255 }, { 181, 179, 253, 255 } },
+                                        },
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Weapon Material",
+                                        value = 1,
+                                        values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Animate Ghost Material",
+                                        value = false,
+                                        tooltip = "Toggles whether or not the 'Ghost' material will be animated or not.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Remove Weapon Skin",
+                                        value = false,
+                                        tooltip = "If a loaded weapon has a skin, it will remove it.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Third Person",
+                                        value = false,
+                                        extra = {
+                                            type = KEYBIND,
+                                            key = nil,
+                                            toggletype = 2,
+                                        },
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Third Person Distance",
+                                        value = 60,
+                                        minvalue = 1,
+                                        maxvalue = 150,
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Local Player Chams",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Local Player Chams",
+                                            color = { 106, 136, 213, 255 },
+                                        },
+                                        tooltip = "Changes the color and material of the local third person body when it is on.",
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Local Player Material",
+                                        value = 1,
+                                        values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            name = "ESP Settings",
+                            autopos = "left",
+                            autofill = true,
+                            content = {
+                                {
+                                    type = SLIDER,
+                                    name = "Max HP Visibility Cap",
+                                    value = 90,
+                                    minvalue = 50,
+                                    maxvalue = 100,
+                                    stradd = "hp",
+                                    custom = {
+                                        [100] = "Always"
+                                    }
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Text Case",
+                                    value = 2,
+                                    values = { "lowercase", "Normal", "UPPERCASE" },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Max Text Length",
+                                    value = 0,
+                                    minvalue = 0,
+                                    maxvalue = 32,
+                                    custom = { [0] = "Unlimited" },
+                                    stradd = " letters",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "ESP Fade Time", 
+                                    value = 0.5,
+                                    minvalue = 0,
+                                    maxvalue = 2,
+                                    stradd = "s",
+                                    decimal = 0.1,
+                                    custom = { [0] = "Off" }
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Highlight Target",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Aimbot Target",
+                                        color = { 255, 0, 0, 255 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Highlight Friends",
+                                    value = true,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Friended Players",
+                                        color = { 0, 255, 255, 255 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Highlight Priority",
+                                    value = true,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Priority Players",
+                                        color = { 255, 210, 0, 255 },
+                                    },
+                                },
+                                -- {
+                                -- 	type = SLIDER,
+                                -- 	name = "Max Player Text",
+                                -- 	value = 0,
+                                -- 	minvalue = 0,
+                                -- 	maxvalue = 32,
+                                -- 	custom = {[0] = "None"},
+                                -- }
+                            },
+                        },
+                        {
+                            name = { "Camera Visuals", "Viewmodel" },
+                            autopos = "right",
+                            size = 228,
+                            [1] = {
+                                content = {
+                                    {
+                                        type = SLIDER,
+                                        name = "Camera FOV",
+                                        value = 80,
+                                        minvalue = 60,
+                                        maxvalue = 120,
+                                        stradd = "°",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "No Camera Bob",
+                                        value = false,
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "No Scope Sway",
+                                        value = false,
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Disable ADS FOV",
+                                        value = false,
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "No Scope Border",
+                                        value = false,
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "No Visual Suppression",
+                                        value = false,
+                                        tooltip = "Removes the suppression of enemies' bullets.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "No Gun Bob or Sway",
+                                        value = false,
+                                        tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving the mouse.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Reduce Camera Recoil",
+                                        value = false,
+                                        tooltip = "Reduces camera recoil by X%. Does not affect visible weapon recoil or kick.",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Camera Recoil Reduction",
+                                        value = 10,
+                                        minvalue = 0,
+                                        maxvalue = 100,
+                                        stradd = "%",
+                                    },
+                                },
+                            },
+                            [2] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Enabled",
+                                        value = false,
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Offset X",
+                                        value = 0,
+                                        minvalue = -3,
+                                        maxvalue = 3,
+                                        decimal = 0.01,
+                                        stradd = " studs",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Offset Y",
+                                        value = 0,
+                                        minvalue = -3,
+                                        maxvalue = 3,
+                                        decimal = 0.01,
+                                        stradd = " studs",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Offset Z",
+                                        value = 0,
+                                        minvalue = -3,
+                                        maxvalue = 3,
+                                        decimal = 0.01,
+                                        stradd = " studs",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Pitch",
+                                        value = 0,
+                                        minvalue = -360,
+                                        maxvalue = 360,
+                                        stradd = "°",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Yaw",
+                                        value = 0,
+                                        minvalue = -360,
+                                        maxvalue = 360,
+                                        stradd = "°",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Roll",
+                                        value = 0,
+                                        minvalue = -360,
+                                        maxvalue = 360,
+                                        stradd = "°",
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            name = { "World", "Misc", "Keybinds", "FOV", "Spawn" },
+                            subtabfill = true,
+                            autopos = "right",
+                            size = 144,
+                            [1] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Ambience",
+                                        value = false,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Inside Ambience", "Outside Ambience" },
+                                            color = { { 117, 76, 236 }, { 117, 76, 236 } },
+                                        },
+                                        tooltip = "Changes the map's ambient colors to your defined colors.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Force Time",
+                                        value = false,
+                                        tooltip = "Forces the time to the time set by your below.",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Custom Time",
+                                        value = 0,
+                                        minvalue = 0,
+                                        maxvalue = 24,
+                                        decimal = 0.1,
+                                        stradd = "hr",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Custom Saturation",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Saturation Tint",
+                                            color = { 255, 255, 255 },
+                                        },
+                                        tooltip = "Adds custom saturation the image of the game.",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Saturation Density",
+                                        value = 0,
+                                        minvalue = 0,
+                                        maxvalue = 100,
+                                        stradd = "%",
+                                    },
+                                },
+                            },
+                            [2] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Crosshair Color",
+                                        value = false,
+                                        extra = {
+                                            type = DOUBLE_COLORPICKER,
+                                            name = { "Inline", "Outline" },
+                                            color = { { 127, 72, 163 }, { 25, 25, 25 } },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Laser Pointer",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Laser Pointer Color",
+                                            color = { 255, 255, 255, 255 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Ragdoll Chams",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Ragdoll Chams",
+                                            color = { 106, 136, 213, 255 },
+                                        },
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Ragdoll Material",
+                                        value = 1,
+                                        values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Bullet Tracers",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Bullet Tracers",
+                                            color = { 201, 69, 54 },
+                                        },
+                                    },
+                                },
+                            },
+                            [3] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Enabled",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Text Color",
+                                            color = { 127, 72, 163, 255 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Use List Sizes",
+                                        value = false,
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Log Keybinds",
+                                        value = false
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Keybinds List X",
+                                        value = 0,
+                                        minvalue = 0,
+                                        maxvalue = 100,
+                                        shift_stepsize = 0.05,
+                                        stradd = "%",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Keybinds List Y",
+                                        value = 50,
+                                        minvalue = 0,
+                                        maxvalue = 100,
+                                        shift_stepsize = 0.05,
+                                        stradd = "%",
+                                    },
+                                },
+                            },
+                            [4] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Enabled",
+                                        value = false,
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Aim Assist",
+                                        value = true,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Aim Assist FOV",
+                                            color = { 127, 72, 163, 255 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Aim Assist Deadzone",
+                                        value = true,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Deadzone FOV",
+                                            color = { 50, 50, 50, 255 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Bullet Redirection",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Bullet Redirection FOV",
+                                            color = { 163, 72, 127, 255 },
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Ragebot",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Ragebot FOV",
+                                            color = { 255, 210, 0, 255 },
+                                        },
+                                    },
+                                },
+                            },
+                            [5] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Enemy Spawns",
+                                        value = false,
+                                        extra = {
+                                            type = COLORPICKER,
+                                            name = "Enemy Spawns",
+                                            color = { 255, 255, 255, 255 }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            name = "Dropped ESP",
+                            autopos = "right",
+                            autofill = true,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Weapon Names",
+                                    value = false,
+                                    extra = {
+                                        type = DOUBLE_COLORPICKER,
+                                        name = { "Highlighted Weapons", "Weapon Names" },
+                                        color = { { 255, 125, 255, 255 }, { 255, 255, 255, 255 } },
+                                    },
+                                    tooltip = "Displays dropped weapons as you get closer to them,\nHighlights the weapon you are holding in the second color.",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Weapon Icons",
+                                    value = false
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Weapon Ammo",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Weapon Ammo",
+                                        color = { 61, 168, 235, 150 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Dropped Weapon Chams",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Dropped Weapon Color",
+                                        color = { 3, 252, 161, 150 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Grenade Warning",
+                                    value = true,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Slider Color",
+                                        color = { 68, 92, 227 },
+                                    },
+                                    tooltip = "Displays where grenades that will deal\ndamage to you will land and the damage they will deal.",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Grenade ESP",
+                                    value = false,
+                                    extra = {
+                                        type = DOUBLE_COLORPICKER,
+                                        name = { "Inner Color", "Outer Color" },
+                                        color = { { 195, 163, 255 }, { 123, 69, 224 } },
+                                    },
+                                    tooltip = "Displays the full path of any grenade that will deal damage to you is thrown.",
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    name = "Misc",
+                    content = {
+                        {
+                            name = { "Movement", "Tweaks" },
+                            autopos = "left",
+                            size = 300,
+                            [1] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Fly",
+                                        value = false,
+                                        unsafe = true,
+                                        tooltip = "Manipulates your velocity to make you fly.\nUse 60 speed or below to never get flagged.",
+                                        extra = {
+                                            type = KEYBIND,
+                                            key = Enum.KeyCode.B,
+                                            toggletype = 2,
+                                        },
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Fly Speed",
+                                        value = 60,
+                                        minvalue = 1,
+                                        maxvalue = 400,
+                                        stradd = " stud/s",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Auto Jump",
+                                        value = false,
+                                        tooltip = "When you hold the spacebar, it will automatically jump repeatedly, ignoring jump delay.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Speed",
+                                        value = false,
+                                        unsafe = true,
+                                        tooltip = "Manipulates your velocity to make you move faster, unlike fly it doesn't make you fly.\nUse 60 speed or below to never get flagged.",
+                                        extra = {
+                                            type = KEYBIND,
+                                            toggletype = 4,
+                                        },
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Speed Type",
+                                        value = 1,
+                                        values = { "Always", "In Air", "On Hop" },
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Speed Factor",
+                                        value = 40,
+                                        minvalue = 1,
+                                        maxvalue = 400,
+                                        stradd = " stud/s",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Avoid Collisions",
+                                        value = false,
+                                        tooltip = "Attempts to stops you from running into obstacles\nfor Speed and Circle Strafe.",
+                                        extra = {
+                                            type = KEYBIND,
+                                            toggletype = 4,
+                                        }
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Avoid Collisions Scale",
+                                        value = 100,
+                                        minvalue = 0,
+                                        maxvalue = 100,
+                                        stradd = "%",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Circle Strafe",
+                                        value = false,
+                                        extra = {
+                                            type = KEYBIND,
+                                        },
+                                        tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed Factor.",
+                                    },
+                                },
+                            },
+                            [2] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Gravity Shift",
+                                        value = false,
+                                        tooltip = "Shifts movement gravity by X%. (Does not affect bullet acceleration.)",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Gravity Shift Percentage",
+                                        value = -50,
+                                        minvalue = -500,
+                                        maxvalue = 500,
+                                        stradd = "%",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Jump Power",
+                                        value = false,
+                                        tooltip = "Shifts movement jump power by X%.",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Jump Power Percentage",
+                                        value = 150,
+                                        minvalue = 0,
+                                        maxvalue = 1000,
+                                        stradd = "%",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Prevent Fall Damage",
+                                        value = false,
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            name = "Weapon Modifications",
+                            autopos = "left",
+                            autofill = true,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Enabled",
+                                    value = false,
+                                    tooltip = "Allows Bitch Bot to modify weapons.",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Fire Rate Scale",
+                                    value = 150,
+                                    minvalue = 50,
+                                    maxvalue = 500,
+                                    stradd = "%",
+                                    tooltip = "Scales all weapons' firerate by X%.\n100% = Normal firerate",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Recoil Scale",
+                                    value = 10,
+                                    minvalue = 0,
+                                    maxvalue = 100,
+                                    stradd = "%",
+                                    tooltip = "Scales all weapons' recoil by X%.\n0% = No recoil | 50% = Halved recoil",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Remove Animations",
+                                    value = true,
+                                    tooltip = "Removes all animations from any gun.\nThis will also completely remove the equipping animations.",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Instant Equip",
+                                    value = true,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Fully Automatic",
+                                    value = true,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Run and Gun",
+                                    value = false,
+                                    tooltip = "Makes it so that your weapon does not\nsway due to mouse movement, or turns over while sprinting.",
+                                },
+                            },
+                        },
+                        {
+                            name = { "Extra", "Exploits" },
+                            autopos = "right",
+                            autofill = true,
+                            [1] = {
+                                content = {
+                                    {
+                                        type = TOGGLE,
+                                        name = "Ignore Friends",
+                                        value = true,
+                                        tooltip = "When turned on, bullets do not deal damage to friends,\nand Rage modules won't target friends.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Target Only Priority Players",
+                                        value = false,
+                                        tooltip = "When turned on, all modules except for Aim Assist that target players\nwill ignore anybody that isn't on the Priority list.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Disable 3D Rendering",
+                                        value = false,
+                                        tooltip = "When turned on, all 3D rendering will be disabled.\nThis helps with running multiple instances at once."
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Suppress Only",
+                                        value = false,
+                                        tooltip = "When turned on, bullets do not deal damage.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Auto Respawn",
+                                        value = false,
+                                        tooltip = "Automatically respawns after deaths.",
+                                    },
+                                    -- {
+                                    -- 	type = TOGGLE,
+                                    -- 	name = "Disable Team Sounds",
+                                    -- 	value = false,
+                                    -- 	tooltip = "Disables sounds from all teammates and local player.",
+                                    -- },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Vote Friends",
+                                        value = 1,
+                                        values = { "Off", "Yes", "No" },
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Vote Priority",
+                                        value = 1,
+                                        values = { "Off", "Yes", "No" },
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Default Vote",
+                                        value = 1,
+                                        values = { "Off", "Yes", "No" },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Kill Sound",
+                                        value = false,
+                                    },
+                                    {
+                                        type = TEXTBOX,
+                                        name = "killsoundid",
+                                        text = "6229978482",
+                                        tooltip = "The Roblox sound ID or file inside of synapse\n workspace to play when Kill Sound is on.",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Kill Sound Volume",
+                                        value = 20,
+                                        minvalue = 0,
+                                        maxvalue = 100,
+                                        stradd = "%",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Kill Say",
+                                        value = false,
+                                        tooltip = "Kill say messages, located in bitchbot/killsay.txt \n[name] is the target's name\n[weapon] is the weapon used\n[hitbox] says head or body depending on where you shot the player",
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Chat Spam",
+                                        value = 1,
+                                        values = {
+                                            "Off",
+                                            "Original",
+                                            "t0nymode",
+                                            "Chinese Propaganda",
+                                            "Emojis",
+                                            "Deluxe",
+                                            "Youtube Title",
+                                            "Custom",
+                                            "Custom Combination",
+                                        },
+                                        tooltip = "Spams chat, Custom options are located in the bitchbot/chatspam.txt",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Chat Spam Repeat",
+                                        value = false,
+                                        tooltip = "Repeats the same Chat Spam message in chat.",
+                                    },
+                                    {
+                                        type = SLIDER,
+                                        name = "Chat Spam Delay",
+                                        minvalue = 1,
+                                        maxvalue = 10,
+                                        value = 5,
+                                        stradd = "s",
+                                    },
+                                    -- {
+                                    -- 	type = TOGGLE,
+                                    -- 	name = "Impact Grenade",
+                                    -- 	value = false,
+                                    -- 	tooltip = "Explodes grenades on impact."
+                                    -- },
+                                    -- {
+                                    -- 	type = TOGGLE,
+                                    -- 	name = "Auto Martyrdom",
+                                    -- 	value = false,
+                                    -- 	tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position.",
+                                    -- },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Break Windows",
+                                        value = false,
+                                        tooltip = "Breaks all windows in the map when you spawn."
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Join New Game On Kick",
+                                        value = false,
+                                    },
+                                    {
+                                        type = BUTTON,
+                                        name = "Join New Game",
+                                        unsafe = false,
+                                        doubleclick = true,
+                                    },
+
+                                },
+                            },
+                            [2] = {
+                                content = {
+
+                                    --[[{
+                                        type = TOGGLE,
+                                        name = "Super Invisibility",
+                                        value = false,
+                                        extra = {
+                                            type = KEYBIND
+                                        }
+                                    },]]
+                                    {
+                                        type = TOGGLE,
+                                        unsafe = true,
+                                        name = "Crash Server",
+                                        tooltip = "Attempts to overwhelm the server so that users are kicked\nfor internet connection problems.\nThe higher the Crash Intensity the faster it will be,\nbut the higher the chance for it to fail.",
+                                    },
+                                    {
+                                        type = SLIDER, 
+                                        name = "Crash Intensity",
+                                        minvalue = 1, 
+                                        maxvalue = 16,
+                                        value = 8
+                                    },
+                                    -- {
+                                    -- 	type = TOGGLE,
+                                    -- 	unsafe = true,
+                                    -- 	name = "Invisibility",
+                                    -- 	extra = {
+                                    -- 		type = KEYBIND,
+                                    -- 		toggletype = 0,
+                                    -- 	},
+                                    -- },
+                                    {
+                                        type = TOGGLE,
+                                        unsafe = true,
+                                        name = "Rapid Kill",
+                                        value = false,
+                                        extra = {
+                                            type = KEYBIND,
+                                            toggletype = 0,
+                                        },
+                                        tooltip = "Throws 3 grenades instantly on random enemies.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        unsafe = true,
+                                        name = "Auto Rapid Kill",
+                                        value = false,
+                                        tooltip = "Throws 3 grenades instantly on random enemies,\nthen kills itself to do it again.\nWorks only when Rapid Kill is enabled.\nAuto Respawn in Misc->Extra will automate this further.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        unsafe = true,
+                                        name = "Grenade Teleport",
+                                        value = false,
+                                        tooltip = "Teleports grenades to other players when enabled."
+                                    },
+                                    {
+                                        type = COMBOBOX,
+                                        name = "Grenade Changes",
+                                        values = { { "Martyrdom", false } , { "Impact", false }, }
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        unsafe = true,
+                                        name = "Crimwalk",
+                                        value = false,
+                                        extra = {
+                                            type = KEYBIND,
+                                        },
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Disable Crimwalk on Shot",
+                                        value = true,
+                                        unsafe = true,
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Bypass Speed Checks",
+                                        value = false,
+                                        unsafe = true,
+                                        tooltip = "Attempts to bypass maximum speed limit on the server.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Teleport",
+                                        value = false,
+                                        unsafe = true,
+                                        extra = {
+                                            type = KEYBIND,
+                                            toggletype = 0,
+                                        },
+                                        tooltip = "When key pressed you will teleport to the mouse position.\nDoes not work when Bypass Speed Checks is enabled.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Vertical Floor Clip",
+                                        value = false,
+                                        unsafe = true,
+                                        extra = {
+                                            type = KEYBIND,
+                                            toggletype = 0,
+                                        },
+                                        tooltip = "Teleports you 19 studs under the ground. Must be over glass or non-collidable parts to work. \nHold Alt to go up, and Shift to go forwards.",
+                                    },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Fake Equip",
+                                        value = false,
+                                        unsafe = true,
+                                    },
+                                    {
+                                        type = DROPBOX,
+                                        name = "Fake Slot",
+                                        values = { "Primary", "Secondary", "Melee" },
+                                        value = 1,
+                                    },
+
+                                    -- {
+                                    -- 	type = TOGGLE,
+                                    -- 	name = "Noclip",
+                                    -- 	value = false,
+                                    -- 	extra = {
+                                    -- 		type = KEYBIND,
+                                    -- 		key = nil
+                                    -- 	},
+                                    -- 	unsafe = true,
+                                    -- 	tooltip = "Allows you to noclip through most parts of the map. Must be over glass or non-collidable parts to work."
+                                    -- },
+                                    -- {
+                                    -- 	type = TOGGLE,
+                                    -- 	name = "Fake Position",
+                                    -- 	value = false,
+                                    -- 	extra = {
+                                    -- 		type = KEYBIND
+                                    -- 	},
+                                    -- 	unsafe = true,
+                                    -- 	tooltip = "Fakes your server-side position. Works best when stationary, and allows you to be unhittable."
+                                    -- },
+                                    {
+                                        type = TOGGLE,
+                                        name = "Lock Player Positions",
+                                        value = false,
+                                        unsafe = true,
+                                        extra = {
+                                            type = KEYBIND,
+                                        },
+                                        tooltip = "Locks all other players' positions.",
+                                    },
+                                    -- {
+                                    -- 	type = TOGGLE,
+                                    -- 	name = "Skin Changer",
+                                    -- 	value = false,
+                                    -- 	tooltip = "While this is enabled, all custom skins will apply with the custom settings below.",
+                                    -- 	extra = {
+                                    -- 		type = COLORPICKER,
+                                    -- 		name = "Weapon Skin Color",
+                                    -- 		color = { 127, 72, 163, 255 },
+                                    -- 	},
+                                    -- },
+                                    -- {
+                                    -- 	type = TEXTBOX,
+                                    -- 	name = "skinchangerTexture",
+                                    -- 	text = "6156783684",
+                                    -- },
+                                    -- {
+                                    -- 	type = SLIDER,
+                                    -- 	name = "Scale X",
+                                    -- 	value = 10,
+                                    -- 	minvalue = 1,
+                                    -- 	maxvalue = 500,
+                                    -- 	stradd = "%",
+                                    -- },
+                                    -- {
+                                    -- 	type = SLIDER,
+                                    -- 	name = "Scale Y",
+                                    -- 	value = 10,
+                                    -- 	minvalue = 1,
+                                    -- 	maxvalue = 500,
+                                    -- 	stradd = "%",
+                                    -- },
+                                    -- {
+                                    -- 	type = DROPBOX,
+                                    -- 	name = "Skin Material",
+                                    -- 	value = 1,
+                                    -- 	values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
+                                    -- },
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    name = "Settings",
+                    content = {
+                        {
+                            name = "Player List",
+                            x = menu.columns.left,
+                            y = 66,
+                            width = menu.w - 34,
+                            height = 328,
+                            content = {
+                                {
+                                    type = "list",
+                                    name = "Players",
+                                    multiname = { "Name", "Team", "Status" },
+                                    size = 9,
+                                    columns = 3,
+                                },
+                                {
+                                    type = IMAGE,
+                                    name = "Player Info",
+                                    text = "No Player Selected",
+                                    size = 72,
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Player Status",
+                                    x = 307,
+                                    y = 314,
+                                    w = 160,
+                                    value = 1,
+                                    values = { "None", "Friend", "Priority" },
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Votekick",
+                                    doubleclick = true,
+                                    x = 307,
+                                    y = 356,
+                                    w = 76,
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Spectate",
+                                    x = 391,
+                                    y = 356,
+                                    w = 76,
+                                },
+                            },
+                        },
+                        {
+                            name = "Cheat Settings",
+                            x = menu.columns.left,
+                            y = 400,
+                            width = menu.columns.width,
+                            height = 183,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Menu Accent",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Accent Color",
+                                        color = { 127, 72, 163 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Watermark",
+                                    value = true,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Custom Menu Name",
+                                    value = MenuName and true or false,
+                                },
+                                {
+                                    type = TEXTBOX,
+                                    name = "MenuName",
+                                    text = MenuName or "Bitch Bot",
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Set Clipboard Game ID",
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Unload Cheat",
+                                    doubleclick = true,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Allow Unsafe Features",
+                                    value = false,
+                                },
+                            },
+                        },
+                        {
+                            name = "Configuration",
+                            x = menu.columns.right,
+                            y = 400,
+                            width = menu.columns.width,
+                            height = 183,
+                            content = {
+                                {
+                                    type = TEXTBOX,
+                                    name = "ConfigName",
+                                    file = true,
+                                    text = "",
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Configs",
+                                    value = 1,
+                                    values = config:GetConfigs(),
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Load Config",
+                                    doubleclick = true,
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Save Config",
+                                    doubleclick = true,
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Delete Config",
+                                    doubleclick = true,
+                                },
+                            },
+                        },
+                    },
+                },
+            }
+        else
+            BBOT.configuration = {
+                {
+                    name = "Combat",
+                    content = {
+                        {
+                            name = "Aim Assist",
+                            autopos = "left",
+                            autofill = true,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Enabled",
+                                    value = false,
+                                    extra = {
+                                        type = KEYBIND,
+                                        key = Enum.KeyCode.J,
+                                        toggletype = 1,
+                                    },
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Use Mouse Keys",
+                                    value = 1,
+                                    values = { "Off", "Mouse 1", "Mouse 2" },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Target Priority Only",
+                                    value = false,
+                                },
+                                {
+                                    type = COMBOBOX,
+                                    name = "Checks",
+                                    values = { { "Alive", true }, { "Same Team", false }, { "Distance", false } },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Max Distance",
+                                    value = 100,
+                                    minvalue = 30,
+                                    maxvalue = 500,
+                                    stradd = "m",
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "FOV Calculation",
+                                    value = 1,
+                                    values = { "Pixel", "Actual Fov", "Custom FOV" },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Custom FOV Value",
+                                    value = 60,
+                                    minvalue = 60,
+                                    maxvalue = 120,
+                                    stradd = "°",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Aimbot FOV",
+                                    value = 0,
+                                    minvalue = 0,
+                                    maxvalue = 360,
+                                    stradd = "°",
+                                    custom = {
+                                        [0] = "Unlimited"
+                                    }
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Hitbox",
+                                    value = 1,
+                                    values = { "Head", "Torso" },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Force Angles In First Person",
+                                    unsafe = true,
+                                    value = false,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Smoothing",
+                                    value = false,
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Smoothing Ammount",
+                                    value = 0,
+                                    minvalue = 0,
+                                    maxvalue = 100,
+                                    stradd = "%",
+                                },
+                                -- {
+                                -- 	type = TOGGLE,
+                                -- 	name = "Visibility Check",
+                                -- 	value = false,
+                                -- },
+                                -- {
+                                -- 	type = COMBOBOX,
+                                -- 	name = "Visibility Check Filters",
+                                -- 	values = { { "Transparent", true }, { "Force Feild", false }, { "Collisionless", false }, { "Thickness", false } },
+                                -- },
+                                -- {
+                                -- 	type = TOGGLE,
+                                -- 	name = "Auto Shoot",
+                                -- 	value = false,
+                                -- },
+                            },
+                        },
+                        {
+                            name = "Trigger Bot",
+                            autopos = "right",
+                            autofill = true,
+                            content = {
+                                {
+                                    -- type = TOGGLE,
+                                    -- name = "Enabled",
+                                    -- value = false,
+                                    -- extra = {
+                                    -- 	type = KEYBIND,
+                                    -- 	key = Enum.KeyCode.J,
+                                    -- 	toggletype = 1,
+                                    -- },
+                                },
+                            },
+                        }
+                    },
+                },
+                {
+                    name = "Visuals",
+                    content = {
+                        {
+                            name = "Player ESP",
+                            autopos = "left",
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Name",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Name ESP",
+                                        color = { 255, 255, 255, 255 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Display Name",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Display Name ESP",
+                                        color = { 255, 255, 255, 255 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Head Dot",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Head Dot",
+                                        color = { 255, 255, 255, 255 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Box",
+                                    value = false,
+                                    extra = {
+                                        type = DOUBLE_COLORPICKER,
+                                        name = { "Box Fill", "Box ESP" },
+                                        color = { { 255, 0, 0, 0 }, { 255, 0, 0, 150 } },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Health Bar",
+                                    value = false,
+                                    extra = {
+                                        type = DOUBLE_COLORPICKER,
+                                        name = { "Low Health", "Max Health" },
+                                        color = { { 255, 0, 0 }, { 0, 255, 0 } },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Health Number",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Health Number ESP",
+                                        color = { 255, 255, 255, 255 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Team",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Team ESP",
+                                        color = { 255, 255, 255, 255 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Team Color Based",
+                                    value = false,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Distance",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Distance ESP",
+                                        color = { 255, 255, 255, 255 },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            name = "ESP Settings",
+                            autopos = "left",
+                            autofill = true,
+                            content = {
+                                -- {
+                                -- 	type = DROPBOX,
+                                -- 	name = "ESP Sorting",
+                                -- 	value = 1,
+                                -- 	values = { "None", "Distance" },
+                                -- },
+                                {
+                                    type = COMBOBOX,
+                                    name = "Checks",
+                                    values = { { "Alive", true }, { "Same Team", false }, { "Distance", false } },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Max Distance",
+                                    value = 100,
+                                    minvalue = 30,
+                                    maxvalue = 500,
+                                    stradd = "m",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Max HP Visibility Cap",
+                                    value = 90,
+                                    minvalue = 50,
+                                    maxvalue = 100,
+                                    stradd = "% hp",
+                                    custom = {
+                                        [100] = "Always"
+                                    }
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Text Case",
+                                    value = 2,
+                                    values = { "lowercase", "Normal", "UPPERCASE" },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Max Text Length",
+                                    value = 0,
+                                    minvalue = 0,
+                                    maxvalue = 32,
+                                    custom = { [0] = "Unlimited" },
+                                    stradd = " letters",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Highlight Target",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Aimbot Target",
+                                        color = { 255, 0, 0, 255 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Highlight Friends",
+                                    value = true,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Friended Players",
+                                        color = { 0, 255, 255, 255 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Highlight Priority",
+                                    value = true,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Priority Players",
+                                        color = { 255, 210, 0, 255 },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            name = "Local Visuals",
+                            autopos = "right",
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Change FOV",
+                                    value = false,
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Camera FOV",
+                                    value = 60,
+                                    minvalue = 60,
+                                    maxvalue = 120,
+                                    stradd = "°",
+                                },
+                            },
+                        },
+                        {
+                            name = "World Visuals",
+                            autopos = "right",
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Force Time",
+                                    value = false,
+                                    --tooltip = "Forces the time to the time set by your below.",
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Custom Time",
+                                    value = 0,
+                                    minvalue = 0,
+                                    maxvalue = 24,
+                                    decimal = 0.1,
+                                    stradd = "hr",
+                                },
+                            }
+                        },
+                        {
+                            name = "Misc",
+                            autopos = "right",
+                            autofill = true,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Custom Crosshair",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Crosshair Color",
+                                        color = { 255, 255, 255, 255 },
+                                    },
+                                },
+        
+                                {
+                                    type = DROPBOX,
+                                    name = "Crosshair Position",
+                                    value = 1,
+                                    values = { "Center Of Screen", "Mouse" },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Crosshair Size",
+                                    value = 10,
+                                    minvalue = 5,
+                                    maxvalue = 15,
+                                    stradd = "px",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Draw Aimbot FOV",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Aimbot FOV Circle Color",
+                                        color = { 255, 255, 255, 255 },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    name = "Misc",
+                    content = {
+                        {
+                            name = "Movement",
+                            autopos = "left",
+                            autofill = true,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Speed",
+                                    value = false,
+                                    extra = {
+                                        type = KEYBIND,
+                                        key = Enum.KeyCode.LeftShift,
+                                        toggletype = 1,
+                                    },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Speed Factor",
+                                    value = 40,
+                                    minvalue = 1,
+                                    maxvalue = 200,
+                                    stradd = " stud/s",
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Speed Method",
+                                    value = 1,
+                                    values = { "Velocity", "Walk Speed" },
+                                },
+                                -- {
+                                -- 	type = COMBOBOX,
+                                -- 	name = COMBOBOX,
+                                -- 	values = {{"Head", true}, {"Body", true}, {"Arms", false}, {"Legs", false}}
+                                -- },
+                                {
+                                    type = TOGGLE,
+                                    name = "Fly",
+                                    value = false,
+                                    extra = {
+                                        type = KEYBIND,
+                                        key = Enum.KeyCode.B,
+                                    },
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Fly Method",
+                                    value = 1,
+                                    values = { "Velocity", "Noclip" },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Fly Speed",
+                                    value = 40,
+                                    minvalue = 1,
+                                    maxvalue = 200,
+                                    stradd = " stud/s",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Mouse Teleport",
+                                    value = false,
+                                    extra = {
+                                        type = KEYBIND,
+                                        key = Enum.KeyCode.Q,
+                                        toggletype = 0
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            name = "Exploits",
+                            autopos = "right",
+                            autofill = true,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Enable Timer Exploits",
+                                    unsafe = true,
+                                    value = false,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Timer",
+                                    value = false,
+                                    extra = {
+                                        type = KEYBIND,
+                                        key = Enum.KeyCode.E,
+                                    },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Timer Factor",
+                                    value = 20,
+                                    minvalue = 1,
+                                    maxvalue = 1000,
+                                    stradd = "ms",
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Instant Tick Shift",
+                                    value = false,
+                                    extra = {
+                                        type = KEYBIND,
+                                        key = Enum.KeyCode.R,
+                                        toggletype = 0,
+                                    },
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Instant Tick Shift Delay",
+                                    value = 0,
+                                    minvalue = 0,
+                                    maxvalue = 30,
+                                    stradd = "s",
+                                    custom = {
+                                        [0] = "Off"
+                                    }
+                                },
+                                {
+                                    type = SLIDER,
+                                    name = "Instant Tick Shift Factor",
+                                    value = 5,
+                                    minvalue = 1,
+                                    maxvalue = 30,
+                                    stradd = "s",
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    name = "Settings",
+                    content = {
+                        {
+                            name = "Player List",
+                            x = menu.columns.left,
+                            y = 66,
+                            width = menuWidth - 34, -- this does nothing?
+                            height = 328,
+                            content = {
+                                {
+                                    type = "list",
+                                    name = "Players",
+                                    multiname = { "Name", "Team", "Status" },
+                                    size = 9,
+                                    columns = 3,
+                                },
+                                {
+                                    type = IMAGE,
+                                    name = "Player Info",
+                                    text = "No Player Selected",
+                                    size = 72,
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Player Status",
+                                    x = 307,
+                                    y = 314,
+                                    w = 160,
+                                    value = 1,
+                                    values = { "None", "Friend", "Priority" },
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Teleport",
+                                    doubleclick = true,
+                                    x = 307,
+                                    y = 356,
+                                    w = 160
+                                },
+                            },
+                        },
+                        {
+                            name = "Cheat Settings",
+                            x = menu.columns.left,
+                            y = 400,
+                            width = menu.columns.width,
+                            height = 182,
+                            content = {
+                                {
+                                    type = TOGGLE,
+                                    name = "Menu Accent",
+                                    value = false,
+                                    extra = {
+                                        type = COLORPICKER,
+                                        name = "Accent Color",
+                                        color = { 127, 72, 163 },
+                                    },
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Watermark",
+                                    value = true,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Custom Menu Name",
+                                    value = MenuName and true or false,
+                                },
+                                {
+                                    type = TEXTBOX,
+                                    name = "MenuName",
+                                    text = MenuName or "Bitch Bot",
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Set Clipboard Game ID",
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Unload Cheat",
+                                    doubleclick = true,
+                                },
+                                {
+                                    type = TOGGLE,
+                                    name = "Allow Unsafe Features",
+                                    value = false,
+                                },
+                            },
+                        },
+                        {
+                            name = "Configuration",
+                            x = menu.columns.right,
+                            y = 400,
+                            width = menu.columns.width,
+                            height = 182,
+                            content = {
+                                {
+                                    type = TEXTBOX,
+                                    name = "ConfigName",
+                                    file = true,
+                                    text = "",
+                                },
+                                {
+                                    type = DROPBOX,
+                                    name = "Configs",
+                                    value = 1,
+                                    values = GetConfigs(),
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Load Config",
+                                    doubleclick = true,
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Save Config",
+                                    doubleclick = true,
+                                },
+                                {
+                                    type = BUTTON,
+                                    name = "Delete Config",
+                                    doubleclick = true,
+                                },
+                            },
+                        },
+                    },
+                },
+            }
+        end
+    end)
 end
 
 -- Configs
@@ -1228,10 +3999,243 @@ do
         -- Configs should have it's own dedicated handle
     -- To do, I don't want to have to do this, but I might make an entirely new config system
         -- Cause why not... and also right now things are just all over the place...
+    -- To do, make a parser for configs
+
+    local hook = BBOT.hook
+    local table = BBOT.table
+    local userinputservice = BBOT.service:GetService("UserInputService")
+    local httpservice = BBOT.service:GetService("HttpService")
+    local config = {
+        registry = {}, -- storage of the current configuration
+        enums = {}
+    }
+    BBOT.config = config
+
+    config.storage_pathway = "bitchbot/" .. BBOT.game
+    config.storage_main = "bitchbot"
+    config.storage_extension = ".bb"
+
+    if not isfolder(config.storage_pathway) then
+        makefolder(config.storage_pathway)
+    end
+
+    if not isfolder(config.storage_main) then
+        makefolder(config.storage_main)
+    end
+
+    do -- key binds
+        local enums = Enum.KeyCode:GetEnumItems()
+        local enumstable, enumtoID = {}, {}
+        for k, v in table.sortedpairs(enums) do
+            local keyname = string.sub(tostring(v), 14)
+            if not string.find( keyname, "World", 1, true ) then
+                enumstable[#enumstable+1] = keyname
+                enumtoID[keyname] = v
+            end
+        end
+
+        enumstable[#enumstable+1] = "MouseButton1"
+        enumtoID["MouseButton1"] = Enum.UserInputType.MouseButton1
+        enumstable[#enumstable+1] = "MouseButton2"
+        enumtoID["MouseButton2"] = Enum.UserInputType.MouseButton2
+
+        config.enums.KeyCode = {
+            Id = enumtoID,
+            List = enumstable
+        }
+    end
+
+    do -- materials
+        local mats, matstoid = {}, {}
+        local enums = Enum.Material:GetEnumItems()
+        for k, v in table.sortedpairs(enums) do
+            local keyname = string.sub(tostring(v), 15)
+            mats[#mats+1] = keyname
+            matstoid[keyname] = v
+        end
+
+        config.enums.Material = {
+            Id = matstoid,
+            List = mats
+        }
+    end
+
+    -- EX:
+    --[[
+        hook:Add("OnConfigChanged", "BBOT:ChamsChanged", function(path, old, new)
+            if config:IsPathwayEqual(path, "Visuals", "Chams") then
+                chams:Rebuild()
+            end
+        end)
+    ]]
+    function config:IsPathwayEqual(pathway, ...)
+        local steps = {...}
+        for i=1, #steps do
+            if pathway[i] ~= steps[i] then
+                return false
+            end
+        end
+        return true
+    end
+
+    function config:GetKeyID(...)
+        local key = self:GetValue(...)
+        return config.enums.KeyCode.Id[key]
+    end
+
+    local userinputservice = BBOT.service:GetService("UserInputService")
+    function config:IsKeyDown(...)
+        local keyid = self:GetKeyID(...)
+        if not keyid then return false end
+
+        if keyid == Enum.UserInputType.MouseButton1 or keyid == Enum.UserInputType.MouseButton2 then
+            return userinputservice:IsMouseButtonPressed(keyid)
+        end
+
+        return userinputservice:IsKeyDown(keyid)
+    end
+
+    function config:InputIsKeyDown(input, ...)
+        local keyid = self:GetKeyID(...)
+        if not keyid then return false end
+
+        if keyid == Enum.UserInputType.MouseButton1 or keyid == Enum.UserInputType.MouseButton2 then
+            if input.UserInputType == keyid then
+                return true
+            end
+        elseif input.UserInputType == Enum.UserInputType.Keyboard then
+            if input.KeyCode == keyid then
+                return true
+            end
+        end
+        return false
+    end
+
+    -- EX: config:GetValue("Aimbot", "Rage", "Silent Aim")
+    -- You can also return a raw table for easier iteration of data
+    function config:GetValue(...)
+        local steps = {...}
+        local reg = self.registry
+        for i=1, #steps do
+            reg = reg[steps[i]]
+            if reg == nil then break end
+        end
+        if reg == nil then return end
+        if typeof(reg) == "table" then
+            if reg.type and reg.type ~= BUTTON then
+                return reg.value
+            end
+        end
+        return reg
+    end
+
+    -- EX: config:SetValue(true, "Aimbot", "Rage", "Silent Aim")
+    function config:SetValue(value, ...)
+        local steps = {...}
+        local reg, len = self.registry, #steps
+        for i=1, len-1 do
+            reg = reg[steps[i]]
+            if reg == nil then break end
+        end
+        local final = steps[len]
+        if reg[final] == nil then return false end
+        local old = reg[final]
+        if typeof(reg[final]) == "table" then
+            if old.type and old.type ~= BUTTON then
+                local o = old.value
+                old.value = value
+                hook:Call("OnConfigChanged", steps, o, value)
+            end
+            return true
+        end
+        reg[final] = value
+        hook:Call("OnConfigChanged", steps, old, value)
+        return true
+    end
+
+    -- Habbit, fuck off.
+    function config:GetTable()
+        return self.registry
+    end
+
+    --COMBOBOX, TOGGLE, KEYBIND, DROPBOX, COLORPICKER, DOUBLE_COLORPICKER, SLIDER, BUTTON, LIST, IMAGE, TEXTBOX 
+    config.parsertovalue = {
+        [TOGGLE] = function(v) return v.value end,
+        [SLIDER] = function(v) return v.value end,
+        [KEYBIND] = function(v) return {type = KEYBIND, value = v.value, list = config.enums.KeyCode.List} end,
+        [DROPBOX] = function(v) return {type = DROPBOX, value = v.values[v.value], list = v.values} end,
+        [COLORPICKER] = function(v) return {type = COLORPICKER, value = Color3.new(unpack(v.color))} end,
+        [COMBOBOX] = function(v) return {type = COMBOBOX, value = v.values} end,
+        [DOUBLE_COLORPICKER] = function(v, i) return {type = DOUBLE_COLORPICKER, value = Color3.new(unpack(v.color[i]))} end,
+    }
+
+    -- Converts a setup table (which is a mix of menu params and config) into a config quick lookup table
+    function config:ParseSetupToConfig(tbl, source)
+        for i=1, #tbl do
+            local v = tbl[i]
+            if v.content then
+                source[v.name] = {}
+                self:ParseSetupToConfig(v.content, source[v.name])
+            elseif v.name and (v.value ~= nil or v.values ~= nil or v.color ~= nil) then
+                local conversion = self.parsertovalue[v.type]
+                if conversion then
+                    source[v.name] = conversion(v)
+                end
+                if v.extra then
+                    local extra = v.extra
+                    if extra.name and (extra.value ~= nil or extra.values ~= nil or extra.color ~= nil) then
+                        source[v.name] = {
+                            ["self"] = source[v.name]
+                        }
+                        local ismulti = typeof(extra.name) == "table"
+                        for i=1, (ismulti and #extra.name or 1) do
+                            local name = (ismulti and extra.name[i] or extra.name)
+                            local conversion = self.parsertovalue[extra.type]
+                            if conversion then
+                                source[v.name][name] = conversion(extra, i)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Setup for the config system to start it's managing process
+    function config:Setup(configtable)
+        local raw = table.deepcopy(configtable)
+        self.raw = raw
+        local reg = {}
+        self:ParseSetupToConfig(raw, reg)
+        self.registry = reg
+    end
+
+    hook:Add("Initialize", "BBOT.ConfigSetup", function()
+        BBOT.log(LOG_DEBUG, "Setting up config quick access table...")
+        config:Setup(BBOT.configuration)
+    end)
+
+    -- I was gonna make this backwards compatible
+    function config:GetConfigs()
+        local result = {}
+        local directory = "bitchbot\\" .. BBOT.game
+        for k, v in pairs(listfiles(directory)) do
+            local clipped = v:sub(#directory + 2)
+            if clipped:sub(#clipped - 2) == ".bb" then
+                clipped = clipped:sub(0, #clipped - 3)
+                result[k] = clipped
+            end
+        end
+        if #result <= 0 then
+            writefile("bitchbot/" .. BBOT.game .. "/Default.bb", "")
+        end
+        return result
+    end
 end
 
 -- Notifications
 do
+    -- I kinda like how this can run standalone
     local hook = BBOT.hook
     local math = BBOT.math
     local notification = {
@@ -1446,6 +4450,7 @@ do
     local string = BBOT.string
     local LOCAL_MOUSE = BBOT.service:GetService("Mouse")
     local INPUT_SERVICE = BBOT.service:GetService("UserInputService")
+    local Camera = BBOT.service:GetService("CurrentCamera")
     local color = BBOT.color
     local menuWidth, menuHeight = 500, 600
     -- What in the fuck - WholeCream
@@ -1508,59 +4513,6 @@ do
         values = {}
     }
     BBOT.menu = menu
-
-    if BBOT.game == "pf" then
-        function menu:MouseCapture()
-            if self.open then
-                if BBOT.aux and BBOT.aux.char.alive then
-                    INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
-                else
-                    INPUT_SERVICE.MouseIconEnabled = false
-                end
-            else
-                if BBOT.aux and BBOT.aux.char.alive then
-                    INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.LockCenter
-                    INPUT_SERVICE.MouseIconEnabled = false
-                else
-                    INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
-                    INPUT_SERVICE.MouseIconEnabled = true
-                end
-            end
-        end
-    else
-        -- I swear to christ I will throw a temper tantrum
-        menu.mousebehavior = Enum.MouseBehavior.Default
-        local mt = getrawmetatable(game)
-        local newindex = mt.__newindex
-        setreadonly(mt, false)
-        mt.__newindex = newcclosure(function(t, p, v)
-            if not checkcaller() then
-                if t == INPUT_SERVICE then
-                    if p == "MouseBehavior" then
-                        menu.mousebehavior = v
-                        if menu.open then
-                            newindex(t, p, Enum.MouseBehavior.Default)
-                            return
-                        end
-                    end
-                end
-            end
-            return newindex(t, p, v)
-        end)
-        menu.oldmt = {
-            __newindex = newindex,
-        }
-        setreadonly(mt, true)
-        function menu:MouseCapture()
-            if self.open then
-                INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
-            else
-                if INPUT_SERVICE.MouseBehavior ~= self.mousebehavior then
-                    INPUT_SERVICE.MouseBehavior = self.mousebehavior
-                end
-            end
-        end
-    end
 
     local textBoxLetters = {
         "A",
@@ -2209,7 +5161,6 @@ do
         return result
     end
 
-    local Camera = BBOT.service:GetService("CurrentCamera")
     local SCREEN_SIZE = Camera.ViewportSize
 
     menu.x = math.floor((SCREEN_SIZE.x / 2) - (menu.w / 2))
@@ -2217,6 +5168,59 @@ do
 
     local RGB = Color3.fromRGB
     function menu:Initialize(menutable)
+        if BBOT.game == "pf" then
+            function self:MouseCapture()
+                if self.open then
+                    if BBOT.aux and BBOT.aux.char.alive then
+                        INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
+                    else
+                        INPUT_SERVICE.MouseIconEnabled = false
+                    end
+                else
+                    if BBOT.aux and BBOT.aux.char.alive then
+                        INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.LockCenter
+                        INPUT_SERVICE.MouseIconEnabled = false
+                    else
+                        INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
+                        INPUT_SERVICE.MouseIconEnabled = true
+                    end
+                end
+            end
+        else
+            -- I swear to christ I will throw a temper tantrum
+            self.mousebehavior = Enum.MouseBehavior.Default
+            local mt = getrawmetatable(game)
+            local newindex = mt.__newindex
+            setreadonly(mt, false)
+            mt.__newindex = newcclosure(function(t, p, v)
+                if not checkcaller() then
+                    if t == INPUT_SERVICE then
+                        if p == "MouseBehavior" then
+                            self.mousebehavior = v
+                            if self.open then
+                                newindex(t, p, Enum.MouseBehavior.Default)
+                                return
+                            end
+                        end
+                    end
+                end
+                return newindex(t, p, v)
+            end)
+            self.oldmt = {
+                __newindex = newindex,
+            }
+            setreadonly(mt, true)
+            function self:MouseCapture()
+                if self.open then
+                    INPUT_SERVICE.MouseBehavior = Enum.MouseBehavior.Default
+                else
+                    if INPUT_SERVICE.MouseBehavior ~= self.mousebehavior then
+                        INPUT_SERVICE.MouseBehavior = self.mousebehavior
+                    end
+                end
+            end
+        end
+
         local bbmenu = {} -- this one is for the rendering n shi
         do
             draw:MenuOutlinedRect(true, 0, 0, self.w, self.h, { 0, 0, 0, 255 }, bbmenu) -- first gradent or whatever
@@ -5417,2093 +8421,13 @@ do
         function self:unload()
             getgenv().v2 = nil
             self.unloaded = true
-    
-            for k, conn in next, self.connections do
-                if not getrawmetatable(conn) then
-                    conn()
-                else
-                    conn:Disconnect()
-                end
-                self.connections[k] = nil
-            end
-    
-            game:service("ContextActionService"):UnbindAction("BB Keycheck")
-            if self.game == "pf" then
-                game:service("ContextActionService"):UnbindAction("BB PF check")
-            elseif self.game == "uni" then
-                game:service("ContextActionService"):UnbindAction("BB UNI check")
-            end
-    
-            local mt = getrawmetatable(game)
-    
-            setreadonly(mt, false)
-    
-            local oldmt = self.oldmt
-    
-            if oldmt then
-                for k, v in next, mt do
-                    if oldmt[k] then
-                        mt[k] = oldmt[k]
-                    end
-                end
-            else
-                --TODO nate do this please
-                -- remember to store any "game" metatable hooks PLEASE PLEASE because this will ensure it replaces the meta so that it UNLOADS properly
-                -- rconsoleerr("fatal error: no old game meta found! (UNLOAD PROBABLY WON'T WORK AS EXPECTED)")
-
-                -- How about fuck that and I just make it hook related - WholeCream
-            end
-    
-            setreadonly(mt, true)
-    
-            if self.game == "pf" or self.pfunload then
-                self:pfunload()
-            end
-    
-            draw:UnRender()
-            CreateNotification = nil
-            allrender = nil
-            self = nil
-            draw = nil
-            self.unloaded = true
         end
     end
 
-    menu:Initialize({
-        { --ANCHOR stuffs
-            name = "Legit",
-            content = {
-                {
-                    name = "Aim Assist",
-                    autopos = "left",
-                    autofill = true,
-                    content = {
-                        {
-                            type = TOGGLE,
-                            name = "Enabled",
-                            value = true,
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Aimbot FOV",
-                            value = 10,
-                            minvalue = 0,
-                            maxvalue = 180,
-                            stradd = "°",
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Dynamic FOV",
-                            value = false,
-                            tooltip = "Changes all FOV settings in the Legit tab\nto change depending on the magnification.",
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Smoothing",
-                            value = 20,
-                            minvalue = 0,
-                            maxvalue = 100,
-                            stradd = "%",
-                        },
-                        {
-                            type = DROPBOX,
-                            name = "Smoothing Type",
-                            value = 2,
-                            values = { "Exponential", "Linear" },
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Randomization",
-                            value = 5,
-                            minvalue = 0,
-                            maxvalue = 20,
-                            custom = { [0] = "Off" },
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Deadzone FOV",
-                            value = 1,
-                            minvalue = 0,
-                            maxvalue = 50,
-                            stradd = "°",
-                            decimal = 0.1,
-                            custom = { [0] = "Off" },
-                        },
-                        {
-                            type = DROPBOX,
-                            name = "Aimbot Key",
-                            value = 1,
-                            values = { "Mouse 1", "Mouse 2", "Always", "Dynamic Always" },
-                        },
-                        {
-                            type = DROPBOX,
-                            name = "Hitscan Priority",
-                            value = 1,
-                            values = { "Head", "Body", "Closest" },
-                        },
-                        {
-                            type = COMBOBOX,
-                            name = "Hitscan Points",
-                            values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Adjust for Bullet Drop",
-                            value = true,
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Target Prediction",
-                            value = true,
-                        },
-                    },
-                },
-                {
-                    name = "Trigger Bot",
-                    autopos = "right",
-                    content = {
-                        {
-                            type = TOGGLE,
-                            name = "Enabled",
-                            value = false,
-                            extra = {
-                                type = KEYBIND,
-                                key = Enum.KeyCode.M,
-                            },
-                        },
-                        {
-                            type = COMBOBOX,
-                            name = "Trigger Bot Hitboxes",
-                            values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Trigger When Aiming",
-                            value = false,
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Aim Percentage",
-                            minvalue = 0,
-                            maxvalue = 100,
-                            value = 90,
-                            stradd = "%",
-                        },
-                        --[[
-                {
-                    type = TOGGLE,
-                    name = "Magnet Triggerbot",
-                    value = false
-                },
-                {
-                    type = SLIDER,
-                    name = "Magnet FOV",
-                    value = 80,
-                    minvalue = 0,
-                    maxvalue = 180,
-                    stradd = "°"
-                },
-                {
-                    type = SLIDER,
-                    name = "Magnet Smoothing Factor",
-                    value = 20,
-                    minvalue = 0,
-                    maxvalue = 50,
-                    stradd = "%"
-                },
-                {
-                    type = DROPBOX,
-                    name = "Magnet Priority",
-                    value = 1,
-                    values = {"Head", "Body"}
-                },]]
-                    },
-                },
-                {
-                    name = "Bullet Redirection",
-                    autopos = "right",
-                    content = {
-                        {
-                            type = TOGGLE,
-                            name = "Silent Aim",
-                            value = false,
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Silent Aim FOV",
-                            value = 5,
-                            minvalue = 0,
-                            maxvalue = 180,
-                            stradd = "°",
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Hit Chance",
-                            value = 30,
-                            minvalue = 0,
-                            maxvalue = 100,
-                            stradd = "%",
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Accuracy",
-                            value = 90,
-                            minvalue = 0,
-                            maxvalue = 100,
-                            stradd = "%",
-                        },
-                        {
-                            type = DROPBOX,
-                            name = "Hitscan Priority",
-                            value = 1,
-                            values = { "Head", "Body", "Closest" },
-                        },
-                        {
-                            type = COMBOBOX,
-                            name = "Hitscan Points",
-                            values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
-                        },
-                    },
-                },
-                {
-                    name = "Recoil Control",
-                    autopos = "right",
-                    autofill = true,
-                    content = {
-                        {
-                            type = TOGGLE,
-                            name = "Weapon RCS",
-                            value = true,
-                        },
-                        {
-                            type = COMBOBOX,
-                            name = "Disable RCS While",
-                            values = { { "Holding Sniper", false }, { "Scoping In", false }, { "Not Shooting", true } }
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Recoil Control X",
-                            value = 45,
-                            minvalue = 0,
-                            maxvalue = 100,
-                            stradd = "%",
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Recoil Control Y",
-                            value = 80,
-                            minvalue = 0,
-                            maxvalue = 150,
-                            stradd = "%",
-                        },
-                    },
-                },
-            },
-        },
-        {
-            name = "Rage",
-            content = {
-                {
-                    name = "Aimbot",
-                    autopos = "left",
-                    content = {
-                        {
-                            type = TOGGLE,
-                            name = "Enabled",
-                            value = false,
-                            extra = {
-                                type = KEYBIND,
-                                toggletype = 4,
-                            },
-                            unsafe = true,
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Silent Aim",
-                            value = false,
-                            tooltip = "Stops the camera from rotating toward targetted players.",
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Rotate Viewmodel",
-                            value = false,
-                            tooltip = "Rotates weapon viewmodel toward the targetted player."
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Aimbot FOV",
-                            value = 180,
-                            minvalue = 0,
-                            maxvalue = 181,
-                            stradd = "°",
-                            custom = { [181] = "Ignored" },
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Auto Wallbang",
-                            value = false
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Auto Shoot",
-                            value = false,
-                            tooltip = "Automatically shoots players when a target is found."
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Double Tap",
-                            value = false,
-                            tooltip = "Shoots twice when target is found when Auto Shoot is enabled.",
-                            extra = {
-                                type = KEYBIND,
-                                toggletype = 4,
-                            },
-                        },
-                        {
-                            type = DROPBOX,
-                            name = "Hitscan Priority",
-                            value = 1,
-                            values = { "Head", "Body" },
-                        },
-                    },
-                },
-                {
-                    name = "Hack vs. Hack",
-                    autopos = "left",
-                    autofill = true,
-                    content = {
-                        --[[{
-                            type = TOGGLE,
-                            name = "Extend Penetration",
-                            value = false
-                        },]]
-                        -- {
-                        -- 	type = SLIDER,
-                        -- 	name = "Extra Penetration",
-                        -- 	value = 11,
-                        -- 	minvalue = 1,
-                        -- 	maxvalue = 20,
-                        -- 	stradd = " studs",
-                        -- 	tooltip = "does nothing",
-                        -- }, -- fuck u json
-                        {
-                            type = TOGGLE,
-                            name = "Autowall Hitscan",
-                            value = false,
-                            unsafe = true,
-                            tooltip = "While using Auto Wallbang, this will hitscan multiple points\nto increase penetration and help for peeking.",
-                        },
-                        {
-                            type = COMBOBOX,
-                            name = "Hitscan Points",
-                            values = {
-                                { "Up", true },
-                                { "Down", true },
-                                { "Left", false },
-                                { "Right", false },
-                                { "Forward", true },
-                                { "Backward", true },
-                                { "Origin", true },
-                                { "Towards", true },
-                            },
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Hitbox Shifting",
-                            value = false,
-                            tooltip = "Increases possible penetration with Autowall. The higher\nthe Hitbox Shift Distance the more likely it is to miss shots.\nWhen it misses it will try disable this.",
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Hitbox Shift Distance",
-                            value = 4,
-                            minvalue = 1,
-                            maxvalue = 12,
-                            stradd = " studs",
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Force Player Stances",
-                            value = false,
-                            tooltip = "Changes the stance of other players to the selected Stance Choice.",
-                        },
-                        {
-                            type = DROPBOX,
-                            name = "Stance Choice",
-                            value = 1,
-                            values = { "Stand", "Crouch", "Prone" },
-                        },
-                        {
-                            type = TOGGLE, 
-                            name = "Backtracking",
-                            value = false,
-                            tooltip = "Attempts to abuse lag compensation and shoot players where they were in the past.\nUsing Visuals->Enemy ESP->Flags->Backtrack will help illustrate this."
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Backtracking Time",
-                            value = 4000,
-                            minvalue = 0,
-                            maxvalue = 5000,
-                            stradd = "ms",
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Freestanding",
-                            value = false,
-                            extra = {
-                                type = KEYBIND,
-                            },
-                        },
-                    },
-                },
-                {
-                    name = { "Anti Aim", "Fake Lag" },
-                    x = menu.columns.right,
-                    y = 66,
-                    width = menu.columns.width,
-                    height = 253,
-                    [1] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Enabled",
-                                value = false,
-                                tooltip = "When this is enabled, your server-side yaw, pitch and stance are set to the values in this tab.",
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Pitch",
-                                value = 4,
-                                values = {
-                                    "Off",
-                                    "Up",
-                                    "Zero",
-                                    "Down",
-                                    "Upside Down",
-                                    "Roll Forward",
-                                    "Roll Backward",
-                                    "Random",
-                                    "Bob",
-                                    "Glitch",
-                                },
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Yaw",
-                                value = 2,
-                                values = { "Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin" },
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Spin Rate",
-                                value = 10,
-                                minvalue = -100,
-                                maxvalue = 100,
-                                stradd = "°/s",
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Force Stance",
-                                value = 4,
-                                values = { "Off", "Stand", "Crouch", "Prone" },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Hide in Floor",
-                                value = true,
-                                tooltip = "Shifts your body slightly under the ground\nso as to hide it when Force Stance is set to Prone.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Lower Arms",
-                                value = false,
-                                tooltip = "Lowers your arms on the server.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Tilt Neck",
-                                value = false,
-                                tooltip = "Forces the replicated aiming state so that it appears as though your head is tilted.",
-                            },
-                        },
-                    },
-                    [2] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Enabled",
-                                value = false,
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Fake Lag Amount",
-                                value = 1,
-                                minvalue = 1,
-                                maxvalue = 1000,
-                                stradd = " kbps",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Fake Lag Distance",
-                                value = 1,
-                                minvalue = 1,
-                                maxvalue = 40,
-                                stradd = " studs",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Manual Choke",
-                                extra = {
-                                    type = KEYBIND,
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Release Packets on Shoot",
-                                value = false,
-                            },
-                        },
-                    },
-                },
-                {
-                    name = { "Extra", "Settings" },
-                    y = 325,
-                    x = menu.columns.right,
-                    width = menu.columns.width,
-                    height = 258,
-                    [1] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Knife Bot",
-                                value = false,
-                                extra = {
-                                    type = KEYBIND,
-                                    toggletype = 4,
-                                },
-                                unsafe = true,
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Knife Bot Type",
-                                value = 2,
-                                values = { "Assist", "Multi Aura", "Flight Aura", "Assist+" },
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Knife Hitscan",
-                                value = 1,
-                                values = { "Head", "Torso", "Other" },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Knife Visible Only",
-                                value = false,
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Knife Range",
-                                value = 26,
-                                minvalue = 1,
-                                maxvalue = 26,
-                                custom = {[26] = "Max"},
-                                stradd = " studs",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Auto Peek",
-                                value = false,
-                                extra = {
-                                    type = KEYBIND,
-                                    toggletype = 1,
-                                },
-                                tooltip = "Hitscans from in front of your camera,\nif a target is found it will move you towards the point automatically",
-                            },
-                        },
-                    },
-                    [2] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Aimbot Performance Mode",
-                                value = true,
-                                tooltip = "Lowers polling rate for targetting in Rage Aimbot.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Resolve Fake Positions",
-                                value = true,
-                                tooltip = "Rage aimbot attempts to resolve Crimwalk on other players.\nDisable if you are having issues with resolver.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Aimbot Damage Prediction",
-                                value = true,
-                                tooltip = "Predicts damage done to enemies as to prevent wasting ammo and time on certain players.\nHelps for users, and against players with high latency.",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Damage Prediction Limit",
-                                value = 100,
-                                minvalue = 0,
-                                maxvalue = 300,
-                                stradd = "hp",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Damage Prediction Time",
-                                value = 200,
-                                minvalue = 100,
-                                maxvalue = 500,
-                                stradd = "%",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Max Hitscan Points",
-                                value = 30,
-                                minvalue = 0,
-                                maxvalue = 300,
-                                stradd = " points",
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        {
-            name = "Visuals",
-            content = {
-                {
-                    name = { "Enemy ESP", "Team ESP", "Local" },
-                    autopos = "left",
-                    size = 300,
-                    [1] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Enabled",
-                                value = true,
-                                tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Name",
-                                value = true,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Enemy Name",
-                                    color = { 255, 255, 255, 200 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Box",
-                                value = true,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Enemy Box Fill", "Enemy Box" },
-                                    color = { { 255, 0, 0, 0 }, { 255, 0, 0, 150 } },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Health Bar",
-                                value = true,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Enemy Low Health", "Enemy Max Health" },
-                                    color = { { 255, 0, 0 }, { 0, 255, 0 } },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Health Number",
-                                value = true,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Enemy Health Number",
-                                    color = { 255, 255, 255, 255 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Held Weapon",
-                                value = true,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Enemy Held Weapon",
-                                    color = { 255, 255, 255, 200 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Held Weapon Icon",
-                                value = false,
-                            },
-                            {
-                                type = COMBOBOX,
-                                name = "Flags",
-                                values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Resolved", false }, { "Backtrack", false },  },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Chams",
-                                value = true,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Visible Enemy Chams", "Invisible Enemy Chams" },
-                                    color = { { 255, 0, 0, 200 }, { 100, 0, 0, 100 } },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Skeleton",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Enemy skeleton",
-                                    color = { 255, 255, 255, 120 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Out of View",
-                                value = true,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Arrow Color",
-                                    color = { 255, 255, 255, 255 },
-                                },
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Arrow Distance",
-                                value = 50,
-                                minvalue = 10,
-                                maxvalue = 101,
-                                custom = { [101] = "Max" },
-                                stradd = "%",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Dynamic Arrow Size",
-                                value = true,
-                            },
-                        },
-                    },
-                    [2] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Enabled",
-                                value = false,
-                                tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Name",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Team Name",
-                                    color = { 255, 255, 255, 200 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Box",
-                                value = true,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Enemy Box Fill", "Enemy Box" },
-                                    color = { { 0, 255, 0, 0 }, { 0, 255, 0, 150 } },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Health Bar",
-                                value = false,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Team Low Health", "Team Max Health" },
-                                    color = { { 255, 0, 0 }, { 0, 255, 0 } },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Health Number",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Team Health Number",
-                                    color = { 255, 255, 255, 255 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Held Weapon",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Team Held Weapon",
-                                    color = { 255, 255, 255, 200 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Held Weapon Icon",
-                                value = false,
-                            },
-                            {
-                                type = COMBOBOX,
-                                name = "Flags",
-                                values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false },  },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Chams",
-                                value = false,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Visible Team Chams", "Invisible Team Chams" },
-                                    color = { { 0, 255, 0, 200 }, { 0, 100, 0, 100 } },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Skeleton",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Team skeleton",
-                                    color = { 255, 255, 255, 120 },
-                                },
-                            },
-                        },
-                    },
-                    [3] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Arm Chams",
-                                value = false,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Sleeve Color", "Hand Color" },
-                                    color = { { 106, 136, 213, 255 }, { 181, 179, 253, 255 } },
-                                },
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Arm Material",
-                                value = 1,
-                                values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Weapon Chams",
-                                value = false,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Weapon Color", "Laser Color" },
-                                    color = { { 106, 136, 213, 255 }, { 181, 179, 253, 255 } },
-                                },
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Weapon Material",
-                                value = 1,
-                                values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Animate Ghost Material",
-                                value = false,
-                                tooltip = "Toggles whether or not the 'Ghost' material will be animated or not.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Remove Weapon Skin",
-                                value = false,
-                                tooltip = "If a loaded weapon has a skin, it will remove it.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Third Person",
-                                value = false,
-                                extra = {
-                                    type = KEYBIND,
-                                    key = nil,
-                                    toggletype = 2,
-                                },
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Third Person Distance",
-                                value = 60,
-                                minvalue = 1,
-                                maxvalue = 150,
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Local Player Chams",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Local Player Chams",
-                                    color = { 106, 136, 213, 255 },
-                                },
-                                tooltip = "Changes the color and material of the local third person body when it is on.",
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Local Player Material",
-                                value = 1,
-                                values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-                            },
-                        },
-                    },
-                },
-                {
-                    name = "ESP Settings",
-                    autopos = "left",
-                    autofill = true,
-                    content = {
-                        {
-                            type = SLIDER,
-                            name = "Max HP Visibility Cap",
-                            value = 90,
-                            minvalue = 50,
-                            maxvalue = 100,
-                            stradd = "hp",
-                            custom = {
-                                [100] = "Always"
-                            }
-                        },
-                        {
-                            type = DROPBOX,
-                            name = "Text Case",
-                            value = 2,
-                            values = { "lowercase", "Normal", "UPPERCASE" },
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Max Text Length",
-                            value = 0,
-                            minvalue = 0,
-                            maxvalue = 32,
-                            custom = { [0] = "Unlimited" },
-                            stradd = " letters",
-                        },
-                        {
-                            type = SLIDER,
-                            name = "ESP Fade Time", 
-                            value = 0.5,
-                            minvalue = 0,
-                            maxvalue = 2,
-                            stradd = "s",
-                            decimal = 0.1,
-                            custom = { [0] = "Off" }
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Highlight Target",
-                            value = false,
-                            extra = {
-                                type = COLORPICKER,
-                                name = "Aimbot Target",
-                                color = { 255, 0, 0, 255 },
-                            },
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Highlight Friends",
-                            value = true,
-                            extra = {
-                                type = COLORPICKER,
-                                name = "Friended Players",
-                                color = { 0, 255, 255, 255 },
-                            },
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Highlight Priority",
-                            value = true,
-                            extra = {
-                                type = COLORPICKER,
-                                name = "Priority Players",
-                                color = { 255, 210, 0, 255 },
-                            },
-                        },
-                        -- {
-                        -- 	type = SLIDER,
-                        -- 	name = "Max Player Text",
-                        -- 	value = 0,
-                        -- 	minvalue = 0,
-                        -- 	maxvalue = 32,
-                        -- 	custom = {[0] = "None"},
-                        -- }
-                    },
-                },
-                {
-                    name = { "Camera Visuals", "Viewmodel" },
-                    autopos = "right",
-                    size = 228,
-                    [1] = {
-                        content = {
-                            {
-                                type = SLIDER,
-                                name = "Camera FOV",
-                                value = 80,
-                                minvalue = 60,
-                                maxvalue = 120,
-                                stradd = "°",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "No Camera Bob",
-                                value = false,
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "No Scope Sway",
-                                value = false,
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Disable ADS FOV",
-                                value = false,
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "No Scope Border",
-                                value = false,
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "No Visual Suppression",
-                                value = false,
-                                tooltip = "Removes the suppression of enemies' bullets.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "No Gun Bob or Sway",
-                                value = false,
-                                tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving the mouse.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Reduce Camera Recoil",
-                                value = false,
-                                tooltip = "Reduces camera recoil by X%. Does not affect visible weapon recoil or kick.",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Camera Recoil Reduction",
-                                value = 10,
-                                minvalue = 0,
-                                maxvalue = 100,
-                                stradd = "%",
-                            },
-                        },
-                    },
-                    [2] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Enabled",
-                                value = false,
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Offset X",
-                                value = 0,
-                                minvalue = -3,
-                                maxvalue = 3,
-                                decimal = 0.01,
-                                stradd = " studs",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Offset Y",
-                                value = 0,
-                                minvalue = -3,
-                                maxvalue = 3,
-                                decimal = 0.01,
-                                stradd = " studs",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Offset Z",
-                                value = 0,
-                                minvalue = -3,
-                                maxvalue = 3,
-                                decimal = 0.01,
-                                stradd = " studs",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Pitch",
-                                value = 0,
-                                minvalue = -360,
-                                maxvalue = 360,
-                                stradd = "°",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Yaw",
-                                value = 0,
-                                minvalue = -360,
-                                maxvalue = 360,
-                                stradd = "°",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Roll",
-                                value = 0,
-                                minvalue = -360,
-                                maxvalue = 360,
-                                stradd = "°",
-                            },
-                        },
-                    },
-                },
-                {
-                    name = { "World", "Misc", "Keybinds", "FOV", "Spawn" },
-                    subtabfill = true,
-                    autopos = "right",
-                    size = 144,
-                    [1] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Ambience",
-                                value = false,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Inside Ambience", "Outside Ambience" },
-                                    color = { { 117, 76, 236 }, { 117, 76, 236 } },
-                                },
-                                tooltip = "Changes the map's ambient colors to your defined colors.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Force Time",
-                                value = false,
-                                tooltip = "Forces the time to the time set by your below.",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Custom Time",
-                                value = 0,
-                                minvalue = 0,
-                                maxvalue = 24,
-                                decimal = 0.1,
-                                stradd = "hr",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Custom Saturation",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Saturation Tint",
-                                    color = { 255, 255, 255 },
-                                },
-                                tooltip = "Adds custom saturation the image of the game.",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Saturation Density",
-                                value = 0,
-                                minvalue = 0,
-                                maxvalue = 100,
-                                stradd = "%",
-                            },
-                        },
-                    },
-                    [2] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Crosshair Color",
-                                value = false,
-                                extra = {
-                                    type = DOUBLE_COLORPICKER,
-                                    name = { "Inline", "Outline" },
-                                    color = { { 127, 72, 163 }, { 25, 25, 25 } },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Laser Pointer",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Laser Pointer Color",
-                                    color = { 255, 255, 255, 255 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Ragdoll Chams",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Ragdoll Chams",
-                                    color = { 106, 136, 213, 255 },
-                                },
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Ragdoll Material",
-                                value = 1,
-                                values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Bullet Tracers",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Bullet Tracers",
-                                    color = { 201, 69, 54 },
-                                },
-                            },
-                        },
-                    },
-                    [3] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Enabled",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Text Color",
-                                    color = { 127, 72, 163, 255 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Use List Sizes",
-                                value = false,
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Log Keybinds",
-                                value = false
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Keybinds List X",
-                                value = 0,
-                                minvalue = 0,
-                                maxvalue = 100,
-                                shift_stepsize = 0.05,
-                                stradd = "%",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Keybinds List Y",
-                                value = 50,
-                                minvalue = 0,
-                                maxvalue = 100,
-                                shift_stepsize = 0.05,
-                                stradd = "%",
-                            },
-                        },
-                    },
-                    [4] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Enabled",
-                                value = false,
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Aim Assist",
-                                value = true,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Aim Assist FOV",
-                                    color = { 127, 72, 163, 255 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Aim Assist Deadzone",
-                                value = true,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Deadzone FOV",
-                                    color = { 50, 50, 50, 255 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Bullet Redirection",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Bullet Redirection FOV",
-                                    color = { 163, 72, 127, 255 },
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Ragebot",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Ragebot FOV",
-                                    color = { 255, 210, 0, 255 },
-                                },
-                            },
-                        },
-                    },
-                    [5] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Enemy Spawns",
-                                value = false,
-                                extra = {
-                                    type = COLORPICKER,
-                                    name = "Enemy Spawns",
-                                    color = { 255, 255, 255, 255 }
-                                }
-                            }
-                        }
-                    }
-                },
-                {
-                    name = "Dropped ESP",
-                    autopos = "right",
-                    autofill = true,
-                    content = {
-                        {
-                            type = TOGGLE,
-                            name = "Weapon Names",
-                            value = false,
-                            extra = {
-                                type = DOUBLE_COLORPICKER,
-                                name = { "Highlighted Weapons", "Weapon Names" },
-                                color = { { 255, 125, 255, 255 }, { 255, 255, 255, 255 } },
-                            },
-                            tooltip = "Displays dropped weapons as you get closer to them,\nHighlights the weapon you are holding in the second color.",
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Weapon Icons",
-                            value = false
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Weapon Ammo",
-                            value = false,
-                            extra = {
-                                type = COLORPICKER,
-                                name = "Weapon Ammo",
-                                color = { 61, 168, 235, 150 },
-                            },
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Dropped Weapon Chams",
-                            value = false,
-                            extra = {
-                                type = COLORPICKER,
-                                name = "Dropped Weapon Color",
-                                color = { 3, 252, 161, 150 },
-                            },
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Grenade Warning",
-                            value = true,
-                            extra = {
-                                type = COLORPICKER,
-                                name = "Slider Color",
-                                color = { 68, 92, 227 },
-                            },
-                            tooltip = "Displays where grenades that will deal\ndamage to you will land and the damage they will deal.",
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Grenade ESP",
-                            value = false,
-                            extra = {
-                                type = DOUBLE_COLORPICKER,
-                                name = { "Inner Color", "Outer Color" },
-                                color = { { 195, 163, 255 }, { 123, 69, 224 } },
-                            },
-                            tooltip = "Displays the full path of any grenade that will deal damage to you is thrown.",
-                        },
-                    },
-                },
-            },
-        },
-        {
-            name = "Misc",
-            content = {
-                {
-                    name = { "Movement", "Tweaks" },
-                    autopos = "left",
-                    size = 300,
-                    [1] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Fly",
-                                value = false,
-                                unsafe = true,
-                                tooltip = "Manipulates your velocity to make you fly.\nUse 60 speed or below to never get flagged.",
-                                extra = {
-                                    type = KEYBIND,
-                                    key = Enum.KeyCode.B,
-                                    toggletype = 2,
-                                },
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Fly Speed",
-                                value = 60,
-                                minvalue = 1,
-                                maxvalue = 400,
-                                stradd = " stud/s",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Auto Jump",
-                                value = false,
-                                tooltip = "When you hold the spacebar, it will automatically jump repeatedly, ignoring jump delay.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Speed",
-                                value = false,
-                                unsafe = true,
-                                tooltip = "Manipulates your velocity to make you move faster, unlike fly it doesn't make you fly.\nUse 60 speed or below to never get flagged.",
-                                extra = {
-                                    type = KEYBIND,
-                                    toggletype = 4,
-                                },
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Speed Type",
-                                value = 1,
-                                values = { "Always", "In Air", "On Hop" },
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Speed Factor",
-                                value = 40,
-                                minvalue = 1,
-                                maxvalue = 400,
-                                stradd = " stud/s",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Avoid Collisions",
-                                value = false,
-                                tooltip = "Attempts to stops you from running into obstacles\nfor Speed and Circle Strafe.",
-                                extra = {
-                                    type = KEYBIND,
-                                    toggletype = 4,
-                                }
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Avoid Collisions Scale",
-                                value = 100,
-                                minvalue = 0,
-                                maxvalue = 100,
-                                stradd = "%",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Circle Strafe",
-                                value = false,
-                                extra = {
-                                    type = KEYBIND,
-                                },
-                                tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed Factor.",
-                            },
-                        },
-                    },
-                    [2] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Gravity Shift",
-                                value = false,
-                                tooltip = "Shifts movement gravity by X%. (Does not affect bullet acceleration.)",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Gravity Shift Percentage",
-                                value = -50,
-                                minvalue = -500,
-                                maxvalue = 500,
-                                stradd = "%",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Jump Power",
-                                value = false,
-                                tooltip = "Shifts movement jump power by X%.",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Jump Power Percentage",
-                                value = 150,
-                                minvalue = 0,
-                                maxvalue = 1000,
-                                stradd = "%",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Prevent Fall Damage",
-                                value = false,
-                            },
-                        },
-                    },
-                },
-                {
-                    name = "Weapon Modifications",
-                    autopos = "left",
-                    autofill = true,
-                    content = {
-                        {
-                            type = TOGGLE,
-                            name = "Enabled",
-                            value = false,
-                            tooltip = "Allows Bitch Bot to modify weapons.",
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Fire Rate Scale",
-                            value = 150,
-                            minvalue = 50,
-                            maxvalue = 500,
-                            stradd = "%",
-                            tooltip = "Scales all weapons' firerate by X%.\n100% = Normal firerate",
-                        },
-                        {
-                            type = SLIDER,
-                            name = "Recoil Scale",
-                            value = 10,
-                            minvalue = 0,
-                            maxvalue = 100,
-                            stradd = "%",
-                            tooltip = "Scales all weapons' recoil by X%.\n0% = No recoil | 50% = Halved recoil",
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Remove Animations",
-                            value = true,
-                            tooltip = "Removes all animations from any gun.\nThis will also completely remove the equipping animations.",
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Instant Equip",
-                            value = true,
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Fully Automatic",
-                            value = true,
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Run and Gun",
-                            value = false,
-                            tooltip = "Makes it so that your weapon does not\nsway due to mouse movement, or turns over while sprinting.",
-                        },
-                    },
-                },
-                {
-                    name = { "Extra", "Exploits" },
-                    autopos = "right",
-                    autofill = true,
-                    [1] = {
-                        content = {
-                            {
-                                type = TOGGLE,
-                                name = "Ignore Friends",
-                                value = true,
-                                tooltip = "When turned on, bullets do not deal damage to friends,\nand Rage modules won't target friends.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Target Only Priority Players",
-                                value = false,
-                                tooltip = "When turned on, all modules except for Aim Assist that target players\nwill ignore anybody that isn't on the Priority list.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Disable 3D Rendering",
-                                value = false,
-                                tooltip = "When turned on, all 3D rendering will be disabled.\nThis helps with running multiple instances at once."
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Suppress Only",
-                                value = false,
-                                tooltip = "When turned on, bullets do not deal damage.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Auto Respawn",
-                                value = false,
-                                tooltip = "Automatically respawns after deaths.",
-                            },
-                            -- {
-                            -- 	type = TOGGLE,
-                            -- 	name = "Disable Team Sounds",
-                            -- 	value = false,
-                            -- 	tooltip = "Disables sounds from all teammates and local player.",
-                            -- },
-                            {
-                                type = DROPBOX,
-                                name = "Vote Friends",
-                                value = 1,
-                                values = { "Off", "Yes", "No" },
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Vote Priority",
-                                value = 1,
-                                values = { "Off", "Yes", "No" },
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Default Vote",
-                                value = 1,
-                                values = { "Off", "Yes", "No" },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Kill Sound",
-                                value = false,
-                            },
-                            {
-                                type = TEXTBOX,
-                                name = "killsoundid",
-                                text = "6229978482",
-                                tooltip = "The Roblox sound ID or file inside of synapse\n workspace to play when Kill Sound is on.",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Kill Sound Volume",
-                                value = 20,
-                                minvalue = 0,
-                                maxvalue = 100,
-                                stradd = "%",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Kill Say",
-                                value = false,
-                                tooltip = "Kill say messages, located in bitchbot/killsay.txt \n[name] is the target's name\n[weapon] is the weapon used\n[hitbox] says head or body depending on where you shot the player",
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Chat Spam",
-                                value = 1,
-                                values = {
-                                    "Off",
-                                    "Original",
-                                    "t0nymode",
-                                    "Chinese Propaganda",
-                                    "Emojis",
-                                    "Deluxe",
-                                    "Youtube Title",
-                                    "Custom",
-                                    "Custom Combination",
-                                },
-                                tooltip = "Spams chat, Custom options are located in the bitchbot/chatspam.txt",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Chat Spam Repeat",
-                                value = false,
-                                tooltip = "Repeats the same Chat Spam message in chat.",
-                            },
-                            {
-                                type = SLIDER,
-                                name = "Chat Spam Delay",
-                                minvalue = 1,
-                                maxvalue = 10,
-                                value = 5,
-                                stradd = "s",
-                            },
-                            -- {
-                            -- 	type = TOGGLE,
-                            -- 	name = "Impact Grenade",
-                            -- 	value = false,
-                            -- 	tooltip = "Explodes grenades on impact."
-                            -- },
-                            -- {
-                            -- 	type = TOGGLE,
-                            -- 	name = "Auto Martyrdom",
-                            -- 	value = false,
-                            -- 	tooltip = "Whenever you die to an enemy, this will drop a grenade\nat your death position.",
-                            -- },
-                            {
-                                type = TOGGLE,
-                                name = "Break Windows",
-                                value = false,
-                                tooltip = "Breaks all windows in the map when you spawn."
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Join New Game On Kick",
-                                value = false,
-                            },
-                            {
-                                type = BUTTON,
-                                name = "Join New Game",
-                                unsafe = false,
-                                doubleclick = true,
-                            },
-
-                        },
-                    },
-                    [2] = {
-                        content = {
-
-                            --[[{
-                                type = TOGGLE,
-                                name = "Super Invisibility",
-                                value = false,
-                                extra = {
-                                    type = KEYBIND
-                                }
-                            },]]
-                            {
-                                type = TOGGLE,
-                                unsafe = true,
-                                name = "Crash Server",
-                                tooltip = "Attempts to overwhelm the server so that users are kicked\nfor internet connection problems.\nThe higher the Crash Intensity the faster it will be,\nbut the higher the chance for it to fail.",
-                            },
-                            {
-                                type = SLIDER, 
-                                name = "Crash Intensity",
-                                minvalue = 1, 
-                                maxvalue = 16,
-                                value = 8
-                            },
-                            -- {
-                            -- 	type = TOGGLE,
-                            -- 	unsafe = true,
-                            -- 	name = "Invisibility",
-                            -- 	extra = {
-                            -- 		type = KEYBIND,
-                            -- 		toggletype = 0,
-                            -- 	},
-                            -- },
-                            {
-                                type = TOGGLE,
-                                unsafe = true,
-                                name = "Rapid Kill",
-                                value = false,
-                                extra = {
-                                    type = KEYBIND,
-                                    toggletype = 0,
-                                },
-                                tooltip = "Throws 3 grenades instantly on random enemies.",
-                            },
-                            {
-                                type = TOGGLE,
-                                unsafe = true,
-                                name = "Auto Rapid Kill",
-                                value = false,
-                                tooltip = "Throws 3 grenades instantly on random enemies,\nthen kills itself to do it again.\nWorks only when Rapid Kill is enabled.\nAuto Respawn in Misc->Extra will automate this further.",
-                            },
-                            {
-                                type = TOGGLE,
-                                unsafe = true,
-                                name = "Grenade Teleport",
-                                value = false,
-                                tooltip = "Teleports grenades to other players when enabled."
-                            },
-                            {
-                                type = COMBOBOX,
-                                name = "Grenade Changes",
-                                values = { { "Martyrdom", false } , { "Impact", false }, }
-                            },
-                            {
-                                type = TOGGLE,
-                                unsafe = true,
-                                name = "Crimwalk",
-                                value = false,
-                                extra = {
-                                    type = KEYBIND,
-                                },
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Disable Crimwalk on Shot",
-                                value = true,
-                                unsafe = true,
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Bypass Speed Checks",
-                                value = false,
-                                unsafe = true,
-                                tooltip = "Attempts to bypass maximum speed limit on the server.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Teleport",
-                                value = false,
-                                unsafe = true,
-                                extra = {
-                                    type = KEYBIND,
-                                    toggletype = 0,
-                                },
-                                tooltip = "When key pressed you will teleport to the mouse position.\nDoes not work when Bypass Speed Checks is enabled.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Vertical Floor Clip",
-                                value = false,
-                                unsafe = true,
-                                extra = {
-                                    type = KEYBIND,
-                                    toggletype = 0,
-                                },
-                                tooltip = "Teleports you 19 studs under the ground. Must be over glass or non-collidable parts to work. \nHold Alt to go up, and Shift to go forwards.",
-                            },
-                            {
-                                type = TOGGLE,
-                                name = "Fake Equip",
-                                value = false,
-                                unsafe = true,
-                            },
-                            {
-                                type = DROPBOX,
-                                name = "Fake Slot",
-                                values = { "Primary", "Secondary", "Melee" },
-                                value = 1,
-                            },
-
-                            -- {
-                            -- 	type = TOGGLE,
-                            -- 	name = "Noclip",
-                            -- 	value = false,
-                            -- 	extra = {
-                            -- 		type = KEYBIND,
-                            -- 		key = nil
-                            -- 	},
-                            -- 	unsafe = true,
-                            -- 	tooltip = "Allows you to noclip through most parts of the map. Must be over glass or non-collidable parts to work."
-                            -- },
-                            -- {
-                            -- 	type = TOGGLE,
-                            -- 	name = "Fake Position",
-                            -- 	value = false,
-                            -- 	extra = {
-                            -- 		type = KEYBIND
-                            -- 	},
-                            -- 	unsafe = true,
-                            -- 	tooltip = "Fakes your server-side position. Works best when stationary, and allows you to be unhittable."
-                            -- },
-                            {
-                                type = TOGGLE,
-                                name = "Lock Player Positions",
-                                value = false,
-                                unsafe = true,
-                                extra = {
-                                    type = KEYBIND,
-                                },
-                                tooltip = "Locks all other players' positions.",
-                            },
-                            -- {
-                            -- 	type = TOGGLE,
-                            -- 	name = "Skin Changer",
-                            -- 	value = false,
-                            -- 	tooltip = "While this is enabled, all custom skins will apply with the custom settings below.",
-                            -- 	extra = {
-                            -- 		type = COLORPICKER,
-                            -- 		name = "Weapon Skin Color",
-                            -- 		color = { 127, 72, 163, 255 },
-                            -- 	},
-                            -- },
-                            -- {
-                            -- 	type = TEXTBOX,
-                            -- 	name = "skinchangerTexture",
-                            -- 	text = "6156783684",
-                            -- },
-                            -- {
-                            -- 	type = SLIDER,
-                            -- 	name = "Scale X",
-                            -- 	value = 10,
-                            -- 	minvalue = 1,
-                            -- 	maxvalue = 500,
-                            -- 	stradd = "%",
-                            -- },
-                            -- {
-                            -- 	type = SLIDER,
-                            -- 	name = "Scale Y",
-                            -- 	value = 10,
-                            -- 	minvalue = 1,
-                            -- 	maxvalue = 500,
-                            -- 	stradd = "%",
-                            -- },
-                            -- {
-                            -- 	type = DROPBOX,
-                            -- 	name = "Skin Material",
-                            -- 	value = 1,
-                            -- 	values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-                            -- },
-                        },
-                    },
-                },
-            },
-        },
-        {
-            name = "Settings",
-            content = {
-                {
-                    name = "Player List",
-                    x = menu.columns.left,
-                    y = 66,
-                    width = menuWidth - 34,
-                    height = 328,
-                    content = {
-                        {
-                            type = "list",
-                            name = "Players",
-                            multiname = { "Name", "Team", "Status" },
-                            size = 9,
-                            columns = 3,
-                        },
-                        {
-                            type = IMAGE,
-                            name = "Player Info",
-                            text = "No Player Selected",
-                            size = 72,
-                        },
-                        {
-                            type = DROPBOX,
-                            name = "Player Status",
-                            x = 307,
-                            y = 314,
-                            w = 160,
-                            value = 1,
-                            values = { "None", "Friend", "Priority" },
-                        },
-                        {
-                            type = BUTTON,
-                            name = "Votekick",
-                            doubleclick = true,
-                            x = 307,
-                            y = 356,
-                            w = 76,
-                        },
-                        {
-                            type = BUTTON,
-                            name = "Spectate",
-                            x = 391,
-                            y = 356,
-                            w = 76,
-                        },
-                    },
-                },
-                {
-                    name = "Cheat Settings",
-                    x = menu.columns.left,
-                    y = 400,
-                    width = menu.columns.width,
-                    height = 183,
-                    content = {
-                        {
-                            type = TOGGLE,
-                            name = "Menu Accent",
-                            value = false,
-                            extra = {
-                                type = COLORPICKER,
-                                name = "Accent Color",
-                                color = { 127, 72, 163 },
-                            },
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Watermark",
-                            value = true,
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Custom Menu Name",
-                            value = MenuName and true or false,
-                        },
-                        {
-                            type = TEXTBOX,
-                            name = "MenuName",
-                            text = MenuName or "Bitch Bot",
-                        },
-                        {
-                            type = BUTTON,
-                            name = "Set Clipboard Game ID",
-                        },
-                        {
-                            type = BUTTON,
-                            name = "Unload Cheat",
-                            doubleclick = true,
-                        },
-                        {
-                            type = TOGGLE,
-                            name = "Allow Unsafe Features",
-                            value = false,
-                        },
-                    },
-                },
-                {
-                    name = "Configuration",
-                    x = menu.columns.right,
-                    y = 400,
-                    width = menu.columns.width,
-                    height = 183,
-                    content = {
-                        {
-                            type = TEXTBOX,
-                            name = "ConfigName",
-                            file = true,
-                            text = "",
-                        },
-                        {
-                            type = DROPBOX,
-                            name = "Configs",
-                            value = 1,
-                            values = GetConfigs(),
-                        },
-                        {
-                            type = BUTTON,
-                            name = "Load Config",
-                            doubleclick = true,
-                        },
-                        {
-                            type = BUTTON,
-                            name = "Save Config",
-                            doubleclick = true,
-                        },
-                        {
-                            type = BUTTON,
-                            name = "Delete Config",
-                            doubleclick = true,
-                        },
-                    },
-                },
-            },
-        },
-    })
+    hook:Add("Initialize", "BBOT:Menu.Start", function()
+        BBOT.log(LOG_DEBUG, "Setting up menu...")
+        menu:Initialize(BBOT.configuration)
+    end)
 
     do -- Watermark setup
         local wm = menu.watermark
@@ -7566,7 +8490,7 @@ do
         end
     end)
     
-    hook:Add("PostInitialize", "BBOT:WaterMark", function()
+    hook:Add("Initialize", "BBOT:WaterMark", function()
         for k, v in pairs(menu.watermark.rect) do
             v.Visible = true
         end
@@ -7857,7 +8781,7 @@ do
         done = true
         local newfunc = function(...)
             local cf = gunmovement(...)
-            local mul = 1 -- sway factor config here
+            mul = 1 -- sway factor config here
             if mul == 0 then
                 return CFrame.new()
             end
@@ -7877,7 +8801,7 @@ do
     local function DetourGunBob(related_func, index, gunmovement)
         local newfunc = function(...)
             local cf = gunmovement(...)
-            local mul = 1 -- bob factor config here
+            mul = 1 -- bob factor config here
             if mul == 0 then
                 return CFrame.new()
             end
