@@ -8500,6 +8500,7 @@ end
 
 -- Auxillary - Responsible for fetching and modifying phantom forces
 do
+    if BBOT.game ~= "pf" then return end
     local math = BBOT.math
     local aux = {}
     BBOT.aux = aux
