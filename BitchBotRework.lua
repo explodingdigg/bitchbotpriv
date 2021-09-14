@@ -4129,6 +4129,13 @@ do
         end
         if reg == nil then return end
         if typeof(reg) == "table" then
+            if reg.self then
+                local s = reg.self
+                if typeof(s) == "table" and reg.type and reg.type ~= BUTTON then
+                    return s.value
+                end
+                return s
+            end
             if reg.type and reg.type ~= BUTTON then
                 return reg.value
             end
@@ -4147,8 +4154,20 @@ do
         local final = steps[len]
         if reg[final] == nil then return false end
         local old = reg[final]
-        if typeof(reg[final]) == "table" then
-            if old.type and old.type ~= BUTTON then
+        if typeof(old) == "table" then
+            if old.self then
+                local o = old.self
+                if typeof(o) == "table" then
+                    if o.type and o.type ~= BUTTON then
+                        local oo = o.value
+                        o.value = value
+                        hook:Call("OnConfigChanged", steps, oo, value)
+                    end
+                else
+                    old.self = value
+                    hook:Call("OnConfigChanged", steps, o, value)
+                end
+            elseif old.type and old.type ~= BUTTON then
                 local o = old.value
                 old.value = value
                 hook:Call("OnConfigChanged", steps, o, value)
