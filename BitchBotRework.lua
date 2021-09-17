@@ -22,7 +22,6 @@ _G.BBOT = BBOT
 -- Locals/Upvalues
 -- Critical for quick stuff
 -- Note: Find a way to put this into an isolated global table
-local LOG_NORMAL, LOG_DEBUG, LOG_WARN, LOG_ERROR, LOG_ANON = 1, 2, 3, 4, 5 -- Logs
 local COLOR, COLOR1, COLOR2 = 1, 2, 3 -- Menu.Colors
 local COMBOBOX, TOGGLE, KEYBIND, DROPBOX, COLORPICKER, DOUBLE_COLORPICKER, SLIDER, BUTTON, LIST, IMAGE, TEXTBOX = 4,5,6,7,8,9,10,11,12,13,14 -- Menu
 
@@ -114,11 +113,23 @@ do
         [LOG_ANON]=log.anonprint
     }
 
+    log.enums = {
+        ["LOG_NORMAL"]=1,
+        ["LOG_DEBUG"]=2,
+        ["LOG_WARN"]=3,
+        ["LOG_ERROR"]=4,
+        ["LOG_ANON"]=5
+    }
+
+    for k, v in pairs(log.enums) do
+        getfenv()[k] = v
+    end
+
     -- This allows you to do this
     -- BBOT.log(LOG_NORMAL, "Hello world!")
     setmetatable(log, {
         __call = function(self, type, ...)
-            if log.types[type] then
+            if type and log.types[type] then
                 log.types[type](...)
             end
         end
@@ -516,11 +527,27 @@ end
 
 -- String
 do
+    local math = BBOT.math
     local string = BBOT.table.deepcopy(string)
     BBOT.string = string
 
     function string.cut(s1, num)
         return num == 0 and s1 or string.sub(s1, 1, num)
+    end
+
+    function string.random(len, len2)
+        local str, length = "", (len2 and math.random(len, len2) or len)
+        for i = 1, length do
+            local typo = math.random(1, 3)
+            if typo == 1 then
+                str = str.. string.char(math.random(97, 122))
+            elseif typo == 2 then
+                str = str.. string.char(math.random(65, 90))
+            elseif typo == 3 then
+                str = str.. string.char(math.random(49, 57))
+            end
+        end
+        return str
     end
 end
 
@@ -4518,6 +4545,25 @@ do
     local Camera = BBOT.service:GetService("CurrentCamera")
     local color = BBOT.color
     local menuWidth, menuHeight = 500, 600
+    
+    local enums = {
+        COMBOBOX = 4,
+        TOGGLE = 5,
+        KEYBIND = 6,
+        DROPBOX = 7,
+        COLORPICKER = 8,
+        DOUBLE_COLORPICKER = 9,
+        SLIDER = 10,
+        BUTTON = 11,
+        LIST = 12,
+        IMAGE = 13,
+        TEXTBOX = 14
+    }
+
+    for k, v in pairs(enums) do
+        getfenv()[k] = v
+    end
+
     -- What in the fuck - WholeCream
     -- I am going to have so much fun splitting the menu and the config apart
     local menu = { -- this is for menu stuffs n shi
@@ -8585,6 +8631,8 @@ do
         end
         menu.watermark.text[1].Visible = true
     end)
+
+
 end
 
 -- Auxillary - Responsible for fetching and modifying phantom forces
@@ -9045,6 +9093,265 @@ do
     end)
 end
 
+-- Aimbot
+do
+    local timer = BBOT.timer
+    local hook = BBOT.hook
+    local config = BBOT.config
+    local network = BBOT.network
+    local gamelogic = BBOT.gamelogic
+    local hud = BBOT.hud
+    local physics = BBOT.physics
+    local localplayer = BBOT.service:GetService("LocalPlayer")
+    local aimbot = {}
+    BBOT.aimbot = aimbot
+
+    function aimbot:VelocityPrediction(startpos, endpos, vel, speed)
+        local len = (endpos-startpos).Magnitude
+        local t = len/speed
+        return endpos + (vel * t)
+    end
+
+    aimbot.bullet_gravity = Vector3.new(0, -196.2, 0) -- Todo: get the velocity from the game public settings
+
+    function aimbot:DropPrediction(startpos, finalpos, speed)
+        return physics.trajectory(startpos, self.bullet_gravity, finalpos, speed)
+    end
+
+    -- Scan targets here
+    function aimbot.Step()
+
+    end
+
+    -- Do aimbot stuff here
+    hook:Add("PreWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
+    
+    end)
+
+    -- If the aimbot stuff before is persistant, use this to restore
+    hook:Add("PostWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
+    
+    end)
+
+    local enque = {}
+    aimbot.silent_bullet_query = enque
+    -- Ta da magical right?
+    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, Entity, HitPos, Part, bulletID, ...)
+        if networkname == "bullethit" then
+            if enque[bulletID] == Entity then
+                return true
+            end
+        end
+    end)
+
+    -- When silent aim isn't enough, resort to this, and make even cheaters rage that their config is garbage
+    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, timestamp)
+        if networkname == "newbullets" then
+            if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
+            local silent = config:GetValue("Rage", "Aimbot", "Silent Aim")
+            if silent and aimbot.target then -- who are we targeting today?
+                local target = aimbot.target
+                -- timescale is to determine how quick the bullet hits
+                -- don't want to get too cocky or the system might silent flag
+                local timescale = config:GetValue("Legit", "Bullet Redirection", "TimeScale")
+                local campos = currentcamera.CFrame.p
+                local dir = target.selected_part.Position-campos
+                local X, Y = CFrame.new(campos, campos+dir):ToOrientation()
+                local firepos = bullettable.firepos
+                local gundata = gamelogic.currentgun.data
+                local campos = currentcamera.CFrame.p
+                local dir = target.selected_part.Position-campos
+                local t = dir.Magnitude/gundata.bulletspeed -- get the time it takes for the bullet to arrive
+                -- remind me to not do this, some cheats fucks with velocity...
+                local targetpos = aimbot:VelocityPrediction(firepos, target.selected_position, target.parts.HumanoidRootPart.Velocity, gundata.bulletspeed)
+                bullettable.firepos = campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
+
+                for i=1, #bullettable.bullets do
+                    local bullet = bullettable.bullets[i]
+                    -- we need the direction we are firing at
+                    -- using kinematics, find the direction needed to fire from long distance and compensate for drop
+                    -- set the new velocity of the bullet directly towards them
+                    bullet[1] = aimbot:DropPrediction(bullettable.firepos, targetpos, gundata.bulletspeed).Unit * bullet[1].Magnitude
+                    timer:Simple(1.5, function() -- bullets last 1.5 seconds, this is basically garbage cleanup
+                        enque[bullet[2]] = nil
+                    end)
+                    timer:Simple(t * timescale, function() -- We need to simulate it being a true bullet arrival
+                        -- enque means we have a bullet to be hit, if it is in the table then it's ready
+                        if not enque[bullet[2]] then return end
+                        if not hud:isplayeralive(target.player) then return end
+                        enque[bullet[2]] = nil
+                        -- Simulate a direct hit, fooling the system with a confirmed hit
+                        network:send("bullethit", target.player, targetpos, target.selected_part, bullet[2])
+                        enque[bullet[2]] = target.player
+                    end)
+                    enque[bullet[2]] = target.player -- this bullet is a magic bullet now, supress networking for this bullet!
+                end
+                network:send(networkname, bullettable, timestamp)
+                
+                return true
+            end
+        end
+    end)
+end
+
+-- ESP
+do
+    -- Why this?
+    -- Because it's more organized :|
+    local hook = BBOT.hook
+    local timer = BBOT.timer
+    local config = BBOT.config
+    local font = BBOT.font
+    local gui = BBOT.gui
+    local log = BBOT.log
+    local math = BBOT.math
+    local string = BBOT.string
+    local service = BBOT.service
+    local esp = {
+        registry = {}
+    }
+    BBOT.esp = esp
+
+    local localplayer = service:GetService("LocalPlayer")
+    local playergui = service:GetService("PlayerGui")
+    local currentcamera = BBOT.service:GetService("CurrentCamera")
+
+    esp.container = Instance.new("Folder")
+    esp.container.Name = string.random(8, 14) -- you gonna try that GetChildren attack anytime soon?
+    syn.protect_gui(esp.container) -- for chams only!
+    esp.container.Parent = playergui.MainGui
+
+    -- Adds an ESP object to the rendering query
+    function esp:Add(construct)
+        local reg = self.registry
+        for i=1, #reg do
+            if reg[i].uniqueid == construct.uniqueid then return false end
+        end
+        reg[#reg+1] = construct
+        if construct.OnCreate then
+            construct:OnCreate()
+        end
+    end
+
+    -- Use this to find an esp object
+    function esp:Find(uniqueid)
+        local reg = self.registry
+        for i=1, #reg do
+            if reg[i].uniqueid == uniqueid then
+                return reg[i], i
+            end
+        end
+    end
+
+    -- Self-explanitory
+    function esp:Remove(uniqueid)
+        local reg = self.registry
+        for i=1, #reg do
+            if reg[i].uniqueid == uniqueid then
+                local v = reg[i]
+                table.remove(reg, i)
+                if v.OnRemove then
+                    v:OnRemove()
+                end
+                break
+            end
+        end
+    end
+
+    hook:Add("Unload", "BBOT:ESP.Destroy", function()
+        local reg = esp.registry
+        for i=1, #reg do
+            local v = reg[i]
+            if v.OnRemove then
+                v:OnRemove()
+            end
+        end
+        esp.registry = {}
+        esp.container:Destroy()
+    end)
+
+    function esp.Render(v)
+        if v.IsValid and v:IsValid() then
+            if v:CanRender() then
+                if v.PreRender then
+                    v:PreRender()
+                end
+                if v.Render then
+                    v:Render()
+                end
+                if v.PostRender then
+                    v:PostRender()
+                end
+            end
+        else
+            return true
+        end
+    end
+
+    function esp:Rebuild()
+        timer:Create("BBOT:ESP.Rebuild", 1, 1, function() self:_Rebuild() end)
+    end
+
+    function esp:_Rebuild()
+        local controllers = self.registry
+        for i=1, #controllers do
+            local v = controllers[i]
+            if v.Rebuild then
+                v:Rebuild()
+            end
+        end
+    end
+
+    function esp.EmptyTable( tab )
+        for k, v in pairs( tab ) do
+            tab[ k ] = nil
+        end
+    end
+
+    local errors = 0
+    hook:Add("RenderStep.Last", "BBOT:ESP.Render", function()
+        if errors > 20 then return end
+        local controllers = esp.registry
+        local istablemissalined = false
+        local c = 0
+        for i=1, #controllers do
+            local v = controllers[i-c]
+            if v then
+                local ran, destroy = pcall(esp.Render, v)
+                if not ran then
+                    log(LOG_ERROR, "ESP render error - ", destroy)
+                    log(LOG_ANON, "Object - ", v.uniqueid)
+                    log(LOG_WARN,"Auto removing to prevent error cascade!")
+                    table.remove(controllers, i-c)
+                    c = c + 1
+                    errors = errors + 1
+                elseif destroy then
+                    table.remove(controllers, i-c)
+                    c = c + 1
+                    if v.OnRemove then
+                        v:OnRemove()
+                    end
+                end
+            else
+                istablemissalined = true
+            end
+        end
+
+        if istablemissalined then
+            local sorted = {}
+            for k, v in pairs(controllers) do
+                sorted[#sorted+1] = v
+            end
+            esp.EmptyTable(controllers)
+            for i=1, #sorted do
+                controllers[i] = sorted[i]
+            end
+        end
+    end)
+
+    -- Will make examples...
+end
+
 -- Weapon Modifications
 do
     -- From wholecream
@@ -9391,52 +9698,6 @@ do
             return a, b, c, d
         end
     end)
-
-    -- @nata and @bitch, here is how your new modifications will now work, this is a sample from screw-pf
-
-    --[[hook:Add("WeaponModifyData", "BBOT:ModifyWeapon.Recoil", function(modifications)
-        if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
-        local rot = config:GetValue("Weapons", "Stat Modifications", "Recoil", "RotationFactor")
-        local trans = config:GetValue("Weapons", "Stat Modifications", "Recoil", "TransitionFactor")
-        local cam = config:GetValue("Weapons", "Stat Modifications", "Recoil", "CameraFactor")
-        local aim = config:GetValue("Weapons", "Stat Modifications", "Recoil", "AimFactor")
-        modifications.rotkickmin = modifications.rotkickmin * rot;
-        modifications.rotkickmax = modifications.rotkickmax * rot;
-        
-        modifications.transkickmin = modifications.transkickmin * trans;
-        modifications.transkickmax = modifications.transkickmax * trans;
-        
-        modifications.camkickmin = modifications.camkickmin * cam;
-        modifications.camkickmax = modifications.camkickmax * cam;
-        
-        modifications.aimrotkickmin = modifications.aimrotkickmin * rot * aim;
-        modifications.aimrotkickmax = modifications.aimrotkickmax * rot * aim;
-        
-        modifications.aimtranskickmin = modifications.aimtranskickmin * trans * aim;
-        modifications.aimtranskickmax = modifications.aimtranskickmax * trans * aim;
-        
-        modifications.aimcamkickmin = modifications.aimcamkickmin * cam * aim;
-        modifications.aimcamkickmax = modifications.aimcamkickmax * cam * aim;
-
-        local cks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "CamKickSpeed")
-        local acks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "AimCamKickSpeed")
-        local mks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "ModelKickSpeed")
-        local mrs = config:GetValue("Weapons", "Stat Modifications", "Recoil", "ModelRecoverSpeed")
-        local mkd = config:GetValue("Weapons", "Stat Modifications", "Recoil", "ModelKickDamper")
-
-        modifications.camkickspeed = modifications.camkickspeed * cks;
-        modifications.aimcamkickspeed = modifications.aimcamkickspeed * acks;
-        modifications.modelkickspeed = modifications.modelkickspeed * mks;
-        modifications.modelrecoverspeed = modifications.modelrecoverspeed * mrs;
-        modifications.modelkickdamper = modifications.modelkickdamper * mkd;
-    end)
-
-    -- You can also use a gun's stepper function now, with pre and post calls like so
-    hook:Add("PostWeaponStep", "BBOT:Aimbot.Post", function(gundata)
-        if not weapons.Firing then
-            gundata:shoot(false)
-        end
-    end)]]
 end
 
 -- Init
