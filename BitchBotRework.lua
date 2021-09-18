@@ -9125,7 +9125,7 @@ do
 
     -- Do aimbot stuff here
     hook:Add("PreWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
-    
+
     end)
 
     -- If the aimbot stuff before is persistant, use this to restore
@@ -9191,6 +9191,11 @@ do
                 return true
             end
         end
+    end)
+
+    -- Knife Aura --
+    hook:Add("PreKnifeStep", "BBOT:KnifeAura.Calculate", function(knifedata)
+    
     end)
 end
 
