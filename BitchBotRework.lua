@@ -1253,8 +1253,9 @@ do
 end
 
 --! POST LIBRARIES !--
+-- WholeCream here, do remember to sort all of this in order for a possible module based loader
 
--- Setup
+-- Setup, are we playing PF, Universal or... Bad Business 😉
 do
     local thread = BBOT.thread
     local hook = BBOT.hook
@@ -4026,7 +4027,8 @@ do
     end)
 end
 
--- Configs
+-- Configs, responsible for user configurations to all modules
+-- This is like 300% faster than the old one, because of the new structure I created
 do
     -- To do, add a config verification system
     -- To do, menu shouldn't be tied together wirh config
@@ -4323,7 +4325,7 @@ do
     end)
 end
 
--- Notifications
+-- Notifications, nice... but some aspects of it still bugs me...
 do
     -- I kinda like how this can run standalone
     local hook = BBOT.hook
@@ -4533,7 +4535,9 @@ do
     end)
 end
 
--- Menu
+-- Menu, slightly modified
+-- Added a hook-bridge between the new config module
+-- Awaiting for @bitch's part (note this menu still works but the crashing is horrendous)
 do
     local draw = BBOT.draw
     local hook = BBOT.hook
@@ -8635,7 +8639,10 @@ do
 
 end
 
--- Auxillary - Responsible for fetching and modifying phantom forces
+-- Auxillary, responsible for fetching, modifying, 
+-- If AUX cannot find or a check is invalidated, it will prevent BBOT from loading
+-- This should in theory prevent most bans related to updates by PF as it would prevent
+-- The cheat from having a colossal error
 do
     if BBOT.game ~= "pf" then return end
     local math = BBOT.math
@@ -8977,7 +8984,7 @@ do
     BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
 end
 
--- Chat
+-- Chat, allows for chat manipulations, or just being a dick with the chat spammer
 do
     local network = BBOT.aux.network
     local hook = BBOT.hook
@@ -9093,7 +9100,255 @@ do
     end)
 end
 
--- Aimbot
+-- VoteKick, handles the votekicks system (Conversion In Progress)
+-- Anti-Votekick
+do
+    local config = BBOT.config
+    local hook = BBOT.hook
+    local timer = BBOT.timer
+    local localplayer = BBOT.service:GetService("LocalPlayer")
+    local votekick = {}
+    BBOT.votekick = votekick
+    votekick.CallDelay = 90
+    votekick.NextCall = 0
+    votekick.Called = 0
+    
+    local receivers = BBOT.network.receivers
+    for k, v in pairs(receivers) do
+        local consts = debug.getconstants(v)
+        local has = false
+        for kk, vv in pairs(consts) do
+            if typeof(vv) == "string" and string.find(vv, "Votekick", 1, true) then
+                local function callvotekick(target, delay, votesrequired, ...)
+                    timer:Async(function() hook:Call("StartVoteKick", target, delay, votesrequired) end)
+                    return v(target, delay, votesrequired, ...)
+                end
+                rawset(receivers, k, callvotekick)
+                hook:Add("Unload", "UndoVotekickDetour-"..k, function()
+                    rawset(receivers, k, v)
+                end)
+    
+                function votekick:GetVotes()
+                    return debug.getupvalue(v, 9)
+                end
+                break
+            end
+        end
+    end
+    
+    local invote = false
+    hook:Add("StartVoteKick", "StartVoteKick", function(target, delay, votesrequired)
+        delay = tonumber(delay)
+        timer:Create("VoteKickCalled", delay, 1, function()
+            hook:Remove("RenderStep.First", "Votekick.Step")
+            hook:Call("EndVoteKick", target, delay, votesrequired, false)
+        end)
+        hook:Add("RenderStep.First", "Votekick.Step", function()
+            if votekick:GetVotes() >= votesrequired then
+                hook:Remove("RenderStep.First", "Votekick.Step")
+                timer:Remove("VoteKickCalled")
+                hook:Call("EndVoteKick", target, delay, votesrequired, true)
+            end
+        end)
+        if config:GetValue("Misc", "Exploits", "Anti-Votekick", "Enable") then
+            timer:Simple(delay+2, function()
+                votekick:RandomCall()
+            end)
+        end
+    
+        if target == localplayer.Name then
+            timer:Simple(.5, function() BBOT.hud:vote("no") end)
+        end
+    
+        invote = votesrequired
+        BBOT.print("Votekick called on " .. target .. "; time till end: " .. delay .. "; votes required: " .. votesrequired)
+        if votekick.Called == 1 then
+            votekick.Called = 2
+        elseif votekick.Called == 2 or votekick.Called == 0 then
+            votekick.Called = 0
+            votekick.NextCall = tick() + 1000000
+        end
+    end)
+    
+    hook:Add("Console", "VoteKickExploit", function(msg)
+        if string.find(msg, "The last votekick was initiated by you", 1, true) then
+            votekick.Called = 2
+        elseif string.find(msg, "seconds before initiating a votekick", 1, true) then
+            votekick.Called = 0
+            votekick.NextCall = tick() + (tonumber(string.match(msg, "%d+")) or 0)
+        end
+    end)
+    
+    function votekick:IsVoteActive()
+        return debug.getupvalue(BBOT.hud.votestep, 2)
+    end
+    
+    local players = BBOT.service:GetService("Players")
+    function votekick:GetTargets()
+        local targetables = {}
+        for i, v in pairs(players:GetPlayers()) do
+            local inpriority = config.prioritylist[v.UserId]
+            if (not inpriority or inpriority >= 0) and v ~= localplayer then
+                targetables[#targetables+1] = v
+            end
+        end
+        return targetables
+    end
+    
+    function votekick:CanCall(target, reason)
+        if self:IsVoteActive() then return false, "VoteActive" end
+        if self.NextCall > tick() or self.Called > 0 then return false, "RateLimit" end
+        return true
+    end
+    
+    function votekick:Call(target, reason)
+        BBOT.chat:Say("/votekick:"..target..":"..reason)
+        self.NextCall = 0
+        self.Called = 1
+    end
+    
+    function votekick:RandomCall()
+        local targets = votekick:GetTargets()
+        local target = BBOT.FYShuffle(targets)[1]
+        votekick:Call(target.Name, config:GetValue("Misc", "Exploits", "Anti-Votekick", "Reason"))
+    end
+    
+    votekick.autohopping = false
+    hook:Add("RenderStep.First", "VoteKickExploit", function()
+        if not config:GetValue("Misc", "Exploits", "Anti-Votekick", "Enable") then return end
+        if config:GetValue("Misc", "Exploits", "Anti-Votekick", "WaitTillAlive") and not votekick.WasAlive then return end
+        if votekick:CanCall() then
+            local targets = votekick:GetTargets()
+            local target = BBOT.FYShuffle(targets)[1]
+            votekick:Call(target.Name, config:GetValue("Misc", "Exploits", "Anti-Votekick", "Reason"))
+        end
+    
+        local t = config:GetValue("Misc", "Exploits", "Anti-Votekick", "Auto-Hop", "Delay")
+        if not votekick.autohopping and config:GetValue("Misc", "Exploits", "Anti-Votekick", "Auto-Hop", "Enable") and votekick.Called == 2 and votekick.NextCall ~= 0 and votekick.NextCall - (10 + (t < 0 and -t or 0)) <= tick() then
+            votekick.autohopping = true
+            log(LOG_NORMAL, "WARNING: Hopping in " .. (10+(t > 0 and t or 0)) .. " seconds")
+            timer:Simple(10+(t > 0 and t or 0), function()
+                BBOT.serverhop:RandomHop()
+            end)
+        end
+    end)
+    
+    hook:Add("PreUpdatePersonalHealth", "VoteKickExploit", function(hp, time, healrate, maxhealth, alive)
+        if alive == true then
+            votekick.WasAlive = true
+        end
+    end)
+end
+
+-- Server-Hopper, redirects and moves the user to other server instances (Conversion In Progress)
+-- Votekick-blacklist (prevents user from joining voted out servers)
+do
+    local config = BBOT.config
+    local hook = BBOT.hook
+    local votekick = BBOT.votekick
+    local log = BBOT.log
+    local TeleportService = game:GetService("TeleportService")
+    local localplayer = BBOT.service:GetService("LocalPlayer")
+    local httpservice = BBOT.service:GetService("HttpService")
+    local serverhop = {}
+    BBOT.serverhop = serverhop
+
+    serverhop.file = "bitchbot/votedoff-servers.txt"
+    serverhop.blacklist = {}
+    serverhop.UserId = tostring(localplayer.UserId)
+
+    hook:Add("FullyLoaded", "LoadServer-Hop", function()
+        if isfile(serverhop.file) then
+            serverhop.blacklist = httpservice:JSONDecode(readfile(serverhop.file))
+            local otime = os.time()
+            for _, userblacklist in pairs(serverhop.blacklist) do
+                for k, v in pairs(userblacklist) do
+                    if otime > v then
+                        userblacklist[k] = nil
+                        log(LOG_NORMAL, "Removed server-hop blacklist " .. k)
+                    end
+                end
+            end
+            writefile(serverhop.file, httpservice:JSONEncode(serverhop.blacklist))
+            local plbllist = serverhop.blacklist[serverhop.UserId]
+            if plbllist then
+                local c = 0
+                for k, v in pairs(plbllist) do
+                    c = c + 1
+                end
+                --BBOT.chat:Message("You have been votekicked from " .. c .. " server(s)!")
+                log(LOG_NORMAL, "You have been votekicked from " .. c .. " server(s)!")
+            end
+        end
+    end)
+
+    function serverhop:IsBlacklisted(id)
+        local plbllist = serverhop.blacklist[self.UserId]
+        if plbllist and plbllist[id] then
+            return true
+        end
+    end
+
+    function serverhop:RandomHop()
+        log(LOG_NORMAL, "Commencing Server-Hop...")
+        local data = httpservice:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100")).data
+        local mode = config:GetValue("Misc", "Exploits", "Server-Hopper", "Sort By")
+        if mode == "Lowest Ping" then
+            table.sort(data, function(a, b) return a.ping < b.ping end)
+        elseif mode == "Highest Ping" then
+            table.sort(data, function(a, b) return a.ping > b.ping end)
+        elseif mode == "Highest Players" then
+            table.sort(data, function(a, b) return a.playing > b.playing end)
+        elseif mode == "Lowest Players" then
+            table.sort(data, function(a, b) return a.playing < b.playing end)
+        end
+        for _, s in pairs(data) do
+            if not serverhop:IsBlacklisted(s.id) and s.id ~= game.JobId then
+                if s.playing ~= s.maxPlayers then
+                    log(LOG_NORMAL, "Hopping to server Id: " .. s.id .. "; Players: " .. s.playing .. "/" .. s.maxPlayers .. "; " .. s.ping .. " ms")
+                    --syn.queue_on_teleport(<string> code)
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id)
+                    return
+                end
+            end
+        end
+        log(LOG_ERROR, "No servers to hop towards... Wow... You really got votekicked off every server now did ya? Impressive...")
+    end
+
+    function serverhop:AddToBlacklist(id, removaltime)
+        local plbllist = self.blacklist[self.UserId]
+        if not plbllist then
+            plbllist = {}
+            self.blacklist[self.UserId] = plbllist
+        end
+        plbllist[id] = (removaltime and removaltime + os.time() or -1)
+    end
+
+    function serverhop:Hop(id)
+        log(LOG_NORMAL, "Hopping to server " .. id)
+        if serverhop:IsBlacklisted(id) then
+            log(LOG_ERROR, "This server ID is blacklisted! Where you votekicked from here?")
+            return
+        end
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, id)
+    end
+
+    hook:Add("EndVoteKick", "Server-Hopper", function(target, delay, required, successful)
+        if target == localplayer.Name and successful then
+            if not serverhop:IsBlacklisted(game.JobId) then
+                serverhop:AddToBlacklist(game.JobId, 86400)
+                log(LOG_NORMAL, "Added " .. game.JobId .. " to server-hop blacklist")
+                writefile(serverhop.file, httpservice:JSONEncode(serverhop.blacklist))
+            end
+            if not config:GetValue("Misc", "Exploits", "Server-Hopper", "Enable") then return end
+            serverhop:RandomHop()
+        end
+    end)
+end
+
+-- Generalized Aimbot
+-- Knife Aura
+-- Bullet Network Manipulation
 do
     local timer = BBOT.timer
     local hook = BBOT.hook
@@ -9199,7 +9454,8 @@ do
     end)
 end
 
--- ESP
+-- Entity Visuals Controller [ESP, Chams, Grenades, etc]
+-- Styled as a constructor with meta tables btw, I'll tell ya later - WholeCream
 do
     -- Why this?
     -- Because it's more organized :|
@@ -9357,7 +9613,8 @@ do
     -- Will make examples...
 end
 
--- Weapon Modifications
+-- Weapon Modifications, I know you cannot do changes while playing, but this allows you to customize the entire gun
+-- Skin changer
 do
     -- From wholecream
     -- configs aren't done so they are default to screw-pf aka my stuff...
@@ -9705,14 +9962,14 @@ do
     end)
 end
 
--- Init
+-- Init, tell all modules we are ready
 do
     BBOT.hook:Call("PreInitialize")
     BBOT.hook:Call("Initialize")
     BBOT.hook:Call("PostInitialize")
 end
 
--- The Moment
+-- The Moment, just some print stuff for the user to see on init, like has the cheat reloaded?
 do
     local loadtime = (BBOT.math.round(tick()-loadstart, 6))
     BBOT.timer:Async(function()
