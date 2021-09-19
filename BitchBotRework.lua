@@ -4027,7 +4027,7 @@ do
     end)
 end
 
--- Configs, responsible for user configurations to all modules
+-- Configs, responsible for user configurations to all modules (Done)
 -- This is like 300% faster than the old one, because of the new structure I created
 do
     -- To do, add a config verification system
@@ -4325,7 +4325,7 @@ do
     end)
 end
 
--- Notifications, nice... but some aspects of it still bugs me...
+-- Notifications, nice... but some aspects of it still bugs me... (Done)
 do
     -- I kinda like how this can run standalone
     local hook = BBOT.hook
@@ -4535,9 +4535,8 @@ do
     end)
 end
 
--- Menu, slightly modified
+-- Menu, slightly modified (Done)
 -- Added a hook-bridge between the new config module
--- Awaiting for @bitch's part (note this menu still works but the crashing is horrendous)
 do
     local draw = BBOT.draw
     local hook = BBOT.hook
@@ -8639,7 +8638,7 @@ do
 
 end
 
--- Auxillary, responsible for fetching, modifying, 
+-- Auxillary, responsible for fetching, modifying,  (Done)
 -- If AUX cannot find or a check is invalidated, it will prevent BBOT from loading
 -- This should in theory prevent most bans related to updates by PF as it would prevent
 -- The cheat from having a colossal error
@@ -8984,7 +8983,7 @@ do
     BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
 end
 
--- Chat, allows for chat manipulations, or just being a dick with the chat spammer
+-- Chat, allows for chat manipulations, or just being a dick with the chat spammer (Conversion In Progress)
 do
     local network = BBOT.aux.network
     local hook = BBOT.hook
@@ -9346,7 +9345,7 @@ do
     end)
 end
 
--- Generalized Aimbot
+-- Generalized Aimbot (Conversion In Progress)
 -- Knife Aura
 -- Bullet Network Manipulation
 do
@@ -9454,7 +9453,7 @@ do
     end)
 end
 
--- Entity Visuals Controller [ESP, Chams, Grenades, etc]
+-- Entity Visuals Controller [ESP, Chams, Grenades, etc] (Conversion In Progress)
 -- Styled as a constructor with meta tables btw, I'll tell ya later - WholeCream
 do
     -- Why this?
@@ -9613,7 +9612,7 @@ do
     -- Will make examples...
 end
 
--- Weapon Modifications, I know you cannot do changes while playing, but this allows you to customize the entire gun
+-- Weapon Modifications, I know you cannot do changes while playing, but this allows you to customize the entire gun (Conversion In Progress)
 -- Skin changer
 do
     -- From wholecream
