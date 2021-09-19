@@ -1904,3 +1904,7 @@ Menu.fading = true
 Menu.fadestart = tick()
 
 print("done making menus")
+
+-- a message to bitch.
+-- Do try to see my config system on the main branch on how it works.
+-- You will need to understand it either way if we are gonna brige this menu.
