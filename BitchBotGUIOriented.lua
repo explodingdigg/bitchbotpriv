@@ -2149,13 +2149,29 @@ do
 
         function GUI:PerformLayout(pos, size)
             self.text.Position = pos
+            local x = self:GetTextSize(self.content)
+            if pos.X + x > size.X then
+                local text = ""
+                for i=1, #self.content do
+                    local v = string.sub(self.content, i, i)
+                    local pretext = text .. v
+                    local prex = self:GetTextSize(pretext)
+                    if pos.X + prex > size.X then
+                        break 
+                    end
+                    text = pretext 
+                end
+            end
         end
 
-        function GUI:GetTextSize() return self.textsize end
-
-        function GUI:GetTextScale(text)
+        function GUI:GetTextSize(text)
             text = text or self.content
-            return #text*(self.textsize/1.85)+(self.textsize/4), (self.textsize/1.85)+(self.textsize/4)
+            local x, y = self:GetTextScale()
+            return (#text)*x, y
+        end
+
+        function GUI:GetTextScale() -- This is a guessing game, not aproximation
+            return (self.textsize/1.5)+(self.textsize/4), (self.textsize/1.5)+(self.textsize/4)
         end
 
         gui:Register(GUI, "Text")
@@ -2207,20 +2223,68 @@ do
             end
             self.text = self:Cache(draw:TextOutlined("", 2, 3, 3, 16, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
             self.content = ""
+            self.content_position = 1 -- I like scrolling text
             self.textsize = 16
             self.font = 2
 
             self.cursor_outline = self:Cache(draw:BoxOutline(0, 0, 1, self.textsize, 4, Color3.fromRGB(20, 20, 20)))
             self.cursor = self:Cache(draw:BoxOutline(0, 0, 1, self.textsize, 0, Color3.fromRGB(255,255,255), 0))
+            self.cursor_position = 1
 
             self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
 
             self.editable = true
+            self.highlightable = true
             self.mouseinputs = true
 
             self.input_repeater_start = 0
             self.input_repeater_key = nil
             self.input_repeater_delay = 0
+        end
+
+        local mouse = BBOT.service:GetService("Mouse")
+        function GUI:ProcessClipping()
+            local text = self:AutoTruncate()
+            self.text.Text = text
+        end
+
+        function GUI:AutoTruncate()
+            local position = self.content_position
+            local w = self:GetTextSize(self.content)
+            local pos, size = self:GetLocalTranslation()
+            local scalew = self:GetTextScale()
+            if pos.X + w > size.X then
+                local text = ""
+                for i=position, #self.content do
+                    local v = string.sub(self.content, i, i)
+                    local pretext = text .. v
+                    local prew = self:GetTextSize(pretext)
+                    if prew - (position*scalew) - pos.X - 6 > size.X then
+                        break 
+                    end
+                    text = pretext 
+                end
+                return text, position
+            end
+            return self.content, 0
+        end
+
+        function GUI:DetermineTextCursorPosition(X)
+            local text, offset = self:AutoTruncate()
+            local pre, post = "", ""
+            for i=1, #text do
+                post = post .. string.sub(text, i, i)
+                local min = self:GetTextSize(pre)
+                min = min + 3
+                local max = self:GetTextSize(post)
+                max = max + 3
+
+                if X >= min and X <= max then
+                    return offset + i
+                end
+                pre = post
+            end
+            return offset + #text
         end
 
         function GUI:PerformLayout(pos, size)
@@ -2229,6 +2293,7 @@ do
             self.background.Position = pos
             self.background_outline.Size = size
             self.background.Size = size
+            self:ProcessClipping()
         end
 
         function GUI:OnTextChanged(old, new)
@@ -2252,45 +2317,84 @@ do
 
         local inputservice = BBOT.service:GetService("UserInputService")
         function GUI:ProcessInput(text, keycode)
+            local cursorpos = self.cursor_position
+            local rtext = string.sub(text, cursorpos+1)
+            local ltext = string.sub(text, 1, cursorpos)
             local set = false
             local enums = menu.enums.KeyCode
             if keycode == Enum.KeyCode.Backspace then
-                text = string.sub(text, 0, #text - 1)
+                ltext = string.sub(ltext, 0, #ltext - 1)
                 set = true
             elseif keycode == Enum.KeyCode.Space then
-                text ..= " "
+                ltext ..= " "
                 set = true
             elseif enums.inverseId[keycode] and self.whitelist[enums.inverseId[keycode]] then
                 local key = enums.inverseId[keycode]
                 if not inputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
                     key = string.lower(key)
                 end
-                text ..= key
+                ltext ..= key
                 set = true
             end
-            return text, set
+            text = ltext .. rtext
+            return text, set, ltext
+        end
+
+        function GUI:DetermineFittable()
+            local w = self:GetTextScale()
+            return math.round(self.absolutesize.X/w)
         end
 
         function GUI:InputBegan(input)
             if not self.editable or not self.active then return end
-            if not self.editing and input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
                 self.editing = true
-            elseif self.editing and input.UserInputType == Enum.UserInputType.MouseButton1 and (not self:IsHovering() or (input.UserInputType == Enum.UserInputType.Keyboard and input.UserInputType == Enum.KeyCode.Return)) then
-                self.editing = nil
-                self.cursor_outline.Transparency = 0
-                self.cursor.Transparency = 0
-            elseif self.editing and input.UserInputType == Enum.UserInputType.Keyboard then
-                local current_text = self:GetText()
-                local original_text = current_text
-                local new_text, success = self:ProcessInput(current_text, input.KeyCode)
-                if success then
-                    self.input_repeater_start = tick() + .5
-                    self.input_repeater_key = input.KeyCode
-                    local w, h = self:GetTextScale(new_text)
-                    if w < self.absolutesize.x then 
-                        self:SetText(new_text)
-                        self:OnTextChanged(original_text, new_text)
+                self.cursor_position = self:DetermineTextCursorPosition(mouse.X - self.absolutepos.X)
+            elseif self.editing then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 and (not self:IsHovering() or (input.UserInputType == Enum.UserInputType.Keyboard and input.UserInputType == Enum.KeyCode.Return)) then
+                    self.editing = nil
+                    self.cursor_outline.Transparency = 0
+                    self.cursor.Transparency = 0
+                elseif input.UserInputType == Enum.UserInputType.Keyboard then
+                    if input.KeyCode == Enum.KeyCode.Left then
+                        self.cursor_position -= 1
+                        if self.cursor_position < 0 then
+                            self.cursor_position = 0
+                        end
+                        self.input_repeater_start = tick() + .5
+                        self.input_repeater_key = input.KeyCode
+                    elseif input.KeyCode == Enum.KeyCode.Right then
+                        self.cursor_position += 1
+                        if self.cursor_position > #self.content then
+                            self.cursor_position -= 1
+                        end
+                        self.input_repeater_start = tick() + .5
+                        self.input_repeater_key = input.KeyCode
+                    else
+                        local current_text = self:GetText()
+                        local original_text = current_text
+                        local new_text, success, ltext = self:ProcessInput(current_text, input.KeyCode)
+                        if success then
+                            self.input_repeater_start = tick() + .5
+                            self.input_repeater_key = input.KeyCode
+                            self:SetText(new_text)
+                            self:OnTextChanged(original_text, new_text)
+                            self.cursor_position = #ltext
+                        end
                     end
+
+                    local fittable = self:DetermineFittable()
+                    if self.cursor_position < 4 then
+                        self.content_position = 1
+                    elseif self.cursor_position > self.content_position-1 + fittable then
+                        self.content_position = self.cursor_position+1 - fittable
+                    elseif self.cursor_position-3 < self.content_position-1 then
+                        self.content_position = self.cursor_position+1-3
+                    end
+                    if self.content_position < 1 then
+                        self.content_position = 1
+                    end
+                    self:ProcessClipping()
                 end
             end
         end
@@ -2306,23 +2410,45 @@ do
         function GUI:Step()
             if self.editing then
                 local t = tick()
-                self.cursor.Transparency = math.sin(t * 4)
-                self.cursor.Position = self.absolutepos + Vector2.new(#self.content*(self.textsize/1.85)+(self.textsize/4)+1, 3)
+                self.cursor.Transparency = math.sin(t * 8)
+                self.cursor.Position = self.absolutepos + Vector2.new((self.cursor_position-(self.content_position-1))*(self.textsize/1.85)+(self.textsize/4)+1, 3)
                 self.cursor_outline.Transparency = self.cursor.Transparency
                 self.cursor_outline.Position = self.cursor.Position
                 if self.input_repeater_key and self.input_repeater_start < t then
                     if self.input_repeater_delay < t then
                         self.input_repeater_delay = t + .025
-                        local current_text = self:GetText()
-                        local original_text = current_text
-                        local new_text, success = self:ProcessInput(current_text, self.input_repeater_key)
-                        if success then
-                            local w, h = self:GetTextScale(new_text)
-                            if w < self.absolutesize.x then 
+                        if self.input_repeater_key == Enum.KeyCode.Left then
+                            self.cursor_position -= 1
+                            if self.cursor_position < 0 then
+                                self.cursor_position = 0
+                            end
+                        elseif self.input_repeater_key == Enum.KeyCode.Right then
+                            self.cursor_position += 1
+                            if self.cursor_position > #self.content then
+                                self.cursor_position -= 1
+                            end
+                        else
+                            local current_text = self:GetText()
+                            local original_text = current_text
+                            local new_text, success, ltext = self:ProcessInput(current_text, self.input_repeater_key)
+                            if success then
                                 self:SetText(new_text)
                                 self:OnTextChanged(original_text, new_text)
+                                self.cursor_position = #ltext
                             end
                         end
+                        local fittable = self:DetermineFittable()
+                        if self.cursor_position < 4 then
+                            self.content_position = 1
+                        elseif self.cursor_position > self.content_position-1 + fittable then
+                            self.content_position = self.cursor_position+1 - fittable
+                        elseif self.cursor_position-3 < self.content_position-1 then
+                            self.content_position = self.cursor_position+1-3
+                        end
+                        if self.content_position < 1 then
+                            self.content_position = 1
+                        end
+                        self:ProcessClipping()
                     end
                 end
             end
@@ -2496,6 +2622,14 @@ do
         while Loopy_Image_Checky() do
             wait(0)
         end
+    end
+    
+    function menu:CreateOptions()
+
+    end
+
+    function menu:HandleGeneration()
+
     end
 
     function menu:Initialize()
