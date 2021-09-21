@@ -1624,6 +1624,7 @@ do
                 end
             end
             self:PostRemove()
+            self.__INVALID = true
         end
     end
 
@@ -2342,16 +2343,15 @@ do
             self.gradient:Generate()
 
             self.text = self:Cache(draw:TextOutlined("", 2, 3, 3, 16, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
-            self.content = ""
             self.textsize = 16
             self.font = 2
 
             self.dropicon = self:Cache(draw:TextOutlined("-", 2, 3, 3, 16, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
-
             self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
-
-            self.editable = true
             self.mouseinputs = true
+
+            self.options = {}
+            self.option = ""
         end
 
         function GUI:GetOption(txt)
@@ -2363,6 +2363,10 @@ do
             self.option = text
         end
 
+        function GUI:AddOption(txt)
+            self.options[#self.options+1] = txt
+        end
+
         function GUI:PerformLayout(pos, size)
             self.text.Position = pos + Vector2.new(3, 3)
             self.dropicon.Position = pos + Vector2.new(size.X - 16 - 4, 3)
@@ -2370,6 +2374,44 @@ do
             self.background.Position = pos
             self.background_outline.Size = size
             self.background.Size = size
+        end
+
+        function GUI:OnSelect() end
+
+        function GUI:Open()
+            if self.selection then
+                self.selection:Remove()
+                self.selection = nil
+            end
+            local box = gui:Create("DropBoxSelection", self)
+            self.selection = box
+            box:SetPos(0,0,0,0)
+            box:SetSize(1,0,0,(#self.options * self.textsize))
+            box:SetOptions(self.options)
+            function box.OnSelect(s, row)
+                self.option = row
+                self:OnSelect(row)
+                self:Close()
+            end
+            box:Generate()
+        end
+
+        function GUI:Close()
+            if self.selection then
+                self.selection:Remove()
+                self.selection = nil
+            end
+        end
+
+        function GUI:InputBegan(input)
+            if not self.active then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+                self.open = true
+                self:Open()
+            elseif self.open and (not self.selection or not self.selection:IsHovering()) then
+                self.open = false
+                self:Close()
+            end
         end
 
         gui:Register(GUI, "DropBox")
