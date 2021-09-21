@@ -1788,7 +1788,7 @@ do
         local inhover = {}
         for i=1, #reg do
             local v = reg[i]
-            if gui:IsHovering(v) and v.mouseinputs then
+            if gui:IsHovering(v) then
                 inhover[#inhover+1] = v
             end
         end
