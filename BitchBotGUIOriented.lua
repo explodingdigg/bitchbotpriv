@@ -1257,6 +1257,78 @@ do
 	end
 end
 
+-- Setup
+do
+    -- There are two types of instruction
+    -- 1. Config Instructions
+    -- 2. Menu Instructions
+
+    -- Config Instructions results in the building of the config module's quick access table
+    -- Menu Instructions results in the generation and setup of all menus
+    BBOT.configuration = {
+        {
+            -- The first layer here is the frame
+            Id = "Env",
+            name = "Environment",
+            pos = UDim2.new(0, 520, 0, 100),
+            size = UDim2.new(0, 599, 0, 501),
+            content = { -- by default operation is tabs
+                { -- Do not assign types in here, as tabs automatically assigns them as "Panel"
+                    name = "Players",
+                    content = {
+                        {
+                            name = "Player List", -- No type means auto-set to panel
+                            pos = UDim2.new(0,0,0,0),
+                            size = UDim2.new(0,0,0,0),
+                            content = {},
+                        },
+                        {
+                            name = "Player Control",
+                            pos = UDim2.new(0,0,0,0),
+                            size = UDim2.new(0,0,0,0),
+                            content = {},
+                        },
+                    },
+                },
+                {
+                    name = "Priorties And Friends",
+                    content = {
+                        {
+                            name = "Saved Players",
+                            pos = UDim2.new(0,0,0,0),
+                            size = UDim2.new(0,0,0,0),
+                            content = {},
+                        },
+                        {
+                            name = "Player Control",
+                            pos = UDim2.new(0,0,0,0),
+                            size = UDim2.new(0,0,0,0),
+                            content = {},
+                        },
+                    },
+                },
+                {
+                    name = "Bitch Bot Users",
+                    content = {
+                        {
+                            name = "Bitch Bot Users Online",
+                            pos = UDim2.new(0,0,0,0),
+                            size = UDim2.new(0,0,0,0),
+                            content = {},
+                        },
+                        {
+                            name = "Selected User Actions",
+                            pos = UDim2.new(0,0,0,0),
+                            size = UDim2.new(0,0,0,0),
+                            content = {},
+                        },
+                    },
+                },
+            }
+        }
+    }
+end
+
 -- Configs
 do
     -- To do, add a config verification system
@@ -1865,6 +1937,7 @@ end
 
 -- Menu
 do
+    -- Menu Instructions is reponsible for the setup and configuration of all menus
     local hook = BBOT.hook
     local gui = BBOT.gui
     local color = BBOT.color
@@ -2161,6 +2234,7 @@ do
                     end
                     text = pretext 
                 end
+                self.text.Text = text
             end
         end
 
@@ -2171,7 +2245,7 @@ do
         end
 
         function GUI:GetTextScale() -- This is a guessing game, not aproximation
-            return (self.textsize/1.5)+(self.textsize/4), (self.textsize/1.5)+(self.textsize/4)
+            return (self.textsize/2)+(self.textsize/4), (self.textsize/2)+(self.textsize/4)
         end
 
         gui:Register(GUI, "Text")
@@ -2410,8 +2484,9 @@ do
         function GUI:Step()
             if self.editing then
                 local t = tick()
+                local wscale = self:GetTextScale()
                 self.cursor.Transparency = math.sin(t * 8)
-                self.cursor.Position = self.absolutepos + Vector2.new((self.cursor_position-(self.content_position-1))*(self.textsize/1.85)+(self.textsize/4)+1, 3)
+                self.cursor.Position = self.absolutepos + Vector2.new((self.cursor_position-(self.content_position-1))*wscale+1, 3)
                 self.cursor_outline.Transparency = self.cursor.Transparency
                 self.cursor_outline.Position = self.cursor.Position
                 if self.input_repeater_key and self.input_repeater_start < t then
@@ -2628,40 +2703,58 @@ do
 
     end
 
-    function menu:HandleGeneration()
+    function menu:HandleGeneration(container, configuration)
+        for i=1, #configuration do
+            local config = configuration[i]
+            local name = config.name
+            local frame = gui:Create("Panel", container)
+            frame.Name = name
+            if config.pos then
+                frame:SetPos(unpack(config.pos))
+            end
+            if config.size then
+                frame:SetSize(unpack(config.size))
+            end
+            local alias = gui:Create("Text", frame)
+            frame.alias = alias
+            alias:SetPos(0, 2, 0, 2)
+            alias:SetText(name)
 
+            local subcontainer = gui:Create("Panel", frame)
+            frame.subcontainer = subcontainer
+            subcontainer:SetPos(0, 0, 0, 6)
+            subcontainer:SetSize(1, 0, 1, -12)
+
+            if config.content then
+                self:HandleGeneration(subcontainer, config.content)
+            end
+        end
     end
 
     function menu:Initialize()
-        local frame = gui:Create("Panel")
-        self.menu = frame
-        frame:SetSize(0, 0, 0, 0)
-        frame:Center()
+        local intro = gui:Create("Panel")
+        intro:SetSize(0, 0, 0, 0)
+        intro:Center()
 
         do
             self.fw, self.fh = 100, 100
 
             local screensize = camera.ViewportSize
-            local image = gui:Create("Image", frame)
+            local image = gui:Create("Image", intro)
             image:SetImage(menu.images[7])
             image:SetPos(0, 0, 0, 2)
             image:SetSize(1, 0, 1, -2)
-            gui:SizeTo(frame, UDim2.new(0, self.fw, 0, self.fh), 0.775, 0, 0.25, function()
-                gui:SizeTo(frame, UDim2.new(0, 0, 0, 0), 0.775, 0.5, 0.25, function()
+            gui:SizeTo(intro, UDim2.new(0, self.fw, 0, self.fh), 0.775, 0, 0.25, function()
+                gui:SizeTo(intro, UDim2.new(0, 0, 0, 0), 0.775, 0.5, 0.25, function()
                     image:Remove()
-                    hook:Call("Menu.PreGenerate", frame)
-                    gui:SizeTo(frame, UDim2.new(0, self.size.X, 0, self.size.Y), .9, 0.25, 0.25, function()
-                        frame:SetDraggable(true)
-                        hook:Call("Menu.Generate", frame)
-                        hook:Call("Menu.PostGenerate", frame)
-                    end)
+                    hook:Call("Menu.PreGenerate")
+                    hook:Call("Menu.Generate")
+                    hook:Call("Menu.PostGenerate")
                 end)
             end)
 
-            gui:MoveTo( frame, UDim2.new(.5, -self.fw/2, .5, -self.fh/2), 0.775, 0, 0.25, function()
-                gui:MoveTo( frame, UDim2.new(.5, 0, .5, 0), 0.775, 0.5, 0.25, function()
-                    gui:MoveTo(frame, UDim2.new(.5, -self.size.X/2, .5, -self.size.Y/2), .9, 0.25, 0.25)
-                end)
+            gui:MoveTo( intro, UDim2.new(.5, -self.fw/2, .5, -self.fh/2), 0.775, 0, 0.25, function()
+                gui:MoveTo( intro, UDim2.new(.5, 0, .5, 0), 0.775, 0.5, 0.25)
             end)
         end
 
@@ -2671,30 +2764,45 @@ do
         end)
     end
 
-    hook:Add("Menu.PreGenerate", "BBOT:Menu.Main", function(frame)
-        local optionscontainer = gui:Create("Panel", frame)
-        frame.optionscontainer = optionscontainer
-        optionscontainer:SetPos(0, 10, 0, 10+20)
-        optionscontainer:SetSize(1, -20, 1, -20-20)
-    end)
+    --[[{
+        activetab = 1
+        name = "Bitch Bot",
+        pos = UDim2.new(0, 520, 0, 100),
+        size = UDim2.new(0, 500, 0, 600),
+        center = true,
+    },]]
 
-    hook:Add("Menu.Generate", "BBOT:Menu.Main", function(frame)
-        local acontainer = gui:Create("Panel", frame.optionscontainer)
-        acontainer:SetPos(0, 50, 0, 50)
-        acontainer:SetSize(0, 300, 0, 40)
-        acontainer:SetDraggable(true)
-        frame.container = acontainer
+    function menu:Create(configuration)
+        local frame = gui:Create("Panel")
+        frame.Id = configuration.Id
+        if configuration.pos then
+            frame:SetPos(unpack(configuration.pos))
+        end
+        if configuration.size then
+            frame:SetSize(unpack(configuration.size))
+        end
+        if configuration.center then
+            frame:Center()
+        end
 
         local alias = gui:Create("Text", frame)
         frame.alias = alias
         alias:SetPos(0, 3, 0, 5)
-        alias:SetText("Bitch Bot")
+        alias:SetText(configuration.name)
 
-        local textbox = gui:Create("TextEntry", frame.container)
-        textbox:SetEditable(true)
-        textbox:SetText("A Test")
-        textbox:SetSize(0, 200, 0, 22)
-        textbox:Center()
+        local optionscontainer = gui:Create("Panel", frame)
+        frame.optionscontainer = optionscontainer
+        optionscontainer:SetPos(0, 10, 0, 10+20)
+        optionscontainer:SetSize(1, -20, 1, -20-20)
+
+        self:HandleGeneration(optionscontainer, configuration.content)
+    end
+
+    hook:Add("Menu.Generate", "BBOT:Menu.Main", function(frame)
+        local setup_parameters = BBOT.configuration
+        for i=1, #setup_parameters do
+            menu:Create(setup_parameters[i])
+        end
     end)
 
     hook:Add("Initialize", "BBOT:Menu", function()
