@@ -519,6 +519,21 @@ do
     function string.cut(s1, num)
         return num == 0 and s1 or string.sub(s1, 1, num)
     end
+
+    function string.random(len, len2)
+        local str, length = "", (len2 and math.random(len, len2) or len)
+        for i = 1, length do
+            local typo = math.random(1, 3)
+            if typo == 1 then
+                str = str.. string.char(math.random(97, 122))
+            elseif typo == 2 then
+                str = str.. string.char(math.random(65, 90))
+            elseif typo == 3 then
+                str = str.. string.char(math.random(49, 57))
+            end
+        end
+        return str
+    end
 end
 
 -- Services
@@ -1520,6 +1535,8 @@ end
 
 -- GUI
 do
+    -- WholeCream's Drawing Library to GUI Library
+    -- Extremely versatile and object oriented!
     local hook = BBOT.hook
     local draw = BBOT.draw
     local math = BBOT.math
@@ -1698,6 +1715,21 @@ do
             self:PostRemove()
             self.__INVALID = true
         end
+        function base:SetTransparency(t)
+            local parent_transparency = (self.parent and self.parent.transparency or 0)
+            for i=1, #self.objects do
+                local v = self.objects[i]
+                v.Transparency = (v.Transparency/self.transparency) * math.clamp(t + parent_transparency, 0, 1)
+            end
+            self.transparency = t
+            local children = self.children
+            for i=1, #children do
+                local v = children[i]
+                if v.SetTransparency then
+                    v:SetTransparency(t)
+                end
+            end
+        end
     end
 
     function gui:Register(tbl, class, base)
@@ -1715,17 +1747,25 @@ do
             objects = {},
             parent = parent,
             children = {},
+            isgui = true,
+            class = class,
 
             active = true,
             visible = true,
+            transparency = 0,
             zindex = uid, -- use this to identify not only rendering but activity, like mouse entering and leaving
             pos = UDim2.new(),
             absolutepos = Vector2.new(),
             size = UDim2.new(),
-            absolutesize = Vector2.new()
+            absolutesize = Vector2.new(),
         }
         uid = uid + 1
-        setmetatable(struct, {__index = self.classes[class]})
+        setmetatable(struct, {
+            __index = self.classes[class],
+            __tostring = function(self)
+                return "GUI: " .. self.class .. "-" .. self.uid
+            end
+        })
         self.registry[#self.registry+1] = struct
         if struct.Init then
             struct:Init()
@@ -2651,6 +2691,57 @@ do
         end
 
         gui:Register(GUI, "Image")
+    end
+
+    do
+        local GUI = {}
+
+        function GUI:Init()
+
+        end
+
+        function GUI:PerformLayout()
+
+        end
+
+        gui:Register(GUI, "Tab")
+
+        local GUI = {}
+
+        function GUI:Init()
+            local container = gui:Create("Container", self)
+            container:SetPos(0,0,0,20)
+            container:SetSize(1,0,1,-20)
+            self.container = container
+
+            local tablist = gui:Create("Container", self)
+            tablist:SetPos(0,0,0,0)
+            tablist:SetSize(1,0,0,20)
+            self.tablist = tablist
+
+            self.registry = {}
+        end
+
+        function GUI:PerformLayout(pos, size)
+
+        end
+
+        function GUI:Add(name, object)
+            object:SetParent(self.container)
+            local tab = gui:Create("Tab", self.tablist)
+            tab:SetText(name)
+            tab:SetPanel(object)
+            local r = self.registry
+            r[#r+1] = {tab, object}
+            local l = #r
+            for i=1, l do
+                local v = r[i]
+                v:SetSize(1/l,0,0,20)
+                v:SetPos((1/l)*i,0,0,0)
+            end
+        end
+
+        gui:Register(GUI, "Tabs")
     end
 
     local camera = BBOT.service:GetService("CurrentCamera")
