@@ -1911,12 +1911,16 @@ do
         if result ~= gui.hovering then
             if gui.hovering then
                 gui.hovering.ishovering = false
-                gui.hovering:OnMouseExit(mouse.X, mouse.Y)
+                if gui.hovering.OnMouseExit then
+                    gui.hovering:OnMouseExit(mouse.X, mouse.Y)
+                end
             end
             gui.hovering = result
             if gui.hovering then
                 gui.hovering.ishovering = true
-                gui.hovering:OnMouseEnter(mouse.X, mouse.Y)
+                if gui.hovering.OnMouseEnter then
+                    gui.hovering:OnMouseEnter(mouse.X, mouse.Y)
+                end
             end
         end
     end)
@@ -2745,7 +2749,6 @@ do
     end
 
     local camera = BBOT.service:GetService("CurrentCamera")
-    menu.size = Vector2.new(500, 600)
 
     menu.images = {}
     thread:CreateMulti({
@@ -2801,10 +2804,10 @@ do
             local frame = gui:Create("Panel", container)
             frame.Name = name
             if config.pos then
-                frame:SetPos(unpack(config.pos))
+                frame:SetPos(config.pos)
             end
             if config.size then
-                frame:SetSize(unpack(config.size))
+                frame:SetSize(config.size)
             end
             local alias = gui:Create("Text", frame)
             frame.alias = alias
@@ -2867,10 +2870,10 @@ do
         local frame = gui:Create("Panel")
         frame.Id = configuration.Id
         if configuration.pos then
-            frame:SetPos(unpack(configuration.pos))
+            frame:SetPos(configuration.pos)
         end
         if configuration.size then
-            frame:SetSize(unpack(configuration.size))
+            frame:SetSize(configuration.size)
         end
         if configuration.center then
             frame:Center()
