@@ -1548,6 +1548,10 @@ do
             end
             self:Calculate()
         end
+
+        function base:SetSizeConstraint(type)
+            self.sizeconstraint = type
+        end
     
         function base:GetPos()
             return self.pos
@@ -1572,21 +1576,32 @@ do
             local Y = self.pos.Y.Offset + (self.pos.Y.Scale * psize.Y)
             local W = self.size.X.Offset + (self.size.X.Scale * psize.X)
             local H = self.size.Y.Offset + (self.size.Y.Scale * psize.Y)
+
+            if self.sizeconstraint == "Y" and W > H then
+                W = H
+            elseif self.sizeconstraint == "X" and H > W then
+                H = W
+            end
+
             return Vector2.new(X, Y), Vector2.new(W, H)
         end
 
         function base:Calculate()
-            local ppos, psize = (self.parent and self.parent.absolutepos or Vector2.new()), (self.parent and self.parent.absolutesize or camera.ViewportSize)
-
-            local X = self.pos.X.Offset + (self.pos.X.Scale * psize.X)
-            local Y = self.pos.Y.Offset + (self.pos.Y.Scale * psize.Y)
-            local W = self.size.X.Offset + (self.size.X.Scale * psize.X)
-            local H = self.size.Y.Offset + (self.size.Y.Scale * psize.Y)
-            local size = Vector2.new(W, H)
-
-            self.absolutepos = Vector2.new(X, Y) + ppos
+            local ppos = (self.parent and self.parent.absolutepos or Vector2.new())
+            local pos, size = self:GetLocalTranslation()
+            self.absolutepos = pos + ppos
             self.absolutesize = size
             self:PerformLayout(self.absolutepos, size)
+            self._zindex = (self.parent and self.parent._zindex + self.zindex or self.zindex)
+
+            local cache = self.objects
+            for i=1, #cache do
+                local v = cache[i]
+                if draw:IsValid(v) then
+                    v.ZIndex = self._zindex
+                end
+            end
+
             local children = self.children
             for i=1, #children do
                 local v = children[i]
@@ -1652,6 +1667,7 @@ do
         function base:PostDestroy() end
         function base:Cache(object)
             self.objects[#self.objects+1] = object
+            object.ZIndex = self._zindex
             return object
         end
         function base:Destroy()
@@ -1737,7 +1753,8 @@ do
             active = true,
             visible = true,
             transparency = 0,
-            zindex = 0, -- use this to identify not only rendering but activity, like mouse entering and leaving
+            zindex = 1,
+            _zindex = 1,
             pos = UDim2.new(),
             absolutepos = Vector2.new(),
             size = UDim2.new(),
@@ -1889,7 +1906,7 @@ do
             end
         end
         
-        table.sort(inhover, function(a, b) return a.zindex > b.zindex end)
+        table.sort(inhover, function(a, b) return a._zindex > b._zindex end)
 
         local result = inhover[1]
         if result ~= gui.hovering then
@@ -1996,6 +2013,8 @@ do
             gui.mouse = self
             self.mouse_mode = "normal"
             self:SetupMouse()
+            self:SetZIndex(10000)
+            self.mouseinputs = false -- wat
         end
 
         function GUI:SetupMouse()
@@ -2081,6 +2100,7 @@ do
             self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 6, Color3.fromRGB(20, 20, 20)))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
             self.asthetic_line = self:Cache(draw:Box(0, 0, 0, 2, 0, Color3.fromRGB(127, 72, 163)))
+            self.asthetic_line_alignment = "Top"
 
             self.gradient = gui:Create("Gradient", self)
             self.gradient:SetPos(0, 0, 0, 1)
@@ -2096,17 +2116,25 @@ do
 
             self:Calculate()
         end
+        
+        function GUI:AstheticLineAlignment(alignment)
+            self.asthetic_line_alignment = alignment
+            self:Calculate()
+        end
 
         function GUI:PerformLayout(pos, size)
             self.background_outline.Position = pos
             self.background.Position = pos
-            self.asthetic_line.Position = pos
+            if self.asthetic_line_alignment == "Top" then
+                self.asthetic_line.Position = pos
+            else
+                self.asthetic_line.Position = pos + Vector2.new(0,size.Y-2)
+            end
             self.sizablearearight.Position = pos + size - Vector2.new(2, 6)
             self.sizableareabottom.Position = pos + size - Vector2.new(6, 2)
             self.background_outline.Size = size
             self.background.Size = size
             self.asthetic_line.Size = Vector2.new(size.X, 2)
-            --self.gradient.size = UDim2.new(0,) Vector2.new(size.X, math.min(20, size.Y))
         end
 
         function GUI:SetDraggable(bool)
@@ -2176,6 +2204,7 @@ do
             self.container = {}
             self.color1 = Color3.fromRGB(50,50,50)
             self.color2 = Color3.fromRGB(35,35,35)
+            self.mouseinputs = false
         end
 
         function GUI:Color(startc, endc)
@@ -2768,6 +2797,9 @@ do
         function()
             menu.images[7] = game:HttpGet("https://i.imgur.com/H7otBZX.png")
         end,
+        function()
+            menu.images[8] = game:HttpGet("https://i.imgur.com/qH0WziT.png")
+        end
     })
 
     local loaded = {}
@@ -2856,6 +2888,18 @@ do
     end
 
     function menu:Initialize()
+        local toolbar = gui:Create("Panel")
+        gui.toolbar = toolbar
+        toolbar:AstheticLineAlignment("Bottom")
+        toolbar:SetSize(1, 0, 0, 0)
+        gui:SizeTo(toolbar, UDim2.new(1, 0, 0, 30), 0.775, 0, 0.25)
+
+        local image = gui:Create("Image", toolbar)
+        image:SetImage(menu.images[8])
+        image:SetPos(0, 2, 0, 2)
+        image:SetSize(1, -2, 1, -2)
+        image:SetSizeConstraint("Y")
+
         local intro = gui:Create("Panel")
         intro:SetSize(0, 0, 0, 0)
         intro:Center()
@@ -2924,6 +2968,7 @@ do
     end
 
     hook:Add("Menu.Generate", "BBOT:Menu.Main", function(frame)
+
         local setup_parameters = BBOT.configuration
         for i=1, #setup_parameters do
             menu:Create(setup_parameters[i])
