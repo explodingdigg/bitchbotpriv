@@ -1105,6 +1105,7 @@ do
 
     function draw:Create(class)
         local object = Drawing.new(class)
+        object.ZIndex = 0
         self.registry[#self.registry+1] = object
         return object
     end
@@ -1287,54 +1288,26 @@ do
             name = "Environment",
             pos = UDim2.new(0, 520, 0, 100),
             size = UDim2.new(0, 599, 0, 501),
+            type = "Tabs",
             content = { -- by default operation is tabs
                 { -- Do not assign types in here, as tabs automatically assigns them as "Panel"
                     name = "Players",
+                    pos = UDim2.new(0,10,0,10),
+                    size = UDim2.new(1,-20,1,-20),
+                    type = "Panel",
                     content = {
                         {
                             name = "Player List", -- No type means auto-set to panel
-                            pos = UDim2.new(0,0,0,0),
-                            size = UDim2.new(0,0,0,0),
+                            pos = UDim2.new(0,5,0,5),
+                            size = UDim2.new(.5,-10,1,-10),
+                            type = "Panel",
                             content = {},
                         },
                         {
                             name = "Player Control",
-                            pos = UDim2.new(0,0,0,0),
-                            size = UDim2.new(0,0,0,0),
-                            content = {},
-                        },
-                    },
-                },
-                {
-                    name = "Priorties And Friends",
-                    content = {
-                        {
-                            name = "Saved Players",
-                            pos = UDim2.new(0,0,0,0),
-                            size = UDim2.new(0,0,0,0),
-                            content = {},
-                        },
-                        {
-                            name = "Player Control",
-                            pos = UDim2.new(0,0,0,0),
-                            size = UDim2.new(0,0,0,0),
-                            content = {},
-                        },
-                    },
-                },
-                {
-                    name = "Bitch Bot Users",
-                    content = {
-                        {
-                            name = "Bitch Bot Users Online",
-                            pos = UDim2.new(0,0,0,0),
-                            size = UDim2.new(0,0,0,0),
-                            content = {},
-                        },
-                        {
-                            name = "Selected User Actions",
-                            pos = UDim2.new(0,0,0,0),
-                            size = UDim2.new(0,0,0,0),
+                            pos = UDim2.new(.5,10,0,5),
+                            size = UDim2.new(.5,-15,1,-10),
+                            type = "Panel",
                             content = {},
                         },
                     },
@@ -1730,6 +1703,16 @@ do
                 end
             end
         end
+        function base:GetAbsoluteZIndex() -- the true zindex of the rendering objects
+            return self._zindex
+        end
+        function base:GetZIndex() -- get the zindex duhh
+            return self.zindex
+        end
+        function base:SetZIndex(index) -- sets both the mouse, keyboard and rendering zindex
+            self.zindex = index -- This controls both mouse inputs and rendering
+            self:Calculate() -- Re-calculate ZIndex for drawings in cache
+        end
     end
 
     function gui:Register(tbl, class, base)
@@ -1748,12 +1731,13 @@ do
             parent = parent,
             children = {},
             isgui = true,
+            mouseinputs = true,
             class = class,
 
             active = true,
             visible = true,
             transparency = 0,
-            zindex = uid, -- use this to identify not only rendering but activity, like mouse entering and leaving
+            zindex = 0, -- use this to identify not only rendering but activity, like mouse entering and leaving
             pos = UDim2.new(),
             absolutepos = Vector2.new(),
             size = UDim2.new(),
@@ -1900,7 +1884,7 @@ do
         local inhover = {}
         for i=1, #reg do
             local v = reg[i]
-            if gui:IsHovering(v) then
+            if v.mouseinputs and gui:IsHovering(v) then
                 inhover[#inhover+1] = v
             end
         end
@@ -2243,6 +2227,7 @@ do
             self.content = ""
             self.textsize = 16
             self.font = 2
+            self.mouseinputs = false
         end
 
         function GUI:SetFont(font)
@@ -2267,13 +2252,15 @@ do
         function GUI:PerformLayout(pos, size)
             self.text.Position = pos
             local x = self:GetTextSize(self.content)
-            if pos.X + x > size.X then
+            local pos = self:GetLocalTranslation()
+            local size = self.parent.absolutesize
+            if x - pos.X > size.X then
                 local text = ""
                 for i=1, #self.content do
                     local v = string.sub(self.content, i, i)
                     local pretext = text .. v
                     local prex = self:GetTextSize(pretext)
-                    if pos.X + prex > size.X then
+                    if prex - pos.X > size.X then
                         break 
                     end
                     text = pretext 
@@ -2708,6 +2695,13 @@ do
 
         end
 
+        function GUI:InputBegan(input)
+            if not self.active then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+                self.panel:SetTransparency(1)
+            end
+        end
+
         gui:Register(GUI, "Tab")
 
         local GUI = {}
@@ -2743,6 +2737,7 @@ do
                 v:SetSize(1/l,0,0,20)
                 v:SetPos((1/l)*i,0,0,0)
             end
+            return tab
         end
 
         gui:Register(GUI, "Tabs")
@@ -2797,30 +2792,65 @@ do
 
     end
 
-    function menu:HandleGeneration(container, configuration)
-        for i=1, #configuration do
-            local config = configuration[i]
-            local name = config.name
-            local frame = gui:Create("Panel", container)
-            frame.Name = name
-            if config.pos then
-                frame:SetPos(config.pos)
-            end
-            if config.size then
-                frame:SetSize(config.size)
-            end
-            local alias = gui:Create("Text", frame)
-            frame.alias = alias
-            alias:SetPos(0, 2, 0, 2)
-            alias:SetText(name)
+    do
+        local menu_generation = {
+            ["Tabs"] = function(container, config)
+                local name = config.name
+                local frame = gui:Create("Panel", container)
+                frame.Name = name
+                if config.pos then
+                    frame:SetPos(config.pos)
+                end
+                if config.size then
+                    frame:SetSize(config.size)
+                end
+                local alias = gui:Create("Text", frame)
+                frame.alias = alias
+                alias:SetPos(0, 2, 0, 2)
+                alias:SetText(name)
 
-            local subcontainer = gui:Create("Panel", frame)
-            frame.subcontainer = subcontainer
-            subcontainer:SetPos(0, 0, 0, 6)
-            subcontainer:SetSize(1, 0, 1, -12)
+                local subcontainer = gui:Create("Panel", frame)
+                frame.subcontainer = subcontainer
+                subcontainer:SetPos(0, 0, 0, 6)
+                subcontainer:SetSize(1, 0, 1, -12)
 
-            if config.content then
-                self:HandleGeneration(subcontainer, config.content)
+                return subcontainer
+            end,
+            ["Panel"] = function(container, config)
+                local name = config.name
+                local frame = gui:Create("Panel", container)
+                frame.Name = name
+                if config.pos then
+                    frame:SetPos(config.pos)
+                end
+                if config.size then
+                    frame:SetSize(config.size)
+                end
+                local alias = gui:Create("Text", frame)
+                frame.alias = alias
+                alias:SetPos(0, 2, 0, 2)
+                alias:SetText(name)
+
+                local subcontainer = gui:Create("Container", frame)
+                frame.subcontainer = subcontainer
+                subcontainer:SetPos(0, 0, 0, 6)
+                subcontainer:SetSize(1, 0, 1, -12)
+
+                return subcontainer
+            end
+        }
+
+        function menu:HandleGeneration(container, configuration)
+            for i=1, #configuration do
+                local config = configuration[i]
+                local type = config.type
+                local subcontainer
+                if menu_generation[type] then
+                    subcontainer = menu_generation[type](container, config)
+                end
+                if config.content and subcontainer then
+                    self:HandleGeneration(subcontainer, config.content)
+                end
             end
         end
     end
@@ -2878,6 +2908,7 @@ do
         if configuration.center then
             frame:Center()
         end
+        frame:SetDraggable(true)
 
         local alias = gui:Create("Text", frame)
         frame.alias = alias
