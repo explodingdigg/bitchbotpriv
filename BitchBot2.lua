@@ -9713,7 +9713,8 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 
 	local _3pweps = {}
 
-	do
+	-- Framework errors here
+	--[[do
 		local VirtualUser = game:GetService("VirtualUser")
 		menu.connections.local_player_id_connect = LOCAL_PLAYER.Idled:Connect(function()
 			VirtualUser:CaptureController()
@@ -10191,7 +10192,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 			end
 		end
-	end
+	end]]
 
 	do
 		local tween = game:service("TweenService")

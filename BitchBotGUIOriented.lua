@@ -18,11 +18,6 @@ if BBOT and BBOT.__init then
 end
 local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "¯\\_(?)_/¯", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
-BBOT.game = "pf"
--- Locals/Upvalues
--- Critical for quick stuff
--- Note: Find a way to put this into an isolated global table
-local LOG_NORMAL, LOG_DEBUG, LOG_WARN, LOG_ERROR, LOG_ANON = 1, 2, 3, 4, 5 -- Logs
 
 -- This should always start before hand, this module is responsible for debugging
 -- Example usage: BBOT.log(LOG_NORMAL, "How do I even fucking make this work?")
@@ -104,6 +99,18 @@ do
         scheduler[#scheduler+1] = {5, {...}}
     end
 
+    log.enums = {
+        ["LOG_NORMAL"]=1,
+        ["LOG_DEBUG"]=2,
+        ["LOG_WARN"]=3,
+        ["LOG_ERROR"]=4,
+        ["LOG_ANON"]=5
+    }
+
+    for k, v in pairs(log.enums) do
+        getfenv()[k] = v
+    end
+
     log.types = {
         [LOG_NORMAL]=log.print,
         [LOG_DEBUG]=log.printdebug,
@@ -116,7 +123,7 @@ do
     -- BBOT.log(LOG_NORMAL, "Hello world!")
     setmetatable(log, {
         __call = function(self, type, ...)
-            if log.types[type] then
+            if type and log.types[type] then
                 log.types[type](...)
             end
         end
@@ -266,6 +273,11 @@ do
 
     log(LOG_NORMAL, "Loading up Bitch Bot...")
 end
+
+-- for now
+local function ISOLATION(BBOT)
+local BBOT = BBOT
+local loadstart = tick()
 
 function BBOT.halt() -- use this if u wana but breaks in the code
     BBOT.log(LOG_WARN, "Halted!")
@@ -513,6 +525,7 @@ end
 
 -- String
 do
+    local math = BBOT.math
     local string = BBOT.table.deepcopy(string)
     BBOT.string = string
 
@@ -602,16 +615,16 @@ end
 
 -- Hooks
 do
-    BBOT.log(LOG_DEBUG, "Hook library...")
     local hook = {
         registry = {},
         _registry_qa = {}
     }
     BBOT.hook = hook
+    local log = BBOT.log
     function hook:Add(name, ident, func) -- Adds a function to a hook array
         local hooks = self.registry
         
-        BBOT.log(LOG_DEBUG, 'Added hook "' .. name .. '" with identity "' .. ident .. '"')
+        log(LOG_DEBUG, 'Added hook "' .. name .. '" with identity "' .. ident .. '"')
 
         hooks[name] = hooks[name] or {}
         hooks[name][ident] = func
@@ -626,7 +639,7 @@ do
         local hooks = self.registry
         if not hooks[name] then return end
 
-        BBOT.log(LOG_DEBUG, 'Removed hook "' .. name .. '" with identity "' .. ident .. '"')
+        log(LOG_DEBUG, 'Removed hook "' .. name .. '" with identity "' .. ident .. '"')
 
         hooks[name][ident] = nil
     
@@ -639,7 +652,7 @@ do
     function hook:Clear(name) -- Clears an entire array of hooks
         local hooks = self.registry
 
-        BBOT.log(LOG_DEBUG, 'Cleared hook "' .. name .. '" callbacks')
+        log(LOG_DEBUG, 'Cleared hook "' .. name .. '" callbacks')
 
         hooks[name] = nil
         self._registry_qa[name] = {}
@@ -664,7 +677,7 @@ do
             local k = l-c
             local v = tbl[k]
             if v[1] ~= name then
-                local _name, func = v[1], v[2]
+                local name, func = v[1], v[2]
                 if not func then 
                     table.remove(tbl, k); c = c + 1; tbln[_name] = nil
                 else
@@ -680,7 +693,6 @@ do
             end
         end
     end
-    local log = BBOT.log
     function hook:CallP(name, ...) -- Same as @hook:Call, put with error isolation
         if not self.registry[name] then return end
         local tbl, tbln = self._registry_qa[name], self.registry[name]
@@ -757,7 +769,14 @@ do
     local runservice = BBOT.service:GetService("RunService")
     local userinputservice = BBOT.service:GetService("UserInputService")
     local mouse = BBOT.service:GetService("Mouse")
-    local camera = BBOT.service:GetService("CurrentCamera")
+    hook:Add("Unload", "BBOT:Hooks.Services", function()
+        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-First")
+        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Input")
+        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Camera")
+        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Character")
+        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Last")
+        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-R")
+    end)
 
     hook:bindEvent(userinputservice.InputBegan, "InputBegan")
     hook:bindEvent(userinputservice.InputEnded, "InputEnded")
@@ -767,12 +786,6 @@ do
         local x, y = mouse.X, mouse.Y
         hook:Call("Mouse.Move", lastMousePos ~= Vector2.new(x, y), x, y)
         lastMousePos = Vector2.new(x, y)
-    end)
-
-    local camera_changed = camera.Changed:Connect(function(property)
-        if property == "ViewportSize" then
-            hook:CallP("Camera.ViewportChanged", camera.ViewportSize)
-        end
     end)
 
     hook:bindEvent(mouse.WheelForward, "WheelForward")
@@ -801,30 +814,20 @@ do
     local players = BBOT.service:GetService("Players")
     hook:bindEvent(players.PlayerAdded, "PlayerAdded")
     hook:bindEvent(players.PlayerRemoving, "PlayerRemoving")
-
-    hook:Add("Unload", "BBOT:Hooks.Services", function()
-        camera_changed:Disconnect()
-        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-First")
-        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Input")
-        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Camera")
-        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Character")
-        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Last")
-        runservice:UnbindFromRenderStep("FW0a9kf0w2of0-R")
-    end)
 end
 
 -- Loops
 do
-    BBOT.log(LOG_DEBUG, "Loops library...")
     local loop = {
         registry = {}
     }
     BBOT.loop = loop
+    local log = BBOT.log
     local hook = BBOT.hook
     hook:Add("Unload", "KillLoops", function()
-        BBOT.log(LOG_DEBUG, "Purging old loops...")
+        log(LOG_DEBUG, "Purging old loops...")
         BBOT.loop:KillAll()
-        BBOT.log(LOG_DEBUG, "Done")
+        log(LOG_DEBUG, "Done")
     end)
     function loop:KillAll()
         local tbl = self:GetTable()
@@ -839,7 +842,7 @@ do
         local loops = self.registry
         if loops[name] ~= nil then return end
 
-        BBOT.log(LOG_DEBUG, 'Creating loop "' .. name .. '"')
+        log(LOG_DEBUG, 'Creating loop "' .. name .. '"')
 
         loops[name] = { }
         loops[name].Running = false
@@ -850,7 +853,7 @@ do
                     local ran, err = xpcall(func, debug.traceback, ...)
                     if not ran then
                         loops[name].Destroy = true
-                        BBOT.log(LOG_ERROR, "Error in loop library - ", err)
+                        log(LOG_ERROR, "Error in loop library - ", err)
                         break
                     end
                 end
@@ -875,7 +878,7 @@ do
             end
         end
         
-        BBOT.log(LOG_DEBUG, 'Running loop "' .. name .. '"')
+        log(LOG_DEBUG, 'Running loop "' .. name .. '"')
 
         loops[name].Running = true
         local succ, out = coroutine.resume(loops[name].Loop)
@@ -887,7 +890,7 @@ do
         local loops = self.registry
         if loops[name] == nil then return end
 
-        BBOT.log(LOG_DEBUG, 'Stopping loop "' .. name .. '"')
+        log(LOG_DEBUG, 'Stopping loop "' .. name .. '"')
 
         loops[name].Running = false
     end
@@ -895,7 +898,7 @@ do
         local loops = self.registry
         if loops[name] == nil then return end
         self:Stop(name)
-        BBOT.log(LOG_DEBUG, 'Removing loop "' .. name .. '"')
+        log(LOG_DEBUG, 'Removing loop "' .. name .. '"')
         loops[name].Destroy = true
         loops[name] = nil
     end
@@ -905,13 +908,13 @@ do
 end
 
 -- Timers
-do
-    BBOT.log(LOG_DEBUG, "Timer library...")
+do  
     local timer = {
         registry = {}
     }
     BBOT.timer = timer
     local loop = BBOT.loop
+    local log = BBOT.log
     
     function timer:Get(ident)
         local reg = self.registry
@@ -931,7 +934,7 @@ do
         else
             local reg = self.registry
             local index = #reg+1
-            BBOT.log(LOG_DEBUG, "Created timer '" .. ident .. "'")
+            log(LOG_DEBUG, "Created timer '" .. ident .. "'")
             reg[index] = {
                 identifier = ident,
                 delay = delay,
@@ -952,7 +955,7 @@ do
             local t, index = timer:Get(timer.ToRemove[i])
             if t then
                 table.remove(timer.registry, index)
-                BBOT.log(LOG_DEBUG, "Removed timer '" .. identifier .. "'")
+                log(LOG_DEBUG, "Removed timer '" .. identifier .. "'")
             end
         end
     end
@@ -1048,11 +1051,11 @@ do
                         end
                     else
                         local errlog = BBOT.stringExplode("\n", err, false)
-                        BBOT.log(LOG_ERROR, "Error in timer library! - ", errlog[1])
-                        BBOT.log(LOG_ANON, "Call stack,")
+                        log(LOG_ERROR, "Error in timer library! - ", errlog[1])
+                        log(LOG_ANON, "Traceback,")
                         if #errlog > 1 then
                             for i=2, #errlog do
-                                BBOT.log(LOG_ANON, errlog[i])
+                                log(LOG_ANON, errlog[i])
                             end
                         end
                         table.remove(timers, i-c)
@@ -1067,7 +1070,7 @@ do
             local t, index = timer:Get(timer.ToRemove[i])
             if t then
                 table.remove(timer.registry, index)
-                BBOT.log(LOG_DEBUG, "Removed timer '" .. t.identifier .. "'")
+                log(LOG_DEBUG, "Removed timer '" .. t.identifier .. "'")
             end
         end
 
@@ -1273,50 +1276,6 @@ do
 	end
 end
 
--- Setup
-do
-    -- There are two types of instruction
-    -- 1. Config Instructions
-    -- 2. Menu Instructions
-
-    -- Config Instructions results in the building of the config module's quick access table
-    -- Menu Instructions results in the generation and setup of all menus
-    BBOT.configuration = {
-        {
-            -- The first layer here is the frame
-            Id = "Env",
-            name = "Environment",
-            pos = UDim2.new(0, 520, 0, 100),
-            size = UDim2.new(0, 599, 0, 501),
-            type = "Tabs",
-            content = { -- by default operation is tabs
-                { -- Do not assign types in here, as tabs automatically assigns them as "Panel"
-                    name = "Players",
-                    pos = UDim2.new(0,10,0,10),
-                    size = UDim2.new(1,-20,1,-20),
-                    type = "Panel",
-                    content = {
-                        {
-                            name = "Player List", -- No type means auto-set to panel
-                            pos = UDim2.new(0,5,0,5),
-                            size = UDim2.new(.5,-10,1,-10),
-                            type = "Panel",
-                            content = {},
-                        },
-                        {
-                            name = "Player Control",
-                            pos = UDim2.new(.5,10,0,5),
-                            size = UDim2.new(.5,-15,1,-10),
-                            type = "Panel",
-                            content = {},
-                        },
-                    },
-                },
-            }
-        }
-    }
-end
-
 -- Configs
 do
     -- To do, add a config verification system
@@ -1336,17 +1295,19 @@ do
     }
     BBOT.config = config
 
-    config.storage_pathway = "bitchbot/" .. BBOT.game
-    config.storage_main = "bitchbot"
-    config.storage_extension = ".bb"
+    hook:Add("PreInitialize", "BBOT:ConfigSetup", function()
+        config.storage_pathway = "bitchbot/" .. BBOT.game
+        config.storage_main = "bitchbot"
+        config.storage_extension = ".bb"
 
-    if not isfolder(config.storage_pathway) then
-        makefolder(config.storage_pathway)
-    end
+        if not isfolder(config.storage_pathway) then
+            makefolder(config.storage_pathway)
+        end
 
-    if not isfolder(config.storage_main) then
-        makefolder(config.storage_main)
-    end
+        if not isfolder(config.storage_main) then
+            makefolder(config.storage_main)
+        end
+    end)
 
     do -- key binds
         local enums = Enum.KeyCode:GetEnumItems()
@@ -1570,7 +1531,7 @@ do
     
         local camera = BBOT.service:GetService("CurrentCamera")
         function base:GetLocalTranslation()
-            local ppos, psize = (self.parent and self.parent.absolutepos or Vector2.new()), (self.parent and self.parent.absolutesize or camera.ViewportSize)
+            local psize = (self.parent and self.parent.absolutesize or camera.ViewportSize)
 
             local X = self.pos.X.Offset + (self.pos.X.Scale * psize.X)
             local Y = self.pos.Y.Offset + (self.pos.Y.Scale * psize.Y)
@@ -1592,13 +1553,17 @@ do
             self.absolutepos = pos + ppos
             self.absolutesize = size
             self:PerformLayout(self.absolutepos, size)
-            self._zindex = (self.parent and self.parent._zindex + self.zindex or self.zindex)
 
+            self._enabled = (self.parent and (not self.parent._enabled and false or self.enabled) or self.enabled)
+            self._transparency = (self.parent and self.parent._transparency * self.transparency or self.transparency)
+            self._zindex = (self.parent and self.parent._zindex + self.zindex or self.zindex)
             local cache = self.objects
             for i=1, #cache do
                 local v = cache[i]
-                if draw:IsValid(v) then
-                    v.ZIndex = self._zindex
+                if v[1] and draw:IsValid(v[1]) then
+                    local drawing = v[1]
+                    drawing.ZIndex = self._zindex
+                    drawing.Transparency = v[2] * self._transparency
                 end
             end
 
@@ -1666,7 +1631,15 @@ do
         function base:PreDestroy() end
         function base:PostDestroy() end
         function base:Cache(object)
-            self.objects[#self.objects+1] = object
+            local objects = self.objects
+            for i=1, #objects do
+                local v = objects[i]
+                if v[1] == object then
+                    v[2] = object.Transparency
+                    return object
+                end
+            end
+            self.objects[#self.objects+1] = {object, object.Transparency}
             object.ZIndex = self._zindex
             return object
         end
@@ -1676,6 +1649,7 @@ do
             while true do
                 local v = objects[1]
                 if not v then break end
+                v = v[1]
                 if v and type(v) ~= "number" and v.__OBJECT_EXISTS then
                     v:Remove()
                 end
@@ -1704,20 +1678,15 @@ do
             self:PostRemove()
             self.__INVALID = true
         end
+        function base:GetAbsoluteTransparency()
+            return self._transparency
+        end
+        function base:GetTransparency()
+            return self.transparency
+        end
         function base:SetTransparency(t)
-            local parent_transparency = (self.parent and self.parent.transparency or 0)
-            for i=1, #self.objects do
-                local v = self.objects[i]
-                v.Transparency = (v.Transparency/self.transparency) * math.clamp(t + parent_transparency, 0, 1)
-            end
             self.transparency = t
-            local children = self.children
-            for i=1, #children do
-                local v = children[i]
-                if v.SetTransparency then
-                    v:SetTransparency(t)
-                end
-            end
+            self:Calculate()
         end
         function base:GetAbsoluteZIndex() -- the true zindex of the rendering objects
             return self._zindex
@@ -1728,6 +1697,16 @@ do
         function base:SetZIndex(index) -- sets both the mouse, keyboard and rendering zindex
             self.zindex = index -- This controls both mouse inputs and rendering
             self:Calculate() -- Re-calculate ZIndex for drawings in cache
+        end
+        function base:GetAbsoluteEnabled()
+            return self._enabled
+        end
+        function base:GetEnabled()
+            return self.enabled
+        end
+        function base:SetEnabled(bool)
+            self.enabled = bool
+            self:Calculate()
         end
     end
 
@@ -1750,9 +1729,10 @@ do
             mouseinputs = true,
             class = class,
 
-            active = true,
-            visible = true,
-            transparency = 0,
+            enabled = true,
+            _enabled = true,
+            transparency = 1,
+            _transparency = 1,
             zindex = 1,
             _zindex = 1,
             pos = UDim2.new(),
@@ -1892,7 +1872,7 @@ do
     end)
 
     function gui:IsHovering(object)
-        if not object.active then return end
+        if not object._enabled then return end
         return mouse.X > object.absolutepos.X and mouse.X < object.absolutepos.X + object.absolutesize.X and mouse.Y > object.absolutepos.Y - 36 and mouse.Y < object.absolutepos.Y + object.absolutesize.Y - 36
     end
 
@@ -1930,7 +1910,7 @@ do
         local reg = gui.registry
         for i=1, #reg do
             local v = reg[i]
-            if v.active then
+            if v._enabled then
                 v:Calculate()
             end
         end
@@ -1940,7 +1920,7 @@ do
         local reg = gui.registry
         for i=1, #reg do
             local v = reg[i]
-            if v.active then
+            if v._enabled then
                 v:_Step()
                 if v.PreStep then
                     v:PreStep()
@@ -1959,7 +1939,7 @@ do
         local reg = gui.registry
         for i=1, #reg do
             local v = reg[i]
-            if v.active then
+            if v._enabled then
                 if v.InputBegan then
                     v:InputBegan(input)
                 end
@@ -1971,7 +1951,7 @@ do
         local reg = gui.registry
         for i=1, #reg do
             local v = reg[i]
-            if v.active then
+            if v._enabled then
                 if v.InputEnded then
                     v:InputEnded(input)
                 end
@@ -1998,8 +1978,15 @@ do
 
     do
         local GUI = {}
-        function GUI:Init() end
-        function GUI:PerformLayout(ppos, psize) end
+        function GUI:Init()
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background.Visible = false
+            self.mouseinputs = false
+        end
+        function GUI:PerformLayout(pos, size)
+            self.background.Position = pos
+            self.background.Size = size
+        end
         gui:Register(GUI, "Container")
     end
 
@@ -2013,7 +2000,7 @@ do
             gui.mouse = self
             self.mouse_mode = "normal"
             self:SetupMouse()
-            self:SetZIndex(10000)
+            self:SetZIndex(1000000)
             self.mouseinputs = false -- wat
         end
 
@@ -2044,7 +2031,7 @@ do
         local inputservce = BBOT.service:GetService("UserInputService")
         function GUI:SetVisible(bool)
             -- Do we want the mouse to be visible?
-            self.active = bool -- changing this will determine if it would be in calculation
+            self:SetEnabled(bool)
             self.mouse.Visible = bool
             self.mouse_outline.Visible = bool
         end
@@ -2083,7 +2070,7 @@ do
         function GUI:Step()
             -- Step is equivilant to RenderStepped
             self.pos = UDim2.new(0, mouse.X, 0, mouse.Y)
-            inputservce.MouseIconEnabled = not self.active
+            inputservce.MouseIconEnabled = not self._enabled
 
             -- Calling calculate will call performlayout & calculate parented GUI objects
             self:Calculate()
@@ -2091,6 +2078,22 @@ do
 
         -- Register this as a generatable object
         gui:Register(GUI, "Mouse")
+    end
+
+    do
+        local GUI = {}
+
+        function GUI:Init()
+            self.asthetic_line = self:Cache(draw:Box(0, 0, 0, 2, 0, Color3.fromRGB(127, 72, 163)))
+            self.mouseinputs = false
+        end
+
+        function GUI:PerformLayout(pos, size)
+            self.asthetic_line.Position = pos
+            self.asthetic_line.Size = size
+        end
+
+        gui:Register(GUI, "AstheticLine")
     end
 
     do
@@ -2120,6 +2123,15 @@ do
         function GUI:AstheticLineAlignment(alignment)
             self.asthetic_line_alignment = alignment
             self:Calculate()
+        end
+
+        function GUI:ShowAstheticLine(value)
+            self.gradient:SetPos(0, 0, 0, (value and 1 or 0))
+            self.asthetic_line.Visible = value
+        end
+
+        function GUI:ShowGradient(value)
+            self.gradient:SetTransparency(value and 1 or 0)
         end
 
         function GUI:PerformLayout(pos, size)
@@ -2257,6 +2269,17 @@ do
             self.textsize = 16
             self.font = 2
             self.mouseinputs = false
+
+            self.textalignmentx = Enum.TextXAlignment.Left
+            self.textalignmenty = Enum.TextYAlignment.Top
+        end
+
+        function GUI:SetTextAlignmentX(align)
+            self.textalignmentx = align
+        end
+
+        function GUI:SetTextAlignmentY(align)
+            self.textalignmenty = align
         end
 
         function GUI:SetFont(font)
@@ -2279,8 +2302,22 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
-            self.text.Position = pos
-            local x = self:GetTextSize(self.content)
+            local offset_x, offset_y = 0, 0
+            local w, h = self:GetTextSize(self.content)
+            if self.textalignmentx == Enum.TextXAlignment.Center then
+                offset_x = -w/2
+            elseif self.textalignmentx == Enum.TextXAlignment.Right then
+                offset_x = -w
+            end
+
+            if self.textalignmenty == Enum.TextYAlignment.Center then
+                offset_y = -h/2
+            elseif self.textalignmenty == Enum.TextYAlignment.Bottom then
+                offset_y = -h
+            end
+
+            self.text.Position = pos + Vector2.new(offset_x, offset_y)
+            --[[local x = self:GetTextSize(self.content)
             local pos = self:GetLocalTranslation()
             local size = self.parent.absolutesize
             if x - pos.X > size.X then
@@ -2295,17 +2332,17 @@ do
                     text = pretext 
                 end
                 self.text.Text = text
-            end
+            end]]
         end
 
         function GUI:GetTextSize(text)
             text = text or self.content
             local x, y = self:GetTextScale()
-            return (#text)*x, y
+            return (#text*x)+(self.textsize/4), y+(self.textsize/4)
         end
 
         function GUI:GetTextScale() -- This is a guessing game, not aproximation
-            return (self.textsize/2)+(self.textsize/4), (self.textsize/2)+(self.textsize/4)
+            return (self.textsize/2), (self.textsize/2)
         end
 
         gui:Register(GUI, "Text")
@@ -2480,7 +2517,7 @@ do
         end
 
         function GUI:InputBegan(input)
-            if not self.editable or not self.active then return end
+            if not self.editable or not self._enabled then return end
             if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
                 self.editing = true
                 self.cursor_position = self:DetermineTextCursorPosition(mouse.X - self.absolutepos.X)
@@ -2665,7 +2702,7 @@ do
         end
 
         function GUI:InputBegan(input)
-            if not self.active then return end
+            if not self._enabled then return end
             if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
                 self.open = true
                 self:Open()
@@ -2717,17 +2754,57 @@ do
         local GUI = {}
 
         function GUI:Init()
+            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 6, Color3.fromRGB(20, 20, 20)))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.mouseinputs = true
 
+            self.gradient = gui:Create("Gradient", self)
+            self.gradient:SetPos(0, 0, 0, 0)
+            self.gradient:SetSize(1, -3, 0, 20)
+            self.gradient:Generate()
+
+            self.text = gui:Create("Text", self)
+            self.text:SetPos(.5, 0, .5, 0)
+            self.text:SetTextAlignmentX(Enum.TextXAlignment.Center)
+            self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            self.text:SetText("")
+
+            local darken = gui:Create("Container", self)
+            darken:SetPos(0,0,0,0)
+            darken:SetSize(1,0,1,0)
+            darken.background.Visible = true
+            darken.background.Transparency = .25
+            darken.background.Color = Color3.new(0,0,0)
+            darken:Cache(darken.background)
+            self.darken = darken
         end
 
-        function GUI:PerformLayout()
+        function GUI:PerformLayout(pos, size)
+            self.background_outline.Position = pos
+            self.background.Position = pos
+            self.background_outline.Size = size
+            self.background.Size = size + (self.activated and Vector2.new(0,4) or Vector2.new())
+        end
 
+        function GUI:SetActive(value)
+            self.activated = value
+            self.darken.background.Visible = not value
+            self:Calculate()
+        end
+
+        function GUI:SetText(text)
+            self.content = text
+            self.text:SetText(text)
+        end
+
+        function GUI:SetPanel(panel)
+            self.panel = panel
         end
 
         function GUI:InputBegan(input)
-            if not self.active then return end
+            if not self._enabled then return end
             if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
-                self.panel:SetTransparency(1)
+                self.controller:SetActive(self.Id)
             end
         end
 
@@ -2736,35 +2813,83 @@ do
         local GUI = {}
 
         function GUI:Init()
-            local container = gui:Create("Container", self)
-            container:SetPos(0,0,0,20)
-            container:SetSize(1,0,1,-20)
+            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 6, Color3.fromRGB(20, 20, 20)))
+
+            local container = gui:Create("Panel", self)
+            container:SetPos(0,0,0,42+2)
+            container:SetSize(1,0,1,-42-2)
+            container:ShowAstheticLine(false)
+            container:ShowGradient(false)
+            container.background_outline.Thickness = 0
             self.container = container
 
-            local tablist = gui:Create("Container", self)
-            tablist:SetPos(0,0,0,0)
-            tablist:SetSize(1,0,0,20)
+            local tablist = gui:Create("Panel", self)
+            tablist:SetPos(0,0,0,2)
+            tablist:SetSize(1,0,0,42-2)
+            tablist:ShowAstheticLine(false)
+            tablist.background_outline.Thickness = 0
             self.tablist = tablist
 
+            local astheticline = gui:Create("AstheticLine", self)
+            astheticline:SetSize(1, 0, 0, 2)
+            astheticline:SetZIndex(2)
+
             self.registry = {}
+            self.activeId = 0
+
+            for i=1, math.random(2,5) do
+                local basic = gui:Create("Panel")
+                basic:SetPos(0,2,0,2)
+                basic:SetSize(0,math.random(20,100),0,math.random(20,100))
+                basic:SetDraggable(true)
+                self:Add("Test-"..i, basic)
+            end
         end
 
         function GUI:PerformLayout(pos, size)
+            self.background_outline.Position = pos
+            self.background_outline.Size = size
+        end
 
+        function GUI:GetActive()
+            return self.registry[self.activeId]
+        end
+
+        function GUI:SetActive(num)
+            if self.activeId == num then return end
+            local new = self.registry[num]
+            if not new then return end
+            local active = self:GetActive()
+            if active then
+                active[1]:SetActive(false)
+                active[2]:SetTransparency(0)
+                active[2]:SetEnabled(false)
+            end
+            new[1]:SetActive(true)
+            new[2]:SetEnabled(true)
+            new[2]:SetTransparency(1)
+            self.activeId = num
         end
 
         function GUI:Add(name, object)
             object:SetParent(self.container)
+            object:SetTransparency(0)
+            object:SetEnabled(false)
+            local r = self.registry
             local tab = gui:Create("Tab", self.tablist)
+            tab.Id = #r+1
+            tab.controller = self
             tab:SetText(name)
             tab:SetPanel(object)
-            local r = self.registry
             r[#r+1] = {tab, object}
             local l = #r
             for i=1, l do
                 local v = r[i]
-                v:SetSize(1/l,0,0,20)
-                v:SetPos((1/l)*i,0,0,0)
+                v[1]:SetSize(1/l,0,1,0)
+                v[1]:SetPos((1/l)*(i-1),0,0,0)
+            end
+            if tab.Id == 1 then
+                self:SetActive(tab.Id)
             end
             return tab
         end
@@ -2825,60 +2950,40 @@ do
     end
 
     do
-        local menu_generation = {
-            ["Tabs"] = function(container, config)
-                local name = config.name
-                local frame = gui:Create("Panel", container)
-                frame.Name = name
-                if config.pos then
-                    frame:SetPos(config.pos)
-                end
-                if config.size then
-                    frame:SetSize(config.size)
-                end
-                local alias = gui:Create("Text", frame)
-                frame.alias = alias
-                alias:SetPos(0, 2, 0, 2)
-                alias:SetText(name)
-
-                local subcontainer = gui:Create("Panel", frame)
-                frame.subcontainer = subcontainer
-                subcontainer:SetPos(0, 0, 0, 6)
-                subcontainer:SetSize(1, 0, 1, -12)
-
-                return subcontainer
-            end,
-            ["Panel"] = function(container, config)
-                local name = config.name
-                local frame = gui:Create("Panel", container)
-                frame.Name = name
-                if config.pos then
-                    frame:SetPos(config.pos)
-                end
-                if config.size then
-                    frame:SetSize(config.size)
-                end
-                local alias = gui:Create("Text", frame)
-                frame.alias = alias
-                alias:SetPos(0, 2, 0, 2)
-                alias:SetText(name)
-
-                local subcontainer = gui:Create("Container", frame)
-                frame.subcontainer = subcontainer
-                subcontainer:SetPos(0, 0, 0, 6)
-                subcontainer:SetSize(1, 0, 1, -12)
-
-                return subcontainer
-            end
-        }
-
         function menu:HandleGeneration(container, configuration)
             for i=1, #configuration do
                 local config = configuration[i]
                 local type = config.type
+                local name = config.name
                 local subcontainer
-                if menu_generation[type] then
-                    subcontainer = menu_generation[type](container, config)
+                if type == "Tabs" then
+                    local frame = gui:Create("Tabs", container)
+                    frame.Name = name
+                    if config.pos then
+                        frame:SetPos(config.pos)
+                    end
+                    if config.size then
+                        frame:SetSize(config.size)
+                    end
+                    subcontainer = frame.container
+                else
+                    local frame = gui:Create("Panel", container)
+                    frame.Name = name
+                    if config.pos then
+                        frame:SetPos(config.pos)
+                    end
+                    if config.size then
+                        frame:SetSize(config.size)
+                    end
+                    local alias = gui:Create("Text", frame)
+                    frame.alias = alias
+                    alias:SetPos(0, 2, 0, 2)
+                    alias:SetText(name)
+
+                    subcontainer = gui:Create("Container", frame)
+                    frame.subcontainer = subcontainer
+                    subcontainer:SetPos(0, 0, 0, 6)
+                    subcontainer:SetSize(1, 0, 1, -12)
                 end
                 if config.content and subcontainer then
                     self:HandleGeneration(subcontainer, config.content)
@@ -2892,7 +2997,8 @@ do
         gui.toolbar = toolbar
         toolbar:AstheticLineAlignment("Bottom")
         toolbar:SetSize(1, 0, 0, 0)
-        gui:SizeTo(toolbar, UDim2.new(1, 0, 0, 30), 0.775, 0, 0.25)
+        toolbar:SetZIndex(10000)
+        gui:SizeTo(toolbar, UDim2.new(1, 0, 0, 34), 0.775, 0, 0.25)
 
         local image = gui:Create("Image", toolbar)
         image:SetImage(menu.images[8])
@@ -2959,19 +3065,19 @@ do
         alias:SetPos(0, 3, 0, 5)
         alias:SetText(configuration.name)
 
-        local optionscontainer = gui:Create("Panel", frame)
-        frame.optionscontainer = optionscontainer
-        optionscontainer:SetPos(0, 10, 0, 10+20)
-        optionscontainer:SetSize(1, -20, 1, -20-20)
+        local tabs = gui:Create("Tabs", frame)
+        tabs:SetPos(0, 10, 0, 10+20)
+        tabs:SetSize(1, -20, 1, -20-20)
 
-        self:HandleGeneration(optionscontainer, configuration.content)
+        --self:HandleGeneration(tabs.container, configuration.content)
+        return frame
     end
 
     hook:Add("Menu.Generate", "BBOT:Menu.Main", function(frame)
 
         local setup_parameters = BBOT.configuration
         for i=1, #setup_parameters do
-            menu:Create(setup_parameters[i])
+            menu:Create(setup_parameters[i]):SetZIndex(100*i)
         end
     end)
 
@@ -2980,6 +3086,1685 @@ do
     end)
 end
 
-BBOT.hook:CallP("PreInitialize")
-BBOT.hook:CallP("Initialize")
-BBOT.hook:CallP("PostInitialize")
+--! POST LIBRARIES !--
+-- WholeCream here, do remember to sort all of this in order for a possible module based loader
+
+-- Setup, are we playing PF, Universal or... Bad Business 😉
+do
+    local thread = BBOT.thread
+    local hook = BBOT.hook
+    local NetworkClient = BBOT.service:GetService("NetworkClient")
+    if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459 then
+        BBOT.game = "pf"
+    else
+        BBOT.game = "uni"
+    end
+
+    BBOT.networksettings = settings().Network
+    NetworkClient:SetOutgoingKBPSLimit(0)
+
+    setfpscap(getgenv().maxfps or 144)
+
+    if not isfolder("bitchbot") then
+        makefolder("bitchbot")
+        if not isfile("bitchbot/relations.bb") then
+            writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
+        end
+    else
+        if not isfile("bitchbot/relations.bb") then
+            writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
+        end
+        writefile("bitchbot/debuglog.bb", "")
+    end
+
+    if not isfolder("bitchbot/" .. BBOT.game) then
+        makefolder("bitchbot/" .. BBOT.game)
+    end
+
+	do
+		local net
+
+		repeat
+			local gc = getgc(true)
+
+			for i = 1, #gc do
+				local garbage = gc[i]
+
+				local garbagetype = type(garbage)
+
+				if garbagetype == "table" then
+					net = rawget(garbage, "fetch")
+					if net then
+						break
+					end
+				end
+			end
+
+			gc = nil
+			game.RunService.RenderStepped:Wait()
+		until net
+
+		net = nil
+
+		local annoyingFuckingMusic = workspace:FindFirstChild("memes")
+		if annoyingFuckingMusic then
+			annoyingFuckingMusic:Destroy()
+		end
+	end -- wait for framwork to load
+
+    hook:Add("PreInitialize", "BBOT:SetupConfigurationScheme", function()
+        local menu = BBOT.menu
+        local config = BBOT.config
+        if BBOT.game == "pf" then
+            BBOT.configuration = {
+                {
+                    -- The first layer here is the frame
+                    Id = "Main",
+                    name = "The Main Attraction",
+                    center = true,
+                    size = UDim2.new(0, 500, 0, 600),
+                    content = {}
+                },
+                {
+                    -- The first layer here is the frame
+                    Id = "Env",
+                    name = "Environment",
+                    pos = UDim2.new(0, 520, 0, 100),
+                    size = UDim2.new(0, 599, 0, 501),
+                    content = { -- by default operation is tabs
+                        { -- Do not assign types in here, as tabs automatically assigns them as "Panel"
+                            name = "Players",
+                            pos = UDim2.new(0,0,0,0),
+                            size = UDim2.new(0,0,0,0),
+                            type = "Panel",
+                            content = {
+                                {
+                                    name = "Player List", -- No type means auto-set to panel
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(0,0,0,0),
+                                    type = "Panel",
+                                    content = {},
+                                },
+                                {
+                                    name = "Player Control",
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(0,0,0,0),
+                                    type = "Panel",
+                                    content = {},
+                                },
+                            },
+                        },
+                    }
+                }
+            }
+        else
+            BBOT.configuration = {}
+        end
+    end)
+end
+
+-- Notifications, nice... but some aspects of it still bugs me... (Done)
+do
+    -- I kinda like how this can run standalone
+    local hook = BBOT.hook
+    local math = BBOT.math
+    local notification = {
+        registry = {},
+    }
+    BBOT.notification = notification
+
+	local function DrawingObject(t, col)
+		local d = Drawing.new(t)
+
+		d.Visible = true
+		d.Transparency = 1
+		d.Color = col
+
+		return d
+	end
+
+	local function Rectangle(sizex, sizey, fill, col)
+		local s = DrawingObject("Square", col)
+
+		s.Filled = fill
+		s.Thickness = 1
+		s.Position = Vector2.new()
+		s.Size = Vector2.new(sizex, sizey)
+
+		return s
+	end
+
+	local function Text(text)
+		local s = DrawingObject("Text", Color3.new(1, 1, 1))
+
+		s.Text = text
+		s.Size = 13
+		s.Center = false
+		s.Outline = true
+		s.Position = Vector2.new()
+		s.Font = 2
+
+		return s
+	end
+
+    do
+        local meta = {}
+        notification.meta = meta
+
+        function meta:Remove(d)
+            if d.Position.x < d.Size.x then
+                for k, drawing in pairs(self.drawings) do
+                    drawing:Remove()
+                    drawing = false
+                end
+                self.enabled = false
+            end
+        end
+
+        function meta:Update(num, listLength, dt)
+            local pos = self.targetPos
+
+            local indexOffset = (listLength - num) * self.gap
+            if self.insety < indexOffset then
+                self.insety -= (self.insety - indexOffset) * 0.2
+            else
+                self.insety = indexOffset
+            end
+            local size = self.size
+
+            local tpos = Vector2.new(pos.x - size.x / self.time - math.remap(self.alpha, 0, 255, size.x, 0), pos.y + self.insety)
+            self.pos = tpos
+
+            local locRect = {
+                x = math.ceil(tpos.x),
+                y = math.ceil(tpos.y),
+                w = math.floor(size.x - math.remap(255 - self.alpha, 0, 255, 0, 70)),
+                h = size.y,
+            }
+            --pos.set(-size.x / fc - math.remap(self.alpha, 0, 255, size.x, 0), pos.y)
+
+            local fade = math.min(self.time * 12, self.alpha)
+            fade = fade > 255 and 255 or fade < 0 and 0 or fade
+
+            if self.enabled then
+                local linenum = 1
+                for i, drawing in pairs(self.drawings) do
+                    drawing.Transparency = fade / 255
+
+                    if type(i) == "number" then
+                        drawing.Position = Vector2.new(locRect.x + 1, locRect.y + i)
+                        drawing.Size = Vector2.new(locRect.w - 2, 1)
+                    elseif i == "text" then
+                        drawing.Position = tpos + Vector2.new(6, 2)
+                    elseif i == "outline" then
+                        drawing.Position = Vector2.new(locRect.x, locRect.y)
+                        drawing.Size = Vector2.new(locRect.w, locRect.h)
+                    elseif i == "fade" then
+                        drawing.Position = Vector2.new(locRect.x - 1, locRect.y - 1)
+                        drawing.Size = Vector2.new(locRect.w + 2, locRect.h + 2)
+                        local t = (200 - fade) / 255 / 3
+                        drawing.Transparency = t < 0.4 and 0.4 or t
+                    elseif i:find("line") then
+                        drawing.Position = Vector2.new(locRect.x + linenum, locRect.y + 1)
+                        if BBOT.menu then
+                            local mencol = customcolor or Color3.fromRGB(127, 72, 163)
+                            local color = linenum == 1 and mencol or Color3.fromRGB(mencol.R * 255 - 40, mencol.G * 255 - 40, mencol.B * 255 - 40) -- super shit
+                            if drawing.Color ~= color then
+                                drawing.Color = color
+                            end
+                        end
+                        linenum += 1
+                    end
+                end
+
+                self.time += self.estep * dt * 128 -- TODO need to do the duration
+                self.estep += self.eestep * dt * 64
+            end
+        end
+
+        function meta:Fade(num, len, dt)
+            if self.pos.x > self.targetPos.x - 0.2 * len or self.fading then
+                if not self.fading then
+                    self.estep = 0
+                end
+                self.fading = true
+                self.alpha -= self.estep / 4 * len * dt * 50
+                self.eestep += 0.01 * dt * 100
+            end
+            if self.alpha <= 0 then
+                self:Remove(self.drawings[1])
+            end
+        end
+    end
+
+    function notification:Create(t, customcolor)
+		local width = 18
+
+        local Note = {
+            enabled = true,
+            targetPos = Vector2.new(50, 33),
+            size = Vector2.new(200, width),
+            drawings = {
+                outline = Rectangle(202, width + 2, false, Color3.new(0, 0, 0)),
+                fade = Rectangle(202, width + 2, false, Color3.new(0, 0, 0)),
+            },
+            gap = 25,
+            width = width,
+            alpha = 255,
+            time = 0,
+            estep = 0,
+            eestep = 0.02,
+            insety = 0
+        }
+
+        setmetatable(Note, {__index = self.meta})
+
+        for i = 1, Note.size.y - 2 do
+            local c = 0.28 - i / 80
+            Note.drawings[i] = Rectangle(200, 1, true, Color3.new(c, c, c))
+        end
+
+        local color = Color3.fromRGB(127, 72, 163)
+
+        Note.drawings.text = Text(t)
+        if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
+            Note.size = Vector2.new(Note.drawings.text.TextBounds.x + 7, Note.size.y)
+        end
+        Note.drawings.line = Rectangle(1, Note.size.y - 2, true, color)
+        Note.drawings.line1 = Rectangle(1, Note.size.y - 2, true, color)
+
+        self.registry[#self.registry + 1] = Note
+    end
+
+    hook:Add("RenderStep.First", "BBOT:Notifications.Render", function(dt)
+		local smallest = math.huge
+        local notes = notification.registry
+		for k = 1, #notes do
+			local v = notes[k]
+			if v and v.enabled then
+				smallest = k < smallest and k or smallest
+			else
+				table.remove(notes, k)
+			end
+		end
+		local length = #notes
+		for k = 1, #notes do
+			local note = notes[k]
+			note:Update(k, length, dt)
+			if k <= math.ceil(length / 10) or note.fading then
+				note:Fade(k, length, dt)
+			end
+		end
+    end)
+
+    hook:Add("Unload", "BBOT:Notifications", function()
+        local notes = notification.registry
+		for k = 1, #notes do
+			local v = notes[k]
+            for index, drawing in pairs(v.drawings) do
+                drawing:Remove()
+                drawing = false
+            end
+        end
+        notification.registry = {}
+    end)
+end
+
+-- Auxillary, responsible for fetching, modifying,  (Done)
+-- If AUX cannot find or a check is invalidated, it will prevent BBOT from loading
+-- This should in theory prevent most bans related to updates by PF as it would prevent
+-- The cheat from having a colossal error
+do
+    if BBOT.game ~= "pf" then return end
+    local math = BBOT.math
+    local table = BBOT.table
+    local hook = BBOT.hook
+    local aux = {}
+    BBOT.aux = aux
+
+    -- This is my automated way of fetching and finding shared modules pf uses
+    -- How to access -> BBOT.aux.replication
+    local aux_tables = {
+        ["vector"] = {"random", "anglesyx"},
+        ["physics"] = {"timehit"},
+        ["animation"] = {"player", "reset"},
+        ["gamelogic"] = {"controllerstep", "setsprintdisable"},
+        ["camera"] = {"setaimsensitivity", "magnify"},
+        ["network"] = {"servertick", "send"},
+        ["hud"] = {"addnametag"},
+        ["char"] = {"unloadguns", "setunaimedfov", "loadcharacter"},
+        ["replication"] = {"getplayerhit"},
+        ["roundsystem"] = {"updatekillzone"},
+        ["cframe"] = {"fromaxisangle", "toaxisangle", "direct"},
+        ["sound"] = {"PlaySound", "play"},
+        ["raycast"] = {"raycast", "raycastSingleExit"}
+    }
+
+    -- fetches by function name
+    -- index is the function you are finding
+    -- value is where to put it in aux
+    -- true = aux.bulletcheck, replication = aux.replication.bulletcheck
+    local aux_functions = {
+        ["bulletcheck"] = "raycast",
+        ["trajectory"] = "physics",
+        ["getupdater"] = "replication",
+
+        -- Not sure where this is supposed to go but ok...
+        -- TODO: Nata/Bitch
+        ["call"] = true,
+        ["gunbob"] = true,
+        ["gunsway"] = true,
+        ["rankcalculator"] = true,
+        ["addplayer"] = true,
+        ["removeplayer"] = true,
+        ["loadplayer"] = true,
+        ["updateplayernames"] = true,
+    }
+
+    function aux:_Scan()
+        local core_aux, core_aux_sub = {}, {}
+
+        function self._CheckTable(result) -- for now...
+            for k, v in next, aux_tables do
+                local failed = false
+                for i=1, #v do
+                    if not rawget(result, v[i]) then
+                        failed = true
+                        break
+                    end
+                end
+                if not failed then
+                    if core_aux[k] ~= result then
+                        if core_aux[k] ~= nil then
+                            return k
+                        else
+                            core_aux[k] = result
+                            BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. k .. '"')
+                        end
+                    end
+                end
+            end
+        end
+
+        BBOT.log(LOG_DEBUG, "Scanning...")
+        local reg = getgc(true)
+        for _,v in next, reg do
+            if(typeof(v) == 'table')then
+                local ax = self._CheckTable(v)
+                if ax then
+                    return "Duplicate auxillary \"" .. ax .. "\""
+                end
+            elseif(typeof(v) == 'function')then
+                local ups = debug.getupvalues(v)
+                for k, v in pairs(ups) do
+                    if typeof(v) == "table" then
+                        local succ, ax = pcall(self._CheckTable, v)
+                        if succ and ax ~= nil then
+                            return "Duplicate auxillary \"" .. ax .. "\""
+                        end
+                    end
+                end
+
+                local name = debug.getinfo(v).name
+                if aux_functions[name] then
+                    local path = aux_functions[name]
+                    BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"' .. (path ~= true and " sorted into " .. path or ""))
+                    core_aux_sub[name] = v
+                end
+            end
+        end
+
+        BBOT.log(LOG_DEBUG, "Scanning auxillaries...")
+        for k, v in next, core_aux do
+            for kk, vv in next, v do
+                if typeof(vv) == "function" then
+                    local ups = debug.getupvalues(vv)
+                    for kkk, vvv in pairs(ups) do
+                        if typeof(vvv) == "table" then
+                            local ax = self._CheckTable(vvv)
+                            if ax then
+                                return "Duplicate auxillary \"" .. ax .. "\""
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        BBOT.log(LOG_DEBUG, "Checking auxillaries...")
+        for k, v in next, aux_tables do
+            if not core_aux[k] then
+                return "Couldn't find auxillary \"" .. k ..  "\""
+            end
+        end
+
+        for k, v in next, core_aux_sub do
+            if not aux_functions[k] then
+                return "Couldn't find auxillary \"" .. k ..  "\""
+            end
+        end
+
+        for k, v in next, core_aux do
+            self[k] = v
+        end
+
+        for k, v in next, core_aux_sub do
+            local saveas = aux_functions[k]
+            if saveas == true then
+                self[k] = v
+            else
+                if not self[saveas] then
+                    self[saveas] = {}
+                end
+                self[saveas][k] = v
+            end
+        end
+
+        for _,v in next, reg do
+            if typeof(v) == "function" then
+                local dbg = debug.getinfo(v)
+                if string.find(dbg.short_src, "network", 1, true) and dbg.name ~= "call" then
+                    local ups = debug.getupvalues(v)
+                    for k, vv in pairs(ups) do
+                        if typeof(vv) == "table" then
+                            if #vv > 10 then
+                                rawset(aux.network, "receivers", vv)
+                                BBOT.log(LOG_DEBUG, "Found network receivers")
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        if not aux.network.receivers then
+            return "Couldn't find auxillary \"network.receivers\""
+        end
+
+        hook:Add("Unload", "BBOT:NetworkReceivers", function()
+            rawset(aux.network, "receivers", nil)
+        end)
+    end
+
+    local profiling_tick = tick()
+    local error = aux:_Scan()
+    if error then
+        BBOT.log(LOG_ERROR, error)
+        BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
+        messagebox("For safety reasons this process has been halted\nError: " .. error .. "\nPlease contact the Demvolopers!", "BBOT: Critical Error", 0)
+        return true
+    end
+
+    do -- using rawget just in case...
+        local send = rawget(aux.network, "send")
+        local osend = rawget(aux.network, "_send")
+        hook:Add("Unload", "BBOT:NetworkOverride", function()
+            rawset(aux.network, "send", osend or send)
+        end)
+        local function sender(self, ...)
+            local _BB = BBOT
+            local _aux = _BB.aux
+            local _hook, _send = _BB.hook, _aux.network._send -- something about synapses hooking system I tried...
+            if _aux.network_supressing then return _send(self, ...) end
+            _aux.network_supressing = true
+            if _hook:Call("SuppressNetworkSend", ...) then
+                _aux.network_supressing = false
+                return
+            end
+            _aux.network_supressing = false
+            local override = _hook:Call("PreNetworkSend", ...)
+            if override then
+                if _BB.username == "dev" then
+                    _BB.log(LOG_DEBUG, unpack(override))
+                end
+                return _send(self, unpack(override)), _hook:Call("PostNetworkSend", unpack(override))
+            end
+            if _BB.username == "dev" then
+                _BB.log(LOG_DEBUG, ...)
+            end
+            return _send(self, ...), _hook:Call("PostNetworkSend", ...)
+        end
+        local function newsend(self, netname, ...)
+            local ran, a, b, c, d, e = xpcall(sender, debug.traceback, self, netname, ...)
+            if not ran then
+                aux.timer:Async(function() BBOT.log(LOG_ERROR, "Networking Error - ", netname, " - ", a) end)
+            else
+                return a, b, c, d, e
+            end
+        end
+        rawset(aux.network, "_send", send)
+        rawset(aux.network, "send", newcclosure(newsend))
+    end
+
+    hook:Add("PostNetworkSend", "BBOT:FrameworkErrorLog", function(net, ...)
+        if net == "logmessage" or net == "debug" then
+            local args = {...}
+            local message = ""
+            for i = 1, #args - 1 do
+                message ..= tostring(args[i]) .. ", "
+            end
+            message ..= tostring(args[#args])
+            BBOT.log(LOG_WARN, "Framework Internal Message -> " .. message)
+        end
+    end)
+    
+    do
+        local old = aux.char.loadcharacter
+        function aux.char.loadcharacter(char, pos, ...)
+            hook:Call("PreLoadCharacter", char, pos, ...)
+            return old(char, pos, ...), hook:Call("PostLoadCharacter", char, pos, ...)
+        end
+        hook:Add("Unload", "BBOT:LoadCharacter", function()
+            aux.char.loadcharacter = old
+        end)
+    end
+    
+    do
+        function aux.sound.playid(p39, p40, p41, p42, p43, p44)
+            aux.sound.PlaySoundId(p39, p40, p41, nil, nil, p42, nil, nil, nil, p43, p44);
+        end
+        local oplay = rawget(aux.sound, "PlaySound")
+        hook:Add("Unload", "BBOT:SoundDetour", function()
+            rawset(aux.sound, "PlaySound", oplay)
+        end)
+        local supressing = false
+        local function newplay(...)
+            if supressing then return oplay(...) end
+            supressing = true
+            if hook:Call("SupressSound", ...) then
+                supressing = false
+                return
+            end
+            supressing = false
+            return oplay(...)
+        end
+        rawset(aux.sound, "PlaySound", newcclosure(newplay))
+    end
+    
+    local setupvalueundo = {}
+    local ups = debug.getupvalues(aux.replication.getupdater)
+    for k, v in pairs(ups) do
+        if typeof(v) == "function" then
+            local name = debug.getinfo(v).name
+            if name == "loadplayer" then
+                local function LoadPlayer(...)
+                    hook:Call("PreLoadPlayer", ...)
+                    local ctlr, a, b = v(...)
+                    if ctlr then
+                        hook:Call("PostLoadPlayer", ctlr)
+                    end
+                    return ctlr, a, b
+                end
+                debug.setupvalue(aux.replication.getupdater, k, newcclosure(LoadPlayer))
+                setupvalueundo[#setupvalueundo+1] = {aux.replication.getupdater, k, v}
+            end
+        end
+    end
+    
+    local ups = debug.getupvalues(aux.hud.isplayeralive)
+    for k, v in pairs(ups) do
+        if typeof(v) == "function" then
+            local name = debug.getinfo(v).name -- are you ok pf?
+            if name == "gethealthstate" then
+                aux.hud.gethealthstate = newcclosure(function(self, player)
+                    return v(player)
+                end)
+            end
+        end
+    end
+    
+    local players = BBOT.service:GetService("Players")
+    hook:Add("Initialize", "BBOT:SetupPlayerReplication", function()
+        for i, v in next, players:GetChildren() do
+            local controller = aux.replication.getupdater(v)
+            if controller and not controller.setup then
+                hook:Call("PostLoadPlayer", controller)
+            end
+        end
+    end)
+    
+    local old = aux.char.step
+    function aux.char.step(...)
+        hook:Call("PreCharacterStep")
+        local a, b, c, d = old(...)
+        hook:Call("PostCharacterStep")
+        return a, b, c, d
+    end
+    hook:Add("Unload", "BBOT:CharStepDetour", function()
+        aux.char.step = old
+    end)
+    
+    hook:Add("FullyLoaded", "BigRewardDetour", function()
+        local receivers = aux.network.receivers
+        for k, v in pairs(receivers) do
+            local a = debug.getupvalues(v)[1]
+            if typeof(a) == "function" then
+                local run, consts = pcall(debug.getconstants, a)
+                if run then
+                    if table.quicksearch(consts, "killshot") and table.quicksearch(consts, "kill") then
+                        receivers[k] = function(type, entity, gunname, earnings, ...)
+                            hook:Call("PreBigAward", type, entity, gunname, earnings, ...)
+                            v(type, entity, gunname, earnings, ...)
+                            hook:Call("PostBigAward", type, entity, gunname, earnings, ...)
+                        end
+    
+                        hook:Add("Unload", "BBOT:RewardDetour." .. tostring(k), function()
+                            receivers[k] = v
+                        end)
+                    end
+                end
+            end
+        end
+    end)
+    
+    hook:Add("Unload", "BBOT:Aux.UpValues.1", function()
+        for i=1, #setupvalueundo do
+            debug.setupvalue(unpack(setupvalueundo[i]))
+        end
+    end)
+
+    local dt = tick() - profiling_tick
+    BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
+end
+
+-- Chat, allows for chat manipulations, or just being a dick with the chat spammer (Conversion In Progress)
+do
+    local network = BBOT.aux.network
+    local hook = BBOT.hook
+    local table = BBOT.table
+    local timer = BBOT.timer
+    local chat = {}
+    BBOT.chat = chat
+    chat.spam_chat = {}
+    chat.spam_kill = {}
+
+    if not isfile("bitchbot/chatspam.txt") then --idk help the user out lol, prevent stupid errors --well it would kinda ig
+        writefile(
+            "bitchbot/chatspam.txt",
+            "WSUP FOOL\nGET OWNED KID\nBBOAT ON TOP\nI LOVE BBOT YEAH\nPLACEHOLDER TEXT \ndear bbot user, edit your chat spam\n	"
+        )
+    end
+    
+    if not isfile("bitchbot/killsay.txt") then
+        writefile(
+            "bitchbot/killsay.txt",
+            "WSUP FOOL [name]\nGET OWNED [name]\n[name] just died to my [weapon] everybody laugh\n[name] got owned roflsauce\nPLACEHOLDER TEXT \ndear bbot user, edit your kill say\n	"
+        )
+    end
+
+    local customtxt = readfile("bitchbot/chatspam.txt")
+    for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
+        table.insert(chat.spam_chat, s) -- I'm care
+    end
+
+    customtxt = readfile("bitchbot/killsay.txt")
+    for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
+        table.insert(chat.spam_kill, s)
+    end
+
+    hook:Add("Initialize", "BBOT:ChatDetour", function()
+        local receivers = network.receivers
+
+        for k, v in pairs(receivers) do
+            local const = debug.getconstants(v)
+            if table.quicksearch(const, "Tag") and table.quicksearch(const, "rbxassetid://") then
+                receivers[k] = function(p20, p21, p22, p23, p24)
+                    timer:Async(function() hook:Call("Chatted", p20, p21, p22, p23, p24) end)
+                    return v(p20, p21, p22, p23, p24)
+                end
+                hook:Add("Unload", "ChatDetour." .. tostring(k), function()
+                    receivers[k] = v
+                end)
+            elseif table.quicksearch(const, "[Console]: ") and table.quicksearch(const, "Tag") then
+                receivers[k] = function(p18)
+                    timer:Async(function() hook:Call("Console", p18) end)
+                    return v(p18)
+                end
+                hook:Add("Unload", "ChatDetour." .. tostring(k), function()
+                    receivers[k] = v
+                end)
+            end
+        end
+    end)
+
+    function chat:Say(str, un)
+        if string.sub(str, 1, 1) == "/" then
+            network:send("modcmd", str);
+            return
+        end
+        network:send("chatted", str, un or false);
+    end
+
+    chat.buffer = {}
+    local lasttext = ""
+    function chat:AddToBuffer(msg)
+        local spaces = ""
+        if msg == lasttext then
+            for i=1, a do
+                spaces = spaces .. "."
+            end
+            a = a + 1
+            if a > 1 then a = 0 end
+        else
+            a = 0
+            lasttext = msg
+        end
+        msgquery[#msgquery+1] = msg .. spaces
+    end
+    
+    function chat:CheckIfValid(msg)
+        for i=1, #msg do
+            local str = string.sub(msg, i, i)
+            if str ~= "\n" or str ~= " " then
+                return true
+            end
+        end
+    end
+
+    --[[
+    local lastkillsay = ""
+    local killsay = lastkillsay
+    while killsay == lastkillsay do
+        killsay = math.random(#customKillSay)
+    end
+    lastkillsay = killsay
+    local message = customKillSay[killsay]
+    message = message:gsub("%[hitbox%]", head and "head" or "body")
+    message = message:gsub("%[name%]", victim.Name)
+    message = message:gsub("%[weapon%]", weapon)
+    chat:AddToBuffer(message)
+    ]]
+
+    timer:Create("Chat.Spam", 1.5, 0, function() -- fuck you stylis
+        local msg = chat.buffer[1]
+        if not msg then return end
+        table.remove(chat.buffer, 1)
+        chat:Say(msg)
+    end)
+end
+
+-- VoteKick, handles the votekicks system (Conversion In Progress)
+-- Anti-Votekick
+--[=[do
+    local config = BBOT.config
+    local hook = BBOT.hook
+    local timer = BBOT.timer
+    local localplayer = BBOT.service:GetService("LocalPlayer")
+    local votekick = {}
+    BBOT.votekick = votekick
+    votekick.CallDelay = 90
+    votekick.NextCall = 0
+    votekick.Called = 0
+    
+    local receivers = BBOT.network.receivers
+    for k, v in pairs(receivers) do
+        local consts = debug.getconstants(v)
+        local has = false
+        for kk, vv in pairs(consts) do
+            if typeof(vv) == "string" and string.find(vv, "Votekick", 1, true) then
+                local function callvotekick(target, delay, votesrequired, ...)
+                    timer:Async(function() hook:Call("StartVoteKick", target, delay, votesrequired) end)
+                    return v(target, delay, votesrequired, ...)
+                end
+                rawset(receivers, k, callvotekick)
+                hook:Add("Unload", "UndoVotekickDetour-"..k, function()
+                    rawset(receivers, k, v)
+                end)
+    
+                function votekick:GetVotes()
+                    return debug.getupvalue(v, 9)
+                end
+                break
+            end
+        end
+    end
+    
+    local invote = false
+    hook:Add("StartVoteKick", "StartVoteKick", function(target, delay, votesrequired)
+        delay = tonumber(delay)
+        timer:Create("VoteKickCalled", delay, 1, function()
+            hook:Remove("RenderStep.First", "Votekick.Step")
+            hook:Call("EndVoteKick", target, delay, votesrequired, false)
+        end)
+        hook:Add("RenderStep.First", "Votekick.Step", function()
+            if votekick:GetVotes() >= votesrequired then
+                hook:Remove("RenderStep.First", "Votekick.Step")
+                timer:Remove("VoteKickCalled")
+                hook:Call("EndVoteKick", target, delay, votesrequired, true)
+            end
+        end)
+        if config:GetValue("Misc", "Exploits", "Anti-Votekick", "Enable") then
+            timer:Simple(delay+2, function()
+                votekick:RandomCall()
+            end)
+        end
+    
+        if target == localplayer.Name then
+            timer:Simple(.5, function() BBOT.hud:vote("no") end)
+        end
+    
+        invote = votesrequired
+        BBOT.print("Votekick called on " .. target .. "; time till end: " .. delay .. "; votes required: " .. votesrequired)
+        if votekick.Called == 1 then
+            votekick.Called = 2
+        elseif votekick.Called == 2 or votekick.Called == 0 then
+            votekick.Called = 0
+            votekick.NextCall = tick() + 1000000
+        end
+    end)
+    
+    hook:Add("Console", "VoteKickExploit", function(msg)
+        if string.find(msg, "The last votekick was initiated by you", 1, true) then
+            votekick.Called = 2
+        elseif string.find(msg, "seconds before initiating a votekick", 1, true) then
+            votekick.Called = 0
+            votekick.NextCall = tick() + (tonumber(string.match(msg, "%d+")) or 0)
+        end
+    end)
+    
+    function votekick:IsVoteActive()
+        return debug.getupvalue(BBOT.hud.votestep, 2)
+    end
+    
+    local players = BBOT.service:GetService("Players")
+    function votekick:GetTargets()
+        local targetables = {}
+        for i, v in pairs(players:GetPlayers()) do
+            local inpriority = config.prioritylist[v.UserId]
+            if (not inpriority or inpriority >= 0) and v ~= localplayer then
+                targetables[#targetables+1] = v
+            end
+        end
+        return targetables
+    end
+    
+    function votekick:CanCall(target, reason)
+        if self:IsVoteActive() then return false, "VoteActive" end
+        if self.NextCall > tick() or self.Called > 0 then return false, "RateLimit" end
+        return true
+    end
+    
+    function votekick:Call(target, reason)
+        BBOT.chat:Say("/votekick:"..target..":"..reason)
+        self.NextCall = 0
+        self.Called = 1
+    end
+    
+    function votekick:RandomCall()
+        local targets = votekick:GetTargets()
+        local target = BBOT.FYShuffle(targets)[1]
+        votekick:Call(target.Name, config:GetValue("Misc", "Exploits", "Anti-Votekick", "Reason"))
+    end
+    
+    votekick.autohopping = false
+    hook:Add("RenderStep.First", "VoteKickExploit", function()
+        if not config:GetValue("Misc", "Exploits", "Anti-Votekick", "Enable") then return end
+        if config:GetValue("Misc", "Exploits", "Anti-Votekick", "WaitTillAlive") and not votekick.WasAlive then return end
+        if votekick:CanCall() then
+            local targets = votekick:GetTargets()
+            local target = BBOT.FYShuffle(targets)[1]
+            votekick:Call(target.Name, config:GetValue("Misc", "Exploits", "Anti-Votekick", "Reason"))
+        end
+    
+        local t = config:GetValue("Misc", "Exploits", "Anti-Votekick", "Auto-Hop", "Delay")
+        if not votekick.autohopping and config:GetValue("Misc", "Exploits", "Anti-Votekick", "Auto-Hop", "Enable") and votekick.Called == 2 and votekick.NextCall ~= 0 and votekick.NextCall - (10 + (t < 0 and -t or 0)) <= tick() then
+            votekick.autohopping = true
+            log(LOG_NORMAL, "WARNING: Hopping in " .. (10+(t > 0 and t or 0)) .. " seconds")
+            timer:Simple(10+(t > 0 and t or 0), function()
+                BBOT.serverhop:RandomHop()
+            end)
+        end
+    end)
+    
+    hook:Add("PreUpdatePersonalHealth", "VoteKickExploit", function(hp, time, healrate, maxhealth, alive)
+        if alive == true then
+            votekick.WasAlive = true
+        end
+    end)
+end
+
+-- Server-Hopper, redirects and moves the user to other server instances (Conversion In Progress)
+-- Votekick-blacklist (prevents user from joining voted out servers)
+do
+    local config = BBOT.config
+    local hook = BBOT.hook
+    local votekick = BBOT.votekick
+    local log = BBOT.log
+    local TeleportService = game:GetService("TeleportService")
+    local localplayer = BBOT.service:GetService("LocalPlayer")
+    local httpservice = BBOT.service:GetService("HttpService")
+    local serverhop = {}
+    BBOT.serverhop = serverhop
+
+    serverhop.file = "bitchbot/votedoff-servers.txt"
+    serverhop.blacklist = {}
+    serverhop.UserId = tostring(localplayer.UserId)
+
+    hook:Add("FullyLoaded", "LoadServer-Hop", function()
+        if isfile(serverhop.file) then
+            serverhop.blacklist = httpservice:JSONDecode(readfile(serverhop.file))
+            local otime = os.time()
+            for _, userblacklist in pairs(serverhop.blacklist) do
+                for k, v in pairs(userblacklist) do
+                    if otime > v then
+                        userblacklist[k] = nil
+                        log(LOG_NORMAL, "Removed server-hop blacklist " .. k)
+                    end
+                end
+            end
+            writefile(serverhop.file, httpservice:JSONEncode(serverhop.blacklist))
+            local plbllist = serverhop.blacklist[serverhop.UserId]
+            if plbllist then
+                local c = 0
+                for k, v in pairs(plbllist) do
+                    c = c + 1
+                end
+                --BBOT.chat:Message("You have been votekicked from " .. c .. " server(s)!")
+                log(LOG_NORMAL, "You have been votekicked from " .. c .. " server(s)!")
+            end
+        end
+    end)
+
+    function serverhop:IsBlacklisted(id)
+        local plbllist = serverhop.blacklist[self.UserId]
+        if plbllist and plbllist[id] then
+            return true
+        end
+    end
+
+    function serverhop:RandomHop()
+        log(LOG_NORMAL, "Commencing Server-Hop...")
+        local data = httpservice:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100")).data
+        local mode = config:GetValue("Misc", "Exploits", "Server-Hopper", "Sort By")
+        if mode == "Lowest Ping" then
+            table.sort(data, function(a, b) return a.ping < b.ping end)
+        elseif mode == "Highest Ping" then
+            table.sort(data, function(a, b) return a.ping > b.ping end)
+        elseif mode == "Highest Players" then
+            table.sort(data, function(a, b) return a.playing > b.playing end)
+        elseif mode == "Lowest Players" then
+            table.sort(data, function(a, b) return a.playing < b.playing end)
+        end
+        for _, s in pairs(data) do
+            if not serverhop:IsBlacklisted(s.id) and s.id ~= game.JobId then
+                if s.playing ~= s.maxPlayers then
+                    log(LOG_NORMAL, "Hopping to server Id: " .. s.id .. "; Players: " .. s.playing .. "/" .. s.maxPlayers .. "; " .. s.ping .. " ms")
+                    --syn.queue_on_teleport(<string> code)
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id)
+                    return
+                end
+            end
+        end
+        log(LOG_ERROR, "No servers to hop towards... Wow... You really got votekicked off every server now did ya? Impressive...")
+    end
+
+    function serverhop:AddToBlacklist(id, removaltime)
+        local plbllist = self.blacklist[self.UserId]
+        if not plbllist then
+            plbllist = {}
+            self.blacklist[self.UserId] = plbllist
+        end
+        plbllist[id] = (removaltime and removaltime + os.time() or -1)
+    end
+
+    function serverhop:Hop(id)
+        log(LOG_NORMAL, "Hopping to server " .. id)
+        if serverhop:IsBlacklisted(id) then
+            log(LOG_ERROR, "This server ID is blacklisted! Where you votekicked from here?")
+            return
+        end
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, id)
+    end
+
+    hook:Add("EndVoteKick", "Server-Hopper", function(target, delay, required, successful)
+        if target == localplayer.Name and successful then
+            if not serverhop:IsBlacklisted(game.JobId) then
+                serverhop:AddToBlacklist(game.JobId, 86400)
+                log(LOG_NORMAL, "Added " .. game.JobId .. " to server-hop blacklist")
+                writefile(serverhop.file, httpservice:JSONEncode(serverhop.blacklist))
+            end
+            if not config:GetValue("Misc", "Exploits", "Server-Hopper", "Enable") then return end
+            serverhop:RandomHop()
+        end
+    end)
+end
+
+-- Generalized Aimbot (Conversion In Progress)
+-- Knife Aura
+-- Bullet Network Manipulation
+do
+    local timer = BBOT.timer
+    local hook = BBOT.hook
+    local config = BBOT.config
+    local network = BBOT.network
+    local gamelogic = BBOT.gamelogic
+    local hud = BBOT.hud
+    local physics = BBOT.physics
+    local localplayer = BBOT.service:GetService("LocalPlayer")
+    local aimbot = {}
+    BBOT.aimbot = aimbot
+
+    function aimbot:VelocityPrediction(startpos, endpos, vel, speed)
+        local len = (endpos-startpos).Magnitude
+        local t = len/speed
+        return endpos + (vel * t)
+    end
+
+    aimbot.bullet_gravity = Vector3.new(0, -196.2, 0) -- Todo: get the velocity from the game public settings
+
+    function aimbot:DropPrediction(startpos, finalpos, speed)
+        return physics.trajectory(startpos, self.bullet_gravity, finalpos, speed)
+    end
+
+    -- Scan targets here
+    function aimbot.Step()
+
+    end
+
+    -- Do aimbot stuff here
+    hook:Add("PreWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
+
+    end)
+
+    -- If the aimbot stuff before is persistant, use this to restore
+    hook:Add("PostWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
+    
+    end)
+
+    local enque = {}
+    aimbot.silent_bullet_query = enque
+    -- Ta da magical right?
+    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, Entity, HitPos, Part, bulletID, ...)
+        if networkname == "bullethit" then
+            if enque[bulletID] == Entity then
+                return true
+            end
+        end
+    end)
+
+    -- When silent aim isn't enough, resort to this, and make even cheaters rage that their config is garbage
+    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, timestamp)
+        if networkname == "newbullets" then
+            if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
+            local silent = config:GetValue("Rage", "Aimbot", "Silent Aim")
+            if silent and aimbot.target then -- who are we targeting today?
+                local target = aimbot.target
+                -- timescale is to determine how quick the bullet hits
+                -- don't want to get too cocky or the system might silent flag
+                local timescale = config:GetValue("Legit", "Bullet Redirection", "TimeScale")
+                local campos = currentcamera.CFrame.p
+                local dir = target.selected_part.Position-campos
+                local X, Y = CFrame.new(campos, campos+dir):ToOrientation()
+                local firepos = bullettable.firepos
+                local gundata = gamelogic.currentgun.data
+                local campos = currentcamera.CFrame.p
+                local dir = target.selected_part.Position-campos
+                local t = dir.Magnitude/gundata.bulletspeed -- get the time it takes for the bullet to arrive
+                -- remind me to not do this, some cheats fucks with velocity...
+                local targetpos = aimbot:VelocityPrediction(firepos, target.selected_position, target.parts.HumanoidRootPart.Velocity, gundata.bulletspeed)
+                bullettable.firepos = campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
+
+                for i=1, #bullettable.bullets do
+                    local bullet = bullettable.bullets[i]
+                    -- we need the direction we are firing at
+                    -- using kinematics, find the direction needed to fire from long distance and compensate for drop
+                    -- set the new velocity of the bullet directly towards them
+                    bullet[1] = aimbot:DropPrediction(bullettable.firepos, targetpos, gundata.bulletspeed).Unit * bullet[1].Magnitude
+                    timer:Simple(1.5, function() -- bullets last 1.5 seconds, this is basically garbage cleanup
+                        enque[bullet[2]] = nil
+                    end)
+                    timer:Simple(t * timescale, function() -- We need to simulate it being a true bullet arrival
+                        -- enque means we have a bullet to be hit, if it is in the table then it's ready
+                        if not enque[bullet[2]] then return end
+                        if not hud:isplayeralive(target.player) then return end
+                        enque[bullet[2]] = nil
+                        -- Simulate a direct hit, fooling the system with a confirmed hit
+                        network:send("bullethit", target.player, targetpos, target.selected_part, bullet[2])
+                        enque[bullet[2]] = target.player
+                    end)
+                    enque[bullet[2]] = target.player -- this bullet is a magic bullet now, supress networking for this bullet!
+                end
+                network:send(networkname, bullettable, timestamp)
+                
+                return true
+            end
+        end
+    end)
+
+    -- Knife Aura --
+    hook:Add("PreKnifeStep", "BBOT:KnifeAura.Calculate", function(knifedata)
+    
+    end)
+end]=]
+
+-- Entity Visuals Controller [ESP, Chams, Grenades, etc] (Conversion In Progress)
+-- Styled as a constructor with meta tables btw, I'll tell ya later - WholeCream
+do
+    -- Why this?
+    -- Because it's more organized :|
+    local hook = BBOT.hook
+    local timer = BBOT.timer
+    local config = BBOT.config
+    local font = BBOT.font
+    local gui = BBOT.gui
+    local log = BBOT.log
+    local math = BBOT.math
+    local string = BBOT.string
+    local service = BBOT.service
+    local esp = {
+        registry = {}
+    }
+    BBOT.esp = esp
+
+    local localplayer = service:GetService("LocalPlayer")
+    local playergui = service:GetService("PlayerGui")
+    local currentcamera = BBOT.service:GetService("CurrentCamera")
+
+    esp.container = Instance.new("Folder")
+    esp.container.Name = string.random(8, 14) -- you gonna try that GetChildren attack anytime soon?
+    syn.protect_gui(esp.container) -- for chams only!
+    esp.container.Parent = playergui.MainGui
+
+    -- Adds an ESP object to the rendering query
+    function esp:Add(construct)
+        local reg = self.registry
+        for i=1, #reg do
+            if reg[i].uniqueid == construct.uniqueid then return false end
+        end
+        reg[#reg+1] = construct
+        if construct.OnCreate then
+            construct:OnCreate()
+        end
+    end
+
+    -- Use this to find an esp object
+    function esp:Find(uniqueid)
+        local reg = self.registry
+        for i=1, #reg do
+            if reg[i].uniqueid == uniqueid then
+                return reg[i], i
+            end
+        end
+    end
+
+    -- Self-explanitory
+    function esp:Remove(uniqueid)
+        local reg = self.registry
+        for i=1, #reg do
+            if reg[i].uniqueid == uniqueid then
+                local v = reg[i]
+                table.remove(reg, i)
+                if v.OnRemove then
+                    v:OnRemove()
+                end
+                break
+            end
+        end
+    end
+
+    hook:Add("Unload", "BBOT:ESP.Destroy", function()
+        local reg = esp.registry
+        for i=1, #reg do
+            local v = reg[i]
+            if v.OnRemove then
+                v:OnRemove()
+            end
+        end
+        esp.registry = {}
+        esp.container:Destroy()
+    end)
+
+    function esp.Render(v)
+        if v.IsValid and v:IsValid() then
+            if v:CanRender() then
+                if v.PreRender then
+                    v:PreRender()
+                end
+                if v.Render then
+                    v:Render()
+                end
+                if v.PostRender then
+                    v:PostRender()
+                end
+            end
+        else
+            return true
+        end
+    end
+
+    function esp:Rebuild()
+        timer:Create("BBOT:ESP.Rebuild", 1, 1, function() self:_Rebuild() end)
+    end
+
+    function esp:_Rebuild()
+        local controllers = self.registry
+        for i=1, #controllers do
+            local v = controllers[i]
+            if v.Rebuild then
+                v:Rebuild()
+            end
+        end
+    end
+
+    function esp.EmptyTable( tab )
+        for k, v in pairs( tab ) do
+            tab[ k ] = nil
+        end
+    end
+
+    local errors = 0
+    hook:Add("RenderStep.Last", "BBOT:ESP.Render", function()
+        if errors > 20 then return end
+        local controllers = esp.registry
+        local istablemissalined = false
+        local c = 0
+        for i=1, #controllers do
+            local v = controllers[i-c]
+            if v then
+                local ran, destroy = pcall(esp.Render, v)
+                if not ran then
+                    log(LOG_ERROR, "ESP render error - ", destroy)
+                    log(LOG_ANON, "Object - ", v.uniqueid)
+                    log(LOG_WARN,"Auto removing to prevent error cascade!")
+                    table.remove(controllers, i-c)
+                    c = c + 1
+                    errors = errors + 1
+                elseif destroy then
+                    table.remove(controllers, i-c)
+                    c = c + 1
+                    if v.OnRemove then
+                        v:OnRemove()
+                    end
+                end
+            else
+                istablemissalined = true
+            end
+        end
+
+        if istablemissalined then
+            local sorted = {}
+            for k, v in pairs(controllers) do
+                sorted[#sorted+1] = v
+            end
+            esp.EmptyTable(controllers)
+            for i=1, #sorted do
+                controllers[i] = sorted[i]
+            end
+        end
+    end)
+
+
+    do -- players
+
+    end
+
+    -- Will make examples...
+end
+
+-- Weapon Modifications, I know you cannot do changes while playing, but this allows you to customize the entire gun (Conversion In Progress)
+-- Skin changer
+do
+    -- From wholecream
+    -- configs aren't done so they are default to screw-pf aka my stuff...
+    -- this weapon module allows complete utter freedom of the gun's functions
+    -- this is also exactly why a skin changer client-side works fantasticly well...
+    local weapons = {}
+    BBOT.weapons = weapons
+    local hook = BBOT.hook
+    local char = BBOT.aux.char
+    local gamelogic = BBOT.aux.gamelogic
+    local config = BBOT.config
+
+    -- Welcome to my hell.
+    -- ft. debug.setupvalue
+    local profiling_tick = tick()
+
+    local receivers = BBOT.aux.network.receivers
+    local upvaluemods = {} -- testing? no problem reloading the script...
+    hook:Add("Unload", "BBOT:WeaponModifications", function()
+        for i=1, #upvaluemods do
+            local v = upvaluemods[i]
+            debug.setupvalue(unpack(v))
+        end
+    end)
+
+    local function DetourKnifeLoader(related_func, index, knifeloader)
+        local newfunc = function(...)
+            hook:CallP("PreLoadKnife", ...)
+            local knifedata = knifeloader(...)
+            hook:CallP("PostLoadKnife", knifedata, ...)
+            return knifedata
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, knifeloader}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local function DetourGunLoader(related_func, index, gunloader)
+        local newfunc = function(...)
+            hook:CallP("PreLoadGun", ...)
+            local gundata = gunloader(...)
+            hook:CallP("PostLoadGun", gundata, ...)
+            return gundata
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, gunloader}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local done = false -- Causes synapse to crash LOL
+    local function DetourWeaponRequire(related_func, index, getweapoondata)
+        --[[if done then return end
+        done = true
+        local newfunc = function(...)
+            local modifications = getweapoondata(...)
+            modifications = BBOT.CopyTable(modifications)
+            hook:Call("GetWeaponData", modifications)
+            return modifications
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, getweapoondata}
+        debug.setupvalue(related_func, index, newfunc)]]
+    end
+
+    local function DetourModifyData(related_func, index, modifydata)
+        local newfunc = function(...)
+            local modifications = modifydata(...)
+            hook:CallP("WeaponModifyData", modifications)
+            return modifications
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, modifydata}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local done = false
+    local function DetourGunSway(related_func, index, gunmovement)
+        if done then return end
+        done = true
+        local newfunc = function(...)
+            local cf = gunmovement(...)
+            local mul = 1 -- sway factor config here
+            if mul == 0 then
+                return CFrame.new()
+            end
+            local x, y, z = cf:GetComponents()
+            x = x * mul
+            y = y * mul
+            z = z * mul
+            local pitch, yaw, roll = cf:ToEulerAnglesYXZ()
+            pitch, yaw, roll = pitch * mul, yaw * mul, roll * mul
+            cf = CFrame.Angles(pitch, yaw, roll) + Vector3.new(x, y, z)
+            return cf
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, gunmovement}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local function DetourGunBob(related_func, index, gunmovement)
+        local newfunc = function(...)
+            local cf = gunmovement(...)
+            local mul = 1 -- bob factor config here
+            if mul == 0 then
+                return CFrame.new()
+            end
+            local x, y, z = cf:GetComponents()
+            x = x * mul
+            y = y * mul
+            z = z * mul
+            local pitch, yaw, roll = cf:ToEulerAnglesYXZ()
+            pitch, yaw, roll = pitch * mul, yaw * mul, roll * mul
+            cf = CFrame.Angles(pitch, yaw, roll) + Vector3.new(x, y, z)
+            return cf
+        end
+        upvaluemods[#upvaluemods+1] = {related_func, index, gunmovement}
+        debug.setupvalue(related_func, index, newcclosure(newfunc))
+    end
+
+    local workspace = BBOT.service:GetService("Workspace")
+    for k, v in pairs(receivers) do
+        local ups = debug.getupvalues(v)
+        for upperindex, related_func in pairs(ups) do
+            if typeof(related_func) == "function" then
+                local funcname = debug.getinfo(related_func).name
+                if funcname == "loadgun" then
+                    local _ups = debug.getupvalues(related_func)
+                    for index, modifydata in pairs(_ups) do
+                        if typeof(modifydata) == "function" then
+                            -- this also contains "gunbob" and "gunsway"
+                            -- we can change these as well...
+                            local name = debug.getinfo(modifydata).name
+                            if name == "gunrequire" then
+                                DetourWeaponRequire(related_func, index, modifydata)
+                            elseif name == "modifydata" then
+                                DetourModifyData(related_func, index, modifydata) -- Stats modification
+                            elseif name == "gunbob" then
+                                DetourGunBob(related_func, index, modifydata)
+                            elseif name == "gunsway" then
+                                DetourGunSway(related_func, index, modifydata)
+                            end
+                        end
+                    end
+
+                    DetourGunLoader(v, upperindex, related_func) -- this will allow us to modify before and after events of gun loading
+                    -- Want rainbow guns? well there ya go
+                elseif funcname == "loadknife" then
+                    local _ups = debug.getupvalues(related_func)
+                    for index, modifydata in pairs(_ups) do
+                        if typeof(modifydata) == "function" then
+                            -- this also contains "gunbob" and "gunsway"
+                            -- we can change these as well...
+                            local name = debug.getinfo(modifydata).name
+                            if name == "gunbob" then
+                                DetourGunBob(related_func, index, modifydata)
+                            elseif name == "gunsway" then
+                                DetourGunSway(related_func, index, modifydata)
+                            end
+                        end
+                    end
+
+                    DetourKnifeLoader(v, upperindex, related_func)
+                end
+            end
+        end
+    end
+
+    do
+        local ogrenadeloader = rawget(char, "loadgrenade")
+        hook:Add("Unload", "UndoWeaponDetourGrenades", function()
+            rawset(char, "loadgrenade", ogrenadeloader)
+        end)
+        local function loadgrenadee(self, ...)
+            hook:CallP("PreLoadGrenade", ...)
+            local gundata = ogrenadeloader(self, ...)
+            hook:CallP("PostLoadGrenade", gundata)
+            return gundata
+        end
+        rawset(char, "loadgrenade", newcclosure(loadgrenadee))
+    end
+
+    -- setup of our detoured controllers
+    hook:Add("PostLoadKnife", "PostLoadKnife", function(gundata, gunname)
+        local ups = debug.getupvalues(gundata.destroy)
+        for k, v in pairs(ups) do
+            local t = typeof(v)
+            if t == "Instance" and v.ClassName == "Model" then
+                gundata._model = v
+            end
+        end
+
+        local oldhide = gundata.hide
+        function gundata.hide(...)
+            hook:Call("PreHideKnife", gundata, ...)
+            return oldhide(...), hook:Call("PostHideKnife", gundata, ...)
+        end
+
+        local oldshow = gundata.show
+        function gundata.show(...)
+            hook:Call("PreShowKnife", gundata, ...)
+            return oldshow(...), hook:Call("PostShowKnife", gundata, ...)
+        end
+
+        local olddestroy = gundata.destroy
+        function gundata.show(...)
+            hook:Call("PreDestroyKnife", gundata, ...)
+            return olddestroy(...), hook:Call("PostDestroyKnife", gundata, ...)
+        end
+
+        local oldsetequipped = gundata.setequipped
+        function gundata.show(...)
+            hook:Call("PreEquippedKnife", gundata, ...)
+            return oldsetequipped(...), hook:Call("PostEquippedKnife", gundata, ...)
+        end
+
+        local ups = debug.getupvalues(gundata.playanimation)
+        for k, v in pairs(ups) do
+            local t = typeof(v)
+            if t == "table" and v.camodata and typeof(v.larm) == "table" and v.larm.basec0 then
+                gundata._anims = v
+            end
+        end
+
+        local oldstep = gundata.step
+        function gundata.step(...)
+            if gamelogic.currentgun == gundata then
+                hook:CallP("PreKnifeStep", gundata)
+            end
+            local a, b, c, d = oldstep(...)
+            if gamelogic.currentgun == gundata then
+                hook:CallP("PostKnifeStep", gundata)
+            end
+            return a, b, c, d
+        end
+    end)
+
+    hook:Add("PostLoadGun", "PostLoadGun", function(gundata, gunname)
+        local oldstep = gundata.step
+        local ups = debug.getupvalues(oldstep)
+        local partdata
+        for k, v in pairs(ups) do
+            if typeof(v) == "function" then
+                local sups = debug.getupvalues(v)
+                for kk, vv in pairs(sups) do
+                    local t = typeof(vv)
+                    if t == "table" and vv.sightpart and vv.sight then
+                        partdata = vv
+                    end
+                end
+            end
+        end
+
+        local ups = debug.getupvalues(gundata.playanimation)
+        for k, v in pairs(ups) do
+            local t = typeof(v)
+            if t == "table" and v.camodata and typeof(v.larm) == "table" and v.larm.basec0 then
+                gundata._anims = v
+            end
+        end
+
+        local ups = debug.getupvalues(gundata.destroy)
+        for k, v in pairs(ups) do
+            local t = typeof(v)
+            if t == "Instance" and v.ClassName == "Model" then
+                gundata._model = v
+            end
+        end
+
+        local oldreloadcancel = gundata.reloadcancel
+        function gundata.reloadcancel(self, force, ...)
+            if force then
+                gundata._lastreloadcancel = tick()
+            end
+            return oldreloadcancel(self, force, ...)
+        end
+
+        local oldhide = gundata.hide
+        function gundata.hide(...)
+            hook:Call("PreHideWeapon", gundata, ...)
+            return oldhide(...), hook:Call("PostHideWeapon", gundata, ...)
+        end
+
+        local oldshow = gundata.show
+        function gundata.show(...)
+            hook:Call("PreShowWeapon", gundata, ...)
+            return oldshow(...), hook:Call("PostShowWeapon", gundata, ...)
+        end
+
+        local olddestroy = gundata.destroy
+        function gundata.destroy(...)
+            hook:Call("PreDestroyWeapon", gundata, ...)
+            return olddestroy(...), hook:Call("PostDestroyWeapon", gundata, ...)
+        end
+
+        local oldsetequipped = gundata.setequipped
+        function gundata.setequipped(...)
+            hook:Call("PreEquippedWeapon", gundata, ...)
+            return oldsetequipped(...), hook:Call("PostEquippedWeapon", gundata, ...)
+        end
+
+        local ups = debug.getupvalues(oldsetequipped)
+        for k, v in pairs(ups) do
+            if typeof(v) == "function" then
+                local name = debug.getinfo(v).name
+                if name == "updatefiremodestability" then
+                    local ups = debug.getupvalues(v)
+                    for kk, vv in pairs(ups) do
+                        if typeof(vv) == "number" then
+                            if kk == 4 and vv == 1 then
+                                function gundata:getfiremode()
+                                    local mode = debug.getupvalue(v, kk) or 1
+                                    local rate
+                                    if typeof(self.data.firerate) == "table" then
+                                        rate = self.data.firerate[mode]
+                                    else
+                                        rate = self.data.firerate
+                                    end
+                                    return self.data.firemodes[mode], rate
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        function gundata.step(...)
+            -- this is where the aimbot controller will be
+            if gamelogic.currentgun == gundata then
+                if not gundata.partdata then
+                    gundata.partdata = partdata
+                end
+                hook:CallP("PreWeaponStep", gundata, partdata)
+            end
+            local a, b, c, d = oldstep(...)
+            if gamelogic.currentgun == gundata then
+                hook:CallP("PostWeaponStep", gundata, partdata)
+            end
+            return a, b, c, d
+        end
+    end)
+end
+
+-- Init, tell all modules we are ready
+do
+    BBOT.hook:Call("PreInitialize")
+    BBOT.hook:Call("Initialize")
+    BBOT.hook:Call("PostInitialize")
+end
+
+-- The Moment, just some print stuff for the user to see on init, like has the cheat reloaded?
+do
+    local loadtime = (BBOT.math.round(tick()-loadstart, 6))
+    BBOT.timer:Async(function()
+        if _BBOT then
+            BBOT.notification:Create("There was an already active version of bbot running, this has been unloaded")
+        end
+        BBOT.notification:Create(string.format("Done loading the " .. BBOT.game .. " cheat. (%d ms)", loadtime*1000))
+        BBOT.notification:Create("Press DELETE to open and close the menu!")
+        if BBOT.username == "dev" then
+            BBOT.notification:Create("So what are we doin today? mr.dev")
+        end
+    end)
+end
+end
+
+local ran, err = xpcall(ISOLATION, debug.traceback, BBOT)
+if not ran then
+    BBOT.log(LOG_ERROR, "Error loading Bitch Bot -", err)
+end
