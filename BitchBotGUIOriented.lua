@@ -1615,16 +1615,27 @@ do
             self.absolutesize = size
             self:PerformLayout(self.absolutepos, size)
 
-            self._enabled = (self.parent and (not self.parent._enabled and false or self.enabled) or self.enabled)
-            self._transparency = (self.parent and self.parent._transparency * self.transparency or self.transparency)
-            self._zindex = (self.parent and self.parent._zindex + self.zindex or self.zindex) + (self.focused and 10000 or 0)
+            if self.parent then
+                if not self.parent._enabled then
+                    self._enabled = false
+                else
+                    self._enabled = self.enabled
+                end
+                self._transparency = self.parent._transparency * self.transparency
+                self._zindex = self.parent._zindex + self.zindex + (self.focused and 10000 or 0)
+            else
+                self._enabled = self.enabled
+                self._transparency = self.transparency
+                self._zindex = self.zindex + (self.focused and 10000 or 0)
+            end
+
             local cache = self.objects
             for i=1, #cache do
                 local v = cache[i]
                 if v[1] and draw:IsValid(v[1]) then
                     local drawing = v[1]
-                    drawing.ZIndex = self._zindex
                     drawing.Transparency = v[2] * self._transparency
+                    drawing.ZIndex = v[3] + self._zindex
                 end
             end
 
@@ -1697,11 +1708,12 @@ do
                 local v = objects[i]
                 if v[1] == object then
                     v[2] = object.Transparency
+                    v[3] = 0
                     return object
                 end
             end
-            self.objects[#self.objects+1] = {object, object.Transparency}
-            object.ZIndex = self._zindex
+            self.objects[#self.objects+1] = {object, object.Transparency, 0}
+            object.ZIndex = 0 + self._zindex
             return object
         end
         function base:Destroy()
@@ -1823,6 +1835,12 @@ do
         return struct
     end
 
+    function gui:IsValid(object)
+        if object and not object.__INVALID then
+            return true
+        end
+    end
+
     do
         local a = draw:TextOutlined("", 2, 0, 0, 14, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0), 1, false)
         function gui:GetTextSize(content, font, size)
@@ -1914,12 +1932,44 @@ do
         end
     end
 
+    do
+        local function step(data, fraction)
+            local diff = data.target - data.origin
+            data.object:SetTransparency(data.origin + (diff * fraction))
+        end
+
+        function gui:TransparencyTo(object, transparency, length, delay, ease, callback)
+            for i=1, #ScheduledObjects do
+                local v = ScheduledObjects[i]
+                if v.type == "TransparencyTo" and v.object == object then
+                    table.remove(ScheduledObjects, i)
+                    break
+                end
+            end
+
+            ScheduledObjects[#ScheduledObjects+1] = {
+                object = object,
+                type = "TransparencyTo",
+
+                starttime = tick()+delay,
+                endtime = tick()+delay+length,
+
+                origin = object:GetTransparency(),
+                target = transparency,
+
+                ease = ease or 1,
+                callback = callback,
+                step = step
+            }
+        end
+    end
+
     hook:Add("RenderStep.First", "BBOT:GUI.Animation", function()
         local c = 0
         for a = 1, #ScheduledObjects do
             local i = a-c
             local data = ScheduledObjects[i]
-            if not data.object then
+            if not data.object or not gui:IsValid(data.object) then
                 table.remove(ScheduledObjects, i)
                 c = c + 1
             elseif tick() >= data.starttime then
@@ -1954,13 +2004,22 @@ do
         return mouse.X > object.absolutepos.X and mouse.X < object.absolutepos.X + object.absolutesize.X and mouse.Y > object.absolutepos.Y - 36 and mouse.Y < object.absolutepos.Y + object.absolutesize.Y - 36
     end
 
+    local ishoveringuniversal
+    function gui:IsHoveringAnObject()
+        return ishoveringuniversal
+    end
+
     hook:Add("RenderStepped", "BBOT:GUI.Hovering", function()
+        ishoveringuniversal = nil
         local reg = gui.registry
         local inhover = {}
         for i=1, #reg do
             local v = reg[i]
-            if v.mouseinputs and gui:IsHovering(v) then
-                inhover[#inhover+1] = v
+            if v._enabled and v.class ~= "Mouse" and gui:IsHovering(v) then
+                if v.mouseinputs then
+                    inhover[#inhover+1] = v
+                end
+                ishoveringuniversal = true
             end
         end
         
@@ -2388,11 +2447,22 @@ do
         local mouse = BBOT.service:GetService("Mouse")
         function GUI:Step()
             -- Step is equivilant to RenderStepped
-            self.pos = UDim2.new(0, mouse.X, 0, mouse.Y)
-            inputservce.MouseIconEnabled = not self._enabled
+            local ishoverobj = gui:IsHoveringAnObject()
+            if ishoverobj ~= self.ishoverobject then
+                if ishoverobj then
+                    self:SetTransparency(1)
+                else
+                    self:SetTransparency(0)
+                end
+                self.ishoverobject = ishoverobj
+            end
 
-            -- Calling calculate will call performlayout & calculate parented GUI objects
-            self:Calculate()
+            if ishoverobj then
+                self.pos = UDim2.new(0, mouse.X, 0, mouse.Y)
+                inputservce.MouseIconEnabled = not self._enabled
+                -- Calling calculate will call performlayout & calculate parented GUI objects
+                self:Calculate()
+            end
         end
 
         -- Register this as a generatable object
@@ -2596,9 +2666,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.text = self:Cache(draw:TextOutlined("", 2, 0, 0, 14, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
+            self.text = self:Cache(draw:TextOutlined("", 2, 0, 0, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
             self.content = ""
-            self.textsize = 16
+            self.textsize = 13
             self.font = 2
             self.mouseinputs = false
 
@@ -2655,28 +2725,27 @@ do
 
         function GUI:PerformLayout(pos, size)
             self.text.Position = pos + self.offset
-            --[[local x = self:GetTextSize(self.content)
+            local x = self:GetTextSize(self.content)
             local pos = self:GetLocalTranslation()
             local size = self.parent.absolutesize
-            if x - pos.X > size.X then
-                local text = ""
-                for i=1, #self.content do
-                    local v = string.sub(self.content, i, i)
-                    local pretext = text .. v
-                    local prex = self:GetTextSize(pretext)
-                    if prex - pos.X > size.X then
-                        break 
-                    end
-                    text = pretext 
+            local text = ""
+            for i=1, #self.content do
+                local v = string.sub(self.content, i, i)
+                local pretext = text .. v
+                local prex = self:GetTextSize(pretext)
+                if prex - pos.X + self.offset.X > size.X then
+                    break 
                 end
-                self.text.Text = text
-            end]]
+                text = pretext 
+            end
+            self.text.Text = text
         end
 
         function GUI:GetTextSize(text)
             text = text or self.content
             local vec = gui:GetTextSize(text, self.font, self.textsize)
-            return vec.X, vec.Y
+            local scale = gui:GetTextSize(" ", self.font, self.textsize)
+            return vec.X + scale.X, vec.Y
         end
 
         function GUI:GetTextScale()
@@ -2851,7 +2920,7 @@ do
 
         function GUI:DetermineFittable()
             local w = self:GetTextScale()
-            return math.round((self.absolutesize.X-w)/w)
+            return math.round(self.absolutesize.X/w)
         end
 
         local inputservice = BBOT.service:GetService("UserInputService")
@@ -3161,15 +3230,16 @@ do
             self.text:SetTextAlignmentX(Enum.TextXAlignment.Center)
             self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
             self.text:SetText("")
+            self.text:SetTextSize(13)
 
             local darken = gui:Create("Container", self)
             darken:SetPos(0,0,0,0)
             darken:SetSize(1,0,1,2)
-            darken:SetZIndex(0)
             darken.background.Visible = true
-            darken.background.Transparency = .25
+            darken.background.Transparency = 1
             darken.background.Color = Color3.new(0,0,0)
             darken:Cache(darken.background)
+            darken:SetTransparency(.25)
             self.darken = darken
         end
 
@@ -3182,7 +3252,7 @@ do
 
         function GUI:SetActive(value)
             self.activated = value
-            self.darken.background.Visible = not value
+            gui:TransparencyTo(self.darken, (value and 0 or .25), 0.3, 0, 0.25)
             self:Calculate()
         end
 
@@ -3230,11 +3300,16 @@ do
             local tablist = gui:Create("Container", self)
             tablist:SetPos(0,0,0,2)
             tablist:SetSize(1,0,0,36-2)
-            tablist.background.Visible = true
-            tablist.background.Transparency = .25
-            tablist.background.Color = Color3.new(0,0,0)
-            tablist:Cache(tablist.background)
             self.tablist = tablist
+
+            local background = gui:Create("Container", tablist)
+            background:SetPos(0,0,0,0)
+            background:SetSize(1,0,1,0)
+            background:SetZIndex(0)
+            background.background.Visible = true
+            background.background.Transparency = .25
+            background.background.Color = Color3.new(0,0,0)
+            background:Cache(background.background)
 
             local line = gui:Create("Container", tablist)
             line:SetPos(0,0,1,-2)
@@ -3281,12 +3356,12 @@ do
             local active = self:GetActive()
             if active then
                 active[1]:SetActive(false)
-                active[2]:SetTransparency(0)
+                gui:TransparencyTo(active[2], 0, 0.3, 0, 0.25)
                 active[2]:SetEnabled(false)
             end
             new[1]:SetActive(true)
             new[2]:SetEnabled(true)
-            new[2]:SetTransparency(1)
+            gui:TransparencyTo(new[2], 1, 0.3, 0, 0.25)
             self.activeId = num
         end
 
@@ -3297,7 +3372,7 @@ do
             for i=1, l do
                 local v = r[i]
                 if self.scalebycontent then
-                    local sizex = v[1].text:GetTextSize() + 1
+                    local sizex = v[1].text:GetTextSize() + 6
                     v[1]:SetSize(0,sizex,1,-3)
                     v[1]:SetPos(0,x,0,0)
                     x += sizex
@@ -3407,12 +3482,52 @@ do
             self.bar = gui:Create("AstheticLine", self)
             self.bar.asthetic_line_dark.Visible = false
             self.bar:SetSize(0,0,1,0)
-            self.percentage = 0.25
+            self.percentage = 0
+
+            self.gradient = gui:Create("Gradient", self)
+            self.gradient:SetPos(0, 0, 0, 0)
+            self.gradient:SetSize(1, 0, 0, 8)
+            self.gradient:SetTransparency(0.5)
+            self.gradient:Generate()
+        end
+
+        function GUI:SetPercentage(perc)
+            self.percentage = perc
+            self:Calculate()
+        end
+
+        function GUI:PerformLayout(pos, size)
+            self.background.Position = pos
+            self.background.Size = size
+            self.background_outline.Position = pos
+            self.background_outline.Size = size
+            self.bar:SetSize(self.percentage, 0, 1, 0)
+        end
+
+        gui:Register(GUI, "ProgressBar")
+    end
+
+    do
+        local GUI = {}
+
+        function GUI:Init()
+            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 4, Color3.fromRGB(20, 20, 20)))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+
+            self.bar = gui:Create("AstheticLine", self)
+            self.bar.asthetic_line_dark.Visible = false
+            self.bar:SetSize(0,0,1,0)
+            self.percentage = 0
 
             --[[self.gradient = gui:Create("Gradient", self)
             self.gradient:SetPos(0, 0, 0, 0)
             self.gradient:SetSize(1, 0, 0, 8)
             self.gradient:Generate()]]
+        end
+
+        function GUI:SetPercentage(perc)
+            self.percentage = perc
+            self:Calculate()
         end
 
         function GUI:PerformLayout(pos, size)
@@ -3640,6 +3755,7 @@ do
                     frame.alias = alias
                     alias:SetPos(0, 2, 0, 2)
                     alias:SetText(name)
+                    alias:SetTextSize(13)
 
                     subcontainer = gui:Create("Container", frame)
                     frame.subcontainer = subcontainer
@@ -3655,25 +3771,6 @@ do
     end
 
     function menu:Initialize()
-        local toolbar = gui:Create("Panel")
-        self.toolbar = toolbar
-        toolbar:AstheticLineAlignment("Bottom")
-        toolbar:SetSize(1, 0, 0, 0)
-        toolbar:SetZIndex(10000)
-        gui:SizeTo(toolbar, UDim2.new(1, 0, 0, 34), 0.775, 0, 0.25)
-
-        local image = gui:Create("Image", toolbar)
-        image:SetImage(menu.images[8])
-        image:SetPos(0, 2, 0, 0)
-        image:SetSize(1, -2, 1, -2)
-        image:SetSizeConstraint("Y")
-
-        local client_info = gui:Create("Text", toolbar)
-        toolbar.client_info = toolbar
-        client_info:SetPos(0, 34 + 8, .5, -2)
-        client_info:SetTextAlignmentY(Enum.TextYAlignment.Center)
-        client_info:SetText("Bitch Bot | " .. BBOT.username .. " | " .. os.date("%b. %d, %Y") .. " | Ver " .. BBOT.version)
-
         local intro = gui:Create("Panel")
         intro:SetSize(0, 0, 0, 0)
         intro:Center()
@@ -3689,6 +3786,7 @@ do
             gui:SizeTo(intro, UDim2.new(0, self.fw, 0, self.fh), 0.775, 0, 0.25, function()
                 gui:SizeTo(intro, UDim2.new(0, 0, 0, 0), 0.775, 0.5, 0.25, function()
                     image:Remove()
+                    intro:Remove()
                     hook:Call("Menu.PreGenerate")
                     hook:Call("Menu.Generate")
                     hook:Call("Menu.PostGenerate")
@@ -3699,11 +3797,6 @@ do
                 gui:MoveTo( intro, UDim2.new(.5, 0, .5, 0), 0.775, 0.5, 0.25)
             end)
         end
-
-        hook:Add("Menu.PostGenerate", "BBOT:Menu.Mouse", function()
-            self.mouse = gui:Create("Mouse")
-            self.mouse:SetVisible(true)
-        end)
     end
 
     --[[{
@@ -3714,8 +3807,13 @@ do
         center = true,
     },]]
 
+    local main = gui:Create("Container")
+    menu.main = main
+    main:SetTransparency(0)
+    main:SetSize(1,0,1,0)
+
     function menu:Create(configuration)
-        local frame = gui:Create("Panel")
+        local frame = gui:Create("Panel", main)
         frame.Id = configuration.Id
         if configuration.pos then
             frame:SetPos(configuration.pos)
@@ -3744,7 +3842,16 @@ do
         return frame
     end
 
-    hook:Add("Menu.Generate", "BBOT:Menu.Main", function(frame)
+    hook:Add("InputBegan", "BBOT:Menu.Toggle", function(input)
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            if input.KeyCode == Enum.KeyCode.Delete then
+                main:SetEnabled(not main:GetEnabled())
+                gui:TransparencyTo(main, (main:GetEnabled() and 1 or 0), 0.4, 0, 0.25)
+            end
+        end
+    end)
+
+    hook:Add("Menu.Generate", "BBOT:Menu.Main", function()
 
         local setup_parameters = BBOT.configuration
         for i=1, #setup_parameters do
@@ -3752,9 +3859,39 @@ do
         end
     end)
 
+    hook:Add("Menu.PostGenerate", "BBOT:Menu.Main", function()
+        gui:TransparencyTo(main, 1, 0.4, 0, 0.25)
+    end)
+
     hook:Add("Initialize", "BBOT:Menu", function()
         menu:Initialize()
     end)
+
+    menu.mouse = gui:Create("Mouse")
+    menu.mouse:SetVisible(true)
+
+    local infobar = gui:Create("Panel")
+    menu.infobar = infobar
+    infobar:AstheticLineAlignment("Top")
+    infobar:SetSize(0, 0, 0, 20)
+    infobar:SetZIndex(120000)
+
+    local image = gui:Create("Image", infobar)
+    image:SetImage(menu.images[8])
+    image:SetPos(0, 2, 0, 1)
+    image:SetSize(1, 0, 1, 0)
+    image:SetSizeConstraint("Y")
+
+    local client_info = gui:Create("Text", infobar)
+    infobar.client_info = infobar
+    client_info:SetPos(0, 20 + 8, .5, 1)
+    client_info:SetTextAlignmentY(Enum.TextYAlignment.Center)
+    client_info:SetText("Bitch Bot | " .. BBOT.username .. " | " .. os.date("%b. %d, %Y") .. " | Ver " .. BBOT.version)
+    client_info:SetTextSize(13)
+
+    local sizex = client_info:GetTextSize()
+    infobar:SetPos(0, 50, 0, 8)
+    gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 4, 0, 20), 0.775, 0, 0.25)
 end
 
 --! POST LIBRARIES !--
@@ -3764,6 +3901,8 @@ end
 do
     local thread = BBOT.thread
     local hook = BBOT.hook
+    local menu = BBOT.menu
+    local gui = BBOT.gui
     local NetworkClient = BBOT.service:GetService("NetworkClient")
     if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459 then
         BBOT.game = "pf"
@@ -3792,7 +3931,7 @@ do
         makefolder("bitchbot/" .. BBOT.game)
     end
 
-	do
+	--[[do
 		local net
 
 		repeat
@@ -3821,9 +3960,107 @@ do
 		if annoyingFuckingMusic then
 			annoyingFuckingMusic:Destroy()
 		end
-	end -- wait for framwork to load
+	end -- wait for framwork to load]]
+
+    BBOT.log(LOG_NORMAL, "Waiting for Phantom Forces...")
+
+    local loading
+    function BBOT:SetLoadingText(txt)
+        if loading then
+            loading.msg:SetText(txt)
+            local w, h = loading.msg:GetTextSize()
+            w = w + 20
+            h = h + 60
+            if w < 270 then
+                w = 270
+            end
+            gui:SizeTo(loading, UDim2.new(0, w, 0, h), 0.775, 0, 0.25)
+            gui:MoveTo(loading, UDim2.new(.5, -w/2, .5, -h/2), 0.775, 0, 0.25)
+        end
+    end
+
+    function BBOT:SetLoadingProgressBar(perc)
+        if loading then
+            loading.progress:SetPercentage(perc/100)
+        end
+    end
+
+    function BBOT:SetLoadingStatus(txt, perc)
+        if not loading then return end
+        if txt then self:SetLoadingText(txt) end
+        if perc then self:SetLoadingProgressBar(perc) end
+        wait()
+    end
+
+    if menu and gui then
+        loading = gui:Create("Panel")
+        loading:Center()
+
+        local message = gui:Create("Text", loading)
+        loading.msg = message
+        message:SetPos(.5, 0, .5, -20)
+        message:SetTextAlignmentX(Enum.TextXAlignment.Center)
+        message:SetTextAlignmentY(Enum.TextYAlignment.Center)
+        message:SetText("Waiting for Phantom Forces...")
+        local w, h = message:GetTextSize()
+
+        local progress = gui:Create("ProgressBar", loading)
+        loading.progress = progress
+        progress:SetPos(0, 10, .5, 10)
+        progress:SetSize(1, -20, 0, 10)
+
+        w = w + 20
+        h = h + 50
+
+        if w < 270 then
+            w = 270
+        end
+
+        gui:SizeTo(loading, UDim2.new(0, w, 0, h), 0.775, 0, 0.25)
+        gui:MoveTo(loading, UDim2.new(.5, -w/2, .5, -h/2), 0.775, 0, 0.25)
+    end
+
+    BBOT:SetLoadingStatus(nil, 5)
+
+    hook:Add("PreInitialize", "PreInitialize", function()
+        BBOT:SetLoadingStatus("Pre-Initializing...", 65)
+    end)
+    
+    hook:Add("Initialize", "Initialize", function()
+        BBOT:SetLoadingStatus("Initializing...", 80)
+    end)
+
+    hook:Add("PostInitialize", "PostInitialize", function()
+        BBOT:SetLoadingStatus("Post-Setups...", 100)
+        if loading then
+            loading:Remove()
+            loading = nil
+        end
+    end)
+
+    local waited = 0
+    while true do
+        if game:IsLoaded() then
+            local lp = game:GetService("Players").LocalPlayer;
+            local chatgame = lp.PlayerGui:FindFirstChild("ChatGame")
+            if chatgame then
+                local version = chatgame:FindFirstChild("Version")
+                if version and not string.find(version.Text, "loading", 1, true) then
+                    wait(1)
+                    break
+                end
+            end
+        end;
+        waited = waited + 1
+        if waited > 6 then
+            BBOT.log(LOG_NORMAL, "Well... This is taking awhile isn't it?")
+            BBOT:SetLoadingStatus("What the hell is taking so long?")
+        end
+        wait(5)
+    end;
 
     hook:Add("PreInitialize", "BBOT:SetupConfigurationScheme", function()
+    
         local menu = BBOT.menu
         local config = BBOT.config
         if BBOT.game == "pf" then
@@ -4740,6 +4977,7 @@ end
 -- The cheat from having a colossal error
 do
     if BBOT.game ~= "pf" then return end
+    BBOT:SetLoadingStatus("Loading Auxillary...", 20)
     local math = BBOT.math
     local table = BBOT.table
     local hook = BBOT.hook
@@ -5089,6 +5327,7 @@ do
 
     local dt = tick() - profiling_tick
     BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
+    BBOT:SetLoadingStatus(nil, 50)
 end
 
 -- Chat, allows for chat manipulations, or just being a dick with the chat spammer (Conversion In Progress)
