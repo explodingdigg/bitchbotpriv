@@ -502,6 +502,11 @@ do
     function color.add(col, num)
 		return Color3.new(col.R + num, col.G + num, col.B + num)
 	end
+
+    function color.darkness(col, scale)
+        local h, s, v = Color3.toHSV(col)
+        return Color3.fromHSV(h, s, v*scale)
+    end
 end
 
 -- Vector
@@ -1542,6 +1547,12 @@ do
         classes = {}
     }
     BBOT.gui = gui
+
+    if BBOT.username == "dev" then
+        gui.drawing_debugger = draw:BoxOutline(0, 0, 0, 0, 1, Color3.fromRGB(0, 255, 255))
+        gui.drawing_debugger.Visible = false
+        gui.drawing_debugger.ZIndex = 2000000
+    end
     
     do
         local base = {}
@@ -1608,13 +1619,34 @@ do
             return Vector2.new(X, Y), Vector2.new(W, H)
         end
 
-        function base:Calculate()
+        function base:InvalidateLayout(recursive, force)
             local ppos = (self.parent and self.parent.absolutepos or Vector2.new())
             local pos, size = self:GetLocalTranslation()
-            self.absolutepos = pos + ppos
-            self.absolutesize = size
-            self:PerformLayout(self.absolutepos, size)
+            local a = pos + ppos
+            local set
+            if not recursive or force or (self.absolutepos ~= a or self.absolutesize ~= size) then
+                self.absolutepos = a
+                self.absolutesize = size
+                self:PerformLayout(a, size)
+                if recursive then set = true end
+            end
+            if set then
+                local children = self.children
+                for i=1, #children do
+                    local v = children[i]
+                    if gui:IsValid(v) and (force or v._enabled) then
+                        v:InvalidateLayout(true, true)
+                    end
+                end
+            end
+        end
 
+        function base:Calculate()
+            if self._enabled and gui:IsValid(self) then
+                self:InvalidateLayout()
+            end
+
+            local last_trans, last_zind = self._transparency, self._zindex
             if self.parent then
                 if not self.parent._enabled then
                     self._enabled = false
@@ -1629,13 +1661,15 @@ do
                 self._zindex = self.zindex + (self.focused and 10000 or 0)
             end
 
-            local cache = self.objects
-            for i=1, #cache do
-                local v = cache[i]
-                if v[1] and draw:IsValid(v[1]) then
-                    local drawing = v[1]
-                    drawing.Transparency = v[2] * self._transparency
-                    drawing.ZIndex = v[3] + self._zindex
+            if last_trans ~= self._transparency or last_zind ~= self.zindex then
+                local cache = self.objects
+                for i=1, #cache do
+                    local v = cache[i]
+                    if v[1] and draw:IsValid(v[1]) then
+                        local drawing = v[1]
+                        drawing.Transparency = v[2] * self._transparency
+                        drawing.ZIndex = v[3] + self._zindex
+                    end
                 end
             end
 
@@ -1646,6 +1680,9 @@ do
                     v:Calculate()
                 end
             end
+
+            self._absolutepos = self.absolutepos
+            self._absolutesize = self.absolutesize
         end
 
         function base:SetParent(object)
@@ -1693,11 +1730,7 @@ do
         function base:OnMouseEnter() end
         function base:OnMouseExit() end
 
-        function base:_Step() end
-
-        function base:PreStep() end
         function base:Step() end
-        function base:PostStep() end
         function base:PreRemove() end
         function base:PostRemove() end
         function base:PreDestroy() end
@@ -1734,11 +1767,12 @@ do
             self:PreRemove()
             self:Destroy()
             local reg = gui.registry
+            local c = 0
             for i=1, #reg do
-                local v = reg[i]
+                local v = reg[i-c]
                 if v.uid == self.uid then
-                    table.remove(reg, i)
-                    break
+                    table.remove(reg, i-c)
+                    c = c + 1
                 end
             end
             local children = self.children
@@ -2015,7 +2049,7 @@ do
         local inhover = {}
         for i=1, #reg do
             local v = reg[i]
-            if v._enabled and v.class ~= "Mouse" and gui:IsHovering(v) then
+            if gui:IsValid(v) and v._enabled and v.class ~= "Mouse" and gui:IsHovering(v) then
                 if v.mouseinputs then
                     inhover[#inhover+1] = v
                 end
@@ -2026,6 +2060,17 @@ do
         table.sort(inhover, function(a, b) return a._zindex > b._zindex end)
 
         local result = inhover[1]
+
+        if gui.drawing_debugger then
+            if result then
+                gui.drawing_debugger.Visible = true
+                gui.drawing_debugger.Position = result.absolutepos
+                gui.drawing_debugger.Size = result.absolutesize
+            else
+                gui.drawing_debugger.Visible = false
+            end
+        end
+
         if result ~= gui.hovering then
             if gui.hovering then
                 gui.hovering.ishovering = false
@@ -2047,7 +2092,7 @@ do
         local reg = gui.registry
         for i=1, #reg do
             local v = reg[i]
-            if v._enabled then
+            if gui:IsValid(v) and v._enabled and not v.parent then
                 v:Calculate()
             end
         end
@@ -2057,16 +2102,9 @@ do
         local reg = gui.registry
         for i=1, #reg do
             local v = reg[i]
-            if v._enabled then
-                v:_Step()
-                if v.PreStep then
-                    v:PreStep()
-                end
+            if gui:IsValid(v) and v._enabled then
                 if v.Step then
                     v:Step()
-                end
-                if v.PostStep then
-                    v:PostStep()
                 end
             end
         end
@@ -2076,7 +2114,7 @@ do
         local reg = gui.registry
         for i=1, #reg do
             local v = reg[i]
-            if v._enabled then
+            if gui:IsValid(v) and v._enabled then
                 if v.InputBegan then
                     v:InputBegan(input)
                 end
@@ -2088,7 +2126,7 @@ do
         local reg = gui.registry
         for i=1, #reg do
             local v = reg[i]
-            if v._enabled then
+            if gui:IsValid(v) and v._enabled then
                 if v.InputEnded then
                     v:InputEnded(input)
                 end
@@ -2344,12 +2382,14 @@ do
     local hook = BBOT.hook
     local gui = BBOT.gui
     local color = BBOT.color
+    local math = BBOT.math
     local table = BBOT.table
     local timer = BBOT.timer
     local thread = BBOT.thread
     local draw = BBOT.draw
     local log = BBOT.log
     local config = BBOT.config
+    local userinputservice = BBOT.service:GetService("UserInputService")
 
     local menu = {}
     BBOT.menu = menu
@@ -2406,7 +2446,6 @@ do
             end
         end
     
-        local inputservce = BBOT.service:GetService("UserInputService")
         function GUI:SetVisible(bool)
             -- Do we want the mouse to be visible?
             self:SetEnabled(bool)
@@ -2418,7 +2457,7 @@ do
             self.mouse_mode = mode
             self:Destroy()
             self:SetupMouse()
-            self:Calculate()
+            self:InvalidateLayout()
         end
 
         do
@@ -2459,7 +2498,7 @@ do
 
             if ishoverobj then
                 self.pos = UDim2.new(0, mouse.X, 0, mouse.Y)
-                inputservce.MouseIconEnabled = not self._enabled
+                userinputservice.MouseIconEnabled = not self._enabled
                 -- Calling calculate will call performlayout & calculate parented GUI objects
                 self:Calculate()
             end
@@ -2621,9 +2660,14 @@ do
             self.mouseinputs = false
         end
 
-        function GUI:Color(startc, endc)
+        function GUI:SetColor(startc, endc)
             self.color1 = startc
             self.color2 = endc
+            local container = self.container
+            for i=1, #container do
+                local v = container[i]
+                v.Color = color.range(i, {{start = 0, color = self.color1}, {start = self.absolutesize.Y-1, color = self.color2}})
+            end
         end
 
         function GUI:Generate()
@@ -2632,11 +2676,11 @@ do
             end
             for i = 0, self.absolutesize.Y-1 do
                 local object = self:Cache(draw:Box(0, i, self.absolutesize.X, 1, 0, self.color1))
-                object.Color = color.range(i, {{start = 0, color = self.color1}, {start = 20, color = self.color2}})
+                object.Color = color.range(i, {{start = 0, color = self.color1}, {start = self.absolutesize.Y-1, color = self.color2}})
                 self.container[#self.container+1] = object
             end
             self.rendersize = self.absolutesize.Y
-            self:Calculate()
+            self:InvalidateLayout()
         end
 
         function GUI:PreDestroy()
@@ -2679,30 +2723,39 @@ do
 
         function GUI:SetTextAlignmentX(align)
             self.textalignmentx = align
+            self:InvalidateLayout()
         end
 
         function GUI:SetTextAlignmentY(align)
             self.textalignmenty = align
+            self:InvalidateLayout()
         end
 
         function GUI:SetFont(font)
             self.text.Font = font
             self.font = font
+            self:InvalidateLayout()
         end
 
         function GUI:GetText()
             return self.content
         end
 
+        function GUI:SetColor(col)
+            self.text.Color = col
+        end
+
         function GUI:SetText(txt)
             self.text.Text = txt
             self.content = txt
             self:GetOffsets()
+            self:InvalidateLayout()
         end
 
         function GUI:SetTextSize(size)
             self.text.Size = size
             self.textsize = size
+            self:InvalidateLayout()
         end
 
         function GUI:GetOffsets()
@@ -2728,15 +2781,18 @@ do
             local x = self:GetTextSize(self.content)
             local pos = self:GetLocalTranslation()
             local size = self.parent.absolutesize
-            local text = ""
-            for i=1, #self.content do
-                local v = string.sub(self.content, i, i)
-                local pretext = text .. v
-                local prex = self:GetTextSize(pretext)
-                if prex - pos.X + self.offset.X > size.X then
-                    break 
+            local text = self.content
+            if x - pos.X + self.offset.X >= size.X then
+                text = ""
+                for i=1, #self.content do
+                    local v = string.sub(self.content, i, i)
+                    local pretext = text .. v
+                    local prex = self:GetTextSize(pretext)
+                    if prex - pos.X + self.offset.X > size.X then
+                        break 
+                    end
+                    text = pretext 
                 end
-                text = pretext 
             end
             self.text.Text = text
         end
@@ -2789,8 +2845,8 @@ do
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
 
             --[[self.gradient = gui:Create("Gradient", self)
-            self.gradient:SetPos(0, 2, 0, 2)
-            self.gradient:SetSize(1, -4, 0, 20)
+            self.gradient:SetPos(0, 2, 0, 0)
+            self.gradient:SetSize(1, -4, 0, 10)
             self.gradient:SetZIndex(0)
             self.gradient:Generate()]]
 
@@ -2831,18 +2887,20 @@ do
         function GUI:AutoTruncate()
             local position = self.content_position
             local pos, size = self:GetLocalTranslation()
-            local scalew = self:GetTextSize(string.sub(self.content, 1, position-1))
-            local text = ""
-            for i=position, #self.content do
-                local v = string.sub(self.content, i, i)
-                local pretext = text .. v
-                local prew = self:GetTextSize(pretext)
-                if prew > size.X then
-                    break 
+            local scalew = self:GetTextSize()
+            if scalew >= size.X then
+                local text = ""
+                for i=position, #self.content do
+                    local v = string.sub(self.content, i, i)
+                    local pretext = text .. v
+                    local prew = self:GetTextSize(pretext)
+                    if prew > size.X then
+                        return text, position
+                    end
+                    text = pretext 
                 end
-                text = pretext 
             end
-            return text, position
+            return string.sub(self.content, position), position
         end
 
         function GUI:DetermineTextCursorPosition(X)
@@ -2856,11 +2914,11 @@ do
                 max = max + 3
 
                 if X >= min and X <= max then
-                    return offset + i
+                    return offset + i - 1
                 end
                 pre = post
             end
-            return offset + #text
+            return offset + #text - 1
         end
 
         function GUI:PerformLayout(pos, size)
@@ -2872,7 +2930,7 @@ do
             self:ProcessClipping()
         end
 
-        function GUI:OnTextChanged(old, new)
+        function GUI:OnChanged(old, new)
 
         end
 
@@ -2885,12 +2943,6 @@ do
                 self.cursor_outline.Transparency = 0
                 self:Cache(self.cursor);self:Cache(self.cursor_outline);
             end
-        end
-
-        function GUI:OnMouseEnter(x, y)
-        end
-
-        function GUI:OnMouseExit(x, y)
         end
 
         local inputservice = BBOT.service:GetService("UserInputService")
@@ -2923,7 +2975,6 @@ do
             return math.round(self.absolutesize.X/w)
         end
 
-        local inputservice = BBOT.service:GetService("UserInputService")
         function GUI:InputBegan(input)
             if not self.editable or not self._enabled then return end
             if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
@@ -2960,7 +3011,7 @@ do
                             self.input_repeater_start = tick() + .5
                             self.input_repeater_key = input.KeyCode
                             self:SetText(new_text)
-                            self:OnTextChanged(original_text, new_text)
+                            self:OnChanged(original_text, new_text)
                             self.cursor_position = #ltext
                         end
                     end
@@ -2969,7 +3020,7 @@ do
                     if self.cursor_position < 4 then
                         self.content_position = 1
                     elseif self.cursor_position > self.content_position-1 + fittable then
-                        self.content_position = self.cursor_position+1 - fittable
+                        self.content_position = self.cursor_position - fittable
                     elseif self.cursor_position-3 < self.content_position-1 then
                         self.content_position = self.cursor_position+1-3
                     end
@@ -3017,7 +3068,7 @@ do
                             local new_text, success, ltext = self:ProcessInput(current_text, self.input_repeater_key)
                             if success then
                                 self:SetText(new_text)
-                                self:OnTextChanged(original_text, new_text)
+                                self:OnChanged(original_text, new_text)
                                 self.cursor_position = #ltext
                             end
                         end
@@ -3025,7 +3076,7 @@ do
                         if self.cursor_position < 4 then
                             self.content_position = 1
                         elseif self.cursor_position > self.content_position-1 + fittable then
-                            self.content_position = self.cursor_position+1 - fittable
+                            self.content_position = self.cursor_position - fittable
                         elseif self.cursor_position-3 < self.content_position-1 then
                             self.content_position = self.cursor_position+1-3
                         end
@@ -3045,41 +3096,155 @@ do
         local GUI = {}
 
         function GUI:Init()
+            self.text = gui:Create("Text", self)
+            self.text:SetTextAlignmentX(Enum.TextXAlignment.Left)
+            self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            self.text:SetPos(0, 0, .5, 0)
+            self.mouseinput = true
+        end
+
+        function GUI:PerformLayout(pos, size)
+        end
+
+        function GUI:SetText(txt)
+            self.text:SetText(txt)
+        end
+
+        function GUI:SetTextAlignmentX(txt)
+            self.text:SetTextAlignmentX(txt)
+        end
+
+        function GUI:SetTextAlignmentY(txt)
+            self.text:SetTextAlignmentY(txt)
+        end
+
+        function GUI:SetTextColor(col)
+            self.text:SetColor(col)
+        end
+
+        function GUI:OnClick() end
+
+        function GUI:InputBegan(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+                self:OnClick()
+            end
+        end
+
+        gui:Register(GUI, "TextButton", "Text")
+
+        local GUI = {}
+
+        function GUI:Init()
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
+
+            self.options = {}
+            self.buttons = {}
+            self.Id = 0
+        end
+
+        function GUI:PerformLayout(pos, size)
+            self.background_outline.Position = pos
+            self.background.Position = pos
+            self.background_outline.Size = size
+            self.background.Size = size
+        end
+
+        function GUI:SetOptions(options)
+            for i=1, #self.buttons do
+                local v = self.buttons[i]
+                v:Remove()
+            end
+            local offset = 0
+            self.options = options
+            for i=1, #options do
+                local v = options[i]
+                local button = gui:Create("TextButton", self)
+                self.buttons[#self.buttons+1] = button
+                local _, scaley = button.text:GetTextSize(v)
+                button:SetPos(0, 5, 0, 4 + (scaley+4) * (i-1))
+                button:SetSize(1, -5, 0, scaley)
+                offset = 4 + (scaley+4) * i
+                button:SetText(v)
+                function button.OnClick()
+                    self.parent:SetOption(i)
+                    self.parent:OnSelect(i)
+                    self.parent:Close()
+                end
+            end
+
+            self:SetSize(1, 0, 0, offset)
+        end
+
+        function GUI:IsHoverTotal()
+            if self:IsHovering() then return true end
+            local buttons = self.buttons
+            for i=1, #buttons do
+                if buttons[i]:IsHovering() then return true end
+            end
+        end
+
+        function GUI:SetOption(Id)
+            self.Id = Id
+            local button = self.buttons[Id]
+            if not button then return end
+            button:SetTextColor(Color3.fromRGB(127, 72, 163))
+        end
+
+        gui:Register(GUI, "DropBoxSelection")
+
+        local GUI = {}
+
+        function GUI:Init()
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
 
             self.gradient = gui:Create("Gradient", self)
-            self.gradient:SetPos(0, 2, 0, 2)
-            self.gradient:SetSize(1, -4, 0, 20)
+            self.gradient:SetPos(0, 2, 0, 1)
+            self.gradient:SetSize(1, -4, 0, 10)
             self.gradient:Generate()
 
-            self.text = self:Cache(draw:TextOutlined("", 2, 3, 3, 16, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
-            self.textsize = 16
-            self.font = 2
+            local text = gui:Create("Text", self)
+            self.text = text
+            text:SetPos(0, 6, .5, 0)
+            text:SetTextAlignmentX(Enum.TextXAlignment.Left)
+            text:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            text:SetText("")
 
-            self.dropicon = self:Cache(draw:TextOutlined("-", 2, 3, 3, 16, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
+            local dropicon = gui:Create("Text", self)
+            self.dropicon = dropicon
+            dropicon:SetPos(1, -10, .5, 0)
+            dropicon:SetTextAlignmentX(Enum.TextXAlignment.Center)
+            dropicon:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            dropicon:SetText("-")
             self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
             self.mouseinputs = true
 
+            self.Id = 0
             self.options = {}
             self.option = ""
         end
 
-        function GUI:GetOption(txt)
-            return self.option
+        function GUI:GetOption()
+            return self.option, self.Id
         end
 
-        function GUI:SetOption(txt)
-            self.text.Text = text
-            self.option = text
+        function GUI:SetOption(num)
+            local opt = self.options[num]
+            if not opt then return end
+            self.Id = num
+            self.text:SetText(opt)
+            self.option = opt
         end
 
         function GUI:AddOption(txt)
             self.options[#self.options+1] = txt
         end
 
+        function GUI:SetOptions(options)
+            self.options = options
+        end
+
         function GUI:PerformLayout(pos, size)
-            self.text.Position = pos + Vector2.new(3, 3)
-            self.dropicon.Position = pos + Vector2.new(size.X - 16 - 4, 3)
             self.background_outline.Position = pos
             self.background.Position = pos
             self.background_outline.Size = size
@@ -3095,15 +3260,11 @@ do
             end
             local box = gui:Create("DropBoxSelection", self)
             self.selection = box
-            box:SetPos(0,0,0,0)
-            box:SetSize(1,0,0,(#self.options * self.textsize))
+            box:SetPos(0,0,1,-1)
             box:SetOptions(self.options)
-            function box.OnSelect(s, row)
-                self.option = row
-                self:OnSelect(row)
-                self:Close()
-            end
-            box:Generate()
+            box:SetOption(self.Id)
+            box:SetZIndex(100)
+            self.open = true
         end
 
         function GUI:Close()
@@ -3111,15 +3272,14 @@ do
                 self.selection:Remove()
                 self.selection = nil
             end
+            self.open = false
         end
 
         function GUI:InputBegan(input)
             if not self._enabled then return end
-            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
-                self.open = true
+            if not self.open and input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
                 self:Open()
-            elseif self.open and (not self.selection or not self.selection:IsHovering()) then
-                self.open = false
+            elseif self.open and (not self.selection or not self.selection:IsHoverTotal()) then
                 self:Close()
             end
         end
@@ -3128,17 +3288,164 @@ do
     end
 
     do 
+
         local GUI = {}
 
         function GUI:Init()
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
 
+            self.options = {}
+            self.buttons = {}
+            self.Id = 0
         end
 
         function GUI:PerformLayout(pos, size)
-
+            self.background_outline.Position = pos
+            self.background.Position = pos
+            self.background_outline.Size = size
+            self.background.Size = size
         end
 
-        gui:Register(GUI, "MultiBox")
+        function GUI:SetOptions(options)
+            for i=1, #self.buttons do
+                local v = self.buttons[i]
+                v:Remove()
+            end
+            local offset = 0
+            self.options = options
+            for i=1, #options do
+                local v = options[i]
+                local button = gui:Create("TextButton", self)
+                self.buttons[#self.buttons+1] = button
+                local _, scaley = button.text:GetTextSize(v[1])
+                button:SetPos(0, 5, 0, 4 + (scaley+4) * (i-1))
+                button:SetSize(1, -5, 0, scaley)
+                offset = 4 + (scaley+4) * i
+                button:SetText(v[1])
+                button:SetTextColor(v[2] and Color3.fromRGB(127, 72, 163) or Color3.new(1,1,1))
+                function button.OnClick()
+                    self.parent:SetOption(i, not v[2])
+                    button:SetTextColor(v[2] and Color3.fromRGB(127, 72, 163) or Color3.new(1,1,1))
+                end
+            end
+
+            self:SetSize(1, 0, 0, offset)
+        end
+
+        function GUI:IsHoverTotal()
+            if self:IsHovering() then return true end
+            local buttons = self.buttons
+            for i=1, #buttons do
+                if buttons[i]:IsHovering() then return true end
+            end
+        end
+
+        gui:Register(GUI, "ComboBoxSelection")
+
+        local GUI = {}
+
+        function GUI:Init()
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+
+            self.gradient = gui:Create("Gradient", self)
+            self.gradient:SetPos(0, 2, 0, 1)
+            self.gradient:SetSize(1, -4, 0, 10)
+            self.gradient:Generate()
+
+            self.textcontainer = gui:Create("Container", self)
+
+            local text = gui:Create("Text", self.textcontainer)
+            self.text = text
+            text:SetPos(0, 6, .5, 0)
+            text:SetTextAlignmentX(Enum.TextXAlignment.Left)
+            text:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            text:SetText("")
+
+            local dropicon = gui:Create("Text", self)
+            self.dropicon = dropicon
+            dropicon:SetPos(1, -4, .5, 0)
+            dropicon:SetTextAlignmentX(Enum.TextXAlignment.Right)
+            dropicon:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            dropicon:SetText("...")
+            local w = dropicon:GetTextSize()
+            self.textcontainer:SetSize(1, -w - 12, 1, 0)
+            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
+            self.mouseinputs = true
+
+            self.options = {}
+        end
+
+        function GUI:GetOptions()
+            return self.option, self.Id
+        end
+
+        function GUI:Refresh()
+            local options = self.options
+            local text = ""
+            local c = 0
+            for i=1, #options do
+                local v = options[i]
+                if v[2] then
+                    c = c + 1
+                    text = text .. (c~=1 and ", " or "") .. v[1]
+                end
+            end
+            self.text:SetText(text)
+        end
+
+        function GUI:SetOption(num, value)
+            local opt = self.options[num]
+            if not opt then return end
+            opt[2] = value
+            self:Refresh()
+        end
+
+        function GUI:SetOptions(options)
+            self.options = options
+            self:Refresh()
+        end
+
+        function GUI:PerformLayout(pos, size)
+            self.background_outline.Position = pos
+            self.background.Position = pos
+            self.background_outline.Size = size
+            self.background.Size = size
+        end
+
+        function GUI:OnSelect() end
+
+        function GUI:Open()
+            if self.selection then
+                self.selection:Remove()
+                self.selection = nil
+            end
+            local box = gui:Create("ComboBoxSelection", self)
+            self.selection = box
+            box:SetPos(0,0,1,-1)
+            box:SetOptions(self.options)
+            box:SetZIndex(100)
+            self.open = true
+        end
+
+        function GUI:Close()
+            if self.selection then
+                self.selection:Remove()
+                self.selection = nil
+            end
+            self.open = false
+        end
+
+        function GUI:InputBegan(input)
+            if not self._enabled then return end
+            if not self.open and input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+                self:Open()
+            elseif self.open and (not self.selection or not self.selection:IsHoverTotal()) then
+                self:Close()
+            end
+        end
+
+        gui:Register(GUI, "ComboBox")
     end
 
     do
@@ -3154,12 +3461,12 @@ do
 
         function GUI:SetImage(img)
             self.image.Data = img
-            self:Calculate()
+            self:InvalidateLayout()
         end
 
         function GUI:PreserveDimensions(bool)
             self.preservedim = bool
-            self:Calculate()
+            self:InvalidateLayout()
         end
 
         function GUI:SetIcon(icon)
@@ -3175,7 +3482,7 @@ do
 
         function GUI:SetScale(scale)
             self.image_scale = scale
-            self:Calculate()
+            self:InvalidateLayout()
         end
 
         function GUI:PerformLayout(pos, size)
@@ -3253,7 +3560,7 @@ do
         function GUI:SetActive(value)
             self.activated = value
             gui:TransparencyTo(self.darken, (value and 0 or .25), 0.3, 0, 0.25)
-            self:Calculate()
+            self:InvalidateLayout()
         end
 
         function GUI:SetIcon(icon)
@@ -3361,6 +3668,7 @@ do
             end
             new[1]:SetActive(true)
             new[2]:SetEnabled(true)
+            new[2]:InvalidateLayout(true, true)
             gui:TransparencyTo(new[2], 1, 0.3, 0, 0.25)
             self.activeId = num
         end
@@ -3413,8 +3721,8 @@ do
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
 
             self.gradient = gui:Create("Gradient", self)
-            self.gradient:SetPos(0, 0, 0, 0)
-            self.gradient:SetSize(1, 0, 0, 20)
+            self.gradient:SetPos(0, 0, 0, -2)
+            self.gradient:SetSize(1, 0, 0, 6)
             self.gradient:Generate()
 
             self.text = gui:Create("Text", self)
@@ -3437,7 +3745,7 @@ do
         function GUI:OnClick() end
 
         function GUI:InputBegan(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
                 self:OnClick()
             end
         end
@@ -3452,21 +3760,44 @@ do
             self.button = gui:Create("Button", self)
             self.button:SetSizeConstraint("Y")
             self.button:SetSize(1,0,1,0)
-            self.button.gradient:SetSize(1, 0, 0, 7)
+            self.button.gradient:SetPos(0, 0, 0, -1)
+            self.button.gradient:SetSize(1, 0, 0, 8)
             self.button.gradient:Generate()
+            self.button.mouseinput = false
 
             self.text = gui:Create("Text", self)
             self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
-            self.text:SetPos(0, 0, .5, 0)
+            self.text:SetPos(0, 0, .5, -1)
             self.text:SetTextSize(13)
+
+            self.toggle = false
+            local col = Color3.fromRGB(127, 72, 163)
+            self.on = {col, color.darkness(col, .5)}
+            self.off = {self.button.gradient.color1, self.button.gradient.color2}
         end
 
         function GUI:SetText(txt)
             self.text:SetText(txt)
+            self:InvalidateLayout()
+        end
+        
+        function GUI:PerformLayout(pos, size)
+            self.text:SetPos(0, self.button.absolutesize.X + 8, .5, -1)
         end
 
-        function GUI:PerformLayout(pos, size)
-            self.text:SetPos(0, self.button.absolutesize.X + 8, .5, 0)
+        function GUI:OnClick()
+            self.toggle = not self.toggle
+            local colors = self.off
+            if self.toggle then
+                colors = self.on
+            end
+            self.button.gradient:SetColor(unpack(colors))
+        end
+
+        function GUI:InputBegan(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+                self:OnClick()
+            end
         end
 
         gui:Register(GUI, "Toggle")
@@ -3478,22 +3809,19 @@ do
         function GUI:Init()
             self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 4, Color3.fromRGB(20, 20, 20)))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
-
-            self.bar = gui:Create("AstheticLine", self)
-            self.bar.asthetic_line_dark.Visible = false
-            self.bar:SetSize(0,0,1,0)
-            self.percentage = 0
-
             self.gradient = gui:Create("Gradient", self)
-            self.gradient:SetPos(0, 0, 0, 0)
-            self.gradient:SetSize(1, 0, 0, 8)
-            self.gradient:SetTransparency(0.5)
+            self.gradient:SetPos(0, 0, 0, -1)
+            self.gradient:SetSize(0, 0, 0, 10)
             self.gradient:Generate()
+            local col = Color3.fromRGB(127, 72, 163)
+            self.basecolor = {col, color.darkness(col, .5)}
+            self.gradient:SetColor(unpack(self.basecolor))
+            self.percentage = 0
         end
 
         function GUI:SetPercentage(perc)
             self.percentage = perc
-            self:Calculate()
+            self:InvalidateLayout()
         end
 
         function GUI:PerformLayout(pos, size)
@@ -3501,7 +3829,7 @@ do
             self.background.Size = size
             self.background_outline.Position = pos
             self.background_outline.Size = size
-            self.bar:SetSize(self.percentage, 0, 1, 0)
+            self.gradient:SetSize(self.percentage, 0, 0, 8)
         end
 
         gui:Register(GUI, "ProgressBar")
@@ -3510,24 +3838,128 @@ do
     do
         local GUI = {}
 
+        local userinputservice = BBOT.service:GetService("UserInputService")
+
         function GUI:Init()
             self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 4, Color3.fromRGB(20, 20, 20)))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
 
-            self.bar = gui:Create("AstheticLine", self)
-            self.bar.asthetic_line_dark.Visible = false
-            self.bar:SetSize(0,0,1,0)
-            self.percentage = 0
+            self.gradient = gui:Create("Gradient", self)
+            self.gradient:SetPos(0, 0, 0, -1)
+            self.gradient:SetSize(1, 0, 0, 10)
+            self.gradient:Generate()
 
-            --[[self.gradient = gui:Create("Gradient", self)
-            self.gradient:SetPos(0, 0, 0, 0)
-            self.gradient:SetSize(1, 0, 0, 8)
-            self.gradient:Generate()]]
+            self.bar = gui:Create("Gradient", self)
+            self.bar:SetPos(0, 0, 0, -1)
+            local col = Color3.fromRGB(127, 72, 163)
+            self.basecolor = {col, color.darkness(col, .5)}
+            self.bar:SetColor(unpack(self.basecolor))
+            self.percentage = math.random(0,1000)/1000
+            self.bar:SetSize(self.percentage, 0, 0, 10)
+            self.bar:Generate()
+
+            self.buttoncontainer = gui:Create("Container", self)
+
+            local onhover = Color3.fromRGB(127, 72, 163)
+            local idle = Color3.new(1,1,1)
+
+            self.add = gui:Create("TextButton", self.buttoncontainer)
+            self.add:SetText("+")
+            self.add:SetTextAlignmentX(Enum.TextXAlignment.Center)
+            self.add:SetTextAlignmentY(Enum.TextYAlignment.Bottom)
+            local w, h = self.add.text:GetTextSize()
+            self.add:SetPos(1, -w + 2, 0, 0)
+            self.add:SetSize(0, w, 0, h)
+            self.add.text:SetPos(.5, 0, .5, 0)
+            
+            function self.add.OnClick()
+                local value = 1
+                if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
+                    value = value / (10^self.decimal)
+                end
+                self:SetValue(self:GetValue()+value)
+            end
+
+            function self.add:Step()
+                local hover = (self:IsHovering())
+                if hover ~= self.hover then
+                    self.hover = hover
+                    if hover then
+                        self:SetTextColor(onhover)
+                    else
+                        self:SetTextColor(idle)
+                    end
+                end
+            end
+
+            self.deduct = gui:Create("TextButton", self.buttoncontainer)
+            self.deduct:SetText("-")
+            self.deduct:SetTextAlignmentX(Enum.TextXAlignment.Center)
+            self.deduct:SetTextAlignmentY(Enum.TextYAlignment.Bottom)
+            local ww, hh = self.deduct.text:GetTextSize()
+            self.deduct:SetPos(1, -w -ww + 2, 0, 0)
+            self.deduct:SetSize(0, w, 0, h)
+            self.deduct.text:SetPos(.5, 0, .5, 0)
+            self.deduct.Step = self.add.Step
+            function self.deduct.OnClick()
+                local value = 1
+                if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
+                    value = value / (10^self.decimal)
+                end
+                self:SetValue(self:GetValue()-value)
+            end
+            self.buttoncontainer.add = self.add
+            self.buttoncontainer.deduct = self.deduct
+
+            self.buttoncontainer:SetSize(0, w + ww, 0, h + 2)
+            self.buttoncontainer:SetPos(1, -(w + ww), 0, - (h + 3))
+            self.buttoncontainer:SetTransparency(0)
+
+            function self.buttoncontainer:Step()
+                local hover = (self:IsHovering() or self.add:IsHovering() or self.deduct:IsHovering())
+                if hover ~= self.hover then
+                    self.hover = hover
+                    if hover then
+                        gui:TransparencyTo(self, 1, 0.3, 0, 0.25)
+                    else
+                        gui:TransparencyTo(self, 0, 0.3, 0, 0.25)
+                    end
+                end
+            end
+
+            self.text = gui:Create("Text", self)
+            self.text:SetTextAlignmentX(Enum.TextXAlignment.Center)
+            self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            self.text:SetPos(.5,0,.5,0)
+            self.text:SetText("0%")
+
+            self.suffix = "%"
+            self.min = 0
+            self.max = 100
+            self.decimal = 1
+            self.custom = {}
+            self.mouseinputs = true
+
+            self:SetPercentage(self.percentage)
         end
 
         function GUI:SetPercentage(perc)
             self.percentage = perc
-            self:Calculate()
+            local value = math.round(math.remap(perc, 0, 1, self.min, self.max), self.decimal)
+            if self.custom[value] then
+                self.text:SetText(self.custom[value])
+            else
+                self.text:SetText(value .. self.suffix)
+            end
+            self:InvalidateLayout()
+        end
+
+        function GUI:SetValue(value)
+            self:SetPercentage(math.remap(math.clamp(value, self.min, self.max), self.min, self.max, 0, 1))
+        end
+
+        function GUI:GetValue()
+            return math.round(math.remap(self.percentage, 0, 1, self.min, self.max), self.decimal)
         end
 
         function GUI:PerformLayout(pos, size)
@@ -3538,36 +3970,30 @@ do
             self.bar:SetSize(self.percentage, 0, 1, 0)
         end
 
-        gui:Register(GUI, "SliderController")
-
-        local GUI = {}
-
-        function GUI:Init()
-            self.slider = gui:Create("SliderController", self)
-            self.text = gui:Create("Text", self)
-            self.text:SetPos(0, 0, 0, -2)
-            self.text:SetTextSize(13)
-
-            local _, scale = self.text:GetTextScale()
-            self.slider:SetPos(0, 0, 0, scale + 2)
-            self.slider:SetSize(1, 0, 0, 8)
+        function GUI:CalculateValue(X)
+            local APX = self.absolutepos.X
+            local ASX = self.absolutesize.X
+            local position = math.clamp(X, APX, APX + ASX )
+            self:SetPercentage((position - APX)/ASX)
         end
 
-        function GUI:SetText(txt)
-            self.text:SetText(txt)
+        local mouse = BBOT.service:GetService("Mouse")
+        function GUI:Step()
+            if self.down then
+                self:CalculateValue(mouse.X)
+            end
         end
 
-        function GUI:SetValue(value)
-            
+        function GUI:InputBegan(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+                self.down = true
+            end
         end
 
-        function GUI:GetValue()
-
-        end
-
-        function GUI:OnValueChanged(old, new) end
-
-        function GUI:PerformLayout(pos, size)
+        function GUI:InputEnded(input)
+            if self.down and input.UserInputType == Enum.UserInputType.MouseButton1 then
+                self.down = false
+            end
         end
 
         gui:Register(GUI, "Slider")
@@ -3577,9 +4003,23 @@ do
         local GUI = {}
 
         function GUI:Init()
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(20, 20, 20)))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(20, 20, 20)))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
         end
 
         function GUI:PerformLayout(pos, size)
+            self.background.Position = pos + Vector2.new(2, 2)
+            self.background.Size = size - Vector2.new(4, 4)
+            self.background_outline.Position = pos
+            self.background_outline.Size = size
+            self.background_border.Position = pos - Vector2.new(1, 1)
+            self.background_border.Size = size + Vector2.new(2, 2)
+        end
+
+        function GUI:SetColor(col)
+            self.background.Color = col
+            self.background_outline.Color = color.darkness(col, .5)
         end
 
         gui:Register(GUI, "ColorPicker", "Button")
@@ -3642,21 +4082,57 @@ do
             color = { 255, 0, 0, 255 },
         }
     },]]
+    function menu:CreateExtra(container, config, X, Y)
+        local name = config.name
+        local type = config.type
+        if type == "ColorPicker" then
+            local picker = gui:Create("ColorPicker", container)
+            picker:SetPos(1, X-26, 0, Y)
+            picker:SetSize(0, 26, 0, 10)
+            picker:SetColor(Color3.fromRGB(unpack(config.color)))
+            return 25 + 9
+        end
+        return 0
+    end
+
     function menu:CreateOptions(container, config, Y)
         local name = config.name
         local type = config.type
+        local X = 0
+        if config.extra then
+            local extra = config.extra
+            for i=1, #extra do
+                X = X - self:CreateExtra(container, extra[i], X, Y)
+            end
+        end
         if type == "Toggle" then
             local toggle = gui:Create("Toggle", container)
             toggle:SetPos(0, 0, 0, Y)
-            toggle:SetSize(1, 0, 0, 8)
+            toggle:SetSize(1, -X, 0, 8)
             toggle:SetText(name)
-            return 8+8
+            local w = toggle.text:GetTextSize()
+            toggle:SetSize(0, 10 + w, 0, 8)
+            toggle:InvalidateLayout(true)
+            return 8+7
         elseif type == "Slider" then
-            local slider = gui:Create("Slider", container)
-            slider:SetPos(0, 0, 0, Y)
-            slider:SetSize(1, 0, 0, 18)
-            slider:SetText(name)
-            return 18+12
+            local cont = gui:Create("Container", container)
+            local text = gui:Create("Text", cont)
+            text:SetPos(0, 0, 0, 0)
+            text:SetTextSize(13)
+            text:SetText(name)
+            local slider = gui:Create("Slider", cont)
+            slider.suffix = config.suffix or slider.suffix
+            slider.min = config.min or slider.min
+            slider.max = config.max or slider.max
+            slider.decimal = config.decimal or slider.decimal
+            slider.custom = config.custom or slider.custom
+            slider:SetValue(config.value)
+            local _, tall = text:GetTextScale()
+            slider:SetPos(0, 0, 0, tall+3)
+            slider:SetSize(1, 0, 0, 10)
+            cont:SetPos(0, 0, 0, Y)
+            cont:SetSize(1, 0, 0, tall+2+10+1)
+            return tall+2+10+8
         elseif type == "Text" then
             local cont = gui:Create("Container", container)
             local text = gui:Create("Text", cont)
@@ -3667,11 +4143,40 @@ do
             local _, tall = text:GetTextScale()
             textentry:SetPos(0, 0, 0, tall+2)
             textentry:SetSize(1, 0, 0, 18)
-            textentry:SetText("A TextEntry")
+            textentry:SetText(config.value)
             textentry:SetTextSize(13)
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+2+18+1)
-            return tall+2+18+12
+            return tall+2+18+4
+        elseif type == "DropBox" then
+            local cont = gui:Create("Container", container)
+            local text = gui:Create("Text", cont)
+            text:SetPos(0, 0, 0, 0)
+            text:SetTextSize(13)
+            text:SetText(name)
+            local dropbox = gui:Create("DropBox", cont)
+            local _, tall = text:GetTextScale()
+            dropbox:SetPos(0, 0, 0, tall+2)
+            dropbox:SetSize(1, 0, 0, 18)
+            dropbox:SetOptions(config.values)
+            dropbox:SetOption(config.value)
+            cont:SetPos(0, 0, 0, Y)
+            cont:SetSize(1, 0, 0, tall+2+18+1)
+            return 18+2+18+2
+        elseif type == "ComboBox" then
+            local cont = gui:Create("Container", container)
+            local text = gui:Create("Text", cont)
+            text:SetPos(0, 0, 0, -1)
+            text:SetTextSize(13)
+            text:SetText(name)
+            local dropbox = gui:Create("ComboBox", cont)
+            local _, tall = text:GetTextScale()
+            dropbox:SetPos(0, 0, 0, tall+2)
+            dropbox:SetSize(1, 0, 0, 18)
+            dropbox:SetOptions(config.values)
+            cont:SetPos(0, 0, 0, Y)
+            cont:SetSize(1, 0, 0, tall+2+18+1)
+            return 18+2+18+2
         end
         return 0
     end
@@ -4144,7 +4649,7 @@ do
                                 {
 							        name = { "Enemy ESP", "Team ESP", "Local" },
                                     pos = UDim2.new(0,0,0,0),
-                                    size = UDim2.new(.5,-4,2/3,-4),
+                                    size = UDim2.new(.5,-4,11/20,-4),
                                     {
                                         content = {
                                             {
@@ -4158,9 +4663,11 @@ do
                                                 name = "Name",
                                                 value = true,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Enemy Name",
-                                                    color = { 255, 255, 255, 200 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Name",
+                                                        color = { 255, 255, 255, 200 },
+                                                    }
                                                 },
                                             },
                                             {
@@ -4168,9 +4675,16 @@ do
                                                 name = "Box",
                                                 value = true,
                                                 extra = {
-                                                    type = "DoubleColorPicker",
-                                                    name = { "Enemy Box Fill", "Enemy Box" },
-                                                    color = { { 255, 0, 0, 0 }, { 255, 0, 0, 150 } },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Box Fill",
+                                                        color = { 255, 0, 0, 0 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Box",
+                                                        color = { 255, 0, 0, 150 },
+                                                    }
                                                 },
                                             },
                                             {
@@ -4178,9 +4692,16 @@ do
                                                 name = "Health Bar",
                                                 value = true,
                                                 extra = {
-                                                    type = "DoubleColorPicker",
-                                                    name = { "Enemy Low Health", "Enemy Max Health" },
-                                                    color = { { 255, 0, 0 }, { 0, 255, 0 } },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Box Fill",
+                                                        color = { 255, 0, 0, 0 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Box",
+                                                        color = { 0, 255, 0, 150 },
+                                                    }
                                                 },
                                             },
                                             {
@@ -4188,9 +4709,11 @@ do
                                                 name = "Health Number",
                                                 value = true,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Enemy Health Number",
-                                                    color = { 255, 255, 255, 255 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Health Number",
+                                                        color = { 255, 255, 255, 255 },
+                                                    }
                                                 },
                                             },
                                             {
@@ -4198,9 +4721,11 @@ do
                                                 name = "Held Weapon",
                                                 value = true,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Enemy Held Weapon",
-                                                    color = { 255, 255, 255, 200 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Held Weapon",
+                                                        color = { 255, 255, 255, 200 },
+                                                    }
                                                 },
                                             },
                                             {
@@ -4218,9 +4743,16 @@ do
                                                 name = "Chams",
                                                 value = true,
                                                 extra = {
-                                                    type = "DoubleColorPicker",
-                                                    name = { "Visible Enemy Chams", "Invisible Enemy Chams" },
-                                                    color = { { 255, 0, 0, 200 }, { 100, 0, 0, 100 } },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Visible Enemy Chams",
+                                                        color = { 255, 0, 0, 200 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Invisible Enemy Chams",
+                                                        color = { 100, 0, 0, 100 },
+                                                    }
                                                 },
                                             },
                                             {
@@ -4228,9 +4760,11 @@ do
                                                 name = "Skeleton",
                                                 value = false,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Enemy skeleton",
-                                                    color = { 255, 255, 255, 120 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy skeleton",
+                                                        color = { 255, 255, 255, 120 },
+                                                    },
                                                 },
                                             },
                                             {
@@ -4238,19 +4772,21 @@ do
                                                 name = "Out of View",
                                                 value = true,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Arrow Color",
-                                                    color = { 255, 255, 255, 255 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Arrow Color",
+                                                        color = { 255, 255, 255, 255 },
+                                                    },
                                                 },
                                             },
                                             {
                                                 type = "Slider",
                                                 name = "Arrow Distance",
                                                 value = 50,
-                                                minvalue = 10,
-                                                maxvalue = 101,
+                                                min = 10,
+                                                max = 101,
                                                 custom = { [101] = "Max" },
-                                                stradd = "%",
+                                                suffix = "%",
                                             },
                                             {
                                                 type = "Toggle",
@@ -4272,9 +4808,11 @@ do
                                                 name = "Name",
                                                 value = false,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Team Name",
-                                                    color = { 255, 255, 255, 200 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Team Name",
+                                                        color = { 255, 255, 255, 200 },
+                                                    },
                                                 },
                                             },
                                             {
@@ -4282,9 +4820,16 @@ do
                                                 name = "Box",
                                                 value = true,
                                                 extra = {
-                                                    type = "DoubleColorPicker",
-                                                    name = { "Enemy Box Fill", "Enemy Box" },
-                                                    color = { { 0, 255, 0, 0 }, { 0, 255, 0, 150 } },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Box Fill",
+                                                        color = { 0, 255, 0, 0 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Box",
+                                                        color = { 0, 255, 0, 150 },
+                                                    },
                                                 },
                                             },
                                             {
@@ -4292,9 +4837,16 @@ do
                                                 name = "Health Bar",
                                                 value = false,
                                                 extra = {
-                                                    type = "DoubleColorPicker",
-                                                    name = { "Team Low Health", "Team Max Health" },
-                                                    color = { { 255, 0, 0 }, { 0, 255, 0 } },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Team Low Health",
+                                                        color = { 255, 0, 0, 255 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Team Max Health",
+                                                        color = { 0, 255, 0, 255 },
+                                                    },
                                                 },
                                             },
                                             {
@@ -4302,9 +4854,11 @@ do
                                                 name = "Health Number",
                                                 value = false,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Team Health Number",
-                                                    color = { 255, 255, 255, 255 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Team Health Number",
+                                                        color = { 255, 255, 255, 255 },
+                                                    },
                                                 },
                                             },
                                             {
@@ -4312,9 +4866,11 @@ do
                                                 name = "Held Weapon",
                                                 value = false,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Team Held Weapon",
-                                                    color = { 255, 255, 255, 200 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Team Held Weapon",
+                                                        color = { 255, 255, 255, 200 },
+                                                    },
                                                 },
                                             },
                                             {
@@ -4332,9 +4888,16 @@ do
                                                 name = "Chams",
                                                 value = false,
                                                 extra = {
-                                                    type = "DoubleColorPicker",
-                                                    name = { "Visible Team Chams", "Invisible Team Chams" },
-                                                    color = { { 0, 255, 0, 200 }, { 0, 100, 0, 100 } },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Visible Team Chams",
+                                                        color = { 0, 255, 0, 200 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Invisible Team Chams",
+                                                        color = { 0, 100, 0, 100 },
+                                                    },
                                                 },
                                             },
                                             {
@@ -4342,9 +4905,11 @@ do
                                                 name = "Skeleton",
                                                 value = false,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Team skeleton",
-                                                    color = { 255, 255, 255, 120 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Team skeleton",
+                                                        color = { 255, 255, 255, 120 },
+                                                    },
                                                 },
                                             },
                                         },
@@ -4356,30 +4921,21 @@ do
                                                 name = "Arm Chams",
                                                 value = false,
                                                 extra = {
-                                                    type = "DoubleColorPicker",
-                                                    name = { "Sleeve Color", "Hand Color" },
-                                                    color = { { 106, 136, 213, 255 }, { 181, 179, 253, 255 } },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Sleeve Color",
+                                                        color = { 106, 136, 213, 255 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Hand Color",
+                                                        color = { 181, 179, 253, 255 },
+                                                    },
                                                 },
                                             },
                                             {
                                                 type = "DropBox",
                                                 name = "Arm Material",
-                                                value = 1,
-                                                values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-                                            },
-                                            {
-                                                type = "Toggle",
-                                                name = "Weapon Chams",
-                                                value = false,
-                                                extra = {
-                                                    type = "DoubleColorPicker",
-                                                    name = { "Weapon Color", "Laser Color" },
-                                                    color = { { 106, 136, 213, 255 }, { 181, 179, 253, 255 } },
-                                                },
-                                            },
-                                            {
-                                                type = "DropBox",
-                                                name = "Weapon Material",
                                                 value = 1,
                                                 values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
                                             },
@@ -4400,26 +4956,30 @@ do
                                                 name = "Third Person",
                                                 value = false,
                                                 extra = {
-                                                    type = "KeyBind",
-                                                    key = nil,
-                                                    toggletype = 2,
+                                                    {
+                                                        type = "KeyBind",
+                                                        key = nil,
+                                                        toggletype = 2,
+                                                    },
                                                 },
                                             },
                                             {
                                                 type = "Slider",
                                                 name = "Third Person Distance",
                                                 value = 60,
-                                                minvalue = 1,
-                                                maxvalue = 150,
+                                                min = 1,
+                                                max = 150,
                                             },
                                             {
                                                 type = "Toggle",
                                                 name = "Local Player Chams",
                                                 value = false,
                                                 extra = {
-                                                    type = "ColorPicker",
-                                                    name = "Local Player Chams",
-                                                    color = { 106, 136, 213, 255 },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Local Player Chams",
+                                                        color = { 106, 136, 213, 255 },
+                                                    },
                                                 },
                                                 tooltip = "Changes the color and material of the local third person body when it is on.",
                                             },
@@ -4434,17 +4994,17 @@ do
                                 },
                                 {
                                     name = "ESP Settings",
-                                    pos = UDim2.new(0,0,2/3,4),
-                                    size = UDim2.new(.5,-4,1/3,-12),
+                                    pos = UDim2.new(0,0,11/20,4),
+                                    size = UDim2.new(.5,-4,9/20,-8),
                                     type = "Panel",
                                     content = {
                                         {
                                             type = "Slider",
                                             name = "Max HP Visibility Cap",
                                             value = 90,
-                                            minvalue = 50,
-                                            maxvalue = 100,
-                                            stradd = "hp",
+                                            min = 50,
+                                            max = 100,
+                                            suffix = "hp",
                                             custom = {
                                                 [100] = "Always"
                                             }
@@ -4459,19 +5019,19 @@ do
                                             type = "Slider",
                                             name = "Max Text Length",
                                             value = 0,
-                                            minvalue = 0,
-                                            maxvalue = 32,
+                                            min = 0,
+                                            max = 32,
                                             custom = { [0] = "Unlimited" },
-                                            stradd = " letters",
+                                            suffix = " letters",
                                         },
                                         {
                                             type = "Slider",
                                             name = "ESP Fade Time", 
                                             value = 0.5,
-                                            minvalue = 0,
-                                            maxvalue = 2,
-                                            stradd = "s",
-                                            decimal = 0.1,
+                                            min = 0,
+                                            max = 2,
+                                            suffix = "s",
+                                            decimal = 1,
                                             custom = { [0] = "Off" }
                                         },
                                         {
@@ -4524,29 +5084,236 @@ do
                                     }
                                 },
                                 {
-                                    name = {"World", "Misc", "Keybinds", "FOV", "Spawn"},
+                                    name = {"World", "Misc", "Keybinds", "FOV"},
                                     pos = UDim2.new(.5,4,1/2,4),
                                     size = UDim2.new(.5,-8,1/4,-8),
                                     {
-                                        content = {},
+                                        content = {
+                                            {
+                                                type = "Toggle",
+                                                name = "Ambience",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Inside Ambience",
+                                                        color = { 117, 76, 236 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Outside Ambience",
+                                                        color = { 117, 76, 236 },
+                                                    }
+                                                },
+                                                tooltip = "Changes the map's ambient colors to your defined colors.",
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Force Time",
+                                                value = false,
+                                                tooltip = "Forces the time to the time set by your below.",
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Custom Time",
+                                                value = 0,
+                                                minvalue = 0,
+                                                maxvalue = 24,
+                                                decimal = 0.1,
+                                                stradd = "hr",
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Custom Saturation",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Saturation Tint",
+                                                        color = { 255, 255, 255 },
+                                                    },
+                                                },
+                                                tooltip = "Adds custom saturation the image of the game.",
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Saturation Density",
+                                                value = 0,
+                                                minvalue = 0,
+                                                maxvalue = 100,
+                                                stradd = "%",
+                                            },
+                                        },
                                     },
                                     {
-                                        content = {},
+                                        content = {
+                                            {
+                                                type = "Toggle",
+                                                name = "Crosshair Color",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Inline",
+                                                        color = { 127, 72, 163 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Outline",
+                                                        color = { 25, 25, 25 },
+                                                    }
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Laser Pointer",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Laser Pointer Color",
+                                                        color = { 255, 255, 255, 255 },
+                                                    },
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Ragdoll Chams",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Ragdoll Chams",
+                                                        color = { 106, 136, 213, 255 },
+                                                    },
+                                                },
+                                            },
+                                            {
+                                                type = "DropBox",
+                                                name = "Ragdoll Material",
+                                                value = 1,
+                                                values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Bullet Tracers",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Bullet Tracers",
+                                                        color = { 201, 69, 54, 255 },
+                                                    },
+                                                },
+                                            },
+                                        },
                                     },
                                     {
-                                        content = {},
+                                        content = {
+                                            {
+                                                type = "Toggle",
+                                                name = "Enabled",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Text Color",
+                                                        color = { 127, 72, 163, 255 },
+                                                    },
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Use List Sizes",
+                                                value = false,
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Log Keybinds",
+                                                value = false
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Keybinds List X",
+                                                value = 0,
+                                                minvalue = 0,
+                                                maxvalue = 100,
+                                                shift_stepsize = 0.05,
+                                                stradd = "%",
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Keybinds List Y",
+                                                value = 50,
+                                                minvalue = 0,
+                                                maxvalue = 100,
+                                                shift_stepsize = 0.05,
+                                                stradd = "%",
+                                            },
+                                        },
                                     },
                                     {
-                                        content = {},
+                                        content = {
+                                            {
+                                                type = "Toggle",
+                                                name = "Enabled",
+                                                value = false,
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Aim Assist",
+                                                value = true,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Aim Assist FOV",
+                                                        color = { 127, 72, 163, 255 },
+                                                    },
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Aim Assist Deadzone",
+                                                value = true,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Deadzone FOV",
+                                                        color = { 50, 50, 50, 255 },
+                                                    },
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Bullet Redirection",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Aim Assist FOV",
+                                                        color = { 163, 72, 127, 255 },
+                                                    },
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Ragebot",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Ragebot FOV",
+                                                        color = { 255, 210, 0, 255 },
+                                                    },
+                                                },
+                                            },
+                                        },
                                     },
-                                    {
-                                        content = {},
-                                    }
                                 },
                                 {
                                     name = "Dropped ESP",
                                     pos = UDim2.new(.5,4,3/4,8),
-                                    size = UDim2.new(.5,-8,1/4,-16),
+                                    size = UDim2.new(.5,-8,1/4,-12),
                                     type = "Panel",
                                     content = {},
                                 },
@@ -4623,19 +5390,29 @@ do
                                                         type = "DropBox",
                                                         name = "Material",
                                                         value = 1,
-                                                        values = BBOT.config.enums.Material.List,
-                                                        extra = {},
+                                                        values = {"Plastic", "Ghost", "Forcefield", "Neon", "Foil", "Glass"},
+                                                        extra = {
+                                                            {
+                                                                type = "ColorPicker",
+                                                                name = "Brick Color",
+                                                                color = { 255, 255, 255, 255 },
+                                                            },
+                                                        },
                                                     },
                                                     {
                                                         type = "Slider",
                                                         name = "Reflectance",
-                                                        value = false,
+                                                        value = 0,
+                                                        min = 0,
+                                                        max = 100,
+                                                        suffix = "%",
+                                                        decimal = 1,
                                                         extra = {},
                                                     },
                                                     {
                                                         name = "Textures",
-                                                        pos = UDim2.new(0,0,0,60),
-                                                        size = UDim2.new(1,0,1,-60),
+                                                        pos = UDim2.new(0,0,0,90),
+                                                        size = UDim2.new(1,0,1,-96),
                                                         type = "Panel",
                                                         content = {
                                                             {
@@ -4647,37 +5424,57 @@ do
                                                             {
                                                                 type = "Text",
                                                                 name = "Asset-Id",
-                                                                value = "rbxassetid://3643887058",
+                                                                value = "3643887058",
                                                                 extra = {},
                                                             },
                                                             {
                                                                 type = "Slider",
                                                                 name = "OffsetStudsU",
-                                                                value = false,
+                                                                value = 0,
+                                                                min = 0,
+                                                                max = 10,
+                                                                suffix = "studs",
+                                                                decimal = 1,
                                                                 extra = {},
                                                             },
                                                             {
                                                                 type = "Slider",
                                                                 name = "OffsetStudsV",
-                                                                value = false,
+                                                                value = 0,
+                                                                min = 0,
+                                                                max = 10,
+                                                                suffix = "studs",
+                                                                decimal = 1,
                                                                 extra = {},
                                                             },
                                                             {
                                                                 type = "Slider",
                                                                 name = "StudsPerTileU",
-                                                                value = false,
+                                                                value = 1,
+                                                                min = 0,
+                                                                max = 10,
+                                                                suffix = "studs/tile",
+                                                                decimal = 1,
                                                                 extra = {},
                                                             },
                                                             {
                                                                 type = "Slider",
                                                                 name = "StudsPerTileV",
-                                                                value = false,
+                                                                value = 1,
+                                                                min = 0,
+                                                                max = 10,
+                                                                suffix = "studs/tile",
+                                                                decimal = 1,
                                                                 extra = {},
                                                             },
                                                             {
                                                                 type = "Slider",
                                                                 name = "Transparency",
-                                                                value = false,
+                                                                value = 0,
+                                                                min = 0,
+                                                                max = 100,
+                                                                suffix = "%",
+                                                                decimal = 1,
                                                                 extra = {},
                                                             },
                                                         },
@@ -5076,6 +5873,8 @@ do
             end
         end
 
+        BBOT:SetLoadingStatus(nil, 30)
+
         BBOT.log(LOG_DEBUG, "Scanning auxillaries...")
         for k, v in next, core_aux do
             for kk, vv in next, v do
@@ -5092,6 +5891,8 @@ do
                 end
             end
         end
+
+        BBOT:SetLoadingStatus(nil, 40)
 
         BBOT.log(LOG_DEBUG, "Checking auxillaries...")
         for k, v in next, aux_tables do
@@ -5157,6 +5958,8 @@ do
         return true
     end
 
+    BBOT:SetLoadingStatus(nil, 45)
+
     do -- using rawget just in case...
         local send = rawget(aux.network, "send")
         local osend = rawget(aux.network, "_send")
@@ -5177,12 +5980,12 @@ do
             local override = _hook:Call("PreNetworkSend", ...)
             if override then
                 if _BB.username == "dev" then
-                    _BB.log(LOG_DEBUG, unpack(override))
+                    --_BB.log(LOG_DEBUG, unpack(override))
                 end
                 return _send(self, unpack(override)), _hook:Call("PostNetworkSend", unpack(override))
             end
             if _BB.username == "dev" then
-                _BB.log(LOG_DEBUG, ...)
+                --_BB.log(LOG_DEBUG, ...)
             end
             return _send(self, ...), _hook:Call("PostNetworkSend", ...)
         end
