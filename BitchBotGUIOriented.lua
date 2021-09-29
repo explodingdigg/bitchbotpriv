@@ -1422,13 +1422,42 @@ do
         if typeof(reg) == "table" then
             if reg.self ~= nil then
                 local s = reg.self
-                if typeof(s) == "table" and reg.type and reg.type ~= "Button" then
+                if typeof(s) == "table" and s.type and s.type ~= "Button" then
+                    if s.type == "KeyBind" then
+                        return s.toggle
+                    end
                     return s.value
                 end
                 return s
             end
             if reg.type and reg.type ~= "Button" then
+                if reg.type == "KeyBind" then
+                    return reg.toggle
+                end
                 return reg.value
+            end
+        end
+        return reg
+    end
+
+    function config:GetRaw(...)
+        local steps = {...}
+        local reg = self.registry
+        for i=1, #steps do
+            reg = reg[steps[i]]
+            if reg == nil then break end
+        end
+        if reg == nil then return end
+        if typeof(reg) == "table" then
+            if reg.self ~= nil then
+                local s = reg.self
+                if typeof(s) == "table" and reg.type and reg.type ~= "Button" then
+                    return s
+                end
+                return s
+            end
+            if reg.type and reg.type ~= "Button" then
+                return reg
             end
         end
         return reg
@@ -1485,7 +1514,7 @@ do
         ["Text"] = function(v) return v.value end,
         ["Toggle"] = function(v) return v.value end,
         ["Slider"] = function(v) return v.value end,
-        ["KeyBind"] = function(v) return {type = "KeyBind", value = v.value, list = config.enums.KeyCode.List} end,
+        ["KeyBind"] = function(v) return {type = "KeyBind", value = v.key, toggle = false, list = config.enums.KeyCode.List} end,
         ["DropBox"] = function(v) return {type = "DropBox", value = v.values[v.value], list = v.values} end,
         ["ColorPicker"] = function(v) return {type = "ColorPicker", value = Color3.new(unpack(v.color))} end,
         ["ComboBox"] = function(v) return {type = "ComboBox", value = v.values} end,
@@ -3728,7 +3757,7 @@ do
             line.background.Color = gui:GetColor("Border")
             line.background.Transparency = 1
             line.background.ZIndex = 0
-            line:Cache(tablist.background)
+            line:Cache(line.background)
             self.line = line
 
             local astheticline = gui:Create("AstheticLine", self)
@@ -3927,6 +3956,111 @@ do
         function GUI:OnValueChanged() end
 
         gui:Register(GUI, "Toggle")
+    end
+
+    do
+        local GUI = {}
+
+        function GUI:Init()
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+
+            self.text = gui:Create("Text", self)
+            self.text:SetTextAlignmentX(Enum.TextXAlignment.Center)
+            self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            self.text:SetPos(.5, 0, .5, 0)
+            self.text:SetTextSize(13)
+            self.text:SetText("None")
+
+            self.key = nil
+            self.value = false
+            self.toggletype = 1
+            self.config = {}
+        end
+        
+        function GUI:PerformLayout(pos, size)
+            self.background_border.Position = pos - Vector2.new(1,1)
+            self.background.Position = pos
+            self.background_border.Size = size + Vector2.new(2,2)
+            self.background.Size = size
+        end
+
+        function GUI:OnClick()
+        end
+
+        function GUI:InputBegan(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+                self:OnClick()
+            end
+        end
+
+        function GUI:SetValue(key)
+            if key == nil then
+                self.key = nil
+                self.text:SetText("None")
+                return
+            end
+            local name = key
+            key = config.enums.KeyCode.Id[key]
+            self.key = key
+            self.text:SetText(name)
+        end
+
+        function GUI:OnValueChanged() end
+
+        hook:Add("InputBegan", "BBOT:Menu.KeyBinds", function(input)
+            if userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
+                return
+            end
+            local guis = gui.registry
+            for i=1, #guis do
+                local v = guis[i]
+                if gui:IsValid(v) and v.class == "KeyBind" then
+                    local last = v.value
+                    if input.KeyCode == v.key then
+                        if v.toggletype == 2 then
+                            v.value = not v.value
+                        elseif v.toggletype == 1 then
+                            v.value = true
+                        elseif v.toggletype == 3 then
+                            v.value = false
+                        end
+                    elseif v.toggletype == 4 then
+                        v.value = true
+                    end
+                    if last ~= v.value then
+                        config:GetRaw(v.config).value = v.value
+                        hook:Call("OnKeyBindChanged", v.config, last, v.Value)
+                    end
+                end
+            end
+        end)
+
+        hook:Add("InputEnded", "BBOT:Menu.KeyBinds", function(input)
+            if userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
+                return
+            end
+            local guis = gui.registry
+            for i=1, #guis do
+                local v = guis[i]
+                if gui:IsValid(v) and v.class == "KeyBind" then
+                    local last = v.value
+                    if input.KeyCode == v.key then
+                        if v.toggletype == 1 then
+                            v.value = false
+                        elseif v.toggletype == 3 then
+                            v.value = true
+                        end
+                    end
+                    if last ~= v.value then
+                        config:GetRaw(v.config).value = v.value
+                        hook:Call("OnKeyBindChanged", v.config, last, v.Value)
+                    end
+                end
+            end
+        end)
+
+        gui:Register(GUI, "KeyBind")
     end
 
     do
@@ -4250,12 +4384,22 @@ do
             local picker = gui:Create("ColorPicker", container)
             picker:SetPos(1, X-26, 0, Y)
             picker:SetSize(0, 26, 0, 10)
-            picker:SetColor(Color3.fromRGB(unpack(config.color)))
+            picker:SetValue(Color3.fromRGB(unpack(config.color)))
             function picker:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = picker
             return 25 + 9
+        elseif type == "KeyBind" then
+            local keybind = gui:Create("KeyBind", container)
+            keybind:SetPos(1, X-32, 0, Y-2)
+            keybind:SetSize(0, 32, 0, 14)
+            keybind:SetValue(config.key)
+            function keybind:OnValueChanged(new)
+                menu:ConfigSetValue(new, path)
+            end
+            self.config_pathways[uid] = keybind
+            return 31 + 9
         end
         return 0
     end
