@@ -1377,7 +1377,7 @@ do
     end
 
     function config:GetKeyID(...)
-        local key = self:GetValue(...)
+        local key = self:GetNormal(...)
         return config.enums.KeyCode.Id[key]
     end
 
@@ -1434,6 +1434,29 @@ do
                 if reg.type == "KeyBind" then
                     return reg.toggle
                 end
+                return reg.value
+            end
+        end
+        return reg
+    end
+
+    function config:GetNormal(...)
+        local steps = {...}
+        local reg = self.registry
+        for i=1, #steps do
+            reg = reg[steps[i]]
+            if reg == nil then break end
+        end
+        if reg == nil then return end
+        if typeof(reg) == "table" then
+            if reg.self ~= nil then
+                local s = reg.self
+                if typeof(s) == "table" and reg.type and reg.type ~= "Button" then
+                    return s.value
+                end
+                return s
+            end
+            if reg.type and reg.type ~= "Button" then
                 return reg.value
             end
         end
@@ -3988,7 +4011,9 @@ do
                 self.text:SetText("...")
             elseif self.editting and input.UserInputType == Enum.UserInputType.MouseButton1 and not self:IsHovering() then
                 self.editting = false
-                self.text:SetText(config.enums.KeyCode.inverseId[self.key])
+                self.key = nil
+                self:OnValueChanged(nil)
+                self.text:SetText((self.key and (config.enums.KeyCode.inverseId[self.key] or "Unk") or "None"))
             elseif self.editting and input.UserInputType == Enum.UserInputType.Keyboard then
                 self.editting = false
                 self.key = input.KeyCode
@@ -4286,6 +4311,34 @@ do
 
         function GUI:Init()
             self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
+        end
+
+        function GUI:PerformLayout()
+            self.background.Position = pos + Vector2.new(2, 2)
+            self.background.Size = size - Vector2.new(4, 4)
+            self.background_outline.Position = pos
+            self.background_outline.Size = size
+            self.background_border.Position = pos - Vector2.new(1, 1)
+            self.background_border.Size = size + Vector2.new(2, 2)
+        end
+
+
+        function GUI:IsHoverTotal()
+            if self:IsHovering() then return true end
+            local buttons = self.buttons
+            for i=1, #buttons do
+                if buttons[i]:IsHovering() then return true end
+            end
+        end
+
+        gui:Register(GUI, "ColorPickerChange")
+
+        local GUI = {}
+
+        function GUI:Init()
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
         end
@@ -4302,6 +4355,37 @@ do
         function GUI:SetColor(col)
             self.background.Color = col
             self.background_outline.Color = color.darkness(col, .5)
+        end
+
+        function GUI:Open()
+            if self.selection then
+                self.selection:Remove()
+                self.selection = nil
+            end
+            local picker = gui:Create("ColorPickerChange", self)
+            self.picker = picker
+            picker:SetPos(0,0,1,-1)
+            picker:SetSize(0, 280, 211)
+            picker:SetColor(self.background.Color)
+            picker:SetZIndex(100)
+            self.open = true
+        end
+
+        function GUI:Close()
+            if self.picker then
+                self.picker:Remove()
+                self.picker = nil
+            end
+            self.open = false
+        end
+
+        function GUI:InputBegan(input)
+            if not self._enabled then return end
+            if not self.open and input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+                self:Open()
+            elseif self.open and (not self.picker or not gui:IsHovering(self.picker)) then
+                self:Close()
+            end
         end
 
         function GUI:SetValue(col)
@@ -4636,7 +4720,7 @@ do
             image:SetPos(0, 0, 0, 2)
             image:SetSize(1, 0, 1, -2)
 
-            local drawquad = image:Cache(draw:Quad({0,0},{0,0},{0,0},{0,0},Color3.new(1,1,1),1,.75))
+            local drawquad = image:Cache(draw:Quad({0,0},{0,0},{0,0},{0,0},Color3.new(1,1,1),3,.75))
 
             local function isvectorequal(a, b)
                 return (a.X == b.X and a.Y == b.Y)
@@ -4763,6 +4847,8 @@ do
 
     local infobar = gui:Create("Panel")
     menu.infobar = infobar
+    infobar.gradient:SetSize(1, 0, 0, 15)
+    infobar.gradient:Generate()
     infobar:AstheticLineAlignment("Top")
     infobar:SetSize(0, 0, 0, 20)
     infobar:SetZIndex(120000)
@@ -4929,6 +5015,7 @@ do
         end
     end)
 
+    -- Why spend the time using getgc, when you can simply check an object!
     local waited = 0
     while true do
         if game:IsLoaded() then
@@ -4943,8 +5030,9 @@ do
             end
         end;
         waited = waited + 1
-        if waited > 6 then
-            BBOT.log(LOG_NORMAL, "Well... This is taking awhile isn't it?")
+        if waited > 7 then
+            BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
+        elseif waited > 5 then
             BBOT:SetLoadingStatus("What the hell is taking so long?")
         end
         wait(5)
