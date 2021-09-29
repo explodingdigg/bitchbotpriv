@@ -1470,6 +1470,10 @@ do
         return true
     end
 
+    hook:Add("OnConfigChanged", "Wow", function(steps, old, new)
+        BBOT.log(LOG_NORMAL, table.concat(steps,"."), old, new)
+    end)
+
     -- Habbit, fuck off.
     function config:GetTable()
         return self.registry
@@ -1666,26 +1670,33 @@ do
         end
 
         function base:Calculate()
-            if self._enabled and gui:IsValid(self) then
-                self:InvalidateLayout()
-            end
+            local last_trans, last_zind, last_vis = self._transparency, self._zindex, self._visible
 
-            local last_trans, last_zind = self._transparency, self._zindex
             if self.parent then
                 if not self.parent._enabled then
                     self._enabled = false
                 else
                     self._enabled = self.enabled
                 end
+                if not self.parent._visible then
+                    self._visible = false
+                else
+                    self._visible = self.visible
+                end
                 self._transparency = self.parent._transparency * self.transparency
                 self._zindex = self.parent._zindex + self.zindex + (self.focused and 10000 or 0)
             else
                 self._enabled = self.enabled
+                self._visible = self.visible
                 self._transparency = self.transparency
                 self._zindex = self.zindex + (self.focused and 10000 or 0)
             end
 
-            if last_trans ~= self._transparency or last_zind ~= self.zindex then
+            if self._enabled and gui:IsValid(self) then
+                self:InvalidateLayout()
+            end
+
+            if last_trans ~= self._transparency or last_zind ~= self.zindex or last_vis ~= self._visible then
                 local cache = self.objects
                 for i=1, #cache do
                     local v = cache[i]
@@ -1693,6 +1704,11 @@ do
                         local drawing = v[1]
                         drawing.Transparency = v[2] * self._transparency
                         drawing.ZIndex = v[3] + self._zindex
+                        if not v[4] or not self._enabled then
+                            drawing.Visible = false
+                        elseif self._visible then
+                            drawing.Visible = self._visible
+                        end
                     end
                 end
             end
@@ -1765,12 +1781,19 @@ do
                 local v = objects[i]
                 if v[1] == object then
                     v[2] = object.Transparency
-                    v[3] = 0
+                    v[3] = object.ZIndex
+                    v[4] = object.Visible
                     return object
                 end
             end
-            self.objects[#self.objects+1] = {object, object.Transparency, 0}
-            object.ZIndex = 0 + self._zindex
+            self.objects[#self.objects+1] = {object, object.Transparency, object.ZIndex, object.Visible}
+            object.Transparency = object.Transparency * self._transparency
+            object.ZIndex = object.ZIndex + self._zindex
+            if not object.Visible or not self._enabled then
+                object.Visible = false
+            elseif self._visible then
+                object.Visible = self._visible
+            end
             return object
         end
         function base:Destroy()
@@ -1839,6 +1862,16 @@ do
             self.enabled = bool
             self:Calculate()
         end
+        function base:GetAbsoluteVisible()
+            return self._visible
+        end
+        function base:GetVisible()
+            return self.visible
+        end
+        function base:SetVisible(bool)
+            self.visible = bool
+            self:Calculate()
+        end
         function base:SetFocused(focus)
             self.focused = focus
             self:Calculate()
@@ -1867,6 +1900,8 @@ do
             -- If only there was a better way of inheriting variables
             enabled = true,
             _enabled = true,
+            visible = true,
+            _visible = true,
             transparency = 1,
             _transparency = 1,
             zindex = 1,
@@ -2421,8 +2456,7 @@ do
     do
         local GUI = {}
         function GUI:Init()
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
-            self.background.Visible = false
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background"), nil, false))
             self.mouseinputs = false
         end
         function GUI:PerformLayout(pos, size)
@@ -2468,13 +2502,6 @@ do
                     false
                 ))
             end
-        end
-    
-        function GUI:SetVisible(bool)
-            -- Do we want the mouse to be visible?
-            self:SetEnabled(bool)
-            self.mouse.Visible = bool
-            self.mouse_outline.Visible = bool
         end
 
         function GUI:SetMode(mode)
@@ -2951,7 +2978,10 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
-            self.text.Position = pos + Vector2.new(3, 3)
+            local w, h = self:GetTextSize(self.content)
+            self.text.Position = Vector2.new(pos.X+3,pos.Y - (h/2) + (size.Y/2))
+            self.cursor.Size = Vector2.new(1,h)
+            self.cursor_outline.Size = Vector2.new(1,h)
             self.background_border.Position = pos - Vector2.new(2,2)
             self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
@@ -2961,9 +2991,11 @@ do
             self:ProcessClipping()
         end
 
-        function GUI:OnChanged(old, new)
-
+        function GUI:SetValue(value)
+            self:SetText(value)
         end
+        
+        function GUI:OnValueChanged() end
 
         function GUI:SetEditable(bool)
             self.editable = bool
@@ -3041,8 +3073,8 @@ do
                         if success then
                             self.input_repeater_start = tick() + .5
                             self.input_repeater_key = input.KeyCode
+                            self:OnValueChanged(new_text)
                             self:SetText(new_text)
-                            self:OnChanged(original_text, new_text)
                             self.cursor_position = #ltext
                         end
                     end
@@ -3074,9 +3106,9 @@ do
         function GUI:Step()
             if self.editing then
                 local t = tick()
-                local wscale = self:GetTextScale()
+                local wscale, hscale = self:GetTextScale()
                 self.cursor.Transparency = math.sin(t * 8)
-                self.cursor.Position = self.absolutepos + Vector2.new((self.cursor_position-(self.content_position-1))*wscale+6, 3)
+                self.cursor.Position = self.absolutepos + Vector2.new((self.cursor_position-(self.content_position-1))*wscale+6, -(hscale/2) + (self.absolutesize.Y/2))
                 self.cursor_outline.Transparency = self.cursor.Transparency
                 self.cursor_outline.Position = self.cursor.Position
                 self:Cache(self.cursor);self:Cache(self.cursor_outline);
@@ -3098,8 +3130,8 @@ do
                             local original_text = current_text
                             local new_text, success, ltext = self:ProcessInput(current_text, self.input_repeater_key)
                             if success then
+                                self:OnValueChanged(new_text)
                                 self:SetText(new_text)
-                                self:OnChanged(original_text, new_text)
                                 self.cursor_position = #ltext
                             end
                         end
@@ -3202,7 +3234,7 @@ do
                 button:SetText(v)
                 function button.OnClick()
                     self.parent:SetOption(i)
-                    self.parent:OnSelect(i)
+                    self.parent:OnValueChanged(v)
                     self.parent:Close()
                 end
             end
@@ -3271,6 +3303,10 @@ do
             self.option = opt
         end
 
+        function GUI:SetValue(num)
+            self:SetOption(num)
+        end
+
         function GUI:AddOption(txt)
             self.options[#self.options+1] = txt
         end
@@ -3288,7 +3324,9 @@ do
             self.background.Size = size
         end
 
-        function GUI:OnSelect() end
+        function GUI:OnValueChanged(i)
+            
+        end
 
         function GUI:Open()
             if self.selection then
@@ -3439,11 +3477,16 @@ do
             if not opt then return end
             opt[2] = value
             self:Refresh()
+            self:OnValueChanged(self.options)
         end
 
         function GUI:SetOptions(options)
             self.options = options
             self:Refresh()
+        end
+
+        function GUI:SetValue(options)
+            self:SetOptions(options)
         end
 
         function GUI:PerformLayout(pos, size)
@@ -3455,7 +3498,7 @@ do
             self.background.Size = size
         end
 
-        function GUI:OnSelect() end
+        function GUI:OnValueChanged() end
 
         function GUI:Open()
             if self.selection then
@@ -3586,6 +3629,7 @@ do
             darken:SetSize(1,0,1,2)
             darken.background.Visible = true
             darken.background.Transparency = 1
+            darken.background.ZIndex = 0
             darken.background.Color = Color3.new(0,0,0)
             darken:Cache(darken.background)
             darken:SetTransparency(.25)
@@ -3661,6 +3705,7 @@ do
             background:SetZIndex(0)
             background.background.Visible = true
             background.background.Transparency = .25
+            background.background.ZIndex = 0
             background.background.Color = Color3.new(0,0,0)
             background:Cache(background.background)
 
@@ -3669,6 +3714,8 @@ do
             line:SetSize(1,0,0,2)
             line.background.Visible = true
             line.background.Color = gui:GetColor("Border")
+            line.background.Transparency = 1
+            line.background.ZIndex = 0
             line:Cache(tablist.background)
             self.line = line
 
@@ -3713,8 +3760,10 @@ do
             local active = self:GetActive()
             if active then
                 active[1]:SetActive(false)
-                gui:TransparencyTo(active[2], 0, 0.2, 0, 0.25)
-                active[2]:SetEnabled(false)
+                local pnl = active[2]
+                gui:TransparencyTo(active[2], 0, 0.2, 0, 0.25, function()
+                    pnl:SetEnabled(false)
+                end)
             end
             new[1]:SetActive(true)
             new[2]:SetEnabled(true)
@@ -3845,6 +3894,7 @@ do
                 colors = self.on
             end
             self.button.gradient:SetColor(unpack(colors))
+            self:OnValueChanged(self.toggle)
         end
 
         function GUI:InputBegan(input)
@@ -3852,6 +3902,17 @@ do
                 self:OnClick()
             end
         end
+
+        function GUI:SetValue(value)
+            self.toggle = value
+            local colors = self.off
+            if self.toggle then
+                colors = self.on
+            end
+            self.button.gradient:SetColor(unpack(colors))
+        end
+
+        function GUI:OnValueChanged() end
 
         gui:Register(GUI, "Toggle")
     end
@@ -3934,7 +3995,7 @@ do
                 if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
                     value = value / (10^self.decimal)
                 end
-                self:SetValue(self:GetValue()+value)
+                self:_SetValue(self:GetValue()+value)
             end
 
             function self.add:Step()
@@ -3963,7 +4024,7 @@ do
                 if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
                     value = value / (10^self.decimal)
                 end
-                self:SetValue(self:GetValue()-value)
+                self:_SetValue(self:GetValue()-value)
             end
             self.buttoncontainer.add = self.add
             self.buttoncontainer.deduct = self.deduct
@@ -4008,11 +4069,12 @@ do
             else
                 self.text:SetText(value .. self.suffix)
             end
-            self:InvalidateLayout()
+            self.bar:SetSize(self.percentage, 0, 1, 0)
         end
 
-        function GUI:SetValue(value)
+        function GUI:_SetValue(value)
             self:SetPercentage(math.remap(math.clamp(value, self.min, self.max), self.min, self.max, 0, 1))
+            self:OnValueChanged(self:GetValue())
         end
 
         function GUI:GetValue()
@@ -4026,14 +4088,18 @@ do
             self.background_border.Size = size + Vector2.new(4,4)
             self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
-            self.bar:SetSize(self.percentage, 0, 1, 0)
         end
 
         function GUI:CalculateValue(X)
             local APX = self.absolutepos.X
             local ASX = self.absolutesize.X
             local position = math.clamp(X, APX, APX + ASX )
+            local last = self:GetValue()
             self:SetPercentage((position - APX)/ASX)
+            local new = self:GetValue()
+            if last ~= new then
+                self:OnValueChanged(new)
+            end
         end
 
         local mouse = BBOT.service:GetService("Mouse")
@@ -4054,6 +4120,12 @@ do
                 self.down = false
             end
         end
+
+        function GUI:SetValue(value)
+            self:SetPercentage(math.remap(math.clamp(value, self.min, self.max), self.min, self.max, 0, 1))
+        end
+
+        function GUI:OnValueChanged() end
 
         gui:Register(GUI, "Slider")
     end
@@ -4080,6 +4152,12 @@ do
             self.background.Color = col
             self.background_outline.Color = color.darkness(col, .5)
         end
+
+        function GUI:SetValue(col)
+            self:SetColor(col)
+        end
+
+        function GUI:OnValueChanged() end
 
         gui:Register(GUI, "ColorPicker", "Button")
     end
@@ -4131,17 +4209,23 @@ do
             wait(0)
         end
     end
-    --[[type = "Toggle",
-    name = "Highlight Target",
-    value = false,
-    extra = {
-        {
-            type = "ColorPicker",
-            name = "Aimbot Target",
-            color = { 255, 0, 0, 255 },
-        }
-    },]]
+
     menu.config_pathways = {}
+
+    hook:Add("OnConfigChanged", "BBOT:Menu.UpdateConfiguration", function(path, old, new)
+        if menu._config_changed then return end
+        local path = table.concat(path, ".")
+        local pathways = menu.config_pathways
+        if pathways[path] and pathways[path].SetValue then
+            pathways[path]:SetValue(new)
+        end
+    end)
+
+    function menu:ConfigSetValue(new, path)
+        menu._config_changed = true
+        config:SetValue(new, unpack(path))
+        menu._config_changed = false
+    end
 
     function menu:CreateExtra(container, config, path, X, Y)
         local name = config.name
@@ -4156,7 +4240,7 @@ do
             picker:SetSize(0, 26, 0, 10)
             picker:SetColor(Color3.fromRGB(unpack(config.color)))
             function picker:OnValueChanged(new)
-                config:SetValue(new, unpack(path))
+                menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = picker
             return 25 + 9
@@ -4185,8 +4269,9 @@ do
             local w = toggle.text:GetTextSize()
             toggle:SetSize(0, 10 + w, 0, 8)
             toggle:InvalidateLayout(true)
+            toggle:SetValue(config.value)
             function toggle:OnValueChanged(new)
-                config:SetValue(new, unpack(path))
+                menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = toggle
             return 8+7
@@ -4209,7 +4294,7 @@ do
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+2+10+1)
             function slider:OnValueChanged(new)
-                config:SetValue(new, unpack(path))
+                menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = slider
             return tall+2+10+7
@@ -4223,12 +4308,12 @@ do
             local _, tall = text:GetTextScale()
             textentry:SetPos(0, 0, 0, tall+4)
             textentry:SetSize(1, 0, 0, 16)
-            textentry:SetText(config.value)
+            textentry:SetValue(config.value)
             textentry:SetTextSize(13)
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+4+16+1)
             function textentry:OnValueChanged(new)
-                config:SetValue(new, unpack(path))
+                menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = textentry
             return tall+4+16+4
@@ -4243,11 +4328,11 @@ do
             dropbox:SetPos(0, 0, 0, tall+4)
             dropbox:SetSize(1, 0, 0, 16)
             dropbox:SetOptions(config.values)
-            dropbox:SetOption(config.value)
+            dropbox:SetValue(config.value)
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+4+16+1)
             function dropbox:OnValueChanged(new)
-                config:SetValue(new, unpack(path))
+                menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = dropbox
             return 16+4+16+4
@@ -4261,11 +4346,11 @@ do
             local _, tall = text:GetTextScale()
             dropbox:SetPos(0, 0, 0, tall+4)
             dropbox:SetSize(1, 0, 0, 16)
-            dropbox:SetOptions(config.values)
+            dropbox:SetValue(config.values)
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+4+16+1)
             function dropbox:OnValueChanged(new)
-                config:SetValue(new, unpack(path))
+                menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = dropbox
             return 16+4+16+4
@@ -4360,8 +4445,8 @@ do
 
                     subcontainer = gui:Create("Container", frame)
                     frame.subcontainer = subcontainer
-                    subcontainer:SetPos(0, 8, 0, 20)
-                    subcontainer:SetSize(1, -16, 1, -20)
+                    subcontainer:SetPos(0, 8, 0, 23)
+                    subcontainer:SetSize(1, -16, 1, -23)
                 end
                 if typeof(Id) == "string" then
                     Y = Y + self:CreateOptions(container, config, path, Y)
@@ -4438,6 +4523,10 @@ do
 
     local main = gui:Create("Container")
     menu.main = main
+    main.background.Transparency = 0
+    main.background.ZIndex = 0
+    main.background.Visible = true
+    main:Cache(main.background)
     main:SetTransparency(0)
     main:SetSize(1,0,1,0)
 
@@ -4476,8 +4565,11 @@ do
     hook:Add("InputBegan", "BBOT:Menu.Toggle", function(input)
         if input.UserInputType == Enum.UserInputType.Keyboard then
             if input.KeyCode == Enum.KeyCode.Delete then
-                main:SetEnabled(not main:GetEnabled())
-                gui:TransparencyTo(main, (main:GetEnabled() and 1 or 0), 0.2, 0, 0.25)
+                local new = not main:GetEnabled()
+                gui:TransparencyTo(main, (new and 1 or 0), 0.2, 0, 0.25, function()
+                    if not new then main:SetEnabled(false) end
+                end)
+                if new then main:SetEnabled(true) end
             end
         end
     end)
@@ -4698,6 +4790,194 @@ do
         local menu = BBOT.menu
         local config = BBOT.config
         if BBOT.game == "pf" then
+            local table = BBOT.table
+            local anims = {
+                {
+                    type = "Toggle",
+                    name = "Enable",
+                    value = false,
+                },
+                {
+                    type = "DropBox",
+                    name = "Type",
+                    value = 1,
+                    values = {"Additive", "Wave"},
+                },
+                {
+                    type = "Slider",
+                    name = "Offset",
+                    min = -1,
+                    max = 1,
+                    value = 0,
+                    suffix = "studs"
+                },
+                {
+                    type = "Slider",
+                    name = "Amplitude",
+                    min = 0,
+                    max = 10,
+                    value = 0,
+                    suffix = "studs"
+                },
+                {
+                    type = "Slider",
+                    name = "Speed",
+                    min = 0,
+                    max = 10,
+                    value = 0,
+                    suffix = "studs"
+                },
+            }
+            local skins_anims = {
+                {
+                    type = "Toggle",
+                    name = "Enable",
+                    value = false,
+                    extra = {},
+                },
+                {
+                    name = "OffsetStudsU",
+                    pos = UDim2.new(0,0,0,20),
+                    size = UDim2.new(.5,-3,0,175),
+                    type = "Panel",
+                    content = anims
+                },
+                {
+                    name = "OffsetStudsV",
+                    pos = UDim2.new(.5,3,0,20),
+                    size = UDim2.new(.5,-3,0,175),
+                    type = "Panel",
+                    content = anims
+                },
+                {
+                    name = "StudsPerTileU",
+                    pos = UDim2.new(0,0,0,20+(175+6)),
+                    size = UDim2.new(.5,-3,0,175),
+                    type = "Panel",
+                    content = anims
+                },
+                {
+                    name = "StudsPerTileV",
+                    pos = UDim2.new(.5,3,0,20+(175+6)),
+                    size = UDim2.new(.5,-3,0,175),
+                    type = "Panel",
+                    content = anims
+                }
+            }
+            local skins_content = {
+                {
+                    type = "Toggle",
+                    name = "Enable",
+                    value = false,
+                    extra = {},
+                },
+                {
+                    type = "DropBox",
+                    name = "Material",
+                    value = 1,
+                    values = {"Plastic", "Ghost", "Forcefield", "Neon", "Foil", "Glass"},
+                    extra = {
+                        {
+                            type = "ColorPicker",
+                            name = "Brick Color",
+                            color = { 255, 255, 255, 255 },
+                        },
+                    },
+                },
+                {
+                    type = "Slider",
+                    name = "Reflectance",
+                    value = 0,
+                    min = 0,
+                    max = 100,
+                    suffix = "%",
+                    decimal = 1,
+                    extra = {},
+                },
+                {
+                    name = "Textures",
+                    pos = UDim2.new(0,0,0,90),
+                    size = UDim2.new(1,0,1,-96),
+                    type = "Panel",
+                    content = {
+                        {
+                            type = "Toggle",
+                            name = "Enable",
+                            value = false,
+                            extra = {},
+                        },
+                        {
+                            type = "Text",
+                            name = "Asset-Id",
+                            value = "3643887058",
+                            extra = {},
+                        },
+                        {
+                            type = "Slider",
+                            name = "OffsetStudsU",
+                            value = 0,
+                            min = 0,
+                            max = 10,
+                            suffix = "studs",
+                            decimal = 1,
+                            extra = {},
+                        },
+                        {
+                            type = "Slider",
+                            name = "OffsetStudsV",
+                            value = 0,
+                            min = 0,
+                            max = 10,
+                            suffix = "studs",
+                            decimal = 1,
+                            extra = {},
+                        },
+                        {
+                            type = "Slider",
+                            name = "StudsPerTileU",
+                            value = 1,
+                            min = 0,
+                            max = 10,
+                            suffix = "studs/tile",
+                            decimal = 1,
+                            extra = {},
+                        },
+                        {
+                            type = "Slider",
+                            name = "StudsPerTileV",
+                            value = 1,
+                            min = 0,
+                            max = 10,
+                            suffix = "studs/tile",
+                            decimal = 1,
+                            extra = {},
+                        },
+                        {
+                            type = "Slider",
+                            name = "Transparency",
+                            value = 0,
+                            min = 0,
+                            max = 100,
+                            suffix = "%",
+                            decimal = 1,
+                            extra = {},
+                        },
+                    },
+                }
+            }
+            local skins = {
+                {
+                    name = { "Slot1", "Slot1-Animations", "Slot2", "Slot2-Animations", },
+                    pos = UDim2.new(0,0,0,0),
+                    size = UDim2.new(1,0,1,0),
+                    type = "Tabs",
+                    {content=skins_content},
+                    {content=skins_anims},
+                    {content=skins_content},
+                    {content=skins_anims},
+                }
+            }
+
             BBOT.configuration = {
                 {
                     -- The first layer here is the frame
@@ -5737,7 +6017,7 @@ do
                     Id = "Weapons",
                     name = "Weapon Customization",
                     pos = UDim2.new(.75, 0, 0, 100),
-                    size = UDim2.new(0, 400, 0, 500),
+                    size = UDim2.new(0, 425, 0, 575),
                     type = "Tabs",
                     content = {
                         {
@@ -5771,135 +6051,13 @@ do
                                     pos = UDim2.new(0,0,0,20),
                                     size = UDim2.new(1,0,1,-20),
                                     {
-                                        content = {
-                                            {
-                                                name = "Modifications",
-                                                pos = UDim2.new(0,0,0,0),
-                                                size = UDim2.new(.5,-4,1,0),
-                                                type = "Panel",
-                                                content = {
-                                                    {
-                                                        type = "Toggle",
-                                                        name = "Enable",
-                                                        value = false,
-                                                        extra = {},
-                                                    },
-                                                    {
-                                                        type = "DropBox",
-                                                        name = "Material",
-                                                        value = 1,
-                                                        values = {"Plastic", "Ghost", "Forcefield", "Neon", "Foil", "Glass"},
-                                                        extra = {
-                                                            {
-                                                                type = "ColorPicker",
-                                                                name = "Brick Color",
-                                                                color = { 255, 255, 255, 255 },
-                                                            },
-                                                        },
-                                                    },
-                                                    {
-                                                        type = "Slider",
-                                                        name = "Reflectance",
-                                                        value = 0,
-                                                        min = 0,
-                                                        max = 100,
-                                                        suffix = "%",
-                                                        decimal = 1,
-                                                        extra = {},
-                                                    },
-                                                    {
-                                                        name = "Textures",
-                                                        pos = UDim2.new(0,0,0,90),
-                                                        size = UDim2.new(1,0,1,-96),
-                                                        type = "Panel",
-                                                        content = {
-                                                            {
-                                                                type = "Toggle",
-                                                                name = "Enable",
-                                                                value = false,
-                                                                extra = {},
-                                                            },
-                                                            {
-                                                                type = "Text",
-                                                                name = "Asset-Id",
-                                                                value = "3643887058",
-                                                                extra = {},
-                                                            },
-                                                            {
-                                                                type = "Slider",
-                                                                name = "OffsetStudsU",
-                                                                value = 0,
-                                                                min = 0,
-                                                                max = 10,
-                                                                suffix = "studs",
-                                                                decimal = 1,
-                                                                extra = {},
-                                                            },
-                                                            {
-                                                                type = "Slider",
-                                                                name = "OffsetStudsV",
-                                                                value = 0,
-                                                                min = 0,
-                                                                max = 10,
-                                                                suffix = "studs",
-                                                                decimal = 1,
-                                                                extra = {},
-                                                            },
-                                                            {
-                                                                type = "Slider",
-                                                                name = "StudsPerTileU",
-                                                                value = 1,
-                                                                min = 0,
-                                                                max = 10,
-                                                                suffix = "studs/tile",
-                                                                decimal = 1,
-                                                                extra = {},
-                                                            },
-                                                            {
-                                                                type = "Slider",
-                                                                name = "StudsPerTileV",
-                                                                value = 1,
-                                                                min = 0,
-                                                                max = 10,
-                                                                suffix = "studs/tile",
-                                                                decimal = 1,
-                                                                extra = {},
-                                                            },
-                                                            {
-                                                                type = "Slider",
-                                                                name = "Transparency",
-                                                                value = 0,
-                                                                min = 0,
-                                                                max = 100,
-                                                                suffix = "%",
-                                                                decimal = 1,
-                                                                extra = {},
-                                                            },
-                                                        },
-                                                    }
-                                                }
-                                            },
-                                            {
-                                                name = "Animations",
-                                                pos = UDim2.new(.5,4,0,0),
-                                                size = UDim2.new(.5,-8,1,0),
-                                                type = "Panel",
-                                                content = {
-                                                    {
-                                                        type = "Toggle",
-                                                        name = "Enable",
-                                                        value = false,
-                                                        extra = {},
-                                                    },
-                                                }
-                                            },
-                                        },
+                                        content = table.deepcopy(skins),
                                     },
                                     {
-                                        content = {},
+                                        content = table.deepcopy(skins),
                                     },
                                     {
-                                        content = {},
+                                        content = table.deepcopy(skins),
                                     }
                                 },
                             }
