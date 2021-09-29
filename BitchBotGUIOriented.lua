@@ -1559,6 +1559,7 @@ do
         ["Accent"] = Color3.fromRGB(127, 72, 163),
         ["Border"] = Color3.fromRGB(0,0,0),
         ["Outline"] = Color3.fromRGB(20,20,20),
+        ["Outline-Light"] = Color3.fromRGB(30,30,30),
         ["Background"] = Color3.fromRGB(35,35,35),
     }
 
@@ -2859,8 +2860,8 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             --[[self.gradient = gui:Create("Gradient", self)
@@ -3154,8 +3155,8 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.options = {}
@@ -3218,8 +3219,8 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.gradient = gui:Create("Gradient", self)
@@ -3317,8 +3318,8 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.options = {}
@@ -3374,8 +3375,8 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
             self.gradient = gui:Create("Gradient", self)
             self.gradient:SetPos(0, 0, 0, -1)
@@ -3393,7 +3394,7 @@ do
 
             local dropicon = gui:Create("Text", self)
             self.dropicon = dropicon
-            dropicon:SetPos(1, -4, .5, 0)
+            dropicon:SetPos(1, -2, .5, 0)
             dropicon:SetTextAlignmentX(Enum.TextXAlignment.Right)
             dropicon:SetTextAlignmentY(Enum.TextYAlignment.Center)
             dropicon:SetText("...")
@@ -3645,7 +3646,7 @@ do
 
             local background = gui:Create("Container", tablist)
             background:SetPos(0,0,0,0)
-            background:SetSize(1,0,1,0)
+            background:SetSize(1,0,1,-1)
             background:SetZIndex(0)
             background.background.Visible = true
             background.background.Transparency = .25
@@ -3719,11 +3720,11 @@ do
                 local v = r[i]
                 if self.scalebycontent then
                     local sizex = v[1].text:GetTextSize() + 6
-                    v[1]:SetSize(0,sizex,1,-3)
+                    v[1]:SetSize(0,sizex,1,-2)
                     v[1]:SetPos(0,x,0,0)
                     x += sizex
                 else
-                    v[1]:SetSize(1/l,0,1,-3)
+                    v[1]:SetSize(1/l,0,1,-2)
                     v[1]:SetPos((1/l)*(i-1),0,0,0)
                 end
             end
@@ -3755,8 +3756,8 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.gradient = gui:Create("Gradient", self)
@@ -3804,11 +3805,11 @@ do
             self.button.gradient:SetPos(0, 0, 0, -1)
             self.button.gradient:SetSize(1, 0, 0, 8)
             self.button.gradient:Generate()
-            self.button.mouseinput = false
+            self.button.mouseinputs = false
 
             self.text = gui:Create("Text", self)
             self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
-            self.text:SetPos(0, 0, .5, -1)
+            self.text:SetPos(0, 0, .5, 0)
             self.text:SetTextSize(13)
 
             self.toggle = false
@@ -3885,8 +3886,8 @@ do
         local userinputservice = BBOT.service:GetService("UserInputService")
 
         function GUI:Init()
-            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.gradient = gui:Create("Gradient", self)
@@ -4129,27 +4130,40 @@ do
             color = { 255, 0, 0, 255 },
         }
     },]]
-    function menu:CreateExtra(container, config, X, Y)
+    menu.config_pathways = {}
+
+    function menu:CreateExtra(container, config, path, X, Y)
         local name = config.name
         local type = config.type
+        local path = table.deepcopy(path)
+        path[#path+1] = name
+        local uid = table.concat(path, ".")
         if type == "ColorPicker" then
             local picker = gui:Create("ColorPicker", container)
-            picker:SetPos(1, X-26, 0, Y-1)
+            picker:SetPos(1, X-26, 0, Y)
             picker:SetSize(0, 26, 0, 10)
             picker:SetColor(Color3.fromRGB(unpack(config.color)))
+            function picker:OnValueChanged(new)
+                config:SetValue(new, unpack(path))
+            end
+            self.config_pathways[uid] = picker
             return 25 + 9
         end
         return 0
     end
 
-    function menu:CreateOptions(container, config, Y)
+    function menu:CreateOptions(container, config, path, Y)
         local name = config.name
         local type = config.type
+        local path = table.deepcopy(path)
+        path[#path+1] = name
+        local uid = table.concat(path, ".")
+
         local X = 0
         if config.extra then
             local extra = config.extra
             for i=1, #extra do
-                X = X - self:CreateExtra(container, extra[i], X, Y)
+                X = X - self:CreateExtra(container, extra[i], path, X, Y)
             end
         end
         if type == "Toggle" then
@@ -4160,6 +4174,10 @@ do
             local w = toggle.text:GetTextSize()
             toggle:SetSize(0, 10 + w, 0, 8)
             toggle:InvalidateLayout(true)
+            function toggle:OnValueChanged(new)
+                config:SetValue(new, unpack(path))
+            end
+            self.config_pathways[uid] = toggle
             return 8+7
         elseif type == "Slider" then
             local cont = gui:Create("Container", container)
@@ -4179,7 +4197,11 @@ do
             slider:SetSize(1, 0, 0, 10)
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+2+10+1)
-            return tall+2+10+8
+            function slider:OnValueChanged(new)
+                config:SetValue(new, unpack(path))
+            end
+            self.config_pathways[uid] = slider
+            return tall+2+10+7
         elseif type == "Text" then
             local cont = gui:Create("Container", container)
             local text = gui:Create("Text", cont)
@@ -4194,6 +4216,10 @@ do
             textentry:SetTextSize(13)
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+4+16+1)
+            function textentry:OnValueChanged(new)
+                config:SetValue(new, unpack(path))
+            end
+            self.config_pathways[uid] = textentry
             return tall+4+16+4
         elseif type == "DropBox" then
             local cont = gui:Create("Container", container)
@@ -4209,6 +4235,10 @@ do
             dropbox:SetOption(config.value)
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+4+16+1)
+            function dropbox:OnValueChanged(new)
+                config:SetValue(new, unpack(path))
+            end
+            self.config_pathways[uid] = dropbox
             return 16+4+16+4
         elseif type == "ComboBox" then
             local cont = gui:Create("Container", container)
@@ -4223,19 +4253,24 @@ do
             dropbox:SetOptions(config.values)
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+4+16+1)
+            function dropbox:OnValueChanged(new)
+                config:SetValue(new, unpack(path))
+            end
+            self.config_pathways[uid] = dropbox
             return 16+4+16+4
         end
         return 0
     end
 
     do
-        function menu:HandleGeneration(container, configuration)
+        function menu:HandleGeneration(container, path, configuration)
             local Y = 0
             for i=1, #configuration do
                 local config = configuration[i]
                 local type = config.type
                 local name = config.name
-                
+                local path = table.deepcopy(path)
+                path[#path+1] = name
                 local subcontainer
                 if type == "Tabs" or typeof(name) == "table" then
                     local istable = typeof(name) == "table"
@@ -4305,7 +4340,7 @@ do
                     end
                     local alias = gui:Create("Text", frame)
                     frame.alias = alias
-                    alias:SetPos(0, 2, 0, 2)
+                    alias:SetPos(0, 3, 0, 4)
                     alias:SetText(name)
                     alias:SetTextSize(13)
 
@@ -4316,7 +4351,7 @@ do
                 end
                 Y = Y + self:CreateOptions(container, config, Y)
                 if config.content and subcontainer then
-                    self:HandleGeneration(subcontainer, config.content)
+                    self:HandleGeneration(subcontainer, path, config.content)
                 end
             end
         end
@@ -4388,9 +4423,11 @@ do
         tabs:SetPos(0, 10, 0, 10+20)
         tabs:SetSize(1, -20, 1, -20-20)
 
+        local path = {frame.Id}
+
         self:HandleGeneration(function(config, panel)
             tabs:Add(config.name, config.icon, panel)
-        end, configuration.content)
+        end, path, configuration.content)
         return frame
     end
 
@@ -5042,7 +5079,7 @@ do
                                 {
                                     name = "ESP Settings",
                                     pos = UDim2.new(0,0,11/20,4),
-                                    size = UDim2.new(.5,-4,9/20,-8),
+                                    size = UDim2.new(.5,-4,9/20,-4),
                                     type = "Panel",
                                     content = {
                                         {
@@ -5472,7 +5509,7 @@ do
                                 {
                                     name = {"Weapons", "Grenades", "Pickups"},
                                     pos = UDim2.new(.5,4,(1/2) + ((12/20)/2),4),
-                                    size = UDim2.new(.5,-8,(8/20)/2,-8),
+                                    size = UDim2.new(.5,-8,(8/20)/2,-4),
                                     type = "Tabs",
                                     {
                                         content = {
