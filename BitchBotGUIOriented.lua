@@ -1553,7 +1553,19 @@ do
         gui.drawing_debugger.Visible = false
         gui.drawing_debugger.ZIndex = 2000000
     end
-    
+
+    gui.colors = {
+        ["Default"] = Color3.new(1,1,1),
+        ["Accent"] = Color3.fromRGB(127, 72, 163),
+        ["Border"] = Color3.fromRGB(0,0,0),
+        ["Outline"] = Color3.fromRGB(20,20,20),
+        ["Background"] = Color3.fromRGB(35,35,35),
+    }
+
+    function gui:GetColor(color)
+        return gui.colors[color] or gui.colors["Default"]
+    end
+
     do
         local base = {}
         gui.base = base
@@ -2397,7 +2409,7 @@ do
     do
         local GUI = {}
         function GUI:Init()
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
             self.background.Visible = false
             self.mouseinputs = false
         end
@@ -2512,9 +2524,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.color = Color3.fromRGB(127, 72, 163)
-            self.asthetic_line = self:Cache(draw:Box(0, 0, 0, 2, 0, self.color))
-            local hue, saturation, darkness = Color3.toHSV(self.color)
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.asthetic_line = self:Cache(draw:Box(0, 0, 0, 2, 0, gui:GetColor("Accent")))
+            local hue, saturation, darkness = Color3.toHSV(gui:GetColor("Accent"))
             darkness = darkness / 2
             self.asthetic_line_dark = self:Cache(draw:Box(0, 0, 0, 1, 0, Color3.fromHSV(hue, saturation, darkness)))
             self.mouseinputs = false
@@ -2525,6 +2537,8 @@ do
             self.asthetic_line.Size = size
             self.asthetic_line_dark.Position = pos + Vector2.new(0, size.Y/2)
             self.asthetic_line_dark.Size = Vector2.new(size.X, size.Y/2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
+            self.background_outline.Size = size + Vector2.new(2,2)
         end
 
         gui:Register(GUI, "AstheticLine")
@@ -2534,8 +2548,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 6, Color3.fromRGB(20, 20, 20)))
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.asthetic_line_alignment = "Top"
             self.asthetic_line = gui:Create("AstheticLine", self)
@@ -2546,8 +2561,8 @@ do
             self.gradient:SetSize(1, 0, 0, 20)
             self.gradient:Generate()
 
-            self.sizablearearight = self:Cache(draw:Box(0, 0, 2, 6, 0, Color3.fromRGB(20, 20, 20), nil, false))
-            self.sizableareabottom = self:Cache(draw:Box(0, 0, 6, 2, 0, Color3.fromRGB(20, 20, 20), nil, false))
+            self.sizablearearight = self:Cache(draw:Box(0, 0, 2, 6, 0, gui:GetColor("Border"), nil, false))
+            self.sizableareabottom = self:Cache(draw:Box(0, 0, 6, 2, 0, gui:GetColor("Border"), nil, false))
 
             self.draggable = false
             self.sizable = false
@@ -2576,12 +2591,14 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
-            self.background_outline.Position = pos
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
+            self.background.Size = size
             self.sizablearearight.Position = pos + size - Vector2.new(2, 6)
             self.sizableareabottom.Position = pos + size - Vector2.new(6, 2)
-            self.background_outline.Size = size
-            self.background.Size = size
         end
 
         function GUI:SetDraggable(bool)
@@ -2842,7 +2859,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             --[[self.gradient = gui:Create("Gradient", self)
             self.gradient:SetPos(0, 2, 0, 0)
@@ -2863,11 +2882,9 @@ do
             self.textsize = 16
             self.font = 2
 
-            self.cursor_outline = self:Cache(draw:BoxOutline(0, 0, 1, self.textsize, 4, Color3.fromRGB(20, 20, 20)))
+            self.cursor_outline = self:Cache(draw:BoxOutline(0, 0, 1, self.textsize, 4, gui:GetColor("Border")))
             self.cursor = self:Cache(draw:BoxOutline(0, 0, 1, self.textsize, 0, Color3.fromRGB(127, 72, 163), 0))
             self.cursor_position = 1
-
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
 
             self.editable = true
             self.highlightable = true
@@ -2923,9 +2940,11 @@ do
 
         function GUI:PerformLayout(pos, size)
             self.text.Position = pos + Vector2.new(3, 3)
-            self.background_outline.Position = pos
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
-            self.background_outline.Size = size
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
             self:ProcessClipping()
         end
@@ -3135,8 +3154,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.options = {}
             self.buttons = {}
@@ -3144,9 +3164,11 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
-            self.background_outline.Position = pos
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
-            self.background_outline.Size = size
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
         end
 
@@ -3196,11 +3218,13 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.gradient = gui:Create("Gradient", self)
-            self.gradient:SetPos(0, 2, 0, 1)
-            self.gradient:SetSize(1, -4, 0, 10)
+            self.gradient:SetPos(0, 0, 0, -1)
+            self.gradient:SetSize(1, 0, 0, 10)
             self.gradient:Generate()
 
             local text = gui:Create("Text", self)
@@ -3216,7 +3240,6 @@ do
             dropicon:SetTextAlignmentX(Enum.TextXAlignment.Center)
             dropicon:SetTextAlignmentY(Enum.TextYAlignment.Center)
             dropicon:SetText("-")
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
             self.mouseinputs = true
 
             self.Id = 0
@@ -3245,9 +3268,11 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
-            self.background_outline.Position = pos
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
-            self.background_outline.Size = size
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
         end
 
@@ -3292,8 +3317,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.options = {}
             self.buttons = {}
@@ -3301,9 +3327,11 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
-            self.background_outline.Position = pos
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
-            self.background_outline.Size = size
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
         end
 
@@ -3346,11 +3374,12 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
-
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
             self.gradient = gui:Create("Gradient", self)
-            self.gradient:SetPos(0, 2, 0, 1)
-            self.gradient:SetSize(1, -4, 0, 10)
+            self.gradient:SetPos(0, 0, 0, -1)
+            self.gradient:SetSize(1, 0, 0, 10)
             self.gradient:Generate()
 
             self.textcontainer = gui:Create("Container", self)
@@ -3370,7 +3399,6 @@ do
             dropicon:SetText("...")
             local w = dropicon:GetTextSize()
             self.textcontainer:SetSize(1, -w - 12, 1, 0)
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
             self.mouseinputs = true
 
             self.options = {}
@@ -3407,9 +3435,11 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
-            self.background_outline.Position = pos
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
-            self.background_outline.Size = size
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
         end
 
@@ -3522,15 +3552,15 @@ do
 
         function GUI:Init()
             self.mouseinputs = true
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 5, Color3.fromRGB(20, 20, 20)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.gradient = gui:Create("Gradient", self)
             self.gradient:SetPos(0, 0, 0, 0)
             self.gradient:SetSize(1, 0, 0, 20)
             self.gradient:SetZIndex(0)
             self.gradient:Generate()
-
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
 
             self.text = gui:Create("Text", self)
             self.text:SetPos(.5, 0, .5, 0)
@@ -3551,15 +3581,17 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
-            self.background_outline.Position = pos
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
-            self.background_outline.Size = size
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size + (self.activated and Vector2.new(0,4) or Vector2.new())
         end
 
         function GUI:SetActive(value)
             self.activated = value
-            gui:TransparencyTo(self.darken, (value and 0 or .25), 0.3, 0, 0.25)
+            gui:TransparencyTo(self.darken, (value and 0 or .25), 0.2, 0, 0.25)
             self:InvalidateLayout()
         end
 
@@ -3597,7 +3629,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 2, Color3.fromRGB(20, 20, 20)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             local container = gui:Create("Container", self)
             container:SetPos(0,8,0,36+8)
@@ -3622,7 +3656,7 @@ do
             line:SetPos(0,0,1,-2)
             line:SetSize(1,0,0,2)
             line.background.Visible = true
-            line.background.Color = Color3.fromRGB(20, 20, 20)
+            line.background.Color = gui:GetColor("Border")
             line:Cache(tablist.background)
             self.line = line
 
@@ -3643,8 +3677,12 @@ do
         end
     
         function GUI:PerformLayout(pos, size)
-            self.background_outline.Position = pos - Vector2.new(2,2)
-            self.background_outline.Size = size + Vector2.new(4,4)
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
+            self.background.Position = pos
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
+            self.background.Size = size
         end
 
         function GUI:GetActive()
@@ -3663,13 +3701,13 @@ do
             local active = self:GetActive()
             if active then
                 active[1]:SetActive(false)
-                gui:TransparencyTo(active[2], 0, 0.3, 0, 0.25)
+                gui:TransparencyTo(active[2], 0, 0.2, 0, 0.25)
                 active[2]:SetEnabled(false)
             end
             new[1]:SetActive(true)
             new[2]:SetEnabled(true)
             new[2]:InvalidateLayout(true, true)
-            gui:TransparencyTo(new[2], 1, 0.3, 0, 0.25)
+            gui:TransparencyTo(new[2], 1, 0.2, 0, 0.25)
             self.activeId = num
         end
 
@@ -3717,8 +3755,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 4, Color3.fromRGB(20, 20, 20)))
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.gradient = gui:Create("Gradient", self)
             self.gradient:SetPos(0, 0, 0, -2)
@@ -3732,10 +3771,12 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
-            self.background_outline.Position = pos
-            self.background_outline.Size = size
         end
 
         function GUI:SetText(txt)
@@ -3807,8 +3848,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 4, Color3.fromRGB(20, 20, 20)))
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
             self.gradient = gui:Create("Gradient", self)
             self.gradient:SetPos(0, 0, 0, -1)
             self.gradient:SetSize(0, 0, 0, 10)
@@ -3825,10 +3867,12 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
-            self.background_outline.Position = pos
-            self.background_outline.Size = size
             self.gradient:SetSize(self.percentage, 0, 0, 8)
         end
 
@@ -3841,8 +3885,9 @@ do
         local userinputservice = BBOT.service:GetService("UserInputService")
 
         function GUI:Init()
-            self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 4, Color3.fromRGB(20, 20, 20)))
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.gradient = gui:Create("Gradient", self)
             self.gradient:SetPos(0, 0, 0, -1)
@@ -3920,9 +3965,9 @@ do
                 if hover ~= self.hover then
                     self.hover = hover
                     if hover then
-                        gui:TransparencyTo(self, 1, 0.3, 0, 0.25)
+                        gui:TransparencyTo(self, 1, 0.2, 0, 0.25)
                     else
-                        gui:TransparencyTo(self, 0, 0.3, 0, 0.25)
+                        gui:TransparencyTo(self, 0, 0.2, 0, 0.25)
                     end
                 end
             end
@@ -3963,10 +4008,12 @@ do
         end
 
         function GUI:PerformLayout(pos, size)
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
             self.background.Position = pos
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
-            self.background_outline.Position = pos
-            self.background_outline.Size = size
             self.bar:SetSize(self.percentage, 0, 1, 0)
         end
 
@@ -4003,9 +4050,9 @@ do
         local GUI = {}
 
         function GUI:Init()
-            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(20, 20, 20)))
-            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(20, 20, 20)))
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(35, 35, 35)))
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
         end
 
         function GUI:PerformLayout(pos, size)
@@ -4087,7 +4134,7 @@ do
         local type = config.type
         if type == "ColorPicker" then
             local picker = gui:Create("ColorPicker", container)
-            picker:SetPos(1, X-26, 0, Y)
+            picker:SetPos(1, X-26, 0, Y-1)
             picker:SetSize(0, 26, 0, 10)
             picker:SetColor(Color3.fromRGB(unpack(config.color)))
             return 25 + 9
@@ -4141,13 +4188,13 @@ do
             text:SetText(name)
             local textentry = gui:Create("TextEntry", cont)
             local _, tall = text:GetTextScale()
-            textentry:SetPos(0, 0, 0, tall+2)
-            textentry:SetSize(1, 0, 0, 18)
+            textentry:SetPos(0, 0, 0, tall+4)
+            textentry:SetSize(1, 0, 0, 16)
             textentry:SetText(config.value)
             textentry:SetTextSize(13)
             cont:SetPos(0, 0, 0, Y)
-            cont:SetSize(1, 0, 0, tall+2+18+1)
-            return tall+2+18+4
+            cont:SetSize(1, 0, 0, tall+4+16+1)
+            return tall+4+16+4
         elseif type == "DropBox" then
             local cont = gui:Create("Container", container)
             local text = gui:Create("Text", cont)
@@ -4156,27 +4203,27 @@ do
             text:SetText(name)
             local dropbox = gui:Create("DropBox", cont)
             local _, tall = text:GetTextScale()
-            dropbox:SetPos(0, 0, 0, tall+2)
-            dropbox:SetSize(1, 0, 0, 18)
+            dropbox:SetPos(0, 0, 0, tall+4)
+            dropbox:SetSize(1, 0, 0, 16)
             dropbox:SetOptions(config.values)
             dropbox:SetOption(config.value)
             cont:SetPos(0, 0, 0, Y)
-            cont:SetSize(1, 0, 0, tall+2+18+1)
-            return 18+2+18+2
+            cont:SetSize(1, 0, 0, tall+4+16+1)
+            return 16+4+16+4
         elseif type == "ComboBox" then
             local cont = gui:Create("Container", container)
             local text = gui:Create("Text", cont)
-            text:SetPos(0, 0, 0, -1)
+            text:SetPos(0, 0, 0, 0)
             text:SetTextSize(13)
             text:SetText(name)
             local dropbox = gui:Create("ComboBox", cont)
             local _, tall = text:GetTextScale()
-            dropbox:SetPos(0, 0, 0, tall+2)
-            dropbox:SetSize(1, 0, 0, 18)
+            dropbox:SetPos(0, 0, 0, tall+4)
+            dropbox:SetSize(1, 0, 0, 16)
             dropbox:SetOptions(config.values)
             cont:SetPos(0, 0, 0, Y)
-            cont:SetSize(1, 0, 0, tall+2+18+1)
-            return 18+2+18+2
+            cont:SetSize(1, 0, 0, tall+4+16+1)
+            return 16+4+16+4
         end
         return 0
     end
@@ -4351,7 +4398,7 @@ do
         if input.UserInputType == Enum.UserInputType.Keyboard then
             if input.KeyCode == Enum.KeyCode.Delete then
                 main:SetEnabled(not main:GetEnabled())
-                gui:TransparencyTo(main, (main:GetEnabled() and 1 or 0), 0.4, 0, 0.25)
+                gui:TransparencyTo(main, (main:GetEnabled() and 1 or 0), 0.2, 0, 0.25)
             end
         end
     end)
@@ -4365,7 +4412,7 @@ do
     end)
 
     hook:Add("Menu.PostGenerate", "BBOT:Menu.Main", function()
-        gui:TransparencyTo(main, 1, 0.4, 0, 0.25)
+        gui:TransparencyTo(main, 1, 0.2, 0, 0.25)
     end)
 
     hook:Add("Initialize", "BBOT:Menu", function()
@@ -5077,16 +5124,128 @@ do
                                     pos = UDim2.new(.5,4,0,0),
                                     size = UDim2.new(.5,-8,1/2,-4),
                                     {
-                                        content = {},
+                                        content = {
+                                            {
+                                                type = "Slider",
+                                                name = "Camera FOV",
+                                                value = 80,
+                                                minvalue = 60,
+                                                maxvalue = 120,
+                                                stradd = "°",
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "No Camera Bob",
+                                                value = false,
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "No Scope Sway",
+                                                value = false,
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Disable ADS FOV",
+                                                value = false,
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "No Scope Border",
+                                                value = false,
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "No Visual Suppression",
+                                                value = false,
+                                                tooltip = "Removes the suppression of enemies' bullets.",
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "No Gun Bob or Sway",
+                                                value = false,
+                                                tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving the mouse.",
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Reduce Camera Recoil",
+                                                value = false,
+                                                tooltip = "Reduces camera recoil by X%. Does not affect visible weapon recoil or kick.",
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Camera Recoil Reduction",
+                                                value = 10,
+                                                minvalue = 0,
+                                                maxvalue = 100,
+                                                stradd = "%",
+                                            },
+                                        },
                                     },
                                     {
-                                        content = {},
-                                    }
+                                        content = {
+                                            {
+                                                type = "Toggle",
+                                                name = "Enabled",
+                                                value = false,
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Offset X",
+                                                value = 0,
+                                                minvalue = -3,
+                                                maxvalue = 3,
+                                                decimal = 0.01,
+                                                stradd = " studs",
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Offset Y",
+                                                value = 0,
+                                                minvalue = -3,
+                                                maxvalue = 3,
+                                                decimal = 0.01,
+                                                stradd = " studs",
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Offset Z",
+                                                value = 0,
+                                                minvalue = -3,
+                                                maxvalue = 3,
+                                                decimal = 0.01,
+                                                stradd = " studs",
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Pitch",
+                                                value = 0,
+                                                minvalue = -360,
+                                                maxvalue = 360,
+                                                stradd = "°",
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Yaw",
+                                                value = 0,
+                                                minvalue = -360,
+                                                maxvalue = 360,
+                                                stradd = "°",
+                                            },
+                                            {
+                                                type = "Slider",
+                                                name = "Roll",
+                                                value = 0,
+                                                minvalue = -360,
+                                                maxvalue = 360,
+                                                stradd = "°",
+                                            },
+                                        },
+                                    },
                                 },
                                 {
                                     name = {"World", "Misc", "Keybinds", "FOV"},
                                     pos = UDim2.new(.5,4,1/2,4),
-                                    size = UDim2.new(.5,-8,1/4,-8),
+                                    size = UDim2.new(.5,-8,(12/20)/2,-8),
                                     {
                                         content = {
                                             {
@@ -5311,11 +5470,168 @@ do
                                     },
                                 },
                                 {
-                                    name = "Dropped ESP",
-                                    pos = UDim2.new(.5,4,3/4,8),
-                                    size = UDim2.new(.5,-8,1/4,-12),
-                                    type = "Panel",
-                                    content = {},
+                                    name = {"Weapons", "Grenades", "Pickups"},
+                                    pos = UDim2.new(.5,4,(1/2) + ((12/20)/2),4),
+                                    size = UDim2.new(.5,-8,(8/20)/2,-8),
+                                    type = "Tabs",
+                                    {
+                                        content = {
+                                            {
+                                                type = "Toggle",
+                                                name = "Weapon Names",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Highlighted Weapons",
+                                                        color = { 255, 125, 255, 255 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Weapon Names",
+                                                        color = { 255, 255, 255, 255 },
+                                                    },
+                                                },
+                                                tooltip = "Displays dropped weapons as you get closer to them,\nHighlights the weapon you are holding in the second color.",
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Weapon Icons",
+                                                value = false
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Weapon Ammo",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Weapon Ammo",
+                                                        color = { 61, 168, 235, 150 },
+                                                    }
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Dropped Weapon Chams",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Dropped Weapon Color",
+                                                        color = { 3, 252, 161, 150 },
+                                                    }
+                                                },
+                                            },
+                                        }
+                                    },
+                                    {
+                                        content = {
+                                            {
+                                                type = "Toggle",
+                                                name = "Grenade Warning",
+                                                value = true,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Slider Color",
+                                                        color = { 68, 92, 227 },
+                                                    }
+                                                },
+                                                tooltip = "Displays where grenades that will deal\ndamage to you will land and the damage they will deal.",
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Grenade ESP",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Inner Color",
+                                                        color = { 195, 163, 255 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Outer Color",
+                                                        color = { 123, 69, 224 },
+                                                    },
+                                                },
+                                                tooltip = "Displays the full path of any grenade that will deal damage to you is thrown.",
+                                            },
+                                        },
+                                    },
+                                    {
+                                        content = {
+                                            {
+                                                type = "Toggle",
+                                                name = "DogTags",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Color",
+                                                        color = { 240, 0, 0 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Friendly Color",
+                                                        color = { 0, 240, 240 },
+                                                    }
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "DogTag Chams",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Color",
+                                                        color = { 240, 0, 0 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Friendly Color",
+                                                        color = { 0, 240, 240 },
+                                                    }
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Flags",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Color",
+                                                        color = { 240, 0, 0 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Friendly Color",
+                                                        color = { 0, 240, 240 },
+                                                    }
+                                                },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Flag Chams",
+                                                value = false,
+                                                extra = {
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Enemy Color",
+                                                        color = { 240, 0, 0 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Friendly Color",
+                                                        color = { 0, 240, 240 },
+                                                    }
+                                                },
+                                            },
+                                        },
+                                    }
                                 },
                             },
                         },
