@@ -1128,7 +1128,7 @@ do
         end
     end
 
-    function draw:Quad(pa, pb, pc, pd, color, transparency, visible)
+    function draw:Quad(pa, pb, pc, pd, color, thickness, transparency, visible)
         if visible == nil then visible = true end
         if transparency == nil then transparency = 1 end
 		local object = self:Create("Quad")
@@ -1494,27 +1494,33 @@ do
             if v.content or v[1] then
                 local ismulti = typeof(v.name) == "table"
                 for i=1, (ismulti and #v.name or 1) do
-                    local name = (ismulti and v.name[i] or v.name)
+                    local name = (ismulti and v.name[i] or (v.Id or v.name))
                     source[name] = {}
                     self:ParseSetupToConfig((ismulti and v[i].content or v.content), source[name])
                 end
             elseif v.name and (v.value ~= nil or v.values ~= nil or v.color ~= nil) then
+                local name = v.Id or v.name
                 local conversion = self.parsertovalue[v.type]
                 if conversion then
-                    source[v.name] = conversion(v)
+                    source[name] = conversion(v)
                 end
                 if v.extra then
                     local extra = v.extra
-                    if extra.name and (extra.value ~= nil or extra.values ~= nil or extra.color ~= nil) then
-                        source[v.name] = {
-                            ["self"] = source[v.name]
+                    if extra[1] then
+                        source[name] = {
+                            ["self"] = source[name]
                         }
-                        local ismulti = typeof(extra.name) == "table"
-                        for i=1, (ismulti and #extra.name or 1) do
-                            local name = (ismulti and extra.name[i] or extra.name)
-                            local conversion = self.parsertovalue[extra.type]
-                            if conversion then
-                                source[v.name][name] = conversion(extra, i)
+                        for c=1, #extra do
+                            local extra = extra[c]
+                            if extra.name and (extra.value ~= nil or extra.values ~= nil or extra.color ~= nil) then
+                                local ismulti = typeof(extra.name) == "table"
+                                for i=1, (ismulti and #extra.name or 1) do
+                                    local _name = (ismulti and extra.name[i] or (extra.Id or extra.name))
+                                    local conversion = self.parsertovalue[extra.type]
+                                    if conversion then
+                                        source[name][_name] = conversion(extra, i)
+                                    end
+                                end
                             end
                         end
                     end
@@ -1529,8 +1535,13 @@ do
         self.raw = raw
         local reg = {}
         self:ParseSetupToConfig(raw, reg)
+        BBOT.log.printtable(reg)
         self.registry = reg
     end
+
+    hook:Add("Initialize", "BBOT:config.setup", function()
+        config:Setup(BBOT.configuration)
+    end)
 end
 
 -- GUI
@@ -4134,9 +4145,10 @@ do
 
     function menu:CreateExtra(container, config, path, X, Y)
         local name = config.name
+        local Id = (config.Id or config.name)
         local type = config.type
         local path = table.deepcopy(path)
-        path[#path+1] = name
+        path[#path+1] = Id
         local uid = table.concat(path, ".")
         if type == "ColorPicker" then
             local picker = gui:Create("ColorPicker", container)
@@ -4154,9 +4166,8 @@ do
 
     function menu:CreateOptions(container, config, path, Y)
         local name = config.name
+        local Id = (config.Id or config.name)
         local type = config.type
-        local path = table.deepcopy(path)
-        path[#path+1] = name
         local uid = table.concat(path, ".")
 
         local X = 0
@@ -4269,8 +4280,11 @@ do
                 local config = configuration[i]
                 local type = config.type
                 local name = config.name
+                local Id = (config.Id or config.name)
                 local path = table.deepcopy(path)
-                path[#path+1] = name
+                if typeof(Id) == "string" then
+                    path[#path+1] = Id
+                end
                 local subcontainer
                 if type == "Tabs" or typeof(name) == "table" then
                     local istable = typeof(name) == "table"
@@ -4306,7 +4320,7 @@ do
                                 subconfig.size = UDim2.new(1,0,1,0)
                             end
                         end
-                        self:HandleGeneration(subcontainer, config)
+                        self:HandleGeneration(subcontainer, path, config)
                         subcontainer = nil
                     end
                 elseif type == "Container" then
@@ -4349,7 +4363,9 @@ do
                     subcontainer:SetPos(0, 8, 0, 20)
                     subcontainer:SetSize(1, -16, 1, -20)
                 end
-                Y = Y + self:CreateOptions(container, config, Y)
+                if typeof(Id) == "string" then
+                    Y = Y + self:CreateOptions(container, config, path, Y)
+                end
                 if config.content and subcontainer then
                     self:HandleGeneration(subcontainer, path, config.content)
                 end
@@ -4370,8 +4386,34 @@ do
             image:SetImage(menu.images[7])
             image:SetPos(0, 0, 0, 2)
             image:SetSize(1, 0, 1, -2)
+
+            local drawquad = image:Cache(draw:Quad({0,0},{0,0},{0,0},{0,0},Color3.new(1,1,1),1,.75))
+
+            local function isvectorequal(a, b)
+                return (a.X == b.X and a.Y == b.Y)
+            end
+
             gui:SizeTo(intro, UDim2.new(0, self.fw, 0, self.fh), 0.775, 0, 0.25, function()
-                gui:SizeTo(intro, UDim2.new(0, 0, 0, 0), 0.775, 0.5, 0.25, function()
+                local start = tick()
+                function image:Step()
+                    local fraction = math.timefraction(start, start+.45, tick())
+                    local size = self.absolutesize
+                    local x, y = 0, 0
+                    x = size.X * fraction * 2
+                    y = size.Y * fraction * 2
+                    local xx = math.max(0, x - 13)
+                    local yy = math.max(0, y - 13)
+                    drawquad.PointB = (xx > size.X and (yy-size.Y > size.Y and size or Vector2.new(size.X, yy-size.Y)) or Vector2.new(xx, 0)) + self.absolutepos
+                    drawquad.PointA = (x > size.X and (y-size.Y > size.Y and size or Vector2.new(size.X, y-size.Y)) or Vector2.new(x, 0)) + self.absolutepos
+                    drawquad.PointC = (yy > size.Y and (xx-size.X > size.X and size or Vector2.new(xx-size.X, size.Y)) or Vector2.new(0, yy)) + self.absolutepos
+                    drawquad.PointD = (y > size.Y and (x-size.X > size.X and size or Vector2.new(x-size.X, size.Y)) or Vector2.new(0, y)) + self.absolutepos
+                    if (xx > size.X and yy-size.Y > size.Y) and (x > size.X and y-size.Y > size.Y) and (yy > size.Y and xx-size.X > size.X) and (y > size.Y and x-size.X > size.X) then
+                        drawquad:Remove()
+                        image.Step = nil
+                    end
+                end
+
+                gui:SizeTo(intro, UDim2.new(0, 0, 0, 0), 0.775, .6, 0.25, function()
                     image:Remove()
                     intro:Remove()
                     hook:Call("Menu.PreGenerate")
@@ -4381,7 +4423,7 @@ do
             end)
 
             gui:MoveTo( intro, UDim2.new(.5, -self.fw/2, .5, -self.fh/2), 0.775, 0, 0.25, function()
-                gui:MoveTo( intro, UDim2.new(.5, 0, .5, 0), 0.775, 0.5, 0.25)
+                gui:MoveTo( intro, UDim2.new(.5, 0, .5, 0), 0.775, .6, 0.25)
             end)
         end
     end
@@ -4445,6 +4487,9 @@ do
         local setup_parameters = BBOT.configuration
         for i=1, #setup_parameters do
             menu:Create(setup_parameters[i]):SetZIndex(100*i)
+        end
+        for k, v in pairs(menu.config_pathways) do
+            log.print(k)
         end
     end)
 
