@@ -1514,7 +1514,7 @@ do
         ["Text"] = function(v) return v.value end,
         ["Toggle"] = function(v) return v.value end,
         ["Slider"] = function(v) return v.value end,
-        ["KeyBind"] = function(v) return {type = "KeyBind", value = v.key, toggle = false, list = config.enums.KeyCode.List} end,
+        ["KeyBind"] = function(v) BBOT.log(LOG_NORMAL, "SET"); return {type = "KeyBind", value = v.key, toggle = false} end,
         ["DropBox"] = function(v) return {type = "DropBox", value = v.values[v.value], list = v.values} end,
         ["ColorPicker"] = function(v) return {type = "ColorPicker", value = Color3.new(unpack(v.color))} end,
         ["ComboBox"] = function(v) return {type = "ComboBox", value = v.values} end,
@@ -1531,7 +1531,8 @@ do
                     source[name] = {}
                     self:ParseSetupToConfig((ismulti and v[i].content or v.content), source[name])
                 end
-            elseif v.name and (v.value ~= nil or v.values ~= nil or v.color ~= nil) then
+            elseif v.type and self.parsertovalue[v.type] then
+                if not v.name then v.name = v.type end
                 local name = v.Id or v.name
                 local conversion = self.parsertovalue[v.type]
                 if conversion then
@@ -1545,7 +1546,8 @@ do
                         }
                         for c=1, #extra do
                             local extra = extra[c]
-                            if extra.name and (extra.value ~= nil or extra.values ~= nil or extra.color ~= nil) then
+                            if extra.type and self.parsertovalue[extra.type] then
+                                if not extra.name then extra.name = extra.type end
                                 local ismulti = typeof(extra.name) == "table"
                                 for i=1, (ismulti and #extra.name or 1) do
                                     local _name = (ismulti and extra.name[i] or (extra.Id or extra.name))
@@ -3985,12 +3987,20 @@ do
             self.background.Size = size
         end
 
-        function GUI:OnClick()
-        end
-
         function GUI:InputBegan(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
-                self:OnClick()
+            if not self.editting and input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+                self.editting = true
+                self.text:SetText("...")
+            elseif self.editting and input.UserInputType == Enum.UserInputType.MouseButton1 and not self:IsHovering() then
+                self.editting = false
+                self.text:SetText(config.enums.KeyCode.inverseId[self.key])
+            elseif self.editting and input.UserInputType == Enum.UserInputType.Keyboard then
+                self.editting = false
+                self.key = input.KeyCode
+                self.value = false
+                local name = config.enums.KeyCode.inverseId[self.key]
+                self.text:SetText(name)
+                self:OnValueChanged(name)
             end
         end
 
@@ -4009,7 +4019,7 @@ do
         function GUI:OnValueChanged() end
 
         hook:Add("InputBegan", "BBOT:Menu.KeyBinds", function(input)
-            if userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
+            if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
                 return
             end
             local guis = gui.registry
@@ -4029,15 +4039,15 @@ do
                         v.value = true
                     end
                     if last ~= v.value then
-                        config:GetRaw(v.config).value = v.value
-                        hook:Call("OnKeyBindChanged", v.config, last, v.Value)
+                        config:GetRaw(unpack(v.config)).toggle = v.value
+                        hook:Call("OnKeyBindChanged", v.config, last, v.value)
                     end
                 end
             end
         end)
 
         hook:Add("InputEnded", "BBOT:Menu.KeyBinds", function(input)
-            if userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
+            if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
                 return
             end
             local guis = gui.registry
@@ -4053,11 +4063,16 @@ do
                         end
                     end
                     if last ~= v.value then
-                        config:GetRaw(v.config).value = v.value
-                        hook:Call("OnKeyBindChanged", v.config, last, v.Value)
+                        config:GetRaw(unpack(v.config)).toggle = v.value
+                        hook:Call("OnKeyBindChanged", v.config, last, v.value)
                     end
                 end
             end
+        end)
+
+        hook:Add("OnKeyBindChanged", "Wow", function(steps, old, new)
+            BBOT.log(LOG_NORMAL, table.concat(steps,"."), old, new)
+            BBOT.log.printtable(config:GetRaw(unpack(steps)))
         end)
 
         gui:Register(GUI, "KeyBind")
@@ -4374,8 +4389,8 @@ do
     end
 
     function menu:CreateExtra(container, config, path, X, Y)
-        local name = config.name
-        local Id = (config.Id or config.name)
+        local name = (config.name or config.type)
+        local Id = (config.Id or config.name or config.type)
         local type = config.type
         local path = table.deepcopy(path)
         path[#path+1] = Id
@@ -4395,6 +4410,9 @@ do
             keybind:SetPos(1, X-32, 0, Y-2)
             keybind:SetSize(0, 32, 0, 14)
             keybind:SetValue(config.key)
+            keybind.value = false
+            keybind.toggletype = config.toggletype
+            keybind.config = path
             function keybind:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
             end
@@ -4520,8 +4538,8 @@ do
             for i=1, #configuration do
                 local config = configuration[i]
                 local type = config.type
-                local name = config.name
-                local Id = (config.Id or config.name)
+                local name = (config.name or config.type)
+                local Id = (config.Id or config.name or config.type)
                 local path = table.deepcopy(path)
                 if typeof(Id) == "string" then
                     path[#path+1] = Id
