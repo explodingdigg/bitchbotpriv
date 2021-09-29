@@ -1499,10 +1499,6 @@ do
         return true
     end
 
-    hook:Add("OnConfigChanged", "Wow", function(steps, old, new)
-        BBOT.log(LOG_NORMAL, table.concat(steps,"."), old, new)
-    end)
-
     -- Habbit, fuck off.
     function config:GetTable()
         return self.registry
@@ -1514,7 +1510,7 @@ do
         ["Text"] = function(v) return v.value end,
         ["Toggle"] = function(v) return v.value end,
         ["Slider"] = function(v) return v.value end,
-        ["KeyBind"] = function(v) BBOT.log(LOG_NORMAL, "SET"); return {type = "KeyBind", value = v.key, toggle = false} end,
+        ["KeyBind"] = function(v) return {type = "KeyBind", value = v.key, toggle = false} end,
         ["DropBox"] = function(v) return {type = "DropBox", value = v.values[v.value], list = v.values} end,
         ["ColorPicker"] = function(v) return {type = "ColorPicker", value = Color3.new(unpack(v.color))} end,
         ["ComboBox"] = function(v) return {type = "ComboBox", value = v.values} end,
@@ -1570,7 +1566,6 @@ do
         self.raw = raw
         local reg = {}
         self:ParseSetupToConfig(raw, reg)
-        BBOT.log.printtable(reg)
         self.registry = reg
     end
 
@@ -4070,11 +4065,6 @@ do
             end
         end)
 
-        hook:Add("OnKeyBindChanged", "Wow", function(steps, old, new)
-            BBOT.log(LOG_NORMAL, table.concat(steps,"."), old, new)
-            BBOT.log.printtable(config:GetRaw(unpack(steps)))
-        end)
-
         gui:Register(GUI, "KeyBind")
     end
 
@@ -4754,13 +4744,9 @@ do
     end)
 
     hook:Add("Menu.Generate", "BBOT:Menu.Main", function()
-
         local setup_parameters = BBOT.configuration
         for i=1, #setup_parameters do
             menu:Create(setup_parameters[i]):SetZIndex(100*i)
-        end
-        for k, v in pairs(menu.config_pathways) do
-            log.print(k)
         end
     end)
 
