@@ -2456,12 +2456,9 @@ do
     do
         local GUI = {}
         function GUI:Init()
-            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background"), nil, false))
             self.mouseinputs = false
         end
         function GUI:PerformLayout(pos, size)
-            self.background.Position = pos
-            self.background.Size = size
         end
         gui:Register(GUI, "Container")
     end
@@ -3627,6 +3624,11 @@ do
             local darken = gui:Create("Container", self)
             darken:SetPos(0,0,0,0)
             darken:SetSize(1,0,1,2)
+            darken.background = darken:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background"), nil, false))
+            function darken:PerformLayout(pos, size)
+                self.background.Position = pos
+                self.background.Size = size
+            end
             darken.background.Visible = true
             darken.background.Transparency = 1
             darken.background.ZIndex = 0
@@ -3703,6 +3705,11 @@ do
             background:SetPos(0,0,0,0)
             background:SetSize(1,0,1,-1)
             background:SetZIndex(0)
+            background.background = background:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background"), nil, false))
+            function background:PerformLayout(pos, size)
+                self.background.Position = pos
+                self.background.Size = size
+            end
             background.background.Visible = true
             background.background.Transparency = .25
             background.background.ZIndex = 0
@@ -3712,6 +3719,11 @@ do
             local line = gui:Create("Container", tablist)
             line:SetPos(0,0,1,-2)
             line:SetSize(1,0,0,2)
+            line.background = line:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background"), nil, false))
+            function line:PerformLayout(pos, size)
+                self.background.Position = pos
+                self.background.Size = size
+            end
             line.background.Visible = true
             line.background.Color = gui:GetColor("Border")
             line.background.Transparency = 1
@@ -4523,6 +4535,11 @@ do
 
     local main = gui:Create("Container")
     menu.main = main
+    main.background = main:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background"), nil, false))
+    function main:PerformLayout(pos, size)
+        self.background.Position = pos
+        self.background.Size = size
+    end
     main.background.Transparency = 0
     main.background.ZIndex = 0
     main.background.Visible = true
