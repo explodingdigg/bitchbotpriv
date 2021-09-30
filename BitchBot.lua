@@ -5783,7 +5783,7 @@ do
                             type = "Tabs",
                             content = {
                                 {
-                                    name = "Pistols",
+                                    name = "Pistol",
                                     icon = "M9",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
@@ -5791,7 +5791,7 @@ do
                                     content = weapon_legit
                                 },
                                 {
-                                    name = "Smgs",
+                                    name = "Smg",
                                     icon = "MP5K",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
@@ -5799,7 +5799,7 @@ do
                                     content = weapon_legit
                                 },
                                 {
-                                    name = "Rifles",
+                                    name = "Rifle",
                                     icon = "M4A1",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
@@ -5807,20 +5807,20 @@ do
                                     content = weapon_legit
                                 },
                                 {
-                                    name = "Snipers",
-                                    icon = "INTERVENTION",
+                                    name = "Shotgun",
+                                    icon = "REMINGTON 870",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
                                     type = "Container",
                                     content = weapon_legit
                                 },
                                 {
-                                    name = "Miscs",
-                                    icon = "CROWBAR",
+                                    name = "Sniper",
+                                    icon = "INTERVENTION",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
                                     type = "Container",
-                                    content = {}
+                                    content = weapon_legit
                                 },
                             }
                         },
