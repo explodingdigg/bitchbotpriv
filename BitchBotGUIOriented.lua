@@ -4060,7 +4060,7 @@ do
             self.text = gui:Create("Text", self)
             self.text:SetTextAlignmentX(Enum.TextXAlignment.Center)
             self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
-            self.text:SetPos(.5, 0, .5, 0)
+            self.text:SetPos(.5, 0, .5, -1)
 
             self.confirmation = false
         end
@@ -4135,7 +4135,7 @@ do
         end
         
         function GUI:PerformLayout(pos, size)
-            self.text:SetPos(0, self.button.absolutesize.X + 8, .5, -1)
+            self.text:SetPos(0, self.button.absolutesize.X + 7, .5, -1)
         end
 
         function GUI:OnClick()
@@ -4837,7 +4837,7 @@ do
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = textentry
-            return tall+4+16+4
+            return tall+4+16+6
         elseif type == "DropBox" then
             local cont = gui:Create("Container", container)
             local text = gui:Create("Text", cont)
@@ -5093,8 +5093,8 @@ do
         alias:SetText(configuration.name)
 
         local tabs = gui:Create("Tabs", frame)
-        tabs:SetPos(0, 10, 0, 10+20)
-        tabs:SetSize(1, -20, 1, -20-20)
+        tabs:SetPos(0, 10, 0, 10+15)
+        tabs:SetSize(1, -20, 1, -20-15)
 
         local path = {frame.Id}
 
