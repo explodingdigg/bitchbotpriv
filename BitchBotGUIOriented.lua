@@ -552,6 +552,79 @@ do
         end
         return str
     end
+
+
+    local _string_rep = string.rep
+    local _string_len = string.len
+    local _string_sub = string.sub
+    local _table_concat = table.concat
+    local _tostring = tostring
+    local _string_find = string.find
+    function string.Explode(separator, str, withpattern)
+        if ( withpattern == nil ) then withpattern = false end
+
+        local ret = {}
+        local current_pos = 1
+
+        for i = 1, _string_len( str ) do
+            local start_pos, end_pos = _string_find( str, separator, current_pos, not withpattern )
+            if ( not start_pos ) then break end
+            ret[ i ] = _string_sub( str, current_pos, start_pos - 1 )
+            current_pos = end_pos + 1
+        end
+
+        ret[ #ret + 1 ] = _string_sub( str, current_pos )
+
+        return ret
+    end
+
+    function string.Replace( str, tofind, toreplace )
+        local tbl = string.Explode( tofind, str )
+        if ( tbl[ 1 ] ) then return _table_concat( tbl, toreplace ) end
+        return str
+    end
+
+    function string.WrapText(text, font, size, width)
+        local sw = BBOT.gui:GetTextSize(' ', font, size).X
+        local ret = {}
+
+        local t2 = string.Explode('\n', text, false)
+        for k=1, #t2 do
+            local v = t2[k]
+            ret[#ret + 1] = v
+        end
+
+        local ret_proccessed = {}
+
+        local w = 0
+        local s = ''
+        for k=1, #ret do
+            local text = ret[k]
+
+            local t2 = string.Explode(' ', text, false)
+            for i2 = 1, #t2 do
+                local neww = BBOT.gui:GetTextSize(t2[i2], font, size).X
+                
+                if (w + neww >= width) then
+                    ret_proccessed[#ret_proccessed + 1] = s
+                    w = neww + sw
+                    s = t2[i2] .. ' '
+                else
+                    s = s .. t2[i2] .. ' '
+                    w = w + neww + sw
+                end
+            end
+            ret_proccessed[#ret_proccessed + 1] = s
+            w = 0
+            s = ''
+            
+            if (s ~= '') then
+                ret_proccessed[#ret_proccessed + 1] = s
+            end
+        end
+
+        return ret_proccessed
+    end
 end
 
 -- Services
@@ -1625,6 +1698,7 @@ do
         ["Outline"] = Color3.fromRGB(20,20,20),
         ["Outline-Light"] = Color3.fromRGB(30,30,30),
         ["Background"] = Color3.fromRGB(35,35,35),
+        ["Background-Light"] = Color3.fromRGB(40,40,40),
     }
 
     function gui:GetColor(color)
@@ -2495,6 +2569,7 @@ do
     local timer = BBOT.timer
     local thread = BBOT.thread
     local draw = BBOT.draw
+    local string = BBOT.string
     local log = BBOT.log
     local config = BBOT.config
     local userinputservice = BBOT.service:GetService("UserInputService")
@@ -2598,9 +2673,8 @@ do
                 self.hoveractive = objecthover
                 local tip = menu.tooltip
                 if objecthover and objecthover.tooltip then
-                    tip:SetTip(objecthover.tooltip)
                     tip:SetEnabled(true)
-                    tip:SetPos(0, objecthover.absolutepos.X, 0, objecthover.absolutepos.Y + objecthover.absolutesize.Y + 4)
+                    tip:SetTip(objecthover.absolutepos.X, objecthover.absolutepos.Y + objecthover.absolutesize.Y + 4, objecthover.tooltip)
                     gui:TransparencyTo(tip, 1, 0.2, 0, 0.25)
                 else
                     gui:TransparencyTo(tip, 0, 0.2, 0, 0.25, function()
@@ -2623,6 +2697,7 @@ do
 
     do
         local GUI = {}
+        local camera = BBOT.service:GetService("CurrentCamera")
         
         function GUI:Init()
             self.mouseinputs = false
@@ -2648,12 +2723,31 @@ do
             
             self:SetTransparency(0)
             self:SetZIndex(600000)
+            self.content = "LOL"
         end
 
-        function GUI:SetTip(txt)
-            self.text:SetText(txt)
+        function GUI:SetTip(x, y, text)
+            self.content = text
+            self.text:SetText(text)
+            self.scalex, self.scaley = self.text:GetTextSize()
+            if self.scalex > 200 then
+                self.text:SetText(table.concat(string.WrapText(self.content, self.text.font, self.text.textsize, 250), "\n"))
+            end
             self.scalex, self.scaley = self.text:GetTextSize()
             self:SetSize(0, self.scalex+8, 0, self.scaley+4)
+            self:SetPos(0, x, 0, y)
+            self:Calculate()
+            local pos, size = self.absolutepos, self.absolutesize
+            if pos.X + size.X > camera.ViewportSize.X then
+                local diff = (pos.X + size.X)-(camera.ViewportSize.X-10)
+                local x = size.X - diff
+                self:SetPos(0, pos.X - x, 0, y)
+            end
+            if pos.Y + size.Y > camera.ViewportSize.Y then
+                local diff = (pos.Y + size.Y)-(camera.ViewportSize.Y-10)
+                local y = size.Y - diff
+                self:SetPos(0, pos.X, 0, pos.Y-y)
+            end
         end
 
         function GUI:PerformLayout(pos, size)
@@ -2952,13 +3046,13 @@ do
             local pos = self:GetLocalTranslation()
             local size = self.parent.absolutesize
             local text = self.content
-            if x - pos.X + self.offset.X >= size.X then
+            if x + pos.X + self.offset.X - 4 >= size.X then
                 text = ""
                 for i=1, #self.content do
                     local v = string.sub(self.content, i, i)
                     local pretext = text .. v
                     local prex = self:GetTextSize(pretext)
-                    if prex - pos.X + self.offset.X > size.X then
+                    if prex + pos.X + self.offset.X - 4 > size.X then
                         break 
                     end
                     text = pretext 
@@ -3011,6 +3105,10 @@ do
 
         local GUI = {}
 
+
+        local keyNames = { One = "1", Two = "2", Three = "3", Four = "4", Five = "5", Six = "6", Seven = "7", Eight = "8", Nine = "9", Zero = "0", LeftBracket = "[", RightBracket = "]", Semicolon = ";", BackSlash = "\\", Slash = "/", Minus = "-", Equals = "=", Backquote = "`", Plus = "+", Multiplaye = "x", Comma = ",", Period = ".", }
+        local keymodifiernames = { ["`"] = "~", ["1"] = "!", ["2"] = "@", ["3"] = "#", ["4"] = "$", ["5"] = "%", ["6"] = "^", ["7"] = "&", ["8"] = "*", ["9"] = "(", ["0"] = ")", ["-"] = "_", ["="] = "+", ["["] = "{", ["]"] = "}", ["\\"] = "|", [";"] = ":", ["'"] = '"', [","] = "<", ["."] = ".", ["/"] = "?", }
+
         function GUI:Init()
             self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
             self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
@@ -3021,14 +3119,14 @@ do
             self.gradient:SetSize(1, -4, 0, 10)
             self.gradient:SetZIndex(0)
             self.gradient:Generate()]]
-
             self.whitelist = {}
             for i=string.byte('A'), string.byte('Z') do
                 self.whitelist[string.char(i)] = true
             end
-            for i=string.byte('1'), string.byte('9') do
-                self.whitelist[string.char(i)] = true
+            for k, v in pairs(keyNames) do
+                self.whitelist[k] = v
             end
+
             self.text = self:Cache(draw:TextOutlined("", 2, 3, 3, 16, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
             self.content = ""
             self.content_position = 1 -- I like scrolling text
@@ -3137,8 +3235,13 @@ do
                 set = true
             elseif enums.inverseId[keycode] and self.whitelist[enums.inverseId[keycode]] then
                 local key = enums.inverseId[keycode]
+                if self.whitelist[key] ~= true then
+                    key = self.whitelist[key]
+                end
                 if not inputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
                     key = string.lower(key)
+                elseif keymodifiernames[key] then
+                    key = keymodifiernames[key]
                 end
                 ltext ..= key
                 set = true
@@ -3149,7 +3252,7 @@ do
 
         function GUI:DetermineFittable()
             local w = self:GetTextScale()
-            return math.round(self.absolutesize.X/w)
+            return math.round((self.absolutesize.X-18)/w)
         end
 
         function GUI:InputBegan(input)
@@ -3449,7 +3552,7 @@ do
             end
             local box = gui:Create("DropBoxSelection", self)
             self.selection = box
-            box:SetPos(0,0,1,-1)
+            box:SetPos(0,0,1,1)
             box:SetOptions(self.options)
             box:SetOption(self.Id)
             box:SetZIndex(100)
@@ -3621,7 +3724,7 @@ do
             end
             local box = gui:Create("ComboBoxSelection", self)
             self.selection = box
-            box:SetPos(0,0,1,-1)
+            box:SetPos(0,0,1,1)
             box:SetOptions(self.options)
             box:SetZIndex(100)
             self.open = true
@@ -3950,14 +4053,16 @@ do
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.gradient = gui:Create("Gradient", self)
-            self.gradient:SetPos(0, 0, 0, -2)
-            self.gradient:SetSize(1, 0, 0, 6)
+            self.gradient:SetPos(0, 0, 0, -1)
+            self.gradient:SetSize(1, 0, 0, 15)
             self.gradient:Generate()
 
             self.text = gui:Create("Text", self)
             self.text:SetTextAlignmentX(Enum.TextXAlignment.Center)
             self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
             self.text:SetPos(.5, 0, .5, 0)
+
+            self.confirmation = false
         end
 
         function GUI:PerformLayout(pos, size)
@@ -3970,14 +4075,31 @@ do
         end
 
         function GUI:SetText(txt)
+            self.content = txt
             self.text:SetText(txt)
+        end
+
+        function GUI:SetConfirmation(txt)
+            self.confirmation = txt
         end
 
         function GUI:OnClick() end
 
         function GUI:InputBegan(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
-                self:OnClick()
+                if self.confirmation and not self.confirm then
+                    self.confirm = true
+                    self.text:SetText(self.confirmation)
+                    self.text:SetColor(gui:GetColor("Accent"))
+                    timer:Simple(1, function()
+                        if not gui:IsValid(self) then return end
+                        self.text:SetText(self.content)
+                        self.text:SetColor(Color3.new(1,1,1))
+                        self.confirm = nil
+                    end)
+                elseif (not self.confirmation or (self.confirmation and self.confirm)) then
+                    self:OnClick()
+                end
             end
         end
 
@@ -4107,7 +4229,7 @@ do
         function GUI:OnValueChanged() end
 
         hook:Add("InputBegan", "BBOT:Menu.KeyBinds", function(input)
-            if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
+            --if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
             if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
                 return
             end
@@ -4136,7 +4258,7 @@ do
         end)
 
         hook:Add("InputEnded", "BBOT:Menu.KeyBinds", function(input)
-            if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
+            --if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
             if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
                 return
             end
@@ -4160,7 +4282,7 @@ do
             end
         end)
 
-        local ignorenotify = false
+        --[[local ignorenotify = false
         hook:Add("OnConfigChanged", "BBOT:Menu.KeyBinds.Reset", function(step, old, new)
             if config:IsPathwayEqual(step, "Main", "Visuals", "Keybinds", "Enabled") then
                 if new == false then
@@ -4193,7 +4315,7 @@ do
                     end
                 end
             end
-        end)
+        end)]]
 
         hook:Add("OnKeyBindChanged", "BBOT:Notify", function(steps, old, new)
             if ignorenotify then return end
@@ -4280,7 +4402,7 @@ do
             local w, h = self.add.text:GetTextSize()
             self.add:SetPos(1, -w + 2, 0, 0)
             self.add:SetSize(0, w, 0, h)
-            self.add.text:SetPos(.5, 0, .5, 0)
+            self.add.text:SetPos(0.25, 0, .5, 0)
             
             function self.add.OnClick()
                 local value = 1
@@ -4309,7 +4431,7 @@ do
             local ww, hh = self.deduct.text:GetTextSize()
             self.deduct:SetPos(1, -w -ww + 2, 0, 0)
             self.deduct:SetSize(0, w, 0, h)
-            self.deduct.text:SetPos(.5, 0, .5, 0)
+            self.deduct.text:SetPos(0.25, 0, .5, 0)
             self.deduct.Step = self.add.Step
             function self.deduct.OnClick()
                 local value = 1
@@ -4663,7 +4785,7 @@ do
             toggle:SetSize(1, -X, 0, 8)
             toggle:SetText(name)
             local w = toggle.text:GetTextSize()
-            toggle:SetSize(0, 10 + w, 0, 8)
+            toggle:SetSize(0, 14 + w, 0, 8)
             toggle:InvalidateLayout(true)
             toggle:SetValue(config.value)
             toggle.tooltip = config.tooltip
@@ -4689,7 +4811,7 @@ do
             slider:SetPos(0, 0, 0, tall+3)
             slider:SetSize(1, 0, 0, 10)
             slider.tooltip = config.tooltip
-            cont:SetPos(0, 0, 0, Y)
+            cont:SetPos(0, 0, 0, Y-2)
             cont:SetSize(1, 0, 0, tall+2+10+1)
             function slider:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
@@ -4709,8 +4831,8 @@ do
             textentry:SetValue(config.value)
             textentry:SetTextSize(13)
             textentry.tooltip = config.tooltip
-            cont:SetPos(0, 0, 0, Y)
-            cont:SetSize(1, 0, 0, tall+4+16+1)
+            cont:SetPos(0, 0, 0, Y-2)
+            cont:SetSize(1, 0, 0, tall+4+16)
             function textentry:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
             end
@@ -4729,8 +4851,8 @@ do
             dropbox:SetOptions(config.values)
             dropbox:SetValue(config.value)
             dropbox.tooltip = config.tooltip
-            cont:SetPos(0, 0, 0, Y)
-            cont:SetSize(1, 0, 0, tall+4+16+1)
+            cont:SetPos(0, 0, 0, Y-2)
+            cont:SetSize(1, 0, 0, tall+4+16)
             function dropbox:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
             end
@@ -4748,13 +4870,22 @@ do
             dropbox:SetSize(1, 0, 0, 16)
             dropbox:SetValue(config.values)
             dropbox.tooltip = config.tooltip
-            cont:SetPos(0, 0, 0, Y)
-            cont:SetSize(1, 0, 0, tall+4+16+1)
+            cont:SetPos(0, 0, 0, Y-2)
+            cont:SetSize(1, 0, 0, tall+4+16)
             function dropbox:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = dropbox
             return 16+4+16+4
+        elseif type == "Button" then
+            local button = gui:Create("Button", container)
+            button:SetPos(0, 0, 0, Y)
+            button:SetSize(1, -X, 0, 16)
+            button:SetText(name)
+            button:SetConfirmation(config.confirm)
+            button.OnClick = config.callback
+            button.tooltip = config.tooltip
+            return 16+7
         end
         return 0
     end
@@ -4861,7 +4992,7 @@ do
 
     function menu:Initialize()
         self.tooltip = gui:Create("ToolTip")
-        self.tooltip:SetTip("LOL")
+        self.tooltip:SetTip(0,0,"LOL")
         self.tooltip:SetEnabled(false)
         self.tooltip:SetTransparency(0)
 
@@ -5024,9 +5155,31 @@ do
     client_info:SetText("Bitch Bot | " .. BBOT.username .. " | " .. os.date("%b. %d, %Y") .. " | Ver " .. BBOT.version)
     client_info:SetTextSize(13)
 
+    hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info", function(steps, old, new)
+        if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Name") then
+            client_info:SetText(new .. " | " .. BBOT.username .. " | " .. os.date("%b. %d, %Y") .. " | Ver " .. BBOT.version)
+            local sizex = client_info:GetTextSize()
+            gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
+        end
+        if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Logo") then
+            image:SetImage(menu.images[5])
+            if #new > 4 then
+                thread:Create(function(img, image)
+                    local img = game:HttpGet("https://i.imgur.com/" .. img .. ".png")
+                    if img then
+                        image:SetImage(img)
+                    else
+                        image:SetImage(menu.images[8])
+                        BBOT.notification:Create("An error occured trying to get the menu logo!")
+                    end
+                end, new, image)
+            end
+        end
+    end)
+
     local sizex = client_info:GetTextSize()
     infobar:SetPos(0, 50, 0, 8)
-    gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 4, 0, 20), 0.775, 0, 0.25)
+    gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
 end
 
 --! POST LIBRARIES !--
@@ -5483,7 +5636,7 @@ do
                                                 type = "Toggle",
                                                 name = "Enabled",
                                                 value = true,
-                                                tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
+                                                tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
                                             },
                                             {
                                                 type = "Toggle",
@@ -5628,7 +5781,7 @@ do
                                                 type = "Toggle",
                                                 name = "Enabled",
                                                 value = false,
-                                                tooltip = "Enables 2D rendering, disabling this could improve performance.\nDoes not affect Chams."
+                                                tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
                                             },
                                             {
                                                 type = "Toggle",
@@ -5943,7 +6096,7 @@ do
                                                 type = "Toggle",
                                                 name = "No Gun Bob or Sway",
                                                 value = false,
-                                                tooltip = "Removes the bob and sway of weapons when walking.\nThis does not remove the swing effect when moving the mouse.",
+                                                tooltip = "Removes the bob and sway of weapons when walking. This does not remove the swing effect when moving the mouse.",
                                             },
                                             {
                                                 type = "Toggle",
@@ -6272,7 +6425,7 @@ do
                                                         color = { 255, 255, 255, 255 },
                                                     },
                                                 },
-                                                tooltip = "Displays dropped weapons as you get closer to them,\nHighlights the weapon you are holding in the second color.",
+                                                tooltip = "Displays dropped weapons as you get closer to them, Highlights the weapon you are holding in the second color.",
                                             },
                                             {
                                                 type = "Toggle",
@@ -6318,7 +6471,7 @@ do
                                                         color = { 68, 92, 227 },
                                                     }
                                                 },
-                                                tooltip = "Displays where grenades that will deal\ndamage to you will land and the damage they will deal.",
+                                                tooltip = "Displays where grenades that will deal damage to you will land and the damage they will deal.",
                                             },
                                             {
                                                 type = "Toggle",
@@ -6427,7 +6580,55 @@ do
                             pos = UDim2.new(0,0,0,0),
                             size = UDim2.new(1,0,1,0),
                             type = "Container",
-                            content = {},
+                            content = {
+                                {
+                                    name = "Cheat Settings",
+                                    pos = UDim2.new(0,0,2/3,0),
+                                    size = UDim2.new(.5,0,1/3,0),
+                                    type = "Panel",
+                                    content = {
+                                        {
+                                            type = "Toggle",
+                                            name = "Menu Accent",
+                                            value = false,
+                                            extra = {
+                                                {
+                                                    type = "ColorPicker",
+                                                    name = "Accent",
+                                                    color = { 127, 72, 163, 255 },
+                                                }
+                                            },
+                                        },
+                                        {
+                                            type = "Text",
+                                            name = "Custom Menu Name",
+                                            value = "Bitch Bot",
+                                            extra = {},
+                                        },
+                                        {
+                                            type = "Text",
+                                            name = "Custom Menu Logo",
+                                            value = "qH0WziT",
+                                            extra = {},
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Allow Unsafe Features",
+                                            value = false,
+                                            extra = {},
+                                        },
+                                        {
+                                            type = "Button",
+                                            name = "Unload Cheat",
+                                            confirm = "Are you sure?",
+                                            callback = function()
+                                                BBOT.hook:Call("Unload")
+                                                BBOT.Unloaded = true
+                                            end
+                                        }
+                                    },
+                                },
+                            },
                         },
                     }
                 },
@@ -6449,7 +6650,7 @@ do
                                     name = "Enable",
                                     value = false,
                                     extra = {},
-                                    tooltip = "Do note that modifying weapons can make\nthings obvious like firerate!"
+                                    tooltip = "Do note that modifying weapons can make things obvious like firerate!"
                                 },
                             }
                         },
