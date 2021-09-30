@@ -1612,11 +1612,11 @@ do
     }
     BBOT.gui = gui
 
-    if BBOT.username == "dev" then
+    --[[if BBOT.username == "dev" then
         gui.drawing_debugger = draw:BoxOutline(0, 0, 0, 0, 1, Color3.fromRGB(0, 255, 255))
         gui.drawing_debugger.Visible = false
         gui.drawing_debugger.ZIndex = 2000000
-    end
+    end]]
 
     gui.colors = {
         ["Default"] = Color3.new(1,1,1),
@@ -2593,6 +2593,22 @@ do
                 self.ishoverobject = ishoverobj
             end
 
+            local objecthover = gui.hovering
+            if objecthover ~= self.hoveractive and menu.tooltip then
+                self.hoveractive = objecthover
+                local tip = menu.tooltip
+                if objecthover and objecthover.tooltip then
+                    tip:SetTip(objecthover.tooltip)
+                    tip:SetEnabled(true)
+                    tip:SetPos(0, objecthover.absolutepos.X, 0, objecthover.absolutepos.Y + objecthover.absolutesize.Y + 4)
+                    gui:TransparencyTo(tip, 1, 0.2, 0, 0.25)
+                else
+                    gui:TransparencyTo(tip, 0, 0.2, 0, 0.25, function()
+                        tip:SetEnabled(false)
+                    end)
+                end
+            end
+
             if ishoverobj then
                 self.pos = UDim2.new(0, mouse.X, 0, mouse.Y)
                 userinputservice.MouseIconEnabled = not self._enabled
@@ -2603,6 +2619,53 @@ do
 
         -- Register this as a generatable object
         gui:Register(GUI, "Mouse")
+    end
+
+    do
+        local GUI = {}
+        
+        function GUI:Init()
+            self.mouseinputs = false
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
+
+            self.gradient = gui:Create("Gradient", self)
+            self.gradient:SetPos(0, 1, 0, 0)
+            self.gradient:SetSize(1, -2, 0, 15)
+            self.gradient:Generate()
+            self.gradient:SetSize(1, -2, 1, 0)
+
+            self.text = gui:Create("Text", self)
+            self.text:SetPos(0, 9, .5, -1)
+            self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            self.text:SetText(" ")
+
+            self.line = gui:Create("AstheticLine", self)
+            self.line:SetPos(0, 1, 0, 1)
+            self.line:SetSize(0, 2, 1, -2)
+            self.line.left = true
+            
+            self:SetTransparency(0)
+            self:SetZIndex(600000)
+        end
+
+        function GUI:SetTip(txt)
+            self.text:SetText(txt)
+            self.scalex, self.scaley = self.text:GetTextSize()
+            self:SetSize(0, self.scalex+8, 0, self.scaley+4)
+        end
+
+        function GUI:PerformLayout(pos, size)
+            self.background.Position = pos + Vector2.new(1, 1)
+            self.background.Size = size - Vector2.new(2, 2)
+            self.background_outline.Position = pos
+            self.background_outline.Size = size
+            self.background_border.Position = pos - Vector2.new(1, 1)
+            self.background_border.Size = size + Vector2.new(2, 2)
+        end
+
+        gui:Register(GUI, "ToolTip")
     end
 
     do
@@ -2620,8 +2683,13 @@ do
         function GUI:PerformLayout(pos, size)
             self.asthetic_line.Position = pos
             self.asthetic_line.Size = size
-            self.asthetic_line_dark.Position = pos + Vector2.new(0, size.Y/2)
-            self.asthetic_line_dark.Size = Vector2.new(size.X, size.Y/2)
+            if self.left then
+                self.asthetic_line_dark.Position = pos + Vector2.new(size.X/2, 0)
+                self.asthetic_line_dark.Size = Vector2.new(size.X/2, size.Y)
+            else
+                self.asthetic_line_dark.Position = pos + Vector2.new(0, size.Y/2)
+                self.asthetic_line_dark.Size = Vector2.new(size.X, size.Y/2)
+            end
             self.background_outline.Position = pos - Vector2.new(1,1)
             self.background_outline.Size = size + Vector2.new(2,2)
         end
@@ -4039,6 +4107,7 @@ do
         function GUI:OnValueChanged() end
 
         hook:Add("InputBegan", "BBOT:Menu.KeyBinds", function(input)
+            if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
             if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
                 return
             end
@@ -4067,6 +4136,7 @@ do
         end)
 
         hook:Add("InputEnded", "BBOT:Menu.KeyBinds", function(input)
+            if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
             if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
                 return
             end
@@ -4087,6 +4157,52 @@ do
                         hook:Call("OnKeyBindChanged", v.config, last, v.value)
                     end
                 end
+            end
+        end)
+
+        local ignorenotify = false
+        hook:Add("OnConfigChanged", "BBOT:Menu.KeyBinds.Reset", function(step, old, new)
+            if config:IsPathwayEqual(step, "Main", "Visuals", "Keybinds", "Enabled") then
+                if new == false then
+                    local guis = gui.registry
+                    for i=1, #guis do
+                        local v = guis[i]
+                        if gui:IsValid(v) and v.class == "KeyBind" then
+                            if v.value ~= true then
+                                config:GetRaw(unpack(v.config)).toggle = true
+                                ignorenotify = true
+                                hook:Call("OnKeyBindChanged", v.config, v.value, true)
+                                ignorenotify = false
+                                v.value = true
+                            end
+                        end
+                    end
+                else
+                    local guis = gui.registry
+                    for i=1, #guis do
+                        local v = guis[i]
+                        if gui:IsValid(v) and v.class == "KeyBind" then
+                            if v.value ~= false then
+                                config:GetRaw(unpack(v.config)).toggle = false
+                                ignorenotify = true
+                                hook:Call("OnKeyBindChanged", v.config, last, false)
+                                ignorenotify = false
+                                v.value = false
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+
+        hook:Add("OnKeyBindChanged", "BBOT:Notify", function(steps, old, new)
+            if ignorenotify then return end
+            if config:GetValue("Main", "Visuals", "Keybinds", "Log Keybinds") then
+                local name = steps[#steps]
+                if name == "KeyBind" then
+                    name = steps[#steps-1]
+                end
+                BBOT.notification:Create(name .. " has been " .. (new and "enabled" or "disabled"))
             end
         end)
 
@@ -4313,9 +4429,22 @@ do
             self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
+
+            self.gradient = gui:Create("Gradient", self)
+            self.gradient:SetPos(0, 2, 0, 2)
+            self.gradient:SetSize(1, -4, 0, 20)
+            self.gradient:Generate()
+
+            local title = gui:Create("Text", self)
+            self.title = title
+            title:SetPos(0, 5, 0, 5)
+            title:SetText("")
+
+            self:SetTransparency(0)
+            gui:TransparencyTo(self, 1, 0.2, 0, 0.25)
         end
 
-        function GUI:PerformLayout()
+        function GUI:PerformLayout(pos, size)
             self.background.Position = pos + Vector2.new(2, 2)
             self.background.Size = size - Vector2.new(4, 4)
             self.background_outline.Position = pos
@@ -4324,6 +4453,17 @@ do
             self.background_border.Size = size + Vector2.new(2, 2)
         end
 
+        function GUI:Close()
+            gui:TransparencyTo(self, 0, 0.2, 0, 0.25, function()
+                self:Remove()
+            end)
+        end
+
+        function GUI:SetTitle(txt)
+            self.title:SetText(txt)
+        end
+
+        function GUI:SetColor() end
 
         function GUI:IsHoverTotal()
             if self:IsHovering() then return true end
@@ -4357,6 +4497,10 @@ do
             self.background_outline.Color = color.darkness(col, .5)
         end
 
+        function GUI:SetTitle(txt)
+            self.title = txt
+        end
+
         function GUI:Open()
             if self.selection then
                 self.selection:Remove()
@@ -4364,16 +4508,17 @@ do
             end
             local picker = gui:Create("ColorPickerChange", self)
             self.picker = picker
-            picker:SetPos(0,0,1,-1)
-            picker:SetSize(0, 280, 211)
+            picker:SetPos(.5,0,.5,0)
+            picker:SetSize(0, 280, 0, 211)
             picker:SetColor(self.background.Color)
+            picker:SetTitle(self.title)
             picker:SetZIndex(100)
             self.open = true
         end
 
         function GUI:Close()
             if self.picker then
-                self.picker:Remove()
+                self.picker:Close()
                 self.picker = nil
             end
             self.open = false
@@ -4473,7 +4618,9 @@ do
             local picker = gui:Create("ColorPicker", container)
             picker:SetPos(1, X-26, 0, Y)
             picker:SetSize(0, 26, 0, 10)
+            picker:SetTitle(name)
             picker:SetValue(Color3.fromRGB(unpack(config.color)))
+            picker.tooltip = config.tooltip
             function picker:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
             end
@@ -4487,6 +4634,7 @@ do
             keybind.value = false
             keybind.toggletype = config.toggletype
             keybind.config = path
+            keybind.tooltip = config.tooltip
             function keybind:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
             end
@@ -4518,6 +4666,7 @@ do
             toggle:SetSize(0, 10 + w, 0, 8)
             toggle:InvalidateLayout(true)
             toggle:SetValue(config.value)
+            toggle.tooltip = config.tooltip
             function toggle:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
             end
@@ -4539,6 +4688,7 @@ do
             local _, tall = text:GetTextScale()
             slider:SetPos(0, 0, 0, tall+3)
             slider:SetSize(1, 0, 0, 10)
+            slider.tooltip = config.tooltip
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+2+10+1)
             function slider:OnValueChanged(new)
@@ -4558,6 +4708,7 @@ do
             textentry:SetSize(1, 0, 0, 16)
             textentry:SetValue(config.value)
             textentry:SetTextSize(13)
+            textentry.tooltip = config.tooltip
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+4+16+1)
             function textentry:OnValueChanged(new)
@@ -4577,6 +4728,7 @@ do
             dropbox:SetSize(1, 0, 0, 16)
             dropbox:SetOptions(config.values)
             dropbox:SetValue(config.value)
+            dropbox.tooltip = config.tooltip
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+4+16+1)
             function dropbox:OnValueChanged(new)
@@ -4595,6 +4747,7 @@ do
             dropbox:SetPos(0, 0, 0, tall+4)
             dropbox:SetSize(1, 0, 0, 16)
             dropbox:SetValue(config.values)
+            dropbox.tooltip = config.tooltip
             cont:SetPos(0, 0, 0, Y)
             cont:SetSize(1, 0, 0, tall+4+16+1)
             function dropbox:OnValueChanged(new)
@@ -4707,6 +4860,11 @@ do
     end
 
     function menu:Initialize()
+        self.tooltip = gui:Create("ToolTip")
+        self.tooltip:SetTip("LOL")
+        self.tooltip:SetEnabled(false)
+        self.tooltip:SetTransparency(0)
+
         local intro = gui:Create("Panel")
         intro:SetSize(0, 0, 0, 0)
         intro:Center()
@@ -4716,7 +4874,7 @@ do
 
             local screensize = camera.ViewportSize
             local image = gui:Create("Image", intro)
-            image:SetImage(menu.images[7])
+            image:SetImage(self.images[7])
             image:SetPos(0, 0, 0, 2)
             image:SetSize(1, 0, 1, -2)
 
@@ -5093,28 +5251,32 @@ do
                     pos = UDim2.new(0,0,0,20),
                     size = UDim2.new(.5,-3,0,175),
                     type = "Panel",
-                    content = anims
+                    content = anims,
+                    tooltip = "OffsetStuds changes the position of texture."
                 },
                 {
                     name = "OffsetStudsV",
                     pos = UDim2.new(.5,3,0,20),
                     size = UDim2.new(.5,-3,0,175),
                     type = "Panel",
-                    content = anims
+                    content = anims,
+                    tooltip = "OffsetStuds changes the position of texture."
                 },
                 {
                     name = "StudsPerTileU",
                     pos = UDim2.new(0,0,0,20+(175+6)),
                     size = UDim2.new(.5,-3,0,175),
                     type = "Panel",
-                    content = anims
+                    content = anims,
+                    tooltip = "StudsPerTile changes the scale of texture."
                 },
                 {
                     name = "StudsPerTileV",
                     pos = UDim2.new(.5,3,0,20+(175+6)),
                     size = UDim2.new(.5,-3,0,175),
                     type = "Panel",
-                    content = anims
+                    content = anims,
+                    tooltip = "StudsPerTile changes the scale of texture."
                 }
             }
             local skins_content = {
@@ -5123,6 +5285,7 @@ do
                     name = "Enable",
                     value = false,
                     extra = {},
+                    tooltip = "Do note this is not server-sided!"
                 },
                 {
                     type = "DropBox",
@@ -5134,6 +5297,7 @@ do
                             type = "ColorPicker",
                             name = "Brick Color",
                             color = { 255, 255, 255, 255 },
+                            tooltip = "Changes the base color of the material, not the texture."
                         },
                     },
                 },
@@ -5146,6 +5310,7 @@ do
                     suffix = "%",
                     decimal = 1,
                     extra = {},
+                    tooltip = "Gives the material reflectance, this may be buggy or not work on some materials."
                 },
                 {
                     name = "Textures",
@@ -6284,6 +6449,7 @@ do
                                     name = "Enable",
                                     value = false,
                                     extra = {},
+                                    tooltip = "Do note that modifying weapons can make\nthings obvious like firerate!"
                                 },
                             }
                         },
@@ -7915,6 +8081,42 @@ do
                 hook:CallP("PostWeaponStep", gundata, partdata)
             end
             return a, b, c, d
+        end
+    end)
+
+    -- Modifications
+    hook:Add("ApplyGunModifications", "ModifyWeapon.FireModes", function(modifications)
+        if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
+        local firemodes = core.CopyTable(modifications.firemodes)
+        local firerates = (typeof(modifications.firerate) == "table" and core.CopyTable(modifications.firerate) or nil)
+        local single = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Single") and 1 or nil
+        if single and not quickhasvalue(firemodes, single) then
+            table.insert(firemodes, 1, single)
+        end
+        local burst3 = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Burst3") and 3 or nil
+        if burst3 and not quickhasvalue(firemodes, burst3) then
+            table.insert(firemodes, 1, burst3)
+        end
+        local auto = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Auto") and true or nil
+        if auto and not quickhasvalue(firemodes, auto) then
+            table.insert(firemodes, 1, auto)
+        end
+        modifications.firemodes = firemodes
+        if firerates and #firerates < #firemodes then
+            local default = firerates[#firerates]
+            for i=1, #firemodes-#firerates do
+                table.insert(firerates, 1, default)
+            end
+            modifications.firerate = firerates
+        end
+        local mul = config:GetValue("Weapons", "Stat Modifications", "Bullet", "Firerate")
+        if firerates then
+            for i=1, #firerates do
+                firerates[i] = firerates[i] * mul
+            end
+            modifications.firerate = firerates
+        else
+            modifications.firerate = modifications.firerate * mul;
         end
     end)
 
