@@ -1601,7 +1601,7 @@ do
     end
 
 
-    --COMBOBOX, TOGGLE, KEYBIND, DROPBOX, COLORPICKER, DOUBLE_COLORPICKER, SLIDER, BUTTON, LIST, IMAGE, TEXTBOX 
+    --"ComboBox", "Toggle", "KeyBind", "DropBox", COLORPICKER, DOUBLE_COLORPICKER, "Slider", BUTTON, LIST, IMAGE, TEXTBOX 
     config.parsertovalue = {
         ["Text"] = function(v) return v.value end,
         ["Toggle"] = function(v) return v.value end,
@@ -4817,7 +4817,7 @@ do
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = slider
-            return tall+2+10+7
+            return tall+2+10+5
         elseif type == "Text" then
             local cont = gui:Create("Container", container)
             local text = gui:Create("Text", cont)
@@ -4837,7 +4837,7 @@ do
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = textentry
-            return tall+4+16+6
+            return tall+4+16+4
         elseif type == "DropBox" then
             local cont = gui:Create("Container", container)
             local text = gui:Create("Text", cont)
@@ -4857,7 +4857,7 @@ do
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = dropbox
-            return 16+4+16+4
+            return 16+4+16+2
         elseif type == "ComboBox" then
             local cont = gui:Create("Container", container)
             local text = gui:Create("Text", cont)
@@ -4876,7 +4876,7 @@ do
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = dropbox
-            return 16+4+16+4
+            return 16+4+16+2
         elseif type == "Button" then
             local button = gui:Create("Button", container)
             button:SetPos(0, 0, 0, Y)
@@ -5548,6 +5548,225 @@ do
                     {content=skins_anims},
                 }
             }
+            local weapon_legit = {
+                {
+                    name = "Aim Assist",
+                    pos = UDim2.new(0,0,0,0),
+                    size = UDim2.new(.5,-4,1-(5.5/20),-4),
+                    type = "Panel",
+                    content = {
+                        {
+                            type = "Toggle",
+                            name = "Enabled",
+                            value = false,
+                            tooltip = "Aim assistance only moves your mouse towards targets"
+                        },
+                        {
+                            type = "Slider",
+                            name = "Aimbot FOV",
+                            min = 0,
+                            max = 100,
+                            suffix = "°",
+                            value = 20
+                        },
+                        {
+                            type = "Toggle",
+                            name = "Dynamic FOV",
+                            value = false,
+                            tooltip = "Changes all FOV to change depending on the magnification."
+                        },
+                        {
+                            type = "Slider",
+                            name = "Smoothing",
+                            value = 20,
+                            min = 0,
+                            max = 100,
+                            suffix = "%",
+                        },
+                        {
+                            type = "DropBox",
+                            name = "Smoothing Type",
+                            value = 2,
+                            values = { "Exponential", "Linear" },
+                        },
+                        {
+                            type = "Slider",
+                            name = "Randomization",
+                            value = 5,
+                            min = 0,
+                            mas = 20,
+                            suffix = "",
+                            custom = { [0] = "Off" },
+                        },
+                        {
+                            type = "Slider",
+                            name = "Deadzone FOV",
+                            value = 1,
+                            min = 0,
+                            max = 50,
+                            suffix = "°",
+                            decimal = 1,
+                            custom = { [0] = "Off" },
+                        },
+                        {
+                            type = "DropBox",
+                            name = "Aimbot Key",
+                            value = 1,
+                            values = { "Mouse 1", "Mouse 2", "Always", "Dynamic Always" },
+                        },
+                        {
+                            type = "DropBox",
+                            name = "Hitscan Priority",
+                            value = 1,
+                            values = { "Head", "Body", "Closest" },
+                        },
+                        {
+                            type = "ComboBox",
+                            name = "Hitscan Points",
+                            values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+                        },
+                    },
+                },
+                {
+                    name = "Trigger Bot",
+                    pos = UDim2.new(0,0,1-(5.5/20),4),
+                    size = UDim2.new(.5,-4,5.5/20,-4),
+                    type = "Panel",
+                    content = {
+                        {
+                            type = "Toggle",
+                            name = "Enabled",
+                            value = false,
+                            extra = {
+                                type = "KeyBind",
+                                key = M,
+                            },
+                        },
+                        {
+                            type = "ComboBox",
+                            name = "Trigger Bot Hitboxes",
+                            values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+                        },
+                        {
+                            type = "Toggle",
+                            name = "Trigger When Aiming",
+                            value = false,
+                        },
+                        {
+                            type = "Slider",
+                            name = "Aim Percentage",
+                            min = 0,
+                            max = 100,
+                            value = 90,
+                            suffix = "%",
+                        },
+                    }
+                },
+                {
+                    name = "Ballistics",
+                    pos = UDim2.new(.5,4,0,0),
+                    size = UDim2.new(.5,-4,1/2,-4),
+                    type = "Panel",
+                    content = {
+                        {
+                            type = "Toggle",
+                            name = "Barrel Compensation",
+                            value = true,
+                            tooltip = "Attempts to aim based on the direction of the barrel",
+                            extra = {}
+                        },
+                        {
+                            type = "ComboBox",
+                            name = "Disable Barrel Comp While",
+                            values = { { "Fire Animation", true }, { "Scoping In", true }, { "Reloading", true } }
+                        },
+                        {
+                            type = "Toggle",
+                            name = "Drop Prediction",
+                            value = true,
+                        },
+                        {
+                            type = "Toggle",
+                            name = "Movement Prediction",
+                            value = true,
+                        },
+                        {
+                            type = "Toggle",
+                            name = "Enable Recoil Control",
+                            value = true,
+                        },
+                        {
+                            type = "ComboBox",
+                            name = "Disable RCS While",
+                            values = { { "Holding Sniper", false }, { "Scoping In", false }, { "Not Shooting", true } }
+                        },
+                        {
+                            type = "Slider",
+                            name = "Recoil Control X",
+                            value = 45,
+                            min = 0,
+                            max = 100,
+                            suffix = "%",
+                        },
+                        {
+                            type = "Slider",
+                            name = "Recoil Control Y",
+                            value = 80,
+                            min = 0,
+                            max = 150,
+                            suffix = "%",
+                        },
+                    }
+                },
+                {
+                    name = "Bullet Redirection",
+                    pos = UDim2.new(.5,4,1/2,4),
+                    size = UDim2.new(.5,-4,1/2,-4),
+                    type = "Panel",
+                    content = {
+                        {
+                            type = "Toggle",
+                            name = "Enabled",
+                            value = false,
+                        },
+                        {
+                            type = "Slider",
+                            name = "Redirection FOV",
+                            value = 5,
+                            min = 0,
+                            max = 180,
+                            suffix = "°",
+                        },
+                        {
+                            type = "Slider",
+                            name = "Hit Chance",
+                            value = 30,
+                            min = 0,
+                            max = 100,
+                            suffix = "%",
+                        },
+                        {
+                            type = "Slider",
+                            name = "Accuracy",
+                            value = 90,
+                            min = 0,
+                            max = 100,
+                            suffix = "%",
+                        },
+                        {
+                            type = "DropBox",
+                            name = "Hitscan Priority",
+                            value = 1,
+                            values = { "Head", "Body", "Closest" },
+                        },
+                        {
+                            type = "ComboBox",
+                            name = "Hitscan Points",
+                            values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+                        },
+                    },
+                },
+            }
 
             BBOT.configuration = {
                 {
@@ -5561,57 +5780,49 @@ do
                             name = "Legit",
                             pos = UDim2.new(0,0,0,0),
                             size = UDim2.new(1,0,1,0),
-                            type = "Container",
+                            type = "Tabs",
                             content = {
                                 {
-                                    name = "Legit",
+                                    name = "Pistols",
+                                    icon = "M9",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
-                                    type = "Tabs",
-                                    content = {
-                                        {
-                                            name = "Pistols",
-                                            icon = "M9",
-                                            pos = UDim2.new(0,0,0,0),
-                                            size = UDim2.new(1,0,1,0),
-                                            type = "Container",
-                                            content = {}
-                                        },
-                                        {
-                                            name = "Smgs",
-                                            icon = "MP5K",
-                                            pos = UDim2.new(0,0,0,0),
-                                            size = UDim2.new(1,0,1,0),
-                                            type = "Container",
-                                            content = {}
-                                        },
-                                        {
-                                            name = "Rifles",
-                                            icon = "M4A1",
-                                            pos = UDim2.new(0,0,0,0),
-                                            size = UDim2.new(1,0,1,0),
-                                            type = "Container",
-                                            content = {}
-                                        },
-                                        {
-                                            name = "Snipers",
-                                            icon = "INTERVENTION",
-                                            pos = UDim2.new(0,0,0,0),
-                                            size = UDim2.new(1,0,1,0),
-                                            type = "Container",
-                                            content = {}
-                                        },
-                                        {
-                                            name = "Miscs",
-                                            icon = "CROWBAR",
-                                            pos = UDim2.new(0,0,0,0),
-                                            size = UDim2.new(1,0,1,0),
-                                            type = "Container",
-                                            content = {}
-                                        },
-                                    }
-                                }
-                            },
+                                    type = "Container",
+                                    content = weapon_legit
+                                },
+                                {
+                                    name = "Smgs",
+                                    icon = "MP5K",
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(1,0,1,0),
+                                    type = "Container",
+                                    content = weapon_legit
+                                },
+                                {
+                                    name = "Rifles",
+                                    icon = "M4A1",
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(1,0,1,0),
+                                    type = "Container",
+                                    content = weapon_legit
+                                },
+                                {
+                                    name = "Snipers",
+                                    icon = "INTERVENTION",
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(1,0,1,0),
+                                    type = "Container",
+                                    content = weapon_legit
+                                },
+                                {
+                                    name = "Miscs",
+                                    icon = "CROWBAR",
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(1,0,1,0),
+                                    type = "Container",
+                                    content = {}
+                                },
+                            }
                         },
                         {
                             name = "Rage",
@@ -6062,9 +6273,9 @@ do
                                                 type = "Slider",
                                                 name = "Camera FOV",
                                                 value = 80,
-                                                minvalue = 60,
-                                                maxvalue = 120,
-                                                stradd = "°",
+                                                min = 60,
+                                                max = 120,
+                                                suffix = "°",
                                             },
                                             {
                                                 type = "Toggle",
@@ -6108,9 +6319,9 @@ do
                                                 type = "Slider",
                                                 name = "Camera Recoil Reduction",
                                                 value = 10,
-                                                minvalue = 0,
-                                                maxvalue = 100,
-                                                stradd = "%",
+                                                min = 0,
+                                                max = 100,
+                                                suffix = "%",
                                             },
                                         },
                                     },
@@ -6125,52 +6336,52 @@ do
                                                 type = "Slider",
                                                 name = "Offset X",
                                                 value = 0,
-                                                minvalue = -3,
-                                                maxvalue = 3,
+                                                min = -3,
+                                                max = 3,
                                                 decimal = 0.01,
-                                                stradd = " studs",
+                                                suffix = " studs",
                                             },
                                             {
                                                 type = "Slider",
                                                 name = "Offset Y",
                                                 value = 0,
-                                                minvalue = -3,
-                                                maxvalue = 3,
+                                                min = -3,
+                                                max = 3,
                                                 decimal = 0.01,
-                                                stradd = " studs",
+                                                suffix = " studs",
                                             },
                                             {
                                                 type = "Slider",
                                                 name = "Offset Z",
                                                 value = 0,
-                                                minvalue = -3,
-                                                maxvalue = 3,
+                                                min = -3,
+                                                max = 3,
                                                 decimal = 0.01,
-                                                stradd = " studs",
+                                                suffix = " studs",
                                             },
                                             {
                                                 type = "Slider",
                                                 name = "Pitch",
                                                 value = 0,
-                                                minvalue = -360,
-                                                maxvalue = 360,
-                                                stradd = "°",
+                                                min = -360,
+                                                max = 360,
+                                                suffix = "°",
                                             },
                                             {
                                                 type = "Slider",
                                                 name = "Yaw",
                                                 value = 0,
-                                                minvalue = -360,
-                                                maxvalue = 360,
-                                                stradd = "°",
+                                                min = -360,
+                                                max = 360,
+                                                suffix = "°",
                                             },
                                             {
                                                 type = "Slider",
                                                 name = "Roll",
                                                 value = 0,
-                                                minvalue = -360,
-                                                maxvalue = 360,
-                                                stradd = "°",
+                                                min = -360,
+                                                max = 360,
+                                                suffix = "°",
                                             },
                                         },
                                     },
@@ -6209,10 +6420,10 @@ do
                                                 type = "Slider",
                                                 name = "Custom Time",
                                                 value = 0,
-                                                minvalue = 0,
-                                                maxvalue = 24,
+                                                min = 0,
+                                                max = 24,
                                                 decimal = 0.1,
-                                                stradd = "hr",
+                                                suffix = "hr",
                                             },
                                             {
                                                 type = "Toggle",
@@ -6231,9 +6442,9 @@ do
                                                 type = "Slider",
                                                 name = "Saturation Density",
                                                 value = 0,
-                                                minvalue = 0,
-                                                maxvalue = 100,
-                                                stradd = "%",
+                                                min = 0,
+                                                max = 100,
+                                                suffix = "%",
                                             },
                                         },
                                     },
@@ -6328,19 +6539,19 @@ do
                                                 type = "Slider",
                                                 name = "Keybinds List X",
                                                 value = 0,
-                                                minvalue = 0,
-                                                maxvalue = 100,
+                                                min = 0,
+                                                max = 100,
                                                 shift_stepsize = 0.05,
-                                                stradd = "%",
+                                                suffix = "%",
                                             },
                                             {
                                                 type = "Slider",
                                                 name = "Keybinds List Y",
                                                 value = 50,
-                                                minvalue = 0,
-                                                maxvalue = 100,
+                                                min = 0,
+                                                max = 100,
                                                 shift_stepsize = 0.05,
-                                                stradd = "%",
+                                                suffix = "%",
                                             },
                                         },
                                     },
