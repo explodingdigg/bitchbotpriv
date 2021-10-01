@@ -526,6 +526,13 @@ do
 
 		return Vector2.new(x, y).Unit * Vec.Magnitude
 	end
+
+    -- msg from cream - this is called pythagorean theorem btw, the guy you found it from doesn't know math...
+	function vector.dist2d ( pos1, pos2 ) -- found this func here https://love2d.org/forums/viewtopic.php?t=1951 ty to whoever did this
+		local dx = pos1.X - pos2.X
+		local dy = pos1.Y - pos2.Y
+		return math.sqrt ( dx * dx + dy * dy )
+	end
 end
 
 -- String
@@ -1377,6 +1384,11 @@ do
     }
     BBOT.config = config
 
+    -- priorities are stored like so
+    -- ["player.UserId"] = -1 -> inf
+    -- -1 is friendly, > 0 is priority
+    config.priority = {}
+
     hook:Add("PreInitialize", "BBOT:ConfigSetup", function()
         config.storage_pathway = "bitchbot/" .. BBOT.game
         config.storage_main = "bitchbot"
@@ -1498,6 +1510,10 @@ do
                 if typeof(s) == "table" and s.type and s.type ~= "Button" then
                     if s.type == "KeyBind" then
                         return s.toggle
+                    elseif reg.type == "ComboBox" then
+                        local t, v = {}, reg.value
+                        for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
+                        return v
                     end
                     return s.value
                 end
@@ -1506,6 +1522,10 @@ do
             if reg.type and reg.type ~= "Button" then
                 if reg.type == "KeyBind" then
                     return reg.toggle
+                elseif reg.type == "ComboBox" then
+                    local t, v = {}, reg.value
+                    for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
+                    return v
                 end
                 return reg.value
             end
@@ -6810,7 +6830,7 @@ do
                                 {
                                     name = "Cheat Settings",
                                     pos = UDim2.new(0,0,2/3,0),
-                                    size = UDim2.new(.5,0,1/3,0),
+                                    size = UDim2.new(.5,-4,1/3,0),
                                     type = "Panel",
                                     content = {
                                         {
@@ -6854,6 +6874,26 @@ do
                                         }
                                     },
                                 },
+                                {
+                                    name = "Configs",
+                                    pos = UDim2.new(.5,4,2/3,0),
+                                    size = UDim2.new(.5,-4,1/3,0),
+                                    type = "Panel",
+                                    content = {
+                                        {
+                                            type = "Text",
+                                            name = "Config Name",
+                                            value = "Default",
+                                            extra = {},
+                                        },
+                                        {
+                                            type = "DropBox",
+                                            name = "Configs",
+                                            value = 1,
+                                            values = {"Default"}
+                                        },
+                                    }
+                                }
                             },
                         },
                     }
@@ -7895,24 +7935,77 @@ do
             serverhop:RandomHop()
         end
     end)
-end
+end]=]
 
--- Generalized Aimbot (Conversion In Progress)
+-- Aimbot (Conversion In Progress)
 -- Knife Aura
 -- Bullet Network Manipulation
 do
     local timer = BBOT.timer
     local hook = BBOT.hook
     local config = BBOT.config
-    local network = BBOT.network
-    local gamelogic = BBOT.gamelogic
-    local hud = BBOT.hud
-    local physics = BBOT.physics
+    local network = BBOT.aux.network
+    local gamelogic = BBOT.aux.gamelogic
+    local vector = BBOT.vector
+    local char = BBOT.aux.char
+    local hud = BBOT.aux.hud
+    local physics = BBOT.aux.physics
+    local replication = BBOT.aux.replication
+    local raycast = BBOT.aux.raycast
+    local cam = BBOT.aux.camera
     local localplayer = BBOT.service:GetService("LocalPlayer")
+    local players = BBOT.service:GetService("Players")
+    local camera = BBOT.service:GetService("CurrentCamera")
+    local mouse = BBOT.service:GetService("Mouse")
     local aimbot = {}
     BBOT.aimbot = aimbot
+    
+    do
+        local function raycastbullet(p1)
+            local instance = p1.Instance
+            if instance.Name == "Window" then return true end
+            return not instance.CanCollide or instance.Transparency == 1
+        end
 
-    function aimbot:VelocityPrediction(startpos, endpos, vel, speed)
+        local workspace = core.service:GetService("Workspace")
+        function aimbot:fullcast(p7, p8, p9, p10, p11)
+            local v3 = nil;
+            local v4 = RaycastParams.new();
+            v4.FilterDescendantsInstances = p9;
+            v4.IgnoreWater = true;
+            local calls = 0;
+            while calls < 2000 do
+                v3 = workspace:Raycast(p7, p8, v4);
+                if not p10 then
+                    break;
+                end;
+                if not v3 then
+                    break;
+                end;
+                local ran, err = pcall(p10, v3)
+                if not ran or not err then
+                    break;
+                end;
+                table.insert(p9, v3.Instance);
+                v4.FilterDescendantsInstances = p9;
+                calls = calls + 1
+            end;
+            if not p11 then
+                for v5 = #p9, #p9 + 1, -1 do
+                    p9[v5] = nil;
+                end;
+            end;
+            return v3;
+        end;
+
+        local currentcamera = core.service:GetService("CurrentCamera")
+        local rcast = core.raycast.fullcast
+        function aimbot:raycastbullet(vec, dir, extra, cb)
+            return aimbot:fullcast(vec, dir, {currentcamera, workspace.Terrain, localplayer.Character, workspace.Ignore, extra}, cb or raycastbullet)
+        end
+    end
+
+    function aimbot:VelocityPrediction(startpos, endpos, vel, speed) -- Kinematics is fun
         local len = (endpos-startpos).Magnitude
         local t = len/speed
         return endpos + (vel * t)
@@ -7924,19 +8017,217 @@ do
         return physics.trajectory(startpos, self.bullet_gravity, finalpos, speed)
     end
 
-    -- Scan targets here
-    function aimbot.Step()
+    function aimbot:BarrelPrediction(target, dir, data)
+        local part = (data.isaiming() and BBOT.weapons.GetToggledSight(data).sightdata or data.barrel)
+        if part then
+            return (dir - part.CFrame.LookVector) - (dir - (target - part.CFrame.Position).Unit)
+        end
+    end
 
+    function aimbot:GetParts(player)
+        if not hud:isplayeralive(player) then return end
+        local charactercontroller = replication.getupdater(player)
+        if not charactercontroller then return end
+        return charactercontroller.getbodyparts()
+    end
+
+    local types = {
+        ["PISTOL"] = "Pistol",
+        ["REVOLVER"] = "Pistol",
+
+        ["PDW"] = "Smg",
+
+        ["DMR"] = "Rifle",
+        ["LMG"] = "Rifle",
+        ["CARBINE"] = "Rifle",
+        ["ASSAULT"] = "Rifle",
+
+        ["SHOTGUN"] = "Shotgun",
+
+        ["SNIPER"] = "Sniper",
+    }
+
+    aimbot.gun_type = "ASSAULT"
+    function aimbot:GetLegitConfig(...)
+        local type = types[self.gun_type]
+        if not type then
+            type = "Rifle"
+        end
+        return config:GetValue("Main", "Legit", type, ...) 
+    end
+
+    function aimbot:SetCurrentType(type)
+        self.gun_type = type
+    end
+
+    -- Scan targets here
+    function aimbot.Step(data)
+
+    end
+
+    local partstosimple = {
+        ["Head"] = "Head",
+        ["HumanoidRootPart"] = "Body",
+        ["Left Arm"] = "Arms",
+        ["Right Arm"] = "Arms",
+        ["Left Leg"] = "Legs",
+        ["Right Leg"] = "Legs",
+    }
+
+    local function Move_Mouse(delta)
+        local coef = cam.sensitivitymult * math.atan(
+            math.tan(cam.basefov * (math.pi / 180) / 2) / 2.72 ^ cam.magspring.p
+        ) / (32 * math.pi)
+        local x = cam.angles.x - coef * delta.y
+        x = x > cam.maxangle and cam.maxangle or x < cam.minangle and cam.minangle or x
+        local y = cam.angles.y - coef * delta.x
+        local newangles = Vector3.new(x, y, 0)
+        cam.delta = (newangles - cam.angles) / 0.016666666666666666
+        cam.angles = newangles
+    end
+
+    function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority)
+        local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
+        local cam_position = camera.CFrame.p
+        local team = (localplayer.Team and localplayer.Team.Name or "NA")
+        local playerteamdata = workspace["Players"][team]
+
+        local organizedPlayers = {}
+        local plys = players:GetPlayers()
+        for i=1, #plys do
+            local v = plys[i]
+            if v == localplayer then
+                continue
+            end
+        
+            if config.priority[v.UserId] then continue end
+            local parts = self:GetParts(v)
+            if not parts then continue end
+        
+            if v.Team and v.Team == localplayer.Team then
+                continue
+            end
+
+            local updater = replication.getupdater(v)
+
+            for name, part in pairs(parts) do
+                local name = partstosimple[name]
+                if not name or not hitscan_points[name] then continue end
+                local pos = v.Position
+                local point, onscreen = camera:WorldToViewportPoint(pos)
+                if not onscreen then continue end
+                local object_fov = camera:GetFOV(part)
+                if fov <= object_fov or dzFov >= object_fov then continue end
+                local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
+                if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
+                table.insert(organizedPlayers, {v, part, point})
+            end
+        end
+        
+        if hitscan_priority == "Closest" then
+            table.sort(organizedPlayers, function(a, b)
+                return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
+            end)
+        end
+        
+        return organizedPlayers[1]
+    end
+
+    function aimbot:MouseStep(data)
+        if not self:GetLegitConfig("Aim Assist", "Enabled") then return end
+        local hitscan_priority = self:GetLegitConfig("Aim Assist", "Hitscan Priority")
+        local hitscan_points = self:GetLegitConfig("Aim Assist", "Hitscan Points")
+        local fov = self:GetLegitConfig("Aim Assist", "Aimbot FOV")
+        local dzFov = self:GetLegitConfig("Aim Assist", "Deadzone FOV")
+
+        if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
+            fov = camera.FieldOfView / char.unaimedfov * fov
+            dzFov = camera.FieldOfView / char.unaimedfov * dzFov
+        end
+
+        local target = self:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority)
+        if not target then return end
+        local position = target[2].Position
+        local cam_position = camera.CFrame.p
+
+        if self:GetLegitConfig("Ballistics", "Movement Prediction") then
+            position = self:VelocityPrediction(cam_position, position, self:GetParts(target[1])["HumanoidRootPart"].Velocity, data.bulletspeed)
+        end
+
+        local dir = (position-cam_position).Unit
+        if self:GetLegitConfig("Ballistics", "Drop Prediction") then
+            dir = self:DropPrediction(cam_position, position, data.bulletspeed).Unit
+        end
+
+        if self:GetLegitConfig("Ballistics", "Barrel Compensation") then
+            dir = self:BarrelPrediction(position, dir, data)
+        end
+
+        local pos, onscreen = workspace.CurrentCamera:WorldToViewportPoint(cam_position + dir)
+        if onscreen then
+            local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
+            local smoothing = self:GetLegitConfig("Aim Assist", "Smoothing") * 0.3 + 2
+            local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - mouse.Y - 36 + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
+            Move_Mouse(inc)
+        end
+    end
+
+    function aimbot:RedirectionStep(data, gunparts)
+        if not self:GetLegitConfig("Bullet Redirection", "Enabled") then return end
+        if math.random(0, 100) > self:GetLegitConfig("Bullet Redirection", "Hit Chance") then
+            return
+        end
+
+        local sFov = self:GetLegitConfig("Bullet Redirection", "Redirection FOV")
+        if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
+            sFov = camera.FieldOfView / char.unaimedfov * sFov
+        end
+
+        local hitscan_priority = self:GetLegitConfig("Bullet Redirection", "Hitscan Priority")
+        local hitscan_points = self:GetLegitConfig("Bullet Redirection", "Hitscan Points")
+
+        local target = self:GetLegitTarget(sFov, 0, hitscan_points, hitscan_priority)
+        if not target then return end
+        local position = target[2].Position
+        local part = (data.isaiming() and BBOT.weapons.GetToggledSight(data).sightdata or data.barrel)
+        local part_pos = part.Position
+
+        if self:GetLegitConfig("Ballistics", "Movement Prediction") then
+            position = self:VelocityPrediction(part_pos, position, self:GetParts(target[1])["HumanoidRootPart"].Velocity, data.bulletspeed)
+        end
+
+        local dir = (position-part_pos).Unit
+        if self:GetLegitConfig("Ballistics", "Drop Prediction") then
+            dir = self:DropPrediction(part_pos, position, data.bulletspeed).Unit
+        end
+
+        local X, Y = CFrame.new(part_pos, dir):ToOrientation()
+        
+        local accuracy = math.remap(self:GetLegitConfig("Bullet Redirection", "Accuracy")/100, 0, 1, .3, 0)
+        X += ((math.pi/2) * (math.random(accuracy*1000, accuracy*1000)/1000))
+        Y += ((math.pi/2) * (math.random(accuracy*1000, accuracy*1000)/1000))
+
+        part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
+        self.silent = part
+    end
+
+    function aimbot:LegitStep(data, gunparts)
+        if not data or not data.bulletspeed then return end
+        self:MouseStep(data)
+        self:RedirectionStep(data, gunparts)
     end
 
     -- Do aimbot stuff here
     hook:Add("PreWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
-
+        aimbot:LegitStep(gundata, partdata)
     end)
 
     -- If the aimbot stuff before is persistant, use this to restore
     hook:Add("PostWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
-    
+        if aimbot.silent and aimbot.silent.Parent then
+            aimbot.silent.Orientation = aimbot.silent.Parent.Trigger.Orientation
+            aimbot.silent = false
+        end
     end)
 
     local enque = {}
@@ -7951,7 +8242,7 @@ do
     end)
 
     -- When silent aim isn't enough, resort to this, and make even cheaters rage that their config is garbage
-    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, timestamp)
+    --[=[hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, timestamp)
         if networkname == "newbullets" then
             if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
             local silent = config:GetValue("Rage", "Aimbot", "Silent Aim")
@@ -8002,8 +8293,8 @@ do
     -- Knife Aura --
     hook:Add("PreKnifeStep", "BBOT:KnifeAura.Calculate", function(knifedata)
     
-    end)
-end]=]
+    end)]=]
+end
 
 -- Entity Visuals Controller [ESP, Chams, Grenades, etc] (Conversion In Progress)
 -- Styled as a constructor with meta tables btw, I'll tell ya later - WholeCream
@@ -8185,6 +8476,11 @@ do
     local char = BBOT.aux.char
     local gamelogic = BBOT.aux.gamelogic
     local network = BBOT.aux.network
+
+    function weapons.GetToggledSight(weapon)
+        local updateaimstatus = debug.getupvalue(weapon.toggleattachment, 3)
+        return debug.getupvalue(updateaimstatus, 1)
+    end
 
     -- Welcome to my hell.
     -- ft. debug.setupvalue
