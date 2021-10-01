@@ -277,7 +277,6 @@ end
 -- for now
 local function ISOLATION(BBOT)
 local BBOT = BBOT
-local loadstart = tick()
 
 function BBOT.halt() -- use this if u wana but breaks in the code
     BBOT.log(LOG_WARN, "Halted!")
@@ -5220,6 +5219,7 @@ end
 --! POST LIBRARIES !--
 -- WholeCream here, do remember to sort all of this in order for a possible module based loader
 
+local loadstart = tick()
 -- Setup, are we playing PF, Universal or... Bad Business 😉
 do
     local thread = BBOT.thread
@@ -5593,7 +5593,7 @@ do
                         {
                             type = "Toggle",
                             name = "Enabled",
-                            value = false,
+                            value = true,
                             tooltip = "Aim assistance only moves your mouse towards targets"
                         },
                         {
@@ -7374,7 +7374,6 @@ do
                         if typeof(vv) == "table" then
                             if #vv > 10 then
                                 rawset(aux.network, "receivers", vv)
-                                BBOT.log(LOG_DEBUG, "Found network receivers")
                             end
                         end
                     end
@@ -7946,6 +7945,7 @@ do
     local config = BBOT.config
     local network = BBOT.aux.network
     local gamelogic = BBOT.aux.gamelogic
+    local math = BBOT.math
     local vector = BBOT.vector
     local char = BBOT.aux.char
     local hud = BBOT.aux.hud
@@ -7967,7 +7967,7 @@ do
             return not instance.CanCollide or instance.Transparency == 1
         end
 
-        local workspace = core.service:GetService("Workspace")
+        local workspace = BBOT.service:GetService("Workspace")
         function aimbot:fullcast(p7, p8, p9, p10, p11)
             local v3 = nil;
             local v4 = RaycastParams.new();
@@ -7998,8 +7998,7 @@ do
             return v3;
         end;
 
-        local currentcamera = core.service:GetService("CurrentCamera")
-        local rcast = core.raycast.fullcast
+        local currentcamera = BBOT.service:GetService("CurrentCamera")
         function aimbot:raycastbullet(vec, dir, extra, cb)
             return aimbot:fullcast(vec, dir, {currentcamera, workspace.Terrain, localplayer.Character, workspace.Ignore, extra}, cb or raycastbullet)
         end
@@ -8017,8 +8016,24 @@ do
         return physics.trajectory(startpos, self.bullet_gravity, finalpos, speed)
     end
 
-    function aimbot:BarrelPrediction(target, dir, data)
-        local part = (data.isaiming() and BBOT.weapons.GetToggledSight(data).sightdata or data.barrel)
+    function aimbot:CanBarrelPredict(gun)
+        local stopon = self:GetLegitConfig("Ballistics", "Disable Barrel Comp While")
+        if stopon["Scoping In"] then
+            local sight = BBOT.weapons.GetToggledSight(gun)
+            if sight and (sight.sightspring.p > 0.1 and sight.sightspring.p < 0.9) then
+                return false
+            end
+        end
+        if stopon["Fire Animation"] then
+        end
+        if stopon["Reloading"] then
+            if debug.getupvalue(gun.reloadcancel, 1) then return false end
+        end
+        return true
+    end
+
+    function aimbot:BarrelPrediction(target, dir, gun)
+        local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
         if part then
             return (dir - part.CFrame.LookVector) - (dir - (target - part.CFrame.Position).Unit)
         end
@@ -8026,9 +8041,7 @@ do
 
     function aimbot:GetParts(player)
         if not hud:isplayeralive(player) then return end
-        local charactercontroller = replication.getupdater(player)
-        if not charactercontroller then return end
-        return charactercontroller.getbodyparts()
+        return replication.getbodyparts(player)
     end
 
     local types = {
@@ -8060,25 +8073,17 @@ do
         self.gun_type = type
     end
 
-    function aimbot:GetLegitConfig(...)
-        local type = types[self.gun_type]
-        if not type then
-            type = "Rifle"
-        end
-        return config:GetValue("Main", "Legit", type, ...) 
-    end
-
-    function aimbot:GetRageConfig(data)
-        return config:GetValue("Main", "Rage", ...) 
+    function aimbot:GetRageConfig(...)
+        return config:GetValue("Main", "Rage", ...)
     end
 
     local partstosimple = {
-        ["Head"] = "Head",
-        ["HumanoidRootPart"] = "Body",
-        ["Left Arm"] = "Arms",
-        ["Right Arm"] = "Arms",
-        ["Left Leg"] = "Legs",
-        ["Right Leg"] = "Legs",
+        ["head"] = "Head",
+        ["rootpart"] = "Body",
+        ["larm"] = "Arms",
+        ["rarm"] = "Arms",
+        ["lleg"] = "Legs",
+        ["rleg"] = "Legs",
     }
 
     local function Move_Mouse(delta)
@@ -8091,6 +8096,13 @@ do
         local newangles = Vector3.new(x, y, 0)
         cam.delta = (newangles - cam.angles) / 0.016666666666666666
         cam.angles = newangles
+    end
+
+    function aimbot:GetFOV(Part, originPart)
+        originPart = originPart or workspace.Camera
+        local directional = CFrame.new(originPart.CFrame.Position, Part.Position)
+        local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
+        return math.deg(ang.Magnitude)
     end
 
     function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority)
@@ -8116,32 +8128,59 @@ do
             end
 
             local updater = replication.getupdater(v)
+            local prioritize
+            if hitscan_priority == "Head" then
+                prioritize = updater.gethead()
+            elseif hitscan_priority == "Body" then
+                prioritize = replication.getbodyparts(v)["HumanoidRootPart"]
+            end
 
-            for name, part in pairs(parts) do
-                local name = partstosimple[name]
-                if not name or not hitscan_points[name] then continue end
-                local pos = v.Position
+            local inserted_priority
+            if prioritize then
+                local part = prioritize
+                local pos = prioritize.Position
                 local point, onscreen = camera:WorldToViewportPoint(pos)
                 if not onscreen then continue end
-                local object_fov = camera:GetFOV(part)
+                local object_fov = aimbot:GetFOV(part)
                 if fov <= object_fov or dzFov >= object_fov then continue end
                 local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
                 if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
                 table.insert(organizedPlayers, {v, part, point})
+                inserted_priority = true
+            end
+            
+            if not inserted_priority then
+                for name, part in pairs(parts) do
+                    local name = partstosimple[name]
+                    if part == prioritize or not name or not hitscan_points[name] then continue end
+                    local pos = v.Position
+                    local point, onscreen = camera:WorldToViewportPoint(pos)
+                    if not onscreen then continue end
+                    local object_fov = aimbot:GetFOV(part)
+                    if fov <= object_fov or dzFov >= object_fov then continue end
+                    local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
+                    if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
+                    table.insert(organizedPlayers, {v, part, point})
+                end
             end
         end
         
-        if hitscan_priority == "Closest" then
-            table.sort(organizedPlayers, function(a, b)
-                return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
-            end)
-        end
+        table.sort(organizedPlayers, function(a, b)
+            return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
+        end)
         
         return organizedPlayers[1]
     end
 
-    function aimbot:MouseStep(data)
+    
+    local userinputservice = BBOT.service:GetService("UserInputService")
+    function aimbot:MouseStep(gun)
         if not self:GetLegitConfig("Aim Assist", "Enabled") then return end
+		local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
+		if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
+			if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and 1 or 2)) then return end
+		end
+
         local hitscan_priority = self:GetLegitConfig("Aim Assist", "Hitscan Priority")
         local hitscan_points = self:GetLegitConfig("Aim Assist", "Hitscan Points")
         local fov = self:GetLegitConfig("Aim Assist", "Aimbot FOV")
@@ -8158,29 +8197,33 @@ do
         local cam_position = camera.CFrame.p
 
         if self:GetLegitConfig("Ballistics", "Movement Prediction") then
-            position = self:VelocityPrediction(cam_position, position, self:GetParts(target[1])["HumanoidRootPart"].Velocity, data.bulletspeed)
+            position = self:VelocityPrediction(cam_position, position, self:GetParts(target[1]).rootpart.Velocity, gun.data.bulletspeed)
         end
 
         local dir = (position-cam_position).Unit
         if self:GetLegitConfig("Ballistics", "Drop Prediction") then
-            dir = self:DropPrediction(cam_position, position, data.bulletspeed).Unit
+            dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
         end
 
-        if self:GetLegitConfig("Ballistics", "Barrel Compensation") then
-            dir = self:BarrelPrediction(position, dir, data)
+        if self:GetLegitConfig("Ballistics", "Barrel Compensation") and self:CanBarrelPredict(gun) then
+            dir = dir + self:BarrelPrediction(position, dir, gun)
         end
 
-        local pos, onscreen = workspace.CurrentCamera:WorldToViewportPoint(cam_position + dir)
+        local pos, onscreen = camera:WorldToViewportPoint(cam_position + dir)
         if onscreen then
             local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
-            local smoothing = self:GetLegitConfig("Aim Assist", "Smoothing") * 0.3 + 2
+            local smoothing = self:GetLegitConfig("Aim Assist", "Smoothing") * 5 + 10
             local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - mouse.Y - 36 + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
             Move_Mouse(inc)
         end
     end
 
-    function aimbot:RedirectionStep(data)
+    function aimbot:RedirectionStep(gun)
         if not self:GetLegitConfig("Bullet Redirection", "Enabled") then return end
+		local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
+		if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
+			if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and 1 or 2)) then return end
+		end
         if math.random(0, 100) > self:GetLegitConfig("Bullet Redirection", "Hit Chance") then
             return
         end
@@ -8196,23 +8239,23 @@ do
         local target = self:GetLegitTarget(sFov, 0, hitscan_points, hitscan_priority)
         if not target then return end
         local position = target[2].Position
-        local part = (data.isaiming() and BBOT.weapons.GetToggledSight(data).sightdata or data.barrel)
+        local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
         local part_pos = part.Position
 
         if self:GetLegitConfig("Ballistics", "Movement Prediction") then
-            position = self:VelocityPrediction(part_pos, position, self:GetParts(target[1])["HumanoidRootPart"].Velocity, data.bulletspeed)
+            position = self:VelocityPrediction(part_pos, position, self:GetParts(target[1]).rootpart.Velocity, gun.data.bulletspeed)
         end
 
         local dir = (position-part_pos).Unit
         if self:GetLegitConfig("Ballistics", "Drop Prediction") then
-            dir = self:DropPrediction(part_pos, position, data.bulletspeed).Unit
+            dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
         end
 
-        local X, Y = CFrame.new(part_pos, dir):ToOrientation()
+        local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
         
         local accuracy = math.remap(self:GetLegitConfig("Bullet Redirection", "Accuracy")/100, 0, 1, .3, 0)
-        X += ((math.pi/2) * (math.random(accuracy*1000, accuracy*1000)/1000))
-        Y += ((math.pi/2) * (math.random(accuracy*1000, accuracy*1000)/1000))
+        X += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
+        Y += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
 
         part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
         self.silent = part
@@ -8222,24 +8265,24 @@ do
 
     end
 
-    function aimbot:LegitStep(data)
-        if not data or not data.bulletspeed then return end
-        self:SetCurrentType(data.type)
-        self:MouseStep(data)
-        self:RedirectionStep(data)
+    function aimbot:LegitStep(gun)
+        if not gun or not gun.data.bulletspeed then return end
+        self:SetCurrentType(gun.type)
+        self:MouseStep(gun)
+        self:RedirectionStep(gun)
     end
 
     -- Do aimbot stuff here
-    hook:Add("PreWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
+    hook:Add("PreFireStep", "BBOT:Aimbot.Calculate", function(gun)
         if aimbot:GetRageConfig("Enabled") then
-            aimbot:RageStep(gundata, partdata)
+            aimbot:RageStep(gun)
         else
-            aimbot:LegitStep(gundata, partdata)
+            aimbot:LegitStep(gun)
         end
     end)
 
     -- If the aimbot stuff before is persistant, use this to restore
-    hook:Add("PostWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
+    hook:Add("PostFireStep", "BBOT:Aimbot.Calculate", function(gun)
         if aimbot.silent and aimbot.silent.Parent then
             aimbot.silent.Orientation = aimbot.silent.Parent.Trigger.Orientation
             aimbot.silent = false
@@ -8500,9 +8543,6 @@ do
 
     -- Welcome to my hell.
     -- ft. debug.setupvalue
-    local profiling_tick = tick()
-
-    local receivers = BBOT.aux.network.receivers
     local upvaluemods = {} -- testing? no problem reloading the script...
     hook:Add("Unload", "BBOT:WeaponModifications", function()
         for i=1, #upvaluemods do
@@ -8601,66 +8641,68 @@ do
     end
 
     local workspace = BBOT.service:GetService("Workspace")
-    for k, v in pairs(receivers) do
-        local ups = debug.getupvalues(v)
-        for upperindex, related_func in pairs(ups) do
-            if typeof(related_func) == "function" then
-                local funcname = debug.getinfo(related_func).name
-                if funcname == "loadgun" then
-                    local _ups = debug.getupvalues(related_func)
-                    for index, modifydata in pairs(_ups) do
-                        if typeof(modifydata) == "function" then
-                            -- this also contains "gunbob" and "gunsway"
-                            -- we can change these as well...
-                            local name = debug.getinfo(modifydata).name
-                            if name == "gunrequire" then
-                                DetourWeaponRequire(related_func, index, modifydata)
-                            elseif name == "modifydata" then
-                                DetourModifyData(related_func, index, modifydata) -- Stats modification
-                            elseif name == "gunbob" then
-                                DetourGunBob(related_func, index, modifydata)
-                            elseif name == "gunsway" then
-                                DetourGunSway(related_func, index, modifydata)
+    hook:Add("Initialize", "BBOT:Weapons.Detour", function()
+        local receivers = network.receivers
+        for k, v in pairs(receivers) do
+            local ups = debug.getupvalues(v)
+            for upperindex, related_func in pairs(ups) do
+                if typeof(related_func) == "function" then
+                    local funcname = debug.getinfo(related_func).name
+                    if funcname == "loadgun" then
+                        local _ups = debug.getupvalues(related_func)
+                        for index, modifydata in pairs(_ups) do
+                            if typeof(modifydata) == "function" then
+                                -- this also contains "gunbob" and "gunsway"
+                                -- we can change these as well...
+                                local name = debug.getinfo(modifydata).name
+                                if name == "gunrequire" then
+                                    DetourWeaponRequire(related_func, index, modifydata)
+                                elseif name == "modifydata" then
+                                    DetourModifyData(related_func, index, modifydata) -- Stats modification
+                                elseif name == "gunbob" then
+                                    DetourGunBob(related_func, index, modifydata)
+                                elseif name == "gunsway" then
+                                    DetourGunSway(related_func, index, modifydata)
+                                end
                             end
                         end
-                    end
-
-                    DetourGunLoader(v, upperindex, related_func) -- this will allow us to modify before and after events of gun loading
-                    -- Want rainbow guns? well there ya go
-                elseif funcname == "loadknife" then
-                    local _ups = debug.getupvalues(related_func)
-                    for index, modifydata in pairs(_ups) do
-                        if typeof(modifydata) == "function" then
-                            -- this also contains "gunbob" and "gunsway"
-                            -- we can change these as well...
-                            local name = debug.getinfo(modifydata).name
-                            if name == "gunbob" then
-                                DetourGunBob(related_func, index, modifydata)
-                            elseif name == "gunsway" then
-                                DetourGunSway(related_func, index, modifydata)
+                        DetourGunLoader(v, upperindex, related_func) -- this will allow us to modify before and after events of gun loading
+                        -- Want rainbow guns? well there ya go
+                    elseif funcname == "loadknife" then
+                        local _ups = debug.getupvalues(related_func)
+                        for index, modifydata in pairs(_ups) do
+                            if typeof(modifydata) == "function" then
+                                -- this also contains "gunbob" and "gunsway"
+                                -- we can change these as well...
+                                local name = debug.getinfo(modifydata).name
+                                if name == "gunbob" then
+                                    DetourGunBob(related_func, index, modifydata)
+                                elseif name == "gunsway" then
+                                    DetourGunSway(related_func, index, modifydata)
+                                end
                             end
                         end
-                    end
 
-                    DetourKnifeLoader(v, upperindex, related_func)
+                        DetourKnifeLoader(v, upperindex, related_func)
+                    end
                 end
             end
         end
-    end
 
-    do
-        local ogrenadeloader = rawget(char, "loadgrenade")
-        hook:Add("Unload", "UndoWeaponDetourGrenades", function()
-            rawset(char, "loadgrenade", ogrenadeloader)
-        end)
-        local function loadgrenadee(self, ...)
-            hook:CallP("PreLoadGrenade", ...)
-            local gundata = ogrenadeloader(self, ...)
-            hook:CallP("PostLoadGrenade", gundata)
-            return gundata
+        do
+            local ogrenadeloader = rawget(char, "loadgrenade")
+            hook:Add("Unload", "UndoWeaponDetourGrenades", function()
+                rawset(char, "loadgrenade", ogrenadeloader)
+            end)
+            local function loadgrenadee(self, ...)
+                hook:CallP("PreLoadGrenade", ...)
+                local gundata = ogrenadeloader(self, ...)
+                hook:CallP("PostLoadGrenade", gundata)
+                return gundata
+            end
+            rawset(char, "loadgrenade", newcclosure(loadgrenadee))
         end
-        rawset(char, "loadgrenade", newcclosure(loadgrenadee))
-    end
+    end)
 
     -- setup of our detoured controllers
     hook:Add("PostLoadKnife", "PostLoadKnife", function(gundata, gunname)
@@ -8685,13 +8727,13 @@ do
         end
 
         local olddestroy = gundata.destroy
-        function gundata.show(...)
+        function gundata.destroy(...)
             hook:Call("PreDestroyKnife", gundata, ...)
             return olddestroy(...), hook:Call("PostDestroyKnife", gundata, ...)
         end
 
         local oldsetequipped = gundata.setequipped
-        function gundata.show(...)
+        function gundata.setequipped(...)
             hook:Call("PreEquippedKnife", gundata, ...)
             return oldsetequipped(...), hook:Call("PostEquippedKnife", gundata, ...)
         end
@@ -8719,20 +8761,6 @@ do
 
     hook:Add("PostLoadGun", "PostLoadGun", function(gundata, gunname)
         local oldstep = gundata.step
-        local ups = debug.getupvalues(oldstep)
-        local partdata
-        for k, v in pairs(ups) do
-            if typeof(v) == "function" then
-                local sups = debug.getupvalues(v)
-                for kk, vv in pairs(sups) do
-                    local t = typeof(vv)
-                    if t == "table" and vv.sightpart and vv.sight then
-                        partdata = vv
-                    end
-                end
-            end
-        end
-
         local ups = debug.getupvalues(gundata.playanimation)
         for k, v in pairs(ups) do
             local t = typeof(v)
@@ -8747,14 +8775,6 @@ do
             if t == "Instance" and v.ClassName == "Model" then
                 gundata._model = v
             end
-        end
-
-        local oldreloadcancel = gundata.reloadcancel
-        function gundata.reloadcancel(self, force, ...)
-            if force then
-                gundata._lastreloadcancel = tick()
-            end
-            return oldreloadcancel(self, force, ...)
         end
 
         local oldhide = gundata.hide
@@ -8807,17 +8827,33 @@ do
             end
         end
 
+        local ups = debug.getupvalues(oldstep)
+        for k, v in pairs(ups) do
+            if typeof(v) == "function" then
+                local ran, consts = pcall(debug.getconstants, v)
+                if ran and table.quicksearch(consts, "onfire") and table.quicksearch(consts, "pullout") and table.quicksearch(consts, "straightpull") and table.quicksearch(consts, "zoom") and table.quicksearch(consts, "zoompullout") then
+                    debug.setupvalue(oldstep, k, function(...)
+                        if gamelogic.currentgun == gundata then
+                            hook:CallP("PreFireStep", gundata)
+                        end
+                        local a, b, c, d = v(...)
+                        if gamelogic.currentgun == gundata then
+                            hook:CallP("PostFireStep", gundata)
+                        end
+                        return a, b, c, d
+                    end)
+                end
+            end
+        end
+
         function gundata.step(...)
             -- this is where the aimbot controller will be
             if gamelogic.currentgun == gundata then
-                if not gundata.partdata then
-                    gundata.partdata = partdata
-                end
-                hook:CallP("PreWeaponStep", gundata, partdata)
+                hook:CallP("PreWeaponStep", gundata)
             end
             local a, b, c, d = oldstep(...)
             if gamelogic.currentgun == gundata then
-                hook:CallP("PostWeaponStep", gundata, partdata)
+                hook:CallP("PostWeaponStep", gundata)
             end
             return a, b, c, d
         end
@@ -8826,18 +8862,18 @@ do
     -- Modifications
     hook:Add("ApplyGunModifications", "ModifyWeapon.FireModes", function(modifications)
         if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
-        local firemodes = core.CopyTable(modifications.firemodes)
-        local firerates = (typeof(modifications.firerate) == "table" and core.CopyTable(modifications.firerate) or nil)
+        local firemodes = table.deepcopy(modifications.firemodes)
+        local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
         local single = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Single") and 1 or nil
-        if single and not quickhasvalue(firemodes, single) then
+        if single and not table.quicksearch(firemodes, single) then
             table.insert(firemodes, 1, single)
         end
         local burst3 = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Burst3") and 3 or nil
-        if burst3 and not quickhasvalue(firemodes, burst3) then
+        if burst3 and not table.quicksearch(firemodes, burst3) then
             table.insert(firemodes, 1, burst3)
         end
         local auto = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Auto") and true or nil
-        if auto and not quickhasvalue(firemodes, auto) then
+        if auto and not table.quicksearch(firemodes, auto) then
             table.insert(firemodes, 1, auto)
         end
         modifications.firemodes = firemodes
@@ -9055,7 +9091,7 @@ do
             return skins
         end
 
-        do
+        hook:Add("Initialize", "BBOT:Weapons.SkinDB", function()
             local receivers = network.receivers
             for k, v in pairs(receivers) do
                 local ups = debug.getupvalues(v)
@@ -9068,7 +9104,7 @@ do
                     end
                 end
             end
-        end
+        end)
 
         do
             weapons.weaponstorage = debug.getupvalue(char.unloadguns, 2)
