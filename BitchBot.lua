@@ -8060,9 +8060,16 @@ do
         self.gun_type = type
     end
 
-    -- Scan targets here
-    function aimbot.Step(data)
+    function aimbot:GetLegitConfig(...)
+        local type = types[self.gun_type]
+        if not type then
+            type = "Rifle"
+        end
+        return config:GetValue("Main", "Legit", type, ...) 
+    end
 
+    function aimbot:GetRageConfig(data)
+        return config:GetValue("Main", "Rage", ...) 
     end
 
     local partstosimple = {
@@ -8172,7 +8179,7 @@ do
         end
     end
 
-    function aimbot:RedirectionStep(data, gunparts)
+    function aimbot:RedirectionStep(data)
         if not self:GetLegitConfig("Bullet Redirection", "Enabled") then return end
         if math.random(0, 100) > self:GetLegitConfig("Bullet Redirection", "Hit Chance") then
             return
@@ -8210,16 +8217,25 @@ do
         part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
         self.silent = part
     end
+    
+    function aimbot:RageStep(data)
 
-    function aimbot:LegitStep(data, gunparts)
+    end
+
+    function aimbot:LegitStep(data)
         if not data or not data.bulletspeed then return end
+        self:SetCurrentType(data.type)
         self:MouseStep(data)
-        self:RedirectionStep(data, gunparts)
+        self:RedirectionStep(data)
     end
 
     -- Do aimbot stuff here
     hook:Add("PreWeaponStep", "BBOT:Aimbot.Calculate", function(gundata, partdata)
-        aimbot:LegitStep(gundata, partdata)
+        if aimbot:GetRageConfig("Enabled") then
+            aimbot:RageStep(gundata, partdata)
+        else
+            aimbot:LegitStep(gundata, partdata)
+        end
     end)
 
     -- If the aimbot stuff before is persistant, use this to restore
