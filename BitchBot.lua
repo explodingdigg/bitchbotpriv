@@ -1668,6 +1668,10 @@ do
     hook:Add("Initialize", "BBOT:config.setup", function()
         config:Setup(BBOT.configuration)
     end)
+
+    hook:Add("PostInitialize", "BBOT:config.setup", function()
+        -- setup config here from file
+    end)
 end
 
 -- GUI
@@ -1794,6 +1798,7 @@ do
 
         function base:Calculate()
             local last_trans, last_zind, last_vis = self._transparency, self._zindex, self._visible
+            local wasenabled = self._enabled
 
             if self.parent then
                 if not self.parent._enabled then
@@ -1836,11 +1841,13 @@ do
                 end
             end
 
-            local children = self.children
-            for i=1, #children do
-                local v = children[i]
-                if v.Calculate then
-                    v:Calculate()
+            if self._enabled or wasenabled then
+                local children = self.children
+                for i=1, #children do
+                    local v = children[i]
+                    if v.Calculate then
+                        v:Calculate()
+                    end
                 end
             end
 
@@ -5092,6 +5099,14 @@ do
         alias:SetPos(0, 3, 0, 5)
         alias:SetText(configuration.name)
 
+        if configuration.name == "Bitch Bot" then
+            hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info.Main", function(steps, old, new)
+                if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Name") then
+                    alias:SetText(new)
+                end
+            end)
+        end
+
         local tabs = gui:Create("Tabs", frame)
         tabs:SetPos(0, 10, 0, 10+15)
         tabs:SetSize(1, -20, 1, -20-15)
@@ -5772,7 +5787,7 @@ do
                 {
                     -- The first layer here is the frame
                     Id = "Main",
-                    name = "The Main Attraction",
+                    name = "Bitch Bot",
                     center = true,
                     size = UDim2.new(0, 500, 0, 600),
                     content = {
