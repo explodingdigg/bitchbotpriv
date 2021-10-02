@@ -1627,7 +1627,7 @@ do
         ["Slider"] = function(v) return v.value end,
         ["KeyBind"] = function(v) return {type = "KeyBind", value = v.key, toggle = false} end,
         ["DropBox"] = function(v) return {type = "DropBox", value = v.values[v.value], list = v.values} end,
-        ["ColorPicker"] = function(v) return {type = "ColorPicker", value = Color3.new(unpack(v.color))} end,
+        ["ColorPicker"] = function(v) return {type = "ColorPicker", value = Color3.fromRGB(unpack(v.color))} end,
         ["ComboBox"] = function(v) return {type = "ComboBox", value = v.values} end,
     }
 
@@ -1684,7 +1684,7 @@ do
         self.registry = reg
     end
 
-    hook:Add("Initialize", "BBOT:config.setup", function()
+    hook:Add("PreInitialize", "BBOT:config.setup", function()
         config:Setup(BBOT.configuration)
     end)
 
@@ -6595,7 +6595,7 @@ do
                                             {
                                                 type = "Toggle",
                                                 name = "Enabled",
-                                                value = false,
+                                                value = true,
                                             },
                                             {
                                                 type = "Toggle",
@@ -6604,7 +6604,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Aim Assist FOV",
+                                                        name = "Color",
                                                         color = { 127, 72, 163, 255 },
                                                     },
                                                 },
@@ -6616,7 +6616,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Deadzone FOV",
+                                                        name = "Color",
                                                         color = { 50, 50, 50, 255 },
                                                     },
                                                 },
@@ -6628,7 +6628,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Aim Assist FOV",
+                                                        name = "Color",
                                                         color = { 163, 72, 127, 255 },
                                                     },
                                                 },
@@ -6640,7 +6640,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Ragebot FOV",
+                                                        name = "Color",
                                                         color = { 255, 210, 0, 255 },
                                                     },
                                                 },
@@ -8045,19 +8045,28 @@ do
     end
 
     local types = {
+        -- Type Based
         ["PISTOL"] = "Pistol",
         ["REVOLVER"] = "Pistol",
-
         ["PDW"] = "Smg",
-
         ["DMR"] = "Rifle",
         ["LMG"] = "Rifle",
         ["CARBINE"] = "Rifle",
         ["ASSAULT"] = "Rifle",
-
         ["SHOTGUN"] = "Shotgun",
-
         ["SNIPER"] = "Sniper",
+
+        -- Class Based
+		["ASSAULT RIFLE"] = "Rifle",
+        DMR = "Rifle",
+        ["BATTLE RIFLE"] = "Rifle",
+        PDW = "Smg",
+        LMG = "Rifle",
+        ["SNIPER RIFLE"] = "Sniper",
+        CARBINE = "Rifle",
+        SHOTGUN = "Shotgun",
+		PISTOLS = "Pistol",
+        ["MACHINE PISTOLS"] = "Pistol"
     }
 
     aimbot.gun_type = "ASSAULT"
@@ -8069,8 +8078,12 @@ do
         return config:GetValue("Main", "Legit", type, ...) 
     end
 
-    function aimbot:SetCurrentType(type)
-        self.gun_type = type
+    function aimbot:SetCurrentType(gun)
+        if not gun.___class or not types[gun.___class] then
+            self.gun_type = gun.type
+            return
+        end
+        self.gun_type = (gun.___class or gun.type)
     end
 
     function aimbot:GetRageConfig(...)
@@ -8178,7 +8191,7 @@ do
         if not self:GetLegitConfig("Aim Assist", "Enabled") then return end
 		local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
 		if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
-			if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and 1 or 2)) then return end
+			if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
 		end
 
         local hitscan_priority = self:GetLegitConfig("Aim Assist", "Hitscan Priority")
@@ -8267,7 +8280,7 @@ do
 
     function aimbot:LegitStep(gun)
         if not gun or not gun.data.bulletspeed then return end
-        self:SetCurrentType(gun.type)
+        self:SetCurrentType(gun)
         self:MouseStep(gun)
         self:RedirectionStep(gun)
     end
@@ -8288,6 +8301,147 @@ do
             aimbot.silent = false
         end
     end)
+    
+    do
+        --(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
+        --[[Draw:Circle(false, 20, 20, 10, 3, 20, { 10, 10, 10, 215 }, menu.fovcircle)
+        Draw:Circle(false, 20, 20, 10, 1, 20, { 255, 255, 255, 255 }, menu.fovcircle)]]
+        local draw = BBOT.draw
+        --(x, y, size, thickness, sides, color, transparency, visible)
+        local fov_outline = draw:Circle(0, 0, 1, 3, 25, { 10, 10, 10, 215 }, 1, false)
+        local fov = draw:Circle(0, 0, 1, 1, 25, { 255, 255, 255, 255 }, 1, false)
+        fov.Filled = false
+        fov_outline.Filled = false
+        aimbot.fov_circle = fov
+        aimbot.fov_outline_circle = fov_outline
+
+        local dzfov_outline = draw:Circle(0, 0, 1, 3, 25, { 10, 10, 10, 215 }, 1, false)
+        local dzfov = draw:Circle(0, 0, 1, 1, 25, { 255, 255, 255, 255 }, 1, false)
+        dzfov.Filled = false
+        dzfov_outline.Filled = false
+        aimbot.dzfov_circle = dzfov
+        aimbot.dzfov_outline_circle = dzfov_outline
+
+        local sfov_outline = draw:Circle(0, 0, 1, 3, 25, { 10, 10, 10, 215 }, 1, false)
+        local sfov = draw:Circle(0, 0, 1, 1, 25, { 255, 255, 255, 255 }, 1, false)
+        sfov.Filled = false
+        sfov_outline.Filled = false
+        aimbot.sfov_circle = sfov
+        aimbot.sfov_outline_circle = sfov_outline
+        
+        hook:Add("Initialize", "BBOT:Visuals.Aimbot.FOV", function()
+            fov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist", "Color")
+            dzfov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone", "Color")
+            sfov.Color = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirection", "Color")
+        end)
+        
+        hook:Add("OnConfigChanged", "BBOT:Visuals.Aimbot.FOV", function(steps, old, new)
+            if config:IsPathwayEqual(steps, "Main", "Visuals", "FOV") or config:IsPathwayEqual(steps, "Main", "Legit") then
+                if not config:GetValue("Main", "Visuals", "FOV", "Enabled") then
+                    fov.Visible = false
+                    fov_outline.Visible = fov.Visible
+                    dzfov.Visible = false
+                    dzfov_outline.Visible = dzfov.Visible
+                    sfov.Visible = false
+                    sfov_outline.Visible = sfov.Visible
+                    return
+                end
+                local center = camera.ViewportSize/2
+                fov.Position = center
+                fov_outline.Position = fov.Position
+                dzfov.Position = center
+                dzfov_outline.Position = dzfov.Position
+                sfov.Position = center
+                sfov_outline.Position = sfov.Position
+                
+                fov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist", "Color")
+                dzfov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone", "Color")
+                sfov.Color = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirection", "Color")
+                
+                fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
+                fov_outline.Visible = fov.Visible
+                dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
+                dzfov_outline.Visible = dzfov.Visible
+                sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirection")
+                sfov_outline.Visible = sfov.Visible
+                
+                if not char.alive and config:IsPathwayEqual(steps, "Main", "Legit") and steps[3] then
+                    local _fov = config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Aimbot FOV")
+                    local _dzfov = config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Deadzone FOV")
+                    local _sfov = config:GetValue("Main", "Legit", steps[3], "Bullet Redirection", "Redirection FOV")
+                    if config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Dynamic FOV") then
+                        _fov = camera.FieldOfView / char.unaimedfov * _fov
+                        _dzfov = camera.FieldOfView / char.unaimedfov * _dzfov
+                        _sfov = camera.FieldOfView / char.unaimedfov * _sfov
+                    end
+                    local yport = camera.ViewportSize.y
+                    fov.Radius = _fov / camera.FieldOfView  * yport
+                    fov_outline.Radius = fov.Radius
+                    dzfov.Radius = _dzfov / camera.FieldOfView  * yport
+                    dzfov_outline.Radius = dzfov.Radius
+                    sfov.Radius = _sfov / camera.FieldOfView  * yport
+                    sfov_outline.Radius = sfov.Radius
+                end
+            end
+        end)
+        
+        local alive, curgun = false, false
+        hook:Add("RenderStepped", "BBOT:Visuals.Aimbot.FOV", function()
+            if not config:GetValue("Main", "Visuals", "FOV", "Enabled") then return end
+            local set = false
+            if alive ~= char.alive then
+                alive = char.alive
+                local bool = (alive and true or false)
+                fov.Visible = bool
+                fov_outline.Visible = fov.Visible
+                dzfov.Visible = bool
+                dzfov_outline.Visible = dzfov.Visible
+                sfov.Visible = bool
+                sfov_outline.Visible = sfov.Visible
+                set = true
+            end
+        
+            local mycurgun = gamelogic.currentgun
+            if mycurgun and mycurgun.data and mycurgun.data.bulletspeed then
+                aimbot:SetCurrentType(mycurgun)
+                local _fov = aimbot:GetLegitConfig("Aim Assist", "Aimbot FOV")
+                local _dzfov = aimbot:GetLegitConfig("Aim Assist", "Deadzone FOV")
+                local _sfov = aimbot:GetLegitConfig("Bullet Redirection", "Redirection FOV")
+                if aimbot:GetLegitConfig("Aim Assist", "Dynamic FOV") then
+                    _fov = camera.FieldOfView / char.unaimedfov * _fov
+                    _dzfov = camera.FieldOfView / char.unaimedfov * _dzfov
+                    _sfov = camera.FieldOfView / char.unaimedfov * _sfov
+                end
+                local yport = camera.ViewportSize.y
+                fov.Radius = _fov / camera.FieldOfView  * yport
+                fov_outline.Radius = fov.Radius
+                dzfov.Radius = _dzfov / camera.FieldOfView  * yport
+                dzfov_outline.Radius = dzfov.Radius
+                sfov.Radius = _sfov / camera.FieldOfView  * yport
+                sfov_outline.Radius = sfov.Radius
+            end
+            
+            if curgun ~= gamelogic.currentgun or set then
+                curgun = gamelogic.currentgun
+                if curgun and curgun.data and curgun.data.bulletspeed then
+                    fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
+                    fov_outline.Visible = fov.Visible
+                    dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
+                    dzfov_outline.Visible = dzfov.Visible
+                    sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirection")
+                    sfov_outline.Visible = sfov.Visible
+                else
+                    local bool = false
+                    fov.Visible = bool
+                    fov_outline.Visible = fov.Visible
+                    dzfov.Visible = bool
+                    dzfov_outline.Visible = dzfov.Visible
+                    sfov.Visible = bool
+                    sfov_outline.Visible = sfov.Visible
+                end
+            end
+        end)
+    end
 
     local enque = {}
     aimbot.silent_bullet_query = enque
@@ -8535,6 +8689,8 @@ do
     local char = BBOT.aux.char
     local gamelogic = BBOT.aux.gamelogic
     local network = BBOT.aux.network
+
+    weapons.WeaponDB = require(game:GetService("ReplicatedStorage").AttachmentModules.GunDatabase)
 
     function weapons.GetToggledSight(weapon)
         local updateaimstatus = debug.getupvalue(weapon.toggleattachment, 3)
@@ -8856,6 +9012,15 @@ do
                 hook:CallP("PostWeaponStep", gundata)
             end
             return a, b, c, d
+        end
+
+        for class, v in pairs(weapons.WeaponDB.weplist) do
+            for i=1, #v do
+                if v[i] == gunname then
+                    gundata.___class = class
+                    return
+                end
+            end
         end
     end)
 
