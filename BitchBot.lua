@@ -351,6 +351,20 @@ do
         return new_tbl
     end
 
+
+    function table.recursion( tbl, cb, pathway )
+        pathway = pathway or {}
+        for k, v in pairs( tbl ) do
+            local newpathway = table.deepcopy(pathway)
+            newpathway[#newpathway+1] = k
+            if typeof( v ) == "table" and cb(newpathway, v) ~= false then
+                table.recursion( v, cb, newpathway)
+            else
+                cb(newpathway, v)
+            end
+        end
+    end
+
     function table.deeprestore(tbl)
         for k, v in next, tbl do
             if type(v) == "function" and is_synapse_function(v) then
@@ -1385,6 +1399,7 @@ do
 
     local hook = BBOT.hook
     local table = BBOT.table
+    local string = BBOT.string
     local userinputservice = BBOT.service:GetService("UserInputService")
     local httpservice = BBOT.service:GetService("HttpService")
     local config = {
@@ -1519,7 +1534,7 @@ do
                 if typeof(s) == "table" and s.type and s.type ~= "Button" then
                     if s.type == "KeyBind" then
                         return s.toggle
-                    elseif reg.type == "ComboBox" then
+                    elseif s.type == "ComboBox" then
                         local t, v = {}, reg.value
                         for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
                         return v
@@ -1698,8 +1713,219 @@ do
         config:Setup(BBOT.configuration)
     end)
 
+    function config:GetTableValue(tbl, ...)
+        local steps = {...}
+        for i=1, #steps do
+            if typeof(tbl) ~= "table" then return end
+            tbl = tbl[steps[i]]
+            if tbl == nil then break end
+        end
+        if tbl == nil then return end
+        return tbl
+    end
+
+    function config:ConfigToSaveable(reg)
+        table.recursion( reg, function(pathway, value)
+            local optionname = pathway[#pathway]
+            if typeof(value) == "table" then
+                if optionname == "configuration" then return false end
+                if value.type == "Button" then
+                    return false
+                elseif value.type then
+                    if value.type == "Message" then return false end
+                    local pathway = table.deepcopy(pathway)
+                    pathway[#pathway] = nil
+                    local val = value.value
+                    local type = typeof(val)
+                    if value.type == "ComboBox" then
+                        config:GetTableValue(reg, unpack(pathway))[optionname] = {
+                            T = "ComboBox",
+                            F = val
+                        }
+                    elseif type == "Color3" then
+                        config:GetTableValue(reg, unpack(pathway))[optionname] = {
+                            T = "Color3",
+                            R = val.R,
+                            G = val.G,
+                            B = val.B,
+                        }
+                    elseif type == "Vector3" then
+                        config:GetTableValue(reg, unpack(pathway))[optionname] = {
+                            T = "Vector3",
+                            X = val.X,
+                            Y = val.Y,
+                            Z = val.Z,
+                        }
+                    else
+                        config:GetTableValue(reg, unpack(pathway))[optionname] = value.value
+                    end
+                    return false
+                end
+                if value.T then return false end
+            end
+        end)
+        return reg
+    end
+
+    function config:Discover()
+        local list = listfiles(self.storage_pathway)
+        local c=0
+        for i=1, #list do
+            local v = list[i-c]
+            local file = v:match("^.+/(.+)$"):match("(.+)%..+")
+            if string.find(file, "\\") then
+                file = string.Explode("\\", file)[2]
+            end
+            if v:match("^.+(%..+)$") ~= ".bb" then
+                table.remove(list, i-c)
+                c=c+1
+            end
+            list[i-c]=file
+        end
+        return list
+    end
+
+    function config:Save(file)
+        local reg = table.deepcopy( self.registry )
+        reg["Main"]["Settings"]["Configs"] = nil
+        reg = self:ConfigToSaveable(reg)
+        writefile(self.storage_pathway .. "/" .. file .. self.storage_extension, httpservice:JSONEncode(reg))
+        hook:Call("OnConfigSaved", file)
+    end
+
+    function config:ProcessOpen(target, path, newconfig)
+        return xpcall(function(target, path, newconfig) table.recursion( target, function(pathway, value)
+            local optionname = pathway[#pathway]
+            if optionname == "self" then
+                optionname = pathway[#pathway-1]
+            end
+            local natural_path = pathway
+            if path then
+                local newpath = {}
+                for i=#path+1, #pathway do
+                    newpath[#newpath+1] = pathway[i]
+                end
+                natural_path = newpath
+            end
+            local T = typeof(value)
+            if T == "Vector3" then
+                local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
+                if not newvalue or typeof(newvalue) ~= "table" or not newvalue.X then return end
+                config:SetValue(Vector3.new(newvalue.X, newvalue.Y, newvalue.Z), unpack(pathway))
+                return false
+            elseif T == "Color3" then
+                local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
+                if not newvalue or typeof(newvalue) ~= "table" or not newvalue.R then return end
+                config:SetValue(Color3.new(newvalue.R, newvalue.G, newvalue.B), unpack(pathway))
+                return false
+            elseif T == "ComboBox" then
+                local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
+                if not newvalue or typeof(newvalue) ~= "table" or (#newvalue < 1) then return end
+                config:SetValue(newvalue, unpack(pathway))
+                return false
+            elseif T=="table" then
+                if value.type then
+                    if value.type == "Message" then return false end
+                    local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
+                    if newvalue == nil then return end
+                    if value.type == "ColorPicker" and newvalue.T == "ColorPicker" then
+                        newvalue = Color3.new(newvalue.R, newvalue.G, newvalue.B)
+                    elseif value.type == "ComboBox" and newvalue.T == "ComboBox" then
+                        newvalue = newvalue.F
+                    elseif value.type == "DropBox" then
+                        if not table.quicksearch(value.list, newvalue) then
+                            newvalue = value.value
+                        end
+                    elseif value.type == "Slider" then
+                        if typeof(newvalue) ~= "number" then
+                            newvalue = value.value
+                        elseif newvalue > value.max then
+                            newvalue = value.max
+                        elseif newvalue < value.min then
+                            newvalue = value.min
+                        end
+                    else
+                        newvalue = nil
+                    end
+                    if newvalue ~= nil then
+                        config:SetValue(newvalue, unpack(pathway))
+                    end
+                    return false
+                end
+                return true
+            end
+            local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
+            if newvalue == nil then return end
+            config:SetValue(newvalue, unpack(pathway))
+        end, path) end, debug.traceback, target, path, newconfig)
+    end
+
+    function config:Open(file)
+        local path = config.storage_pathway .. "/" .. file .. self.storage_extension
+        if isfile(path) then
+            local configsection = self.registry["Main"]["Settings"]["Configs"]
+            local old = table.deepcopy(self.registry)
+            local newconfig = httpservice:JSONDecode(readfile(path))
+            self.Opening = true
+            local ran, err = self:ProcessOpen(self.registry, nil, newconfig)
+            if not ran then
+                BBOT.log(LOG_WARN, "Error loading config '" .. file .. "', did you break something in it?")
+                BBOT.log(LOG_ERROR, err)
+                self.registry = old
+                return
+            end
+            self.Opening = nil
+            self.registry["Main"]["Settings"]["Configs"] = configsection
+            hook:Call("OnConfigOpened", file)
+        end
+    end
+
+    function config:SaveBase()
+        local reg = table.deepcopy( self.registry["Main"]["Settings"]["Configs"] )
+        reg = self:ConfigToSaveable(reg)
+        writefile(self.storage_main .. "/configs" .. self.storage_extension, httpservice:JSONEncode(reg))
+    end
+
+    function config:OpenBase()
+        local path = config.storage_main .. "/configs" .. self.storage_extension
+        if isfile(path) then
+            local old = table.deepcopy(self.registry["Main"]["Settings"]["Configs"])
+            local newconfig = httpservice:JSONDecode(readfile(path))
+            self.Opening = true
+            local ran, err = self:ProcessOpen(self.registry["Main"]["Settings"]["Configs"], {"Main", "Settings", "Configs"}, newconfig)
+            if not ran then
+                BBOT.log(LOG_WARN, "Error loading base '" .. path .. "', did you break something in it?")
+                BBOT.log(LOG_ERROR, err)
+                self.registry["Main"]["Settings"]["Configs"] = old
+                return
+            end
+            self.Opening = nil
+        end
+    end
+
+    hook:Add("OnConfigChanged", "BBOT:config.autosave", function()
+        if config.Opening then return end
+        config:SaveBase()
+        if config:GetValue("Main", "Settings", "Configs", "Auto Save Config") then
+            local file = config:GetValue("Main", "Settings", "Configs", "Autosave File")
+            BBOT.log(LOG_NORMAL, "Autosaving config -> " .. file)
+            config:Save(file)
+        end
+    end)
+
     hook:Add("PostInitialize", "BBOT:config.setup", function()
-        -- setup config here from file
+        config:OpenBase()
+        if config:GetValue("Main", "Settings", "Configs", "Auto Load Config") then
+            local file = config:GetValue("Main", "Settings", "Configs", "Autoload File")
+            BBOT.log(LOG_NORMAL, "Autoloading config -> " .. file)
+            config:Open(file)
+        end
+    end)
+
+    hook:Add("Menu.PostGenerate", "BBOT:config.setup", function()
+        local configs = BBOT.config:Discover()
+        BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+        BBOT.menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
     end)
 end
 
@@ -3556,7 +3782,14 @@ do
             self.option = opt
         end
 
-        function GUI:SetValue(num)
+        function GUI:SetValue(value)
+            local num = 1
+            for i=1, #self.options do
+                if self.options[i] == value then
+                    num = i
+                    break
+                end
+            end
             self:SetOption(num)
         end
 
@@ -4765,6 +4998,8 @@ do
         menu._config_changed = false
     end
 
+    local _config_module = config
+
     function menu:CreateExtra(container, config, path, X, Y)
         local name = (config.name or config.type)
         local Id = (config.Id or config.name or config.type)
@@ -4777,7 +5012,7 @@ do
             picker:SetPos(1, X-26, 0, Y)
             picker:SetSize(0, 26, 0, 10)
             picker:SetTitle(name)
-            picker:SetValue(Color3.fromRGB(unpack(config.color)))
+            picker:SetValue(_config_module:GetValue(unpack(path)))
             picker.tooltip = config.tooltip
             function picker:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
@@ -4788,7 +5023,7 @@ do
             local keybind = gui:Create("KeyBind", container)
             keybind:SetPos(1, X-32, 0, Y-2)
             keybind:SetSize(0, 32, 0, 14)
-            keybind:SetValue(config.key)
+            keybind:SetValue(_config_module:GetRaw(unpack(path)).value)
             keybind.value = false
             keybind.toggletype = config.toggletype
             keybind.config = path
@@ -4823,7 +5058,7 @@ do
             local w = toggle.text:GetTextSize()
             toggle:SetSize(0, 14 + w, 0, 8)
             toggle:InvalidateLayout(true)
-            toggle:SetValue(config.value)
+            toggle:SetValue(_config_module:GetValue(unpack(path)))
             toggle.tooltip = config.tooltip
             function toggle:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
@@ -4842,7 +5077,7 @@ do
             slider.max = config.max or slider.max
             slider.decimal = config.decimal or slider.decimal
             slider.custom = config.custom or slider.custom
-            slider:SetValue(config.value)
+            slider:SetValue(_config_module:GetValue(unpack(path)))
             local _, tall = text:GetTextScale()
             slider:SetPos(0, 0, 0, tall+3)
             slider:SetSize(1, 0, 0, 10)
@@ -4864,7 +5099,7 @@ do
             local _, tall = text:GetTextScale()
             textentry:SetPos(0, 0, 0, tall+4)
             textentry:SetSize(1, 0, 0, 16)
-            textentry:SetValue(config.value)
+            textentry:SetValue(_config_module:GetValue(unpack(path)))
             textentry:SetTextSize(13)
             textentry.tooltip = config.tooltip
             cont:SetPos(0, 0, 0, Y-2)
@@ -4885,7 +5120,7 @@ do
             dropbox:SetPos(0, 0, 0, tall+4)
             dropbox:SetSize(1, 0, 0, 16)
             dropbox:SetOptions(config.values)
-            dropbox:SetValue(config.value)
+            dropbox:SetValue(_config_module:GetValue(unpack(path)))
             dropbox.tooltip = config.tooltip
             cont:SetPos(0, 0, 0, Y-2)
             cont:SetSize(1, 0, 0, tall+4+16)
@@ -4904,7 +5139,7 @@ do
             local _, tall = text:GetTextScale()
             dropbox:SetPos(0, 0, 0, tall+4)
             dropbox:SetSize(1, 0, 0, 16)
-            dropbox:SetValue(config.values)
+            dropbox:SetValue(_config_module:GetRaw(unpack(path)).value)
             dropbox.tooltip = config.tooltip
             cont:SetPos(0, 0, 0, Y-2)
             cont:SetSize(1, 0, 0, tall+4+16)
@@ -5739,11 +5974,11 @@ do
                     }
                 },
                 {
-                    name = "Bullet Redirection",
+                    name = {"Bullet Redirect", "Trigger Bot"},
                     pos = UDim2.new(.5,4,1/2,4),
                     size = UDim2.new(.5,-4,1/2,-4),
                     type = "Panel",
-                    content = {
+                    {content = {
                         {
                             type = "Toggle",
                             name = "Enabled",
@@ -5784,7 +6019,36 @@ do
                             name = "Hitscan Points",
                             values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
                         },
-                    },
+                    }},
+                    {content = {
+                        {
+                            type = "Toggle",
+                            name = "Enabled",
+                            value = false,
+                            extra = {
+                                type = "KeyBind",
+                                key = M,
+                            },
+                        },
+                        {
+                            type = "ComboBox",
+                            name = "Trigger Bot Hitboxes",
+                            values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+                        },
+                        {
+                            type = "Toggle",
+                            name = "Trigger When Aiming",
+                            value = false,
+                        },
+                        {
+                            type = "Slider",
+                            name = "Aim Percentage",
+                            min = 0,
+                            max = 100,
+                            value = 90,
+                            suffix = "%",
+                        },
+                    }},
                 },
             }
 
@@ -6591,7 +6855,7 @@ do
                                             },
                                             {
                                                 type = "Toggle",
-                                                name = "Bullet Redirection",
+                                                name = "Bullet Redirect",
                                                 value = false,
                                                 extra = {
                                                     {
@@ -6797,8 +7061,8 @@ do
                             content = {
                                 {
                                     name = "Cheat Settings",
-                                    pos = UDim2.new(0,0,2/3,0),
-                                    size = UDim2.new(.5,-4,1/3,0),
+                                    pos = UDim2.new(0,0,2/3,4),
+                                    size = UDim2.new(.5,-4,1/3,-4),
                                     type = "Panel",
                                     content = {
                                         {
@@ -6844,8 +7108,8 @@ do
                                 },
                                 {
                                     name = "Configs",
-                                    pos = UDim2.new(.5,4,2/3,0),
-                                    size = UDim2.new(.5,-4,1/3,0),
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(.5,-4,2/3,-4),
                                     type = "Panel",
                                     content = {
                                         {
@@ -6859,6 +7123,60 @@ do
                                             name = "Configs",
                                             value = 1,
                                             values = {"Default"}
+                                        },
+                                        {
+                                            type = "Button",
+                                            name = "Refresh",
+                                            callback = function()
+                                                local configs = BBOT.config:Discover()
+                                                BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+                                                menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+                                            end
+                                        },
+                                        {
+                                            type = "Button",
+                                            name = "Save",
+                                            confirm = "Are you sure?",
+                                            callback = function()
+                                                BBOT.config:Save(BBOT.config:GetValue("Main", "Settings", "Configs", "Config Name"))
+                                                local configs = BBOT.config:Discover()
+                                                BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+                                                menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+                                            end
+                                        },
+                                        {
+                                            type = "Button",
+                                            name = "Load",
+                                            confirm = "Are you sure?",
+                                            callback = function()
+                                                BBOT.config:Open(BBOT.config:GetValue("Main", "Settings", "Configs", "Configs"))
+                                                BBOT.config:SetValue(BBOT.config:GetValue("Main", "Settings", "Configs", "Configs"), "Main", "Settings", "Configs", "Config Name")
+                                                BBOT.config:SetValue(BBOT.config:GetValue("Main", "Settings", "Configs", "Configs"), "Main", "Settings", "Configs", "Autosave File")
+                                            end
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Auto Save Config",
+                                            value = false,
+                                            extra = {},
+                                        },
+                                        {
+                                            type = "Text",
+                                            name = "Autosave File",
+                                            value = "Default",
+                                            extra = {},
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Auto Load Config",
+                                            value = false,
+                                            extra = {},
+                                        },
+                                        {
+                                            type = "Text",
+                                            name = "Autoload File",
+                                            value = "Default",
+                                            extra = {},
                                         },
                                     }
                                 }
@@ -8123,7 +8441,7 @@ do
             if hitscan_priority == "Head" then
                 prioritize = updater.gethead()
             elseif hitscan_priority == "Body" then
-                prioritize = replication.getbodyparts(v)["HumanoidRootPart"]
+                prioritize = replication.getbodyparts(v).rootpart
             end
 
             local inserted_priority
@@ -8287,24 +8605,24 @@ do
             assist_prediction.Visible = false
             assist_prediction_outline.Visible = assist_prediction.Visible
 
-            if not self:GetLegitConfig("Bullet Redirection", "Enabled") then return end
+            if not self:GetLegitConfig("Bullet Redirect", "Enabled") then return end
             local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
             if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
                 if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
             elseif aimkey == "Dynamic Always" then
                 if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
             end
-            if math.random(0, 100) > self:GetLegitConfig("Bullet Redirection", "Hit Chance") then
+            if math.random(0, 100) > self:GetLegitConfig("Bullet Redirect", "Hit Chance") then
                 return
             end
 
-            local sFov = self:GetLegitConfig("Bullet Redirection", "Redirection FOV")
+            local sFov = self:GetLegitConfig("Bullet Redirect", "Redirection FOV")
             if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
                 sFov = camera.FieldOfView / char.unaimedfov * sFov
             end
 
-            local hitscan_priority = self:GetLegitConfig("Bullet Redirection", "Hitscan Priority")
-            local hitscan_points = self:GetLegitConfig("Bullet Redirection", "Hitscan Points")
+            local hitscan_priority = self:GetLegitConfig("Bullet Redirect", "Hitscan Priority")
+            local hitscan_points = self:GetLegitConfig("Bullet Redirect", "Hitscan Points")
 
             local target = self:GetLegitTarget(sFov, 0, hitscan_points, hitscan_priority)
             if not target then return end
@@ -8333,7 +8651,7 @@ do
 
             local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
             
-            local accuracy = math.remap(self:GetLegitConfig("Bullet Redirection", "Accuracy")/100, 0, 1, .3, 0)
+            local accuracy = math.remap(self:GetLegitConfig("Bullet Redirect", "Accuracy")/100, 0, 1, .3, 0)
             X += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
             Y += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
 
@@ -8404,7 +8722,7 @@ do
         hook:Add("Initialize", "BBOT:Visuals.Aimbot.FOV", function()
             fov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist", "Color")
             dzfov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone", "Color")
-            sfov.Color = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirection", "Color")
+            sfov.Color = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect", "Color")
         end)
         
         hook:Add("OnConfigChanged", "BBOT:Visuals.Aimbot.FOV", function(steps, old, new)
@@ -8428,19 +8746,19 @@ do
                 
                 fov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist", "Color")
                 dzfov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone", "Color")
-                sfov.Color = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirection", "Color")
+                sfov.Color = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect", "Color")
                 
                 fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
                 fov_outline.Visible = fov.Visible
                 dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
                 dzfov_outline.Visible = dzfov.Visible
-                sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirection")
+                sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect")
                 sfov_outline.Visible = sfov.Visible
                 
                 if not char.alive and config:IsPathwayEqual(steps, "Main", "Legit") and steps[3] then
                     local _fov = config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Aimbot FOV")
                     local _dzfov = config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Deadzone FOV")
-                    local _sfov = config:GetValue("Main", "Legit", steps[3], "Bullet Redirection", "Redirection FOV")
+                    local _sfov = config:GetValue("Main", "Legit", steps[3], "Bullet Redirect", "Redirection FOV")
                     if config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Dynamic FOV") then
                         _fov = camera.FieldOfView / char.unaimedfov * _fov
                         _dzfov = camera.FieldOfView / char.unaimedfov * _dzfov
@@ -8478,7 +8796,7 @@ do
                 aimbot:SetCurrentType(mycurgun)
                 local _fov = aimbot:GetLegitConfig("Aim Assist", "Aimbot FOV")
                 local _dzfov = aimbot:GetLegitConfig("Aim Assist", "Deadzone FOV")
-                local _sfov = aimbot:GetLegitConfig("Bullet Redirection", "Redirection FOV")
+                local _sfov = aimbot:GetLegitConfig("Bullet Redirect", "Redirection FOV")
                 if aimbot:GetLegitConfig("Aim Assist", "Dynamic FOV") then
                     _fov = camera.FieldOfView / char.unaimedfov * _fov
                     _dzfov = camera.FieldOfView / char.unaimedfov * _dzfov
@@ -8500,7 +8818,7 @@ do
                     fov_outline.Visible = fov.Visible
                     dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
                     dzfov_outline.Visible = dzfov.Visible
-                    sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirection")
+                    sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect")
                     sfov_outline.Visible = sfov.Visible
                 else
                     local bool = false
@@ -8535,7 +8853,7 @@ do
                 local target = aimbot.target
                 -- timescale is to determine how quick the bullet hits
                 -- don't want to get too cocky or the system might silent flag
-                local timescale = config:GetValue("Legit", "Bullet Redirection", "TimeScale")
+                local timescale = config:GetValue("Legit", "Bullet Redirect", "TimeScale")
                 local campos = currentcamera.CFrame.p
                 local dir = target.selected_part.Position-campos
                 local X, Y = CFrame.new(campos, campos+dir):ToOrientation()
@@ -9097,7 +9415,7 @@ do
     end)
 
     -- Modifications
-    hook:Add("ApplyGunModifications", "ModifyWeapon.FireModes", function(modifications)
+    hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
         if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
         local firemodes = table.deepcopy(modifications.firemodes)
         local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
@@ -9129,6 +9447,18 @@ do
             modifications.firerate = firerates
         else
             modifications.firerate = modifications.firerate * mul;
+        end
+    end)
+
+    hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
+        --if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
+        local timescale = .5--config:GetValue("Weapons", "Stat Modifications", "Animation", "ReloadFactor")
+        for i, v in next, modifications.animations do
+            if string.find(string.lower(i), "reload") then
+                if typeof(modifications.animations[i]) == "table" and modifications.animations[i].timescale then
+                    modifications.animations[i].timescale = (modifications.animations[i].timescale or 1) * timescale
+                end
+            end
         end
     end)
 
