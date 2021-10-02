@@ -460,6 +460,16 @@ do
     function math.timefraction( Start, End, Current )
         return ( Current - Start ) / ( End - Start )
     end
+
+    function math.approach( cur, target, inc )
+        inc = math.abs( inc )
+        if ( cur < target ) then
+            return math.min( cur + inc, target )
+        elseif ( cur > target ) then
+            return math.max( cur - inc, target )
+        end
+        return target
+    end
 end
 
 -- Color
@@ -5587,7 +5597,7 @@ do
                 {
                     name = "Aim Assist",
                     pos = UDim2.new(0,0,0,0),
-                    size = UDim2.new(.5,-4,1-(5.5/20),-4),
+                    size = UDim2.new(.5,-4,1,0),
                     type = "Panel",
                     content = {
                         {
@@ -5612,17 +5622,27 @@ do
                         },
                         {
                             type = "Slider",
-                            name = "Smoothing",
+                            name = "Start Smoothing",
                             value = 20,
                             min = 0,
                             max = 100,
                             suffix = "%",
                         },
                         {
-                            type = "DropBox",
-                            name = "Smoothing Type",
-                            value = 2,
-                            values = { "Exponential", "Linear" },
+                            type = "Slider",
+                            name = "End Smoothing",
+                            min = 0,
+                            max = 100,
+                            suffix = "%",
+                            value = 20
+                        },
+                        {
+                            type = "Slider",
+                            name = "Smoothing Increment",
+                            min = 0,
+                            max = 100,
+                            suffix = "%/s",
+                            value = 20
                         },
                         {
                             type = "Slider",
@@ -5661,41 +5681,6 @@ do
                             values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
                         },
                     },
-                },
-                {
-                    name = "Trigger Bot",
-                    pos = UDim2.new(0,0,1-(5.5/20),4),
-                    size = UDim2.new(.5,-4,5.5/20,-4),
-                    type = "Panel",
-                    content = {
-                        {
-                            type = "Toggle",
-                            name = "Enabled",
-                            value = false,
-                            extra = {
-                                type = "KeyBind",
-                                key = M,
-                            },
-                        },
-                        {
-                            type = "ComboBox",
-                            name = "Trigger Bot Hitboxes",
-                            values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
-                        },
-                        {
-                            type = "Toggle",
-                            name = "Trigger When Aiming",
-                            value = false,
-                        },
-                        {
-                            type = "Slider",
-                            name = "Aim Percentage",
-                            min = 0,
-                            max = 100,
-                            value = 90,
-                            suffix = "%",
-                        },
-                    }
                 },
                 {
                     name = "Ballistics",
@@ -6487,30 +6472,13 @@ do
                                         content = {
                                             {
                                                 type = "Toggle",
-                                                name = "Crosshair Color",
-                                                value = false,
+                                                name = "Aimbot Prediction",
+                                                value = true,
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Inline",
-                                                        color = { 127, 72, 163 },
-                                                    },
-                                                    {
-                                                        type = "ColorPicker",
-                                                        name = "Outline",
-                                                        color = { 25, 25, 25 },
-                                                    }
-                                                },
-                                            },
-                                            {
-                                                type = "Toggle",
-                                                name = "Laser Pointer",
-                                                value = false,
-                                                extra = {
-                                                    {
-                                                        type = "ColorPicker",
-                                                        name = "Laser Pointer Color",
-                                                        color = { 255, 255, 255, 255 },
+                                                        name = "Color",
+                                                        color = { 127, 72, 163, 255 },
                                                     },
                                                 },
                                             },
@@ -7562,6 +7530,14 @@ do
             end
         end
     end)
+
+    local isalive = false
+    hook:Add("RenderStepped", "BBOT:Aux.IsAlive", function()
+        if isalive ~= aux.char.alive then
+            isalive = aux.char.alive
+            hook:Call("OnAliveChanged", (isalive and true or false))
+        end
+    end)
     
     hook:Add("Unload", "BBOT:Aux.UpValues.1", function()
         for i=1, #setupvalueundo do
@@ -7950,10 +7926,12 @@ do
     local char = BBOT.aux.char
     local hud = BBOT.aux.hud
     local physics = BBOT.aux.physics
+    local draw = BBOT.draw
     local replication = BBOT.aux.replication
     local raycast = BBOT.aux.raycast
     local cam = BBOT.aux.camera
     local localplayer = BBOT.service:GetService("LocalPlayer")
+    local userinputservice = BBOT.service:GetService("UserInputService")
     local players = BBOT.service:GetService("Players")
     local camera = BBOT.service:GetService("CurrentCamera")
     local mouse = BBOT.service:GetService("Mouse")
@@ -8185,93 +8163,183 @@ do
         return organizedPlayers[1]
     end
 
-    
-    local userinputservice = BBOT.service:GetService("UserInputService")
-    function aimbot:MouseStep(gun)
-        if not self:GetLegitConfig("Aim Assist", "Enabled") then return end
-		local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
-		if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
-			if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
-		end
-
-        local hitscan_priority = self:GetLegitConfig("Aim Assist", "Hitscan Priority")
-        local hitscan_points = self:GetLegitConfig("Aim Assist", "Hitscan Points")
-        local fov = self:GetLegitConfig("Aim Assist", "Aimbot FOV")
-        local dzFov = self:GetLegitConfig("Aim Assist", "Deadzone FOV")
-
-        if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
-            fov = camera.FieldOfView / char.unaimedfov * fov
-            dzFov = camera.FieldOfView / char.unaimedfov * dzFov
+    do
+        local smoothing_incrimental = 0
+        do
+            local last_target
+            hook:Add("RenderStepped", "BBOT:Aimbot.Assist.CalcSmoothing", function(delta)
+                if not gamelogic.currentgun or not gamelogic.currentgun.data or not gamelogic.currentgun.data.bulletspeed then
+                    smoothing_incrimental = aimbot:GetLegitConfig("Aim Assist", "Start Smoothing")
+                    return
+                end
+                aimbot:SetCurrentType(gamelogic.currentgun)
+                if (last_target == nil and aimbot.mouse_target) or (aimbot.mouse_target == nil and last_target) or (aimbot.mouse_target and last_target and aimbot.mouse_target[1] ~= last_target[1]) then
+                    last_target = aimbot.mouse_target
+                    smoothing_incrimental = aimbot:GetLegitConfig("Aim Assist", "Start Smoothing")
+                elseif aimbot.mouse_target then
+                    smoothing_incrimental = math.approach( smoothing_incrimental, aimbot:GetLegitConfig("Aim Assist", "End Smoothing"), aimbot:GetLegitConfig("Aim Assist", "Smoothing Increment") * delta )
+                end
+            end)
         end
 
-        local target = self:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority)
-        if not target then return end
-        local position = target[2].Position
-        local cam_position = camera.CFrame.p
+        local assist_prediction_outline = draw:Circle(0, 0, 4, 6, 25, { 0, 0, 0, 255 }, 1, false)
+        local assist_prediction = draw:Circle(0, 0, 3, 1, 25, { 255, 255, 255, 255 }, 1, false)
+        hook:Add("Initialize", "BBOT:Aimbot.Assist.DotPrediction", function()
+            assist_prediction.Color = config:GetValue("Main", "Visuals", "Misc", "Aimbot Prediction", "Color")
+        end)
 
-        if self:GetLegitConfig("Ballistics", "Movement Prediction") then
-            position = self:VelocityPrediction(cam_position, position, self:GetParts(target[1]).rootpart.Velocity, gun.data.bulletspeed)
-        end
+        hook:Add("OnConfigChanged", "BBOT:Aimbot.Assist.DotPrediction", function(steps, old, new)
+            if config:IsPathwayEqual(steps, "Main", "Visuals", "Misc", "Aimbot Prediction", "Color") then
+                assist_prediction.Color = new
+            end
+        end)
 
-        local dir = (position-cam_position).Unit
-        if self:GetLegitConfig("Ballistics", "Drop Prediction") then
-            dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
-        end
+        hook:Add("OnAliveChanged", "BBOT:Aimbot.Assist.Hide", function(isalive)
+            if not isalive then
+                assist_prediction.Visible = false
+                assist_prediction_outline.Visible = assist_prediction.Visible
+            end
+        end)
 
-        if self:GetLegitConfig("Ballistics", "Barrel Compensation") and self:CanBarrelPredict(gun) then
-            dir = dir + self:BarrelPrediction(position, dir, gun)
-        end
+        function aimbot:MouseStep(gun)
+            self.mouse_target = nil
+            assist_prediction.Visible = false
+            assist_prediction_outline.Visible = assist_prediction.Visible
 
-        local pos, onscreen = camera:WorldToViewportPoint(cam_position + dir)
-        if onscreen then
-            local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
-            local smoothing = self:GetLegitConfig("Aim Assist", "Smoothing") * 5 + 10
-            local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - mouse.Y - 36 + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
-            Move_Mouse(inc)
+            if not self:GetLegitConfig("Aim Assist", "Enabled") then return end
+            local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
+            if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
+                if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
+            elseif aimkey == "Dynamic Always" then
+                if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+            end
+
+            local hitscan_priority = self:GetLegitConfig("Aim Assist", "Hitscan Priority")
+            local hitscan_points = self:GetLegitConfig("Aim Assist", "Hitscan Points")
+            local fov = self:GetLegitConfig("Aim Assist", "Aimbot FOV")
+            local dzFov = self:GetLegitConfig("Aim Assist", "Deadzone FOV")
+
+            if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
+                fov = camera.FieldOfView / char.unaimedfov * fov
+                dzFov = camera.FieldOfView / char.unaimedfov * dzFov
+            end
+
+            local target = self:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority)
+            if not target then return end
+            self.mouse_target = target
+            local position = target[2].Position
+            local cam_position = camera.CFrame.p
+
+            if self:GetLegitConfig("Ballistics", "Movement Prediction") then
+                position = self:VelocityPrediction(cam_position, position, self:GetParts(target[1]).rootpart.Velocity, gun.data.bulletspeed)
+            end
+
+            local dir = (position-cam_position).Unit
+            local magnitude = (position-cam_position).Magnitude
+            if self:GetLegitConfig("Ballistics", "Drop Prediction") then
+                dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
+            end
+            local pos, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
+            if onscreen then
+                if config:GetValue("Main", "Visuals", "Misc", "Aimbot Prediction") then
+                    assist_prediction.Visible = true
+                    assist_prediction_outline.Visible = assist_prediction.Visible
+                    assist_prediction.Position = Vector2.new(pos.X, pos.Y)
+                    assist_prediction_outline.Position = assist_prediction.Position
+                end
+            end
+
+            if self:GetLegitConfig("Ballistics", "Barrel Compensation") and self:CanBarrelPredict(gun) then
+                dir = dir + self:BarrelPrediction(position, dir, gun)
+            end
+
+            pos, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
+            if onscreen then
+                local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
+                local smoothing = smoothing_incrimental * 5 + 10
+                local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - mouse.Y - 36 + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
+                Move_Mouse(inc)
+            end
         end
     end
 
-    function aimbot:RedirectionStep(gun)
-        if not self:GetLegitConfig("Bullet Redirection", "Enabled") then return end
-		local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
-		if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
-			if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and 1 or 2)) then return end
-		end
-        if math.random(0, 100) > self:GetLegitConfig("Bullet Redirection", "Hit Chance") then
-            return
+    do
+        local assist_prediction_outline = draw:Circle(0, 0, 4, 6, 25, { 0, 0, 0, 255 }, 1, false)
+        local assist_prediction = draw:Circle(0, 0, 3, 1, 25, { 255, 255, 255, 255 }, 1, false)
+        hook:Add("Initialize", "BBOT:Aimbot.Redirection.DotPrediction", function()
+            assist_prediction.Color = config:GetValue("Main", "Visuals", "Misc", "Aimbot Prediction", "Color")
+        end)
+
+        hook:Add("OnConfigChanged", "BBOT:Aimbot.Redirection.DotPrediction", function(steps, old, new)
+            if config:IsPathwayEqual(steps, "Main", "Visuals", "Misc", "Aimbot Prediction", "Color") then
+                assist_prediction.Color = new
+            end
+        end)
+
+        hook:Add("OnAliveChanged", "BBOT:Aimbot.Redirection.Hide", function(isalive)
+            if not isalive then
+                assist_prediction.Visible = false
+                assist_prediction_outline.Visible = assist_prediction.Visible
+            end
+        end)
+    
+        function aimbot:RedirectionStep(gun)
+            assist_prediction.Visible = false
+            assist_prediction_outline.Visible = assist_prediction.Visible
+
+            if not self:GetLegitConfig("Bullet Redirection", "Enabled") then return end
+            local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
+            if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
+                if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
+            elseif aimkey == "Dynamic Always" then
+                if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+            end
+            if math.random(0, 100) > self:GetLegitConfig("Bullet Redirection", "Hit Chance") then
+                return
+            end
+
+            local sFov = self:GetLegitConfig("Bullet Redirection", "Redirection FOV")
+            if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
+                sFov = camera.FieldOfView / char.unaimedfov * sFov
+            end
+
+            local hitscan_priority = self:GetLegitConfig("Bullet Redirection", "Hitscan Priority")
+            local hitscan_points = self:GetLegitConfig("Bullet Redirection", "Hitscan Points")
+
+            local target = self:GetLegitTarget(sFov, 0, hitscan_points, hitscan_priority)
+            if not target then return end
+            local position = target[2].Position
+            local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+            local part_pos = part.Position
+
+            if self:GetLegitConfig("Ballistics", "Movement Prediction") then
+                position = self:VelocityPrediction(part_pos, position, self:GetParts(target[1]).rootpart.Velocity, gun.data.bulletspeed)
+            end
+
+            local dir = (position-part_pos).Unit
+            local magnitude = (position-part_pos).Magnitude
+            if self:GetLegitConfig("Ballistics", "Drop Prediction") then
+                dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
+            end
+            local pos, onscreen = camera:WorldToViewportPoint(camera.CFrame.p + (dir*magnitude))
+            if onscreen then
+                if config:GetValue("Main", "Visuals", "Misc", "Aimbot Prediction") then
+                    assist_prediction.Visible = true
+                    assist_prediction_outline.Visible = assist_prediction.Visible
+                    assist_prediction.Position = Vector2.new(pos.X, pos.Y)
+                    assist_prediction_outline.Position = assist_prediction.Position
+                end
+            end
+
+            local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
+            
+            local accuracy = math.remap(self:GetLegitConfig("Bullet Redirection", "Accuracy")/100, 0, 1, .3, 0)
+            X += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
+            Y += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
+
+            part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
+            self.silent = part
         end
-
-        local sFov = self:GetLegitConfig("Bullet Redirection", "Redirection FOV")
-        if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
-            sFov = camera.FieldOfView / char.unaimedfov * sFov
-        end
-
-        local hitscan_priority = self:GetLegitConfig("Bullet Redirection", "Hitscan Priority")
-        local hitscan_points = self:GetLegitConfig("Bullet Redirection", "Hitscan Points")
-
-        local target = self:GetLegitTarget(sFov, 0, hitscan_points, hitscan_priority)
-        if not target then return end
-        local position = target[2].Position
-        local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-        local part_pos = part.Position
-
-        if self:GetLegitConfig("Ballistics", "Movement Prediction") then
-            position = self:VelocityPrediction(part_pos, position, self:GetParts(target[1]).rootpart.Velocity, gun.data.bulletspeed)
-        end
-
-        local dir = (position-part_pos).Unit
-        if self:GetLegitConfig("Ballistics", "Drop Prediction") then
-            dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
-        end
-
-        local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
-        
-        local accuracy = math.remap(self:GetLegitConfig("Bullet Redirection", "Accuracy")/100, 0, 1, .3, 0)
-        X += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
-        Y += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
-
-        part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
-        self.silent = part
     end
     
     function aimbot:RageStep(data)
@@ -8291,6 +8359,10 @@ do
             aimbot:RageStep(gun)
         else
             aimbot:LegitStep(gun)
+        end
+        
+        if config:GetValue("Main", "Visuals", "Misc", "Aimbot Prediction") then
+
         end
     end)
 
