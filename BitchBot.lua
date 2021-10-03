@@ -7162,15 +7162,6 @@ do
                                         },
                                         {
                                             type = "Button",
-                                            name = "Refresh",
-                                            callback = function()
-                                                local configs = BBOT.config:Discover()
-                                                BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
-                                                menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
-                                            end
-                                        },
-                                        {
-                                            type = "Button",
                                             name = "Save",
                                             confirm = "Are you sure?",
                                             callback = function()
@@ -7188,6 +7179,9 @@ do
                                                 BBOT.config:Open(BBOT.config:GetValue("Main", "Settings", "Configs", "Configs"))
                                                 BBOT.config:SetValue(BBOT.config:GetValue("Main", "Settings", "Configs", "Configs"), "Main", "Settings", "Configs", "Config Name")
                                                 BBOT.config:SetValue(BBOT.config:GetValue("Main", "Settings", "Configs", "Configs"), "Main", "Settings", "Configs", "Autosave File")
+                                                local configs = BBOT.config:Discover()
+                                                BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+                                                menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
                                             end
                                         },
                                         {
