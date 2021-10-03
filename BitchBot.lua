@@ -5468,7 +5468,7 @@ do
 
     hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info", function(steps, old, new)
         if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Menu Accent") then
-            if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+            if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Menu Accent", "Accent") then
 
             else
 
@@ -8578,7 +8578,7 @@ do
 
         hook:Add("OnConfigChanged", "BBOT:Aimbot.Assist.DotPrediction", function(steps, old, new)
             if config:IsPathwayEqual(steps, "Main", "Visuals", "Misc", "Aimbot Prediction", "Color") then
-                assist_prediction.Color = new
+                assist_prediction.Color = Color3.fromRGB(unpack(new))
             end
         end)
 
