@@ -1535,9 +1535,9 @@ do
                     if s.type == "KeyBind" then
                         return s.toggle
                     elseif s.type == "ComboBox" then
-                        local t, v = {}, reg.value
+                        local t, v = {}, s.value
                         for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
-                        return v
+                        return t
                     end
                     return s.value
                 end
@@ -1549,7 +1549,7 @@ do
                 elseif reg.type == "ComboBox" then
                     local t, v = {}, reg.value
                     for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
-                    return v
+                    return t
                 end
                 return reg.value
             end
@@ -5331,7 +5331,7 @@ do
 
     local main = gui:Create("Container")
     menu.main = main
-    main.background = main:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background"), nil, false))
+    main.background = main:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border"), nil, false))
     function main:PerformLayout(pos, size)
         self.background.Position = pos
         self.background.Size = size
@@ -5340,6 +5340,16 @@ do
     main.background.ZIndex = 0
     main.background.Visible = true
     main:Cache(main.background)
+
+    hook:Add("OnConfigChanged", "BBOT:Menu.Background", function(steps, old, new)
+        if config:IsPathwayEqual(steps, "Main","Settings","Cheat Settings","Background Transparency") then
+            main.background.Transparency = 1-(config:GetValue("Main","Settings","Cheat Settings","Background Transparency")/100)
+            main.background.Color = config:GetValue("Main","Settings","Cheat Settings","Background Transparency","Color")
+            main:Cache(main.background)
+        end
+    end)
+
+    main:SetZIndex(-1)
     main:SetTransparency(0)
     main:SetSize(1,0,1,0)
 
@@ -6026,8 +6036,16 @@ do
                             name = "Enabled",
                             value = false,
                             extra = {
-                                type = "KeyBind",
-                                key = M,
+                                {
+                                    type = "ColorPicker",
+                                    name = "Dot Color",
+                                    color = { 255, 0, 0, 255 },
+                                },
+                                {
+                                    type = "KeyBind",
+                                    key = nil,
+                                    toggletype = 2,
+                                },
                             },
                         },
                         {
@@ -7061,8 +7079,8 @@ do
                             content = {
                                 {
                                     name = "Cheat Settings",
-                                    pos = UDim2.new(0,0,2/3,4),
-                                    size = UDim2.new(.5,-4,1/3,-4),
+                                    pos = UDim2.new(0,0,6/10,4),
+                                    size = UDim2.new(.5,-4,4/10,-4),
                                     type = "Panel",
                                     content = {
                                         {
@@ -7074,6 +7092,24 @@ do
                                                     type = "ColorPicker",
                                                     name = "Accent",
                                                     color = { 127, 72, 163, 255 },
+                                                }
+                                            },
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Background Transparency",
+                                            value = 80,
+                                            min = 0,
+                                            max = 100,
+                                            suffix = "%",
+                                            custom = {
+                                                [100] = "Off"
+                                            },
+                                            extra = {
+                                                {
+                                                    type = "ColorPicker",
+                                                    name = "Color",
+                                                    color = { 0, 0, 0, 255 },
                                                 }
                                             },
                                         },
@@ -7109,7 +7145,7 @@ do
                                 {
                                     name = "Configs",
                                     pos = UDim2.new(0,0,0,0),
-                                    size = UDim2.new(.5,-4,2/3,-4),
+                                    size = UDim2.new(.5,-4,6/10,-4),
                                     type = "Panel",
                                     content = {
                                         {
@@ -7184,7 +7220,7 @@ do
                         },
                     }
                 },
-                {
+                --[[{
                     Id = "Weapons",
                     name = "Weapon Customization",
                     pos = UDim2.new(.75, 0, 0, 100),
@@ -7281,7 +7317,7 @@ do
                             content = {},
                         },
                     }
-                }
+                }]]
             }
         else
             BBOT.configuration = {}
@@ -8374,6 +8410,14 @@ do
         return config:GetValue("Main", "Legit", type, ...) 
     end
 
+    function aimbot:GetLegitConfigR(...)
+        local type = types[self.gun_type]
+        if not type then
+            type = "Rifle"
+        end
+        return config:GetRaw("Main", "Legit", type, ...) 
+    end
+
     function aimbot:SetCurrentType(gun)
         if not gun.___class or not types[gun.___class] then
             self.gun_type = gun.type
@@ -8450,7 +8494,7 @@ do
                 local pos = prioritize.Position
                 local point, onscreen = camera:WorldToViewportPoint(pos)
                 if not onscreen then continue end
-                local object_fov = aimbot:GetFOV(part)
+                local object_fov = self:GetFOV(part)
                 if fov <= object_fov or dzFov >= object_fov then continue end
                 local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
                 if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
@@ -8462,10 +8506,10 @@ do
                 for name, part in pairs(parts) do
                     local name = partstosimple[name]
                     if part == prioritize or not name or not hitscan_points[name] then continue end
-                    local pos = v.Position
+                    local pos = part.Position
                     local point, onscreen = camera:WorldToViewportPoint(pos)
                     if not onscreen then continue end
-                    local object_fov = aimbot:GetFOV(part)
+                    local object_fov = self:GetFOV(part)
                     if fov <= object_fov or dzFov >= object_fov then continue end
                     local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
                     if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
@@ -8539,7 +8583,9 @@ do
 
             if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
                 fov = camera.FieldOfView / char.unaimedfov * fov
-                dzFov = camera.FieldOfView / char.unaimedfov * dzFov
+                if dzFov ~= 0 then
+                    dzFov = camera.FieldOfView / char.unaimedfov * dzFov
+                end
             end
 
             local target = self:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority)
@@ -8659,7 +8705,84 @@ do
             self.silent = part
         end
     end
-    
+
+    do
+        local assist_prediction_outline = draw:Circle(0, 0, 4, 6, 25, { 0, 0, 0, 255 }, 1, false)
+        local assist_prediction = draw:Circle(0, 0, 3, 1, 25, { 255, 255, 255, 255 }, 1, false)
+
+        hook:Add("RenderStepped", "BBOT:Aimbot.TriggerBot", function()
+            local mycurgun = gamelogic.currentgun
+            if mycurgun and mycurgun.data and mycurgun.data.bulletspeed then
+                aimbot:SetCurrentType(mycurgun)
+                if not aimbot:GetLegitConfig("Trigger Bot", "Enabled") then return end
+                assist_prediction.Color = aimbot:GetLegitConfig("Trigger Bot", "Enabled", "Dot Color")
+            end
+        end)
+
+        hook:Add("OnAliveChanged", "BBOT:Aimbot.TriggerBot.Hide", function(isalive)
+            if not isalive then
+                assist_prediction.Visible = false
+                assist_prediction_outline.Visible = assist_prediction.Visible
+            end
+        end)
+
+        local zoomspring = debug.getupvalue(char.step, 1)
+        function aimbot:TriggerBotStep(gun)
+            assist_prediction.Visible = false
+            assist_prediction_outline.Visible = assist_prediction.Visible
+            if not self:GetLegitConfig("Trigger Bot", "Enabled") then return end
+            local aim_percentage = self:GetLegitConfig("Trigger Bot", "Aim Percentage")/100
+            if self:GetLegitConfig("Trigger Bot", "Trigger When Aiming") and (not gun.isaiming() or not (zoomspring.p >= aim_percentage)) then return end
+            local hitscan_points = self:GetLegitConfig("Trigger Bot", "Trigger Bot Hitboxes")
+            local target = self:GetLegitTarget(camera.FieldOfView / char.unaimedfov * 180, 0, hitscan_points)
+            if not target then return end
+
+            local position = target[2].Position
+            local cam_position = camera.CFrame.p
+
+            if self:GetLegitConfig("Ballistics", "Movement Prediction") then
+                position = self:VelocityPrediction(cam_position, position, self:GetParts(target[1]).rootpart.Velocity, gun.data.bulletspeed)
+            end
+
+            local dir = (position-cam_position).Unit
+            local magnitude = (position-cam_position).Magnitude
+            if self:GetLegitConfig("Ballistics", "Drop Prediction") then
+                dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
+            end
+            local trigger_position, onscreen = camera:WorldToViewportPoint(cam_position + dir)
+            if onscreen then
+                trigger_position = Vector2.new(trigger_position.X, trigger_position.Y)
+                assist_prediction.Visible = true
+                assist_prediction_outline.Visible = assist_prediction.Visible
+                assist_prediction.Position = trigger_position
+                assist_prediction_outline.Position = assist_prediction.Position
+                local size = 125*(char.unaimedfov/camera.FieldOfView)/(magnitude/2)
+                assist_prediction.Radius = size
+                assist_prediction_outline.Radius = size
+            
+                local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+                local part_pos = part.Position
+                local team = (localplayer.Team and localplayer.Team.Name or "NA")
+                local playerteamdata = workspace["Players"][team]
+
+                local endpositon = part_pos+(part.CFrame.LookVector*70000)
+                local raydata = self:raycastbullet(part_pos,endpositon,playerteamdata)
+                local pointhit
+                if raydata and raydata.Position then
+                    pointhit = raydata.Position
+                else
+                    pointhit = endpositon
+                end
+                local barrel_end_positon, onscreen = camera:WorldToViewportPoint(pointhit)
+                barrel_end_positon = Vector2.new(barrel_end_positon.X, barrel_end_positon.Y)
+                if onscreen and vector.dist2d(trigger_position, barrel_end_positon) <= size then
+                    aimbot.fire = true
+                    gun:shoot(true)
+                end
+            end
+        end
+    end
+
     function aimbot:RageStep(data)
 
     end
@@ -8668,6 +8791,7 @@ do
         if not gun or not gun.data.bulletspeed then return end
         self:SetCurrentType(gun)
         self:MouseStep(gun)
+        self:TriggerBotStep(gun)
         self:RedirectionStep(gun)
     end
 
@@ -8678,10 +8802,6 @@ do
         else
             aimbot:LegitStep(gun)
         end
-        
-        if config:GetValue("Main", "Visuals", "Misc", "Aimbot Prediction") then
-
-        end
     end)
 
     -- If the aimbot stuff before is persistant, use this to restore
@@ -8689,6 +8809,11 @@ do
         if aimbot.silent and aimbot.silent.Parent then
             aimbot.silent.Orientation = aimbot.silent.Parent.Trigger.Orientation
             aimbot.silent = false
+        end
+
+        if aimbot.fire then
+            aimbot.fire = nil
+            gun:shoot(false)
         end
     end)
     
@@ -8698,22 +8823,22 @@ do
         Draw:Circle(false, 20, 20, 10, 1, 20, { 255, 255, 255, 255 }, menu.fovcircle)]]
         local draw = BBOT.draw
         --(x, y, size, thickness, sides, color, transparency, visible)
-        local fov_outline = draw:Circle(0, 0, 1, 3, 25, { 10, 10, 10, 215 }, 1, false)
-        local fov = draw:Circle(0, 0, 1, 1, 25, { 255, 255, 255, 255 }, 1, false)
+        local fov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
+        local fov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
         fov.Filled = false
         fov_outline.Filled = false
         aimbot.fov_circle = fov
         aimbot.fov_outline_circle = fov_outline
 
-        local dzfov_outline = draw:Circle(0, 0, 1, 3, 25, { 10, 10, 10, 215 }, 1, false)
-        local dzfov = draw:Circle(0, 0, 1, 1, 25, { 255, 255, 255, 255 }, 1, false)
+        local dzfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
+        local dzfov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
         dzfov.Filled = false
         dzfov_outline.Filled = false
         aimbot.dzfov_circle = dzfov
         aimbot.dzfov_outline_circle = dzfov_outline
 
-        local sfov_outline = draw:Circle(0, 0, 1, 3, 25, { 10, 10, 10, 215 }, 1, false)
-        local sfov = draw:Circle(0, 0, 1, 1, 25, { 255, 255, 255, 255 }, 1, false)
+        local sfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
+        local sfov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
         sfov.Filled = false
         sfov_outline.Filled = false
         aimbot.sfov_circle = sfov
@@ -9450,7 +9575,7 @@ do
         end
     end)
 
-    hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
+    --[[hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
         --if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
         local timescale = .5--config:GetValue("Weapons", "Stat Modifications", "Animation", "ReloadFactor")
         for i, v in next, modifications.animations do
@@ -9460,7 +9585,7 @@ do
                 end
             end
         end
-    end)
+    end)]]
 
     -- Skins
     do
