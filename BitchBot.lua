@@ -8487,13 +8487,16 @@ do
                 local part = prioritize
                 local pos = prioritize.Position
                 local point, onscreen = camera:WorldToViewportPoint(pos)
-                if not onscreen then continue end
-                local object_fov = self:GetFOV(part)
-                if fov <= object_fov or dzFov >= object_fov then continue end
-                local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
-                if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
-                table.insert(organizedPlayers, {v, part, point})
-                inserted_priority = true
+                if onscreen then
+                    local object_fov = self:GetFOV(part)
+                    if fov > object_fov and dzFov < object_fov then
+                        local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
+                        if (raydata and raydata.Instance:IsDescendantOf(updater.gethead().Parent)) then
+                            table.insert(organizedPlayers, {v, part, point})
+                            inserted_priority = true
+                        end
+                    end
+                end
             end
             
             if not inserted_priority then
@@ -8559,9 +8562,10 @@ do
 
         function aimbot:MouseStep(gun)
             self.mouse_target = nil
-            assist_prediction.Visible = false
-            assist_prediction_outline.Visible = assist_prediction.Visible
-
+            if assist_prediction.Visible then
+                assist_prediction.Visible = false
+                assist_prediction_outline.Visible = assist_prediction.Visible
+            end
             if not self:GetLegitConfig("Aim Assist", "Enabled") then return end
             local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
             if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
@@ -8642,9 +8646,11 @@ do
         end)
     
         function aimbot:RedirectionStep(gun)
-            assist_prediction.Visible = false
-            assist_prediction_outline.Visible = assist_prediction.Visible
-
+            self.redirection_target = nil
+            if assist_prediction.Visible then
+                assist_prediction.Visible = false
+                assist_prediction_outline.Visible = assist_prediction.Visible
+            end
             if not self:GetLegitConfig("Bullet Redirect", "Enabled") then return end
             local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
             if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
@@ -8666,6 +8672,7 @@ do
 
             local target = self:GetLegitTarget(sFov, 0, hitscan_points, hitscan_priority)
             if not target then return end
+            self.redirection_target = target
             local position = target[2].Position
             local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
             local part_pos = part.Position
@@ -8710,6 +8717,9 @@ do
                 aimbot:SetCurrentType(mycurgun)
                 if not aimbot:GetLegitConfig("Trigger Bot", "Enabled") then return end
                 assist_prediction.Color = aimbot:GetLegitConfig("Trigger Bot", "Enabled", "Dot Color")
+            elseif assist_prediction.Visible then
+                assist_prediction.Visible = false
+                assist_prediction_outline.Visible = assist_prediction.Visible
             end
         end)
 
@@ -8722,14 +8732,18 @@ do
 
         local zoomspring = debug.getupvalue(char.step, 1)
         function aimbot:TriggerBotStep(gun)
-            assist_prediction.Visible = false
-            assist_prediction_outline.Visible = assist_prediction.Visible
+            self.trigger_target = nil
+            if assist_prediction.Visible then
+                assist_prediction.Visible = false
+                assist_prediction_outline.Visible = assist_prediction.Visible
+            end
             if not self:GetLegitConfig("Trigger Bot", "Enabled") then return end
             local aim_percentage = self:GetLegitConfig("Trigger Bot", "Aim Percentage")/100
             if self:GetLegitConfig("Trigger Bot", "Trigger When Aiming") and (not gun.isaiming() or not (zoomspring.p >= aim_percentage)) then return end
             local hitscan_points = self:GetLegitConfig("Trigger Bot", "Trigger Bot Hitboxes")
             local target = self:GetLegitTarget(camera.FieldOfView / char.unaimedfov * 180, 0, hitscan_points)
             if not target then return end
+            self.trigger_target = target
 
             local position = target[2].Position
             local cam_position = camera.CFrame.p
@@ -8750,9 +8764,9 @@ do
                 assist_prediction_outline.Visible = assist_prediction.Visible
                 assist_prediction.Position = trigger_position
                 assist_prediction_outline.Position = assist_prediction.Position
-                local size = 125*(char.unaimedfov/camera.FieldOfView)/(magnitude/2)
-                assist_prediction.Radius = size
-                assist_prediction_outline.Radius = size
+                local radi = 125*(char.unaimedfov/camera.FieldOfView)/(magnitude/2)
+                assist_prediction.Radius = radi
+                assist_prediction_outline.Radius = radi
             
                 local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
                 local part_pos = part.Position
@@ -8769,7 +8783,7 @@ do
                 end
                 local barrel_end_positon, onscreen = camera:WorldToViewportPoint(pointhit)
                 barrel_end_positon = Vector2.new(barrel_end_positon.X, barrel_end_positon.Y)
-                if onscreen and vector.dist2d(trigger_position, barrel_end_positon) <= size then
+                if onscreen and vector.dist2d(trigger_position, barrel_end_positon) <= radi then
                     aimbot.fire = true
                     gun:shoot(true)
                 end
