@@ -1060,7 +1060,7 @@ do
         if self.incalls then
             self.ToRemove[#self.ToRemove+1] = identifier
         else
-            local t, index = timer:Get(timer.ToRemove[i])
+            local t, index = timer:Get(identifier)
             if t then
                 table.remove(timer.registry, index)
                 log(LOG_DEBUG, "Removed timer '" .. identifier .. "'")
@@ -1822,15 +1822,15 @@ do
                 if not newvalue or typeof(newvalue) ~= "table" or not newvalue.X then return end
                 config:SetValue(Vector3.new(newvalue.X, newvalue.Y, newvalue.Z), unpack(pathway))
                 return false
+            elseif T == "ColorPicker" then
+                local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
+                if not newvalue or typeof(newvalue) ~= "table" or (#newvalue < 3) then return end
+                config:SetValue(newvalue, unpack(pathway))
             elseif T == "Color3" then
                 local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
                 if not newvalue or typeof(newvalue) ~= "table" or not newvalue.R then return end
                 config:SetValue(Color3.new(newvalue.R, newvalue.G, newvalue.B), unpack(pathway))
                 return false
-            elseif T == "ColorPicker" then
-                local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
-                if not newvalue or typeof(newvalue) ~= "table" or (#newvalue ~= 4) then return end
-                config:SetValue(newvalue, unpack(pathway))
             elseif T == "ComboBox" then
                 local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
                 if not newvalue or typeof(newvalue) ~= "table" or (#newvalue < 1) then return end
@@ -1842,9 +1842,9 @@ do
                     local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
                     if newvalue == nil then return end
                     if value.type == "ColorPicker" and newvalue.T == "ColorPicker" then
-                        newvalue = Color3.new(newvalue.R, newvalue.G, newvalue.B)
+                        newvalue = newvalue.V
                     elseif value.type == "ComboBox" and newvalue.T == "ComboBox" then
-                        newvalue = newvalue.F
+                        newvalue = newvalue.V
                     elseif value.type == "DropBox" then
                         if not table.quicksearch(value.list, newvalue) then
                             newvalue = value.value
@@ -2602,6 +2602,14 @@ do
     hook:Add("PreInitialize", "BBOT.Icons:Load", function()
         if BBOT.game == "pf" then
             icons.registry = {
+                -- MENU
+                ["PISTOL"] = {"iVBORw0KGgoAAAANSUhEUgAAADQAAAAeCAYAAABjTz27AAACXUlEQVR4nNXYS6hNURzH8c9xLzeSR6SQgVIXA4k8SkhKSlHKAKUMjDBRZkZGSibKwISJUkqMiEylJMr7NZC886Z78/wbrHvrdJxz7ln77utc39qd3Vl7/fb/t57/tSsRYQAm4Dm24mzV/90Y26DOD9wcSLhEZuAovnYO8GAHdmEMTuEwRmEpFjWp18jQKxzHJzzGtD7tXHrwArMwHvswH58rTXqoE6exvsALW6EXXRhRoO4vfMfo2oJmho5he4GXtZVGhibjtWKt11aqA96A5X33q/2HZkjzpAM7cRCBHdjUzqAGwcdKRGyUJn8/gd+S0f+NA/1zaCwWYz+WtTWk4nzDzE5swx7MQ+UfB9BTgs5XvMFFvKxExBlpp+2nC3MMbsidwzOMxBpMryp7jL04L5kql4iod3VHxPXI43dE9EbE/YjoqNKaFBF3+555GBFTGryzlKvR0vwAm/Ezo20uSF1/UtrJ+3knDWl9v28y2zyLZnvNA1zL0LojDdP3dcqu4ItkekgZaPP8kqG1AJexsE7ZT6mnfmToFaKZoRHSytcqq/BUyp6n1pRNlI4hQ06z5HQ+bmTqPZGGXu1yPBsfsDJTL5tm56HcTHs3jkiZRtto1EPduCXtI61wDuvKCmowNJpDh7RuBi6VEEsp1DM0V35r3y4hllKoZ2hNAZ1bgw2kLOoZWp2p8Vb6+DEsqDXUiRWZGsOmd/jb0BKMy9QYNvOHvw3NLqAxrA0VOeA9LyOQsqg19KiAxpIyAimLWkNX5af4W/zbo3tTag31Yq20F51oof496Vt1W/O3av4ARjQk0oC+k4cAAAAASUVORK5CYII=", 52, 30},
+                ["RIFLE"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAdCAYAAABcz8ldAAAD+klEQVR4nO3aS2hcVRjA8d+MRqTahqj4bIUujIKPBitasQsfUXHTouhGMKLiTjeCoKCIDwTduPIFKoq1IFQXFS2iLVGoaNWmlmqVKloNihvTGG0yscm4+O4wk8nMeCfzTOofLpd7zp1zzpzvfI/znZvJ5/OWGMdgLfqxH3/hZKzBCchiM86ro80pjODvpo6UIbyGa/EhHNvkDtJyC64Sk9cKVuBqRWH0ltRNY1BMQlryeAkHMF6hfiy578LBOtq9Ibn3FAoyHdCQIbyKTLs7bjJTigu6cH8LN6f8fRZbMYMXsI32CuTEpNN1OqeZxGqfwSHsKSk/E2ck5T+UlJ8rtCwvhFBNQ87C6bgLr6QYxyVYhb3CvG6jvRPTj8va3GclMskYehVNDaxEHybLypcl1294TvifShwvVvzLwhw+jZ9qjGM9HkUOjwm/l83kG1eRI/hMOKVfS8p7xOo6HxfhlAb7OSpohkCOFnZgVJitSsyKBTiF1cnzOzXaW4EbhZn7GL/zv0Dq4Un1RVBpyArTuRm/0Hl73my24A/heCdxGNeLEJswr59iJ35M6qeSe07sM6ZFuPwPJpLf5JJ3Wk67NCQn/MwELsdJFd75Do/gXuHsxsRkDeB1fI2fFWP3SqxL+iklK4SyDNtFFNW1tFJDvsf7IpwbVtzljqgskAN4Exfgg5Ly0+roc8B8gcwmY1gUZJvUzhGxgjeJFX5Oct2Dd81NOTxcpY2Cpo6IFEc5U5L0Qg3Wpxxv17JQkzUmVv0OsSL3CZudhuX4s6xsAk/gRWH/+xT3AgO4Iulnt9C6wSptjwuNyqUcS9eRViCTwhFuT67dYre7EC4Uu9NShoSfWIVTy+oOik3XaPK8Fl/UaH+D2uFmV1NNIDP4UlEAO1WPv+vlITxe8jyKsxVN1n+REamN1VXqhxWjqkVHqVPfryiAYa2LRjaWPW+VXhiSd7fg/ir1V+J2kdZedGTy+fwgvjE37dEqVorQtTTTe525UVUaLhYaXI0xEa214z81laz5OahWstFcYRwS2lgvu9UWYh+eX0C7HadZYW9ays3Ve2JHvBDuUzua2oC7F9h2x2inQJYL+17Krgba2ydC5Vo8q3qI3JW0UyCHxQR+IjaSRAjcCE+JjWQ1esQp3jUN9tM2OnGES2hLP77V+IcDa/C5knPpCkzjTrzRYF8tp90+pMCEiJKa8RXHVyIZWYvjxMbzAV1+lt8pDWk2GZFHu1XsU6pN+iwuVTtk7iid0pBmkxcm6SO1NeAZXSwMlo6GFOjF2+KbrHL2Cu3o6sTjUtGQAuPiAGtTWXkOt+lyYbD0BEJEVEPmOvoHzc8wdyVLzWSVc4fIDtwkHHrX8y9c6Q6XYJwubQAAAABJRU5ErkJggg==", 100, 29},
+                ["SHOTGUN"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAbCAYAAACKlipAAAADgklEQVR4nO3aS2hcZRTA8V/StKYtEbGxLdr6QFsfUBHRhWhRqCiI2qAVXLkRurG4EVwpiK66caGg+Ni5UxeiFJQqiAaUFotB8bGoRRc+sLRFm1eT9Lg495rJdCaZZKYzaTt/uMw333fud8+d853vnHPv9ESEs8Q27MQQrscvuLkYGyn6+nEEa7Eex/E3ttaYbwx/NnjtF/DO0tTuMBHRqmNFRNwdES9HxOGYy1Ah81ZEvF60d0XEzxGxMiIGI2IiIrZERE9EDEdz7GnhfbX16GvSnmtwv/SEB7Gujtzl6JNeMI0VRd9aXIwNFX1/4Oom9Vpu9OASjGNiXsklWHF9RDwZER9GxNgiVu1onfZkREwX7ZmIGK8YOxkRuyPi9CKuE7H8PGSw0OuNhWQb9ZAtMhbsxB3obeCcGQzjAE4vIPtIcY1eGVdKLsJuucJqcQpf4WBxvZJR3NuAjovhS0wu8dyVxed9Cwn2xNygvglXSLfql0Z4GDctUZHzia9xcpHnrMFGDOCyom8Eq6ntDJUGGcDjCDwts6Qubaa00g687fwLpuccpYcM484O67LcGcOLcuuZlBnlqMwaDy9innVyN6qMw98Xc3YNsky4VhbODWVLXdpIGUNGO6rFucW/+EdmUKcwhb+anPP/dLo0yOcayJEr+AS/Fu3tuLGGzF68N88cq2R1Pyir/asqxo7gR7MevFHm8jfIir6TPIEPivZqWX23jDKGbMAreEz9ImxK5uLHZCFXFntXmjVOye/YbOGCsORRXNeA3Etmi6xOsV3G3LNCdWF4Fz6Sz12qmcYzsmh8s2psUq74kldlLdNqRqU3f4wfpHH65TZSPi86XsheKhdP2VbIbJNp/u3OLM7G5Y/9mSLIVjGGfU3fxTxUKzSM/dJTasmecGatMiT30oP4Bofwfgt1rGSH9NJmeBfPy63ylqLvkCyIR+W9dIxqgwxIL6nFAbkiT8i9/Cf5SKVPrsyZOue1kmaNUclRfNrC+VpC9Za1F8/WkJvBbfi2+H4rrsFv0jO6tIhKg2zFd+bGgpLX8FS7lLqQqTTIPjxQQ+aYfN16tF1KXciUef5DahsDntM1RtvoiYhVcquq9ceCCZkytrT46VKfXuxR2xjwha4x2kovds0zvr9dinRJeiJiSp3XibJwGmmfOl16zR+wN7VLkS5JL+6RDwNrsbl9qnSB/wBF8j6LJlmzYQAAAABJRU5ErkJggg==", 100, 27},
+                ["SMG"] = {"iVBORw0KGgoAAAANSUhEUgAAAE0AAAAeCAYAAABpE5PpAAADmklEQVR4nO3ZS4iVZRgH8N+Mk6FRNpXlQrPLBEVN2WUhJSUkXSgs6EZBSG0KWrQJIlu00YKgRSuJdrbKkDYVU9pNi2rRZVBrkyGWKQ4U5oxMXs7T4v2mvnPmO9+cc2bOnDnhH154r8/zfM/7fu9zeXsiQpdhJUaxuw20v8At6EVdxfS2gXE7sRAP4vZOCtHTZSdtOfZhf1afaTR00vrawLiduB4V9OOrrO/vmjl9mJdrV3CiZs589OTap3Ayow/v4v56QnSb0hZifa79Aha1gc+KssFuU9oqDOOPrH2yTXwuljbjSNFgN91pZ0pWM7/Rb0n320CuzNTJW4Uviwa66aRdZbK8b2JnTd9iXC4p8IpcfQDnN8Fv0P9AaYMFfbsK+kay8nXBWL/qUzmAtTi3QX5ISltTLuucwZ017T9xU4u0JhS7Ax9iE45hSW7OZfUW92Fbi4w7jX4zJ/sxHFCttLqOf7dFBHMCs3mn7cH4NNZfivNy7VEcnpZE/2Gx5APWYgkWqHaED/dEF/kcs4zfcIHk6gzjWilJsLmbrOdsY2mu3iudth4Mnj5pzeO70yetGJ/hI5wj+XB5gzk+V5RWwafYLBkM0q+wFs+oNgBleAnvZ/UBvCIZkGaxWopvHygcjc5iLCLWR8SyiFCnnB0ROxqg9UnB2sGIqLQo29Z6MnXaT3scL+PXkjlH8aySpGCG9wr6dmFryZrAB3gHQ1PQ/xed/D1/l5J9jWDP1FMmJRon8BAextsFYztxT679OW7N6nPyjeCsJuY+p9rBLMK9Uhy9omBsixRj1mKspj2aq89JpS2SLvoyzMPr2NgAvTukWPSNOuP7CvoOlNCb8o3gR8ly5bFSSZ68Diqa24hNOIRvCsZuxAbcVbL+IB6T7qUFWd91UuZ1f25eb0avFttLaNdV2oRzOyKFCnksxZUlRIswJJn5pyVzPb/Bdb9IL0Hj0m94M66eYs1fuA0/4KcaWYewTopNz5BckRdr1lek2HIk13c3lmX1vfi4iHE7090X4kk8hUtmmPZx6QLfLm3MUZM36Ah+xkWqQ6IJfI8bWuJe4h/NVOmNiDURsSUiTrToM+VRiYh1OfqDLdJ5NVr8ptlQWr4sj4iNEXGoxQ+NiHi+huajLdAYymTpCqVNlPkR8UhEHGziQ4cjYnUBrQ1N0NgbEfdNV/5OObfHJWfzCSlfVYRT+FYKnLcpfkSBaxrgNyYZqNdMLxEK/gEIMckYAgwqoQAAAABJRU5ErkJggg==", 77, 30},
+                ["SNIPER"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAXCAYAAAD9VOo7AAADIklEQVR4nO3ZS2hdVRSA4e/mYa310VajlapYRQRtFScOfEFFcCIojhw4kIoVrQhSHSmIUwURHPmYqAOhA3HgQBQFURR0YBRRaw0+20SDL6y9sU27HKx9yU1Nbm5ubu4j6Q+bs/c+Z+29DuuctdZZpxIReph78DyOYA/u7K46y89AtxVYgH3lOFzXX9EMdXCvYTyJU8r4CMZxFH/jOZxWrvu1XDNWJ1/fP7vI/1FkLsc2bC3tDBwz+4Hbgc/bdjfLRKWDLmstDjU4/wPW42R8UeZOxaWlvx8Tpb8VU/gdF6LSxP7X4sPFKNwNeskgy01fGKTXY8iqo5MxZBovmYkh09LlrEcVj+Jl6aK2lGtOxyWlP44Dpf89vsIdZuLGFeW4DRvK+p28v7bQSZc1H7fLwAwP4HzsRMjAXM+ADNjP4kc8VebH8NGya9oBumGQs3CXfAtGcLN8E2ocw6fzyA7hyuPmpvC1zNbgHxyuO/+X/xu2Z+mGQZ7GQ53etF/ohI89D7fgGvl0b+zAnt3kM7zaqvB8b8ganItN0q2MlHGtv0m6lYcbrD2IR/AETmpVwT7kE1zdqvBcBhmWQfPeBWRDZjVfznFui8yYrmtVsT7mkExSWopbQ3gFF+McmcGc2aRsBbtx93HzO/CMmcxptVGVHqbainAlIl7HrS1ufhgXybLGCF5osNZv0uBLjVsTeF9+a9yEP+Xb2gtMyZT9jZZXiIhdsTTei4j7I2KiwTVjEXFBRGyOiD0R8VhEbIyIDXXtxYj4ron93owIEbEmIh6PiEoZr4g2hI+X+FTcUNp8jGE7firjD/AOLiv9GuN4V7q8ZvhXJgwrigEzFdTl4FuzjQF7sVkaoEZFftDVl9hXJZWIqAWgZkrYi2EfbsTPc5y7TVZ/p8t4EKO4Dw8usO4ormqHgr1ILe2tyv8Q7eIbaYz9i5S7Xn7jNOIoXmtFqX6gEhHrcLBF+arMt9fVze2Vxjgwp8QJGjKk8XfH27JwN4lfSpssbVwacq0sFu4u6203Oz6cYBHUXNZbss40KaujB+U/h11m/PxCDMp/EaPtVnI18R9vKf2ssOnBPwAAAABJRU5ErkJggg==", 100, 23},
+
+                -- WEAPONS
                 ["1858 CARBINE"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAJCAYAAABwgn/fAAABHUlEQVR4nNXUTyuEURQG8N/LSEiSv7GzseMjkI/B3sqSvY/hYxBJsZCVwUIRamRnMyl/R2ia1+K+Y2YxmsHL5Knbvfd07j3Pec7pRHEcSwkjGMVSla0dByhW2frQg1sU8JZC7IkoxURacY1BRImtiEwN3wfcIMYmnn8avFaQr6IFk5jDkIrCbVjAPHI4w4lQiWPcpRD7A9UV6cAAhpO9v+pePndiJSE1jRlMoVdQN48dvGAVu3hKk/BniOI4XsQyur75Rw6H2BKUvhd6/9UfJUFIJMI5xht8k8cG9oRe30/2Arrx+As86yIjtEShjt8p1pOVRSmxtwvKl9GUJAgVGcOlyqQp4UIgnMU2rppDr3FkMIs1Yd5ncSS0yr/CO58sURmvjH21AAAAAElFTkSuQmCC", 50, 9},
                 ["1858 NEW ARMY"] = {"iVBORw0KGgoAAAANSUhEUgAAACkAAAAPCAYAAAB5lebdAAABhUlEQVR4nM3VPWsVQRTG8d9efAVFBG0kpBIFtRRsAgpWphAsLIKVIH4E/Qo2phU7LawUG8HCSlEUJOlEsVKITUgUBV8iV3ksZoV1c+PdEO/FPwwMZ2bOPDzn7GyVxBCOYg7b8RST+Njasw378BDPEXxGf1jyIZzF7aqDyFM4j9NYwa4NXrxuuoiEuzgzYi2/+YL7zcCmDoe24sCQPfN18in0Oorp4yreDMg13wx0EXkDh+v5N6U329zBFSxhT2ttCU/wAm/xCR/wEosd7l+z3JO4hOM40ogHX+vkuxvxR1hWXF/GPcWp93jVRch6Rc7gmm4fyBwe1CIfK07/e5I0x4kkP7OafpLXSWaTTCU5mOR6kqp1fiSj2ZM7cdOfjb+CC3iGY1hQ+kvtXqenYaM0RV5UerHJLG7V85PYj73YoTT+eKgt3ZJkYUCZp1vWT9R7R17iQeU+h4m2fqXMTd6N3LUBVEkq5Q071Fr7gc3jl7SanvJPbgukPLr/BT1cXmPt+ziF/I1fmt1T3HjM+CIAAAAASUVORK5CYII=", 41, 15},
                 ["AA-12"] = {"iVBORw0KGgoAAAANSUhEUgAAACcAAAAPCAYAAABnXNZuAAABdElEQVR4nM3Vv0odQRQG8J9iKgXjDQQ7DVgknU1ICKkkWFmk0MoulT5BCh8hL5A8gyDYpEkr5A9RbIKVhSIIFjfR/FFvNJNizoXNYszuXgl+MMyZmbNnvv327DlSSmqOuymlzQbPVRlLxXW/+niAhYq+Qxiv6HsHU8WNATxDH44qBBjBQxzjZwX/OXTwDoP/8H2Mm8WNvpRSqnDJ/8JnWcFDsnLXCaeY7i6um3In+NRdVFXuGz5iD0/lRL8M51iX87iD73HxcdgdfMWZ/AnP8SXiv+0GuUi5s2D/Hh9i3ooAMIvlsNewH/YUboX9CzdibowB7AaBLpmNeLu/ofhXz4jkxRs8Cbsfw3KC90RurIb/MF6F/RqjaOERyl+g1Su5uhX8Rco4TCndLp29TH/ifq8do26HmC+odlA6a5fWrUZqFVCX3Cp2sH3B2ZWTq1uEF2OexHO5na3IZaOMkea0Mpp2iM0YE7gnV/U1/JAVbMu1sSf8Bjx4QyzAKlIYAAAAAElFTkSuQmCC", 39, 15},
@@ -5459,6 +5467,13 @@ do
     client_info:SetTextSize(13)
 
     hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info", function(steps, old, new)
+        if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Menu Accent") then
+            if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+
+            else
+
+            end
+        end
         if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Name") then
             client_info:SetText(new .. " | " .. BBOT.username .. " | " .. os.date("%b. %d, %Y") .. " | Ver " .. BBOT.version)
             local sizex = client_info:GetTextSize()
@@ -6100,7 +6115,7 @@ do
                             content = {
                                 {
                                     name = "Pistol",
-                                    icon = "M9",
+                                    icon = "PISTOL",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
                                     type = "Container",
@@ -6108,7 +6123,7 @@ do
                                 },
                                 {
                                     name = "Smg",
-                                    icon = "MP5K",
+                                    icon = "SMG",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
                                     type = "Container",
@@ -6116,7 +6131,7 @@ do
                                 },
                                 {
                                     name = "Rifle",
-                                    icon = "M4A1",
+                                    icon = "RIFLE",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
                                     type = "Container",
@@ -6124,7 +6139,7 @@ do
                                 },
                                 {
                                     name = "Shotgun",
-                                    icon = "REMINGTON 870",
+                                    icon = "SHOTGUN",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
                                     type = "Container",
@@ -6132,7 +6147,7 @@ do
                                 },
                                 {
                                     name = "Sniper",
-                                    icon = "INTERVENTION",
+                                    icon = "SNIPER",
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
                                     type = "Container",
@@ -8648,7 +8663,7 @@ do
 
         hook:Add("OnConfigChanged", "BBOT:Aimbot.Redirection.DotPrediction", function(steps, old, new)
             if config:IsPathwayEqual(steps, "Main", "Visuals", "Misc", "Aimbot Prediction", "Color") then
-                assist_prediction.Color = new
+                assist_prediction.Color = Color3.fromRGB(unpack(new))
             end
         end)
 
