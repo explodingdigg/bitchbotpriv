@@ -8489,9 +8489,9 @@ do
                 local point, onscreen = camera:WorldToViewportPoint(pos)
                 if onscreen then
                     local object_fov = self:GetFOV(part)
-                    if fov > object_fov and dzFov < object_fov then
+                    if not (fov <= object_fov or dzFov >= object_fov) then
                         local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
-                        if (raydata and raydata.Instance:IsDescendantOf(updater.gethead().Parent)) then
+                        if not ((not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos)) then
                             table.insert(organizedPlayers, {v, part, point})
                             inserted_priority = true
                         end
@@ -8764,7 +8764,7 @@ do
                 assist_prediction_outline.Visible = assist_prediction.Visible
                 assist_prediction.Position = trigger_position
                 assist_prediction_outline.Position = assist_prediction.Position
-                local radi = 125*(char.unaimedfov/camera.FieldOfView)/(magnitude/2)
+                local radi = 300*(char.unaimedfov/camera.FieldOfView)/magnitude
                 assist_prediction.Radius = radi
                 assist_prediction_outline.Radius = radi
             
