@@ -1520,6 +1520,16 @@ do
 
     -- EX: config:GetValue("Aimbot", "Rage", "Silent Aim")
     -- You can also return a raw table for easier iteration of data
+    local valuetypetoconfig = {
+        ["KeyBind"] = function(reg) return reg.toggle end,
+        ["ComboBox"] = function(reg)
+            local t, v = {}, reg.value
+            for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
+            return t
+        end,
+        ["ColorPicker"] = function(reg) return Color3.fromRGB(unpack(reg.value)), reg.value[4] end,
+    }
+
     function config:GetValue(...)
         local steps = {...}
         local reg = self.registry
@@ -1532,24 +1542,18 @@ do
             if reg.self ~= nil then
                 local s = reg.self
                 if typeof(s) == "table" and s.type and s.type ~= "Button" then
-                    if s.type == "KeyBind" then
-                        return s.toggle
-                    elseif s.type == "ComboBox" then
-                        local t, v = {}, s.value
-                        for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
-                        return t
+                    local valuet = valuetypetoconfig[s.type]
+                    if valuet then
+                        return valuet(s)
                     end
                     return s.value
                 end
                 return s
             end
             if reg.type and reg.type ~= "Button" then
-                if reg.type == "KeyBind" then
-                    return reg.toggle
-                elseif reg.type == "ComboBox" then
-                    local t, v = {}, reg.value
-                    for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
-                    return t
+                local valuet = valuetypetoconfig[reg.type]
+                if valuet then
+                    return valuet(reg)
                 end
                 return reg.value
             end
@@ -1652,7 +1656,7 @@ do
         ["Slider"] = function(v) return v.value end,
         ["KeyBind"] = function(v) return {type = "KeyBind", value = v.key, toggle = false} end,
         ["DropBox"] = function(v) return {type = "DropBox", value = v.values[v.value], list = v.values} end,
-        ["ColorPicker"] = function(v) return {type = "ColorPicker", value = Color3.fromRGB(unpack(v.color))} end,
+        ["ColorPicker"] = function(v) return {type = "ColorPicker", value = v.color} end,
         ["ComboBox"] = function(v) return {type = "ComboBox", value = v.values} end,
     }
 
@@ -1740,7 +1744,12 @@ do
                     if value.type == "ComboBox" then
                         config:GetTableValue(reg, unpack(pathway))[optionname] = {
                             T = "ComboBox",
-                            F = val
+                            V = val
+                        }
+                    elseif value.type == "ColorPicker" then
+                        config:GetTableValue(reg, unpack(pathway))[optionname] = {
+                            T = "ColorPicker",
+                            V = val
                         }
                     elseif type == "Color3" then
                         config:GetTableValue(reg, unpack(pathway))[optionname] = {
@@ -1818,6 +1827,10 @@ do
                 if not newvalue or typeof(newvalue) ~= "table" or not newvalue.R then return end
                 config:SetValue(Color3.new(newvalue.R, newvalue.G, newvalue.B), unpack(pathway))
                 return false
+            elseif T == "ColorPicker" then
+                local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
+                if not newvalue or typeof(newvalue) ~= "table" or (#newvalue ~= 4) then return end
+                config:SetValue(newvalue, unpack(pathway))
             elseif T == "ComboBox" then
                 local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
                 if not newvalue or typeof(newvalue) ~= "table" or (#newvalue < 1) then return end
@@ -4883,9 +4896,10 @@ do
             self.background_border.Size = size + Vector2.new(2, 2)
         end
 
-        function GUI:SetColor(col)
+        function GUI:SetColor(col, transparency)
             self.background.Color = col
             self.background_outline.Color = color.darkness(col, .5)
+            self.color_transparency = transparency
         end
 
         function GUI:SetTitle(txt)
@@ -4901,7 +4915,7 @@ do
             self.picker = picker
             picker:SetPos(.5,0,.5,0)
             picker:SetSize(0, 280, 0, 211)
-            picker:SetColor(self.background.Color)
+            picker:SetColor(self.background.Color, self.color_transparency)
             picker:SetTitle(self.title)
             picker:SetZIndex(100)
             self.open = true
@@ -4925,7 +4939,7 @@ do
         end
 
         function GUI:SetValue(col)
-            self:SetColor(col)
+            self:SetColor(Color3.fromRGB(unpack(col)), col[4])
         end
 
         function GUI:OnValueChanged() end
@@ -5012,7 +5026,7 @@ do
             picker:SetPos(1, X-26, 0, Y)
             picker:SetSize(0, 26, 0, 10)
             picker:SetTitle(name)
-            picker:SetValue(_config_module:GetValue(unpack(path)))
+            picker:SetValue(_config_module:GetRaw(unpack(path)).value)
             picker.tooltip = config.tooltip
             function picker:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
@@ -6060,11 +6074,11 @@ do
                         },
                         {
                             type = "Slider",
-                            name = "Aim Percentage",
+                            name = "Aim In Time",
                             min = 0,
-                            max = 100,
-                            value = 90,
-                            suffix = "%",
+                            max = 2,
+                            value = .75,
+                            suffix = "s",
                         },
                     }},
                 },
@@ -6238,12 +6252,12 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Visible Enemy Chams",
+                                                        name = "Visible Chams",
                                                         color = { 255, 0, 0, 200 },
                                                     },
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Invisible Enemy Chams",
+                                                        name = "Invisible Chams",
                                                         color = { 100, 0, 0, 100 },
                                                     }
                                                 },
@@ -6383,12 +6397,12 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Visible Team Chams",
+                                                        name = "Visible Chams",
                                                         color = { 0, 255, 0, 200 },
                                                     },
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Invisible Team Chams",
+                                                        name = "Invisible Chams",
                                                         color = { 0, 100, 0, 100 },
                                                     },
                                                 },
@@ -8730,6 +8744,7 @@ do
             end
         end)
 
+        local isaiming, aimtime = nil, 0
         local zoomspring = debug.getupvalue(char.step, 1)
         function aimbot:TriggerBotStep(gun)
             self.trigger_target = nil
@@ -8738,8 +8753,12 @@ do
                 assist_prediction_outline.Visible = assist_prediction.Visible
             end
             if not self:GetLegitConfig("Trigger Bot", "Enabled") then return end
-            local aim_percentage = self:GetLegitConfig("Trigger Bot", "Aim Percentage")/100
-            if self:GetLegitConfig("Trigger Bot", "Trigger When Aiming") and (not gun.isaiming() or not (zoomspring.p >= aim_percentage)) then return end
+            local aim_percentage = self:GetLegitConfig("Trigger Bot", "Aim In Time")
+            if isaiming ~= gun.isaiming() then
+                isaiming = gun.isaiming()
+                aimtime = tick()
+            end
+            if self:GetLegitConfig("Trigger Bot", "Trigger When Aiming") and (not isaiming or (tick() - aimtime < aim_percentage)) then return end
             local hitscan_points = self:GetLegitConfig("Trigger Bot", "Trigger Bot Hitboxes")
             local target = self:GetLegitTarget(camera.FieldOfView / char.unaimedfov * 180, 0, hitscan_points)
             if not target then return end
@@ -9188,9 +9207,227 @@ do
         end
     end)
 
+    hook:Add("OnConfigChanged", "BBOT:ESP.Reload", function(steps, old, new)
+        if config:IsPathwayEqual(steps, "Main", "Visuals") then
+            esp:Rebuild()
+        end
+    end)
 
     do -- players
+        local workspace = BBOT.service:GetService("Workspace")
+        local players = BBOT.service:GetService("Players")
+        local replication = BBOT.aux.replication
+        local hud = BBOT.aux.hud
+        local updater = replication.getupdater
+        local ups = debug.getupvalues(updater)
+        local player_registry
+        for k, v in pairs(ups) do
+            if typeof(v) == "table" then
+                player_registry = v
+            elseif typeof(v) == "function" then
+                local function createupdater(player)
+                    timer:Async(function() if (localplayer ~= player) then hook:Call("CreateUpdater", player) end end)
+                    return v(player)
+                end
+                debug.setupvalue(updater, k, newcclosure(createupdater))
+                hook:Add("Unload", "Replication.UndoUpdaterDetour", function()
+                    debug.setupvalue(updater, k, v)
+                end)
+            end
+        end
 
+        esp.playercontainer = Instance.new("Folder", esp.container)
+        esp.playercontainer.Name = "Players"
+
+        if player_registry then
+            local player_meta = {}
+            esp.player_meta = {__index = player_meta}
+
+            function player_meta:IsValid()
+                return self.player:IsDescendantOf(players) and player_registry[self.player]
+            end
+
+            function player_meta:OnRemove()
+                self:Destroy(true)
+                log(LOG_DEBUG, "Player ESP: Removing ", self.player.Name)
+            end
+
+            function player_meta:CanRender()
+                local alive = hud:isplayeralive(self.player)
+                if alive ~= self.alive then
+                    self.alive = alive
+                    if self.alive then
+                        self:Setup()
+                    else
+                        self:Destroy()
+                    end
+                end
+
+                if self.alive then
+                    return true
+                else
+                    return false
+                end
+            end
+
+            function player_meta:Render()
+                if not self.parts then return end
+            end
+
+            function player_meta:GetConfig(...)
+                if self.player and self.player.Team ~= localplayer.team then
+                    return config:GetValue("Main", "Visuals", "Enemy ESP", ...)
+                else
+                    return config:GetValue("Main", "Visuals", "Team ESP", ...)
+                end
+            end
+
+            function player_meta:Setup()
+                local parts = replication.getbodyparts(self.player)
+                if not parts then return end
+                self.model = parts.head.Parent
+                self.parts = parts
+                local container = Instance.new("Folder", esp.playercontainer)
+                self.container = container
+                container.Name = self.player.Name
+                if self:GetConfig("Chams") then
+                    local visible, transparency = self:GetConfig("Chams", "Visible Chams")
+                    local invisible, itransparency = self:GetConfig("Chams", "Invisible Chams")
+                    local scale = 0.1
+                    local chams = {}
+                    for k, v in pairs(parts) do
+                        if k ~= "rootpart" then
+                            local boxhandle
+                            if v.Name ~= "Head" then
+								boxhandle = Instance.new("BoxHandleAdornment", Part)
+                                chams[#chams+1] = {k, boxhandle}
+                                boxhandle.Size = (v.Size + Vector3.new(0.1, 0.1, 0.1))
+							else
+								boxhandle = Instance.new("CylinderHandleAdornment", Part)
+                                chams[#chams+1] = {k, boxhandle}
+								boxhandle.Height = v.Size.y + 0.3
+								boxhandle.Radius = v.Size.x * 0.5 + 0.2
+                                boxhandle.Height -= 0.2
+                                boxhandle.Radius -= 0.2
+								boxhandle.CFrame = CFrame.new(Vector3.new(), Vector3.new(0, 1, 0))
+							end
+                            boxhandle.Parent = container
+                            boxhandle.Name = "Chams_"..k
+                            boxhandle.Adornee = v
+                            boxhandle.AlwaysOnTop = true
+                            boxhandle.Color3 = invisible
+                            boxhandle.Transparency = 1-itransparency
+                            boxhandle.Visible = true
+                            boxhandle.ZIndex = 1
+                        end
+                    end
+                    scale = 0.25
+                    for k, v in pairs(parts) do
+                        if k ~= "rootpart" then
+                            local boxhandle
+                            if v.Name ~= "Head" then
+								boxhandle = Instance.new("BoxHandleAdornment", Part)
+                                chams[#chams+1] = {k, boxhandle}
+                                boxhandle.Size = (v.Size + Vector3.new(0.25, 0.25, 0.25))
+							else
+								boxhandle = Instance.new("CylinderHandleAdornment", Part)
+                                chams[#chams+1] = {k, boxhandle}
+								boxhandle.Height = v.Size.y + 0.3
+								boxhandle.Radius = v.Size.x * 0.5 + 0.2
+								boxhandle.CFrame = CFrame.new(Vector3.new(), Vector3.new(0, 1, 0))
+							end
+                            boxhandle.Parent = container
+                            boxhandle.Name = "UChams_"..k
+                            boxhandle.Adornee = v
+                            boxhandle.AlwaysOnTop = false
+                            boxhandle.Color3 = visible
+                            boxhandle.Transparency = 1-transparency
+                            boxhandle.Visible = true
+                            boxhandle.ZIndex = 1
+                        end
+                    end
+                    self.chams = chams
+                end
+
+                log(LOG_DEBUG, "Player ESP: Now Alive ", self.player.Name)
+            end
+
+            function player_meta:Rebuild()
+                self:Destroy(true)
+                self.alive = false
+            end
+
+            function player_meta:Destroy(forced)
+                self.timesdestroyed = self.timesdestroyed + 1
+                self.parts = nil
+                if self.chams then
+                    for i=1, #self.chams do
+                        local v = self.chams[i]
+                        if v[2] then
+                            v[2]:Destroy()
+                        end
+                    end
+                    self.chams = nil
+                end
+                if self.container then
+                    self.container:Destroy()
+                    self.container = nil
+                end
+                log(LOG_DEBUG, "Player ESP: Died ", self.player.Name)
+            end
+        end
+
+        function esp:CreatePlayer(player, controller)
+            local uid = "PLAYER_" .. player.UserId
+            local esp_controller = setmetatable({
+                uniqueid = uid,
+                player = player,
+                players = players,
+                controller = controller,
+                parent = workspace.Players,
+                timesdestroyed = 0,
+            }, self.player_meta)
+            self:Remove(uid)
+            self:Add(esp_controller)
+
+            log(LOG_DEBUG, "Player ESP: Created ", player.Name)
+            return esp_controller
+        end
+
+        hook:Add("PostInitialize", "BBOT:ESP.Players.Load", function()
+            for player, controller in pairs(player_registry) do
+                if controller.updater and player ~= localplayer then
+                    esp:CreatePlayer(player, controller.updater)
+                end
+            end
+
+            timer:Create("esp.checkplayers", 5, 0, function()
+                for player, controller in pairs(player_registry) do
+                    if controller.updater and player ~= localplayer and not esp:Find("PLAYER_" .. player.UserId) then
+                        esp:CreatePlayer(player, controller.updater)
+                    end
+                end
+            end)
+
+            hook:Add("PlayerAdded", "BBOT:ESP.Players", function(player)
+                timer:Create("BBOT:ESP.Players."..player.UserId, 1, 0, function()
+                    if not player_registry[player] or not player_registry[player].updater then return end
+                    timer:Remove("BBOT:ESP.Players."..player.UserId)
+                    esp:CreatePlayer(player, player_registry[player].updater)
+                end)
+            end)
+
+            hook:Add("PlayerRemoving", "BBOT:ESP.Players", function(player)
+                timer:Remove("BBOT:ESP.Players."..player.UserId)
+            end)
+
+            hook:Add("CreateUpdater", "BBOT:ESP.Players", function(player)
+                if player_registry[player] and player_registry[player].updater then
+                    timer:Remove("BBOT:ESP.Players."..player.UserId)
+                    esp:CreatePlayer(player, player_registry[player].updater)
+                end
+            end)
+        end)
     end
 
     -- Will make examples...
