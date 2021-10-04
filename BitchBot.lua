@@ -8798,7 +8798,7 @@ do
                 assist_prediction_outline.Visible = assist_prediction.Visible
                 assist_prediction.Position = trigger_position
                 assist_prediction_outline.Position = assist_prediction.Position
-                local radi = 300*(char.unaimedfov/camera.FieldOfView)/magnitude
+                local radi = 325*(char.unaimedfov/camera.FieldOfView)/magnitude
                 assist_prediction.Radius = radi
                 assist_prediction_outline.Radius = radi
             
