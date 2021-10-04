@@ -22,6 +22,13 @@ end
 local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "¯\\_(?)_/¯", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
+while true do
+    if game:IsLoaded() then
+        break
+    end;
+    wait(2)
+end
+
 -- This should always start before hand, this module is responsible for debugging
 -- Example usage: BBOT.log(LOG_NORMAL, "How do I even fucking make this work?")
 do
