@@ -29,10 +29,10 @@ do
     -- note: this is disabled due to problems with synapse's second console being all fucky wucky
     local _rconsoleprint = rconsoleprint
     local rconsoleprint = function() end
-    if BBOT.username == "dev" then
+    --[[if BBOT.username == "dev" then
         rconsoleclear()
         rconsoleprint = _rconsoleprint
-    end
+    end]]
 
     log.async_registery = {}
     local printingvaluetypes = {
@@ -1931,6 +1931,7 @@ do
         if config:GetValue("Main", "Settings", "Configs", "Auto Load Config") then
             local file = config:GetValue("Main", "Settings", "Configs", "Autoload File")
             BBOT.log(LOG_NORMAL, "Autoloading config -> " .. file)
+            BBOT.notification:Create("Auto loaded config: " .. file)
             config:Open(file)
         end
     end)
@@ -5440,7 +5441,25 @@ do
 
     hook:Add("Initialize", "BBOT:Menu", function()
         menu:Initialize()
+
+        if BBOT.game == "pf" then
+            local userinputservice = BBOT.service:GetService("UserInputService")
+            hook:Add("RenderStepped", "BBOT:Menu.MouseBehavior", function()
+                if main:GetEnabled() then
+                    if BBOT.aux and BBOT.aux.char and BBOT.aux.char.alive then
+                        userinputservice.MouseBehavior = Enum.MouseBehavior.Default
+                    end
+                else
+                    if BBOT.aux and BBOT.aux.char and BBOT.aux.char.alive then
+                        userinputservice.MouseBehavior = Enum.MouseBehavior.LockCenter
+                    else
+                        userinputservice.MouseBehavior = Enum.MouseBehavior.Default
+                    end
+                end
+            end)
+        end
     end)
+
 
     menu.mouse = gui:Create("Mouse")
     menu.mouse:SetVisible(true)
@@ -7250,10 +7269,12 @@ do
                                             name = "Save",
                                             confirm = "Are you sure?",
                                             callback = function()
-                                                BBOT.config:Save(BBOT.config:GetValue("Main", "Settings", "Configs", "Config Name"))
+                                                local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Configs")
+                                                BBOT.config:Save(s)
                                                 local configs = BBOT.config:Discover()
                                                 BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
                                                 menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+                                                BBOT.notification:Create("Saved config: " .. s)
                                             end
                                         },
                                         {
@@ -7261,12 +7282,15 @@ do
                                             name = "Load",
                                             confirm = "Are you sure?",
                                             callback = function()
-                                                BBOT.config:Open(BBOT.config:GetValue("Main", "Settings", "Configs", "Configs"))
-                                                BBOT.config:SetValue(BBOT.config:GetValue("Main", "Settings", "Configs", "Configs"), "Main", "Settings", "Configs", "Config Name")
-                                                BBOT.config:SetValue(BBOT.config:GetValue("Main", "Settings", "Configs", "Configs"), "Main", "Settings", "Configs", "Autosave File")
+                                                local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Configs")
+                                                BBOT.config:Open(s)
+                                                BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Config Name")
+                                                BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autosave File")
+                                                BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autoload File")
                                                 local configs = BBOT.config:Discover()
                                                 BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
                                                 menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+                                                BBOT.notification:Create("Loaded config: " .. s)
                                             end
                                         },
                                         {
