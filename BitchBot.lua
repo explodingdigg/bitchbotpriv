@@ -6515,11 +6515,11 @@ do
                                     },
                                 },
                                 {
-                                    name = "ESP Settings",
+                                    name = {"ESP Settings", "Crosshair"},
                                     pos = UDim2.new(0,0,11/20,4),
                                     size = UDim2.new(.5,-4,9/20,-4),
                                     type = "Panel",
-                                    content = {
+                                    {content = {
                                         {
                                             type = "Slider",
                                             name = "Max HP Visibility Cap",
@@ -6592,7 +6592,63 @@ do
                                                 }
                                             },
                                         },
-                                    },
+                                    }},
+                                    {content={
+                                        {
+                                            name = {"Basic", "Advanced"},
+                                            pos = UDim2.new(0,0,0,0),
+                                            size = UDim2.new(1,0,1,0),
+                                            {content={
+                                                {
+                                                    type = "Toggle",
+                                                    name = "Enabled",
+                                                    value = false,
+                                                    extra = {
+                                                        {
+                                                            type = "ColorPicker",
+                                                            name = "Outter",
+                                                            color = { 0, 0, 0, 255 },
+                                                        },
+                                                        {
+                                                            type = "ColorPicker",
+                                                            name = "Inner",
+                                                            color = { 127, 72, 163, 255 },
+                                                        },
+                                                    },
+                                                },
+                                                {
+                                                    type = "ComboBox",
+                                                    name = "Setup",
+                                                    values = {{"Top",true},{"Bottom",true},{"Left",true},{"Right",true},{"Center",true}}
+                                                },
+                                                {
+                                                    type = "Slider",
+                                                    name = "Width",
+                                                    value = 2,
+                                                    min = 1,
+                                                    max = 200,
+                                                    suffix = "px",
+                                                },
+                                                {
+                                                    type = "Slider",
+                                                    name = "Height",
+                                                    value = 15,
+                                                    min = 1,
+                                                    max = 200,
+                                                    suffix = "px",
+                                                },
+                                                {
+                                                    type = "Slider",
+                                                    name = "Gap",
+                                                    value = 25,
+                                                    min = 0,
+                                                    max = 200,
+                                                    suffix = "px",
+                                                },
+                                            }},
+                                            {content={}},
+                                        }
+                                    }}
                                 },
                                 {
                                     name = {"Camera Visuals", "Viewmodel"},
@@ -8303,6 +8359,7 @@ do
     local char = BBOT.aux.char
     local hud = BBOT.aux.hud
     local physics = BBOT.aux.physics
+    local log = BBOT.log
     local draw = BBOT.draw
     local replication = BBOT.aux.replication
     local raycast = BBOT.aux.raycast
@@ -8837,13 +8894,260 @@ do
         self:RedirectionStep(gun)
     end
 
+    do -- Crosshair
+        --draw:Box(x, y, w, h, thickness, color, transparency, visible)
+        local crosshair_objects = {
+            center_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            top_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            bottom_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            left_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            right_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            center = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            top = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            bottom = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            left = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            right = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+        }
+
+        hook:Add("OnConfigChanged", "BBOT:Crosshair.Changed", function(steps, old, new)
+            if config:IsPathwayEqual(steps, "Main", "Visuals", "Crosshair", "Basic") then
+                local enabled = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled")
+                local inner, inner_transparency = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled", "Inner")
+                local outter, outter_transparency = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled", "Outter")
+                local width = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Width")
+                local height = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Height")
+                if not enabled then
+                    for k, v in pairs(crosshair_objects) do
+                        v.Visible = false
+                    end
+                else
+                    for k, v in pairs(crosshair_objects) do
+                        if string.find(k, "outline", 1, true) then
+                            v.Color = outter
+                            v.Transparency = outter_transparency
+                        else
+                            v.Color = inner
+                            v.Transparency = inner_transparency
+                        end
+                    end
+
+                    local setup = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Setup")
+                    crosshair_objects.center.Visible = setup.Center
+                    crosshair_objects.top.Visible = setup.Top
+                    crosshair_objects.bottom.Visible = setup.Bottom
+                    crosshair_objects.left.Visible = setup.Left
+                    crosshair_objects.right.Visible = setup.Right
+
+                    crosshair_objects.center_outline.Visible = setup.Center
+                    crosshair_objects.top_outline.Visible = setup.Top
+                    crosshair_objects.bottom_outline.Visible = setup.Bottom
+                    crosshair_objects.left_outline.Visible = setup.Left
+                    crosshair_objects.right_outline.Visible = setup.Right
+
+                    crosshair_objects.center.Size = Vector2.new(2, 2)
+                    crosshair_objects.top.Size = Vector2.new(width, height)
+                    crosshair_objects.bottom.Size = Vector2.new(width, height)
+                    crosshair_objects.left.Size = Vector2.new(height, width)
+                    crosshair_objects.right.Size = Vector2.new(height, width)
+
+                    width, height = width+2, height+2
+                    crosshair_objects.center_outline.Size = Vector2.new(2+2, 2+2)
+                    crosshair_objects.top_outline.Size = Vector2.new(width, height)
+                    crosshair_objects.bottom_outline.Size = Vector2.new(width, height)
+                    crosshair_objects.left_outline.Size = Vector2.new(height, width)
+                    crosshair_objects.right_outline.Size = Vector2.new(height, width)
+                end
+            end
+        end)
+
+        function aimbot:CrosshairStep(delta, gun)
+            if not config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled") then return end
+            local positionoverride
+            if gun then
+                local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+                if part then
+                    for k, v in pairs(crosshair_objects) do
+                        v.Visible = false
+                    end
+
+                    local raycastdata = self:raycastbullet(camera.CFrame.Position,part.CFrame.Position-camera.CFrame.Position)
+                    if raycastdata and raycastdata.Position then
+                        local point, onscreen = camera:WorldToViewportPoint(raycastdata.Position)
+                        if onscreen then
+                            positionoverride = point
+                        end
+                    else
+                        raycastdata = self:raycastbullet(part.CFrame.Position,part.CFrame.LookVector * 10000)
+                        if raycastdata and raycastdata.Position then
+                            local point, onscreen = camera:WorldToViewportPoint(raycastdata.Position)
+                            if onscreen then
+                                positionoverride = point
+                            end
+                        else
+                            local point, onscreen = camera:WorldToViewportPoint(part.CFrame.Position + part.CFrame.LookVector * 10000)
+                            if onscreen then
+                                positionoverride = point
+                            end
+                        end
+                    end
+                    if positionoverride then
+                        for k, v in pairs(crosshair_objects) do
+                            v.Visible = true
+                        end
+                    end
+                end
+            end
+
+            local setup = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Setup")
+            local gap = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Gap")
+
+            local addrot = 0
+            --[[if config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Enable") then
+                local type = config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Type")
+                if type == "Wave" then
+                    addrot = math.sin(config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Speed") * tick()) * config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Amplitude")
+                else
+                    addrot = lastrot + config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Speed") * DeltaTime
+                    if addrot > config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Max") then
+                        addrot = addrot - config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Max")
+                        addrot = addrot + config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Min")
+                    end
+                    lastrot = addrot
+                end
+            end]]
+            
+            local rot = 0 + addrot
+            local rad = math.rad(rot)
+            local cs, sn = math.cos(rad), math.sin(rad)
+            local outline_vec = Vector2.new(1,1)
+            
+            if setup.Center then
+                local part = crosshair_objects.center
+                local part_outline = crosshair_objects.center_outline
+                if positionoverride then
+                    part.Position = Vector2.new(positionoverride.x-part.Size.X/2,positionoverride.y-part.Size.Y/2)
+                else
+                    part.Position = (camera.ViewportSize/2) + Vector2.new(-part.Size.X/2,-part.Size.Y/2)
+                end
+                part_outline.Position = part.Position-outline_vec
+                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot
+            elseif crosshair_objects.center_outline.Visible then
+                crosshair_objects.center.Visible = false
+                crosshair_objects.center_outline.Visible = false
+            end
+            
+            local addgap = 0
+            --[[if config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Enable") then
+                local type = config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Type")
+                if type == "Wave" then
+                    addgap = math.sin(config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Speed") * tick()) * config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Amplitude")
+                else
+                    addgap = lastgap + config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Speed") * DeltaTime
+                    if addgap > config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Max") then
+                        addgap = addgap - config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Max")
+                        addgap = addgap + config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Min")
+                    end
+                    lastgap = addgap
+                end
+            end]]
+            
+            gap = gap + addgap
+            
+            if setup.Top then
+                local part = crosshair_objects.top
+                local part_outline = crosshair_objects.top_outline
+                local gapx = 0 * cs - (-gap) * sn;
+                local gapy = 0 * sn + (-gap) * cs;
+            
+                if positionoverride then
+                    part.Position = Vector2.new(positionoverride.x+gapx-part.Size.X/2,positionoverride.y+gapy-part.Size.Y/2)
+                else
+                    part.Position = (camera.ViewportSize/2) + Vector2.new(gapx-part.Size.X/2,gapy-part.Size.Y/2)
+                end
+                part_outline.Position = part.Position-outline_vec
+                
+                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot
+            elseif crosshair_objects.top_outline.Visible then
+                crosshair_objects.top.Visible = false
+                crosshair_objects.top_outline.Visible = false
+            end
+            
+            if setup.Bottom then
+                local part = crosshair_objects.bottom
+                local part_outline = crosshair_objects.bottom_outline
+                local gapx = 0 * cs - (gap) * sn;
+                local gapy = 0 * sn + (gap) * cs;
+            
+                if positionoverride then
+                    part.Position = Vector2.new(positionoverride.x+gapx-part.Size.X/2,positionoverride.y+gapy-part.Size.Y/2)
+                else
+                    part.Position = (camera.ViewportSize/2) + Vector2.new(gapx-part.Size.X/2,gapy-part.Size.Y/2)
+                end
+                part_outline.Position = part.Position-outline_vec
+                
+                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot - 180
+            elseif crosshair_objects.bottom_outline.Visible then
+                crosshair_objects.bottom.Visible = false
+                crosshair_objects.bottom_outline.Visible = false
+            end
+            
+            if setup.Left then
+                local part = crosshair_objects.left
+                local part_outline = crosshair_objects.left_outline
+                local gapx = (-gap) * cs - 0 * sn;
+                local gapy = (-gap) * sn + 0 * cs;
+            
+                if positionoverride then
+                    part.Position = Vector2.new(positionoverride.x+gapx-part.Size.X/2,positionoverride.y+gapy-part.Size.Y/2)
+                else
+                    part.Position = (camera.ViewportSize/2) + Vector2.new(gapx-part.Size.X/2,gapy-part.Size.Y/2)
+                end
+                part_outline.Position = part.Position-outline_vec
+                
+                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot - 90
+            elseif crosshair_objects.left_outline.Visible then
+                crosshair_objects.left.Visible = false
+                crosshair_objects.left_outline.Visible = false
+            end
+            
+            if setup.Right then
+                local part = crosshair_objects.right
+                local part_outline = crosshair_objects.right_outline
+                local gapx = (gap) * cs - 0 * sn;
+                local gapy = (gap) * sn + 0 * cs;
+            
+                if positionoverride then
+                    part.Position = Vector2.new(positionoverride.x+gapx-part.Size.X/2,positionoverride.y+gapy-part.Size.Y/2)
+                else
+                    part.Position = (camera.ViewportSize/2) + Vector2.new(gapx-part.Size.X/2,gapy-part.Size.Y/2)
+                end
+                part_outline.Position = part.Position-outline_vec
+                
+                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot + 90
+            elseif crosshair_objects.right_outline.Visible then
+                crosshair_objects.right.Visible = false
+                crosshair_objects.right_outline.Visible = false
+            end
+        end
+    end
+
+    local t = 0
+    hook:Add("RenderStep.Last", "BBOT:Aimbot.CrosshairStep", function(DeltaTime)
+        if gamelogic.currentgun and gamelogic.currentgun.data and gamelogic.currentgun.data.bulletspeed then return end
+        t = tick()
+        aimbot:CrosshairStep(DeltaTime)
+    end)
+
     -- Do aimbot stuff here
     hook:Add("PreFireStep", "BBOT:Aimbot.Calculate", function(gun)
+        aimbot:CrosshairStep(tick()-t, gun)
+
         if aimbot:GetRageConfig("Enabled") then
             aimbot:RageStep(gun)
         else
             aimbot:LegitStep(gun)
         end
+        t = tick()
     end)
 
     -- If the aimbot stuff before is persistant, use this to restore
