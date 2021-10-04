@@ -8578,7 +8578,7 @@ do
                     if not (fov <= object_fov or dzFov >= object_fov) then
                         local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
                         if not ((not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos)) then
-                            table.insert(organizedPlayers, {v, part, point})
+                            table.insert(organizedPlayers, {v, part, point, prioritize})
                             inserted_priority = true
                         end
                     end
@@ -8596,7 +8596,7 @@ do
                     if fov <= object_fov or dzFov >= object_fov then continue end
                     local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
                     if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
-                    table.insert(organizedPlayers, {v, part, point})
+                    table.insert(organizedPlayers, {v, part, point, name})
                 end
             end
         end
@@ -8855,7 +8855,7 @@ do
                 assist_prediction_outline.Visible = assist_prediction.Visible
                 assist_prediction.Position = trigger_position
                 assist_prediction_outline.Position = assist_prediction.Position
-                local radi = 325*(char.unaimedfov/camera.FieldOfView)/magnitude
+                local radi = (target[4] == "Body" and 600 or 350)*(char.unaimedfov/camera.FieldOfView)/magnitude
                 assist_prediction.Radius = radi
                 assist_prediction_outline.Radius = radi
             
