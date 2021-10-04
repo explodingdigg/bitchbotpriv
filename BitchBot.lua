@@ -10,6 +10,9 @@
     They tend to... Crash... A lot...
     Reloading is still fine thought...
 ]]
+if not(game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459) then
+    return
+end
 
 local _BBOT = _G.BBOT
 local username = (BBOT and BBOT.username or nil)
@@ -1160,14 +1163,7 @@ do
                             c = c + 1
                         end
                     else
-                        local errlog = BBOT.stringExplode("\n", err, false)
-                        log(LOG_ERROR, "Error in timer library! - ", errlog[1])
-                        log(LOG_ANON, "Traceback,")
-                        if #errlog > 1 then
-                            for i=2, #errlog do
-                                log(LOG_ANON, errlog[i])
-                            end
-                        end
+                        log(LOG_ERROR, "Error in timer library! - ", err)
                         table.remove(timers, i-c)
                         c = c + 1
                     end
@@ -7217,7 +7213,92 @@ do
                             pos = UDim2.new(0,0,0,0),
                             size = UDim2.new(1,0,1,0),
                             type = "Container",
-                            content = {},
+                            content = {
+                                {
+                                    name = {"Movement", "Tweaks"},
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(.5,-4,5.5/10,-4),
+                                    type = "Panel",
+                                    {content = {}},
+                                    {content = {}},
+                                },
+                                {
+                                    name = {"Server Hopper", "VoteKick"},
+                                    pos = UDim2.new(0,0,5.5/10,4),
+                                    size = UDim2.new(.5,-4,1-(5.5/10),-4),
+                                    type = "Panel",
+                                    {content = {
+                                        {
+                                            type = "Toggle",
+                                            name = "Enabled",
+                                            value = false,
+                                            tooltip = "This will auto-hop you to your desired servers when kicked."
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Hop Delay",
+                                            min = 0,
+                                            max = 20,
+                                            suffix = "s",
+                                            decimal = 1,
+                                            value = 0,
+                                            custom = {
+                                                [0] = "Instantaneous Hop",
+                                            },
+                                            tooltip = "Delays server hopper by a certain amount of seconds."
+                                        },
+                                        {
+                                            type = "DropBox",
+                                            name = "Sorting",
+                                            value = 1,
+                                            values = {"Lowest Players", "Highest Players"},
+                                        },
+                                        {
+                                            type = "Button",
+                                            name = "Get JobId",
+                                            confirm = "Are you sure?",
+                                            clicked = "Copied to clipboard!",
+                                            callback = function()
+                                                setclipboard(game.JobId)
+                                            end
+                                        },
+                                        {
+                                            type = "Button",
+                                            name = "Clear Blacklist",
+                                            confirm = "Are you sure 100%?",
+                                            tooltip = "This will clear the server blacklist, careful as this would mean you may join votekicked servers!",
+                                            callback = function()
+                                                BBOT.serverhopper:ClearBlacklist()
+                                            end
+                                        },
+                                        {
+                                            type = "Button",
+                                            name = "Rejoin",
+                                            confirm = "Are you sure?",
+                                            callback = function()
+                                                BBOT.serverhopper:Hop(game.JobId)
+                                            end
+                                        },
+                                        {
+                                            type = "Button",
+                                            name = "Hop",
+                                            confirm = "Are you sure?",
+                                            callback = function()
+                                                BBOT.serverhopper:RandomHop()
+                                            end
+                                        },
+                                    }},
+                                    {content = {}},
+                                },
+                                {
+                                    name = {"Extra", "Exploits"},
+                                    pos = UDim2.new(.5,4,0,0),
+                                    size = UDim2.new(.5,-4,1,0),
+                                    type = "Panel",
+                                    {content = {}},
+                                    {content = {}},
+                                },
+                            },
                         },
                         {
                             name = "Settings",
@@ -7920,6 +8001,7 @@ do
             end
             message ..= tostring(args[#args])
             BBOT.log(LOG_WARN, "Framework Internal Message -> " .. message)
+            hook:Call("InternalMessage", message)
         end
     end)
     
@@ -8295,7 +8377,7 @@ end
             votekick.autohopping = true
             log(LOG_NORMAL, "WARNING: Hopping in " .. (10+(t > 0 and t or 0)) .. " seconds")
             timer:Simple(10+(t > 0 and t or 0), function()
-                BBOT.serverhop:RandomHop()
+                BBOT.serverhopper:RandomHop()
             end)
         end
     end)
@@ -8306,29 +8388,31 @@ end
         end
     end)
 end
-
--- Server-Hopper, redirects and moves the user to other server instances (Conversion In Progress)
+]=]
+-- Server Hopper, redirects and moves the user to other server instances (Conversion In Progress)
 -- Votekick-blacklist (prevents user from joining voted out servers)
 do
     local config = BBOT.config
     local hook = BBOT.hook
     local votekick = BBOT.votekick
     local log = BBOT.log
+    local timer = BBOT.timer
+    local notification = BBOT.notification
     local TeleportService = game:GetService("TeleportService")
     local localplayer = BBOT.service:GetService("LocalPlayer")
     local httpservice = BBOT.service:GetService("HttpService")
-    local serverhop = {}
-    BBOT.serverhop = serverhop
+    local serverhopper = {}
+    BBOT.serverhopper = serverhopper
 
-    serverhop.file = "bitchbot/votedoff-servers.txt"
-    serverhop.blacklist = {}
-    serverhop.UserId = tostring(localplayer.UserId)
+    serverhopper.file = "bitchbot/votedoff-servers.txt"
+    serverhopper.blacklist = {}
+    serverhopper.UserId = tostring(localplayer.UserId)
 
-    hook:Add("FullyLoaded", "LoadServer-Hop", function()
-        if isfile(serverhop.file) then
-            serverhop.blacklist = httpservice:JSONDecode(readfile(serverhop.file))
+    hook:Add("PostInitialize", "BBOT:ServerHopper.Load", function()
+        if isfile(serverhopper.file) then
+            serverhopper.blacklist = httpservice:JSONDecode(readfile(serverhopper.file))
             local otime = os.time()
-            for _, userblacklist in pairs(serverhop.blacklist) do
+            for _, userblacklist in pairs(serverhopper.blacklist) do
                 for k, v in pairs(userblacklist) do
                     if otime > v then
                         userblacklist[k] = nil
@@ -8336,8 +8420,8 @@ do
                     end
                 end
             end
-            writefile(serverhop.file, httpservice:JSONEncode(serverhop.blacklist))
-            local plbllist = serverhop.blacklist[serverhop.UserId]
+            writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+            local plbllist = serverhopper.blacklist[serverhopper.UserId]
             if plbllist then
                 local c = 0
                 for k, v in pairs(plbllist) do
@@ -8345,73 +8429,84 @@ do
                 end
                 --BBOT.chat:Message("You have been votekicked from " .. c .. " server(s)!")
                 log(LOG_NORMAL, "You have been votekicked from " .. c .. " server(s)!")
+                notification:Create("You have been votekicked from " .. c .. " server(s)!")
             end
         end
     end)
 
-    function serverhop:IsBlacklisted(id)
-        local plbllist = serverhop.blacklist[self.UserId]
+    function serverhopper:ClearBlacklist()
+        serverhopper.blacklist = {}
+        writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+        notification:Create("Server hop blacklist cleared!")
+    end
+
+    function serverhopper:IsBlacklisted(id)
+        local plbllist = serverhopper.blacklist[self.UserId]
         if plbllist and plbllist[id] then
             return true
         end
     end
 
-    function serverhop:RandomHop()
-        log(LOG_NORMAL, "Commencing Server-Hop...")
-        local data = httpservice:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100")).data
-        local mode = config:GetValue("Misc", "Exploits", "Server-Hopper", "Sort By")
-        if mode == "Lowest Ping" then
-            table.sort(data, function(a, b) return a.ping < b.ping end)
-        elseif mode == "Highest Ping" then
-            table.sort(data, function(a, b) return a.ping > b.ping end)
-        elseif mode == "Highest Players" then
-            table.sort(data, function(a, b) return a.playing > b.playing end)
-        elseif mode == "Lowest Players" then
-            table.sort(data, function(a, b) return a.playing < b.playing end)
+    function serverhopper:RandomHop()
+        local delay = config:GetValue("Main", "Misc", "Server Hopper", "Hop Delay")
+        if delay > 0 then
+            notification:Create("Hopping in " .. delay .. "s")
         end
-        for _, s in pairs(data) do
-            if not serverhop:IsBlacklisted(s.id) and s.id ~= game.JobId then
-                if s.playing ~= s.maxPlayers then
-                    log(LOG_NORMAL, "Hopping to server Id: " .. s.id .. "; Players: " .. s.playing .. "/" .. s.maxPlayers .. "; " .. s.ping .. " ms")
-                    --syn.queue_on_teleport(<string> code)
-                    TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id)
-                    return
+        timer:Simple(delay, function()
+            log(LOG_NORMAL, "Commencing Server-Hop...")
+            local data = httpservice:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100")).data
+            local mode = config:GetValue("Main", "Misc", "Server Hopper", "Sort By")
+            if mode == "Highest Players" then
+                table.sort(data, function(a, b) return a.playing > b.playing end)
+            elseif mode == "Lowest Players" then
+                table.sort(data, function(a, b) return a.playing < b.playing end)
+            end
+            for _, s in pairs(data) do
+                if not serverhopper:IsBlacklisted(s.id) and s.id ~= game.JobId then
+                    if s.playing ~= s.maxPlayers then
+                        --syn.queue_on_teleport(<string> code)
+                        log(LOG_NORMAL, "Hopping to server Id: " .. s.id .. "; Players: " .. s.playing .. "/" .. s.maxPlayers .. "; " .. s.ping .. " ms")
+                        notification:Create("Hopping to server Id '" .. s.id .. "' -> Players: " .. s.playing .. "/" .. s.maxPlayers)
+                        timer:Simple(1, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id) end)
+                        return
+                    end
                 end
             end
-        end
-        log(LOG_ERROR, "No servers to hop towards... Wow... You really got votekicked off every server now did ya? Impressive...")
+            log(LOG_ERROR, "No servers to hop towards... Wow... You really got votekicked off every server now did ya? Impressive...")
+        end)
     end
 
-    function serverhop:AddToBlacklist(id, removaltime)
+    function serverhopper:AddToBlacklist(id, removaltime)
         local plbllist = self.blacklist[self.UserId]
         if not plbllist then
             plbllist = {}
             self.blacklist[self.UserId] = plbllist
         end
         plbllist[id] = (removaltime and removaltime + os.time() or -1)
+        writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+        log(LOG_NORMAL, "Added " .. game.JobId .. " to server-hop blacklist")
+        notification:Create("Added " .. game.JobId .. " to server-hop blacklist")
     end
 
-    function serverhop:Hop(id)
+    function serverhopper:Hop(id)
         log(LOG_NORMAL, "Hopping to server " .. id)
-        if serverhop:IsBlacklisted(id) then
-            log(LOG_ERROR, "This server ID is blacklisted! Where you votekicked from here?")
+        if serverhopper:IsBlacklisted(id) then
+            log(LOG_NORMAL, "This server ID is blacklisted! Where you votekicked from here?")
+            notification:Create("This server Id (" .. id .. ") is blacklisted! Where you votekicked from here?")
             return
         end
         TeleportService:TeleportToPlaceInstance(game.PlaceId, id)
     end
 
-    hook:Add("EndVoteKick", "Server-Hopper", function(target, delay, required, successful)
-        if target == localplayer.Name and successful then
-            if not serverhop:IsBlacklisted(game.JobId) then
-                serverhop:AddToBlacklist(game.JobId, 86400)
-                log(LOG_NORMAL, "Added " .. game.JobId .. " to server-hop blacklist")
-                writefile(serverhop.file, httpservice:JSONEncode(serverhop.blacklist))
-            end
-            if not config:GetValue("Misc", "Exploits", "Server-Hopper", "Enable") then return end
-            serverhop:RandomHop()
+    hook:Add("InternalMessage", "BBOT:ServerHopper.HopOnKick", function(message)
+        if not string.find(message, "Server Kick Message:", 1, true) then return end
+        if not config:GetValue("Main", "Misc", "Server Hopper", "Enable") then return end
+        if not serverhopper:IsBlacklisted(game.JobId) then
+            serverhopper:AddToBlacklist(game.JobId, 86400)
         end
+        serverhopper:RandomHop()
     end)
-end]=]
+end
 
 -- Aimbot (Conversion In Progress)
 -- Knife Aura
