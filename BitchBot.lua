@@ -29,10 +29,10 @@ do
     -- note: this is disabled due to problems with synapse's second console being all fucky wucky
     local _rconsoleprint = rconsoleprint
     local rconsoleprint = function() end
-    if BBOT.username == "dev" then
+    --[[if BBOT.username == "dev" then
         rconsoleclear()
         rconsoleprint = _rconsoleprint
-    end
+    end]]
 
     log.async_registery = {}
     local printingvaluetypes = {
@@ -223,6 +223,7 @@ do
                 log.menu_display(white, "[", green, "System", white, "] ", unpack(makereadable(unpack(v[2]))))
             elseif v[1] == 3 then
                 local text = valuetoprintable(unpack(v[2]))
+                local rconsoleprint = _rconsoleprint
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('[')
                 rconsoleprint('@@MAGENTA@@')
@@ -249,6 +250,7 @@ do
                 log.menu_display(white, "[", green, "System", white, "] ", "[", blue, "DEBUG", white, "] ", unpack(makereadable(unpack(v[2]))))
             elseif v[1] == 5 then
                 local text = valuetoprintable(unpack(v[2]))
+                local rconsoleprint = _rconsoleprint
                 rconsoleprint('@@WHITE@@')
                 rconsoleprint('[')
                 rconsoleprint('@@MAGENTA@@')
@@ -5916,7 +5918,7 @@ do
                         {
                             type = "Toggle",
                             name = "Use Barrel",
-                            value = true,
+                            value = false,
                             tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
                         },
                         {
