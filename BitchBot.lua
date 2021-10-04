@@ -1418,20 +1418,6 @@ do
     -- -1 is friendly, > 0 is priority
     config.priority = {}
 
-    hook:Add("PreInitialize", "BBOT:ConfigSetup", function()
-        config.storage_pathway = "bitchbot/" .. BBOT.game
-        config.storage_main = "bitchbot"
-        config.storage_extension = ".bb"
-
-        if not isfolder(config.storage_pathway) then
-            makefolder(config.storage_pathway)
-        end
-
-        if not isfolder(config.storage_main) then
-            makefolder(config.storage_main)
-        end
-    end)
-
     do -- key binds
         local enums = Enum.KeyCode:GetEnumItems()
         local enumstable, enumtoID, IDtoenum = {}, {}, {}
@@ -1718,10 +1704,6 @@ do
         self.registry = reg
     end
 
-    hook:Add("PreInitialize", "BBOT:config.setup", function()
-        config:Setup(BBOT.configuration)
-    end)
-
     function config:GetTableValue(tbl, ...)
         local steps = {...}
         for i=1, #steps do
@@ -1905,7 +1887,7 @@ do
     end
 
     function config:OpenBase()
-        local path = config.storage_main .. "/configs" .. self.storage_extension
+        local path = self.storage_main .. "/configs" .. self.storage_extension
         if isfile(path) then
             local old = table.deepcopy(self.registry["Main"]["Settings"]["Configs"])
             local newconfig = httpservice:JSONDecode(readfile(path))
@@ -1931,7 +1913,27 @@ do
         end
     end)
 
-    hook:Add("PostInitialize", "BBOT:config.setup", function()
+    hook:Add("Menu.PostGenerate", "BBOT:config.setup", function()
+        local configs = BBOT.config:Discover()
+        BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+        BBOT.menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+    end)
+
+    hook:Add("PreInitialize", "BBOT:config.setup", function()
+        config.storage_pathway = "bitchbot/" .. BBOT.game
+        config.storage_main = "bitchbot"
+        config.storage_extension = ".bb"
+
+        if not isfolder(config.storage_pathway) then
+            makefolder(config.storage_pathway)
+        end
+
+        if not isfolder(config.storage_main) then
+            makefolder(config.storage_main)
+        end
+
+        config:Setup(BBOT.configuration)
+
         config:OpenBase()
         if config:GetValue("Main", "Settings", "Configs", "Auto Load Config") then
             local file = config:GetValue("Main", "Settings", "Configs", "Autoload File")
@@ -1939,12 +1941,6 @@ do
             BBOT.notification:Create("Auto loaded config: " .. file)
             config:Open(file)
         end
-    end)
-
-    hook:Add("Menu.PostGenerate", "BBOT:config.setup", function()
-        local configs = BBOT.config:Discover()
-        BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
-        BBOT.menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
     end)
 end
 
@@ -5304,7 +5300,23 @@ do
 
             local screensize = camera.ViewportSize
             local image = gui:Create("Image", intro)
-            image:SetImage(self.images[7])
+            local img = config:GetValue("Main", "Settings", "Cheat Settings", "Custom Menu Logo")
+            if img ~= "Bitch Bot" then
+                image:SetImage(menu.images[5])
+                if #img > 4 then
+                    thread:Create(function(img, image)
+                        local img = game:HttpGet("https://i.imgur.com/" .. img .. ".png")
+                        if img then
+                            image:SetImage(img)
+                        else
+                            image:SetImage(menu.images[8])
+                            BBOT.notification:Create("An error occured trying to get the menu logo!")
+                        end
+                    end, img, image)
+                end
+            else
+                image:SetImage(self.images[7])
+            end
             image:SetPos(0, 0, 0, 2)
             image:SetSize(1, 0, 1, -2)
 
@@ -5445,7 +5457,7 @@ do
         gui:TransparencyTo(main, 1, 0.2, 0, 0.25)
     end)
 
-    hook:Add("Initialize", "BBOT:Menu", function()
+    hook:Add("PostInitialize", "BBOT:Menu", function()
         menu:Initialize()
 
         if BBOT.game == "pf" then
@@ -5505,17 +5517,21 @@ do
             gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
         end
         if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Logo") then
-            image:SetImage(menu.images[5])
-            if #new > 4 then
-                thread:Create(function(img, image)
-                    local img = game:HttpGet("https://i.imgur.com/" .. img .. ".png")
-                    if img then
-                        image:SetImage(img)
-                    else
-                        image:SetImage(menu.images[8])
-                        BBOT.notification:Create("An error occured trying to get the menu logo!")
-                    end
-                end, new, image)
+            if new == "Bitch Bot" then
+                image:SetImage(menu.images[8])
+            else
+                image:SetImage(menu.images[5])
+                if #new > 4 then
+                    thread:Create(function(img, image)
+                        local img = game:HttpGet("https://i.imgur.com/" .. img .. ".png")
+                        if img then
+                            image:SetImage(img)
+                        else
+                            image:SetImage(menu.images[8])
+                            BBOT.notification:Create("An error occured trying to get the menu logo!")
+                        end
+                    end, new, image)
+                end
             end
         end
     end)
@@ -7359,8 +7375,9 @@ do
                                         {
                                             type = "Text",
                                             name = "Custom Menu Logo",
-                                            value = "qH0WziT",
+                                            value = "Bitch Bot",
                                             extra = {},
+                                            tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
                                         },
                                         {
                                             type = "Toggle",
@@ -8508,7 +8525,7 @@ do
 
     hook:Add("InternalMessage", "BBOT:ServerHopper.HopOnKick", function(message)
         if not string.find(message, "Server Kick Message:", 1, true) then return end
-        if not config:GetValue("Main", "Misc", "Server Hopper", "Enable") then return end
+        if not config:GetValue("Main", "Misc", "Server Hopper", "Enabled") then return end
         if not serverhopper:IsBlacklisted(game.JobId) then
             serverhopper:AddToBlacklist(game.JobId, 86400)
         end
