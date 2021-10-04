@@ -1518,7 +1518,7 @@ do
             for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
             return t
         end,
-        ["ColorPicker"] = function(reg) return Color3.fromRGB(unpack(reg.value)), reg.value[4] end,
+        ["ColorPicker"] = function(reg) return Color3.fromRGB(unpack(reg.value)), reg.value[4]/255 end,
     }
 
     function config:GetValue(...)
