@@ -8580,7 +8580,7 @@ do
 
     local partstosimple = {
         ["head"] = "Head",
-        ["rootpart"] = "Body",
+        ["torso"] = "Body",
         ["larm"] = "Arms",
         ["rarm"] = "Arms",
         ["lleg"] = "Legs",
@@ -8633,7 +8633,7 @@ do
             if hitscan_priority == "Head" then
                 prioritize = updater.gethead()
             elseif hitscan_priority == "Body" then
-                prioritize = replication.getbodyparts(v).rootpart
+                prioritize = replication.getbodyparts(v).torso
             end
 
             local inserted_priority
@@ -8905,7 +8905,7 @@ do
             if self:GetLegitConfig("Ballistics", "Drop Prediction") then
                 dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
             end
-            local trigger_position, onscreen = camera:WorldToViewportPoint(cam_position + dir)
+            local trigger_position, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
             if onscreen then
                 trigger_position = Vector2.new(trigger_position.X, trigger_position.Y)
                 assist_prediction.Visible = true
