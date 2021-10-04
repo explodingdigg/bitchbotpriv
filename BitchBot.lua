@@ -9163,7 +9163,7 @@ do
         end)
         
         local alive, curgun = false, false
-        hook:Add("PreCalculateCrosshair", "BBOT:Visuals.Aimbot.FOV", function(position_override)
+        hook:Add("PreCalculateCrosshair", "BBOT:Visuals.Aimbot.FOV", function(position_override, onscreen)
             local enabled = config:GetValue("Main", "Visuals", "FOV", "Enabled")
             position_override = Vector2.new(position_override.X, position_override.Y)
             local set = false
@@ -9205,6 +9205,17 @@ do
                     dzfov_outline.Position = dzfov.Position
                     aimbot.fov_circle_last.Position = position_override
                     aimbot.dzfov_circle_last.Position = position_override
+                    if onscreen then
+                        fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
+                        fov_outline.Visible = fov.Visible
+                        dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
+                        dzfov_outline.Visible = dzfov.Visible
+                    else
+                        fov.Visible = false
+                        fov_outline.Visible = fov.Visible
+                        dzfov.Visible = false
+                        dzfov_outline.Visible = dzfov.Visible
+                    end
                 else
                     local center = camera.ViewportSize/2
                     fov.Position = center
@@ -9218,6 +9229,13 @@ do
                     sfov.Position = position_override
                     sfov_outline.Position = sfov.Position
                     aimbot.sfov_circle_last.Position = position_override
+                    if onscreen then
+                        sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect")
+                        sfov_outline.Visible = sfov.Visible
+                    else
+                        sfov.Visible = false
+                        sfov_outline.Visible = sfov.Visible
+                    end
                 else
                     local center = camera.ViewportSize/2
                     sfov.Position = center
@@ -9326,13 +9344,14 @@ do
 
         local lastrot = 0
         function aimbot:CrosshairStep(delta, gun)
-            local positionoverride
+            local positionoverride, ondascreen
             if gun then
                 local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
                 if part then
                     for k, v in pairs(crosshair_objects) do
                         v.Visible = false
                     end
+                    ondascreen = false
 
                     local raycastdata = self:raycastbullet(camera.CFrame.Position,part.CFrame.Position-camera.CFrame.Position)
                     if raycastdata and raycastdata.Position then
@@ -9358,11 +9377,12 @@ do
                         for k, v in pairs(crosshair_objects) do
                             v.Visible = true
                         end
+                        ondascreen = true
                     end
                 end
             end
 
-            hook:Call("PreCalculateCrosshair", (positionoverride and positionoverride or (camera.ViewportSize/2)))
+            hook:Call("PreCalculateCrosshair", (positionoverride and positionoverride or (camera.ViewportSize/2)), ondascreen)
             if not config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled") then return end
 
             local setup = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Setup")
