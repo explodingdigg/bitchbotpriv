@@ -5402,6 +5402,7 @@ do
         alias:SetText(configuration.name)
 
         if configuration.name == "Bitch Bot" then
+            alias:SetText(config:GetValue("Main", "Settings", "Cheat Settings", "Custom Menu Name"))
             hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info.Main", function(steps, old, new)
                 if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Name") then
                     alias:SetText(new)
@@ -8868,7 +8869,7 @@ do
             if onscreen then
                 local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
                 local smoothing = smoothing_incrimental * 5 + 10
-                local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - mouse.Y - 36 + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
+                local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
                 Move_Mouse(inc)
             end
         end
