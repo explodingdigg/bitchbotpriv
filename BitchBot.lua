@@ -29,10 +29,10 @@ do
     -- note: this is disabled due to problems with synapse's second console being all fucky wucky
     local _rconsoleprint = rconsoleprint
     local rconsoleprint = function() end
-    --[[if BBOT.username == "dev" then
+    if BBOT.username == "dev" then
         rconsoleclear()
         rconsoleprint = _rconsoleprint
-    end]]
+    end
 
     log.async_registery = {}
     local printingvaluetypes = {
@@ -1916,10 +1916,10 @@ do
         end
     end
 
-    hook:Add("OnConfigChanged", "BBOT:config.autosave", function()
+    hook:Add("OnConfigChanged", "BBOT:config.autosave", function(steps)
         if config.Opening then return end
         config:SaveBase()
-        if config:GetValue("Main", "Settings", "Configs", "Auto Save Config") then
+        if config:GetValue("Main", "Settings", "Configs", "Auto Save Config") and not config:IsPathwayEqual(steps, "Main", "Settings", "Configs") then
             local file = config:GetValue("Main", "Settings", "Configs", "Autosave File")
             BBOT.log(LOG_NORMAL, "Autosaving config -> " .. file)
             config:Save(file)
@@ -5914,6 +5914,12 @@ do
                             tooltip = "Changes all FOV to change depending on the magnification."
                         },
                         {
+                            type = "Toggle",
+                            name = "Use Barrel",
+                            value = true,
+                            tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
+                        },
+                        {
                             type = "Slider",
                             name = "Start Smoothing",
                             value = 20,
@@ -6041,6 +6047,12 @@ do
                             type = "Toggle",
                             name = "Enabled",
                             value = false,
+                        },
+                        {
+                            type = "Toggle",
+                            name = "Use Barrel",
+                            value = true,
+                            tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
                         },
                         {
                             type = "Slider",
@@ -6665,7 +6677,37 @@ do
                                                     suffix = "px",
                                                 },
                                             }},
-                                            {content={}},
+                                            {content={
+                                                {
+                                                    type = "Toggle",
+                                                    name = "Enabled",
+                                                    value = false,
+                                                },
+                                                {
+                                                    type = "DropBox",
+                                                    name = "Type",
+                                                    value = 1,
+                                                    values = { "Additive", "Wave" },
+                                                },
+                                                {
+                                                    type = "Slider",
+                                                    name = "Speed",
+                                                    value = 20,
+                                                    min = -100,
+                                                    max = 100,
+                                                    custom = { [0] = "Nothing..." },
+                                                    suffix = "",
+                                                },
+                                                {
+                                                    type = "Slider",
+                                                    name = "Amplitude",
+                                                    value = 5,
+                                                    min = -100,
+                                                    max = 100,
+                                                    custom = { [0] = "Nothing..." },
+                                                    suffix = "",
+                                                },
+                                            }},
                                         }
                                     }}
                                 },
@@ -8562,7 +8604,7 @@ do
         return math.deg(ang.Magnitude)
     end
 
-    function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority)
+    function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority, scan_part)
         local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
         local cam_position = camera.CFrame.p
         local team = (localplayer.Team and localplayer.Team.Name or "NA")
@@ -8598,8 +8640,8 @@ do
                 local pos = prioritize.Position
                 local point, onscreen = camera:WorldToViewportPoint(pos)
                 if onscreen then
-                    local object_fov = self:GetFOV(part)
-                    if not (fov <= object_fov or dzFov >= object_fov) then
+                    --local object_fov = self:GetFOV(part, scan_part)
+                    if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) and (not dzFov or vector.dist2d(dzFov.Position, point) > dzFov.Radius) then
                         local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
                         if not ((not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos)) then
                             table.insert(organizedPlayers, {v, part, point, prioritize})
@@ -8616,8 +8658,8 @@ do
                     local pos = part.Position
                     local point, onscreen = camera:WorldToViewportPoint(pos)
                     if not onscreen then continue end
-                    local object_fov = self:GetFOV(part)
-                    if fov <= object_fov or dzFov >= object_fov then continue end
+                    --local object_fov = self:GetFOV(part, scan_part)
+                    if (fov and vector.dist2d(fov.Position, point) > fov.Radius) or (dzFov and vector.dist2d(dzFov.Position, point) < dzFov.Radius) then continue end
                     local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
                     if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
                     table.insert(organizedPlayers, {v, part, point, name})
@@ -8686,17 +8728,10 @@ do
 
             local hitscan_priority = self:GetLegitConfig("Aim Assist", "Hitscan Priority")
             local hitscan_points = self:GetLegitConfig("Aim Assist", "Hitscan Points")
-            local fov = self:GetLegitConfig("Aim Assist", "Aimbot FOV")
-            local dzFov = self:GetLegitConfig("Aim Assist", "Deadzone FOV")
+            local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+            local barrel_calc = self:GetLegitConfig("Aim Assist", "Use Barrel")
 
-            if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
-                fov = camera.FieldOfView / char.unaimedfov * fov
-                if dzFov ~= 0 then
-                    dzFov = camera.FieldOfView / char.unaimedfov * dzFov
-                end
-            end
-
-            local target = self:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority)
+            local target = self:GetLegitTarget(aimbot.fov_circle_last, aimbot.dzfov_circle_last, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
             if not target then return end
             self.mouse_target = target
             local position = target[2].Position
@@ -8772,19 +8807,15 @@ do
                 return
             end
 
-            local sFov = self:GetLegitConfig("Bullet Redirect", "Redirection FOV")
-            if self:GetLegitConfig("Aim Assist", "Dynamic FOV") then
-                sFov = camera.FieldOfView / char.unaimedfov * sFov
-            end
-
             local hitscan_priority = self:GetLegitConfig("Bullet Redirect", "Hitscan Priority")
             local hitscan_points = self:GetLegitConfig("Bullet Redirect", "Hitscan Points")
+            local barrel_calc = self:GetLegitConfig("Bullet Redirect", "Use Barrel")
+            local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
-            local target = self:GetLegitTarget(sFov, 0, hitscan_points, hitscan_priority)
+            local target = self:GetLegitTarget(aimbot.sfov_circle_last, nil, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
             if not target then return end
             self.redirection_target = target
             local position = target[2].Position
-            local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
             local part_pos = part.Position
 
             if self:GetLegitConfig("Ballistics", "Movement Prediction") then
@@ -8856,7 +8887,7 @@ do
             end
             if self:GetLegitConfig("Trigger Bot", "Trigger When Aiming") and (not isaiming or (tick() - aimtime < aim_percentage)) then return end
             local hitscan_points = self:GetLegitConfig("Trigger Bot", "Trigger Bot Hitboxes")
-            local target = self:GetLegitTarget(camera.FieldOfView / char.unaimedfov * 180, 0, hitscan_points)
+            local target = self:GetLegitTarget(nil, nil, hitscan_points)
             if not target then return end
             self.trigger_target = target
 
@@ -8929,6 +8960,7 @@ do
         fov.Filled = false
         fov_outline.Filled = false
         aimbot.fov_circle = fov
+        aimbot.fov_circle_last = {Position = Vector2.new(), Radius = 0}
         aimbot.fov_outline_circle = fov_outline
 
         local dzfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
@@ -8936,6 +8968,7 @@ do
         dzfov.Filled = false
         dzfov_outline.Filled = false
         aimbot.dzfov_circle = dzfov
+        aimbot.dzfov_circle_last = {Position = Vector2.new(), Radius = 0}
         aimbot.dzfov_outline_circle = dzfov_outline
 
         local sfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
@@ -8943,6 +8976,7 @@ do
         sfov.Filled = false
         sfov_outline.Filled = false
         aimbot.sfov_circle = sfov
+        aimbot.sfov_circle_last = {Position = Vector2.new(), Radius = 0}
         aimbot.sfov_outline_circle = sfov_outline
         
         hook:Add("Initialize", "BBOT:Visuals.Aimbot.FOV", function()
@@ -8953,15 +8987,6 @@ do
         
         hook:Add("OnConfigChanged", "BBOT:Visuals.Aimbot.FOV", function(steps, old, new)
             if config:IsPathwayEqual(steps, "Main", "Visuals", "FOV") or config:IsPathwayEqual(steps, "Main", "Legit") then
-                if not config:GetValue("Main", "Visuals", "FOV", "Enabled") then
-                    fov.Visible = false
-                    fov_outline.Visible = fov.Visible
-                    dzfov.Visible = false
-                    dzfov_outline.Visible = dzfov.Visible
-                    sfov.Visible = false
-                    sfov_outline.Visible = sfov.Visible
-                    return
-                end
                 local center = camera.ViewportSize/2
                 fov.Position = center
                 fov_outline.Position = fov.Position
@@ -8992,20 +9017,35 @@ do
                     end
                     local yport = camera.ViewportSize.y
                     fov.Radius = _fov / camera.FieldOfView  * yport
+                    aimbot.fov_circle_last.Radius = _fov / camera.FieldOfView  * yport
                     fov_outline.Radius = fov.Radius
+
                     dzfov.Radius = _dzfov / camera.FieldOfView  * yport
+                    aimbot.dzfov_circle_last.Radius = _dzfov / camera.FieldOfView  * yport
                     dzfov_outline.Radius = dzfov.Radius
+
                     sfov.Radius = _sfov / camera.FieldOfView  * yport
+                    aimbot.sfov_circle_last.Radius = _sfov / camera.FieldOfView  * yport
                     sfov_outline.Radius = sfov.Radius
+                end
+
+                if not config:GetValue("Main", "Visuals", "FOV", "Enabled") then
+                    fov.Visible = false
+                    fov_outline.Visible = fov.Visible
+                    dzfov.Visible = false
+                    dzfov_outline.Visible = dzfov.Visible
+                    sfov.Visible = false
+                    sfov_outline.Visible = sfov.Visible
                 end
             end
         end)
         
         local alive, curgun = false, false
-        hook:Add("RenderStepped", "BBOT:Visuals.Aimbot.FOV", function()
-            if not config:GetValue("Main", "Visuals", "FOV", "Enabled") then return end
+        hook:Add("PreCalculateCrosshair", "BBOT:Visuals.Aimbot.FOV", function(position_override)
+            local enabled = config:GetValue("Main", "Visuals", "FOV", "Enabled")
+            position_override = Vector2.new(position_override.X, position_override.Y)
             local set = false
-            if alive ~= char.alive then
+            if enabled and alive ~= char.alive then
                 alive = char.alive
                 local bool = (alive and true or false)
                 fov.Visible = bool
@@ -9035,9 +9075,36 @@ do
                 dzfov_outline.Radius = dzfov.Radius
                 sfov.Radius = _sfov / camera.FieldOfView  * yport
                 sfov_outline.Radius = sfov.Radius
+
+                if aimbot:GetLegitConfig("Aim Assist", "Use Barrel") then
+                    fov.Position = position_override
+                    fov_outline.Position = fov.Position
+                    dzfov.Position = position_override
+                    dzfov_outline.Position = dzfov.Position
+                    aimbot.fov_circle_last.Position = position_override
+                    aimbot.dzfov_circle_last.Position = position_override
+                else
+                    local center = camera.ViewportSize/2
+                    fov.Position = center
+                    fov_outline.Position = fov.Position
+                    dzfov.Position = center
+                    dzfov_outline.Position = dzfov.Position
+                    aimbot.fov_circle_last.Position = center
+                    aimbot.dzfov_circle_last.Position = center
+                end
+                if aimbot:GetLegitConfig("Bullet Redirect", "Use Barrel") then
+                    sfov.Position = position_override
+                    sfov_outline.Position = sfov.Position
+                    aimbot.sfov_circle_last.Position = position_override
+                else
+                    local center = camera.ViewportSize/2
+                    sfov.Position = center
+                    sfov_outline.Position = sfov.Position
+                    aimbot.sfov_circle_last.Position = center
+                end
             end
             
-            if curgun ~= gamelogic.currentgun or set then
+            if enabled and curgun ~= gamelogic.currentgun or set then
                 curgun = gamelogic.currentgun
                 if curgun and curgun.data and curgun.data.bulletspeed then
                     fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
@@ -9061,17 +9128,26 @@ do
 
     do -- Crosshair
         --draw:Box(x, y, w, h, thickness, color, transparency, visible)
+        --draw:Line(thickness, start_x, start_y, end_x, end_y, color, transparency, visible)\
+        --[[
+		object.Visible = visible
+		object.Thickness = thickness
+		object.From = Vector2.new(start_x, start_y)
+		object.To = Vector2.new(end_x, end_y)
+		object.Color = self:VerifyColor(color)
+		object.Transparency = transparency 
+        ]]
         local crosshair_objects = {
             center_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            top_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            bottom_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            left_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            right_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            top_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            bottom_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            left_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            right_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
             center = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            top = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            bottom = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            left = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            right = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            top = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            bottom = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            left = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            right = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
         }
 
         hook:Add("OnConfigChanged", "BBOT:Crosshair.Changed", function(steps, old, new)
@@ -9109,24 +9185,25 @@ do
                     crosshair_objects.left_outline.Visible = setup.Left
                     crosshair_objects.right_outline.Visible = setup.Right
 
+
                     crosshair_objects.center.Size = Vector2.new(2, 2)
-                    crosshair_objects.top.Size = Vector2.new(width, height)
-                    crosshair_objects.bottom.Size = Vector2.new(width, height)
-                    crosshair_objects.left.Size = Vector2.new(height, width)
-                    crosshair_objects.right.Size = Vector2.new(height, width)
+                    crosshair_objects.top.Thickness = width
+                    crosshair_objects.bottom.Thickness = width
+                    crosshair_objects.left.Thickness = width
+                    crosshair_objects.right.Thickness = width
 
                     width, height = width+2, height+2
                     crosshair_objects.center_outline.Size = Vector2.new(2+2, 2+2)
-                    crosshair_objects.top_outline.Size = Vector2.new(width, height)
-                    crosshair_objects.bottom_outline.Size = Vector2.new(width, height)
-                    crosshair_objects.left_outline.Size = Vector2.new(height, width)
-                    crosshair_objects.right_outline.Size = Vector2.new(height, width)
+                    crosshair_objects.top_outline.Thickness = width
+                    crosshair_objects.bottom_outline.Thickness = width
+                    crosshair_objects.left_outline.Thickness = width
+                    crosshair_objects.right_outline.Thickness = width
                 end
             end
         end)
 
+        local lastrot = 0
         function aimbot:CrosshairStep(delta, gun)
-            if not config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled") then return end
             local positionoverride
             if gun then
                 local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
@@ -9163,23 +9240,27 @@ do
                 end
             end
 
+            hook:Call("PreCalculateCrosshair", (positionoverride and positionoverride or (camera.ViewportSize/2)))
+            if not config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled") then return end
+
             local setup = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Setup")
             local gap = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Gap")
+            local width = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Width")
+            local height = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Height")
 
             local addrot = 0
-            --[[if config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Enable") then
-                local type = config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Type")
+            if config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Enabled") then
+                local type = config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Type")
                 if type == "Wave" then
-                    addrot = math.sin(config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Speed") * tick()) * config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Amplitude")
+                    addrot = math.sin(config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Speed") * tick()) * config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Amplitude")
                 else
-                    addrot = lastrot + config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Speed") * DeltaTime
-                    if addrot > config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Max") then
-                        addrot = addrot - config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Max")
-                        addrot = addrot + config:GetValue("Visuals", "Crosshair", "Animation", "Rotation", "Min")
+                    addrot = lastrot + config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Speed") * delta
+                    if addrot > 360 then
+                        addrot = addrot - 360
                     end
                     lastrot = addrot
                 end
-            end]]
+            end
             
             local rot = 0 + addrot
             local rad = math.rad(rot)
@@ -9223,13 +9304,19 @@ do
                 local part_outline = crosshair_objects.top_outline
                 local gapx = 0 * cs - (-gap) * sn;
                 local gapy = 0 * sn + (-gap) * cs;
+                local heightx = 0 * cs - (-height) * sn;
+                local heighty = 0 * sn + (-height) * cs;
             
                 if positionoverride then
-                    part.Position = Vector2.new(positionoverride.x+gapx-part.Size.X/2,positionoverride.y+gapy-part.Size.Y/2)
+                    part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
                 else
-                    part.Position = (camera.ViewportSize/2) + Vector2.new(gapx-part.Size.X/2,gapy-part.Size.Y/2)
+                    part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
                 end
-                part_outline.Position = part.Position-outline_vec
+                part.To = part.From + Vector2.new(heightx, heighty)
+                local outlinex = 0 * cs - (-1) * sn;
+                local outliney = 0 * sn + (-1) * cs;
+                part_outline.From = part.From - Vector2.new(outlinex, outliney)
+                part_outline.To = part.To + Vector2.new(outlinex, outliney)
                 
                 --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot
             elseif crosshair_objects.top_outline.Visible then
@@ -9242,13 +9329,19 @@ do
                 local part_outline = crosshair_objects.bottom_outline
                 local gapx = 0 * cs - (gap) * sn;
                 local gapy = 0 * sn + (gap) * cs;
+                local heightx = 0 * cs - (height) * sn;
+                local heighty = 0 * sn + (height) * cs;
             
                 if positionoverride then
-                    part.Position = Vector2.new(positionoverride.x+gapx-part.Size.X/2,positionoverride.y+gapy-part.Size.Y/2)
+                    part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
                 else
-                    part.Position = (camera.ViewportSize/2) + Vector2.new(gapx-part.Size.X/2,gapy-part.Size.Y/2)
+                    part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
                 end
-                part_outline.Position = part.Position-outline_vec
+                part.To = part.From + Vector2.new(heightx, heighty)
+                local outlinex = 0 * cs - (1) * sn;
+                local outliney = 0 * sn + (1) * cs;
+                part_outline.From = part.From - Vector2.new(outlinex, outliney)
+                part_outline.To = part.To + Vector2.new(outlinex, outliney)
                 
                 --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot - 180
             elseif crosshair_objects.bottom_outline.Visible then
@@ -9261,13 +9354,19 @@ do
                 local part_outline = crosshair_objects.left_outline
                 local gapx = (-gap) * cs - 0 * sn;
                 local gapy = (-gap) * sn + 0 * cs;
+                local heightx = (-height) * cs - 0 * sn;
+                local heighty = (-height) * sn + 0 * cs;
             
                 if positionoverride then
-                    part.Position = Vector2.new(positionoverride.x+gapx-part.Size.X/2,positionoverride.y+gapy-part.Size.Y/2)
+                    part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
                 else
-                    part.Position = (camera.ViewportSize/2) + Vector2.new(gapx-part.Size.X/2,gapy-part.Size.Y/2)
+                    part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
                 end
-                part_outline.Position = part.Position-outline_vec
+                part.To = part.From + Vector2.new(heightx, heighty)
+                local outlinex = (-1) * cs - 0 * sn;
+                local outliney = (-1) * sn + 0 * cs;
+                part_outline.From = part.From - Vector2.new(outlinex, outliney)
+                part_outline.To = part.To + Vector2.new(outlinex, outliney)
                 
                 --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot - 90
             elseif crosshair_objects.left_outline.Visible then
@@ -9280,13 +9379,19 @@ do
                 local part_outline = crosshair_objects.right_outline
                 local gapx = (gap) * cs - 0 * sn;
                 local gapy = (gap) * sn + 0 * cs;
+                local heightx = (height) * cs - 0 * sn;
+                local heighty = (height) * sn + 0 * cs;
             
                 if positionoverride then
-                    part.Position = Vector2.new(positionoverride.x+gapx-part.Size.X/2,positionoverride.y+gapy-part.Size.Y/2)
+                    part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
                 else
-                    part.Position = (camera.ViewportSize/2) + Vector2.new(gapx-part.Size.X/2,gapy-part.Size.Y/2)
+                    part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
                 end
-                part_outline.Position = part.Position-outline_vec
+                part.To = part.From + Vector2.new(heightx, heighty)
+                local outlinex = (1) * cs - 0 * sn;
+                local outliney = (1) * sn + 0 * cs;
+                part_outline.From = part.From - Vector2.new(outlinex, outliney)
+                part_outline.To = part.To + Vector2.new(outlinex, outliney)
                 
                 --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot + 90
             elseif crosshair_objects.right_outline.Visible then
