@@ -8864,7 +8864,7 @@ do
                 local team = (localplayer.Team and localplayer.Team.Name or "NA")
                 local playerteamdata = workspace["Players"][team]
 
-                local endpositon = part_pos+(part.CFrame.LookVector*70000)
+                local endpositon = part.CFrame.LookVector*70000
                 local raydata = self:raycastbullet(part_pos,endpositon,playerteamdata)
                 local pointhit
                 if raydata and raydata.Position then
