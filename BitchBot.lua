@@ -831,7 +831,7 @@ do
             local ran, a, b, c, d, e, f = xpcall(func, debug.traceback, ...)
             if not ran then
                 log(LOG_ERROR, "Hook Error - ", name, " - ", name)
-                log(LOG_NORMAL, a)
+                log(LOG_ERROR, a)
                 log(LOG_WARN, "Removing to prevent cascade!")
                 for l=1, #tbl do
                     local v = tbl[l]
@@ -860,7 +860,7 @@ do
                         local ran, a, b, c, d, e, f = xpcall(func, debug.traceback, ...)
                         if not ran then
                             log(LOG_ERROR, "Hook Error - ", name, " - ", _name)
-                            log(LOG_NORMAL, a)
+                            log(LOG_ERROR, a)
                             log(LOG_WARN, "Removing to prevent cascade!")
                             table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
                         elseif a ~= nil then
@@ -886,6 +886,8 @@ do
         for i=1, #connections do
             connections[i]:Disconnect()
         end
+        self.registry = {}
+        self._registry_qa = {}
     end)
 end
 
@@ -4999,7 +5001,7 @@ do
     local loaded = {}
     do
         local function Loopy_Image_Checky()
-            for i = 1, 7 do
+            for i = 1, 8 do
                 local v = menu.images[i]
                 if v == nil then
                     return true
@@ -6249,7 +6251,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Enemy Name",
+                                                        name = "Color",
                                                         color = { 255, 255, 255, 200 },
                                                     }
                                                 },
@@ -6261,12 +6263,12 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Enemy Box Fill",
+                                                        name = "Color Fill",
                                                         color = { 255, 0, 0, 0 },
                                                     },
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Enemy Box",
+                                                        name = "Color Box",
                                                         color = { 255, 0, 0, 150 },
                                                     }
                                                 },
@@ -6278,12 +6280,12 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Enemy Box Fill",
+                                                        name = "Color Low",
                                                         color = { 255, 0, 0, 0 },
                                                     },
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Enemy Box",
+                                                        name = "Color Max",
                                                         color = { 0, 255, 0, 150 },
                                                     }
                                                 },
@@ -6295,7 +6297,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Enemy Health Number",
+                                                        name = "Color",
                                                         color = { 255, 255, 255, 255 },
                                                     }
                                                 },
@@ -6307,7 +6309,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Enemy Held Weapon",
+                                                        name = "Color",
                                                         color = { 255, 255, 255, 200 },
                                                     }
                                                 },
@@ -6394,7 +6396,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Team Name",
+                                                        name = "Color",
                                                         color = { 255, 255, 255, 200 },
                                                     },
                                                 },
@@ -6406,12 +6408,12 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Enemy Box Fill",
+                                                        name = "Color Fill",
                                                         color = { 0, 255, 0, 0 },
                                                     },
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Enemy Box",
+                                                        name = "Color Box",
                                                         color = { 0, 255, 0, 150 },
                                                     },
                                                 },
@@ -6423,12 +6425,12 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Team Low Health",
+                                                        name = "Color Low",
                                                         color = { 255, 0, 0, 255 },
                                                     },
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Team Max Health",
+                                                        name = "Color Max",
                                                         color = { 0, 255, 0, 255 },
                                                     },
                                                 },
@@ -6440,7 +6442,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Team Health Number",
+                                                        name = "Color",
                                                         color = { 255, 255, 255, 255 },
                                                     },
                                                 },
@@ -6452,7 +6454,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Team Held Weapon",
+                                                        name = "Color",
                                                         color = { 255, 255, 255, 200 },
                                                     },
                                                 },
@@ -8307,6 +8309,7 @@ do
     local timer = BBOT.timer
     local notification = BBOT.notification
     local table = BBOT.table
+    local hud = BBOT.aux.hud
     local playerdata = BBOT.aux.playerdata
     local char = BBOT.aux.char
     local localplayer = BBOT.service:GetService("LocalPlayer")
@@ -8362,7 +8365,7 @@ do
         end
     
         if target == localplayer.Name then
-            timer:Simple(.5, function() BBOT.hud:vote("no") end)
+            timer:Simple(.5, function() hud:vote("no") end)
         end
     
         invote = votesrequired
@@ -8541,7 +8544,7 @@ do
     end
 
     hook:Add("InternalMessage", "BBOT:ServerHopper.HopOnKick", function(message)
-        if not string.find(message, "Server Kick Message:", 1, true) or not string.find(message, "Votekick", 1, true) then return end
+        if not string.find(message, "Server Kick Message:", 1, true) or not string.find(message, "votekicked", 1, true) then return end
         if not config:GetValue("Main", "Misc", "Server Hopper", "Enabled") then return end
         if not serverhopper:IsBlacklisted(game.JobId) then
             serverhopper:AddToBlacklist(game.JobId, 86400)
@@ -9656,6 +9659,7 @@ do
     end)]=]
 end
 
+-- ESP
 -- Entity Visuals Controller [ESP, Chams, Grenades, etc] (Conversion In Progress)
 -- Styled as a constructor with meta tables btw, I'll tell ya later - WholeCream
 do
@@ -9666,6 +9670,7 @@ do
     local config = BBOT.config
     local font = BBOT.font
     local gui = BBOT.gui
+    local draw = BBOT.draw
     local log = BBOT.log
     local math = BBOT.math
     local string = BBOT.string
@@ -9772,7 +9777,7 @@ do
     end
 
     local errors = 0
-    hook:Add("RenderStep.Last", "BBOT:ESP.Render", function()
+    hook:Add("RenderStepped", "BBOT:ESP.Render", function()
         if errors > 20 then return end
         local controllers = esp.registry
         local istablemissalined = false
@@ -9780,7 +9785,7 @@ do
         for i=1, #controllers do
             local v = controllers[i-c]
             if v then
-                local ran, destroy = pcall(esp.Render, v)
+                local ran, destroy = xpcall(esp.Render, debug.traceback, v)
                 if not ran then
                     log(LOG_ERROR, "ESP render error - ", destroy)
                     log(LOG_ANON, "Object - ", v.uniqueid)
@@ -9853,7 +9858,7 @@ do
             end
 
             function player_meta:OnRemove()
-                self:Destroy(true)
+                self:Destroy(true, true)
                 log(LOG_DEBUG, "Player ESP: Removing ", self.player.Name)
             end
 
@@ -9867,6 +9872,8 @@ do
                         self:Destroy()
                     end
                 end
+                
+                self:KillRender()
 
                 if self.alive then
                     return true
@@ -9875,8 +9882,120 @@ do
                 end
             end
 
-            function player_meta:Render()
-                if not self.parts then return end
+            function player_meta:Cache(draw)
+                for i=1, #self.draw_cache do
+                    if self.draw_cache[i][1] == draw then
+                        self.draw_cache[i][2] = draw.Transparency
+                        return draw
+                    end
+                end
+                self.draw_cache[#self.draw_cache+1] = {draw, draw.Transparency}
+                return draw
+            end
+
+            function player_meta:Render(points)
+                if not self:GetConfig("Enabled") then return end
+                if not self.parts and not points then return end
+
+                local points = points
+                if not points then
+                    points = {}
+                    self._points = points
+                    for k, v in pairs(self.parts) do
+                        if k ~= "rootpart" then
+                            local object_bounds_cframe = (CFrame.new(v.Size):ToWorldSpace(CFrame.Angles(v.CFrame:ToOrientation()))).Position
+                            local min, max = v.Position - object_bounds_cframe, v.Position + object_bounds_cframe
+                            local current_points_length = #points
+                            points[current_points_length+1] = Vector3.new(min.x, min.y, min.z)
+                            points[current_points_length+2] = Vector3.new(min.x, max.y, min.z)
+                            points[current_points_length+3] = Vector3.new(max.x, max.y, min.z)
+                            points[current_points_length+4] = Vector3.new(max.x, min.y, min.z)
+                            points[current_points_length+5] = Vector3.new(max.x, max.y, max.z)
+                            points[current_points_length+6] = Vector3.new(min.x, max.y, max.z)
+                            points[current_points_length+7] = Vector3.new(min.x, min.y, max.z)
+                            points[current_points_length+8] = Vector3.new(max.x, min.y, max.z)
+                        end
+                    end
+                end
+
+                -- L, W, H
+                local fail = 0
+                local points2d = {}
+                for i=1, #points do
+                    local point, onscreen = currentcamera:WorldToViewportPoint(points[i])
+                    if not onscreen then
+                        fail = fail + 1
+                    end
+                    points2d[#points2d+1] = point
+                end
+
+                if fail >= #points then
+                    fail = true
+                else
+                    fail = false
+                end
+
+                local bounding_box = {x=0,y=0,w=0,h=0}
+                if not fail then
+                    local left = points2d[1].X
+                    local top = points2d[1].Y
+                    local right = points2d[1].X
+                    local bottom = points2d[1].Y
+                    
+                    for i=1,#points2d do
+                        if(points2d[i]) then
+                            if (left > points2d[i].X) then
+                                left = points2d[i].X
+                            end
+                            if (bottom < points2d[i].Y) then
+                                bottom = points2d[i].Y
+                            end
+                            if (right < points2d[i].X) then
+                                right = points2d[i].X
+                            end
+                            if (top > points2d[i].Y) then
+                                top = points2d[i].Y
+                            end
+                        end
+                    end
+
+                    bounding_box.x = left
+                    bounding_box.y = top
+                    bounding_box.w = right - left
+                    bounding_box.h = bottom - top
+                end
+
+                local lefty, righty = 0, 0
+
+                if self.box and self.box_enabled then
+                    if fail then
+                        self.box_fill.Visible = false
+                        self.box_outline.Visible = false
+                        self.box.Visible = false
+                    else
+                        self.box_fill.Visible = true
+                        self.box_outline.Visible = true
+                        self.box.Visible = true
+
+                        local pos, size = Vector2.new(bounding_box.x, bounding_box.y), Vector2.new(bounding_box.w, bounding_box.h)
+
+                        self.box_fill.Position = pos
+                        self.box_fill.Size = size
+                        self.box_outline.Position = pos
+                        self.box_outline.Size = size
+                        self.box.Position = pos
+                        self.box.Size = size
+                    end
+                end
+
+                if self.name and self.name_enabled then
+                    if fail then
+                        self.name.Visible = false
+                    else
+                        self.name.Visible = true
+                        self.name.Position = Vector2.new(bounding_box.x + (bounding_box.w/2) - (self.name.TextBounds.X/2), bounding_box.y - self.name.TextBounds.Y)
+                    end
+                end
             end
 
             function player_meta:GetConfig(...)
@@ -9887,18 +10006,57 @@ do
                 end
             end
 
+            -- draw:TextOutlined(text, font, x, y, size, centered, color, color2, transparency, visible)
+            -- draw:BoxOutline(x, y, w, h, thickness, color, transparency, visible)
+            local black = Color3.new(0,0,0)
             function player_meta:OnCreate()
-
+                local color, color_transparency = self:GetConfig("Name", "Color")
+                self.name = self:Cache(draw:TextOutlined(self.player.name, 2, 0, 0, 12, false, color, black, color_transparency, false))
+                color, color_transparency = self:GetConfig("Box", "Color Fill")
+                self.box_fill = self:Cache(draw:Box(0, 0, 0, 0, 0, color, color_transparency, false))
+                color, color_transparency = self:GetConfig("Box", "Color Box")
+                self.box_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 4, Color3.new(0,0,0), color_transparency, false))
+                self.box = self:Cache(draw:BoxOutline(0, 0, 0, 0, 0, color, color_transparency, false))
             end
 
             function player_meta:Setup()
+                self.begin_fading = false
                 local parts = replication.getbodyparts(self.player)
                 if not parts then return end
                 self.model = parts.head.Parent
                 self.parts = parts
+                local esp_enabled = self:GetConfig("Enabled")
+                
+                local color, color_transparency = self:GetConfig("Name", "Color")
+                self.name_enabled = (esp_enabled and self:GetConfig("Name") or false)
+                self.name.Visible = self.name_enabled
+                self.name.Color = color
+                self.name.Transparency = color_transparency
+                self:Cache(self.name)
+
+                self.box_enabled = (esp_enabled and self:GetConfig("Box") or false)
+                self.box_fill.Visible = self.box_enabled
+                self.box_outline.Visible = self.box_enabled
+                self.box.Visible = self.box_enabled
+
+                color, color_transparency = self:GetConfig("Box", "Color Fill")
+                self.box_fill.Color = color
+                self.box_fill.Transparency = color_transparency
+
+                color, color_transparency = self:GetConfig("Box", "Color Box")
+                self.box.Color = color
+                self.box.Transparency = color_transparency
+                self.box_outline.Transparency = color_transparency
+                self:Cache(self.box)
+                self:Cache(self.box_outline)
+                self:Cache(self.box_fill)
+
+                self:RemoveInstances()
+
                 local container = Instance.new("Folder", esp.playercontainer)
                 self.container = container
                 container.Name = self.player.Name
+
                 if self:GetConfig("Chams") then
                     local visible, transparency = self:GetConfig("Chams", "Visible Chams")
                     local invisible, itransparency = self:GetConfig("Chams", "Invisible Chams")
@@ -9909,11 +10067,11 @@ do
                             local boxhandle
                             if v.Name ~= "Head" then
 								boxhandle = Instance.new("BoxHandleAdornment", Part)
-                                chams[#chams+1] = {k, boxhandle}
+                                chams[#chams+1] = {k, boxhandle, itransparency}
                                 boxhandle.Size = (v.Size + Vector3.new(0.1, 0.1, 0.1))
 							else
 								boxhandle = Instance.new("CylinderHandleAdornment", Part)
-                                chams[#chams+1] = {k, boxhandle}
+                                chams[#chams+1] = {k, boxhandle, itransparency}
 								boxhandle.Height = v.Size.y + 0.3
 								boxhandle.Radius = v.Size.x * 0.5 + 0.2
                                 boxhandle.Height -= 0.2
@@ -9936,11 +10094,11 @@ do
                             local boxhandle
                             if v.Name ~= "Head" then
 								boxhandle = Instance.new("BoxHandleAdornment", Part)
-                                chams[#chams+1] = {k, boxhandle}
+                                chams[#chams+1] = {k, boxhandle, transparency}
                                 boxhandle.Size = (v.Size + Vector3.new(0.25, 0.25, 0.25))
 							else
 								boxhandle = Instance.new("CylinderHandleAdornment", Part)
-                                chams[#chams+1] = {k, boxhandle}
+                                chams[#chams+1] = {k, boxhandle, transparency}
 								boxhandle.Height = v.Size.y + 0.3
 								boxhandle.Radius = v.Size.x * 0.5 + 0.2
 								boxhandle.CFrame = CFrame.new(Vector3.new(), Vector3.new(0, 1, 0))
@@ -9966,9 +10124,7 @@ do
                 self.alive = false
             end
 
-            function player_meta:Destroy(forced)
-                self.timesdestroyed = self.timesdestroyed + 1
-                self.parts = nil
+            function player_meta:RemoveInstances()
                 if self.chams then
                     for i=1, #self.chams do
                         local v = self.chams[i]
@@ -9978,10 +10134,70 @@ do
                     end
                     self.chams = nil
                 end
+                
                 if self.container then
                     self.container:Destroy()
                     self.container = nil
                 end
+            end
+
+            function player_meta:KillRender()
+                if self.alive or not self.timedestroyed or not self.begin_fading then return end
+                local fadetime = config:GetValue("Main", "Visuals", "ESP Settings", "ESP Fade Time")
+                local fraction = math.timefraction(self.timedestroyed, self.timedestroyed+fadetime, tick())
+                
+                if fraction > 1 then
+                    for i=1, #self.draw_cache do
+                        local v = self.draw_cache[i]
+                        if v[1].Visible then
+                            v[1].Visible = false
+                        end
+                    end
+
+                    self:RemoveInstances()
+                else
+                    fraction = math.remap(fraction, 0, 1, 1, 0)
+
+                    for i=1, #self.draw_cache do
+                        local v = self.draw_cache[i]
+                        if v[1].Visible then
+                            v[1].Transparency = v[2]*fraction
+                        end
+                    end
+
+                    if self.chams then
+                        for i=1, #self.chams do
+                            local v = self.chams[i]
+                            if v[2] then
+                                v[2].Transparency = 1-(v[3]*fraction)
+                            end
+                        end
+                    end
+
+                    self:Render(self._points)
+                end
+            end
+
+            function player_meta:Destroy(forced, kill)
+                self.timesdestroyed = self.timesdestroyed + 1
+                self.timedestroyed = tick()
+                self.fulldestroy = (forced or kill)
+                self.begin_fading = not (forced or kill)
+
+                for i=1, #self.draw_cache do
+                    local v = self.draw_cache[i][1]
+                    if kill then
+                        v:Remove()
+                    elseif forced then
+                        v.Visible = false
+                    end
+                end
+
+                if forced or kill then
+                    self:RemoveInstances()
+                end
+
+                self.parts = nil
                 log(LOG_DEBUG, "Player ESP: Died ", self.player.Name)
             end
         end
@@ -9989,6 +10205,8 @@ do
         function esp:CreatePlayer(player, controller)
             local uid = "PLAYER_" .. player.UserId
             local esp_controller = setmetatable({
+                draw_cache = {},
+                position_cache = {},
                 uniqueid = uid,
                 player = player,
                 players = players,
