@@ -363,6 +363,15 @@ do
         return new_tbl
     end
 
+    function table.fyshuffle( tInput )
+        local tReturn = {}
+        for i = #tInput, 1, -1 do
+            local j = math.random(i)
+            tInput[i], tInput[j] = tInput[j], tInput[i]
+            table.insert(tReturn, tInput[i])
+        end
+        return tReturn
+    end
 
     function table.recursion( tbl, cb, pathway )
         pathway = pathway or {}
@@ -7247,7 +7256,7 @@ do
                                     {content = {}},
                                 },
                                 {
-                                    name = {"Server Hopper", "VoteKick"},
+                                    name = {"Server Hopper", "Votekick"},
                                     pos = UDim2.new(0,0,5.5/10,4),
                                     size = UDim2.new(.5,-4,1-(5.5/10),-4),
                                     type = "Panel",
@@ -7312,7 +7321,19 @@ do
                                             end
                                         },
                                     }},
-                                    {content = {}},
+                                    {content = {
+                                        {
+                                            type = "Toggle",
+                                            name = "Anti Votekick",
+                                            value = false,
+                                            tooltip = "WARNING: This requires 2 or more rank 25 accounts to work! You can do 1 rank 25 but it would only delay a votekick by ~90-120 seconds",
+                                        },
+                                        {
+                                            type = "Text",
+                                            name = "Reason",
+                                            value = "Aimbot",
+                                        },
+                                    }},
                                 },
                                 {
                                     name = {"Extra", "Exploits"},
@@ -7808,6 +7829,7 @@ do
         ["camera"] = {"setaimsensitivity", "magnify"},
         ["network"] = {"servertick", "send"},
         ["hud"] = {"addnametag"},
+        ["playerdata"] = {"getattloadoutdata", "getgunattdata", "getattachdata", "updatesettings"},
         ["char"] = {"unloadguns", "setunaimedfov", "loadcharacter"},
         ["replication"] = {"getplayerhit"},
         ["cframe"] = {"fromaxisangle", "toaxisangle", "direct"},
@@ -7823,13 +7845,13 @@ do
         ["bulletcheck"] = "raycast",
         ["trajectory"] = "physics",
         ["getupdater"] = "replication",
+        ["rankcalculator"] = "playerdata",
 
         -- Not sure where this is supposed to go but ok...
         -- TODO: Nata/Bitch
         ["call"] = true,
         ["gunbob"] = true,
         ["gunsway"] = true,
-        ["rankcalculator"] = true,
         ["addplayer"] = true,
         ["removeplayer"] = true,
         ["loadplayer"] = true,
@@ -7935,7 +7957,11 @@ do
                 if not self[saveas] then
                     self[saveas] = {}
                 end
-                self[saveas][k] = v
+                local t = self[saveas]
+                rawset(t, k, v)
+                hook:Add("Unload", "BBOT:Aux.RemoveAuxSub-" .. k, function()
+                    rawset(t, k, nil)
+                end)
             end
         end
 
@@ -8273,54 +8299,60 @@ do
     end)
 end
 
--- VoteKick, handles the votekicks system (Conversion In Progress)
+-- Votekick, handles the votekicks system (Conversion In Progress)
 -- Anti-Votekick
---[=[do
+do
     local config = BBOT.config
     local hook = BBOT.hook
     local timer = BBOT.timer
+    local notification = BBOT.notification
+    local table = BBOT.table
+    local playerdata = BBOT.aux.playerdata
+    local char = BBOT.aux.char
     local localplayer = BBOT.service:GetService("LocalPlayer")
     local votekick = {}
     BBOT.votekick = votekick
     votekick.CallDelay = 90
     votekick.NextCall = 0
     votekick.Called = 0
-    
-    local receivers = BBOT.network.receivers
-    for k, v in pairs(receivers) do
-        local consts = debug.getconstants(v)
-        local has = false
-        for kk, vv in pairs(consts) do
-            if typeof(vv) == "string" and string.find(vv, "Votekick", 1, true) then
-                local function callvotekick(target, delay, votesrequired, ...)
-                    timer:Async(function() hook:Call("StartVoteKick", target, delay, votesrequired) end)
-                    return v(target, delay, votesrequired, ...)
+
+    hook:Add("PreInitialize", "BBOT:Votekick.Load", function()
+        local receivers = BBOT.aux.network.receivers
+        for k, v in pairs(receivers) do
+            local consts = debug.getconstants(v)
+            local has = false
+            for kk, vv in pairs(consts) do
+                if typeof(vv) == "string" and string.find(vv, "Votekick", 1, true) then
+                    local function callvotekick(target, delay, votesrequired, ...)
+                        timer:Async(function() hook:Call("Votekick.Start", target, delay, votesrequired) end)
+                        return v(target, delay, votesrequired, ...)
+                    end
+                    rawset(receivers, k, callvotekick)
+                    hook:Add("Unload", "UndoVotekickDetour-"..k, function()
+                        rawset(receivers, k, v)
+                    end)
+        
+                    function votekick:GetVotes()
+                        return debug.getupvalue(v, 9)
+                    end
+                    break
                 end
-                rawset(receivers, k, callvotekick)
-                hook:Add("Unload", "UndoVotekickDetour-"..k, function()
-                    rawset(receivers, k, v)
-                end)
-    
-                function votekick:GetVotes()
-                    return debug.getupvalue(v, 9)
-                end
-                break
             end
         end
-    end
+    end)
     
     local invote = false
-    hook:Add("StartVoteKick", "StartVoteKick", function(target, delay, votesrequired)
+    hook:Add("Votekick.Start", "Votekick.Start", function(target, delay, votesrequired)
         delay = tonumber(delay)
-        timer:Create("VoteKickCalled", delay, 1, function()
+        timer:Create("Votekick.Tick", delay, 1, function()
             hook:Remove("RenderStep.First", "Votekick.Step")
-            hook:Call("EndVoteKick", target, delay, votesrequired, false)
+            hook:Call("Votekick.End", target, delay, votesrequired, false)
         end)
         hook:Add("RenderStep.First", "Votekick.Step", function()
             if votekick:GetVotes() >= votesrequired then
                 hook:Remove("RenderStep.First", "Votekick.Step")
-                timer:Remove("VoteKickCalled")
-                hook:Call("EndVoteKick", target, delay, votesrequired, true)
+                timer:Remove("Votekick.Tick")
+                hook:Call("Votekick.End", target, delay, votesrequired, true)
             end
         end)
         if config:GetValue("Misc", "Exploits", "Anti-Votekick", "Enable") then
@@ -8334,7 +8366,7 @@ end
         end
     
         invote = votesrequired
-        BBOT.print("Votekick called on " .. target .. "; time till end: " .. delay .. "; votes required: " .. votesrequired)
+        notification:Create("Votekick called on " .. target .. "; time till end: " .. delay .. "; votes required: " .. votesrequired)
         if votekick.Called == 1 then
             votekick.Called = 2
         elseif votekick.Called == 2 or votekick.Called == 0 then
@@ -8343,7 +8375,7 @@ end
         end
     end)
     
-    hook:Add("Console", "VoteKickExploit", function(msg)
+    hook:Add("Console", "BBOT:Votekick.AntiVotekick", function(msg)
         if string.find(msg, "The last votekick was initiated by you", 1, true) then
             votekick.Called = 2
         elseif string.find(msg, "seconds before initiating a votekick", 1, true) then
@@ -8382,37 +8414,23 @@ end
     
     function votekick:RandomCall()
         local targets = votekick:GetTargets()
-        local target = BBOT.FYShuffle(targets)[1]
-        votekick:Call(target.Name, config:GetValue("Misc", "Exploits", "Anti-Votekick", "Reason"))
+        local target = table.fyshuffle(targets)[1]
+        votekick:Call(target.Name, config:GetValue("Main", "Misc", "Votekick", "Reason"))
     end
     
-    votekick.autohopping = false
-    hook:Add("RenderStep.First", "VoteKickExploit", function()
-        if not config:GetValue("Misc", "Exploits", "Anti-Votekick", "Enable") then return end
-        if config:GetValue("Misc", "Exploits", "Anti-Votekick", "WaitTillAlive") and not votekick.WasAlive then return end
-        if votekick:CanCall() then
-            local targets = votekick:GetTargets()
-            local target = BBOT.FYShuffle(targets)[1]
-            votekick:Call(target.Name, config:GetValue("Misc", "Exploits", "Anti-Votekick", "Reason"))
-        end
-    
-        local t = config:GetValue("Misc", "Exploits", "Anti-Votekick", "Auto-Hop", "Delay")
-        if not votekick.autohopping and config:GetValue("Misc", "Exploits", "Anti-Votekick", "Auto-Hop", "Enable") and votekick.Called == 2 and votekick.NextCall ~= 0 and votekick.NextCall - (10 + (t < 0 and -t or 0)) <= tick() then
-            votekick.autohopping = true
-            log(LOG_NORMAL, "WARNING: Hopping in " .. (10+(t > 0 and t or 0)) .. " seconds")
-            timer:Simple(10+(t > 0 and t or 0), function()
-                BBOT.serverhopper:RandomHop()
-            end)
-        end
-    end)
-    
-    hook:Add("PreUpdatePersonalHealth", "VoteKickExploit", function(hp, time, healrate, maxhealth, alive)
-        if alive == true then
+    hook:Add("RenderStep.First", "BBOT:Votekick.AntiVotekick", function()
+        if not config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then return end
+        if playerdata.rankcalculator(playerdata.stats.experience) < 25 then return end
+        if char.alive == true then
             votekick.WasAlive = true
+        end
+        if not votekick.WasAlive then return end
+        if votekick:CanCall() then
+            votekick:RandomCall()
         end
     end)
 end
-]=]
+
 -- Server Hopper, redirects and moves the user to other server instances (Conversion In Progress)
 -- Votekick-blacklist (prevents user from joining voted out servers)
 do
@@ -8523,7 +8541,7 @@ do
     end
 
     hook:Add("InternalMessage", "BBOT:ServerHopper.HopOnKick", function(message)
-        if not string.find(message, "Server Kick Message:", 1, true) then return end
+        if not string.find(message, "Server Kick Message:", 1, true) or not string.find(message, "Votekick", 1, true) then return end
         if not config:GetValue("Main", "Misc", "Server Hopper", "Enabled") then return end
         if not serverhopper:IsBlacklisted(game.JobId) then
             serverhopper:AddToBlacklist(game.JobId, 86400)
