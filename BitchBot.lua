@@ -4754,7 +4754,7 @@ do
             self.text = gui:Create("Text", self)
             self.text:SetTextAlignmentX(Enum.TextXAlignment.Center)
             self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
-            self.text:SetPos(.5,0,.5,0)
+            self.text:SetPos(.5,0,.5,-1)
             self.text:SetText("0%")
 
             self.suffix = "%"
@@ -5045,8 +5045,8 @@ do
             return 25 + 9
         elseif type == "KeyBind" then
             local keybind = gui:Create("KeyBind", container)
-            keybind:SetPos(1, X-32, 0, Y-2)
-            keybind:SetSize(0, 32, 0, 14)
+            keybind:SetPos(1, X-34, 0, Y-2)
+            keybind:SetSize(0, 34, 0, 14)
             keybind:SetValue(_config_module:GetRaw(unpack(path)).value)
             keybind.value = false
             keybind.toggletype = config.toggletype
@@ -5056,7 +5056,7 @@ do
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = keybind
-            return 31 + 9
+            return 33 + 9
         end
         return 0
     end
@@ -7810,7 +7810,6 @@ do
         ["hud"] = {"addnametag"},
         ["char"] = {"unloadguns", "setunaimedfov", "loadcharacter"},
         ["replication"] = {"getplayerhit"},
-        ["roundsystem"] = {"updatekillzone"},
         ["cframe"] = {"fromaxisangle", "toaxisangle", "direct"},
         ["sound"] = {"PlaySound", "play"},
         ["raycast"] = {"raycast", "raycastSingleExit"}
@@ -7943,7 +7942,7 @@ do
         for _,v in next, reg do
             if typeof(v) == "function" then
                 local dbg = debug.getinfo(v)
-                if string.find(dbg.short_src, "network", 1, true) and dbg.name ~= "call" then
+                if string.find(dbg.short_src, "network", 1, true) then
                     local ups = debug.getupvalues(v)
                     for k, vv in pairs(ups) do
                         if typeof(vv) == "table" then
@@ -8605,9 +8604,7 @@ do
     end
 
     function aimbot:VelocityPrediction(startpos, endpos, vel, speed) -- Kinematics is fun
-        local len = (endpos-startpos).Magnitude
-        local t = len/speed
-        return endpos + (vel * t)
+        return endpos + (vel * ((endpos-startpos).Magnitude/speed))
     end
 
     aimbot.bullet_gravity = Vector3.new(0, -196.2, 0) -- Todo: get the velocity from the game public settings
@@ -9872,6 +9869,10 @@ do
                 end
             end
 
+            function player_meta:OnCreate()
+
+            end
+
             function player_meta:Setup()
                 local parts = replication.getbodyparts(self.player)
                 if not parts then return end
@@ -10412,7 +10413,7 @@ do
 
     --[[hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
         --if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
-        local timescale = .5--config:GetValue("Weapons", "Stat Modifications", "Animation", "ReloadFactor")
+        local timescale = 0--config:GetValue("Weapons", "Stat Modifications", "Animation", "ReloadFactor")
         for i, v in next, modifications.animations do
             if string.find(string.lower(i), "reload") then
                 if typeof(modifications.animations[i]) == "table" and modifications.animations[i].timescale then
@@ -10421,6 +10422,30 @@ do
             end
         end
     end)]]
+
+    --[[hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
+        local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
+        local mul = 5
+        if firerates then
+            for i=1, #firerates do
+                firerates[i] = firerates[i] * mul
+            end
+            modifications.firerate = firerates
+        else
+            modifications.firerate = modifications.firerate * mul;
+        end
+    end)]]
+
+    hook:Add("WeaponModifyData", "ModifyWeapon.Offsets", function(modifications)
+        local ang = Vector3.new(0, 0, 0)
+        modifications.mainoffset = CFrame.new(Vector3.new(0,-1.5,-1.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
+
+        local ang = Vector3.new(-0.479, 0.610, 0.779)
+        modifications.sprintoffset = CFrame.new(Vector3.new(0.1,0,-0.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
+
+        local ang = Vector3.new(0, 0, 0)
+        modifications.crouchoffset = CFrame.new(Vector3.new(0.25,0.25,0.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
+    end)
 
     -- Skins
     do
