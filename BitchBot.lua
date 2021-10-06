@@ -11090,22 +11090,48 @@ do
                 draw_endpos.ZIndex = 3
             end
             local point, onscreen = camera:WorldToViewportPoint(final.p0)
-            if onscreen then
-                draw_endpos.Position = Vector2.new(point.X, point.Y)
-                draw_endpos_outline.Position = Vector2.new(point.X, point.Y)
+            local screensize = camera.ViewportSize
+            if not onscreen or point.x > screensize.x - 36 or point.y > screensize.y - 72 then
+                local relativePos = camera.CFrame:PointToObjectSpace(position)
+                local angle = math.atan2(-relativePos.y, relativePos.x)
+                local ox = math.cos(angle)
+                local oy = math.sin(angle)
+                local slope = oy / ox
+
+                local h_edge = screensize.x - 36
+                local v_edge = screensize.y - 72
+                if oy < 0 then
+                    v_edge = 0
+                end
+                if ox < 0 then
+                    h_edge = 36
+                end
+                local y = (slope * h_edge) + (screensize.y / 2) - slope * (screensize.x / 2)
+                if y > 0 and y < screensize.y - 72 then
+                    point = Vector2.new(h_edge, y)
+                else
+                    point = Vector2.new(
+                        (v_edge - screensize.y / 2 + slope * (screensize.x / 2)) / slope,
+                        v_edge
+                    )
+                end
             end
-
-
+            draw_endpos.Position = Vector2.new(point.X, point.Y)
+            draw_endpos_outline.Position = Vector2.new(point.X, point.Y)
             for i=(curframe and curframe+1 or 2), framelen do
                 local v = parts[i]
                 if not v then break end
                 local framedata = frames[i]
                 local point1, onscreen1 = camera:WorldToViewportPoint(lastframe.p0)
                 local point2, onscreen2 = camera:WorldToViewportPoint(framedata.p0)
-                if not onscreen1 and not onscreen2 then 
+                if not onscreen1 and not onscreen2 then
+                    v[1].Visible = false
+                    v[2].Visible = false
                     lastframe = framedata
                     continue
                 end
+                v[1].Visible = true
+                v[2].Visible = true
                 v[1].From = Vector2.new(point1.X, point1.Y)
                 v[1].To = Vector2.new(point2.X, point2.Y)
                 v[2].From = Vector2.new(point1.X, point1.Y)
