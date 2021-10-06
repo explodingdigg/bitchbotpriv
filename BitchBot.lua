@@ -11092,7 +11092,7 @@ do
             local point, onscreen = camera:WorldToViewportPoint(final.p0)
             local screensize = camera.ViewportSize
             if not onscreen or point.x > screensize.x - 36 or point.y > screensize.y - 72 then
-                local relativePos = camera.CFrame:PointToObjectSpace(position)
+                local relativePos = camera.CFrame:PointToObjectSpace(final.p0)
                 local angle = math.atan2(-relativePos.y, relativePos.x)
                 local ox = math.cos(angle)
                 local oy = math.sin(angle)
