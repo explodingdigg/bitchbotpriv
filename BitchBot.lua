@@ -1349,7 +1349,7 @@ do
 		object.Color = self:VerifyColor(color)
 		object.Transparency = transparency 
 		object.Outline = true
-		object.OutlineColor = color2
+		object.OutlineColor = self:VerifyColor(color2)
 		object.Font = font
 		return object
 	end
@@ -1529,7 +1529,7 @@ do
             for i=1, #v do local c = v[i]; t[c[1]] = c[2]; end
             return t
         end,
-        ["ColorPicker"] = function(reg) return Color3.fromRGB(unpack(reg.value)), reg.value[4]/255 end,
+        ["ColorPicker"] = function(reg) return Color3.fromRGB(unpack(reg.value)), (reg.value[4]or 255)/255 end,
     }
 
     function config:GetValue(...)
@@ -1658,7 +1658,12 @@ do
         ["Slider"] = function(v) return v.value end,
         ["KeyBind"] = function(v) return {type = "KeyBind", value = v.key, toggle = false} end,
         ["DropBox"] = function(v) return {type = "DropBox", value = v.values[v.value], list = v.values} end,
-        ["ColorPicker"] = function(v) return {type = "ColorPicker", value = v.color} end,
+        ["ColorPicker"] = function(v)
+            if not v.color[4] then
+                v.color[4] = 255
+            end
+            return {type = "ColorPicker", value = v.color}
+        end,
         ["ComboBox"] = function(v) return {type = "ComboBox", value = v.values} end,
     }
 
@@ -7142,7 +7147,7 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Slider Color",
+                                                        name = "Warning Color",
                                                         color = { 68, 92, 227 },
                                                     }
                                                 },
@@ -7150,21 +7155,16 @@ do
                                             },
                                             {
                                                 type = "Toggle",
-                                                name = "Grenade ESP",
-                                                value = false,
+                                                name = "Grenade Prediction",
+                                                value = true,
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Inner Color",
-                                                        color = { 195, 163, 255 },
-                                                    },
-                                                    {
-                                                        type = "ColorPicker",
-                                                        name = "Outer Color",
-                                                        color = { 123, 69, 224 },
-                                                    },
+                                                        name = "Prediction Color",
+                                                        color = { 68, 92, 227 },
+                                                    }
                                                 },
-                                                tooltip = "Displays the full path of any grenade that will deal damage to you is thrown.",
+                                                tooltip = "Shows where your grenades may land before throwing it.",
                                             },
                                         },
                                     },
@@ -7831,6 +7831,7 @@ do
         ["camera"] = {"setaimsensitivity", "magnify"},
         ["network"] = {"servertick", "send"},
         ["hud"] = {"addnametag"},
+        ["roundsystem"] = {"raycastwhitelist"},
         ["playerdata"] = {"getattloadoutdata", "getgunattdata", "getattachdata", "updatesettings"},
         ["char"] = {"unloadguns", "setunaimedfov", "loadcharacter"},
         ["replication"] = {"getplayerhit"},
@@ -8618,9 +8619,9 @@ do
             return v3;
         end;
 
-        local currentcamera = BBOT.service:GetService("CurrentCamera")
+        local camera = BBOT.service:GetService("CurrentCamera")
         function aimbot:raycastbullet(vec, dir, extra, cb)
-            return aimbot:fullcast(vec, dir, {currentcamera, workspace.Terrain, localplayer.Character, workspace.Ignore, extra}, cb or raycastbullet)
+            return aimbot:fullcast(vec, dir, {camera, workspace.Terrain, localplayer.Character, workspace.Ignore, extra}, cb or raycastbullet)
         end
     end
 
@@ -9614,12 +9615,12 @@ do
                 -- timescale is to determine how quick the bullet hits
                 -- don't want to get too cocky or the system might silent flag
                 local timescale = config:GetValue("Legit", "Bullet Redirect", "TimeScale")
-                local campos = currentcamera.CFrame.p
+                local campos = camera.CFrame.p
                 local dir = target.selected_part.Position-campos
                 local X, Y = CFrame.new(campos, campos+dir):ToOrientation()
                 local firepos = bullettable.firepos
                 local gundata = gamelogic.currentgun.data
-                local campos = currentcamera.CFrame.p
+                local campos = camera.CFrame.p
                 local dir = target.selected_part.Position-campos
                 local t = dir.Magnitude/gundata.bulletspeed -- get the time it takes for the bullet to arrive
                 -- remind me to not do this, some cheats fucks with velocity...
@@ -9682,7 +9683,7 @@ do
 
     local localplayer = service:GetService("LocalPlayer")
     local playergui = service:GetService("PlayerGui")
-    local currentcamera = BBOT.service:GetService("CurrentCamera")
+    local camera = BBOT.service:GetService("CurrentCamera")
 
     esp.container = Instance.new("Folder")
     esp.container.Name = string.random(8, 14) -- you gonna try that GetChildren attack anytime soon?
@@ -9922,7 +9923,7 @@ do
                 local fail = 0
                 local points2d = {}
                 for i=1, #points do
-                    local point, onscreen = currentcamera:WorldToViewportPoint(points[i])
+                    local point, onscreen = camera:WorldToViewportPoint(points[i])
                     if not onscreen then
                         fail = fail + 1
                     end
@@ -10257,6 +10258,263 @@ do
         end)
     end
 
+    do
+        local workspace = service:GetService("Workspace")
+
+        do
+            local grenade_meta = {}
+            esp.grenade_meta = {__index = grenade_meta}
+            local char = BBOT.aux.char
+            local roundsystem = BBOT.aux.roundsystem
+            local math = BBOT.math
+
+            function grenade_meta:IsValid()
+                return self.object:IsDescendantOf(self.parent)
+            end
+
+            function grenade_meta:OnRemove()
+                self:Destroy(true)
+                log(LOG_DEBUG, "Grenade ESP: Removing ", self.object.Name)
+            end
+
+            function grenade_meta:Cache(draw)
+                for i=1, #self.draw_cache do
+                    if self.draw_cache[i] == draw then
+                        self.draw_cache[i] = draw
+                        return draw
+                    end
+                end
+                self.draw_cache[#self.draw_cache+1] = draw
+                return draw
+            end
+
+            function grenade_meta:CanRender()
+                if not self.setup then
+                    self.setup = self:Setup()
+                    if not self.setup or (self.physics.time + self.physics.blowuptime) - tick() < 0 then
+                        esp:Remove(self.uniqueid)
+                        return false
+                    end
+                end
+
+                return true
+            end
+            local col1 = Color3.fromRGB(20, 20, 20)
+            local col2 = Color3.fromRGB(150, 20, 20)
+            local col3 = Color3.fromRGB(50, 50, 50)
+            local col4 = Color3.fromRGB(220, 20, 20)
+            local color = BBOT.color
+
+            function grenade_meta:Render()
+                if not self.setup or not self.finalposition then return end
+                if not config:GetValue("Main", "Visuals", "Grenades", "Grenade Warning") then return end
+                local position = self.finalposition.p0
+                local cam_position = camera.CFrame.p
+                local nade_dist = (position - cam_position).Magnitude
+                local draw_cache = self.draw_cache
+                local point, onscreen = camera:WorldToViewportPoint(position)
+                local screensize = camera.ViewportSize
+                if not onscreen or point.x > screensize.x - 36 or point.y > screensize.y - 72 then
+                    local relativePos = camera.CFrame:PointToObjectSpace(position)
+                    local angle = math.atan2(-relativePos.y, relativePos.x)
+                    local ox = math.cos(angle)
+                    local oy = math.sin(angle)
+                    local slope = oy / ox
+
+                    local h_edge = screensize.x - 36
+                    local v_edge = screensize.y - 72
+                    if oy < 0 then
+                        v_edge = 0
+                    end
+                    if ox < 0 then
+                        h_edge = 36
+                    end
+                    local y = (slope * h_edge) + (screensize.y / 2) - slope * (screensize.x / 2)
+                    if y > 0 and y < screensize.y - 72 then
+                        point = Vector2.new(h_edge, y)
+                    else
+                        point = Vector2.new(
+                            (v_edge - screensize.y / 2 + slope * (screensize.x / 2)) / slope,
+                            v_edge
+                        )
+                    end
+                end
+
+                draw_cache[1].Visible = true
+                draw_cache[1].Position = Vector2.new(math.floor(point.x), math.floor(point.y + 36))
+
+                draw_cache[2].Visible = true
+                draw_cache[2].Position = Vector2.new(math.floor(point.x), math.floor(point.y + 36))
+
+                draw_cache[4].Visible = true
+                draw_cache[4].Position = Vector2.new(math.floor(point.x) - 10, math.floor(point.y + 10))
+
+                draw_cache[3].Visible = true
+                draw_cache[3].Position = Vector2.new(math.floor(point.x), math.floor(point.y + 36))
+
+                local d0 = 250 -- max damage
+                local d1 = 15 -- min damage
+                local r0 = 8 -- maximum range before the damage starts dropping off due to distance
+                local r1 = 30 -- minimum range i think idk
+
+                local damage = nade_dist < r0 and d0 or nade_dist < r1 and (d1 - d0) / (r1 - r0) * (nade_dist - r0) + d0 or 0
+
+                local wall
+                if damage > 0 then
+                    wall = workspace:FindPartOnRayWithWhitelist(
+                        Ray.new(cam_position, (position - cam_position)),
+                        roundsystem.raycastwhitelist
+                    )
+                    if wall then
+                        damage = 0
+                    end
+                end
+
+                local health = char:gethealth()
+                local str = damage == 0 and "Safe" or damage >= health and "LETHAL" or string.format("-%d hp", damage)
+                local nade_percent = math.timefraction(self.physics.time, self.physics.time + self.physics.blowuptime, tick())
+
+                draw_cache[3].Text = str
+
+                draw_cache[1].Color = color.range(damage, {
+                    [1] = { start = 15, color = col1 },
+                    [2] = { start = health, color = col2 },
+                })
+
+                draw_cache[2].Color = color.range(damage, {
+                    [1] = { start = 15, color = col3 },
+                    [2] = { start = health, color = col4 },
+                })
+
+                draw_cache[5].Visible = true
+                draw_cache[5].Position = Vector2.new(math.floor(point.x) - 16, math.floor(point.y + 50))
+
+                draw_cache[6].Visible = true
+                draw_cache[6].Position = Vector2.new(math.floor(point.x) - 15, math.floor(point.y + 51))
+
+                draw_cache[7].Visible = true
+                draw_cache[7].Size = Vector2.new(30 * (1 - nade_percent), 2)
+                draw_cache[7].Position = Vector2.new(math.floor(point.x) - 15, math.floor(point.y + 51))
+                draw_cache[7].Color = self.color1
+
+                draw_cache[8].Visible = true
+                draw_cache[8].Size = Vector2.new(30 * (1 - nade_percent), 2)
+                draw_cache[8].Position = Vector2.new(math.floor(point.x) - 15, math.floor(point.y + 53))
+                draw_cache[8].Color = self.color2
+
+                local tranz = 1
+                if nade_dist >= 50 then
+                    local closedist = nade_dist - 50
+                    tranz = 1 - (1 * closedist / 30)
+                end
+
+                local cache = self.draw_cache
+                for i = 1, #cache do
+                    cache[i].Transparency = tranz
+                end
+            end
+
+            --[[{
+                curi = 1, 
+                time = initiatetime, 
+                blowuptime = delaytime - initiatetime, 
+                frames = { {
+                        t0 = 0, 
+                        p0 = u195, 
+                        v0 = u193, 
+                        offset = Vector3.new(), 
+                        a = gravity, 
+                        rot0 = grenade_mainpart_cframe - grenade_mainpart_cframe.p,
+                        timedelta = 0,
+                        hit = false,
+                        hitnormal = Vector3.new(0,1,0),
+                        rotv = u197, 
+                        glassbreaks = {}
+                    } }
+            };]]
+
+            function grenade_meta:OnCreate()
+                if self.player ~= localplayer and self.player.Team == localplayer.Team then return end
+                self.run = true
+
+                self:Cache(draw:Circle(0, 0, 32, 1, 20, { 20, 20, 20, 215 }, 1, false))
+                self:Cache(draw:CircleOutline(0, 0, 30, 1, 20, { 50, 50, 50, 255 }, 1, false))
+                self:Cache(draw:TextOutlined("", 2, 0, 0, 13, true, { 255, 255, 255, 255 }, { 0, 0, 0, 0 }, 1, false))
+                self:Cache(draw:Image(BBOT.menu.images[6], 0, 0, 23, 30, 1, false))
+                self:Cache(draw:BoxOutline(0, 0, 32, 6, 0, { 50, 50, 50, 255 }, 1, false))
+                self:Cache(draw:Box(0, 0, 30, 4, 0, { 30, 30, 30, 255 }, 1, false))
+                self:Cache(draw:Box(0, 0, 2, 20, 0, { 30, 30, 30, 255 }, 1, false))
+                self:Cache(draw:Box(0, 0, 2, 20, 0, { 30, 30, 30, 255 }, 1, false))
+
+                --[[
+                --(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
+                Draw:FilledCircle(false, 60, 60, 32, 1, 20, { 20, 20, 20, 215 }, draw_cache[1])
+                Draw:Circle(false, 60, 60, 30, 1, 20, { 50, 50, 50, 255 }, draw_cache[2])
+                --(text, font, visible, pos_x, pos_y, size, centered, clr, clr2, tablename)
+                Draw:OutlinedText("", 2, false, 20, 20, 13, true, { 255, 255, 255, 255 }, { 0, 0, 0 }, draw_cache[3])
+                --(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+                Draw:Image(false, BBOT_IMAGES[6], 20, 20, 23, 30, 1, draw_cache[4])
+
+                --(visible, pos_x, pos_y, width, height, clr, tablename)
+                Draw:OutlinedRect(false, 20, 20, 32, 6, { 50, 50, 50, 255 }, draw_cache[5])
+                Draw:FilledRect(false, 20, 20, 30, 4, { 30, 30, 30, 255 }, draw_cache[6])
+        
+                Draw:FilledRect(false, 20, 20, 2, 20, { 30, 30, 30, 255 }, draw_cache[7])
+                Draw:FilledRect(false, 20, 20, 2, 20, { 30, 30, 30, 255 }, draw_cache[8])]]
+            end
+
+            function grenade_meta:Setup()
+                if not self.run then return false end
+                self.finalposition = self.physics.frames[#self.physics.frames]
+                self.color1 = config:GetValue("Main", "Visuals", "Grenades", "Grenade Warning", "Warning Color")
+                self.color2 = Color3.new(
+                    self.color1.R - (20/255),
+                    self.color1.G - (20/255),
+                    self.color1.B - (20/255)
+                )
+                return true
+            end
+
+            function grenade_meta:Rebuild()
+                self:Destroy()
+                self.setup = false
+            end
+
+            function grenade_meta:Destroy(remove)
+                if remove then
+                    for i=1, #self.draw_cache do
+                        local v = self.draw_cache[i]
+                        v:Remove()
+                    end
+                end
+            end
+        end
+
+        function esp:CreateGrenade(object, player, grenadename, physics)
+            local uid = "GRENADE_" .. object.Name .. "_" .. object:GetDebugId()
+            local esp_controller = setmetatable({
+                draw_cache = {},
+                uniqueid = uid,
+                object = object,
+                name = grenadename,
+                physics = physics,
+                player = player,
+                parent = workspace.Ignore.Misc,
+            }, self.grenade_meta)
+            self:Remove(uid)
+            self:Add(esp_controller)
+
+            log(LOG_DEBUG, "Grenade ESP: Created ", player.Name, " ", object.Name)
+            return esp_controller
+        end
+
+        hook:Add("Initialize", "BBOT:ESP.Grenades", function()
+            hook:Add("GrenadeCreated", "BBOT:ESP.Grenades", function(...)
+                esp:CreateGrenade(...)
+            end)
+        end)
+    end
+
     -- Will make examples...
 end
 
@@ -10272,6 +10530,7 @@ do
     local hook = BBOT.hook
     local math = BBOT.math
     local table = BBOT.table
+    local timer = BBOT.timer
     local config = BBOT.config
     local char = BBOT.aux.char
     local gamelogic = BBOT.aux.gamelogic
@@ -10387,6 +10646,20 @@ do
     hook:Add("Initialize", "BBOT:Weapons.Detour", function()
         local receivers = network.receivers
         for k, v in pairs(receivers) do
+            local const = debug.getconstants(v)
+            if table.quicksearch(const, "Trigger") and table.quicksearch(const, "Indicator") and table.quicksearch(const, "Ticking") then
+                hook:Add("Unload", "BBOT:GrenadeThrown-"..tostring(k), function()
+                    rawset(receivers, k, v)
+                end)
+                rawset(receivers, k, function(player, grenadename, animtable, ...)
+                    local thingy = workspace.Ignore.Misc.DescendantAdded:Connect(function(descendant)
+                        if descendant.Name ~= "Trigger" then return end
+                        timer:Async(function() hook:Call("GrenadeCreated", descendant, player, grenadename, animtable) end)
+                    end)
+                    v(player, grenadename, animtable, ...)
+                    thingy:Disconnect()
+                end)
+            end
             local ups = debug.getupvalues(v)
             for upperindex, related_func in pairs(ups) do
                 if typeof(related_func) == "function" then
@@ -10610,6 +10883,299 @@ do
             end
         end
     end)
+
+    -- Grenades Wow
+    -- config:GetValue("Main", "Visuals", "Grenades", "Grenade Warning")
+
+    do
+        local camera = BBOT.service:GetService("CurrentCamera")
+        local localplayer = BBOT.service:GetService("LocalPlayer")
+        local char = BBOT.aux.char
+        local roundsystem = BBOT.aux.roundsystem
+        local cframe = BBOT.aux.cframe
+        local draw = BBOT.draw
+        local grenade_prediction_lines = {}
+
+        local function CalculateGrenadePathway(grenade_mainpart, grenadedata, delaytime)
+            local initiatetime = 0
+        
+            local me_HumanoidRootPart = localplayer.Character:FindFirstChild("HumanoidRootPart")
+            local u193 = char.alive and (camera.CFrame * CFrame.Angles(math.rad(grenadedata.throwangle and 0), 0, 0)).lookVector * grenadedata.throwspeed + me_HumanoidRootPart.Velocity or Vector3.new(math.random(-3, 5), math.random(0, 2), math.random(-3, 5));
+            local u195 = char.deadcf and char.deadcf.p or grenade_mainpart.CFrame.p;
+            local u197 = (camera.CFrame - camera.CFrame.p) * Vector3.new(19.539, -5, 0);
+            local u198 = grenade_mainpart.CFrame - grenade_mainpart.CFrame.p;
+            local grenade_mainpart_cframe = grenade_mainpart.CFrame;
+            local gravity = Vector3.new(0, -80, 0)
+            local windowsbroken = 0
+            local u202 = Vector3.new()
+            local u146 = u202.Dot
+            local u203 = false
+            local timedelta = 0.016666666666666666
+            local pathtable = {
+                curi = 1, 
+                time = initiatetime, 
+                blowuptime = delaytime - initiatetime, 
+                frames = { {
+                        t0 = 0, 
+                        p0 = u195, 
+                        v0 = u193, 
+                        offset = Vector3.new(), 
+                        a = gravity, 
+                        rot0 = grenade_mainpart_cframe - grenade_mainpart_cframe.p,
+                        timedelta = 0,
+                        hit = false,
+                        hitnormal = Vector3.new(0,1,0),
+                        rotv = u197, 
+                        glassbreaks = {}
+                    } }
+            };
+            local timedeltaacc = (timedelta ^ 2)*0.5
+            for v765 = 1, (delaytime - initiatetime) / timedelta + 1 do
+                local v766 = u195 + timedelta * u193 + timedeltaacc * gravity; -- kinematics basically
+                local v767, v768, v769 = workspace:FindPartOnRayWithWhitelist(Ray.new(u195, v766 - u195 - 0.05 * u202),roundsystem.raycastwhitelist);
+                local v770 = timedelta * v765;
+                if v767 and v767.Name ~= "Window" and v767.Name ~= "Col" then
+                    u198 = grenade_mainpart.CFrame - grenade_mainpart.CFrame.p;
+                    u202 = 0.2 * v769;
+                    u197 = v769:Cross(u193) / 0.2;
+                    local v771 = v768 - u195;
+                    local v772 = 1 - 0.001 / v771.magnitude;
+                    if v772 < 0 then
+                        local v773 = 0;
+                    else
+                        v773 = v772;
+                    end;
+                    u195 = u195 + v773 * v771 + 0.05 * v769;
+                    local v774 = u146(v769, u193) * v769;
+                    local v775 = u193 - v774;
+                    local v776 = -u146(v769, gravity);
+                    local v777 = -1.2 * u146(v769, u193);
+                    if v776 < 0 then
+                        local v778 = 0;
+                    else
+                        v778 = v776;
+                    end;
+                    if v777 < 0 then
+                        local v779 = 0;
+                    else
+                        v779 = v777;
+                    end;
+                    local v780 = 1 - 0.08 * (10 * v778 * timedelta + v779) / v775.magnitude;
+                    if v780 < 0 then
+                        local v781 = 0;
+                    else
+                        v781 = v780;
+                    end;
+                    u193 = v781 * v775 - 0.2 * v774;
+                    if u193.magnitude < 1 then
+                        local l__frames__782 = pathtable.frames;
+                        l__frames__782[#l__frames__782 + 1] = {
+                            t0 = v770 - timedelta * (v766 - v768).magnitude / (v766 - u195).magnitude, 
+                            p0 = u195, 
+                            v0 = u161, 
+                            a = u161, 
+                            rot0 = cframe.fromaxisangle (v770 * u197) * u198, 
+                            offset = 0.2 * v769, 
+                            rotv = u161,
+                            hitnormal = v769,
+                            hit = true,
+                            timedelta = timedelta * v765,
+                            glassbreaks = {}
+                        };
+                        break;
+                    end;
+                    local l__frames__783 = pathtable.frames;
+                    l__frames__783[#l__frames__783 + 1] = {
+                        t0 = v770 - timedelta * (v766 - v768).magnitude / (v766 - u195).magnitude, 
+                        p0 = u195, 
+                        v0 = u193, 
+                        a = u203 and u161 or gravity, 
+                        rot0 = cframe.fromaxisangle (v770 * u197) * u198, 
+                        offset = 0.2 * v769, 
+                        rotv = u197,
+                        timedelta = timedelta * v765,
+                        hitnormal = v769,
+                        hit = true,
+                        glassbreaks = {}
+                    };
+                    u203 = true;
+                else
+                    u195 = v766;
+                    u193 = u193 + timedelta * gravity;
+                    u203 = false;
+                    local l__frames__783 = pathtable.frames;
+                    l__frames__783[#l__frames__783 + 1] = {
+                        t0 = v770 - timedelta * (v766 - v768).magnitude / (v766 - u195).magnitude, 
+                        p0 = u195, 
+                        v0 = u193, 
+                        a = u203 and u161 or gravity, 
+                        rot0 = cframe.fromaxisangle (v770 * u197) * u198, 
+                        offset = 0.2 * v769, 
+                        rotv = u197,
+                        timedelta = timedelta * v765,
+                        hitnormal = Vector3.new(0,1,0),
+                        hit = false,
+                        glassbreaks = {}
+                    };
+                    --[[if v767 and v767.Name == "Window" and windowsbroken < 5 then
+                        windowsbroken = windowsbroken + 1;
+                        local l__frames__784 = pathtable.frames;
+                        local l__glassbreaks__785 = l__frames__784[#l__frames__784].glassbreaks;
+                        l__glassbreaks__785[#l__glassbreaks__785 + 1] = {
+                            t = v770, 
+                            part = v767
+                        };
+                    end;]]
+                end;
+            end;
+            return pathtable
+        end
+        
+        local draw_endpos, draw_endpos_outline
+        local function RemovePredictionLines()
+            for i=1, #grenade_prediction_lines do
+                local v = grenade_prediction_lines[i]
+                if v and draw:IsValid(v[1]) and draw:IsValid(v[2]) then
+                    v[1]:Remove()
+                    v[2]:Remove()
+                end
+            end
+            grenade_prediction_lines = {}
+            if draw_endpos then
+                draw_endpos:Remove()
+                draw_endpos_outline:Remove()
+                draw_endpos = nil
+                draw_endpos_outline = nil
+            end
+        end
+
+        hook:Add("OnAliveChanged", "BBOT:GrenadePrediction", function(alive)
+            if not alive then
+                RemovePredictionLines()
+            end
+        end)
+        
+        local dark = Color3.new(0,0,0)
+
+        local function ManagePredictionLines(frames, curframe)
+            local parts = grenade_prediction_lines
+            local partlen, framelen = #parts, #frames
+            local col = config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction", "Prediction Color")
+            if partlen < framelen then
+                local creates = framelen - partlen
+                for i=1, creates do
+                    local darkline = draw:Line(0, 0, 0, 0, 4, dark, 1, true)
+                    darkline.ZIndex = 0
+                    local line = draw:Line(0, 0, 0, 0, 0, col, 1, true)
+                    line.ZIndex = 1
+                    parts[#parts+1]={darkline, line}
+                end
+            elseif partlen > framelen then
+                local c = 0
+                for i=framelen, partlen do
+                    if parts[i-c] then
+                        parts[i-c][1]:Remove()
+                        parts[i-c][2]:Remove()
+                        table.remove(parts, i-c)
+                    end
+                end
+            end
+
+            local lastframe = frames[1]
+            local final = frames[#frames]
+            if not draw_endpos then
+                draw_endpos_outline = draw:Circle(x, y, 10, 1, 20, dark, 1, true)
+                draw_endpos_outline.ZIndex = 2
+                draw_endpos = draw:Circle(x, y, 8, 1, 20, col, 1, true)
+                draw_endpos.ZIndex = 3
+            end
+            local point, onscreen = camera:WorldToViewportPoint(final.p0)
+            if onscreen then
+                draw_endpos.Position = Vector2.new(point.X, point.Y)
+                draw_endpos_outline.Position = Vector2.new(point.X, point.Y)
+            end
+
+
+            for i=(curframe and curframe+1 or 2), framelen do
+                local v = parts[i]
+                if not v then break end
+                local framedata = frames[i]
+                local point1, onscreen1 = camera:WorldToViewportPoint(lastframe.p0)
+                local point2, onscreen2 = camera:WorldToViewportPoint(framedata.p0)
+                if not onscreen1 and not onscreen2 then 
+                    lastframe = framedata
+                    continue
+                end
+                v[1].From = Vector2.new(point1.X, point1.Y)
+                v[1].To = Vector2.new(point2.X, point2.Y)
+                v[2].From = Vector2.new(point1.X, point1.Y)
+                v[2].To = Vector2.new(point2.X, point2.Y)
+                lastframe = framedata
+            end
+        end
+
+        hook:Add("PostLoadGrenade", "PostLoadGrenade", function(grenadehandler)
+            local ups = debug.getupvalues(grenadehandler.throw)
+            local createnade, createnadeid
+            for k, v in pairs(ups) do
+                if typeof(v) == "function" then
+                    local name = debug.getinfo(v).name
+                    if name == "createnade" then
+                        createnade = v
+                        createnadeid = k
+                    end
+                end
+            end
+
+            local mainpart = debug.getupvalue(createnade, 2)
+            if typeof(mainpart) ~= "Instance" then
+                mainpart = nil
+            end
+
+            local _pull = grenadehandler.pull
+            local ups = debug.getupvalues(_pull)
+
+            local blowuptimeindex = #ups
+            local throwinhandindex = #ups-2
+            local grenadedataindex
+            local grenadedata
+            for k, v in pairs(ups) do
+                if typeof(v) == "table" then
+                    if v.throwspeed then
+                        grenadedata = v
+                        grenadedata = table.deepcopy(grenadedata)
+                        grenadedataindex = k
+                        debug.setupvalue(_pull, k, grenadedata)
+                    end
+                end
+            end
+
+            local showpath = true
+            local created = false
+            local function _createnade(...)
+                created = true
+                RemovePredictionLines()
+                return createnade(...)
+            end
+
+            debug.setupvalue(grenadehandler.throw, createnadeid, newcclosure(_createnade))
+
+            local pathway
+            function grenadehandler.pull(...)
+                _pull(...)
+                local step = grenadehandler.step
+                function grenadehandler.step()
+                    step()
+                    if config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction") then
+                        if not created and mainpart then
+                            pathway = CalculateGrenadePathway(mainpart, grenadedata, onimpact and 3 or debug.getupvalue(_pull, blowuptimeindex) - tick())
+                            ManagePredictionLines(pathway.frames)
+                        end
+                    end
+                end
+            end
+        end)
+    end
 
     -- Modifications
     hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
