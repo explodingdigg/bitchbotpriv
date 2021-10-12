@@ -886,8 +886,8 @@ do
         for i=1, #connections do
             connections[i]:Disconnect()
         end
-        self.registry = {}
-        self._registry_qa = {}
+        --[[self.registry = {}
+        self._registry_qa = {}]]
     end)
 end
 
@@ -917,6 +917,15 @@ do
         local x, y = mouse.X, mouse.Y
         hook:Call("Mouse.Move", lastMousePos ~= Vector2.new(x, y), x, y)
         lastMousePos = Vector2.new(x, y)
+    end)
+
+    local camera = BBOT.service:GetService("CurrentCamera")
+    local vport = camera.ViewportSize
+    hook:Add("RenderStep.First", "ViewportSize.Changed", function()
+        if camera.ViewportSize ~= vport then
+            vport = camera.ViewportSize
+            hook:CallP("Camera.ViewportChanged", vport)
+        end
     end)
 
     hook:bindEvent(mouse.WheelForward, "WheelForward")
@@ -1065,7 +1074,6 @@ do
         else
             local reg = self.registry
             local index = #reg+1
-            log(LOG_DEBUG, "Created timer '" .. ident .. "'")
             reg[index] = {
                 identifier = ident,
                 delay = delay,
@@ -1086,7 +1094,6 @@ do
             local t, index = timer:Get(identifier)
             if t then
                 table.remove(timer.registry, index)
-                log(LOG_DEBUG, "Removed timer '" .. identifier .. "'")
             end
         end
     end
@@ -1479,9 +1486,19 @@ do
     ]]
     function config:IsPathwayEqual(pathway, ...)
         local steps = {...}
-        for i=1, #steps do
-            if pathway[i] ~= steps[i] then
-                return false
+        local isabsolute = steps[#steps]
+        if isabsolute == true then
+            for i=1, #steps-1 do
+                if pathway[i] ~= steps[i] then
+                    return false
+                end
+            end
+            if #pathway ~= #steps-1 then return false end
+        else
+            for i=1, #steps do
+                if pathway[i] ~= steps[i] then
+                    return false
+                end
             end
         end
         return true
@@ -1814,7 +1831,9 @@ do
     function config:ProcessOpen(target, path, newconfig)
         return xpcall(function(target, path, newconfig) table.recursion( target, function(pathway, value)
             local optionname = pathway[#pathway]
+            local isself = false
             if optionname == "self" then
+                isself = true
                 optionname = pathway[#pathway-1]
             end
             local natural_path = pathway
@@ -1825,31 +1844,30 @@ do
                 end
                 natural_path = newpath
             end
+            if isself then
+                pathway = table.deepcopy(pathway)
+                pathway[#pathway] = nil
+            end
             local T = typeof(value)
             if T == "Vector3" then
                 local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
                 if not newvalue or typeof(newvalue) ~= "table" or not newvalue.X then return end
                 config:SetValue(Vector3.new(newvalue.X, newvalue.Y, newvalue.Z), unpack(pathway))
                 return false
-            elseif T == "ColorPicker" then
-                local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
-                if not newvalue or typeof(newvalue) ~= "table" or (#newvalue < 3) then return end
-                config:SetValue(newvalue, unpack(pathway))
             elseif T == "Color3" then
                 local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
                 if not newvalue or typeof(newvalue) ~= "table" or not newvalue.R then return end
                 config:SetValue(Color3.new(newvalue.R, newvalue.G, newvalue.B), unpack(pathway))
                 return false
-            elseif T == "ComboBox" then
-                local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
-                if not newvalue or typeof(newvalue) ~= "table" or (#newvalue < 1) then return end
-                config:SetValue(newvalue, unpack(pathway))
-                return false
             elseif T=="table" then
                 if value.type then
                     if value.type == "Message" then return false end
                     local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
-                    if newvalue == nil then return end
+                    if value.type == "KeyBind" then
+                        config:SetValue(newvalue, unpack(pathway))
+                        return false
+                    end
+                    if newvalue == nil then return false end
                     if value.type == "ColorPicker" and newvalue.T == "ColorPicker" then
                         newvalue = newvalue.V
                     elseif value.type == "ComboBox" and newvalue.T == "ComboBox" and #newvalue.V == #value.value then
@@ -2089,6 +2107,7 @@ do
         end
 
         function base:Calculate()
+            if self.__INVALID then return end
             local last_trans, last_zind, last_vis = self._transparency, self._zindex, self._visible
             local wasenabled = self._enabled
 
@@ -2150,7 +2169,6 @@ do
         function base:SetParent(object)
             if not object and self.parent then
                 local parent_children = self.parent.children
-                self.parent = nil
                 local c=0
                 for i=1, #parent_children do
                     local v = parent_children[i-c]
@@ -2159,7 +2177,10 @@ do
                         c=c+1
                     end
                 end
-            else
+                self.parent:Calculate()
+                self.parent = nil
+                self:Calculate()
+            elseif object then
                 self.parent = object
                 local parent_children = self.parent.children
                 parent_children[#parent_children+1] = self
@@ -2171,8 +2192,8 @@ do
                         c=c+1
                     end
                 end
+                self:Calculate()
             end
-            self:Calculate()
         end
 
         function base:RecursiveToNumeric(children, destination)
@@ -2233,6 +2254,8 @@ do
             self:PostDestroy()
         end
         function base:Remove()
+            self.__INVALID = true
+            self:SetParent(nil)
             self:PreRemove()
             self:Destroy()
             local reg = gui.registry
@@ -2252,7 +2275,6 @@ do
                 end
             end
             self:PostRemove()
-            self.__INVALID = true
         end
         function base:GetAbsoluteTransparency()
             return self._transparency
@@ -2564,6 +2586,30 @@ do
                 gui.hovering.ishovering = true
                 if gui.hovering.OnMouseEnter then
                     gui.hovering:OnMouseEnter(mouse.X, mouse.Y)
+                end
+            end
+        end
+    end)
+
+    hook:Add("WheelForward", "BBOT:GUI.Input", function()
+        local reg = gui.registry
+        for i=1, #reg do
+            local v = reg[i]
+            if gui:IsValid(v) and v._enabled then
+                if v.WheelForward then
+                    v:WheelForward()
+                end
+            end
+        end
+    end)
+
+    hook:Add("WheelBackward", "BBOT:GUI.Input", function()
+        local reg = gui.registry
+        for i=1, #reg do
+            local v = reg[i]
+            if gui:IsValid(v) and v._enabled then
+                if v.WheelBackward then
+                    v:WheelBackward()
                 end
             end
         end
@@ -3309,7 +3355,7 @@ do
         end
 
         function GUI:GetText()
-            return self.content
+            return self.content or ""
         end
 
         function GUI:SetColor(col)
@@ -3597,8 +3643,8 @@ do
                         if success then
                             self.input_repeater_start = tick() + .5
                             self.input_repeater_key = input.KeyCode
-                            self:OnValueChanged(new_text)
                             self:SetText(new_text)
+                            self:OnValueChanged(new_text)
                             self.cursor_position = #ltext
                         end
                     end
@@ -3654,8 +3700,8 @@ do
                             local original_text = current_text
                             local new_text, success, ltext = self:ProcessInput(current_text, self.input_repeater_key)
                             if success then
-                                self:OnValueChanged(new_text)
                                 self:SetText(new_text)
+                                self:OnValueChanged(new_text)
                                 self.cursor_position = #ltext
                             end
                         end
@@ -4492,7 +4538,7 @@ do
             self.text = gui:Create("Text", self)
             self.text:SetTextAlignmentX(Enum.TextXAlignment.Center)
             self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
-            self.text:SetPos(.5, 0, .5, 0)
+            self.text:SetPos(.5, 0, .5, -1)
             self.text:SetTextSize(13)
             self.text:SetText("None")
 
@@ -4500,6 +4546,12 @@ do
             self.value = false
             self.toggletype = 1
             self.config = {}
+        end
+
+        function GUI:GetRelatedConfig()
+            local cfg = table.deepcopy(self.config)
+            cfg[#cfg] = nil
+            return cfg
         end
         
         function GUI:PerformLayout(pos, size)
@@ -4542,11 +4594,7 @@ do
 
         function GUI:OnValueChanged() end
 
-        hook:Add("InputBegan", "BBOT:Menu.KeyBinds", function(input)
-            --if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
-            if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
-                return
-            end
+        hook:Add("OnConfigChanged", "BBOT:Menu.KeyBinds", function(steps)
             local guis = gui.registry
             for i=1, #guis do
                 local v = guis[i]
@@ -4554,10 +4602,26 @@ do
                     local cfg = table.deepcopy(v.config)
                     cfg[#cfg] = nil
                     local parentoption = config:GetRaw(unpack(cfg))
-                    if typeof(parentoption) == "boolean" and not parentoption then continue end
+                    if (typeof(parentoption) == "boolean" and not parentoption) or not v.key then
+                        menu:UpdateStatus(cfg[#cfg], nil, false, v.text:GetText())
+                    else
+                        menu:UpdateStatus(cfg[#cfg], "Disabled", true, v.text:GetText())
+                    end
+                end
+            end
+        end)
 
+        hook:Add("InputBegan", "BBOT:Menu.KeyBinds", function(input)
+            --if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
+            if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetAbsoluteEnabled() then
+                return
+            end
+            local guis = gui.registry
+            for i=1, #guis do
+                local v = guis[i]
+                if gui:IsValid(v) and v.class == "KeyBind" and input and input.KeyCode == v.key then
                     local last = v.value
-                    if input.KeyCode == v.key then
+                    if input and input.KeyCode == v.key then
                         if v.toggletype == 2 then
                             v.value = not v.value
                         elseif v.toggletype == 1 then
@@ -4569,8 +4633,11 @@ do
                         v.value = true
                     end
                     if last ~= v.value then
+                        local cfg = table.deepcopy(v.config)
+                        cfg[#cfg] = nil
+                        menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
                         config:GetRaw(unpack(v.config)).toggle = v.value
-                        hook:Call("OnKeyBindChanged", v.config, last, v.value)
+                        hook:CallP("OnKeyBindChanged", v.config, last, v.value)
                     end
                 end
             end
@@ -4578,18 +4645,13 @@ do
 
         hook:Add("InputEnded", "BBOT:Menu.KeyBinds", function(input)
             --if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
-            if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetEnabled() then
+            if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetAbsoluteEnabled() then
                 return
             end
             local guis = gui.registry
             for i=1, #guis do
                 local v = guis[i]
-                if gui:IsValid(v) and v.class == "KeyBind" then
-                    local cfg = table.deepcopy(v.config)
-                    cfg[#cfg] = nil
-                    local parentoption = config:GetRaw(unpack(cfg))
-                    if typeof(parentoption) == "boolean" and not parentoption then continue end
-
+                if gui:IsValid(v) and v.class == "KeyBind" and input and input.KeyCode == v.key then
                     local last = v.value
                     if input.KeyCode == v.key then
                         if v.toggletype == 1 then
@@ -4599,8 +4661,11 @@ do
                         end
                     end
                     if last ~= v.value then
+                        local cfg = table.deepcopy(v.config)
+                        cfg[#cfg] = nil
+                        menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
                         config:GetRaw(unpack(v.config)).toggle = v.value
-                        hook:Call("OnKeyBindChanged", v.config, last, v.value)
+                        hook:CallP("OnKeyBindChanged", v.config, last, v.value)
                     end
                 end
             end
@@ -4643,6 +4708,7 @@ do
 
         hook:Add("OnKeyBindChanged", "BBOT:Notify", function(steps, old, new)
             if ignorenotify then return end
+            
             if config:GetValue("Main", "Visuals", "Keybinds", "Log Keybinds") then
                 local name = steps[#steps]
                 if name == "KeyBind" then
@@ -4989,6 +5055,131 @@ do
         gui:Register(GUI, "ColorPicker", "Button")
     end
 
+    do
+        local GUI = {}
+
+        function GUI:Init()
+
+        end
+
+        function GUI:PerformLayout()
+
+        end
+
+        gui:Register(GUI, "ScrollBar")
+
+        local GUI = {}
+
+        function GUI:Init()
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
+
+            self.scrollbar = gui:Create("ScrollBar", self)
+            self.scrollbar:SetSize(0,3,0,1)
+            self.scrollbar:SetPos(1,-3,0,0)
+
+            self.canvas = gui:Create("Container", self)
+            self.canvas:SetSize(1,0,1,0)
+
+            self.Y_scroll = 0 -- for now this is by object
+            self.Spacing = 2
+            self.Padding = 0
+        end
+
+        function GUI:SetPadding(num) -- Padding is the idents around the panels
+            self.Padding = num
+            self:PerformOrganization()
+        end
+
+        function GUI:SetSpacing(num) -- The spacing in-between panels
+            self.Spacing = num
+            self:PerformOrganization()
+        end
+
+        function GUI:PerformLayout(pos, size)
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
+            self.background.Position = pos
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
+            self.background.Size = size
+        end
+
+        function GUI:PerformOrganization()
+            local max_h = self.absolutesize.Y
+            local children = self.canvas.children
+            local y_axis = 0
+
+            local count, onpage = 0, 0
+            for i=1, #children do
+                local v = children[i]
+                if not gui:IsValid(v) then continue end
+                if not v:GetVisible() then continue end
+                count = count + 1
+
+                local sizeY = v.absolutesize.Y
+                if i >= self.Y_scroll then
+                    if y_axis + sizeY + self.Spacing <= max_h then
+                        onpage = onpage + 1
+                    end
+                    y_axis = y_axis + sizeY + self.Spacing
+                end
+            end
+
+            if self.Y_scroll > count-onpage then
+                self.Y_scroll = math.max(0, count-onpage)
+            end
+
+            y_axis = 0
+
+            for i=1, #children do
+                local v = children[i]
+                if not gui:IsValid(v) then continue end
+                if not v:GetVisible() then
+                    v:SetEnabled(false)
+                    continue
+                end
+                local sizeY = v.absolutesize.Y
+                v:SetSize(1, -4-self.Padding*2, 0, sizeY)
+
+                if i < self.Y_scroll then
+                    v:SetPos(0, self.Padding+2, 0, -sizeY-4)
+                    v:SetEnabled(false)
+                else
+                    if y_axis + sizeY + self.Spacing > max_h then
+                        v:SetEnabled(false)
+                    else
+                        v:SetEnabled(true)
+                        v:SetPos(0, self.Padding+2, 0, y_axis + self.Spacing)
+                    end
+                    y_axis = y_axis + sizeY + self.Spacing
+                end
+            end
+
+            --self:InvalidateLayout(true, true)
+        end
+
+        function GUI:WheelForward()
+            if not gui:IsHovering(self) then return end
+            self.Y_scroll = math.max(0, self.Y_scroll - 1)
+            self:PerformOrganization()
+        end
+
+        function GUI:WheelBackward()
+            if not gui:IsHovering(self) then return end
+            self.Y_scroll = math.min(#self.canvas.children, self.Y_scroll + 1)
+            self:PerformOrganization()
+        end
+
+        function GUI:Add(object) -- Add GUI objects here to add to the canvas
+            object:SetParent(self.canvas)
+            self:PerformOrganization()
+        end
+
+        gui:Register(GUI, "ScrollPanel")
+    end
+
     local camera = BBOT.service:GetService("CurrentCamera")
 
     menu.images = {}
@@ -5077,13 +5268,13 @@ do
             return 25 + 9
         elseif type == "KeyBind" then
             local keybind = gui:Create("KeyBind", container)
-            keybind:SetPos(1, X-34, 0, Y-2)
-            keybind:SetSize(0, 34, 0, 14)
-            keybind:SetValue(_config_module:GetRaw(unpack(path)).value)
+            keybind:SetPos(1, X-34, 0, Y)
+            keybind:SetSize(0, 34, 0, 10)
             keybind.value = false
             keybind.toggletype = config.toggletype
             keybind.config = path
             keybind.tooltip = config.tooltip
+            keybind:SetValue(_config_module:GetRaw(unpack(path)).value)
             function keybind:OnValueChanged(new)
                 menu:ConfigSetValue(new, path)
             end
@@ -5267,6 +5458,21 @@ do
                         self:HandleGeneration(subcontainer, path, config)
                         subcontainer = nil
                     end
+                elseif type == "ScrollPanel" then
+                    local frame = gui:Create("ScrollPanel")
+                    if typeof(container) == "function" then
+                        container(config, frame)
+                    else
+                        frame:SetParent(container)
+                    end
+                    frame.Name = name
+                    if config.pos then
+                        frame:SetPos(config.pos)
+                    end
+                    if config.size then
+                        frame:SetSize(config.size)
+                    end
+                    subcontainer = frame
                 elseif type == "Container" then
                     local frame = gui:Create("Container")
                     if typeof(container) == "function" then
@@ -5306,6 +5512,21 @@ do
                     frame.subcontainer = subcontainer
                     subcontainer:SetPos(0, 8, 0, 23)
                     subcontainer:SetSize(1, -16, 1, -23)
+                elseif type == "Custom" then
+                    local frame = config.callback()
+                    if typeof(container) == "function" then
+                        container(config, frame)
+                    else
+                        frame:SetParent(container)
+                    end
+                    frame.Name = name
+                    if config.pos then
+                        frame:SetPos(config.pos)
+                    end
+                    if config.size then
+                        frame:SetSize(config.size)
+                    end
+                    subcontainer = frame
                 end
                 if typeof(Id) == "string" then
                     Y = Y + self:CreateOptions(container, config, path, Y)
@@ -5415,6 +5636,67 @@ do
     main.background.ZIndex = 0
     main.background.Visible = true
     main:Cache(main.background)
+
+    do
+        local keybinds = gui:Create("Panel")
+        menu.keybinds = keybinds
+        keybinds:SetPos(0,0,.5,0)
+        keybinds:SetDraggable(true)
+        keybinds:SetEnabled(true)
+        keybinds.gradient:SetSize(1,0,0,15)
+        keybinds.gradient:Generate()
+
+        local alias = gui:Create("Text", keybinds)
+        keybinds.alias = alias
+        alias:SetPos(0, 3, 0, 4)
+        alias:SetText("Keybinds")
+        alias:SetTextSize(13)
+        local w, h = alias:GetTextSize()
+        keybinds.min_w = w
+        keybinds.min_h = h
+        keybinds:SetSize(0,w+2,0,h+8)
+
+        local activity = gui:Create("Text", keybinds)
+        keybinds.activity = activity
+        activity:SetPos(0, 3, 0, h+4+2)
+        activity:SetText("")
+        activity:SetTextSize(13)
+
+        hook:Add("OnConfigChanged", "BBOT:KeyBinds.Menu", function(steps, old, new)
+            if not config:IsPathwayEqual(steps, "Main", "Visuals", "Keybinds", "Enabled", true) then return end
+            keybinds:SetEnabled(new)
+        end)
+
+        menu.statuses = {}
+        function menu:UpdateStatus(name, extra, status, bind)
+            local cur = self.statuses[name]
+            if status == nil and cur then
+                status = cur[1]
+            end
+            if cur and cur[2] == extra and cur[1] == status and bind == cur[3] then
+                return
+            end
+
+            self.statuses[name] = {status, extra, bind or (cur and cur[3] or "")}
+            self:ReloadStatus()
+        end
+
+        function menu:ReloadStatus()
+            local txt = ""
+            for k, v in pairs(self.statuses) do
+                if v[1] then txt = txt .. ((v[3] and v[3] ~= "") and "[" .. v[3] .. "] " or "") .. k .. (v[2] and ": " .. v[2] or "") .. "\n" end
+            end
+            activity:SetText(txt)
+            local w, h = activity:GetTextSize()
+            keybinds:SetSize(0,math.max(keybinds.min_w, w),0,h+keybinds.min_h+10)
+        end
+
+        hook:Add("Menu.PostGenerate", "BBOT:Keybinds.Menu", function()
+            hook:GetTable()["InputBegan"]["BBOT:Menu.KeyBinds"]()
+            hook:GetTable()["OnConfigChanged"]["BBOT:Menu.KeyBinds"]()
+        end)
+    end
+
 
     hook:Add("OnConfigChanged", "BBOT:Menu.Background", function(steps, old, new)
         if config:IsPathwayEqual(steps, "Main","Settings","Cheat Settings","Background Transparency") then
@@ -5594,8 +5876,7 @@ do
     local gui = BBOT.gui
     local NetworkClient = BBOT.service:GetService("NetworkClient")
     if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459 then
-        BBOT.game = "pf"
-    else
+        BBOT.game = "pf"    else
         BBOT.game = "uni"
     end
 
@@ -6072,32 +6353,6 @@ do
                             name = "Movement Prediction",
                             value = true,
                         },
-                        {
-                            type = "Toggle",
-                            name = "Enable Recoil Control",
-                            value = true,
-                        },
-                        {
-                            type = "ComboBox",
-                            name = "Disable RCS While",
-                            values = { { "Holding Sniper", false }, { "Scoping In", false }, { "Not Shooting", true } }
-                        },
-                        {
-                            type = "Slider",
-                            name = "Recoil Control X",
-                            value = 45,
-                            min = 0,
-                            max = 100,
-                            suffix = "%",
-                        },
-                        {
-                            type = "Slider",
-                            name = "Recoil Control Y",
-                            value = 80,
-                            min = 0,
-                            max = 150,
-                            suffix = "%",
-                        },
                     }
                 },
                 {
@@ -6258,12 +6513,12 @@ do
                                 {
                                     name = "Aimbot",
                                     pos = UDim2.new(0,0,0,0),
-                                    size = UDim2.new(.5,-4,5.5/10,-4),
+                                    size = UDim2.new(.5,-4,5/10,-4),
                                     type = "Panel",
                                     content = {
                                         {
                                             type = "Toggle",
-                                            name = "Enabled",
+                                            name = "Rage Bot",
                                             value = false,
                                             unsafe = true,
                                             extra = {
@@ -6292,9 +6547,9 @@ do
                                             name = "Auto Wallbang Scale",
                                             value = 100,
                                             min = 0,
-                                            max = 101,
+                                            max = 121,
                                             suffix = "%",
-                                            custom = { [101] = "Screw Walls" },
+                                            custom = { [121] = "Screw Walls" },
                                         },
                                         {
                                             type = "Toggle",
@@ -6312,8 +6567,8 @@ do
                                 },
                                 {
                                     name = "Hack vs. Hack",
-                                    pos = UDim2.new(0,0,5.5/10,4),
-                                    size = UDim2.new(.5,-4,1-(5.5/10),-4),
+                                    pos = UDim2.new(0,0,5/10,4),
+                                    size = UDim2.new(.5,-4,1-(5/10),-4),
                                     type = "Panel",
                                     content = {
                                         {
@@ -6323,12 +6578,67 @@ do
                                             tooltip = "Increases possible penetration with Autowall. The higher\nthe Hitbox Shift Distance the more likely it is to miss shots.\nWhen it misses it will try disable this.",
                                         },
                                         {
+                                            type = "ComboBox",
+                                            name = "Hitbox Hitscan Points",
+                                            values = {
+                                                { "Up", true },
+                                                { "Down", true },
+                                                { "Left", false },
+                                                { "Right", false },
+                                                { "Forward", true },
+                                                { "Backward", true },
+                                                { "Origin", true },
+                                                { "Towards", true },
+                                            },
+                                        },
+                                        {
                                             type = "Slider",
                                             name = "Hitbox Shift Distance",
                                             value = 4,
                                             min = 1,
                                             max = 12,
                                             suffix = " studs",
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "FirePos Shifting",
+                                            value = false,
+                                            tooltip = "Increases possible penetration with Autowall. The higher the Hitbox Shift Distance the more likely it is to miss shots. When it misses it will try disable this.",
+                                        },
+                                        {
+                                            type = "ComboBox",
+                                            name = "FirePos Hitscan Points",
+                                            values = {
+                                                { "Up", true },
+                                                { "Down", true },
+                                                { "Left", false },
+                                                { "Right", false },
+                                                { "Forward", true },
+                                                { "Backward", true },
+                                                { "Origin", true },
+                                                { "Towards", true },
+                                            },
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "FirePos Shift Distance",
+                                            value = 4,
+                                            min = 1,
+                                            max = 12,
+                                            suffix = " studs",
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Max Hitpoints",
+                                            value = 30,
+                                            min = 0,
+                                            max = 100,
+                                            suffix = " point(s)",
+                                            decimal = 0,
+                                            custom = {
+                                                [0] = "Infinite",
+                                            },
+                                            tooltip = "The maximum amount of scans per hitbox point, useful if you don't wana lag to shit",
                                         },
                                         {
                                             type = "Toggle",
@@ -6399,7 +6709,30 @@ do
                                             suffix = "s",
                                         },
                                     }},
-                                    {content = {}},
+                                    {content = {
+                                        {
+                                            type = "Toggle",
+                                            name = "Damage Prediction",
+                                            value = true,
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Damage Prediction Time",
+                                            value = 200,
+                                            min = 100,
+                                            max = 500,
+                                            suffix = "%",
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Damage Prediction Limit",
+                                            value = 100,
+                                            min = 0,
+                                            max = 300,
+                                            custom = {[0] = "What even is the point?"},
+                                            suffix = "hp",
+                                        },
+                                    }},
                                 }
                             },
                         },
@@ -6868,6 +7201,7 @@ do
                                                     value = 2,
                                                     min = 1,
                                                     max = 200,
+                                                    decimal = 0,
                                                     suffix = "px",
                                                 },
                                                 {
@@ -6876,6 +7210,7 @@ do
                                                     value = 15,
                                                     min = 1,
                                                     max = 200,
+                                                    decimal = 0,
                                                     suffix = "px",
                                                 },
                                                 {
@@ -6884,6 +7219,7 @@ do
                                                     value = 25,
                                                     min = 0,
                                                     max = 200,
+                                                    decimal = 0,
                                                     suffix = "px",
                                                 },
                                             }},
@@ -7110,18 +7446,6 @@ do
                                         content = {
                                             {
                                                 type = "Toggle",
-                                                name = "Aimbot Prediction",
-                                                value = true,
-                                                extra = {
-                                                    {
-                                                        type = "ColorPicker",
-                                                        name = "Color",
-                                                        color = { 127, 72, 163, 255 },
-                                                    },
-                                                },
-                                            },
-                                            {
-                                                type = "Toggle",
                                                 name = "Ragdoll Chams",
                                                 value = false,
                                                 extra = {
@@ -7145,11 +7469,21 @@ do
                                                 extra = {
                                                     {
                                                         type = "ColorPicker",
-                                                        name = "Bullet Tracers",
+                                                        name = "Tracer Color",
                                                         color = { 201, 69, 54, 255 },
                                                     },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Tracer Outline",
+                                                        color = { 101, 69, 54, 255 },
+                                                    },
+                                                    {
+                                                        type = "ColorPicker",
+                                                        name = "Tracer Inner",
+                                                        color = { 201, 100, 54, 255 },
+                                                    },
                                                 },
-                                            },
+                                            }
                                         },
                                     },
                                     {
@@ -7515,7 +7849,7 @@ do
                                                 {
                                                     type = "KeyBind",
                                                     key = nil,
-                                                    toggletype = 1,
+                                                    toggletype = 2,
                                                 }
                                             },
                                         }
@@ -7560,7 +7894,27 @@ do
                                         },
                                         {
                                             type = "Slider",
+                                            name = "Swing Scale",
+                                            min = -200,
+                                            max = 200,
+                                            suffix = "%",
+                                            decimal = 1,
+                                            value = 100,
+                                            tooltip = "Temporarily here till I make a weapons tab..."
+                                        },
+                                        {
+                                            type = "Slider",
                                             name = "Reload Speed",
+                                            min = 0,
+                                            max = 100,
+                                            suffix = "%",
+                                            decimal = 1,
+                                            value = 100,
+                                            tooltip = "Temporarily here till I make a weapons tab..."
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "OnFire Speed",
                                             min = 0,
                                             max = 100,
                                             suffix = "%",
@@ -7658,6 +8012,19 @@ do
                                             name = "Reason",
                                             value = "Aimbot",
                                         },
+                                        {
+                                            type = "Slider",
+                                            name = "Votekick On Kills",
+                                            min = 0,
+                                            max = 10,
+                                            suffix = " kills",
+                                            decimal = 0,
+                                            value = 4,
+                                            custom = {
+                                                [0] = "Instantaneous Kick",
+                                            },
+                                            tooltip = "Delays votekick once at a certain amount of kills."
+                                        },
                                     }},
                                 },
                                 {
@@ -7680,6 +8047,12 @@ do
                                             tooltip = "Literally makes you look like your having a stroke."
                                         },
                                         {
+                                            type = "Toggle",
+                                            name = "Spaz Attack Force",
+                                            value = false,
+                                            tooltip = "Forces the repupdate regardless."
+                                        },
+                                        {
                                             type = "Slider",
                                             name = "Spaz Attack Intensity",
                                             min = 1,
@@ -7690,6 +8063,86 @@ do
                                             custom = {
                                                 [8] = "Unbearable",
                                             },
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Invisibility",
+                                            value = false,
+                                            tooltip = "Wtf where did he go?",
+                                            extra = {
+                                                {
+                                                    type = "KeyBind",
+                                                    toggletype = 2,
+                                                }
+                                            }
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Client Crasher",
+                                            value = false,
+                                            tooltip = "Dear god...",
+                                            extra = {
+                                                {
+                                                    type = "KeyBind",
+                                                    toggletype = 2,
+                                                }
+                                            }
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Server Crasher",
+                                            value = false,
+                                            tooltip = "Dear god...",
+                                            extra = {
+                                                {
+                                                    type = "KeyBind",
+                                                    toggletype = 2,
+                                                }
+                                            }
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Server Crasher Intensity",
+                                            min = 1,
+                                            max = 16,
+                                            suffix = "",
+                                            decimal = 0,
+                                            value = 4,
+                                            custom = {
+                                                [15] = "Literally Unplayable",
+                                                [16] = "Insta-Crash",
+                                            },
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Revenge Grenade",
+                                            value = false,
+                                            tooltip = "Automatically TP's a grenade to the person who killed you.",
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Semi-God",
+                                            value = false,
+                                            tooltip = "Enables when you are standing still. Staying longer than 8 seconds may result in a auto-slay when you move. Grenades and knives still affect you!",
+                                            extra = {
+                                                {
+                                                    type = "KeyBind",
+                                                    toggletype = 2,
+                                                }
+                                            }
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Semi-God Keep Alive",
+                                            min = 0,
+                                            max = 8,
+                                            suffix = "s",
+                                            decimal = 1,
+                                            value = 7,
+                                            custom = {
+                                                [0] = "Invulnerable",
+                                            },
+                                            tooltip = "Attempts to allow movement when in temp-god when needed, WARNING: This can make you vulnerable for a split second",
                                         },
                                     }},
                                 },
@@ -7903,7 +8356,7 @@ do
                             }
                         },
                     }
-                },
+                },]]
                 {
                     -- The first layer here is the frame
                     Id = "Env",
@@ -7916,20 +8369,90 @@ do
                             name = "Players",
                             pos = UDim2.new(0,0,0,0),
                             size = UDim2.new(1,0,1,0),
-                            type = "Container",
+                            type = "Panel",
                             content = {
                                 {
                                     name = "Player List", -- No type means auto-set to panel
-                                    pos = UDim2.new(0,8,0,8),
-                                    size = UDim2.new(1,-16,1,-40-16),
-                                    type = "Panel",
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(1,0,1,-80-4),
+                                    type = "Custom",
+                                    callback = function()
+                                        local container = gui:Create("Container")
+                                        local search = gui:Create("TextEntry", container)
+                                        search:SetText("")
+                                        search:SetSize(1,0,0,21)
+
+                                        local playerlist = gui:Create("ScrollPanel", container)
+                                        playerlist:SetPos(0,0,0,21+4)
+                                        playerlist:SetSize(1,0,1,-21-4)
+                                        
+                                        local function Refresh_List()
+                                            local tosearch = search:GetText()
+                                            local table = BBOT.table
+                                            local players = BBOT.service:GetService("Players")
+                                            local localplayer = BBOT.service:GetService("LocalPlayer")
+                                            local checked = {}
+
+                                            for i, v in next, players:GetChildren() do
+                                                if v == localplayer then continue end
+                                                local children = playerlist.canvas.children
+                                                for i=1, #children do
+                                                    if children[i].player == v then
+                                                        checked[v] = true
+                                                        break 
+                                                    end
+                                                end
+                                                if not checked[v] then
+                                                    local player_item = gui:Create("Panel")
+                                                    player_item:SetSize(1,0,0,26)
+                                                    player_item.player = v
+
+                                                    local name = gui:Create("Text", player_item)
+                                                    player_item.name = name
+                                                    name:SetPos(0, 3, 0, 5)
+                                                    name:SetText(v.Name)
+
+                                                    playerlist:Add(player_item)
+                                                    checked[v] = true
+                                                end
+                                            end
+
+                                            for i, v in next, playerlist.canvas.children do
+                                                if not v.player or not checked[v.player] then
+                                                    v:Remove()
+                                                elseif tosearch == "" or string.find(string.lower(v.name:GetText()), string.lower(tosearch), 1, true) then
+                                                    v:SetVisible(true)
+                                                else
+                                                    v:SetVisible(false)
+                                                end
+                                            end
+
+                                            playerlist:PerformOrganization()
+                                        end
+
+                                        function search:OnValueChanged()
+                                            Refresh_List()
+                                        end
+
+                                        hook:Add("PlayerAdded", "BBOT:PlayerList.Add", function(player)
+                                            Refresh_List()
+                                        end)
+
+                                        hook:Add("PlayerRemoving", "BBOT:PlayerList.Add", function(player)
+                                            Refresh_List()
+                                        end)
+
+                                        BBOT.timer:Simple(.1, Refresh_List)
+
+                                        return container
+                                    end,
                                     content = {},
                                 },
                                 {
                                     name = "Player Control",
-                                    pos = UDim2.new(0,8,1,-80-8),
-                                    size = UDim2.new(1,-16,0,80),
-                                    type = "Panel",
+                                    pos = UDim2.new(0,0,1,-80+4),
+                                    size = UDim2.new(1,0,0,80-4),
+                                    type = "Container",
                                     content = {},
                                 },
                             },
@@ -7949,7 +8472,7 @@ do
                             content = {},
                         },
                     }
-                }]]
+                }
             }
         else
             BBOT.configuration = {}
@@ -8174,6 +8697,7 @@ do
     local math = BBOT.math
     local table = BBOT.table
     local hook = BBOT.hook
+    local timer = BBOT.timer
     local aux = {}
     BBOT.aux = aux
 
@@ -8194,7 +8718,8 @@ do
         ["cframe"] = {"fromaxisangle", "toaxisangle", "direct"},
         ["sound"] = {"PlaySound", "play"},
         ["raycast"] = {"raycast", "raycastSingleExit"},
-        ["menu"] = {"isdeployed"}
+        ["menu"] = {"isdeployed"},
+        ["ScreenCull"] = {"point", "sphere", "localSegment", "segment"}
     }
 
     -- fetches by function name
@@ -8358,7 +8883,7 @@ do
         messagebox("For safety reasons this process has been halted\nError: " .. error .. "\nPlease contact the Demvolopers!", "BBOT: Critical Error", 0)
         return true
     end
-
+    
     BBOT:SetLoadingStatus(nil, 45)
 
     do -- using rawget just in case...
@@ -8371,29 +8896,30 @@ do
             local _BB = BBOT
             local _aux = _BB.aux
             local _hook, _send = _BB.hook, _aux.network._send -- something about synapses hooking system I tried...
-            if _aux.network_supressing then return _send(self, ...) end
-            _aux.network_supressing = true
-            if _hook:Call("SuppressNetworkSend", ...) then
+            if not _aux.network_supressing then
+                _aux.network_supressing = true
+                if _hook:CallP("SuppressNetworkSend", ...) then
+                    _aux.network_supressing = false
+                    return
+                end
                 _aux.network_supressing = false
-                return
             end
-            _aux.network_supressing = false
-            local override = _hook:Call("PreNetworkSend", ...)
+            local override = _hook:CallP("PreNetworkSend", ...)
             if override then
                 if _BB.username == "dev" then
                     --_BB.log(LOG_DEBUG, unpack(override))
                 end
-                return _send(self, unpack(override)), _hook:Call("PostNetworkSend", unpack(override))
+                return _send(self, unpack(override)), _hook:CallP("PostNetworkSend", unpack(override))
             end
             if _BB.username == "dev" then
                 --_BB.log(LOG_DEBUG, ...)
             end
-            return _send(self, ...), _hook:Call("PostNetworkSend", ...)
+            return _send(self, ...), _hook:CallP("PostNetworkSend", ...)
         end
         local function newsend(self, netname, ...)
             local ran, a, b, c, d, e = xpcall(sender, debug.traceback, self, netname, ...)
             if not ran then
-                aux.timer:Async(function() BBOT.log(LOG_ERROR, "Networking Error - ", netname, " - ", a) end)
+                BBOT.log(LOG_ERROR, "Networking Error - ", netname, " - ", a)
             else
                 return a, b, c, d, e
             end
@@ -8500,8 +9026,8 @@ do
     hook:Add("Unload", "BBOT:CharStepDetour", function()
         aux.char.step = old
     end)
-    
-    hook:Add("FullyLoaded", "BigRewardDetour", function()
+
+    hook:Add("Initialize", "BigRewardDetour", function()
         local receivers = aux.network.receivers
         for k, v in pairs(receivers) do
             local a = debug.getupvalues(v)[1]
@@ -8510,9 +9036,9 @@ do
                 if run then
                     if table.quicksearch(consts, "killshot") and table.quicksearch(consts, "kill") then
                         receivers[k] = function(type, entity, gunname, earnings, ...)
-                            hook:Call("PreBigAward", type, entity, gunname, earnings, ...)
+                            hook:CallP("PreBigAward", type, entity, gunname, earnings, ...)
                             v(type, entity, gunname, earnings, ...)
-                            hook:Call("PostBigAward", type, entity, gunname, earnings, ...)
+                            hook:CallP("PostBigAward", type, entity, gunname, earnings, ...)
                         end
     
                         hook:Add("Unload", "BBOT:RewardDetour." .. tostring(k), function()
@@ -8548,6 +9074,8 @@ do
     local network = BBOT.aux.network
     local hook = BBOT.hook
     local table = BBOT.table
+    local notification = BBOT.notification
+    local string = BBOT.string
     local timer = BBOT.timer
     local chat = {}
     BBOT.chat = chat
@@ -8585,7 +9113,7 @@ do
             local const = debug.getconstants(v)
             if table.quicksearch(const, "Tag") and table.quicksearch(const, "rbxassetid://") then
                 receivers[k] = function(p20, p21, p22, p23, p24)
-                    timer:Async(function() hook:Call("Chatted", p20, p21, p22, p23, p24) end)
+                    timer:Async(function() hook:CallP("Chatted", p20, p21, p22, p23, p24) end)
                     return v(p20, p21, p22, p23, p24)
                 end
                 hook:Add("Unload", "ChatDetour." .. tostring(k), function()
@@ -8593,7 +9121,7 @@ do
                 end)
             elseif table.quicksearch(const, "[Console]: ") and table.quicksearch(const, "Tag") then
                 receivers[k] = function(p18)
-                    timer:Async(function() hook:Call("Console", p18) end)
+                    timer:Async(function() hook:CallP("Console", p18) end)
                     return v(p18)
                 end
                 hook:Add("Unload", "ChatDetour." .. tostring(k), function()
@@ -8610,6 +9138,40 @@ do
         end
         network:send("chatted", str, un or false);
     end
+
+    chat.commands = {}
+
+    function chat:AddCommand(name, callback, help)
+        chat.commands[name] = {callback, help}
+    end
+
+    function chat:RemoveCommand(name)
+        chat.commands[name] = nil
+    end
+
+    chat:AddCommand("help", function(...)
+        notification:Create("WIP, please wait a bit!")
+    end, "Shows all command information.")
+
+    hook:Add("SuppressNetworkSend", "BBOT:Chat.Commands", function(netname, message)
+        if netname ~= "chatted" then return end
+        if string.sub(message, 1, 1) ~= "." or string.sub(message, 2, 2) == "." then return end
+        local command_line = string.sub(message, 2)
+        command_line = string.Explode(" ", command_line)
+        local command = command_line[1]
+        table.remove(command_line, 1)
+        local args = command_line
+
+        if chat.commands[command] then
+            local cmd = chat.commands[command]
+            local exec = cmd[1](unpack(args))
+            if exec == nil then exec = true end
+            return exec
+        else
+            notification:Create("Not a command, try \".help\" to see available commands.")
+        end
+        return true
+    end)
 
     chat.buffer = {}
     local lasttext = ""
@@ -8716,7 +9278,7 @@ do
                 hook:Call("Votekick.End", target, delay, votesrequired, true)
             end
         end)
-        if config:GetValue("Misc", "Votekick", "Anti-Votekick", "Enable") then
+        if config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then
             timer:Simple(delay+2, function()
                 votekick:RandomCall()
             end)
@@ -8732,7 +9294,7 @@ do
             votekick.Called = 2
         elseif votekick.Called == 2 or votekick.Called == 0 then
             votekick.Called = 0
-            votekick.NextCall = tick() + 1000000
+            votekick.NextCall = tick() + 1000000000
         end
     end)
     
@@ -8778,6 +9340,11 @@ do
         local target = table.fyshuffle(targets)[1]
         votekick:Call(target.Name, config:GetValue("Main", "Misc", "Votekick", "Reason"))
     end
+
+    local totalkills = 0
+    hook:Add("PreBigAward", "BBOT:Votekick.Kills", function()
+        totalkills = totalkills + 1
+    end)
     
     hook:Add("RenderStep.First", "BBOT:Votekick.AntiVotekick", function()
         if not config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then return end
@@ -8787,7 +9354,10 @@ do
         if not votekick.WasAlive then return end
         if playerdata.rankcalculator(playerdata:getdata().stats.experience) < 25 then return end
         if votekick:CanCall() then
-            votekick:RandomCall()
+            local kills = config:GetValue("Main", "Misc", "Votekick", "Votekick On Kills")
+            if kills == 0 or totalkills >= kills then
+                votekick:RandomCall()
+            end
         end
     end)
 end
@@ -8901,6 +9471,18 @@ do
         TeleportService:TeleportToPlaceInstance(game.PlaceId, id)
     end
 
+    BBOT.chat:AddCommand("hop", function(id)
+        if not id or id == "" then
+            serverhopper:RandomHop()
+            return
+        end
+        serverhopper:Hop(id)
+    end, "Hops to a server instance.")
+
+    BBOT.chat:AddCommand("rejoin", function()
+        BBOT.serverhopper:Hop(game.JobId)
+    end, "Rejoin the current server instance.")
+
     hook:Add("InternalMessage", "BBOT:ServerHopper.HopOnKick", function(message)
         if not string.find(message, "Server Kick Message:", 1, true) or not string.find(message, "votekicked", 1, true) then return end
         if not config:GetValue("Main", "Misc", "Server Hopper", "Enabled") then return end
@@ -8919,8 +9501,12 @@ do
     local hook = BBOT.hook
     local config = BBOT.config
     local roundsystem = BBOT.aux.roundsystem
+    local network = BBOT.aux.network
     local char = BBOT.aux.char
+    local table = BBOT.table
     local vector = BBOT.vector
+    local hud = BBOT.aux.hud
+    local replication = BBOT.aux.replication
     local gamelogic = BBOT.aux.gamelogic
     local gamemenu = BBOT.aux.menu
     local misc = {}
@@ -8930,7 +9516,7 @@ do
 
     hook:Add("OnConfigChanged", "BBOT:Misc.Fly", function(steps, old, new)
         if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly") and not config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
-            if not new and char.alive then
+            if not new and char.alive and misc.rootpart then
                 misc.rootpart.Anchored = false
             end
         end
@@ -8938,7 +9524,7 @@ do
 
     hook:Add("OnKeyBindChanged", "BBOT:Misc.Fly", function(steps, old, new)
         if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
-            if not new and char.alive then
+            if not new and char.alive and misc.rootpart then
                 misc.rootpart.Anchored = false
             end
         end
@@ -8997,7 +9583,7 @@ do
             local looking = camera.CFrame.LookVector
             local rightVector = camera.CFrame.RightVector
             local moving = false
-            if not config:GetValue("Misc", "Movement", "Circle Strafe") and not config:GetValue("Misc", "Movement", "Circle Strafe", "KeyBind") then
+            if not config:GetValue("Main", "Misc", "Movement", "Circle Strafe") or not config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
                 if userinputservice:IsKeyDown(Enum.KeyCode.W) then
                     travel += looking
                 end
@@ -9139,7 +9725,81 @@ do
         char.jump = oldjump
     end)
 
+    misc.beams = {}
+    local debris = BBOT.service:GetService("Debris")
+    local tween = BBOT.service:GetService("TweenService")
+    function misc:CreateBeam(origin_att, ending_att, texture)
+        local beam = Instance.new("Beam")
+        beam.Texture = texture or "http://www.roblox.com/asset/?id=446111271"
+        beam.TextureMode = Enum.TextureMode.Wrap
+        beam.TextureSpeed = 8
+        beam.LightEmission = 1
+        beam.LightInfluence = 1
+        beam.TextureLength = 12
+        beam.FaceCamera = true
+        beam.Enabled = true
+        beam.ZOffset = -1
+        beam.Transparency = NumberSequence.new(0,0)
+        beam.Color = ColorSequence.new(config:GetValue("Main", "Visuals", "Misc", "Bullet Tracers", "Tracer Color"), Color3.new(0, 0, 0))
+        beam.Attachment0 = origin_att
+        beam.Attachment1 = ending_att
+        debris:AddItem(beam, 3)
+        debris:AddItem(origin_att, 3)
+        debris:AddItem(ending_att, 3)
+
+        local speedtween = TweenInfo.new(5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0)
+        tween:Create(beam, speedtween, { TextureSpeed = 2 }):Play()
+        beam.Parent = workspace
+        table.insert(misc.beams, { beam = beam, time = tick() })
+        return beam
+    end
+
+    function misc:UpdateBeams()
+        local time = tick()
+        for i = #self.beams, 1, -1 do
+            if self.beams[i].beam  then
+                local transparency = (time - self.beams[i].time) - 2
+                self.beams[i].beam.Transparency = NumberSequence.new(transparency, transparency)
+            else
+                table.remove(self.beams, i)
+            end
+        end
+    end
+
+    local bullet_query = {}
+    hook:Add("PostNetworkSend", "BBOT:Misc.BulletTracer", function(networkname, ...)
+        if networkname == "newbullets" then
+            if not config:GetValue("Main", "Visuals", "Misc", "Bullet Tracers") then return end
+            local args = {...}
+            if not args[1] then return end
+            local reg = args[1]
+            local bullettable = reg.bullets
+            for i=1, #bullettable do
+                local v = bullettable[i]
+                bullet_query[v[2]] = reg.firepos
+            end
+        elseif networkname == "bullethit" then
+            local args = {...}
+            local Entity, HitPos, Part, bulletID = args[1], args[2], args[3], args[4]
+            if bullet_query[bulletID] then
+                local attach_origin = Instance.new("Attachment", workspace.Terrain)
+                attach_origin.Position = bullet_query[bulletID]
+                local attach_ending = Instance.new("Attachment", workspace.Terrain)
+                attach_ending.Position = HitPos
+                local beam = misc:CreateBeam(attach_origin, attach_ending)
+                beam.Parent = workspace
+            end
+        end
+    end)
+
     hook:Add("RenderStepped", "BBOT:Misc.Calculate", function()
+        misc:UpdateBeams()
+        if config:GetValue("Main", "Misc", "Exploits", "Server Crasher") and config:GetValue("Main", "Misc", "Exploits", "Server Crasher", "KeyBind") then
+            for i = 1, config:GetValue("Main", "Misc", "Exploits", "Server Crasher Intensity") ^ 2 do
+                network:send("changeatt", "Primary", "MP5K", { Underbarrel = "Flashlight",  Other = "Flashlight",  Ammo = "",  Barrel = "",  Optics = "" })
+                network:send("changeatt", "Primary", "MP5K", { Underbarrel = "",  Other = "",  Ammo = "",  Barrel = "",  Optics = ""  })
+            end
+        end
         misc:BypassSpeedCheck()
         if not char.alive then
             misc.humanoid = nil
@@ -9156,6 +9816,141 @@ do
             misc:Fly()
             misc:Speed()
             misc:AutoJump()
+        end
+    end)
+
+    function misc:GrenadeTP(position)
+        if gamelogic.gammo < 1 then return end
+        local args = {
+            "FRAG",
+            {
+                frames = {
+                    {
+                        v0 = Vector3.new(),
+                        glassbreaks = {},
+                        t0 = 0,
+                        offset = Vector3.new(),
+                        rot0 = CFrame.new(),
+                        a = Vector3.new(0 / 0),
+                        p0 = char.rootpart.Position,
+                        rotv = Vector3.new(),
+                    },
+                    {
+                        v0 = Vector3.new(),
+                        glassbreaks = {},
+                        t0 = 0.002,
+                        offset = Vector3.new(),
+                        rot0 = CFrame.new(),
+                        a = Vector3.new(0 / 0),
+                        p0 = Vector3.new(0 / 0),
+                        rotv = Vector3.new(),
+                    },
+                    {
+                        v0 = Vector3.new(),
+                        glassbreaks = {},
+                        t0 = 0.003,
+                        offset = Vector3.new(),
+                        rot0 = CFrame.new(),
+                        a = Vector3.new(),
+                        p0 = position,
+                        rotv = Vector3.new(),
+                    },
+                },
+                time = tick(),
+                blowuptime = 0.003,
+            },
+        }
+        gamelogic.gammo = gamelogic.gammo - 1
+        hud:updateammo("GRENADE");
+        network:send("newgrenade", unpack(args))
+    end
+
+    hook:Add("LocalKilled", "BBOT:RevengeGrenade", function(player)
+        if player == localplayer then return end
+        if not config:GetValue("Main", "Misc", "Exploits", "Revenge Grenade") then return end
+        misc:GrenadeTP(replication.getupdater(player).getpos())
+    end)
+
+    hook:Add("Initialize", "BBOT:LocalKilled", function()
+        local receivers = network.receivers
+
+        for k, v in pairs(receivers) do
+            local const = debug.getconstants(v)
+            if table.quicksearch(const, "setfixedcam") and table.quicksearch(const, "setspectate") and table.quicksearch(const, "isplayeralive") and table.quicksearch(const, "Killer") then
+                receivers[k] = function(player, name, p210, p211, p212, p213, p214)
+                    hook:CallP("LocalKilled", player, name, p210, p211, p212, p213, p214)
+                    return v(player, name, p210, p211, p212, p213, p214)
+                end
+                hook:Add("Unload", "Killed_Dtawdw." .. tostring(k), function()
+                    receivers[k] = v
+                end)
+            end
+        end
+    end)
+
+    hook:Add("Initialize", "BBOT:ScreenCull.Step", function()
+        local screencull = BBOT.aux.ScreenCull
+        local oldstep = screencull.step
+        function screencull.step(...)
+            hook:CallP("ScreenCull.PreStep", ...)
+            oldstep(...)
+            hook:CallP("ScreenCull.PostStep", ...)
+        end
+        hook:Add("Unload", "BBOT:ScreenCull.Step", function()
+            screencull.step = oldstep
+        end)
+    end)
+
+    local camera = BBOT.service:GetService("CurrentCamera")
+    hook:Add("ScreenCull.PreStep", "BBOT:Misc.Thirdperson", function()
+        if not char.alive or not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
+        local val = camera.CFrame
+        local dist = config:GetValue("Main", "Visuals", "Local", "Third Person Distance") / 10
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Blacklist
+        params.FilterDescendantsInstances = { camera, workspace.Ignore, workspace.Players }
+        local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
+        if hit and not hit.Instance.CanCollide then
+            camera.CFrame = val * CFrame.new(0, 0, dist)
+        else
+            local mag = hit and (hit.Position - val.p).Magnitude or nil
+            val *= CFrame.new(0, 0, mag or dist)
+            camera.CFrame = val
+        end
+    end)
+
+    local last_pos, last_ang, last_send, should_start = nil, nil, tick(), 0
+    hook:Add("SuppressNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, ...)
+        if networkname == "repupdate" then
+            if config:GetValue("Main", "Misc", "Exploits", "Semi-God") and config:GetValue("Main", "Misc", "Exploits", "Semi-God", "KeyBind") then
+                if last_pos == pos then
+                    if last_send < tick() and config:GetValue("Main", "Misc", "Exploits", "Semi-God Keep Alive") > 0 then
+                        last_send = tick() + config:GetValue("Main", "Misc", "Exploits", "Semi-God Keep Alive")
+                        last_pos = pos
+                        BBOT.menu:UpdateStatus("Semi-God", "Buffering...")
+                        network:send(networkname, last_pos, last_ang, ...)
+                    else
+                        BBOT.menu:UpdateStatus("Semi-God", "Active")
+                    end
+                    return true
+                else
+                    BBOT.menu:UpdateStatus("Semi-God", "Stand Still")
+                    last_pos = pos
+                    last_ang = ang
+                end
+            else
+                last_pos = pos
+                last_ang = ang
+            end
+        end
+    end)
+
+    hook:Add("RenderStepped", "BBOT:RepUpdate", function()
+        if not config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Force") then return end
+        if not char.alive then return end
+		local l__angles__1304 = BBOT.aux.camera.angles;
+        for i=1, 10 do
+		    network:send("repupdate", char.rootpart.Position, Vector2.new(l__angles__1304.x, l__angles__1304.y), tick());
         end
     end)
 
@@ -9197,6 +9992,7 @@ do
     local players = BBOT.service:GetService("Players")
     local camera = BBOT.service:GetService("CurrentCamera")
     local mouse = BBOT.service:GetService("Mouse")
+    local aux_camera = BBOT.aux.camera
     local aimbot = {}
     BBOT.aimbot = aimbot
     
@@ -9245,6 +10041,7 @@ do
     end
 
     function aimbot:VelocityPrediction(startpos, endpos, vel, speed) -- Kinematics is fun
+        vel = vel or Vector3.new()
         return endpos + (vel * ((endpos-startpos).Magnitude/speed))
     end
 
@@ -9474,6 +10271,9 @@ do
             local barrel_calc = self:GetLegitConfig("Aim Assist", "Use Barrel")
 
             local target = self:GetLegitTarget(aimbot.fov_circle_last, aimbot.dzfov_circle_last, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
+            if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
+                hook:Call("MouseBot.Changed", (target and unpack(target) or nil))
+            end
             if not target then return end
             self.mouse_target = target
             local position = target[2].Position
@@ -9523,6 +10323,9 @@ do
             local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
             local target = self:GetLegitTarget(aimbot.sfov_circle_last, nil, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
+            if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
+                hook:Call("RedirectionBot.Changed", (target and unpack(target) or nil))
+            end
             if not target then return end
             self.redirection_target = target
             local position = target[2].Position
@@ -9573,7 +10376,6 @@ do
         end)
 
         local isaiming, aimtime = nil, 0
-        local zoomspring = debug.getupvalue(char.step, 1)
         function aimbot:TriggerBotStep(gun)
             self.trigger_target = nil
             if assist_prediction.Visible then
@@ -9611,7 +10413,10 @@ do
                 assist_prediction_outline.Visible = assist_prediction.Visible
                 assist_prediction.Position = trigger_position
                 assist_prediction_outline.Position = assist_prediction.Position
-                local radi = (target[4] == "Body" and 600 or 350)*(char.unaimedfov/camera.FieldOfView)/magnitude
+                local radi = (target[4] == "Body" and 650 or 400)*(char.unaimedfov/camera.FieldOfView)/magnitude
+                if gun.type == "SHOTGUN" then
+                    radi = radi * 2
+                end
                 assist_prediction.Radius = radi
                 assist_prediction_outline.Radius = radi
             
@@ -9726,10 +10531,10 @@ do
         local parts = aimbot:GetParts(player)
         if updater and updater.receivedPosition and parts then
             local headpart = parts.head
-            local offset = (updater.receivedPosition-headpart.Position)+Vector3.new(0,1.25,0)
+            local offset = (updater.getpos()-headpart.Position)+Vector3.new(0,1.25,0)
             if offset.Magnitude > 1 then
                 if offset.Magnitude >= math.huge then
-                    return updater.receivedPosition, true
+                    return updater.getpos(), true
                 else
                     return offset
                 end
@@ -9743,9 +10548,63 @@ do
         return vector_cache
     end
 
+    local PingStat = BBOT.service:GetService("Stats").PerformanceStats.Ping
+    local function GetLatency()
+        return PingStat:GetValue() / 1000
+    end
+
+    function aimbot:GetDamage(data, distance, headshot)
+        local r0, r1, d0, d1 = data.range0, data.range1, data.damage0, data.damage1
+        return (distance < r0 and d0 or distance < r1 and (d1 - d0) / (r1 - r0) * (distance - r0) + d0 or d1)  * (headshot and data.multhead or 1)
+    end
+
+    aimbot.predictedDamageDealt = {}
+    aimbot.predictedDamageDealtRemovals = {}
+    aimbot.BulletQuery = {}
+    hook:Add("PostNetworkSend", "BBOT:RageBot.DamagePrediction", function(netname, ...)
+        if netname == "bullethit" then
+            local a = {...}
+            local Entity, HitPos, Part, bulletID = a[1], a[2], a[3], a[4]
+            if not Entity or not Entity:IsA("Player") then return end
+            if not aimbot:GetRageConfig("Settings", "Damage Prediction") then return end
+            if not aimbot.BulletQuery[bulletID] then return end
+            local bullet_data = aimbot.BulletQuery[bulletID]
+            local damageDealt = aimbot:GetDamage(bullet_data[1], (HitPos-bullet_data[2]).Magnitude, Part == "Head")
+            if not aimbot.predictedDamageDealt[Entity] then
+                aimbot.predictedDamageDealt[Entity] = 0
+            end
+            aimbot.predictedDamageDealt[Entity] += damageDealt
+            aimbot.predictedDamageDealtRemovals[Entity] = tick() + GetLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
+        elseif netname == "newbullets" then
+            local a = {...}
+            local bullet_table, time_stamp = a[1], a[2]
+            local dataset = {gamelogic.currentgun.data, bullet_table.firepos}
+            for i=1, #bullet_table.bullets do
+                local v = bullet_table.bullets[i]
+                aimbot.BulletQuery[v[2]] = dataset
+            end
+            timer:Simple(1.5, function()
+                for i=1, #bullet_table.bullets do
+                    local v = bullet_table.bullets[i]
+                    aimbot.BulletQuery[v[2]] = nil
+                end
+            end)
+        end
+    end)
+
+    hook:Add("RenderStepped", "BBOT:RageBot.DamagePrediction", function()
+        for index, time in next, aimbot.predictedDamageDealtRemovals do
+            if time and (tick() > time) then
+                aimbot.predictedDamageDealt[index] = 0
+                aimbot.predictedDamageDealtRemovals[index] = nil
+            end
+        end
+    end)
+
     function aimbot:GetRageTarget(fov, gun)
         local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
-        local cam_position = camera.CFrame.p
+        local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+        local cam_position = aux_camera.basecframe.p
         local team = (localplayer.Team and localplayer.Team.Name or "NA")
         local playerteamdata = workspace["Players"][team]
         local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
@@ -9754,6 +10613,41 @@ do
         local hitscan_priority = self:GetRageConfig("Aimbot", "Hitscan Priority")
         local aimbot_fov = config:GetValue("Main", "Rage", "Aimbot", "Aimbot FOV")
 
+        local hitbox_shift = self:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
+        local hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
+        local hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
+        local max_points = self:GetRageConfig("Hack vs. Hack", "Max Hitpoints")
+
+        local hitbox_points = {}
+        if hitbox_shift then
+            if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) end
+            if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) end
+            if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) end
+            if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) end
+            if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) end
+            if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) end
+            if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) end
+        end
+
+        local firepos_shift = self:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
+        local firepos_shift_points = self:GetRageConfig("Hack vs. Hack", "FirePos Hitscan Points")
+        local firepos_shift_distance = self:GetRageConfig("Hack vs. Hack", "FirePos Shift Distance")
+        
+        local firepos_points = {}
+        if firepos_shift then
+            if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(part.CFrame.p-cam_position) end
+            if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,firepos_shift_distance,0) end
+            if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-firepos_shift_distance,0) end
+            if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-firepos_shift_distance,0,0) end
+            if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(firepos_shift_distance,0,0) end
+            if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) end
+            if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) end
+        end
+
+        local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
+        local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
+
+        local scan_count = 0
         local organizedPlayers = {}
         local plys = players:GetPlayers()
         for i=1, #plys do
@@ -9761,8 +10655,10 @@ do
             if v == localplayer then
                 continue
             end
+            if max_points ~= 0 and scan_count > max_points then break end
         
             if config.priority[v.UserId] then continue end
+            if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
             local parts = self:GetParts(v)
             if not parts then continue end
         
@@ -9788,14 +10684,47 @@ do
                 if onscreen or aimbot_fov >= 180 then
                     --local object_fov = self:GetFOV(part, scan_part)
                     if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
-                        if wall_scale > 100 then
+                        if wall_scale > 120 then
                             table.insert(organizedPlayers, {v, part, pos, prioritize})
                             inserted_priority = true
                         else
-                            local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-                            if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-                                table.insert(organizedPlayers, {v, part, pos, prioritize})
-                                inserted_priority = true
+                            if firepos_shift then
+                                local lookatme = CFrame.new(Vector3.new(), pos-cam_position)
+                                local targetcframe = CFrame.new(cam_position)
+                                for i=1, #firepos_points do
+                                    local point = firepos_points[i]
+                                    local newcf = targetcframe * lookatme * point
+                                    local cam_position = newcf.p
+                                    if hitbox_shift then
+                                        local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
+                                        local targetcframe = CFrame.new(pos)
+                                        for i=1, #hitbox_points do
+                                            local point = hitbox_points[i]
+                                            local newcf = targetcframe * lookatme * point
+                                            local pos = newcf.p
+                                            local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+                                            if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+                                                table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
+                                                inserted_priority = true
+                                                scan_count = scan_count + 1
+                                            end
+                                        end
+                                    else
+                                        local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+                                        if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+                                            table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
+                                            inserted_priority = true
+                                            scan_count = scan_count + 1
+                                        end
+                                    end
+                                end
+                            else
+                                local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+                                if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+                                    table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
+                                    inserted_priority = true
+                                    scan_count = scan_count + 1
+                                end
                             end
                         end
                     end
@@ -9813,10 +10742,12 @@ do
                     if (fov and vector.dist2d(fov.Position, point) > fov.Radius) then continue end
                     if wall_scale > 100 then
                         table.insert(organizedPlayers, {v, part, pos, name})
+                        scan_count = scan_count + 1
                     else
                         local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
                         if (not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos) then continue end
-                        table.insert(organizedPlayers, {v, part, pos, name})
+                        table.insert(organizedPlayers, {v, part, pos, cam_position, name})
+                        scan_count = scan_count + 1
                     end
                 end
             end
@@ -9830,11 +10761,22 @@ do
     end
 
     do
+        function aimbot:RageChanged(target)
+            if (target == nil and self.rage_target) or (self.rage_target == nil and target) or (target and self.rage_target and target[1] ~= self.rage_target[1]) then
+                hook:Call("RageBot.Changed", (target and unpack(target) or nil))
+            end
+        end
+
         function aimbot:RageStep(gun)
-            if not self:GetRageConfig("Aimbot", "Enabled", "KeyBind") then return end
+            if not self:GetRageConfig("Aimbot", "Rage Bot", "KeyBind") then
+                self.rage_target = nil
+                self:RageChanged(nil)
+                return
+            end
             local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
             local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
+            self:RageChanged(target)
             if not target then return end
             self.rage_target = target
             local position = target[3]
@@ -10373,7 +11315,8 @@ do
     hook:Add("PreFireStep", "BBOT:Aimbot.Calculate", function(gun)
         aimbot:CrosshairStep(tick()-t, gun)
         aimbot.rage_target = nil
-        if config:GetValue("Main", "Rage", "Aimbot", "Enabled") then
+        aimbot:RageChanged(nil)
+        if config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
             aimbot:RageStep(gun)
         else
             aimbot:LegitStep(gun)
@@ -10397,7 +11340,7 @@ do
     local enque = {}
     aimbot.silent_bullet_query = enque
     -- Ta da magical right?
-    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, Entity, HitPos, Part, bulletID, ...)
+    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Slient.Prevent", function(networkname, Entity, HitPos, Part, bulletID, ...)
         if networkname == "bullethit" then
             if enque[bulletID] == Entity then
                 return true
@@ -10406,7 +11349,7 @@ do
     end)
 
     -- When silent aim isn't enough, resort to this, and make even cheaters rage that their config is garbage
-    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, timestamp)
+    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, ...)
         if networkname == "newbullets" then
             if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
             if aimbot.rage_target then -- who are we targeting today?
@@ -10418,11 +11361,10 @@ do
                 local dir = target[3]-campos
                 local firepos = bullettable.firepos
                 local gundata = gamelogic.currentgun.data
-                local campos = camera.CFrame.p
                 local t = dir.Magnitude/gundata.bulletspeed -- get the time it takes for the bullet to arrive
                 -- remind me to not do this, some cheats fucks with velocity...
                 local targetpos = target[3]
-                bullettable.firepos = campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
+                bullettable.firepos = target[4]--campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
 
                 for i=1, #bullettable.bullets do
                     local bullet = bullettable.bullets[i]
@@ -10444,7 +11386,7 @@ do
                     end)
                     enque[bullet[2]] = target[1] -- this bullet is a magic bullet now, supress networking for this bullet!
                 end
-                network:send(networkname, bullettable, timestamp)
+                network:send(networkname, bullettable, ...)
                 
                 return true
             end
@@ -10502,12 +11444,13 @@ do
         return organizedPlayers
     end
     
-    local nextstab = tick()
+    local nextstab, block_equip = tick(), false
     hook:Add("RenderStepped", "KnifeAura", function()
         if not char.alive or not config:GetValue("Main", "Rage", "Extra", "Knife Bot") or not config:GetValue("Main", "Rage", "Extra", "Knife Bot", "KeyBind") then return end
         local target = aimbot:GetKnifeTarget()
         if not target then return end
         if nextstab > tick() then return end
+        block_equip = true
         local lastequipped = aimbot.equipped
         if lastequipped ~= 3 then
             network:send("equip", 3);
@@ -10520,13 +11463,14 @@ do
         if lastequipped ~= 3 then
             network:send("equip", lastequipped);
         end
+        block_equip = false
         nextstab = tick() + config:GetValue("Main", "Rage", "Extra", "Knife Delay")
     end)
     
     aimbot.equipped = 1
     hook:Add("PostNetworkSend", "Aimbot.Equipped", function(netname, slot)
-        if netname ~= "equip" then return end
-        BBOT.timer:Async(function() aimbot.equipped = slot end)
+        if netname ~= "equip" or block_equip then return end
+        aimbot.equipped = slot
     end)
 end
 
@@ -10585,10 +11529,12 @@ do
     -- Self-explanitory
     function esp:Remove(uniqueid)
         local reg = self.registry
+        local c = 0
         for i=1, #reg do
-            if reg[i].uniqueid == uniqueid then
-                local v = reg[i]
-                table.remove(reg, i)
+            if reg[i-c].uniqueid == uniqueid then
+                local v = reg[i-c]
+                table.remove(reg, i-c)
+                c=c+1
                 if v.OnRemove then
                     v:OnRemove()
                 end
@@ -10699,6 +11645,7 @@ do
         local players = BBOT.service:GetService("Players")
         local replication = BBOT.aux.replication
         local hud = BBOT.aux.hud
+        local aimbot = BBOT.aimbot
         local color = BBOT.color
         local updater = replication.getupdater
         local ups = debug.getupvalues(updater)
@@ -10731,6 +11678,7 @@ do
 
             function player_meta:OnRemove()
                 self:Destroy(true, true)
+                self.removed = true
                 log(LOG_DEBUG, "Player ESP: Removing ", self.player.Name)
             end
 
@@ -10901,6 +11849,18 @@ do
                         self.healthbar_outline.Size = Vector2.new(2+2, bounding_box.h+2)
                     end
                 end
+
+                if self.healthtext and self.healthtext_enabled then
+                    if fail then
+                        self.healthtext.Visible = false
+                    else
+                        self.healthtext.Visible = true
+                        local offsety = (self.healthbar_enabled and (bounding_box.h * math.remap(math.clamp(health/100, 0, 1),0,1,1,0)) or lefty)
+                        self.healthtext.Position = Vector2.new(bounding_box.x - self.healthtext.TextBounds.X - (self.healthbar_enabled and 8 or 1), bounding_box.y + offsety - (self.healthbar_enabled and self.healthtext.TextBounds.Y/2 or 0))
+                        self.healthtext.Text = (self.healthbar_enabled and tostring(health) or tostring(health) .. "hp")
+                        lefty = lefty + self.healthtext.TextBounds.Y + 2
+                    end
+                end
             end
 
             function player_meta:GetConfig(...)
@@ -10926,6 +11886,17 @@ do
                 color, color_transparency = self:GetConfig("Health Bar", "Color Max")
                 self.healthbar_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.new(0,0,0), color_transparency, false))
                 self.healthbar = self:Cache(draw:Box(0, 0, 0, 0, 0, color, color_transparency, false))
+                
+                color, color_transparency = self:GetConfig("Health Number", "Color")
+                self.healthtext = self:Cache(draw:TextOutlined("100", 2, 0, 0, 12, false, color, black, color_transparency, false))
+            end
+
+            function player_meta:GetColor(...)
+                local color, color_transparency = self:GetConfig(...)
+                if config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target") and aimbot.rage_target and aimbot.rage_target[1] == self.player then
+                    color = config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target", "Aimbot Target")
+                end
+                return color, color_transparency
             end
 
             function player_meta:Setup()
@@ -10936,7 +11907,7 @@ do
                 self.parts = parts
                 local esp_enabled = self:GetConfig("Enabled")
                 
-                local color, color_transparency = self:GetConfig("Name", "Color")
+                local color, color_transparency = self:GetColor("Name", "Color")
                 self.name_enabled = (esp_enabled and self:GetConfig("Name") or false)
                 self.name.Visible = self.name_enabled
                 self.name.Color = color
@@ -10948,11 +11919,11 @@ do
                 self.box_outline.Visible = self.box_enabled
                 self.box.Visible = self.box_enabled
 
-                color, color_transparency = self:GetConfig("Box", "Color Fill")
+                color, color_transparency = self:GetColor("Box", "Color Fill")
                 self.box_fill.Color = color
                 self.box_fill.Transparency = color_transparency
 
-                color, color_transparency = self:GetConfig("Box", "Color Box")
+                color, color_transparency = self:GetColor("Box", "Color Box")
                 self.box.Color = color
                 self.box.Transparency = color_transparency
                 self.box_outline.Transparency = color_transparency
@@ -10961,7 +11932,7 @@ do
                 self:Cache(self.box_fill)
                 
                 color, color_transparency = self:GetConfig("Health Bar", "Color Max")
-                self.healthbar_enabled = self:GetConfig("Health Bar")
+                self.healthbar_enabled = (esp_enabled and self:GetConfig("Health Bar") or false)
                 self.healthbar.Color = color
                 self.healthbar.Transparency = color_transparency
                 self.healthbar_outline.Transparency = color_transparency
@@ -10969,6 +11940,13 @@ do
                 self.healthbar_outline.Visible = self.healthbar_enabled
                 self:Cache(self.healthbar)
                 self:Cache(self.healthbar_outline)
+                
+                color, color_transparency = self:GetConfig("Health Number", "Color")
+                self.healthtext_enabled = (esp_enabled and self:GetConfig("Health Number") or false)
+                self.healthtext.Visible = self.healthtext_enabled
+                self.healthtext.Color = color
+                self.healthtext.Transparency = color_transparency
+                self:Cache(self.healthtext)
 
                 self:RemoveInstances()
 
@@ -10981,6 +11959,7 @@ do
                     local invisible, itransparency = self:GetConfig("Chams", "Invisible Chams")
                     local scale = 0.1
                     local chams = {}
+                    self.chams = chams
                     for k, v in pairs(parts) do
                         if k ~= "rootpart" then
                             local boxhandle
@@ -11032,7 +12011,6 @@ do
                             boxhandle.ZIndex = 1
                         end
                     end
-                    self.chams = chams
                 end
 
                 log(LOG_DEBUG, "Player ESP: Now Alive ", self.player.Name)
@@ -11139,6 +12117,22 @@ do
             log(LOG_DEBUG, "Player ESP: Created ", player.Name)
             return esp_controller
         end
+
+        local last = ""
+        hook:Add("RageBot.Changed", "BBOT:ESP.Players.Targeted", function(target)
+            if not config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target") then return end
+            local oldobject = esp:Find("PLAYER_" .. last)
+            if oldobject then
+                oldobject:Rebuild()
+            end
+            if target then
+                local object = esp:Find("PLAYER_" .. target.UserId)
+                last = target.UserId
+                if object then
+                    object:Rebuild()
+                end
+            end
+        end)
 
         hook:Add("PostInitialize", "BBOT:ESP.Players.Load", function()
             for player, controller in pairs(player_registry) do
@@ -11402,7 +12396,9 @@ do
                 if remove then
                     for i=1, #self.draw_cache do
                         local v = self.draw_cache[i]
-                        v:Remove()
+                        if draw:IsValid(v) then
+                            v:Remove()
+                        end
                     end
                 end
             end
@@ -12136,7 +13132,7 @@ do
     end
 
     -- Modifications
-    hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
+    --[[hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
         if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
         local firemodes = table.deepcopy(modifications.firemodes)
         local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
@@ -12169,7 +13165,7 @@ do
         else
             modifications.firerate = modifications.firerate * mul;
         end
-    end)
+    end)]]
 
     hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
         --if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
@@ -12183,6 +13179,16 @@ do
         end
     end)
 
+    hook:Add("PreKnifeStep", "BBOT:Weapon.SwaySpring", function()
+        local swayspring = debug.getupvalue(BBOT.aux.char.reloadsprings, 6)
+        swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
+    end)
+    
+    hook:Add("PreWeaponStep", "BBOT:Weapon.SwaySpring", function()
+        local swayspring = debug.getupvalue(BBOT.aux.char.reloadsprings, 6)
+        swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
+    end)
+
     hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
         local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
         local mul = config:GetValue("Main", "Misc", "Tweaks", "Firerate")/100
@@ -12193,6 +13199,18 @@ do
             modifications.firerate = firerates
         else
             modifications.firerate = modifications.firerate * mul;
+        end
+    end)
+
+
+    hook:Add("WeaponModifyData", "ModifyWeapon.OnFire", function(modifications)
+        local timescale = config:GetValue("Main", "Misc", "Tweaks", "OnFire Speed")/100
+        for i, v in next, modifications.animations do
+            if string.find(string.lower(i), "onfire") then
+                if typeof(modifications.animations[i]) == "table" and modifications.animations[i].timescale then
+                    modifications.animations[i].timescale = (modifications.animations[i].timescale or 1) * timescale
+                end
+            end
         end
     end)
 
