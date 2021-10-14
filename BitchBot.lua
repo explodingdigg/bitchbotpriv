@@ -3772,8 +3772,14 @@ do
             self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
+            self.scrollpanel = gui:Create("ScrollPanel", self)
+            self.scrollpanel:SetPadding(5)
+            self.scrollpanel:SetSpacing(4)
+            self.scrollpanel:SetSize(1,0,1,0)
+
             self.options = {}
             self.buttons = {}
+            self.max_length = 8
             self.Id = 0
         end
 
@@ -3795,21 +3801,21 @@ do
             self.options = options
             for i=1, #options do
                 local v = options[i]
-                local button = gui:Create("TextButton", self)
+                local button = gui:Create("TextButton")
                 self.buttons[#self.buttons+1] = button
                 local _, scaley = button.text:GetTextSize(v)
-                button:SetPos(0, 5, 0, 4 + (scaley+4) * (i-1))
-                button:SetSize(1, -5, 0, scaley)
-                offset = 4 + (scaley+4) * i
+                button:SetPos(0, 0, 0, 0)
+                button:SetSize(1, 0, 0, scaley)
                 button:SetText(v)
                 function button.OnClick()
                     self.parent:SetOption(i)
                     self.parent:OnValueChanged(v)
                     self.parent:Close()
                 end
+                self.scrollpanel:Add(button)
             end
 
-            self:SetSize(1, 0, 0, offset)
+            self:SetSize(1, 0, 0, self.scrollpanel:GetTall(8))
         end
 
         function GUI:IsHoverTotal()
@@ -5059,11 +5065,31 @@ do
         local GUI = {}
 
         function GUI:Init()
-
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Accent")))
+            self.mouseinputs = true
         end
 
-        function GUI:PerformLayout()
+        function GUI:PerformLayout(pos, size)
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
+            self.background.Position = pos
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
+            self.background.Size = size
+        end
 
+        function GUI:Scrolled()
+            local canvas_size = self.parent:GetTall()
+            local scroll_position = self.parent:GetTall(self.parent.Y_scrol)
+            local maxLength = canvas_size - self.parent.absolutesize.Y
+            self.heightRatio = self.parent.absolutesize.Y / canvas_size
+            self.height = math.max(math.ceil(self.heightRatio * self.parent.absolutesize.Y), 20)
+            local position = math.clamp(scroll_position / maxLength, 0, 1) * (self.absolutesize.Y - self.height)
+    
+            self:SetSize(0, self.size.X.Offset, self.height/self.parent.absolutesize.Y, 0)
+            self:SetPos(0, -self.size.X.Offset-1, position/self.parent.absolutesize.Y, 0)
         end
 
         gui:Register(GUI, "ScrollBar")
@@ -5104,6 +5130,24 @@ do
             self.background_border.Size = size + Vector2.new(4,4)
             self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
+        end
+
+        function GUI:GetCanvas()
+            return self.canvas
+        end
+
+        function GUI:GetTall(max)
+            local children = self.canvas.children
+            max = max or #children
+            max = math.min(max, #children)
+            local y_axis = 0
+            for i=1, max do
+                local v = children[i]
+                if not gui:IsValid(v) then continue end
+                if not v:GetVisible() then continue end
+                y_axis = y_axis + sizeY + self.Spacing
+            end
+            return y_axis
         end
 
         function GUI:PerformOrganization()
@@ -5458,21 +5502,6 @@ do
                         self:HandleGeneration(subcontainer, path, config)
                         subcontainer = nil
                     end
-                elseif type == "ScrollPanel" then
-                    local frame = gui:Create("ScrollPanel")
-                    if typeof(container) == "function" then
-                        container(config, frame)
-                    else
-                        frame:SetParent(container)
-                    end
-                    frame.Name = name
-                    if config.pos then
-                        frame:SetPos(config.pos)
-                    end
-                    if config.size then
-                        frame:SetSize(config.size)
-                    end
-                    subcontainer = frame
                 elseif type == "Container" then
                     local frame = gui:Create("Container")
                     if typeof(container) == "function" then
@@ -5807,7 +5836,7 @@ do
 
     local infobar = gui:Create("Panel")
     menu.infobar = infobar
-    infobar.gradient:SetSize(1, 0, 0, 15)
+    infobar.gradient:SetSize(1, 0, 0, 17)
     infobar.gradient:Generate()
     infobar:AstheticLineAlignment("Top")
     infobar:SetSize(0, 0, 0, 20)
@@ -5862,6 +5891,213 @@ do
     local sizex = client_info:GetTextSize()
     infobar:SetPos(0, 50, 0, 8)
     gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
+end
+
+-- Notifications, nice... but some aspects of it still bugs me... (Done)
+do
+    -- I kinda like how this can run standalone
+    local hook = BBOT.hook
+    local math = BBOT.math
+    local notification = {
+        registry = {},
+    }
+    BBOT.notification = notification
+
+	local function DrawingObject(t, col)
+		local d = Drawing.new(t)
+
+		d.Visible = true
+		d.Transparency = 1
+		d.Color = col
+
+		return d
+	end
+
+	local function Rectangle(sizex, sizey, fill, col)
+		local s = DrawingObject("Square", col)
+
+		s.Filled = fill
+		s.Thickness = 1
+		s.Position = Vector2.new()
+		s.Size = Vector2.new(sizex, sizey)
+
+		return s
+	end
+
+	local function Text(text)
+		local s = DrawingObject("Text", Color3.new(1, 1, 1))
+
+		s.Text = text
+		s.Size = 13
+		s.Center = false
+		s.Outline = true
+		s.Position = Vector2.new()
+		s.Font = 2
+
+		return s
+	end
+
+    do
+        local meta = {}
+        notification.meta = meta
+
+        function meta:Remove(d)
+            if d.Position.x < d.Size.x then
+                for k, drawing in pairs(self.drawings) do
+                    drawing:Remove()
+                    drawing = false
+                end
+                self.enabled = false
+            end
+        end
+
+        function meta:Update(num, listLength, dt)
+            local pos = self.targetPos
+
+            local indexOffset = (listLength - num) * self.gap
+            if self.insety < indexOffset then
+                self.insety -= (self.insety - indexOffset) * 0.2
+            else
+                self.insety = indexOffset
+            end
+            local size = self.size
+
+            local tpos = Vector2.new(pos.x - size.x / self.time - math.remap(self.alpha, 0, 255, size.x, 0), pos.y + self.insety)
+            self.pos = tpos
+
+            local locRect = {
+                x = math.ceil(tpos.x),
+                y = math.ceil(tpos.y),
+                w = math.floor(size.x - math.remap(255 - self.alpha, 0, 255, 0, 70)),
+                h = size.y,
+            }
+            --pos.set(-size.x / fc - math.remap(self.alpha, 0, 255, size.x, 0), pos.y)
+
+            local fade = math.min(self.time * 12, self.alpha)
+            fade = fade > 255 and 255 or fade < 0 and 0 or fade
+
+            if self.enabled then
+                local linenum = 1
+                for i, drawing in pairs(self.drawings) do
+                    drawing.Transparency = fade / 255
+
+                    if type(i) == "number" then
+                        drawing.Position = Vector2.new(locRect.x + 1, locRect.y + i)
+                        drawing.Size = Vector2.new(locRect.w - 2, 1)
+                    elseif i == "text" then
+                        drawing.Position = tpos + Vector2.new(6, 2)
+                    elseif i == "outline" then
+                        drawing.Position = Vector2.new(locRect.x, locRect.y)
+                        drawing.Size = Vector2.new(locRect.w, locRect.h)
+                    elseif i == "fade" then
+                        drawing.Position = Vector2.new(locRect.x - 1, locRect.y - 1)
+                        drawing.Size = Vector2.new(locRect.w + 2, locRect.h + 2)
+                        local t = (200 - fade) / 255 / 3
+                        drawing.Transparency = t < 0.4 and 0.4 or t
+                    elseif i:find("line") then
+                        drawing.Position = Vector2.new(locRect.x + linenum, locRect.y + 1)
+                        if BBOT.menu then
+                            local mencol = customcolor or Color3.fromRGB(127, 72, 163)
+                            local color = linenum == 1 and mencol or Color3.fromRGB(mencol.R * 255 - 40, mencol.G * 255 - 40, mencol.B * 255 - 40) -- super shit
+                            if drawing.Color ~= color then
+                                drawing.Color = color
+                            end
+                        end
+                        linenum += 1
+                    end
+                end
+
+                self.time += self.estep * dt * 128 -- TODO need to do the duration
+                self.estep += self.eestep * dt * 64
+            end
+        end
+
+        function meta:Fade(num, len, dt)
+            if self.pos.x > self.targetPos.x - 0.2 * len or self.fading then
+                if not self.fading then
+                    self.estep = 0
+                end
+                self.fading = true
+                self.alpha -= self.estep / 4 * len * dt * 50
+                self.eestep += 0.01 * dt * 100
+            end
+            if self.alpha <= 0 then
+                self:Remove(self.drawings[1])
+            end
+        end
+    end
+
+    function notification:Create(t, customcolor)
+		local width = 18
+
+        local Note = {
+            enabled = true,
+            targetPos = Vector2.new(50, 33),
+            size = Vector2.new(200, width),
+            drawings = {
+                outline = Rectangle(202, width + 2, false, Color3.new(0, 0, 0)),
+                fade = Rectangle(202, width + 2, false, Color3.new(0, 0, 0)),
+            },
+            gap = 25,
+            width = width,
+            alpha = 255,
+            time = 0,
+            estep = 0,
+            eestep = 0.02,
+            insety = 0
+        }
+
+        setmetatable(Note, {__index = self.meta})
+
+        for i = 1, Note.size.y - 2 do
+            local c = 0.28 - i / 80
+            Note.drawings[i] = Rectangle(200, 1, true, Color3.new(c, c, c))
+        end
+
+        local color = Color3.fromRGB(127, 72, 163)
+
+        Note.drawings.text = Text(t)
+        if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
+            Note.size = Vector2.new(Note.drawings.text.TextBounds.x + 7, Note.size.y)
+        end
+        Note.drawings.line = Rectangle(1, Note.size.y - 2, true, color)
+        Note.drawings.line1 = Rectangle(1, Note.size.y - 2, true, color)
+
+        self.registry[#self.registry + 1] = Note
+    end
+
+    hook:Add("RenderStep.First", "BBOT:Notifications.Render", function(dt)
+		local smallest = math.huge
+        local notes = notification.registry
+		for k = 1, #notes do
+			local v = notes[k]
+			if v and v.enabled then
+				smallest = k < smallest and k or smallest
+			else
+				table.remove(notes, k)
+			end
+		end
+		local length = #notes
+		for k = 1, #notes do
+			local note = notes[k]
+			note:Update(k, length, dt)
+			if k <= math.ceil(length / 10) or note.fading then
+				note:Fade(k, length, dt)
+			end
+		end
+    end)
+
+    hook:Add("Unload", "BBOT:Notifications", function()
+        local notes = notification.registry
+		for k = 1, #notes do
+			local v = notes[k]
+            for index, drawing in pairs(v.drawings) do
+                drawing:Remove()
+                drawing = false
+            end
+        end
+        notification.registry = {}
+    end)
 end
 
 --! POST LIBRARIES !--
@@ -8385,6 +8621,8 @@ do
                                         local playerlist = gui:Create("ScrollPanel", container)
                                         playerlist:SetPos(0,0,0,21+4)
                                         playerlist:SetSize(1,0,1,-21-4)
+
+                                        
                                         
                                         local function Refresh_List()
                                             local tosearch = search:GetText()
@@ -8480,2228 +8718,2031 @@ do
     end)
 end
 
--- Notifications, nice... but some aspects of it still bugs me... (Done)
-do
-    -- I kinda like how this can run standalone
-    local hook = BBOT.hook
-    local math = BBOT.math
-    local notification = {
-        registry = {},
-    }
-    BBOT.notification = notification
-
-	local function DrawingObject(t, col)
-		local d = Drawing.new(t)
-
-		d.Visible = true
-		d.Transparency = 1
-		d.Color = col
-
-		return d
-	end
-
-	local function Rectangle(sizex, sizey, fill, col)
-		local s = DrawingObject("Square", col)
-
-		s.Filled = fill
-		s.Thickness = 1
-		s.Position = Vector2.new()
-		s.Size = Vector2.new(sizex, sizey)
-
-		return s
-	end
-
-	local function Text(text)
-		local s = DrawingObject("Text", Color3.new(1, 1, 1))
-
-		s.Text = text
-		s.Size = 13
-		s.Center = false
-		s.Outline = true
-		s.Position = Vector2.new()
-		s.Font = 2
-
-		return s
-	end
-
+if BBOT.game == "pf" then
+    -- Auxillary, responsible for fetching, modifying,  (Done)
+    -- If AUX cannot find or a check is invalidated, it will prevent BBOT from loading
+    -- This should in theory prevent most bans related to updates by PF as it would prevent
+    -- The cheat from having a colossal error
     do
-        local meta = {}
-        notification.meta = meta
+        BBOT:SetLoadingStatus("Loading Auxillary...", 20)
+        local math = BBOT.math
+        local table = BBOT.table
+        local hook = BBOT.hook
+        local timer = BBOT.timer
+        local aux = {}
+        BBOT.aux = aux
 
-        function meta:Remove(d)
-            if d.Position.x < d.Size.x then
-                for k, drawing in pairs(self.drawings) do
-                    drawing:Remove()
-                    drawing = false
-                end
-                self.enabled = false
-            end
-        end
-
-        function meta:Update(num, listLength, dt)
-            local pos = self.targetPos
-
-            local indexOffset = (listLength - num) * self.gap
-            if self.insety < indexOffset then
-                self.insety -= (self.insety - indexOffset) * 0.2
-            else
-                self.insety = indexOffset
-            end
-            local size = self.size
-
-            local tpos = Vector2.new(pos.x - size.x / self.time - math.remap(self.alpha, 0, 255, size.x, 0), pos.y + self.insety)
-            self.pos = tpos
-
-            local locRect = {
-                x = math.ceil(tpos.x),
-                y = math.ceil(tpos.y),
-                w = math.floor(size.x - math.remap(255 - self.alpha, 0, 255, 0, 70)),
-                h = size.y,
-            }
-            --pos.set(-size.x / fc - math.remap(self.alpha, 0, 255, size.x, 0), pos.y)
-
-            local fade = math.min(self.time * 12, self.alpha)
-            fade = fade > 255 and 255 or fade < 0 and 0 or fade
-
-            if self.enabled then
-                local linenum = 1
-                for i, drawing in pairs(self.drawings) do
-                    drawing.Transparency = fade / 255
-
-                    if type(i) == "number" then
-                        drawing.Position = Vector2.new(locRect.x + 1, locRect.y + i)
-                        drawing.Size = Vector2.new(locRect.w - 2, 1)
-                    elseif i == "text" then
-                        drawing.Position = tpos + Vector2.new(6, 2)
-                    elseif i == "outline" then
-                        drawing.Position = Vector2.new(locRect.x, locRect.y)
-                        drawing.Size = Vector2.new(locRect.w, locRect.h)
-                    elseif i == "fade" then
-                        drawing.Position = Vector2.new(locRect.x - 1, locRect.y - 1)
-                        drawing.Size = Vector2.new(locRect.w + 2, locRect.h + 2)
-                        local t = (200 - fade) / 255 / 3
-                        drawing.Transparency = t < 0.4 and 0.4 or t
-                    elseif i:find("line") then
-                        drawing.Position = Vector2.new(locRect.x + linenum, locRect.y + 1)
-                        if BBOT.menu then
-                            local mencol = customcolor or Color3.fromRGB(127, 72, 163)
-                            local color = linenum == 1 and mencol or Color3.fromRGB(mencol.R * 255 - 40, mencol.G * 255 - 40, mencol.B * 255 - 40) -- super shit
-                            if drawing.Color ~= color then
-                                drawing.Color = color
-                            end
-                        end
-                        linenum += 1
-                    end
-                end
-
-                self.time += self.estep * dt * 128 -- TODO need to do the duration
-                self.estep += self.eestep * dt * 64
-            end
-        end
-
-        function meta:Fade(num, len, dt)
-            if self.pos.x > self.targetPos.x - 0.2 * len or self.fading then
-                if not self.fading then
-                    self.estep = 0
-                end
-                self.fading = true
-                self.alpha -= self.estep / 4 * len * dt * 50
-                self.eestep += 0.01 * dt * 100
-            end
-            if self.alpha <= 0 then
-                self:Remove(self.drawings[1])
-            end
-        end
-    end
-
-    function notification:Create(t, customcolor)
-		local width = 18
-
-        local Note = {
-            enabled = true,
-            targetPos = Vector2.new(50, 33),
-            size = Vector2.new(200, width),
-            drawings = {
-                outline = Rectangle(202, width + 2, false, Color3.new(0, 0, 0)),
-                fade = Rectangle(202, width + 2, false, Color3.new(0, 0, 0)),
-            },
-            gap = 25,
-            width = width,
-            alpha = 255,
-            time = 0,
-            estep = 0,
-            eestep = 0.02,
-            insety = 0
+        -- This is my automated way of fetching and finding shared modules pf uses
+        -- How to access -> BBOT.aux.replication
+        local aux_tables = {
+            ["vector"] = {"random", "anglesyx"},
+            ["physics"] = {"timehit"},
+            ["animation"] = {"player", "reset"},
+            ["gamelogic"] = {"controllerstep", "setsprintdisable"},
+            ["camera"] = {"setaimsensitivity", "magnify"},
+            ["network"] = {"servertick", "send"},
+            ["hud"] = {"addnametag"},
+            ["roundsystem"] = {"raycastwhitelist"},
+            ["playerdata"] = {"getattloadoutdata", "getgunattdata", "getattachdata", "updatesettings"},
+            ["char"] = {"unloadguns", "getslidecondition", "sprinting"},
+            ["replication"] = {"getplayerhit"},
+            ["cframe"] = {"fromaxisangle", "toaxisangle", "direct"},
+            ["sound"] = {"PlaySound", "play"},
+            ["raycast"] = {"raycast", "raycastSingleExit"},
+            ["menu"] = {"isdeployed"},
+            ["ScreenCull"] = {"point", "sphere", "localSegment", "segment"}
         }
 
-        setmetatable(Note, {__index = self.meta})
+        -- fetches by function name
+        -- index is the function you are finding
+        -- value is where to put it in aux
+        -- true = aux.bulletcheck, replication = aux.replication.bulletcheck
+        local aux_functions = {
+            ["bulletcheck"] = "raycast",
+            ["trajectory"] = "physics",
+            ["getupdater"] = "replication",
+            ["rankcalculator"] = "playerdata",
 
-        for i = 1, Note.size.y - 2 do
-            local c = 0.28 - i / 80
-            Note.drawings[i] = Rectangle(200, 1, true, Color3.new(c, c, c))
-        end
+            -- Not sure where this is supposed to go but ok...
+            -- TODO: Nata/Bitch
+            ["call"] = true,
+            ["gunbob"] = true,
+            ["gunsway"] = true,
+            ["addplayer"] = true,
+            ["removeplayer"] = true,
+            ["loadplayer"] = true,
+            ["updateplayernames"] = true,
+        }
 
-        local color = Color3.fromRGB(127, 72, 163)
+        function aux:_Scan()
+            local core_aux, core_aux_sub = {}, {}
 
-        Note.drawings.text = Text(t)
-        if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
-            Note.size = Vector2.new(Note.drawings.text.TextBounds.x + 7, Note.size.y)
-        end
-        Note.drawings.line = Rectangle(1, Note.size.y - 2, true, color)
-        Note.drawings.line1 = Rectangle(1, Note.size.y - 2, true, color)
-
-        self.registry[#self.registry + 1] = Note
-    end
-
-    hook:Add("RenderStep.First", "BBOT:Notifications.Render", function(dt)
-		local smallest = math.huge
-        local notes = notification.registry
-		for k = 1, #notes do
-			local v = notes[k]
-			if v and v.enabled then
-				smallest = k < smallest and k or smallest
-			else
-				table.remove(notes, k)
-			end
-		end
-		local length = #notes
-		for k = 1, #notes do
-			local note = notes[k]
-			note:Update(k, length, dt)
-			if k <= math.ceil(length / 10) or note.fading then
-				note:Fade(k, length, dt)
-			end
-		end
-    end)
-
-    hook:Add("Unload", "BBOT:Notifications", function()
-        local notes = notification.registry
-		for k = 1, #notes do
-			local v = notes[k]
-            for index, drawing in pairs(v.drawings) do
-                drawing:Remove()
-                drawing = false
-            end
-        end
-        notification.registry = {}
-    end)
-end
-
--- Auxillary, responsible for fetching, modifying,  (Done)
--- If AUX cannot find or a check is invalidated, it will prevent BBOT from loading
--- This should in theory prevent most bans related to updates by PF as it would prevent
--- The cheat from having a colossal error
-do
-    if BBOT.game ~= "pf" then return end
-    BBOT:SetLoadingStatus("Loading Auxillary...", 20)
-    local math = BBOT.math
-    local table = BBOT.table
-    local hook = BBOT.hook
-    local timer = BBOT.timer
-    local aux = {}
-    BBOT.aux = aux
-
-    -- This is my automated way of fetching and finding shared modules pf uses
-    -- How to access -> BBOT.aux.replication
-    local aux_tables = {
-        ["vector"] = {"random", "anglesyx"},
-        ["physics"] = {"timehit"},
-        ["animation"] = {"player", "reset"},
-        ["gamelogic"] = {"controllerstep", "setsprintdisable"},
-        ["camera"] = {"setaimsensitivity", "magnify"},
-        ["network"] = {"servertick", "send"},
-        ["hud"] = {"addnametag"},
-        ["roundsystem"] = {"raycastwhitelist"},
-        ["playerdata"] = {"getattloadoutdata", "getgunattdata", "getattachdata", "updatesettings"},
-        ["char"] = {"unloadguns", "getslidecondition", "sprinting"},
-        ["replication"] = {"getplayerhit"},
-        ["cframe"] = {"fromaxisangle", "toaxisangle", "direct"},
-        ["sound"] = {"PlaySound", "play"},
-        ["raycast"] = {"raycast", "raycastSingleExit"},
-        ["menu"] = {"isdeployed"},
-        ["ScreenCull"] = {"point", "sphere", "localSegment", "segment"}
-    }
-
-    -- fetches by function name
-    -- index is the function you are finding
-    -- value is where to put it in aux
-    -- true = aux.bulletcheck, replication = aux.replication.bulletcheck
-    local aux_functions = {
-        ["bulletcheck"] = "raycast",
-        ["trajectory"] = "physics",
-        ["getupdater"] = "replication",
-        ["rankcalculator"] = "playerdata",
-
-        -- Not sure where this is supposed to go but ok...
-        -- TODO: Nata/Bitch
-        ["call"] = true,
-        ["gunbob"] = true,
-        ["gunsway"] = true,
-        ["addplayer"] = true,
-        ["removeplayer"] = true,
-        ["loadplayer"] = true,
-        ["updateplayernames"] = true,
-    }
-
-    function aux:_Scan()
-        local core_aux, core_aux_sub = {}, {}
-
-        function self._CheckTable(result) -- for now...
-            for k, v in next, aux_tables do
-                local failed = false
-                for i=1, #v do
-                    if not rawget(result, v[i]) then
-                        failed = true
-                        break
+            function self._CheckTable(result) -- for now...
+                for k, v in next, aux_tables do
+                    local failed = false
+                    for i=1, #v do
+                        if not rawget(result, v[i]) then
+                            failed = true
+                            break
+                        end
                     end
-                end
-                if not failed then
-                    if core_aux[k] ~= result then
-                        if core_aux[k] ~= nil then
-                            return k
-                        else
-                            core_aux[k] = result
-                            BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. k .. '"')
+                    if not failed then
+                        if core_aux[k] ~= result then
+                            if core_aux[k] ~= nil then
+                                return k
+                            else
+                                core_aux[k] = result
+                                BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. k .. '"')
+                            end
                         end
                     end
                 end
             end
-        end
 
-        BBOT.log(LOG_DEBUG, "Scanning...")
-        local reg = getgc(true)
-        for _,v in next, reg do
-            if(typeof(v) == 'table')then
-                local ax = self._CheckTable(v)
-                if ax then
-                    return "Duplicate auxillary \"" .. ax .. "\""
-                end
-            elseif(typeof(v) == 'function')then
-                local ups = debug.getupvalues(v)
-                for k, v in pairs(ups) do
-                    if typeof(v) == "table" then
-                        local succ, ax = pcall(self._CheckTable, v)
-                        if succ and ax ~= nil then
-                            return "Duplicate auxillary \"" .. ax .. "\""
-                        end
+            BBOT.log(LOG_DEBUG, "Scanning...")
+            local reg = getgc(true)
+            for _,v in next, reg do
+                if(typeof(v) == 'table')then
+                    local ax = self._CheckTable(v)
+                    if ax then
+                        return "Duplicate auxillary \"" .. ax .. "\""
                     end
-                end
-
-                local name = debug.getinfo(v).name
-                if aux_functions[name] then
-                    local path = aux_functions[name]
-                    BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"' .. (path ~= true and " sorted into " .. path or ""))
-                    core_aux_sub[name] = v
-                end
-            end
-        end
-
-        BBOT:SetLoadingStatus(nil, 30)
-
-        BBOT.log(LOG_DEBUG, "Scanning auxillaries...")
-        for k, v in next, core_aux do
-            for kk, vv in next, v do
-                if typeof(vv) == "function" then
-                    local ups = debug.getupvalues(vv)
-                    for kkk, vvv in pairs(ups) do
-                        if typeof(vvv) == "table" then
-                            local ax = self._CheckTable(vvv)
-                            if ax then
+                elseif(typeof(v) == 'function')then
+                    local ups = debug.getupvalues(v)
+                    for k, v in pairs(ups) do
+                        if typeof(v) == "table" then
+                            local succ, ax = pcall(self._CheckTable, v)
+                            if succ and ax ~= nil then
                                 return "Duplicate auxillary \"" .. ax .. "\""
                             end
                         end
                     end
-                end
-            end
-        end
 
-        BBOT:SetLoadingStatus(nil, 40)
-
-        BBOT.log(LOG_DEBUG, "Checking auxillaries...")
-        for k, v in next, aux_tables do
-            if not core_aux[k] then
-                return "Couldn't find auxillary \"" .. k ..  "\""
-            end
-        end
-
-        for k, v in next, core_aux_sub do
-            if not aux_functions[k] then
-                return "Couldn't find auxillary \"" .. k ..  "\""
-            end
-        end
-
-        for k, v in next, core_aux do
-            self[k] = v
-        end
-
-        for k, v in next, core_aux_sub do
-            local saveas = aux_functions[k]
-            if saveas == true then
-                self[k] = v
-            else
-                if not self[saveas] then
-                    self[saveas] = {}
-                end
-                local t = self[saveas]
-                rawset(t, k, v)
-                hook:Add("Unload", "BBOT:Aux.RemoveAuxSub-" .. k, function()
-                    rawset(t, k, nil)
-                end)
-            end
-        end
-
-        for _,v in next, reg do
-            if typeof(v) == "function" then
-                local dbg = debug.getinfo(v)
-                if string.find(dbg.short_src, "network", 1, true) then
-                    local ups = debug.getupvalues(v)
-                    for k, vv in pairs(ups) do
-                        if typeof(vv) == "table" then
-                            if #vv > 10 then
-                                rawset(aux.network, "receivers", vv)
-                            end
-                        end
+                    local name = debug.getinfo(v).name
+                    if aux_functions[name] then
+                        local path = aux_functions[name]
+                        BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"' .. (path ~= true and " sorted into " .. path or ""))
+                        core_aux_sub[name] = v
                     end
                 end
             end
-        end
 
-        if not aux.network.receivers then
-            return "Couldn't find auxillary \"network.receivers\""
-        end
+            BBOT:SetLoadingStatus(nil, 30)
 
-        hook:Add("Unload", "BBOT:NetworkReceivers", function()
-            rawset(aux.network, "receivers", nil)
-        end)
-    end
-
-    local profiling_tick = tick()
-    local error = aux:_Scan()
-    if error then
-        BBOT.log(LOG_ERROR, error)
-        BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
-        messagebox("For safety reasons this process has been halted\nError: " .. error .. "\nPlease contact the Demvolopers!", "BBOT: Critical Error", 0)
-        return true
-    end
-    
-    BBOT:SetLoadingStatus(nil, 45)
-
-    do -- using rawget just in case...
-        local send = rawget(aux.network, "send")
-        local osend = rawget(aux.network, "_send")
-        hook:Add("Unload", "BBOT:NetworkOverride", function()
-            rawset(aux.network, "send", osend or send)
-        end)
-        local function sender(self, ...)
-            local _BB = BBOT
-            local _aux = _BB.aux
-            local _hook, _send = _BB.hook, _aux.network._send -- something about synapses hooking system I tried...
-            if not _aux.network_supressing then
-                _aux.network_supressing = true
-                if _hook:CallP("SuppressNetworkSend", ...) then
-                    _aux.network_supressing = false
-                    return
-                end
-                _aux.network_supressing = false
-            end
-            local override = _hook:CallP("PreNetworkSend", ...)
-            if override then
-                if _BB.username == "dev" then
-                    --_BB.log(LOG_DEBUG, unpack(override))
-                end
-                return _send(self, unpack(override)), _hook:CallP("PostNetworkSend", unpack(override))
-            end
-            if _BB.username == "dev" then
-                --_BB.log(LOG_DEBUG, ...)
-            end
-            return _send(self, ...), _hook:CallP("PostNetworkSend", ...)
-        end
-        local function newsend(self, netname, ...)
-            local ran, a, b, c, d, e = xpcall(sender, debug.traceback, self, netname, ...)
-            if not ran then
-                BBOT.log(LOG_ERROR, "Networking Error - ", netname, " - ", a)
-            else
-                return a, b, c, d, e
-            end
-        end
-        rawset(aux.network, "_send", send)
-        rawset(aux.network, "send", newcclosure(newsend))
-    end
-
-    hook:Add("PostNetworkSend", "BBOT:FrameworkErrorLog", function(net, ...)
-        if net == "logmessage" or net == "debug" then
-            local args = {...}
-            local message = ""
-            for i = 1, #args - 1 do
-                message ..= tostring(args[i]) .. ", "
-            end
-            message ..= tostring(args[#args])
-            BBOT.log(LOG_WARN, "Framework Internal Message -> " .. message)
-            hook:Call("InternalMessage", message)
-        end
-    end)
-    
-    do
-        local old = aux.char.loadcharacter
-        function aux.char.loadcharacter(char, pos, ...)
-            hook:Call("PreLoadCharacter", char, pos, ...)
-            return old(char, pos, ...), hook:Call("PostLoadCharacter", char, pos, ...)
-        end
-        hook:Add("Unload", "BBOT:LoadCharacter", function()
-            aux.char.loadcharacter = old
-        end)
-    end
-    
-    do
-        function aux.sound.playid(p39, p40, p41, p42, p43, p44)
-            aux.sound.PlaySoundId(p39, p40, p41, nil, nil, p42, nil, nil, nil, p43, p44);
-        end
-        local oplay = rawget(aux.sound, "PlaySound")
-        hook:Add("Unload", "BBOT:SoundDetour", function()
-            rawset(aux.sound, "PlaySound", oplay)
-        end)
-        local supressing = false
-        local function newplay(...)
-            if supressing then return oplay(...) end
-            supressing = true
-            if hook:Call("SupressSound", ...) then
-                supressing = false
-                return
-            end
-            supressing = false
-            return oplay(...)
-        end
-        rawset(aux.sound, "PlaySound", newcclosure(newplay))
-    end
-    
-    local setupvalueundo = {}
-    local ups = debug.getupvalues(aux.replication.getupdater)
-    for k, v in pairs(ups) do
-        if typeof(v) == "function" then
-            local name = debug.getinfo(v).name
-            if name == "loadplayer" then
-                local function LoadPlayer(...)
-                    hook:Call("PreLoadPlayer", ...)
-                    local ctlr, a, b = v(...)
-                    if ctlr then
-                        hook:Call("PostLoadPlayer", ctlr)
-                    end
-                    return ctlr, a, b
-                end
-                debug.setupvalue(aux.replication.getupdater, k, newcclosure(LoadPlayer))
-                setupvalueundo[#setupvalueundo+1] = {aux.replication.getupdater, k, v}
-            end
-        end
-    end
-    
-    local ups = debug.getupvalues(aux.hud.isplayeralive)
-    for k, v in pairs(ups) do
-        if typeof(v) == "function" then
-            local name = debug.getinfo(v).name -- are you ok pf?
-            if name == "gethealthstate" then
-                aux.hud.gethealthstate = newcclosure(function(self, player)
-                    return v(player)
-                end)
-            end
-        end
-    end
-    
-    local players = BBOT.service:GetService("Players")
-    hook:Add("Initialize", "BBOT:SetupPlayerReplication", function()
-        for i, v in next, players:GetChildren() do
-            local controller = aux.replication.getupdater(v)
-            if controller and not controller.setup then
-                hook:Call("PostLoadPlayer", controller)
-            end
-        end
-    end)
-    
-    local old = aux.char.step
-    function aux.char.step(...)
-        hook:Call("PreCharacterStep")
-        local a, b, c, d = old(...)
-        hook:Call("PostCharacterStep")
-        return a, b, c, d
-    end
-    hook:Add("Unload", "BBOT:CharStepDetour", function()
-        aux.char.step = old
-    end)
-
-    hook:Add("Initialize", "BigRewardDetour", function()
-        local receivers = aux.network.receivers
-        for k, v in pairs(receivers) do
-            local a = debug.getupvalues(v)[1]
-            if typeof(a) == "function" then
-                local run, consts = pcall(debug.getconstants, a)
-                if run then
-                    if table.quicksearch(consts, "killshot") and table.quicksearch(consts, "kill") then
-                        receivers[k] = function(type, entity, gunname, earnings, ...)
-                            hook:CallP("PreBigAward", type, entity, gunname, earnings, ...)
-                            v(type, entity, gunname, earnings, ...)
-                            hook:CallP("PostBigAward", type, entity, gunname, earnings, ...)
-                        end
-    
-                        hook:Add("Unload", "BBOT:RewardDetour." .. tostring(k), function()
-                            receivers[k] = v
-                        end)
-                    end
-                end
-            end
-        end
-    end)
-
-    local isalive = false
-    hook:Add("RenderStepped", "BBOT:Aux.IsAlive", function()
-        if isalive ~= aux.char.alive then
-            isalive = aux.char.alive
-            hook:Call("OnAliveChanged", (isalive and true or false))
-        end
-    end)
-    
-    hook:Add("Unload", "BBOT:Aux.UpValues.1", function()
-        for i=1, #setupvalueundo do
-            debug.setupvalue(unpack(setupvalueundo[i]))
-        end
-    end)
-
-    local dt = tick() - profiling_tick
-    BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
-    BBOT:SetLoadingStatus(nil, 50)
-end
-
--- Chat, allows for chat manipulations, or just being a dick with the chat spammer (Conversion In Progress)
-do
-    local network = BBOT.aux.network
-    local hook = BBOT.hook
-    local table = BBOT.table
-    local notification = BBOT.notification
-    local string = BBOT.string
-    local timer = BBOT.timer
-    local chat = {}
-    BBOT.chat = chat
-    chat.spam_chat = {}
-    chat.spam_kill = {}
-
-    if not isfile("bitchbot/chatspam.txt") then --idk help the user out lol, prevent stupid errors --well it would kinda ig
-        writefile(
-            "bitchbot/chatspam.txt",
-            "WSUP FOOL\nGET OWNED KID\nBBOAT ON TOP\nI LOVE BBOT YEAH\nPLACEHOLDER TEXT \ndear bbot user, edit your chat spam\n	"
-        )
-    end
-    
-    if not isfile("bitchbot/killsay.txt") then
-        writefile(
-            "bitchbot/killsay.txt",
-            "WSUP FOOL [name]\nGET OWNED [name]\n[name] just died to my [weapon] everybody laugh\n[name] got owned roflsauce\nPLACEHOLDER TEXT \ndear bbot user, edit your kill say\n	"
-        )
-    end
-
-    local customtxt = readfile("bitchbot/chatspam.txt")
-    for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
-        table.insert(chat.spam_chat, s) -- I'm care
-    end
-
-    customtxt = readfile("bitchbot/killsay.txt")
-    for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
-        table.insert(chat.spam_kill, s)
-    end
-
-    hook:Add("Initialize", "BBOT:ChatDetour", function()
-        local receivers = network.receivers
-
-        for k, v in pairs(receivers) do
-            local const = debug.getconstants(v)
-            if table.quicksearch(const, "Tag") and table.quicksearch(const, "rbxassetid://") then
-                receivers[k] = function(p20, p21, p22, p23, p24)
-                    timer:Async(function() hook:CallP("Chatted", p20, p21, p22, p23, p24) end)
-                    return v(p20, p21, p22, p23, p24)
-                end
-                hook:Add("Unload", "ChatDetour." .. tostring(k), function()
-                    receivers[k] = v
-                end)
-            elseif table.quicksearch(const, "[Console]: ") and table.quicksearch(const, "Tag") then
-                receivers[k] = function(p18)
-                    timer:Async(function() hook:CallP("Console", p18) end)
-                    return v(p18)
-                end
-                hook:Add("Unload", "ChatDetour." .. tostring(k), function()
-                    receivers[k] = v
-                end)
-            end
-        end
-    end)
-
-    function chat:Say(str, un)
-        if string.sub(str, 1, 1) == "/" then
-            network:send("modcmd", str);
-            return
-        end
-        network:send("chatted", str, un or false);
-    end
-
-    chat.commands = {}
-
-    function chat:AddCommand(name, callback, help)
-        chat.commands[name] = {callback, help}
-    end
-
-    function chat:RemoveCommand(name)
-        chat.commands[name] = nil
-    end
-
-    chat:AddCommand("help", function(...)
-        notification:Create("WIP, please wait a bit!")
-    end, "Shows all command information.")
-
-    hook:Add("SuppressNetworkSend", "BBOT:Chat.Commands", function(netname, message)
-        if netname ~= "chatted" then return end
-        if string.sub(message, 1, 1) ~= "." or string.sub(message, 2, 2) == "." then return end
-        local command_line = string.sub(message, 2)
-        command_line = string.Explode(" ", command_line)
-        local command = command_line[1]
-        table.remove(command_line, 1)
-        local args = command_line
-
-        if chat.commands[command] then
-            local cmd = chat.commands[command]
-            local exec = cmd[1](unpack(args))
-            if exec == nil then exec = true end
-            return exec
-        else
-            notification:Create("Not a command, try \".help\" to see available commands.")
-        end
-        return true
-    end)
-
-    chat.buffer = {}
-    local lasttext = ""
-    function chat:AddToBuffer(msg)
-        local spaces = ""
-        if msg == lasttext then
-            for i=1, a do
-                spaces = spaces .. "."
-            end
-            a = a + 1
-            if a > 1 then a = 0 end
-        else
-            a = 0
-            lasttext = msg
-        end
-        msgquery[#msgquery+1] = msg .. spaces
-    end
-    
-    function chat:CheckIfValid(msg)
-        for i=1, #msg do
-            local str = string.sub(msg, i, i)
-            if str ~= "\n" or str ~= " " then
-                return true
-            end
-        end
-    end
-
-    --[[
-    local lastkillsay = ""
-    local killsay = lastkillsay
-    while killsay == lastkillsay do
-        killsay = math.random(#customKillSay)
-    end
-    lastkillsay = killsay
-    local message = customKillSay[killsay]
-    message = message:gsub("%[hitbox%]", head and "head" or "body")
-    message = message:gsub("%[name%]", victim.Name)
-    message = message:gsub("%[weapon%]", weapon)
-    chat:AddToBuffer(message)
-    ]]
-
-    timer:Create("Chat.Spam", 1.5, 0, function() -- fuck you stylis
-        local msg = chat.buffer[1]
-        if not msg then return end
-        table.remove(chat.buffer, 1)
-        chat:Say(msg)
-    end)
-end
-
--- Votekick, handles the votekicks system (Conversion In Progress)
--- Anti-Votekick
-do
-    local config = BBOT.config
-    local hook = BBOT.hook
-    local timer = BBOT.timer
-    local notification = BBOT.notification
-    local table = BBOT.table
-    local hud = BBOT.aux.hud
-    local playerdata = BBOT.aux.playerdata
-    local char = BBOT.aux.char
-    local localplayer = BBOT.service:GetService("LocalPlayer")
-    local votekick = {}
-    BBOT.votekick = votekick
-    votekick.CallDelay = 90
-    votekick.NextCall = 0
-    votekick.Called = 0
-
-    hook:Add("PreInitialize", "BBOT:Votekick.Load", function()
-        local receivers = BBOT.aux.network.receivers
-        for k, v in pairs(receivers) do
-            local consts = debug.getconstants(v)
-            local has = false
-            for kk, vv in pairs(consts) do
-                if typeof(vv) == "string" and string.find(vv, "Votekick", 1, true) then
-                    local function callvotekick(target, delay, votesrequired, ...)
-                        timer:Async(function() hook:Call("Votekick.Start", target, delay, votesrequired) end)
-                        return v(target, delay, votesrequired, ...)
-                    end
-                    rawset(receivers, k, callvotekick)
-                    hook:Add("Unload", "UndoVotekickDetour-"..k, function()
-                        rawset(receivers, k, v)
-                    end)
-        
-                    function votekick:GetVotes()
-                        return debug.getupvalue(v, 9)
-                    end
-                    break
-                end
-            end
-        end
-    end)
-    
-    local invote = false
-    hook:Add("Votekick.Start", "Votekick.Start", function(target, delay, votesrequired)
-        delay = tonumber(delay)
-        timer:Create("Votekick.Tick", delay, 1, function()
-            hook:Remove("RenderStep.First", "Votekick.Step")
-            hook:Call("Votekick.End", target, delay, votesrequired, false)
-        end)
-        hook:Add("RenderStep.First", "Votekick.Step", function()
-            if votekick:GetVotes() >= votesrequired then
-                hook:Remove("RenderStep.First", "Votekick.Step")
-                timer:Remove("Votekick.Tick")
-                hook:Call("Votekick.End", target, delay, votesrequired, true)
-            end
-        end)
-        if config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then
-            timer:Simple(delay+2, function()
-                votekick:RandomCall()
-            end)
-        end
-    
-        if target == localplayer.Name then
-            timer:Simple(.5, function() hud:vote("no") end)
-        end
-    
-        invote = votesrequired
-        notification:Create("Votekick called on " .. target .. "; time till end: " .. delay .. "; votes required: " .. votesrequired)
-        if votekick.Called == 1 then
-            votekick.Called = 2
-        elseif votekick.Called == 2 or votekick.Called == 0 then
-            votekick.Called = 0
-            votekick.NextCall = tick() + 1000000000
-        end
-    end)
-    
-    hook:Add("Console", "BBOT:Votekick.AntiVotekick", function(msg)
-        if string.find(msg, "The last votekick was initiated by you", 1, true) then
-            votekick.Called = 2
-        elseif string.find(msg, "seconds before initiating a votekick", 1, true) then
-            votekick.Called = 0
-            votekick.NextCall = tick() + (tonumber(string.match(msg, "%d+")) or 0)
-        end
-    end)
-    
-    function votekick:IsVoteActive()
-        return debug.getupvalue(BBOT.aux.hud.votestep, 2)
-    end
-    
-    local players = BBOT.service:GetService("Players")
-    function votekick:GetTargets()
-        local targetables = {}
-        for i, v in pairs(players:GetPlayers()) do
-            local inpriority = config.priority[v.UserId]
-            if (not inpriority or inpriority >= 0) and v ~= localplayer then
-                targetables[#targetables+1] = v
-            end
-        end
-        return targetables
-    end
-    
-    function votekick:CanCall(target, reason)
-        if self:IsVoteActive() then return false, "VoteActive" end
-        if self.NextCall > tick() or self.Called > 0 then return false, "RateLimit" end
-        return true
-    end
-    
-    function votekick:Call(target, reason)
-        BBOT.chat:Say("/votekick:"..target..":"..reason)
-        self.NextCall = 0
-        self.Called = 1
-    end
-    
-    function votekick:RandomCall()
-        local targets = votekick:GetTargets()
-        local target = table.fyshuffle(targets)[1]
-        votekick:Call(target.Name, config:GetValue("Main", "Misc", "Votekick", "Reason"))
-    end
-
-    local totalkills = 0
-    hook:Add("PreBigAward", "BBOT:Votekick.Kills", function()
-        totalkills = totalkills + 1
-    end)
-    
-    hook:Add("RenderStep.First", "BBOT:Votekick.AntiVotekick", function()
-        if not config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then return end
-        if char.alive == true then
-            votekick.WasAlive = true
-        end
-        if not votekick.WasAlive then return end
-        if playerdata.rankcalculator(playerdata:getdata().stats.experience) < 25 then return end
-        if votekick:CanCall() then
-            local kills = config:GetValue("Main", "Misc", "Votekick", "Votekick On Kills")
-            if kills == 0 or totalkills >= kills then
-                votekick:RandomCall()
-            end
-        end
-    end)
-end
-
--- Server Hopper, redirects and moves the user to other server instances (Conversion In Progress)
--- Votekick-blacklist (prevents user from joining voted out servers)
-do
-    local config = BBOT.config
-    local hook = BBOT.hook
-    local votekick = BBOT.votekick
-    local log = BBOT.log
-    local timer = BBOT.timer
-    local notification = BBOT.notification
-    local TeleportService = game:GetService("TeleportService")
-    local localplayer = BBOT.service:GetService("LocalPlayer")
-    local httpservice = BBOT.service:GetService("HttpService")
-    local serverhopper = {}
-    BBOT.serverhopper = serverhopper
-
-    serverhopper.file = "bitchbot/votedoff-servers.txt"
-    serverhopper.blacklist = {}
-    serverhopper.UserId = tostring(localplayer.UserId)
-
-    hook:Add("PostInitialize", "BBOT:ServerHopper.Load", function()
-        if isfile(serverhopper.file) then
-            serverhopper.blacklist = httpservice:JSONDecode(readfile(serverhopper.file))
-            local otime = os.time()
-            for _, userblacklist in pairs(serverhopper.blacklist) do
-                for k, v in pairs(userblacklist) do
-                    if otime > v then
-                        userblacklist[k] = nil
-                        log(LOG_NORMAL, "Removed server-hop blacklist " .. k)
-                    end
-                end
-            end
-            writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
-            local plbllist = serverhopper.blacklist[serverhopper.UserId]
-            if plbllist then
-                local c = 0
-                for k, v in pairs(plbllist) do
-                    c = c + 1
-                end
-                --BBOT.chat:Message("You have been votekicked from " .. c .. " server(s)!")
-                log(LOG_NORMAL, "You have been votekicked from " .. c .. " server(s)!")
-                notification:Create("You have been votekicked from " .. c .. " server(s)!")
-            end
-        end
-    end)
-
-    function serverhopper:ClearBlacklist()
-        serverhopper.blacklist = {}
-        writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
-        notification:Create("Server hop blacklist cleared!")
-    end
-
-    function serverhopper:IsBlacklisted(id)
-        local plbllist = serverhopper.blacklist[self.UserId]
-        if plbllist and plbllist[id] then
-            return true
-        end
-    end
-
-    function serverhopper:RandomHop()
-        local delay = config:GetValue("Main", "Misc", "Server Hopper", "Hop Delay")
-        if delay > 0 then
-            notification:Create("Hopping in " .. delay .. "s")
-        end
-        timer:Simple(delay, function()
-            log(LOG_NORMAL, "Commencing Server-Hop...")
-            local data = httpservice:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100")).data
-            local mode = config:GetValue("Main", "Misc", "Server Hopper", "Sort By")
-            if mode == "Highest Players" then
-                table.sort(data, function(a, b) return a.playing > b.playing end)
-            elseif mode == "Lowest Players" then
-                table.sort(data, function(a, b) return a.playing < b.playing end)
-            end
-            for _, s in pairs(data) do
-                if not serverhopper:IsBlacklisted(s.id) and s.id ~= game.JobId then
-                    if s.playing < s.maxPlayers-1 then
-                        --syn.queue_on_teleport(<string> code)
-                        log(LOG_NORMAL, "Hopping to server Id: " .. s.id .. "; Players: " .. s.playing .. "/" .. s.maxPlayers .. "; " .. s.ping .. " ms")
-                        notification:Create("Hopping to server Id '" .. s.id .. "' -> Players: " .. s.playing .. "/" .. s.maxPlayers)
-                        timer:Simple(1, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id) end)
-                        return
-                    end
-                end
-            end
-            log(LOG_ERROR, "No servers to hop towards... Wow... You really got votekicked off every server now did ya? Impressive...")
-        end)
-    end
-
-    function serverhopper:AddToBlacklist(id, removaltime)
-        local plbllist = self.blacklist[self.UserId]
-        if not plbllist then
-            plbllist = {}
-            self.blacklist[self.UserId] = plbllist
-        end
-        plbllist[id] = (removaltime and removaltime + os.time() or -1)
-        writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
-        log(LOG_NORMAL, "Added " .. game.JobId .. " to server-hop blacklist")
-        notification:Create("Added " .. game.JobId .. " to server-hop blacklist")
-    end
-
-    function serverhopper:Hop(id)
-        log(LOG_NORMAL, "Hopping to server " .. id)
-        if serverhopper:IsBlacklisted(id) then
-            log(LOG_NORMAL, "This server ID is blacklisted! Where you votekicked from here?")
-            notification:Create("This server Id (" .. id .. ") is blacklisted! Where you votekicked from here?")
-            return
-        end
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, id)
-    end
-
-    BBOT.chat:AddCommand("hop", function(id)
-        if not id or id == "" then
-            serverhopper:RandomHop()
-            return
-        end
-        serverhopper:Hop(id)
-    end, "Hops to a server instance.")
-
-    BBOT.chat:AddCommand("rejoin", function()
-        BBOT.serverhopper:Hop(game.JobId)
-    end, "Rejoin the current server instance.")
-
-    hook:Add("InternalMessage", "BBOT:ServerHopper.HopOnKick", function(message)
-        if not string.find(message, "Server Kick Message:", 1, true) or not string.find(message, "votekicked", 1, true) then return end
-        if not config:GetValue("Main", "Misc", "Server Hopper", "Enabled") then return end
-        if not serverhopper:IsBlacklisted(game.JobId) then
-            serverhopper:AddToBlacklist(game.JobId, 86400)
-        end
-        serverhopper:RandomHop()
-    end)
-end
-
--- Misc
-do
-    local userinputservice = BBOT.service:GetService("UserInputService")
-    local camera = BBOT.service:GetService("CurrentCamera")
-    local localplayer = BBOT.service:GetService("LocalPlayer")
-    local hook = BBOT.hook
-    local config = BBOT.config
-    local roundsystem = BBOT.aux.roundsystem
-    local network = BBOT.aux.network
-    local char = BBOT.aux.char
-    local table = BBOT.table
-    local vector = BBOT.vector
-    local hud = BBOT.aux.hud
-    local replication = BBOT.aux.replication
-    local gamelogic = BBOT.aux.gamelogic
-    local gamemenu = BBOT.aux.menu
-    local misc = {}
-    BBOT.misc = misc
-
-    local CACHED_VEC3 = Vector3.new()
-
-    hook:Add("OnConfigChanged", "BBOT:Misc.Fly", function(steps, old, new)
-        if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly") and not config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
-            if not new and char.alive and misc.rootpart then
-                misc.rootpart.Anchored = false
-            end
-        end
-    end)
-
-    hook:Add("OnKeyBindChanged", "BBOT:Misc.Fly", function(steps, old, new)
-        if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
-            if not new and char.alive and misc.rootpart then
-                misc.rootpart.Anchored = false
-            end
-        end
-    end)
-    
-    hook:Add("SuppressNetworkSend", "BBOT:Misc.Tweaks", function(networkname, Entity, HitPos, Part, bulletID, ...)
-        if networkname == "falldamage" and config:GetValue("Main", "Misc", "Tweaks", "Prevent Fall Damage") then
-            return true
-        end
-    end)
-
-    function misc:Fly()
-        if not config:GetValue("Main", "Misc", "Movement", "Fly") or not config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
-        local speed = config:GetValue("Main", "Misc", "Movement", "Fly Speed")
-        local rootpart = self.rootpart -- Invis compatibility
-
-        local travel = CACHED_VEC3
-        local looking = camera.CFrame.lookVector --getting camera looking vector
-        local rightVector = camera.CFrame.RightVector
-        if userinputservice:IsKeyDown(Enum.KeyCode.W) then
-            travel += looking
-        end
-        if userinputservice:IsKeyDown(Enum.KeyCode.S) then
-            travel -= looking
-        end
-        if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-            travel += rightVector
-        end
-        if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-            travel -= rightVector
-        end
-        if userinputservice:IsKeyDown(Enum.KeyCode.Space) then
-            travel += Vector3.new(0, 1, 0)
-        end
-        if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
-            travel -= Vector3.new(0, 1, 0)
-        end
-        if travel.Unit.x == travel.Unit.x then
-            rootpart.Anchored = false
-            rootpart.Velocity = travel.Unit * speed --multiplaye the unit by the speed to make
-        else
-            rootpart.Velocity = Vector3.new(0, 0, 0)
-            rootpart.Anchored = true
-        end
-    end
-
-    misc.speedDirection = Vector3.new(1,0,0)
-    function misc:Speed()
-        if config:GetValue("Main", "Misc", "Movement", "Fly") and config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
-        local speedtype = config:GetValue("Main", "Misc", "Movement", "Speed Type")
-        local rootpart = self.rootpart
-        if config:GetValue("Main", "Misc", "Movement", "Speed") then
-            local speed = config:GetValue("Main", "Misc", "Movement", "Speed Factor")
-
-            local travel = CACHED_VEC3
-            local looking = camera.CFrame.LookVector
-            local rightVector = camera.CFrame.RightVector
-            local moving = false
-            if not config:GetValue("Main", "Misc", "Movement", "Circle Strafe") or not config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
-                if userinputservice:IsKeyDown(Enum.KeyCode.W) then
-                    travel += looking
-                end
-                if userinputservice:IsKeyDown(Enum.KeyCode.S) then
-                    travel -= looking
-                end
-                if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-                    travel += rightVector
-                end
-                if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-                    travel -= rightVector
-                end
-                misc.speedDirection = Vector3.new(travel.x, 0, travel.z).Unit
-                -- if misc.speedDirection.x ~= misc.speedDirection.x then 
-                -- 	misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
-                -- end
-                misc.circleStrafeAngle = -0.1
-            else
-                if misc.speedDirection.x ~= misc.speedDirection.x then 
-                    misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
-                end
-                travel = misc.speedDirection
-                misc.circleStrafeAngle = -0.1
-                
-                if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-                    misc.circleStrafeAngle = 0.1
-                end
-                if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-                    misc.circleStrafeAngle = -0.1
-                end
-                local cd = Vector2.new(misc.speedDirection.x, misc.speedDirection.z)
-                cd = vector.rotate(cd, misc.circleStrafeAngle)
-                misc.speedDirection = Vector3.new(cd.x, 0, cd.y)
-            end
-
-            travel = misc.speedDirection
-            if config:GetValue("Main", "Misc", "Movement", "Avoid Collisions") and config:GetValue("Main", "Misc", "Movement", "Avoid Collisions", "KeyBind") then
-                if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
-                    local scale = config:GetValue("Main", "Misc", "Movement", "Avoid Collisions Scale") / 1000
-                    local position = char.rootpart.CFrame.p
-                    local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-                        Ray.new(position, (travel * speed * scale)),
-                        roundsystem.raycastwhitelist
-                    ) 
-                    if part then
-                        for i = -10, 10 do
-                            local cd = Vector2.new(travel.x, travel.z)
-                            cd = vector.rotate(cd, misc.circleStrafeAngle * i * -1)
-                            cd = Vector3.new(cd.x, 0, cd.y)
-                            local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-                                Ray.new(position, (cd * speed * scale)),
-                                roundsystem.raycastwhitelist
-                            ) 
-                            misc.normal = normal
-                            if not part then 
-                                travel = cd
-                            end
-                        end
-                    end
-                else
-                    local position = char.rootpart.CFrame.p
-                    for i = 1, 10 do
-                        local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-                            Ray.new(position, (travel * speed / 10) + Vector3.new(0,rootpart.Velocity.y/10,0)),
-                            roundsystem.raycastwhitelist
-                        ) 
-                        misc.normal = normal
-                        if part then 
-                            local dot = normal.Unit:Dot((char.rootpart.CFrame.p - position).Unit)
-                            misc.normalPositive = dot
-                            if dot > 0 then
-                                travel += normal.Unit * dot
-                                travel = travel.Unit
-                                if travel.x == travel.x then
-                                    misc.circleStrafeDirection = travel
+            BBOT.log(LOG_DEBUG, "Scanning auxillaries...")
+            for k, v in next, core_aux do
+                for kk, vv in next, v do
+                    if typeof(vv) == "function" then
+                        local ups = debug.getupvalues(vv)
+                        for kkk, vvv in pairs(ups) do
+                            if typeof(vvv) == "table" then
+                                local ax = self._CheckTable(vvv)
+                                if ax then
+                                    return "Duplicate auxillary \"" .. ax .. "\""
                                 end
                             end
                         end
                     end
                 end
             end
-            local humanoid = self.humanoid
-            if travel.x == travel.x and humanoid:GetState() ~= Enum.HumanoidStateType.Climbing then
-                if speedtype == "In Air" and (humanoid:GetState() ~= Enum.HumanoidStateType.Freefall or not humanoid.Jump) then
-                    return
-                elseif speedtype == "On Hop" and not userinputservice:IsKeyDown(Enum.KeyCode.Space) then
-                    return
-                end
-            
-                if config:GetValue("Main", "Misc", "Movement", "Speed", "KeyBind") then
-                    rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.z * speed)
+
+            BBOT:SetLoadingStatus(nil, 40)
+
+            BBOT.log(LOG_DEBUG, "Checking auxillaries...")
+            for k, v in next, aux_tables do
+                if not core_aux[k] then
+                    return "Couldn't find auxillary \"" .. k ..  "\""
                 end
             end
-        end
-    end
 
-    function misc:AutoJump()
-        if config:GetValue("Main", "Misc", "Movement", "Auto Jump") and userinputservice:IsKeyDown(Enum.KeyCode.Space) then
-            misc.humanoid.Jump = true
-        end
-    end
-
-    local CHAT_GAME = localplayer.PlayerGui.ChatGame
-	local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
-
-    function misc:BypassSpeedCheck()
-        local val = config:GetValue("Main", "Misc", "Exploits", "Bypass Speed Checks")
-        local character = localplayer.Character
-        if not character then return end
-        local rootpart = character:FindFirstChild("HumanoidRootPart")
-        if not rootpart then
-            return
-        end
-        rootpart.Anchored = false
-        self.oldroot = rootpart
-
-        if val and char.alive and not self.newroot then
-            copy = rootpart:Clone()
-            copy.Parent = character
-            self.newroot = copy
-        elseif self.newroot then
-            if ((not val) or (not gamelogic.currentgun) or (not char.alive) or (not gamemenu.isdeployed())) then
-                self.newroot:Destroy()
-                self.newroot = nil
-            else
-                -- client.char.rootpart.CFrame = self.newroot.CFrame
-                --idk if i can manipulate this at all
-            end
-        end
-    end
-
-    local oldjump = char.jump
-    function char:jump(height)
-        height = config:GetValue("Main", "Misc", "Tweaks", "Jump Power") and (height * config:GetValue("Main", "Misc", "Tweaks", "Jump Power Percentage") / 100) or height
-        return oldjump(self, height)
-    end
-
-    hook:Add("Unload", "BBOT:Misc.JumpPower", function()
-        char.jump = oldjump
-    end)
-
-    misc.beams = {}
-    local debris = BBOT.service:GetService("Debris")
-    local tween = BBOT.service:GetService("TweenService")
-    function misc:CreateBeam(origin_att, ending_att, texture)
-        local beam = Instance.new("Beam")
-        beam.Texture = texture or "http://www.roblox.com/asset/?id=446111271"
-        beam.TextureMode = Enum.TextureMode.Wrap
-        beam.TextureSpeed = 8
-        beam.LightEmission = 1
-        beam.LightInfluence = 1
-        beam.TextureLength = 12
-        beam.FaceCamera = true
-        beam.Enabled = true
-        beam.ZOffset = -1
-        beam.Transparency = NumberSequence.new(0,0)
-        beam.Color = ColorSequence.new(config:GetValue("Main", "Visuals", "Misc", "Bullet Tracers", "Tracer Color"), Color3.new(0, 0, 0))
-        beam.Attachment0 = origin_att
-        beam.Attachment1 = ending_att
-        debris:AddItem(beam, 3)
-        debris:AddItem(origin_att, 3)
-        debris:AddItem(ending_att, 3)
-
-        local speedtween = TweenInfo.new(5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0)
-        tween:Create(beam, speedtween, { TextureSpeed = 2 }):Play()
-        beam.Parent = workspace
-        table.insert(misc.beams, { beam = beam, time = tick() })
-        return beam
-    end
-
-    function misc:UpdateBeams()
-        local time = tick()
-        for i = #self.beams, 1, -1 do
-            if self.beams[i].beam  then
-                local transparency = (time - self.beams[i].time) - 2
-                self.beams[i].beam.Transparency = NumberSequence.new(transparency, transparency)
-            else
-                table.remove(self.beams, i)
-            end
-        end
-    end
-
-    local bullet_query = {}
-    hook:Add("PostNetworkSend", "BBOT:Misc.BulletTracer", function(networkname, ...)
-        if networkname == "newbullets" then
-            if not config:GetValue("Main", "Visuals", "Misc", "Bullet Tracers") then return end
-            local args = {...}
-            if not args[1] then return end
-            local reg = args[1]
-            local bullettable = reg.bullets
-            for i=1, #bullettable do
-                local v = bullettable[i]
-                bullet_query[v[2]] = reg.firepos
-            end
-        elseif networkname == "bullethit" then
-            local args = {...}
-            local Entity, HitPos, Part, bulletID = args[1], args[2], args[3], args[4]
-            if bullet_query[bulletID] then
-                local attach_origin = Instance.new("Attachment", workspace.Terrain)
-                attach_origin.Position = bullet_query[bulletID]
-                local attach_ending = Instance.new("Attachment", workspace.Terrain)
-                attach_ending.Position = HitPos
-                local beam = misc:CreateBeam(attach_origin, attach_ending)
-                beam.Parent = workspace
-            end
-        end
-    end)
-
-    hook:Add("RenderStepped", "BBOT:Misc.Calculate", function()
-        misc:UpdateBeams()
-        if config:GetValue("Main", "Misc", "Exploits", "Server Crasher") and config:GetValue("Main", "Misc", "Exploits", "Server Crasher", "KeyBind") then
-            for i = 1, config:GetValue("Main", "Misc", "Exploits", "Server Crasher Intensity") ^ 2 do
-                network:send("changeatt", "Primary", "MP5K", { Underbarrel = "Flashlight",  Other = "Flashlight",  Ammo = "",  Barrel = "",  Optics = "" })
-                network:send("changeatt", "Primary", "MP5K", { Underbarrel = "",  Other = "",  Ammo = "",  Barrel = "",  Optics = ""  })
-            end
-        end
-        misc:BypassSpeedCheck()
-        if not char.alive then
-            misc.humanoid = nil
-            misc.rootpart = nil
-            return
-        end
-        if not misc.humanoid then
-            misc.humanoid = localplayer.Character:FindFirstChild("Humanoid")
-            misc.rootpart = localplayer.Character:FindFirstChild("HumanoidRootPart")
-        end
-        misc.rootpart = (misc.newroot or misc.oldroot)
-        char.rootpart = misc.rootpart
-	    if not CHAT_BOX.Active then
-            misc:Fly()
-            misc:Speed()
-            misc:AutoJump()
-        end
-    end)
-
-    function misc:GrenadeTP(position)
-        if gamelogic.gammo < 1 then return end
-        local args = {
-            "FRAG",
-            {
-                frames = {
-                    {
-                        v0 = Vector3.new(),
-                        glassbreaks = {},
-                        t0 = 0,
-                        offset = Vector3.new(),
-                        rot0 = CFrame.new(),
-                        a = Vector3.new(0 / 0),
-                        p0 = char.rootpart.Position,
-                        rotv = Vector3.new(),
-                    },
-                    {
-                        v0 = Vector3.new(),
-                        glassbreaks = {},
-                        t0 = 0.002,
-                        offset = Vector3.new(),
-                        rot0 = CFrame.new(),
-                        a = Vector3.new(0 / 0),
-                        p0 = Vector3.new(0 / 0),
-                        rotv = Vector3.new(),
-                    },
-                    {
-                        v0 = Vector3.new(),
-                        glassbreaks = {},
-                        t0 = 0.003,
-                        offset = Vector3.new(),
-                        rot0 = CFrame.new(),
-                        a = Vector3.new(),
-                        p0 = position,
-                        rotv = Vector3.new(),
-                    },
-                },
-                time = tick(),
-                blowuptime = 0.003,
-            },
-        }
-        gamelogic.gammo = gamelogic.gammo - 1
-        hud:updateammo("GRENADE");
-        network:send("newgrenade", unpack(args))
-    end
-
-    hook:Add("LocalKilled", "BBOT:RevengeGrenade", function(player)
-        if player == localplayer then return end
-        if not config:GetValue("Main", "Misc", "Exploits", "Revenge Grenade") then return end
-        misc:GrenadeTP(replication.getupdater(player).getpos())
-    end)
-
-    hook:Add("Initialize", "BBOT:LocalKilled", function()
-        local receivers = network.receivers
-
-        for k, v in pairs(receivers) do
-            local const = debug.getconstants(v)
-            if table.quicksearch(const, "setfixedcam") and table.quicksearch(const, "setspectate") and table.quicksearch(const, "isplayeralive") and table.quicksearch(const, "Killer") then
-                receivers[k] = function(player, name, p210, p211, p212, p213, p214)
-                    hook:CallP("LocalKilled", player, name, p210, p211, p212, p213, p214)
-                    return v(player, name, p210, p211, p212, p213, p214)
+            for k, v in next, core_aux_sub do
+                if not aux_functions[k] then
+                    return "Couldn't find auxillary \"" .. k ..  "\""
                 end
-                hook:Add("Unload", "Killed_Dtawdw." .. tostring(k), function()
-                    receivers[k] = v
-                end)
             end
-        end
-    end)
 
-    hook:Add("Initialize", "BBOT:ScreenCull.Step", function()
-        local screencull = BBOT.aux.ScreenCull
-        local oldstep = screencull.step
-        function screencull.step(...)
-            hook:CallP("ScreenCull.PreStep", ...)
-            oldstep(...)
-            hook:CallP("ScreenCull.PostStep", ...)
-        end
-        hook:Add("Unload", "BBOT:ScreenCull.Step", function()
-            screencull.step = oldstep
-        end)
-    end)
+            for k, v in next, core_aux do
+                self[k] = v
+            end
 
-    local camera = BBOT.service:GetService("CurrentCamera")
-    hook:Add("ScreenCull.PreStep", "BBOT:Misc.Thirdperson", function()
-        if not char.alive or not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
-        local val = camera.CFrame
-        local dist = config:GetValue("Main", "Visuals", "Local", "Third Person Distance") / 10
-        local params = RaycastParams.new()
-        params.FilterType = Enum.RaycastFilterType.Blacklist
-        params.FilterDescendantsInstances = { camera, workspace.Ignore, workspace.Players }
-        local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
-        if hit and not hit.Instance.CanCollide then
-            camera.CFrame = val * CFrame.new(0, 0, dist)
-        else
-            local mag = hit and (hit.Position - val.p).Magnitude or nil
-            val *= CFrame.new(0, 0, mag or dist)
-            camera.CFrame = val
-        end
-    end)
-
-    local last_pos, last_ang, last_send, should_start = nil, nil, tick(), 0
-    hook:Add("SuppressNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, ...)
-        if networkname == "repupdate" then
-            if config:GetValue("Main", "Misc", "Exploits", "Semi-God") and config:GetValue("Main", "Misc", "Exploits", "Semi-God", "KeyBind") then
-                if last_pos == pos then
-                    if last_send < tick() and config:GetValue("Main", "Misc", "Exploits", "Semi-God Keep Alive") > 0 then
-                        last_send = tick() + config:GetValue("Main", "Misc", "Exploits", "Semi-God Keep Alive")
-                        last_pos = pos
-                        BBOT.menu:UpdateStatus("Semi-God", "Buffering...")
-                        network:send(networkname, last_pos, last_ang, ...)
-                    else
-                        BBOT.menu:UpdateStatus("Semi-God", "Active")
-                    end
-                    return true
+            for k, v in next, core_aux_sub do
+                local saveas = aux_functions[k]
+                if saveas == true then
+                    self[k] = v
                 else
-                    BBOT.menu:UpdateStatus("Semi-God", "Stand Still")
-                    last_pos = pos
-                    last_ang = ang
+                    if not self[saveas] then
+                        self[saveas] = {}
+                    end
+                    local t = self[saveas]
+                    rawset(t, k, v)
+                    hook:Add("Unload", "BBOT:Aux.RemoveAuxSub-" .. k, function()
+                        rawset(t, k, nil)
+                    end)
                 end
-            else
-                last_pos = pos
-                last_ang = ang
-            end
-        end
-    end)
-
-    hook:Add("RenderStepped", "BBOT:RepUpdate", function()
-        if not config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Force") then return end
-        if not char.alive then return end
-		local l__angles__1304 = BBOT.aux.camera.angles;
-        for i=1, 10 do
-		    network:send("repupdate", char.rootpart.Position, Vector2.new(l__angles__1304.x, l__angles__1304.y), tick());
-        end
-    end)
-
-    local workspace = BBOT.service:GetService("Workspace")
-    hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ...)
-        if networkname == "repupdate" and config:GetValue("Main", "Misc", "Exploits", "Spaz Attack") then
-            local intensity = config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
-            local offset = Vector3.new(math.random(-1000,1000)/1000, math.random(-1000,1000)/1000, math.random(-1000,1000)/1000)*config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
-            local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(pos, offset), BBOT.aux.roundsystem.raycastwhitelist)
-            if part then
-                offset = offset - (position-pos).Unit
-            end
-            return {networkname, pos + offset, ...}
-        end
-    end)
-end
-
--- Aimbot (Conversion In Progress)
--- Knife Aura
--- Bullet Network Manipulation
-do
-    local timer = BBOT.timer
-    local hook = BBOT.hook
-    local config = BBOT.config
-    local network = BBOT.aux.network
-    local gamelogic = BBOT.aux.gamelogic
-    local math = BBOT.math
-    local vector = BBOT.vector
-    local char = BBOT.aux.char
-    local hud = BBOT.aux.hud
-    local physics = BBOT.aux.physics
-    local log = BBOT.log
-    local draw = BBOT.draw
-    local replication = BBOT.aux.replication
-    local raycast = BBOT.aux.raycast
-    local cam = BBOT.aux.camera
-    local localplayer = BBOT.service:GetService("LocalPlayer")
-    local userinputservice = BBOT.service:GetService("UserInputService")
-    local players = BBOT.service:GetService("Players")
-    local camera = BBOT.service:GetService("CurrentCamera")
-    local mouse = BBOT.service:GetService("Mouse")
-    local aux_camera = BBOT.aux.camera
-    local aimbot = {}
-    BBOT.aimbot = aimbot
-    
-    do
-        local function raycastbullet(p1)
-            local instance = p1.Instance
-            if instance.Name == "Window" then return true end
-            return not instance.CanCollide or instance.Transparency == 1
-        end
-
-        local workspace = BBOT.service:GetService("Workspace")
-        function aimbot:fullcast(p7, p8, p9, p10, p11)
-            local v3 = nil;
-            local v4 = RaycastParams.new();
-            v4.FilterDescendantsInstances = p9;
-            v4.IgnoreWater = true;
-            local calls = 0;
-            while calls < 2000 do
-                v3 = workspace:Raycast(p7, p8, v4);
-                if not p10 then
-                    break;
-                end;
-                if not v3 then
-                    break;
-                end;
-                local ran, err = pcall(p10, v3)
-                if not ran or not err then
-                    break;
-                end;
-                table.insert(p9, v3.Instance);
-                v4.FilterDescendantsInstances = p9;
-                calls = calls + 1
-            end;
-            if not p11 then
-                for v5 = #p9, #p9 + 1, -1 do
-                    p9[v5] = nil;
-                end;
-            end;
-            return v3;
-        end;
-
-        local camera = BBOT.service:GetService("CurrentCamera")
-        function aimbot:raycastbullet(vec, dir, extra, cb)
-            return aimbot:fullcast(vec, dir, {camera, workspace.Terrain, localplayer.Character, workspace.Ignore, extra}, cb or raycastbullet)
-        end
-    end
-
-    function aimbot:VelocityPrediction(startpos, endpos, vel, speed) -- Kinematics is fun
-        vel = vel or Vector3.new()
-        return endpos + (vel * ((endpos-startpos).Magnitude/speed))
-    end
-
-    aimbot.bullet_gravity = Vector3.new(0, -196.2, 0) -- Todo: get the velocity from the game public settings
-
-    function aimbot:DropPrediction(startpos, finalpos, speed)
-        local a, b = physics.trajectory(startpos, self.bullet_gravity, finalpos, speed)
-        if a then
-            return a
-        else
-            return (finalpos-startpos).Unit
-        end
-    end
-
-    function aimbot:CanBarrelPredict(gun)
-        local stopon = self:GetLegitConfig("Ballistics", "Disable Barrel Comp While")
-        if stopon["Scoping In"] then
-            local sight = BBOT.weapons.GetToggledSight(gun)
-            if sight and (sight.sightspring.p > 0.1 and sight.sightspring.p < 0.9) then
-                return false
-            end
-        end
-        if stopon["Fire Animation"] then
-        end
-        if stopon["Reloading"] then
-            if debug.getupvalue(gun.reloadcancel, 1) then return false end
-        end
-        return true
-    end
-
-    function aimbot:BarrelPrediction(target, dir, gun)
-        local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-        if part then
-            return (dir - part.CFrame.LookVector) - (dir - (target - part.CFrame.Position).Unit)
-        end
-    end
-
-    function aimbot:GetParts(player)
-        if not hud:isplayeralive(player) then return end
-        return replication.getbodyparts(player)
-    end
-
-    local types = {
-        -- Type Based
-        ["PISTOL"] = "Pistol",
-        ["REVOLVER"] = "Pistol",
-        ["PDW"] = "Smg",
-        ["DMR"] = "Rifle",
-        ["LMG"] = "Rifle",
-        ["CARBINE"] = "Rifle",
-        ["ASSAULT"] = "Rifle",
-        ["SHOTGUN"] = "Shotgun",
-        ["SNIPER"] = "Sniper",
-
-        -- Class Based
-		["ASSAULT RIFLE"] = "Rifle",
-        DMR = "Rifle",
-        ["BATTLE RIFLE"] = "Rifle",
-        PDW = "Smg",
-        LMG = "Rifle",
-        ["SNIPER RIFLE"] = "Sniper",
-        CARBINE = "Rifle",
-        SHOTGUN = "Shotgun",
-		PISTOLS = "Pistol",
-        ["MACHINE PISTOLS"] = "Pistol"
-    }
-
-    aimbot.gun_type = "ASSAULT"
-    function aimbot:GetLegitConfig(...)
-        local type = types[self.gun_type]
-        if not type then
-            type = "Rifle"
-        end
-        return config:GetValue("Main", "Legit", type, ...) 
-    end
-
-    function aimbot:GetLegitConfigR(...)
-        local type = types[self.gun_type]
-        if not type then
-            type = "Rifle"
-        end
-        return config:GetRaw("Main", "Legit", type, ...) 
-    end
-
-    function aimbot:SetCurrentType(gun)
-        if not gun.___class or not types[gun.___class] then
-            self.gun_type = gun.type
-            return
-        end
-        self.gun_type = (gun.___class or gun.type)
-    end
-
-    function aimbot:GetRageConfig(...)
-        return config:GetValue("Main", "Rage", ...)
-    end
-
-    local partstosimple = {
-        ["head"] = "Head",
-        ["torso"] = "Body",
-        ["larm"] = "Arms",
-        ["rarm"] = "Arms",
-        ["lleg"] = "Legs",
-        ["rleg"] = "Legs",
-    }
-
-    local function Move_Mouse(delta)
-        local coef = cam.sensitivitymult * math.atan(
-            math.tan(cam.basefov * (math.pi / 180) / 2) / 2.72 ^ cam.magspring.p
-        ) / (32 * math.pi)
-        local x = cam.angles.x - coef * delta.y
-        x = x > cam.maxangle and cam.maxangle or x < cam.minangle and cam.minangle or x
-        local y = cam.angles.y - coef * delta.x
-        local newangles = Vector3.new(x, y, 0)
-        cam.delta = (newangles - cam.angles) / 0.016666666666666666
-        cam.angles = newangles
-    end
-
-    function aimbot:GetFOV(Part, originPart)
-        originPart = originPart or workspace.Camera
-        local directional = CFrame.new(originPart.CFrame.Position, Part.Position)
-        local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
-        return math.deg(ang.Magnitude)
-    end
-
-    function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority, scan_part)
-        local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
-        local cam_position = camera.CFrame.p
-        local team = (localplayer.Team and localplayer.Team.Name or "NA")
-        local playerteamdata = workspace["Players"][team]
-
-        local organizedPlayers = {}
-        local plys = players:GetPlayers()
-        for i=1, #plys do
-            local v = plys[i]
-            if v == localplayer then
-                continue
-            end
-        
-            if config.priority[v.UserId] then continue end
-            local parts = self:GetParts(v)
-            if not parts then continue end
-        
-            if v.Team and v.Team == localplayer.Team then
-                continue
             end
 
-            local updater = replication.getupdater(v)
-            local prioritize
-            if hitscan_priority == "Head" then
-                prioritize = updater.gethead()
-            elseif hitscan_priority == "Body" then
-                prioritize = replication.getbodyparts(v).torso
-            end
-
-            local inserted_priority
-            if prioritize then
-                local part = prioritize
-                local pos = prioritize.Position
-                local point, onscreen = camera:WorldToViewportPoint(pos)
-                if onscreen then
-                    --local object_fov = self:GetFOV(part, scan_part)
-                    if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) and (not dzFov or vector.dist2d(dzFov.Position, point) > dzFov.Radius) then
-                        local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
-                        if not ((not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos)) then
-                            table.insert(organizedPlayers, {v, part, point, prioritize})
-                            inserted_priority = true
+            for _,v in next, reg do
+                if typeof(v) == "function" then
+                    local dbg = debug.getinfo(v)
+                    if string.find(dbg.short_src, "network", 1, true) then
+                        local ups = debug.getupvalues(v)
+                        for k, vv in pairs(ups) do
+                            if typeof(vv) == "table" then
+                                if #vv > 10 then
+                                    rawset(aux.network, "receivers", vv)
+                                end
+                            end
                         end
                     end
                 end
             end
-            
-            if not inserted_priority then
-                for name, part in pairs(parts) do
-                    local name = partstosimple[name]
-                    if part == prioritize or not name or not hitscan_points[name] then continue end
-                    local pos = part.Position
-                    local point, onscreen = camera:WorldToViewportPoint(pos)
-                    if not onscreen then continue end
-                    --local object_fov = self:GetFOV(part, scan_part)
-                    if (fov and vector.dist2d(fov.Position, point) > fov.Radius) or (dzFov and vector.dist2d(dzFov.Position, point) < dzFov.Radius) then continue end
-                    local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
-                    if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
-                    table.insert(organizedPlayers, {v, part, point, name})
-                end
+
+            if not aux.network.receivers then
+                return "Couldn't find auxillary \"network.receivers\""
             end
+
+            hook:Add("Unload", "BBOT:NetworkReceivers", function()
+                rawset(aux.network, "receivers", nil)
+            end)
+        end
+
+        local profiling_tick = tick()
+        local error = aux:_Scan()
+        if error then
+            BBOT.log(LOG_ERROR, error)
+            BBOT.log(LOG_WARN, "For safety reasons this process has been halted")
+            messagebox("For safety reasons this process has been halted\nError: " .. error .. "\nPlease contact the Demvolopers!", "BBOT: Critical Error", 0)
+            return true
         end
         
-        table.sort(organizedPlayers, function(a, b)
-            return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
+        BBOT:SetLoadingStatus(nil, 45)
+
+        do -- using rawget just in case...
+            local send = rawget(aux.network, "send")
+            local osend = rawget(aux.network, "_send")
+            hook:Add("Unload", "BBOT:NetworkOverride", function()
+                rawset(aux.network, "send", osend or send)
+            end)
+            local function sender(self, ...)
+                local _BB = BBOT
+                local _aux = _BB.aux
+                local _hook, _send = _BB.hook, _aux.network._send -- something about synapses hooking system I tried...
+                if not _aux.network_supressing then
+                    _aux.network_supressing = true
+                    if _hook:CallP("SuppressNetworkSend", ...) then
+                        _aux.network_supressing = false
+                        return
+                    end
+                    _aux.network_supressing = false
+                end
+                local override = _hook:CallP("PreNetworkSend", ...)
+                if override then
+                    if _BB.username == "dev" then
+                        --_BB.log(LOG_DEBUG, unpack(override))
+                    end
+                    return _send(self, unpack(override)), _hook:CallP("PostNetworkSend", unpack(override))
+                end
+                if _BB.username == "dev" then
+                    --_BB.log(LOG_DEBUG, ...)
+                end
+                return _send(self, ...), _hook:CallP("PostNetworkSend", ...)
+            end
+            local function newsend(self, netname, ...)
+                local ran, a, b, c, d, e = xpcall(sender, debug.traceback, self, netname, ...)
+                if not ran then
+                    BBOT.log(LOG_ERROR, "Networking Error - ", netname, " - ", a)
+                else
+                    return a, b, c, d, e
+                end
+            end
+            rawset(aux.network, "_send", send)
+            rawset(aux.network, "send", newcclosure(newsend))
+        end
+
+        hook:Add("PostNetworkSend", "BBOT:FrameworkErrorLog", function(net, ...)
+            if net == "logmessage" or net == "debug" then
+                local args = {...}
+                local message = ""
+                for i = 1, #args - 1 do
+                    message ..= tostring(args[i]) .. ", "
+                end
+                message ..= tostring(args[#args])
+                BBOT.log(LOG_WARN, "Framework Internal Message -> " .. message)
+                hook:Call("InternalMessage", message)
+            end
         end)
         
-        return organizedPlayers[1]
-    end
-
-    do
-        local smoothing_incrimental = 0
         do
-            local last_target
-            hook:Add("RenderStepped", "BBOT:Aimbot.Assist.CalcSmoothing", function(delta)
-                if not gamelogic.currentgun or not gamelogic.currentgun.data or not gamelogic.currentgun.data.bulletspeed then
-                    smoothing_incrimental = aimbot:GetLegitConfig("Aim Assist", "Start Smoothing")
+            local old = aux.char.loadcharacter
+            function aux.char.loadcharacter(char, pos, ...)
+                hook:Call("PreLoadCharacter", char, pos, ...)
+                return old(char, pos, ...), hook:Call("PostLoadCharacter", char, pos, ...)
+            end
+            hook:Add("Unload", "BBOT:LoadCharacter", function()
+                aux.char.loadcharacter = old
+            end)
+        end
+        
+        do
+            function aux.sound.playid(p39, p40, p41, p42, p43, p44)
+                aux.sound.PlaySoundId(p39, p40, p41, nil, nil, p42, nil, nil, nil, p43, p44);
+            end
+            local oplay = rawget(aux.sound, "PlaySound")
+            hook:Add("Unload", "BBOT:SoundDetour", function()
+                rawset(aux.sound, "PlaySound", oplay)
+            end)
+            local supressing = false
+            local function newplay(...)
+                if supressing then return oplay(...) end
+                supressing = true
+                if hook:Call("SupressSound", ...) then
+                    supressing = false
                     return
                 end
-                aimbot:SetCurrentType(gamelogic.currentgun)
-                if (last_target == nil and aimbot.mouse_target) or (aimbot.mouse_target == nil and last_target) or (aimbot.mouse_target and last_target and aimbot.mouse_target[1] ~= last_target[1]) then
-                    last_target = aimbot.mouse_target
-                    smoothing_incrimental = aimbot:GetLegitConfig("Aim Assist", "Start Smoothing")
-                elseif aimbot.mouse_target then
-                    smoothing_incrimental = math.approach( smoothing_incrimental, aimbot:GetLegitConfig("Aim Assist", "End Smoothing"), aimbot:GetLegitConfig("Aim Assist", "Smoothing Increment") * delta )
+                supressing = false
+                return oplay(...)
+            end
+            rawset(aux.sound, "PlaySound", newcclosure(newplay))
+        end
+        
+        local setupvalueundo = {}
+        local ups = debug.getupvalues(aux.replication.getupdater)
+        for k, v in pairs(ups) do
+            if typeof(v) == "function" then
+                local name = debug.getinfo(v).name
+                if name == "loadplayer" then
+                    local function LoadPlayer(...)
+                        hook:Call("PreLoadPlayer", ...)
+                        local ctlr, a, b = v(...)
+                        if ctlr then
+                            hook:Call("PostLoadPlayer", ctlr)
+                        end
+                        return ctlr, a, b
+                    end
+                    debug.setupvalue(aux.replication.getupdater, k, newcclosure(LoadPlayer))
+                    setupvalueundo[#setupvalueundo+1] = {aux.replication.getupdater, k, v}
                 end
-            end)
-        end
-
-        function aimbot:MouseStep(gun)
-            self.mouse_target = nil
-            if not self:GetLegitConfig("Aim Assist", "Enabled") then return end
-            local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
-            if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
-                if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
-            elseif aimkey == "Dynamic Always" then
-                if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
-            end
-
-            local hitscan_priority = self:GetLegitConfig("Aim Assist", "Hitscan Priority")
-            local hitscan_points = self:GetLegitConfig("Aim Assist", "Hitscan Points")
-            local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-            local barrel_calc = self:GetLegitConfig("Aim Assist", "Use Barrel")
-
-            local target = self:GetLegitTarget(aimbot.fov_circle_last, aimbot.dzfov_circle_last, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
-            if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
-                hook:Call("MouseBot.Changed", (target and unpack(target) or nil))
-            end
-            if not target then return end
-            self.mouse_target = target
-            local position = target[2].Position
-            local cam_position = camera.CFrame.p
-
-            if self:GetLegitConfig("Ballistics", "Movement Prediction") then
-                position = self:VelocityPrediction(cam_position, position, replication.getupdater(target[1]).receivedVelocity, gun.data.bulletspeed)
-            end
-
-            local dir = (position-cam_position).Unit
-            local magnitude = (position-cam_position).Magnitude
-            if self:GetLegitConfig("Ballistics", "Drop Prediction") then
-                dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
-            end
-
-            if self:GetLegitConfig("Ballistics", "Barrel Compensation") and self:CanBarrelPredict(gun) then
-                dir = dir + self:BarrelPrediction(position, dir, gun)
-            end
-
-            pos, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
-            if onscreen then
-                local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
-                local smoothing = smoothing_incrimental * 5 + 10
-                local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
-                Move_Mouse(inc)
             end
         end
+        
+        local ups = debug.getupvalues(aux.hud.isplayeralive)
+        for k, v in pairs(ups) do
+            if typeof(v) == "function" then
+                local name = debug.getinfo(v).name -- are you ok pf?
+                if name == "gethealthstate" then
+                    aux.hud.gethealthstate = newcclosure(function(self, player)
+                        return v(player)
+                    end)
+                end
+            end
+        end
+        
+        local players = BBOT.service:GetService("Players")
+        hook:Add("Initialize", "BBOT:SetupPlayerReplication", function()
+            for i, v in next, players:GetChildren() do
+                local controller = aux.replication.getupdater(v)
+                if controller and not controller.setup then
+                    hook:Call("PostLoadPlayer", controller)
+                end
+            end
+        end)
+        
+        local old = aux.char.step
+        function aux.char.step(...)
+            hook:Call("PreCharacterStep")
+            local a, b, c, d = old(...)
+            hook:Call("PostCharacterStep")
+            return a, b, c, d
+        end
+        hook:Add("Unload", "BBOT:CharStepDetour", function()
+            aux.char.step = old
+        end)
+
+        hook:Add("Initialize", "BigRewardDetour", function()
+            local receivers = aux.network.receivers
+            for k, v in pairs(receivers) do
+                local a = debug.getupvalues(v)[1]
+                if typeof(a) == "function" then
+                    local run, consts = pcall(debug.getconstants, a)
+                    if run then
+                        if table.quicksearch(consts, "killshot") and table.quicksearch(consts, "kill") then
+                            receivers[k] = function(type, entity, gunname, earnings, ...)
+                                hook:CallP("PreBigAward", type, entity, gunname, earnings, ...)
+                                v(type, entity, gunname, earnings, ...)
+                                hook:CallP("PostBigAward", type, entity, gunname, earnings, ...)
+                            end
+        
+                            hook:Add("Unload", "BBOT:RewardDetour." .. tostring(k), function()
+                                receivers[k] = v
+                            end)
+                        end
+                    end
+                end
+            end
+        end)
+
+        local isalive = false
+        hook:Add("RenderStepped", "BBOT:Aux.IsAlive", function()
+            if isalive ~= aux.char.alive then
+                isalive = aux.char.alive
+                hook:Call("OnAliveChanged", (isalive and true or false))
+            end
+        end)
+        
+        hook:Add("Unload", "BBOT:Aux.UpValues.1", function()
+            for i=1, #setupvalueundo do
+                debug.setupvalue(unpack(setupvalueundo[i]))
+            end
+        end)
+
+        local dt = tick() - profiling_tick
+        BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
+        BBOT:SetLoadingStatus(nil, 50)
     end
 
+    -- Chat, allows for chat manipulations, or just being a dick with the chat spammer (Conversion In Progress)
     do
-        function aimbot:RedirectionStep(gun)
-            self.redirection_target = nil
-            if not self:GetLegitConfig("Bullet Redirect", "Enabled") then return end
-            local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
-            if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
-                if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
-            elseif aimkey == "Dynamic Always" then
-                if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+        local network = BBOT.aux.network
+        local hook = BBOT.hook
+        local table = BBOT.table
+        local notification = BBOT.notification
+        local string = BBOT.string
+        local timer = BBOT.timer
+        local chat = {}
+        BBOT.chat = chat
+        chat.spam_chat = {}
+        chat.spam_kill = {}
+
+        if not isfile("bitchbot/chatspam.txt") then --idk help the user out lol, prevent stupid errors --well it would kinda ig
+            writefile(
+                "bitchbot/chatspam.txt",
+                "WSUP FOOL\nGET OWNED KID\nBBOAT ON TOP\nI LOVE BBOT YEAH\nPLACEHOLDER TEXT \ndear bbot user, edit your chat spam\n	"
+            )
+        end
+        
+        if not isfile("bitchbot/killsay.txt") then
+            writefile(
+                "bitchbot/killsay.txt",
+                "WSUP FOOL [name]\nGET OWNED [name]\n[name] just died to my [weapon] everybody laugh\n[name] got owned roflsauce\nPLACEHOLDER TEXT \ndear bbot user, edit your kill say\n	"
+            )
+        end
+
+        local customtxt = readfile("bitchbot/chatspam.txt")
+        for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
+            table.insert(chat.spam_chat, s) -- I'm care
+        end
+
+        customtxt = readfile("bitchbot/killsay.txt")
+        for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
+            table.insert(chat.spam_kill, s)
+        end
+
+        hook:Add("Initialize", "BBOT:ChatDetour", function()
+            local receivers = network.receivers
+
+            for k, v in pairs(receivers) do
+                local const = debug.getconstants(v)
+                if table.quicksearch(const, "Tag") and table.quicksearch(const, "rbxassetid://") then
+                    receivers[k] = function(p20, p21, p22, p23, p24)
+                        timer:Async(function() hook:CallP("Chatted", p20, p21, p22, p23, p24) end)
+                        return v(p20, p21, p22, p23, p24)
+                    end
+                    hook:Add("Unload", "ChatDetour." .. tostring(k), function()
+                        receivers[k] = v
+                    end)
+                elseif table.quicksearch(const, "[Console]: ") and table.quicksearch(const, "Tag") then
+                    receivers[k] = function(p18)
+                        timer:Async(function() hook:CallP("Console", p18) end)
+                        return v(p18)
+                    end
+                    hook:Add("Unload", "ChatDetour." .. tostring(k), function()
+                        receivers[k] = v
+                    end)
+                end
             end
-            if math.random(0, 100) > self:GetLegitConfig("Bullet Redirect", "Hit Chance") then
+        end)
+
+        function chat:Say(str, un)
+            if string.sub(str, 1, 1) == "/" then
+                network:send("modcmd", str);
                 return
             end
-
-            local hitscan_priority = self:GetLegitConfig("Bullet Redirect", "Hitscan Priority")
-            local hitscan_points = self:GetLegitConfig("Bullet Redirect", "Hitscan Points")
-            local barrel_calc = self:GetLegitConfig("Bullet Redirect", "Use Barrel")
-            local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-
-            local target = self:GetLegitTarget(aimbot.sfov_circle_last, nil, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
-            if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
-                hook:Call("RedirectionBot.Changed", (target and unpack(target) or nil))
-            end
-            if not target then return end
-            self.redirection_target = target
-            local position = target[2].Position
-            local part_pos = part.Position
-
-            if self:GetLegitConfig("Ballistics", "Movement Prediction") then
-                position = self:VelocityPrediction(part_pos, position, replication.getupdater(target[1]).receivedVelocity, gun.data.bulletspeed)
-            end
-
-            local dir = (position-part_pos).Unit
-            local magnitude = (position-part_pos).Magnitude
-            if self:GetLegitConfig("Ballistics", "Drop Prediction") then
-                dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
-            end
-
-            local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
-            
-            local accuracy = math.remap(self:GetLegitConfig("Bullet Redirect", "Accuracy")/100, 0, 1, .3, 0)
-            X += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
-            Y += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
-
-            part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
-            self.silent = part
+            network:send("chatted", str, un or false);
         end
+
+        chat.commands = {}
+
+        function chat:AddCommand(name, callback, help)
+            chat.commands[name] = {callback, help}
+        end
+
+        function chat:RemoveCommand(name)
+            chat.commands[name] = nil
+        end
+
+        chat:AddCommand("help", function(...)
+            notification:Create("WIP, please wait a bit!")
+        end, "Shows all command information.")
+
+        hook:Add("SuppressNetworkSend", "BBOT:Chat.Commands", function(netname, message)
+            if netname ~= "chatted" then return end
+            if string.sub(message, 1, 1) ~= "." or string.sub(message, 2, 2) == "." then return end
+            local command_line = string.sub(message, 2)
+            command_line = string.Explode(" ", command_line)
+            local command = command_line[1]
+            table.remove(command_line, 1)
+            local args = command_line
+
+            if chat.commands[command] then
+                local cmd = chat.commands[command]
+                local exec = cmd[1](unpack(args))
+                if exec == nil then exec = true end
+                return exec
+            else
+                notification:Create("Not a command, try \".help\" to see available commands.")
+            end
+            return true
+        end)
+
+        chat.buffer = {}
+        local lasttext = ""
+        function chat:AddToBuffer(msg)
+            local spaces = ""
+            if msg == lasttext then
+                for i=1, a do
+                    spaces = spaces .. "."
+                end
+                a = a + 1
+                if a > 1 then a = 0 end
+            else
+                a = 0
+                lasttext = msg
+            end
+            msgquery[#msgquery+1] = msg .. spaces
+        end
+        
+        function chat:CheckIfValid(msg)
+            for i=1, #msg do
+                local str = string.sub(msg, i, i)
+                if str ~= "\n" or str ~= " " then
+                    return true
+                end
+            end
+        end
+
+        --[[
+        local lastkillsay = ""
+        local killsay = lastkillsay
+        while killsay == lastkillsay do
+            killsay = math.random(#customKillSay)
+        end
+        lastkillsay = killsay
+        local message = customKillSay[killsay]
+        message = message:gsub("%[hitbox%]", head and "head" or "body")
+        message = message:gsub("%[name%]", victim.Name)
+        message = message:gsub("%[weapon%]", weapon)
+        chat:AddToBuffer(message)
+        ]]
+
+        timer:Create("Chat.Spam", 1.5, 0, function() -- fuck you stylis
+            local msg = chat.buffer[1]
+            if not msg then return end
+            table.remove(chat.buffer, 1)
+            chat:Say(msg)
+        end)
     end
 
+    -- Votekick, handles the votekicks system (Conversion In Progress)
+    -- Anti-Votekick
     do
-        local assist_prediction_outline = draw:Circle(0, 0, 4, 6, 25, { 0, 0, 0, 255 }, 1, false)
-        local assist_prediction = draw:Circle(0, 0, 3, 1, 25, { 255, 255, 255, 255 }, 1, false)
+        local config = BBOT.config
+        local hook = BBOT.hook
+        local timer = BBOT.timer
+        local notification = BBOT.notification
+        local table = BBOT.table
+        local hud = BBOT.aux.hud
+        local playerdata = BBOT.aux.playerdata
+        local char = BBOT.aux.char
+        local localplayer = BBOT.service:GetService("LocalPlayer")
+        local votekick = {}
+        BBOT.votekick = votekick
+        votekick.CallDelay = 90
+        votekick.NextCall = 0
+        votekick.Called = 0
 
-        hook:Add("RenderStepped", "BBOT:Aimbot.TriggerBot", function()
-            local mycurgun = gamelogic.currentgun
-            if mycurgun and mycurgun.data and mycurgun.data.bulletspeed then
-                aimbot:SetCurrentType(mycurgun)
-                if not aimbot:GetLegitConfig("Trigger Bot", "Enabled") then return end
-                assist_prediction.Color = aimbot:GetLegitConfig("Trigger Bot", "Enabled", "Dot Color")
-            elseif assist_prediction.Visible then
-                assist_prediction.Visible = false
-                assist_prediction_outline.Visible = assist_prediction.Visible
-            end
-        end)
-
-        hook:Add("OnAliveChanged", "BBOT:Aimbot.TriggerBot.Hide", function(isalive)
-            if not isalive then
-                assist_prediction.Visible = false
-                assist_prediction_outline.Visible = assist_prediction.Visible
-            end
-        end)
-
-        local isaiming, aimtime = nil, 0
-        function aimbot:TriggerBotStep(gun)
-            self.trigger_target = nil
-            if assist_prediction.Visible then
-                assist_prediction.Visible = false
-                assist_prediction_outline.Visible = assist_prediction.Visible
-            end
-            if not self:GetLegitConfig("Trigger Bot", "Enabled") then return end
-            local aim_percentage = self:GetLegitConfig("Trigger Bot", "Aim In Time")
-            if isaiming ~= gun.isaiming() then
-                isaiming = gun.isaiming()
-                aimtime = tick()
-            end
-            if self:GetLegitConfig("Trigger Bot", "Trigger When Aiming") and (not isaiming or (tick() - aimtime < aim_percentage)) then return end
-            local hitscan_points = self:GetLegitConfig("Trigger Bot", "Trigger Bot Hitboxes")
-            local target = self:GetLegitTarget(nil, nil, hitscan_points)
-            if not target then return end
-            self.trigger_target = target
-
-            local position = target[2].Position
-            local cam_position = camera.CFrame.p
-
-            if self:GetLegitConfig("Ballistics", "Movement Prediction") then
-                position = self:VelocityPrediction(cam_position, position, replication.getupdater(target[1]).receivedVelocity, gun.data.bulletspeed)
-            end
-
-            local dir = (position-cam_position).Unit
-            local magnitude = (position-cam_position).Magnitude
-            if self:GetLegitConfig("Ballistics", "Drop Prediction") then
-                dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
-            end
-            local trigger_position, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
-            if onscreen then
-                trigger_position = Vector2.new(trigger_position.X, trigger_position.Y)
-                assist_prediction.Visible = true
-                assist_prediction_outline.Visible = assist_prediction.Visible
-                assist_prediction.Position = trigger_position
-                assist_prediction_outline.Position = assist_prediction.Position
-                local radi = (target[4] == "Body" and 650 or 400)*(char.unaimedfov/camera.FieldOfView)/magnitude
-                if gun.type == "SHOTGUN" then
-                    radi = radi * 2
-                end
-                assist_prediction.Radius = radi
-                assist_prediction_outline.Radius = radi
+        hook:Add("PreInitialize", "BBOT:Votekick.Load", function()
+            local receivers = BBOT.aux.network.receivers
+            for k, v in pairs(receivers) do
+                local consts = debug.getconstants(v)
+                local has = false
+                for kk, vv in pairs(consts) do
+                    if typeof(vv) == "string" and string.find(vv, "Votekick", 1, true) then
+                        local function callvotekick(target, delay, votesrequired, ...)
+                            timer:Async(function() hook:Call("Votekick.Start", target, delay, votesrequired) end)
+                            return v(target, delay, votesrequired, ...)
+                        end
+                        rawset(receivers, k, callvotekick)
+                        hook:Add("Unload", "UndoVotekickDetour-"..k, function()
+                            rawset(receivers, k, v)
+                        end)
             
-                local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-                local part_pos = part.Position
-                local team = (localplayer.Team and localplayer.Team.Name or "NA")
-                local playerteamdata = workspace["Players"][team]
-
-                local endpositon = part.CFrame.LookVector*70000
-                local raydata = self:raycastbullet(part_pos,endpositon,playerteamdata)
-                local pointhit
-                if raydata and raydata.Position then
-                    pointhit = raydata.Position
-                else
-                    pointhit = endpositon
-                end
-                local barrel_end_positon, onscreen = camera:WorldToViewportPoint(pointhit)
-                barrel_end_positon = Vector2.new(barrel_end_positon.X, barrel_end_positon.Y)
-                if onscreen and vector.dist2d(trigger_position, barrel_end_positon) <= radi then
-                    aimbot.fire = true
-                    gun:shoot(true)
-                end
-            end
-        end
-    end
-
-    local dot = Vector3.new().Dot
-    local rcaster = BBOT.aux.raycast
-    function aimbot:raycastbullet_rage(start, dir, extra, depth, main, raytracepenetration)
-        local function bulletcb(p1)
-            local instance = p1.Instance
-            if instance.Name == "Window" then return true end
-            if instance:IsDescendantOf(main) then return false end
-            local cancollide = not instance.CanCollide or instance.Transparency == 1
-            if raytracepenetration and depth and not cancollide then
-                local position = p1.Position
-                local instance = p1.Instance
-                local dirunit = dir.Unit
-                local v21 = rcaster.raycastSingleExit(position, instance.Size.magnitude * dirunit, instance);
-                if v21 then
-                    local l__Position__22 = v21.Position;
-                    local l__Normal__23 = v21.Normal;
-                    local v24 = dot(dirunit, l__Position__22 - position);
-                    if instance.Name == "killbullet" then
-                        return false
-                    end
-                    if v24 < depth then
-                        depth = depth - v24
-                        return true
-                    else
-                        return false
+                        function votekick:GetVotes()
+                            return debug.getupvalue(v, 9)
+                        end
+                        break
                     end
                 end
-            else
-                return cancollide
             end
-        end
-        return self:raycastbullet(start,dir,extra,bulletcb)
-    end
-
-    hook:Add("Initialize", "FindnewBullet", function()
-        local receivers = network.receivers
-
-        local function quickhasvalue(tbl, value)
-            for i=1, #tbl do
-                if tbl[i] == value then return true end
-            end
-            return false
-        end
-
-        for k, v in pairs(receivers) do
-            local ran, const = pcall(debug.getconstants, v)
-            if ran and quickhasvalue(const, "firepos") and quickhasvalue(const, "bullets") and quickhasvalue(const, "bulletcolor") and quickhasvalue(const, "penetrationdepth") then
-                receivers[k] = function(data)
-                    hook:CallP("NewBullet", data)
-                    v(data)
-                end
-                hook:Add("Unload", "BBOT:NewBullet.Ups." .. tostring(k), function()
-                    receivers[k] = v
-                end)
-            end
-        end
-    end)
-
-    local Resolver_NewBullet = {}
-    hook:Add("NewBullet", "Resolver", function(data)
-        local firepos, player = data.firepos, data.player
-        local isalive = hud:isplayeralive(player)
-        if isalive then
-            local headpart = aimbot:GetParts(player).torso
-            local mag = (firepos-headpart.Position).Magnitude
-            if mag > 12 then
-                Resolver_NewBullet[player.UserId] = (firepos-headpart.Position)
-            else
-                Resolver_NewBullet[player.UserId] = nil
-            end
-        end
-    end)
-
-    local vector_cache = Vector3.new()
-    function aimbot:GetResolvedPosition(player)
-        if not self:GetRageConfig("Hack vs. Hack", "Resolver") then return vector_cache end
-        --[[local bodyparts, rootpart = aimbot:GetParts(player)
-        local resolvedoffset = vector_cache
-        -- method 1
-        local root_cframe, torso_cframe = rootpart.CFrame, bodyparts.torso.CFrame
-        if (root_cframe.Position - torso_cframe.Position).Magnitude > 18 then
-            resolvedoffset = root_cframe.Position - torso_cframe.Position
-        end
-        return resolvedoffset]]
-        local updater = replication.getupdater(player)
-        local parts = aimbot:GetParts(player)
-        if updater and updater.receivedPosition and parts then
-            local headpart = parts.head
-            local offset = (updater.getpos()-headpart.Position)+Vector3.new(0,1.25,0)
-            if offset.Magnitude > 1 then
-                if offset.Magnitude >= math.huge then
-                    return updater.getpos(), true
-                else
-                    return offset
-                end
-            end
-        end
-
-        if Resolver_NewBullet[player.UserId] then
-            return Resolver_NewBullet[player.UserId]
-        end
-
-        return vector_cache
-    end
-
-    local PingStat = BBOT.service:GetService("Stats").PerformanceStats.Ping
-    local function GetLatency()
-        return PingStat:GetValue() / 1000
-    end
-
-    function aimbot:GetDamage(data, distance, headshot)
-        local r0, r1, d0, d1 = data.range0, data.range1, data.damage0, data.damage1
-        return (distance < r0 and d0 or distance < r1 and (d1 - d0) / (r1 - r0) * (distance - r0) + d0 or d1)  * (headshot and data.multhead or 1)
-    end
-
-    aimbot.predictedDamageDealt = {}
-    aimbot.predictedDamageDealtRemovals = {}
-    aimbot.BulletQuery = {}
-    hook:Add("PostNetworkSend", "BBOT:RageBot.DamagePrediction", function(netname, ...)
-        if netname == "bullethit" then
-            local a = {...}
-            local Entity, HitPos, Part, bulletID = a[1], a[2], a[3], a[4]
-            if not Entity or not Entity:IsA("Player") then return end
-            if not aimbot:GetRageConfig("Settings", "Damage Prediction") then return end
-            if not aimbot.BulletQuery[bulletID] then return end
-            local bullet_data = aimbot.BulletQuery[bulletID]
-            local damageDealt = aimbot:GetDamage(bullet_data[1], (HitPos-bullet_data[2]).Magnitude, Part == "Head")
-            if not aimbot.predictedDamageDealt[Entity] then
-                aimbot.predictedDamageDealt[Entity] = 0
-            end
-            aimbot.predictedDamageDealt[Entity] += damageDealt
-            aimbot.predictedDamageDealtRemovals[Entity] = tick() + GetLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
-        elseif netname == "newbullets" then
-            local a = {...}
-            local bullet_table, time_stamp = a[1], a[2]
-            local dataset = {gamelogic.currentgun.data, bullet_table.firepos}
-            for i=1, #bullet_table.bullets do
-                local v = bullet_table.bullets[i]
-                aimbot.BulletQuery[v[2]] = dataset
-            end
-            timer:Simple(1.5, function()
-                for i=1, #bullet_table.bullets do
-                    local v = bullet_table.bullets[i]
-                    aimbot.BulletQuery[v[2]] = nil
+        end)
+        
+        local invote = false
+        hook:Add("Votekick.Start", "Votekick.Start", function(target, delay, votesrequired)
+            delay = tonumber(delay)
+            timer:Create("Votekick.Tick", delay, 1, function()
+                hook:Remove("RenderStep.First", "Votekick.Step")
+                hook:Call("Votekick.End", target, delay, votesrequired, false)
+            end)
+            hook:Add("RenderStep.First", "Votekick.Step", function()
+                if votekick:GetVotes() >= votesrequired then
+                    hook:Remove("RenderStep.First", "Votekick.Step")
+                    timer:Remove("Votekick.Tick")
+                    hook:Call("Votekick.End", target, delay, votesrequired, true)
                 end
             end)
-        end
-    end)
-
-    hook:Add("RenderStepped", "BBOT:RageBot.DamagePrediction", function()
-        for index, time in next, aimbot.predictedDamageDealtRemovals do
-            if time and (tick() > time) then
-                aimbot.predictedDamageDealt[index] = 0
-                aimbot.predictedDamageDealtRemovals[index] = nil
+            if config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then
+                timer:Simple(delay+2, function()
+                    votekick:RandomCall()
+                end)
             end
-        end
-    end)
-
-    function aimbot:GetRageTarget(fov, gun)
-        local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
-        local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-        local cam_position = aux_camera.basecframe.p
-        local team = (localplayer.Team and localplayer.Team.Name or "NA")
-        local playerteamdata = workspace["Players"][team]
-        local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
-        local penetration_depth = gun.data.penetrationdepth * wall_scale/100
-        local auto_wall = self:GetRageConfig("Aimbot", "Auto Wallbang")
-        local hitscan_priority = self:GetRageConfig("Aimbot", "Hitscan Priority")
-        local aimbot_fov = config:GetValue("Main", "Rage", "Aimbot", "Aimbot FOV")
-
-        local hitbox_shift = self:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
-        local hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
-        local hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
-        local max_points = self:GetRageConfig("Hack vs. Hack", "Max Hitpoints")
-
-        local hitbox_points = {}
-        if hitbox_shift then
-            if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) end
-            if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) end
-            if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) end
-            if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) end
-            if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) end
-            if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) end
-            if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) end
-        end
-
-        local firepos_shift = self:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
-        local firepos_shift_points = self:GetRageConfig("Hack vs. Hack", "FirePos Hitscan Points")
-        local firepos_shift_distance = self:GetRageConfig("Hack vs. Hack", "FirePos Shift Distance")
         
-        local firepos_points = {}
-        if firepos_shift then
-            if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(part.CFrame.p-cam_position) end
-            if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,firepos_shift_distance,0) end
-            if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-firepos_shift_distance,0) end
-            if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-firepos_shift_distance,0,0) end
-            if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(firepos_shift_distance,0,0) end
-            if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) end
-            if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) end
+            if target == localplayer.Name then
+                timer:Simple(.5, function() hud:vote("no") end)
+            end
+        
+            invote = votesrequired
+            notification:Create("Votekick called on " .. target .. "; time till end: " .. delay .. "; votes required: " .. votesrequired)
+            if votekick.Called == 1 then
+                votekick.Called = 2
+            elseif votekick.Called == 2 or votekick.Called == 0 then
+                votekick.Called = 0
+                votekick.NextCall = tick() + 1000000000
+            end
+        end)
+        
+        hook:Add("Console", "BBOT:Votekick.AntiVotekick", function(msg)
+            if string.find(msg, "The last votekick was initiated by you", 1, true) then
+                votekick.Called = 2
+            elseif string.find(msg, "seconds before initiating a votekick", 1, true) then
+                votekick.Called = 0
+                votekick.NextCall = tick() + (tonumber(string.match(msg, "%d+")) or 0)
+            end
+        end)
+        
+        function votekick:IsVoteActive()
+            return debug.getupvalue(BBOT.aux.hud.votestep, 2)
+        end
+        
+        local players = BBOT.service:GetService("Players")
+        function votekick:GetTargets()
+            local targetables = {}
+            for i, v in pairs(players:GetPlayers()) do
+                local inpriority = config.priority[v.UserId]
+                if (not inpriority or inpriority >= 0) and v ~= localplayer then
+                    targetables[#targetables+1] = v
+                end
+            end
+            return targetables
+        end
+        
+        function votekick:CanCall(target, reason)
+            if self:IsVoteActive() then return false, "VoteActive" end
+            if self.NextCall > tick() or self.Called > 0 then return false, "RateLimit" end
+            return true
+        end
+        
+        function votekick:Call(target, reason)
+            BBOT.chat:Say("/votekick:"..target..":"..reason)
+            self.NextCall = 0
+            self.Called = 1
+        end
+        
+        function votekick:RandomCall()
+            local targets = votekick:GetTargets()
+            local target = table.fyshuffle(targets)[1]
+            votekick:Call(target.Name, config:GetValue("Main", "Misc", "Votekick", "Reason"))
         end
 
-        local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
-        local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
-
-        local scan_count = 0
-        local organizedPlayers = {}
-        local plys = players:GetPlayers()
-        for i=1, #plys do
-            local v = plys[i]
-            if v == localplayer then
-                continue
-            end
-            if max_points ~= 0 and scan_count > max_points then break end
+        local totalkills = 0
+        hook:Add("PreBigAward", "BBOT:Votekick.Kills", function()
+            totalkills = totalkills + 1
+        end)
         
-            if config.priority[v.UserId] then continue end
-            if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
-            local parts = self:GetParts(v)
-            if not parts then continue end
+        hook:Add("RenderStep.First", "BBOT:Votekick.AntiVotekick", function()
+            if not config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then return end
+            if char.alive == true then
+                votekick.WasAlive = true
+            end
+            if not votekick.WasAlive then return end
+            if playerdata.rankcalculator(playerdata:getdata().stats.experience) < 25 then return end
+            if votekick:CanCall() then
+                local kills = config:GetValue("Main", "Misc", "Votekick", "Votekick On Kills")
+                if kills == 0 or totalkills >= kills then
+                    votekick:RandomCall()
+                end
+            end
+        end)
+    end
+
+    -- Server Hopper, redirects and moves the user to other server instances (Conversion In Progress)
+    -- Votekick-blacklist (prevents user from joining voted out servers)
+    do
+        local config = BBOT.config
+        local hook = BBOT.hook
+        local votekick = BBOT.votekick
+        local log = BBOT.log
+        local timer = BBOT.timer
+        local notification = BBOT.notification
+        local TeleportService = game:GetService("TeleportService")
+        local localplayer = BBOT.service:GetService("LocalPlayer")
+        local httpservice = BBOT.service:GetService("HttpService")
+        local serverhopper = {}
+        BBOT.serverhopper = serverhopper
+
+        serverhopper.file = "bitchbot/votedoff-servers.txt"
+        serverhopper.blacklist = {}
+        serverhopper.UserId = tostring(localplayer.UserId)
+
+        hook:Add("PostInitialize", "BBOT:ServerHopper.Load", function()
+            if isfile(serverhopper.file) then
+                serverhopper.blacklist = httpservice:JSONDecode(readfile(serverhopper.file))
+                local otime = os.time()
+                for _, userblacklist in pairs(serverhopper.blacklist) do
+                    for k, v in pairs(userblacklist) do
+                        if otime > v then
+                            userblacklist[k] = nil
+                            log(LOG_NORMAL, "Removed server-hop blacklist " .. k)
+                        end
+                    end
+                end
+                writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+                local plbllist = serverhopper.blacklist[serverhopper.UserId]
+                if plbllist then
+                    local c = 0
+                    for k, v in pairs(plbllist) do
+                        c = c + 1
+                    end
+                    --BBOT.chat:Message("You have been votekicked from " .. c .. " server(s)!")
+                    log(LOG_NORMAL, "You have been votekicked from " .. c .. " server(s)!")
+                    notification:Create("You have been votekicked from " .. c .. " server(s)!")
+                end
+            end
+        end)
+
+        function serverhopper:ClearBlacklist()
+            serverhopper.blacklist = {}
+            writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+            notification:Create("Server hop blacklist cleared!")
+        end
+
+        function serverhopper:IsBlacklisted(id)
+            local plbllist = serverhopper.blacklist[self.UserId]
+            if plbllist and plbllist[id] then
+                return true
+            end
+        end
+
+        function serverhopper:RandomHop()
+            local delay = config:GetValue("Main", "Misc", "Server Hopper", "Hop Delay")
+            if delay > 0 then
+                notification:Create("Hopping in " .. delay .. "s")
+            end
+            timer:Simple(delay, function()
+                log(LOG_NORMAL, "Commencing Server-Hop...")
+                local data = httpservice:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100")).data
+                local mode = config:GetValue("Main", "Misc", "Server Hopper", "Sort By")
+                if mode == "Highest Players" then
+                    table.sort(data, function(a, b) return a.playing > b.playing end)
+                elseif mode == "Lowest Players" then
+                    table.sort(data, function(a, b) return a.playing < b.playing end)
+                end
+                for _, s in pairs(data) do
+                    if not serverhopper:IsBlacklisted(s.id) and s.id ~= game.JobId then
+                        if s.playing < s.maxPlayers-1 then
+                            --syn.queue_on_teleport(<string> code)
+                            log(LOG_NORMAL, "Hopping to server Id: " .. s.id .. "; Players: " .. s.playing .. "/" .. s.maxPlayers .. "; " .. s.ping .. " ms")
+                            notification:Create("Hopping to server Id '" .. s.id .. "' -> Players: " .. s.playing .. "/" .. s.maxPlayers)
+                            timer:Simple(1, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id) end)
+                            return
+                        end
+                    end
+                end
+                log(LOG_ERROR, "No servers to hop towards... Wow... You really got votekicked off every server now did ya? Impressive...")
+            end)
+        end
+
+        function serverhopper:AddToBlacklist(id, removaltime)
+            local plbllist = self.blacklist[self.UserId]
+            if not plbllist then
+                plbllist = {}
+                self.blacklist[self.UserId] = plbllist
+            end
+            plbllist[id] = (removaltime and removaltime + os.time() or -1)
+            writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+            log(LOG_NORMAL, "Added " .. game.JobId .. " to server-hop blacklist")
+            notification:Create("Added " .. game.JobId .. " to server-hop blacklist")
+        end
+
+        function serverhopper:Hop(id)
+            log(LOG_NORMAL, "Hopping to server " .. id)
+            if serverhopper:IsBlacklisted(id) then
+                log(LOG_NORMAL, "This server ID is blacklisted! Where you votekicked from here?")
+                notification:Create("This server Id (" .. id .. ") is blacklisted! Where you votekicked from here?")
+                return
+            end
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, id)
+        end
+
+        BBOT.chat:AddCommand("hop", function(id)
+            if not id or id == "" then
+                serverhopper:RandomHop()
+                return
+            end
+            serverhopper:Hop(id)
+        end, "Hops to a server instance.")
+
+        BBOT.chat:AddCommand("rejoin", function()
+            BBOT.serverhopper:Hop(game.JobId)
+        end, "Rejoin the current server instance.")
+
+        hook:Add("InternalMessage", "BBOT:ServerHopper.HopOnKick", function(message)
+            if not string.find(message, "Server Kick Message:", 1, true) or not string.find(message, "votekicked", 1, true) then return end
+            if not config:GetValue("Main", "Misc", "Server Hopper", "Enabled") then return end
+            if not serverhopper:IsBlacklisted(game.JobId) then
+                serverhopper:AddToBlacklist(game.JobId, 86400)
+            end
+            serverhopper:RandomHop()
+        end)
+    end
+
+    -- Misc
+    do
+        local userinputservice = BBOT.service:GetService("UserInputService")
+        local camera = BBOT.service:GetService("CurrentCamera")
+        local localplayer = BBOT.service:GetService("LocalPlayer")
+        local hook = BBOT.hook
+        local config = BBOT.config
+        local roundsystem = BBOT.aux.roundsystem
+        local network = BBOT.aux.network
+        local char = BBOT.aux.char
+        local table = BBOT.table
+        local vector = BBOT.vector
+        local hud = BBOT.aux.hud
+        local replication = BBOT.aux.replication
+        local gamelogic = BBOT.aux.gamelogic
+        local gamemenu = BBOT.aux.menu
+        local misc = {}
+        BBOT.misc = misc
+
+        local CACHED_VEC3 = Vector3.new()
+
+        hook:Add("OnConfigChanged", "BBOT:Misc.Fly", function(steps, old, new)
+            if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly") and not config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
+                if not new and char.alive and misc.rootpart then
+                    misc.rootpart.Anchored = false
+                end
+            end
+        end)
+
+        hook:Add("OnKeyBindChanged", "BBOT:Misc.Fly", function(steps, old, new)
+            if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
+                if not new and char.alive and misc.rootpart then
+                    misc.rootpart.Anchored = false
+                end
+            end
+        end)
         
-            if v.Team and v.Team == localplayer.Team then
-                continue
+        hook:Add("SuppressNetworkSend", "BBOT:Misc.Tweaks", function(networkname, Entity, HitPos, Part, bulletID, ...)
+            if networkname == "falldamage" and config:GetValue("Main", "Misc", "Tweaks", "Prevent Fall Damage") then
+                return true
             end
+        end)
 
-            local updater = replication.getupdater(v)
-            local prioritize
-            if hitscan_priority == "Head" then
-                prioritize = updater.gethead()
-            elseif hitscan_priority == "Body" then
-                prioritize = replication.getbodyparts(v).torso
+        function misc:Fly()
+            if not config:GetValue("Main", "Misc", "Movement", "Fly") or not config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
+            local speed = config:GetValue("Main", "Misc", "Movement", "Fly Speed")
+            local rootpart = self.rootpart -- Invis compatibility
+
+            local travel = CACHED_VEC3
+            local looking = camera.CFrame.lookVector --getting camera looking vector
+            local rightVector = camera.CFrame.RightVector
+            if userinputservice:IsKeyDown(Enum.KeyCode.W) then
+                travel += looking
             end
-            local main_part = updater.gethead().Parent
-            local resolver_offset, isabsolute = self:GetResolvedPosition(v)
+            if userinputservice:IsKeyDown(Enum.KeyCode.S) then
+                travel -= looking
+            end
+            if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+                travel += rightVector
+            end
+            if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+                travel -= rightVector
+            end
+            if userinputservice:IsKeyDown(Enum.KeyCode.Space) then
+                travel += Vector3.new(0, 1, 0)
+            end
+            if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
+                travel -= Vector3.new(0, 1, 0)
+            end
+            if travel.Unit.x == travel.Unit.x then
+                rootpart.Anchored = false
+                rootpart.Velocity = travel.Unit * speed --multiplaye the unit by the speed to make
+            else
+                rootpart.Velocity = Vector3.new(0, 0, 0)
+                rootpart.Anchored = true
+            end
+        end
 
-            local inserted_priority
-            if prioritize then
-                local part = prioritize
-                local pos = (isabsolute and resolver_offset or prioritize.Position + resolver_offset)
-                local point, onscreen = camera:WorldToViewportPoint(pos)
-                if onscreen or aimbot_fov >= 180 then
-                    --local object_fov = self:GetFOV(part, scan_part)
-                    if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
-                        if wall_scale > 120 then
-                            table.insert(organizedPlayers, {v, part, pos, prioritize})
-                            inserted_priority = true
+        misc.speedDirection = Vector3.new(1,0,0)
+        function misc:Speed()
+            if config:GetValue("Main", "Misc", "Movement", "Fly") and config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
+            local speedtype = config:GetValue("Main", "Misc", "Movement", "Speed Type")
+            local rootpart = self.rootpart
+            if config:GetValue("Main", "Misc", "Movement", "Speed") then
+                local speed = config:GetValue("Main", "Misc", "Movement", "Speed Factor")
+
+                local travel = CACHED_VEC3
+                local looking = camera.CFrame.LookVector
+                local rightVector = camera.CFrame.RightVector
+                local moving = false
+                if not config:GetValue("Main", "Misc", "Movement", "Circle Strafe") or not config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
+                    if userinputservice:IsKeyDown(Enum.KeyCode.W) then
+                        travel += looking
+                    end
+                    if userinputservice:IsKeyDown(Enum.KeyCode.S) then
+                        travel -= looking
+                    end
+                    if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+                        travel += rightVector
+                    end
+                    if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+                        travel -= rightVector
+                    end
+                    misc.speedDirection = Vector3.new(travel.x, 0, travel.z).Unit
+                    -- if misc.speedDirection.x ~= misc.speedDirection.x then 
+                    -- 	misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
+                    -- end
+                    misc.circleStrafeAngle = -0.1
+                else
+                    if misc.speedDirection.x ~= misc.speedDirection.x then 
+                        misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
+                    end
+                    travel = misc.speedDirection
+                    misc.circleStrafeAngle = -0.1
+                    
+                    if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+                        misc.circleStrafeAngle = 0.1
+                    end
+                    if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+                        misc.circleStrafeAngle = -0.1
+                    end
+                    local cd = Vector2.new(misc.speedDirection.x, misc.speedDirection.z)
+                    cd = vector.rotate(cd, misc.circleStrafeAngle)
+                    misc.speedDirection = Vector3.new(cd.x, 0, cd.y)
+                end
+
+                travel = misc.speedDirection
+                if config:GetValue("Main", "Misc", "Movement", "Avoid Collisions") and config:GetValue("Main", "Misc", "Movement", "Avoid Collisions", "KeyBind") then
+                    if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
+                        local scale = config:GetValue("Main", "Misc", "Movement", "Avoid Collisions Scale") / 1000
+                        local position = char.rootpart.CFrame.p
+                        local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+                            Ray.new(position, (travel * speed * scale)),
+                            roundsystem.raycastwhitelist
+                        ) 
+                        if part then
+                            for i = -10, 10 do
+                                local cd = Vector2.new(travel.x, travel.z)
+                                cd = vector.rotate(cd, misc.circleStrafeAngle * i * -1)
+                                cd = Vector3.new(cd.x, 0, cd.y)
+                                local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+                                    Ray.new(position, (cd * speed * scale)),
+                                    roundsystem.raycastwhitelist
+                                ) 
+                                misc.normal = normal
+                                if not part then 
+                                    travel = cd
+                                end
+                            end
+                        end
+                    else
+                        local position = char.rootpart.CFrame.p
+                        for i = 1, 10 do
+                            local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+                                Ray.new(position, (travel * speed / 10) + Vector3.new(0,rootpart.Velocity.y/10,0)),
+                                roundsystem.raycastwhitelist
+                            ) 
+                            misc.normal = normal
+                            if part then 
+                                local dot = normal.Unit:Dot((char.rootpart.CFrame.p - position).Unit)
+                                misc.normalPositive = dot
+                                if dot > 0 then
+                                    travel += normal.Unit * dot
+                                    travel = travel.Unit
+                                    if travel.x == travel.x then
+                                        misc.circleStrafeDirection = travel
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                local humanoid = self.humanoid
+                if travel.x == travel.x and humanoid:GetState() ~= Enum.HumanoidStateType.Climbing then
+                    if speedtype == "In Air" and (humanoid:GetState() ~= Enum.HumanoidStateType.Freefall or not humanoid.Jump) then
+                        return
+                    elseif speedtype == "On Hop" and not userinputservice:IsKeyDown(Enum.KeyCode.Space) then
+                        return
+                    end
+                
+                    if config:GetValue("Main", "Misc", "Movement", "Speed", "KeyBind") then
+                        rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.z * speed)
+                    end
+                end
+            end
+        end
+
+        function misc:AutoJump()
+            if config:GetValue("Main", "Misc", "Movement", "Auto Jump") and userinputservice:IsKeyDown(Enum.KeyCode.Space) then
+                misc.humanoid.Jump = true
+            end
+        end
+
+        local CHAT_GAME = localplayer.PlayerGui.ChatGame
+        local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
+
+        function misc:BypassSpeedCheck()
+            local val = config:GetValue("Main", "Misc", "Exploits", "Bypass Speed Checks")
+            local character = localplayer.Character
+            if not character then return end
+            local rootpart = character:FindFirstChild("HumanoidRootPart")
+            if not rootpart then
+                return
+            end
+            rootpart.Anchored = false
+            self.oldroot = rootpart
+
+            if val and char.alive and not self.newroot then
+                copy = rootpart:Clone()
+                copy.Parent = character
+                self.newroot = copy
+            elseif self.newroot then
+                if ((not val) or (not gamelogic.currentgun) or (not char.alive) or (not gamemenu.isdeployed())) then
+                    self.newroot:Destroy()
+                    self.newroot = nil
+                else
+                    -- client.char.rootpart.CFrame = self.newroot.CFrame
+                    --idk if i can manipulate this at all
+                end
+            end
+        end
+
+        local oldjump = char.jump
+        function char:jump(height)
+            height = config:GetValue("Main", "Misc", "Tweaks", "Jump Power") and (height * config:GetValue("Main", "Misc", "Tweaks", "Jump Power Percentage") / 100) or height
+            return oldjump(self, height)
+        end
+
+        hook:Add("Unload", "BBOT:Misc.JumpPower", function()
+            char.jump = oldjump
+        end)
+
+        misc.beams = {}
+        local debris = BBOT.service:GetService("Debris")
+        local tween = BBOT.service:GetService("TweenService")
+        function misc:CreateBeam(origin_att, ending_att, texture)
+            local beam = Instance.new("Beam")
+            beam.Texture = texture or "http://www.roblox.com/asset/?id=446111271"
+            beam.TextureMode = Enum.TextureMode.Wrap
+            beam.TextureSpeed = 8
+            beam.LightEmission = 1
+            beam.LightInfluence = 1
+            beam.TextureLength = 12
+            beam.FaceCamera = true
+            beam.Enabled = true
+            beam.ZOffset = -1
+            beam.Transparency = NumberSequence.new(0,0)
+            beam.Color = ColorSequence.new(config:GetValue("Main", "Visuals", "Misc", "Bullet Tracers", "Tracer Color"), Color3.new(0, 0, 0))
+            beam.Attachment0 = origin_att
+            beam.Attachment1 = ending_att
+            debris:AddItem(beam, 3)
+            debris:AddItem(origin_att, 3)
+            debris:AddItem(ending_att, 3)
+
+            local speedtween = TweenInfo.new(5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0)
+            tween:Create(beam, speedtween, { TextureSpeed = 2 }):Play()
+            beam.Parent = workspace
+            table.insert(misc.beams, { beam = beam, time = tick() })
+            return beam
+        end
+
+        function misc:UpdateBeams()
+            local time = tick()
+            for i = #self.beams, 1, -1 do
+                if self.beams[i].beam  then
+                    local transparency = (time - self.beams[i].time) - 2
+                    self.beams[i].beam.Transparency = NumberSequence.new(transparency, transparency)
+                else
+                    table.remove(self.beams, i)
+                end
+            end
+        end
+
+        local bullet_query = {}
+        hook:Add("PostNetworkSend", "BBOT:Misc.BulletTracer", function(networkname, ...)
+            if networkname == "newbullets" then
+                if not config:GetValue("Main", "Visuals", "Misc", "Bullet Tracers") then return end
+                local args = {...}
+                if not args[1] then return end
+                local reg = args[1]
+                local bullettable = reg.bullets
+                for i=1, #bullettable do
+                    local v = bullettable[i]
+                    bullet_query[v[2]] = reg.firepos
+                end
+            elseif networkname == "bullethit" then
+                local args = {...}
+                local Entity, HitPos, Part, bulletID = args[1], args[2], args[3], args[4]
+                if bullet_query[bulletID] then
+                    local attach_origin = Instance.new("Attachment", workspace.Terrain)
+                    attach_origin.Position = bullet_query[bulletID]
+                    local attach_ending = Instance.new("Attachment", workspace.Terrain)
+                    attach_ending.Position = HitPos
+                    local beam = misc:CreateBeam(attach_origin, attach_ending)
+                    beam.Parent = workspace
+                end
+            end
+        end)
+
+        hook:Add("RenderStepped", "BBOT:Misc.Calculate", function()
+            misc:UpdateBeams()
+            if config:GetValue("Main", "Misc", "Exploits", "Server Crasher") and config:GetValue("Main", "Misc", "Exploits", "Server Crasher", "KeyBind") then
+                for i = 1, config:GetValue("Main", "Misc", "Exploits", "Server Crasher Intensity") ^ 2 do
+                    network:send("changeatt", "Primary", "MP5K", { Underbarrel = "Flashlight",  Other = "Flashlight",  Ammo = "",  Barrel = "",  Optics = "" })
+                    network:send("changeatt", "Primary", "MP5K", { Underbarrel = "",  Other = "",  Ammo = "",  Barrel = "",  Optics = ""  })
+                end
+            end
+            misc:BypassSpeedCheck()
+            if not char.alive then
+                misc.humanoid = nil
+                misc.rootpart = nil
+                return
+            end
+            if not misc.humanoid then
+                misc.humanoid = localplayer.Character:FindFirstChild("Humanoid")
+                misc.rootpart = localplayer.Character:FindFirstChild("HumanoidRootPart")
+            end
+            misc.rootpart = (misc.newroot or misc.oldroot)
+            char.rootpart = misc.rootpart
+            if not CHAT_BOX.Active then
+                misc:Fly()
+                misc:Speed()
+                misc:AutoJump()
+            end
+        end)
+
+        function misc:GrenadeTP(position)
+            if gamelogic.gammo < 1 then return end
+            local args = {
+                "FRAG",
+                {
+                    frames = {
+                        {
+                            v0 = Vector3.new(),
+                            glassbreaks = {},
+                            t0 = 0,
+                            offset = Vector3.new(),
+                            rot0 = CFrame.new(),
+                            a = Vector3.new(0 / 0),
+                            p0 = char.rootpart.Position,
+                            rotv = Vector3.new(),
+                        },
+                        {
+                            v0 = Vector3.new(),
+                            glassbreaks = {},
+                            t0 = 0.002,
+                            offset = Vector3.new(),
+                            rot0 = CFrame.new(),
+                            a = Vector3.new(0 / 0),
+                            p0 = Vector3.new(0 / 0),
+                            rotv = Vector3.new(),
+                        },
+                        {
+                            v0 = Vector3.new(),
+                            glassbreaks = {},
+                            t0 = 0.003,
+                            offset = Vector3.new(),
+                            rot0 = CFrame.new(),
+                            a = Vector3.new(),
+                            p0 = position,
+                            rotv = Vector3.new(),
+                        },
+                    },
+                    time = tick(),
+                    blowuptime = 0.003,
+                },
+            }
+            gamelogic.gammo = gamelogic.gammo - 1
+            hud:updateammo("GRENADE");
+            network:send("newgrenade", unpack(args))
+        end
+
+        hook:Add("LocalKilled", "BBOT:RevengeGrenade", function(player)
+            if player == localplayer then return end
+            if not config:GetValue("Main", "Misc", "Exploits", "Revenge Grenade") then return end
+            misc:GrenadeTP(replication.getupdater(player).getpos())
+        end)
+
+        hook:Add("Initialize", "BBOT:LocalKilled", function()
+            local receivers = network.receivers
+
+            for k, v in pairs(receivers) do
+                local const = debug.getconstants(v)
+                if table.quicksearch(const, "setfixedcam") and table.quicksearch(const, "setspectate") and table.quicksearch(const, "isplayeralive") and table.quicksearch(const, "Killer") then
+                    receivers[k] = function(player, name, p210, p211, p212, p213, p214)
+                        hook:CallP("LocalKilled", player, name, p210, p211, p212, p213, p214)
+                        return v(player, name, p210, p211, p212, p213, p214)
+                    end
+                    hook:Add("Unload", "Killed_Dtawdw." .. tostring(k), function()
+                        receivers[k] = v
+                    end)
+                end
+            end
+        end)
+
+        hook:Add("Initialize", "BBOT:ScreenCull.Step", function()
+            local screencull = BBOT.aux.ScreenCull
+            local oldstep = screencull.step
+            function screencull.step(...)
+                hook:CallP("ScreenCull.PreStep", ...)
+                oldstep(...)
+                hook:CallP("ScreenCull.PostStep", ...)
+            end
+            hook:Add("Unload", "BBOT:ScreenCull.Step", function()
+                screencull.step = oldstep
+            end)
+        end)
+
+        local camera = BBOT.service:GetService("CurrentCamera")
+        hook:Add("ScreenCull.PreStep", "BBOT:Misc.Thirdperson", function()
+            if not char.alive or not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
+            local val = camera.CFrame
+            local dist = config:GetValue("Main", "Visuals", "Local", "Third Person Distance") / 10
+            local params = RaycastParams.new()
+            params.FilterType = Enum.RaycastFilterType.Blacklist
+            params.FilterDescendantsInstances = { camera, workspace.Ignore, workspace.Players }
+            local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
+            if hit and not hit.Instance.CanCollide then
+                camera.CFrame = val * CFrame.new(0, 0, dist)
+            else
+                local mag = hit and (hit.Position - val.p).Magnitude or nil
+                val *= CFrame.new(0, 0, mag or dist)
+                camera.CFrame = val
+            end
+        end)
+
+        local last_pos, last_ang, last_send, should_start = nil, nil, tick(), 0
+        hook:Add("SuppressNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, ...)
+            if networkname == "repupdate" then
+                if config:GetValue("Main", "Misc", "Exploits", "Semi-God") and config:GetValue("Main", "Misc", "Exploits", "Semi-God", "KeyBind") then
+                    if last_pos == pos then
+                        if last_send < tick() and config:GetValue("Main", "Misc", "Exploits", "Semi-God Keep Alive") > 0 then
+                            last_send = tick() + config:GetValue("Main", "Misc", "Exploits", "Semi-God Keep Alive")
+                            last_pos = pos
+                            BBOT.menu:UpdateStatus("Semi-God", "Buffering...")
+                            network:send(networkname, last_pos, last_ang, ...)
                         else
-                            if firepos_shift then
-                                local lookatme = CFrame.new(Vector3.new(), pos-cam_position)
-                                local targetcframe = CFrame.new(cam_position)
-                                for i=1, #firepos_points do
-                                    local point = firepos_points[i]
-                                    local newcf = targetcframe * lookatme * point
-                                    local cam_position = newcf.p
-                                    if hitbox_shift then
-                                        local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
-                                        local targetcframe = CFrame.new(pos)
-                                        for i=1, #hitbox_points do
-                                            local point = hitbox_points[i]
-                                            local newcf = targetcframe * lookatme * point
-                                            local pos = newcf.p
+                            BBOT.menu:UpdateStatus("Semi-God", "Active")
+                        end
+                        return true
+                    else
+                        BBOT.menu:UpdateStatus("Semi-God", "Stand Still")
+                        last_pos = pos
+                        last_ang = ang
+                    end
+                else
+                    last_pos = pos
+                    last_ang = ang
+                end
+            end
+        end)
+
+        hook:Add("RenderStepped", "BBOT:RepUpdate", function()
+            if not config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Force") then return end
+            if not char.alive then return end
+            local l__angles__1304 = BBOT.aux.camera.angles;
+            for i=1, 10 do
+                network:send("repupdate", char.rootpart.Position, Vector2.new(l__angles__1304.x, l__angles__1304.y), tick());
+            end
+        end)
+
+        local workspace = BBOT.service:GetService("Workspace")
+        hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ...)
+            if networkname == "repupdate" and config:GetValue("Main", "Misc", "Exploits", "Spaz Attack") then
+                local intensity = config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
+                local offset = Vector3.new(math.random(-1000,1000)/1000, math.random(-1000,1000)/1000, math.random(-1000,1000)/1000)*config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
+                local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(pos, offset), BBOT.aux.roundsystem.raycastwhitelist)
+                if part then
+                    offset = offset - (position-pos).Unit
+                end
+                return {networkname, pos + offset, ...}
+            end
+        end)
+    end
+
+    -- Aimbot (Conversion In Progress)
+    -- Knife Aura
+    -- Bullet Network Manipulation
+    do
+        local timer = BBOT.timer
+        local hook = BBOT.hook
+        local config = BBOT.config
+        local network = BBOT.aux.network
+        local gamelogic = BBOT.aux.gamelogic
+        local math = BBOT.math
+        local vector = BBOT.vector
+        local char = BBOT.aux.char
+        local hud = BBOT.aux.hud
+        local physics = BBOT.aux.physics
+        local log = BBOT.log
+        local draw = BBOT.draw
+        local replication = BBOT.aux.replication
+        local raycast = BBOT.aux.raycast
+        local cam = BBOT.aux.camera
+        local localplayer = BBOT.service:GetService("LocalPlayer")
+        local userinputservice = BBOT.service:GetService("UserInputService")
+        local players = BBOT.service:GetService("Players")
+        local camera = BBOT.service:GetService("CurrentCamera")
+        local mouse = BBOT.service:GetService("Mouse")
+        local aux_camera = BBOT.aux.camera
+        local aimbot = {}
+        BBOT.aimbot = aimbot
+        
+        do
+            local function raycastbullet(p1)
+                local instance = p1.Instance
+                if instance.Name == "Window" then return true end
+                return not instance.CanCollide or instance.Transparency == 1
+            end
+
+            local workspace = BBOT.service:GetService("Workspace")
+            function aimbot:fullcast(p7, p8, p9, p10, p11)
+                local v3 = nil;
+                local v4 = RaycastParams.new();
+                v4.FilterDescendantsInstances = p9;
+                v4.IgnoreWater = true;
+                local calls = 0;
+                while calls < 2000 do
+                    v3 = workspace:Raycast(p7, p8, v4);
+                    if not p10 then
+                        break;
+                    end;
+                    if not v3 then
+                        break;
+                    end;
+                    local ran, err = pcall(p10, v3)
+                    if not ran or not err then
+                        break;
+                    end;
+                    table.insert(p9, v3.Instance);
+                    v4.FilterDescendantsInstances = p9;
+                    calls = calls + 1
+                end;
+                if not p11 then
+                    for v5 = #p9, #p9 + 1, -1 do
+                        p9[v5] = nil;
+                    end;
+                end;
+                return v3;
+            end;
+
+            local camera = BBOT.service:GetService("CurrentCamera")
+            function aimbot:raycastbullet(vec, dir, extra, cb)
+                return aimbot:fullcast(vec, dir, {camera, workspace.Terrain, localplayer.Character, workspace.Ignore, extra}, cb or raycastbullet)
+            end
+        end
+
+        function aimbot:VelocityPrediction(startpos, endpos, vel, speed) -- Kinematics is fun
+            vel = vel or Vector3.new()
+            return endpos + (vel * ((endpos-startpos).Magnitude/speed))
+        end
+
+        aimbot.bullet_gravity = Vector3.new(0, -196.2, 0) -- Todo: get the velocity from the game public settings
+
+        function aimbot:DropPrediction(startpos, finalpos, speed)
+            local a, b = physics.trajectory(startpos, self.bullet_gravity, finalpos, speed)
+            if a then
+                return a
+            else
+                return (finalpos-startpos).Unit
+            end
+        end
+
+        function aimbot:CanBarrelPredict(gun)
+            local stopon = self:GetLegitConfig("Ballistics", "Disable Barrel Comp While")
+            if stopon["Scoping In"] then
+                local sight = BBOT.weapons.GetToggledSight(gun)
+                if sight and (sight.sightspring.p > 0.1 and sight.sightspring.p < 0.9) then
+                    return false
+                end
+            end
+            if stopon["Fire Animation"] then
+            end
+            if stopon["Reloading"] then
+                if debug.getupvalue(gun.reloadcancel, 1) then return false end
+            end
+            return true
+        end
+
+        function aimbot:BarrelPrediction(target, dir, gun)
+            local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+            if part then
+                return (dir - part.CFrame.LookVector) - (dir - (target - part.CFrame.Position).Unit)
+            end
+        end
+
+        function aimbot:GetParts(player)
+            if not hud:isplayeralive(player) then return end
+            return replication.getbodyparts(player)
+        end
+
+        local types = {
+            -- Type Based
+            ["PISTOL"] = "Pistol",
+            ["REVOLVER"] = "Pistol",
+            ["PDW"] = "Smg",
+            ["DMR"] = "Rifle",
+            ["LMG"] = "Rifle",
+            ["CARBINE"] = "Rifle",
+            ["ASSAULT"] = "Rifle",
+            ["SHOTGUN"] = "Shotgun",
+            ["SNIPER"] = "Sniper",
+
+            -- Class Based
+            ["ASSAULT RIFLE"] = "Rifle",
+            DMR = "Rifle",
+            ["BATTLE RIFLE"] = "Rifle",
+            PDW = "Smg",
+            LMG = "Rifle",
+            ["SNIPER RIFLE"] = "Sniper",
+            CARBINE = "Rifle",
+            SHOTGUN = "Shotgun",
+            PISTOLS = "Pistol",
+            ["MACHINE PISTOLS"] = "Pistol"
+        }
+
+        aimbot.gun_type = "ASSAULT"
+        function aimbot:GetLegitConfig(...)
+            local type = types[self.gun_type]
+            if not type then
+                type = "Rifle"
+            end
+            return config:GetValue("Main", "Legit", type, ...) 
+        end
+
+        function aimbot:GetLegitConfigR(...)
+            local type = types[self.gun_type]
+            if not type then
+                type = "Rifle"
+            end
+            return config:GetRaw("Main", "Legit", type, ...) 
+        end
+
+        function aimbot:SetCurrentType(gun)
+            if not gun.___class or not types[gun.___class] then
+                self.gun_type = gun.type
+                return
+            end
+            self.gun_type = (gun.___class or gun.type)
+        end
+
+        function aimbot:GetRageConfig(...)
+            return config:GetValue("Main", "Rage", ...)
+        end
+
+        local partstosimple = {
+            ["head"] = "Head",
+            ["torso"] = "Body",
+            ["larm"] = "Arms",
+            ["rarm"] = "Arms",
+            ["lleg"] = "Legs",
+            ["rleg"] = "Legs",
+        }
+
+        local function Move_Mouse(delta)
+            local coef = cam.sensitivitymult * math.atan(
+                math.tan(cam.basefov * (math.pi / 180) / 2) / 2.72 ^ cam.magspring.p
+            ) / (32 * math.pi)
+            local x = cam.angles.x - coef * delta.y
+            x = x > cam.maxangle and cam.maxangle or x < cam.minangle and cam.minangle or x
+            local y = cam.angles.y - coef * delta.x
+            local newangles = Vector3.new(x, y, 0)
+            cam.delta = (newangles - cam.angles) / 0.016666666666666666
+            cam.angles = newangles
+        end
+
+        function aimbot:GetFOV(Part, originPart)
+            originPart = originPart or workspace.Camera
+            local directional = CFrame.new(originPart.CFrame.Position, Part.Position)
+            local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
+            return math.deg(ang.Magnitude)
+        end
+
+        function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority, scan_part)
+            local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
+            local cam_position = camera.CFrame.p
+            local team = (localplayer.Team and localplayer.Team.Name or "NA")
+            local playerteamdata = workspace["Players"][team]
+
+            local organizedPlayers = {}
+            local plys = players:GetPlayers()
+            for i=1, #plys do
+                local v = plys[i]
+                if v == localplayer then
+                    continue
+                end
+            
+                if config.priority[v.UserId] then continue end
+                local parts = self:GetParts(v)
+                if not parts then continue end
+            
+                if v.Team and v.Team == localplayer.Team then
+                    continue
+                end
+
+                local updater = replication.getupdater(v)
+                local prioritize
+                if hitscan_priority == "Head" then
+                    prioritize = updater.gethead()
+                elseif hitscan_priority == "Body" then
+                    prioritize = replication.getbodyparts(v).torso
+                end
+
+                local inserted_priority
+                if prioritize then
+                    local part = prioritize
+                    local pos = prioritize.Position
+                    local point, onscreen = camera:WorldToViewportPoint(pos)
+                    if onscreen then
+                        --local object_fov = self:GetFOV(part, scan_part)
+                        if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) and (not dzFov or vector.dist2d(dzFov.Position, point) > dzFov.Radius) then
+                            local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
+                            if not ((not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos)) then
+                                table.insert(organizedPlayers, {v, part, point, prioritize})
+                                inserted_priority = true
+                            end
+                        end
+                    end
+                end
+                
+                if not inserted_priority then
+                    for name, part in pairs(parts) do
+                        local name = partstosimple[name]
+                        if part == prioritize or not name or not hitscan_points[name] then continue end
+                        local pos = part.Position
+                        local point, onscreen = camera:WorldToViewportPoint(pos)
+                        if not onscreen then continue end
+                        --local object_fov = self:GetFOV(part, scan_part)
+                        if (fov and vector.dist2d(fov.Position, point) > fov.Radius) or (dzFov and vector.dist2d(dzFov.Position, point) < dzFov.Radius) then continue end
+                        local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
+                        if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
+                        table.insert(organizedPlayers, {v, part, point, name})
+                    end
+                end
+            end
+            
+            table.sort(organizedPlayers, function(a, b)
+                return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
+            end)
+            
+            return organizedPlayers[1]
+        end
+
+        do
+            local smoothing_incrimental = 0
+            do
+                local last_target
+                hook:Add("RenderStepped", "BBOT:Aimbot.Assist.CalcSmoothing", function(delta)
+                    if not gamelogic.currentgun or not gamelogic.currentgun.data or not gamelogic.currentgun.data.bulletspeed then
+                        smoothing_incrimental = aimbot:GetLegitConfig("Aim Assist", "Start Smoothing")
+                        return
+                    end
+                    aimbot:SetCurrentType(gamelogic.currentgun)
+                    if (last_target == nil and aimbot.mouse_target) or (aimbot.mouse_target == nil and last_target) or (aimbot.mouse_target and last_target and aimbot.mouse_target[1] ~= last_target[1]) then
+                        last_target = aimbot.mouse_target
+                        smoothing_incrimental = aimbot:GetLegitConfig("Aim Assist", "Start Smoothing")
+                    elseif aimbot.mouse_target then
+                        smoothing_incrimental = math.approach( smoothing_incrimental, aimbot:GetLegitConfig("Aim Assist", "End Smoothing"), aimbot:GetLegitConfig("Aim Assist", "Smoothing Increment") * delta )
+                    end
+                end)
+            end
+
+            function aimbot:MouseStep(gun)
+                self.mouse_target = nil
+                if not self:GetLegitConfig("Aim Assist", "Enabled") then return end
+                local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
+                if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
+                    if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
+                elseif aimkey == "Dynamic Always" then
+                    if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+                end
+
+                local hitscan_priority = self:GetLegitConfig("Aim Assist", "Hitscan Priority")
+                local hitscan_points = self:GetLegitConfig("Aim Assist", "Hitscan Points")
+                local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+                local barrel_calc = self:GetLegitConfig("Aim Assist", "Use Barrel")
+
+                local target = self:GetLegitTarget(aimbot.fov_circle_last, aimbot.dzfov_circle_last, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
+                if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
+                    hook:Call("MouseBot.Changed", (target and unpack(target) or nil))
+                end
+                if not target then return end
+                self.mouse_target = target
+                local position = target[2].Position
+                local cam_position = camera.CFrame.p
+
+                if self:GetLegitConfig("Ballistics", "Movement Prediction") then
+                    position = self:VelocityPrediction(cam_position, position, replication.getupdater(target[1]).receivedVelocity, gun.data.bulletspeed)
+                end
+
+                local dir = (position-cam_position).Unit
+                local magnitude = (position-cam_position).Magnitude
+                if self:GetLegitConfig("Ballistics", "Drop Prediction") then
+                    dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
+                end
+
+                if self:GetLegitConfig("Ballistics", "Barrel Compensation") and self:CanBarrelPredict(gun) then
+                    dir = dir + self:BarrelPrediction(position, dir, gun)
+                end
+
+                pos, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
+                if onscreen then
+                    local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
+                    local smoothing = smoothing_incrimental * 5 + 10
+                    local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
+                    Move_Mouse(inc)
+                end
+            end
+        end
+
+        do
+            function aimbot:RedirectionStep(gun)
+                self.redirection_target = nil
+                if not self:GetLegitConfig("Bullet Redirect", "Enabled") then return end
+                local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
+                if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
+                    if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
+                elseif aimkey == "Dynamic Always" then
+                    if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+                end
+                if math.random(0, 100) > self:GetLegitConfig("Bullet Redirect", "Hit Chance") then
+                    return
+                end
+
+                local hitscan_priority = self:GetLegitConfig("Bullet Redirect", "Hitscan Priority")
+                local hitscan_points = self:GetLegitConfig("Bullet Redirect", "Hitscan Points")
+                local barrel_calc = self:GetLegitConfig("Bullet Redirect", "Use Barrel")
+                local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+
+                local target = self:GetLegitTarget(aimbot.sfov_circle_last, nil, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
+                if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
+                    hook:Call("RedirectionBot.Changed", (target and unpack(target) or nil))
+                end
+                if not target then return end
+                self.redirection_target = target
+                local position = target[2].Position
+                local part_pos = part.Position
+
+                if self:GetLegitConfig("Ballistics", "Movement Prediction") then
+                    position = self:VelocityPrediction(part_pos, position, replication.getupdater(target[1]).receivedVelocity, gun.data.bulletspeed)
+                end
+
+                local dir = (position-part_pos).Unit
+                local magnitude = (position-part_pos).Magnitude
+                if self:GetLegitConfig("Ballistics", "Drop Prediction") then
+                    dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
+                end
+
+                local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
+                
+                local accuracy = math.remap(self:GetLegitConfig("Bullet Redirect", "Accuracy")/100, 0, 1, .3, 0)
+                X += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
+                Y += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
+
+                part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
+                self.silent = part
+            end
+        end
+
+        do
+            local assist_prediction_outline = draw:Circle(0, 0, 4, 6, 25, { 0, 0, 0, 255 }, 1, false)
+            local assist_prediction = draw:Circle(0, 0, 3, 1, 25, { 255, 255, 255, 255 }, 1, false)
+
+            hook:Add("RenderStepped", "BBOT:Aimbot.TriggerBot", function()
+                local mycurgun = gamelogic.currentgun
+                if mycurgun and mycurgun.data and mycurgun.data.bulletspeed then
+                    aimbot:SetCurrentType(mycurgun)
+                    if not aimbot:GetLegitConfig("Trigger Bot", "Enabled") then return end
+                    assist_prediction.Color = aimbot:GetLegitConfig("Trigger Bot", "Enabled", "Dot Color")
+                elseif assist_prediction.Visible then
+                    assist_prediction.Visible = false
+                    assist_prediction_outline.Visible = assist_prediction.Visible
+                end
+            end)
+
+            hook:Add("OnAliveChanged", "BBOT:Aimbot.TriggerBot.Hide", function(isalive)
+                if not isalive then
+                    assist_prediction.Visible = false
+                    assist_prediction_outline.Visible = assist_prediction.Visible
+                end
+            end)
+
+            local isaiming, aimtime = nil, 0
+            function aimbot:TriggerBotStep(gun)
+                self.trigger_target = nil
+                if assist_prediction.Visible then
+                    assist_prediction.Visible = false
+                    assist_prediction_outline.Visible = assist_prediction.Visible
+                end
+                if not self:GetLegitConfig("Trigger Bot", "Enabled") then return end
+                local aim_percentage = self:GetLegitConfig("Trigger Bot", "Aim In Time")
+                if isaiming ~= gun.isaiming() then
+                    isaiming = gun.isaiming()
+                    aimtime = tick()
+                end
+                if self:GetLegitConfig("Trigger Bot", "Trigger When Aiming") and (not isaiming or (tick() - aimtime < aim_percentage)) then return end
+                local hitscan_points = self:GetLegitConfig("Trigger Bot", "Trigger Bot Hitboxes")
+                local target = self:GetLegitTarget(nil, nil, hitscan_points)
+                if not target then return end
+                self.trigger_target = target
+
+                local position = target[2].Position
+                local cam_position = camera.CFrame.p
+
+                if self:GetLegitConfig("Ballistics", "Movement Prediction") then
+                    position = self:VelocityPrediction(cam_position, position, replication.getupdater(target[1]).receivedVelocity, gun.data.bulletspeed)
+                end
+
+                local dir = (position-cam_position).Unit
+                local magnitude = (position-cam_position).Magnitude
+                if self:GetLegitConfig("Ballistics", "Drop Prediction") then
+                    dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
+                end
+                local trigger_position, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
+                if onscreen then
+                    trigger_position = Vector2.new(trigger_position.X, trigger_position.Y)
+                    assist_prediction.Visible = true
+                    assist_prediction_outline.Visible = assist_prediction.Visible
+                    assist_prediction.Position = trigger_position
+                    assist_prediction_outline.Position = assist_prediction.Position
+                    local radi = (target[4] == "Body" and 650 or 400)*(char.unaimedfov/camera.FieldOfView)/magnitude
+                    if gun.type == "SHOTGUN" then
+                        radi = radi * 2
+                    end
+                    assist_prediction.Radius = radi
+                    assist_prediction_outline.Radius = radi
+                
+                    local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+                    local part_pos = part.Position
+                    local team = (localplayer.Team and localplayer.Team.Name or "NA")
+                    local playerteamdata = workspace["Players"][team]
+
+                    local endpositon = part.CFrame.LookVector*70000
+                    local raydata = self:raycastbullet(part_pos,endpositon,playerteamdata)
+                    local pointhit
+                    if raydata and raydata.Position then
+                        pointhit = raydata.Position
+                    else
+                        pointhit = endpositon
+                    end
+                    local barrel_end_positon, onscreen = camera:WorldToViewportPoint(pointhit)
+                    barrel_end_positon = Vector2.new(barrel_end_positon.X, barrel_end_positon.Y)
+                    if onscreen and vector.dist2d(trigger_position, barrel_end_positon) <= radi then
+                        aimbot.fire = true
+                        gun:shoot(true)
+                    end
+                end
+            end
+        end
+
+        local dot = Vector3.new().Dot
+        local rcaster = BBOT.aux.raycast
+        function aimbot:raycastbullet_rage(start, dir, extra, depth, main, raytracepenetration)
+            local function bulletcb(p1)
+                local instance = p1.Instance
+                if instance.Name == "Window" then return true end
+                if instance:IsDescendantOf(main) then return false end
+                local cancollide = not instance.CanCollide or instance.Transparency == 1
+                if raytracepenetration and depth and not cancollide then
+                    local position = p1.Position
+                    local instance = p1.Instance
+                    local dirunit = dir.Unit
+                    local v21 = rcaster.raycastSingleExit(position, instance.Size.magnitude * dirunit, instance);
+                    if v21 then
+                        local l__Position__22 = v21.Position;
+                        local l__Normal__23 = v21.Normal;
+                        local v24 = dot(dirunit, l__Position__22 - position);
+                        if instance.Name == "killbullet" then
+                            return false
+                        end
+                        if v24 < depth then
+                            depth = depth - v24
+                            return true
+                        else
+                            return false
+                        end
+                    end
+                else
+                    return cancollide
+                end
+            end
+            return self:raycastbullet(start,dir,extra,bulletcb)
+        end
+
+        hook:Add("Initialize", "FindnewBullet", function()
+            local receivers = network.receivers
+
+            local function quickhasvalue(tbl, value)
+                for i=1, #tbl do
+                    if tbl[i] == value then return true end
+                end
+                return false
+            end
+
+            for k, v in pairs(receivers) do
+                local ran, const = pcall(debug.getconstants, v)
+                if ran and quickhasvalue(const, "firepos") and quickhasvalue(const, "bullets") and quickhasvalue(const, "bulletcolor") and quickhasvalue(const, "penetrationdepth") then
+                    receivers[k] = function(data)
+                        hook:CallP("NewBullet", data)
+                        v(data)
+                    end
+                    hook:Add("Unload", "BBOT:NewBullet.Ups." .. tostring(k), function()
+                        receivers[k] = v
+                    end)
+                end
+            end
+        end)
+
+        local Resolver_NewBullet = {}
+        hook:Add("NewBullet", "Resolver", function(data)
+            local firepos, player = data.firepos, data.player
+            local isalive = hud:isplayeralive(player)
+            if isalive then
+                local headpart = aimbot:GetParts(player).torso
+                local mag = (firepos-headpart.Position).Magnitude
+                if mag > 12 then
+                    Resolver_NewBullet[player.UserId] = (firepos-headpart.Position)
+                else
+                    Resolver_NewBullet[player.UserId] = nil
+                end
+            end
+        end)
+
+        local vector_cache = Vector3.new()
+        function aimbot:GetResolvedPosition(player)
+            if not self:GetRageConfig("Hack vs. Hack", "Resolver") then return vector_cache end
+            --[[local bodyparts, rootpart = aimbot:GetParts(player)
+            local resolvedoffset = vector_cache
+            -- method 1
+            local root_cframe, torso_cframe = rootpart.CFrame, bodyparts.torso.CFrame
+            if (root_cframe.Position - torso_cframe.Position).Magnitude > 18 then
+                resolvedoffset = root_cframe.Position - torso_cframe.Position
+            end
+            return resolvedoffset]]
+            local updater = replication.getupdater(player)
+            local parts = aimbot:GetParts(player)
+            if updater and updater.receivedPosition and parts then
+                local headpart = parts.head
+                local offset = (updater.getpos()-headpart.Position)+Vector3.new(0,1.25,0)
+                if offset.Magnitude > 1 then
+                    if offset.Magnitude >= math.huge then
+                        return updater.getpos(), true
+                    else
+                        return offset
+                    end
+                end
+            end
+
+            if Resolver_NewBullet[player.UserId] then
+                return Resolver_NewBullet[player.UserId]
+            end
+
+            return vector_cache
+        end
+
+        local PingStat = BBOT.service:GetService("Stats").PerformanceStats.Ping
+        local function GetLatency()
+            return PingStat:GetValue() / 1000
+        end
+
+        function aimbot:GetDamage(data, distance, headshot)
+            local r0, r1, d0, d1 = data.range0, data.range1, data.damage0, data.damage1
+            return (distance < r0 and d0 or distance < r1 and (d1 - d0) / (r1 - r0) * (distance - r0) + d0 or d1)  * (headshot and data.multhead or 1)
+        end
+
+        aimbot.predictedDamageDealt = {}
+        aimbot.predictedDamageDealtRemovals = {}
+        aimbot.BulletQuery = {}
+        hook:Add("PostNetworkSend", "BBOT:RageBot.DamagePrediction", function(netname, ...)
+            if netname == "bullethit" then
+                local curthread = syn.get_thread_identity()
+                syn.set_thread_identity(1)
+                local a = {...}
+                local Entity, HitPos, Part, bulletID = a[1], a[2], a[3], a[4]
+                if Entity and Entity:IsA("Player") and aimbot:GetRageConfig("Settings", "Damage Prediction") and aimbot.BulletQuery[bulletID] then
+                    local bullet_data = aimbot.BulletQuery[bulletID]
+                    local damageDealt = aimbot:GetDamage(bullet_data[1], (HitPos-bullet_data[2]).Magnitude, Part == "Head")
+                    if not aimbot.predictedDamageDealt[Entity] then
+                        aimbot.predictedDamageDealt[Entity] = 0
+                    end
+                    aimbot.predictedDamageDealt[Entity] += damageDealt
+                    aimbot.predictedDamageDealtRemovals[Entity] = tick() + GetLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
+                end
+                syn.set_thread_identity(curthread)
+            elseif netname == "newbullets" then
+                local a = {...}
+                local bullet_table, time_stamp = a[1], a[2]
+                local dataset = {gamelogic.currentgun.data, bullet_table.firepos}
+                for i=1, #bullet_table.bullets do
+                    local v = bullet_table.bullets[i]
+                    aimbot.BulletQuery[v[2]] = dataset
+                end
+                timer:Simple(1.5, function()
+                    for i=1, #bullet_table.bullets do
+                        local v = bullet_table.bullets[i]
+                        aimbot.BulletQuery[v[2]] = nil
+                    end
+                end)
+            end
+        end)
+
+        hook:Add("RenderStepped", "BBOT:RageBot.DamagePrediction", function()
+            for index, time in next, aimbot.predictedDamageDealtRemovals do
+                if time and (tick() > time) then
+                    aimbot.predictedDamageDealt[index] = 0
+                    aimbot.predictedDamageDealtRemovals[index] = nil
+                end
+            end
+        end)
+
+        function aimbot:GetRageTarget(fov, gun)
+            local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
+            local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+            local cam_position = aux_camera.basecframe.p
+            local team = (localplayer.Team and localplayer.Team.Name or "NA")
+            local playerteamdata = workspace["Players"][team]
+            local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
+            local penetration_depth = gun.data.penetrationdepth * wall_scale/100
+            local auto_wall = self:GetRageConfig("Aimbot", "Auto Wallbang")
+            local hitscan_priority = self:GetRageConfig("Aimbot", "Hitscan Priority")
+            local aimbot_fov = config:GetValue("Main", "Rage", "Aimbot", "Aimbot FOV")
+
+            local hitbox_shift = self:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
+            local hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
+            local hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
+            local max_points = self:GetRageConfig("Hack vs. Hack", "Max Hitpoints")
+
+            local hitbox_points = {}
+            if hitbox_shift then
+                if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) end
+                if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) end
+                if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) end
+                if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) end
+                if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) end
+                if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) end
+                if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) end
+            end
+
+            local firepos_shift = self:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
+            local firepos_shift_points = self:GetRageConfig("Hack vs. Hack", "FirePos Hitscan Points")
+            local firepos_shift_distance = self:GetRageConfig("Hack vs. Hack", "FirePos Shift Distance")
+            
+            local firepos_points = {}
+            if firepos_shift then
+                if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(part.CFrame.p-cam_position) end
+                if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,firepos_shift_distance,0) end
+                if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-firepos_shift_distance,0) end
+                if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-firepos_shift_distance,0,0) end
+                if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(firepos_shift_distance,0,0) end
+                if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) end
+                if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) end
+            end
+
+            local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
+            local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
+
+            local scan_count = 0
+            local organizedPlayers = {}
+            local plys = players:GetPlayers()
+            for i=1, #plys do
+                local v = plys[i]
+                if v == localplayer then
+                    continue
+                end
+                if max_points ~= 0 and scan_count > max_points then break end
+            
+                if config.priority[v.UserId] then continue end
+                if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
+                local parts = self:GetParts(v)
+                if not parts then continue end
+            
+                if v.Team and v.Team == localplayer.Team then
+                    continue
+                end
+
+                local updater = replication.getupdater(v)
+                local prioritize
+                if hitscan_priority == "Head" then
+                    prioritize = updater.gethead()
+                elseif hitscan_priority == "Body" then
+                    prioritize = replication.getbodyparts(v).torso
+                end
+                local main_part = updater.gethead().Parent
+                local resolver_offset, isabsolute = self:GetResolvedPosition(v)
+
+                local inserted_priority
+                if prioritize then
+                    local part = prioritize
+                    local pos = (isabsolute and resolver_offset or prioritize.Position + resolver_offset)
+                    local point, onscreen = camera:WorldToViewportPoint(pos)
+                    if onscreen or aimbot_fov >= 180 then
+                        --local object_fov = self:GetFOV(part, scan_part)
+                        if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
+                            if wall_scale > 120 then
+                                table.insert(organizedPlayers, {v, part, pos, prioritize})
+                                inserted_priority = true
+                            else
+                                if firepos_shift then
+                                    local lookatme = CFrame.new(Vector3.new(), pos-cam_position)
+                                    local targetcframe = CFrame.new(cam_position)
+                                    for i=1, #firepos_points do
+                                        local point = firepos_points[i]
+                                        local newcf = targetcframe * lookatme * point
+                                        local cam_position = newcf.p
+                                        if hitbox_shift then
+                                            local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
+                                            local targetcframe = CFrame.new(pos)
+                                            for i=1, #hitbox_points do
+                                                local point = hitbox_points[i]
+                                                local newcf = targetcframe * lookatme * point
+                                                local pos = newcf.p
+                                                local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+                                                if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+                                                    table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
+                                                    inserted_priority = true
+                                                    scan_count = scan_count + 1
+                                                end
+                                            end
+                                        else
                                             local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
                                             if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
                                                 table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
@@ -10709,1525 +10750,2310 @@ do
                                                 scan_count = scan_count + 1
                                             end
                                         end
-                                    else
-                                        local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-                                        if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-                                            table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
-                                            inserted_priority = true
-                                            scan_count = scan_count + 1
-                                        end
                                     end
-                                end
-                            else
-                                local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-                                if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-                                    table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
-                                    inserted_priority = true
-                                    scan_count = scan_count + 1
+                                else
+                                    local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+                                    if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+                                        table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
+                                        inserted_priority = true
+                                        scan_count = scan_count + 1
+                                    end
                                 end
                             end
                         end
                     end
                 end
-            end
-            
-            if not inserted_priority then
-                for name, part in pairs(parts) do
-                    local name = partstosimple[name]
-                    if part == prioritize or not name or name == "Legs" or name == "Arms" then continue end
-                    local pos = (isabsolute and resolver_offset or prioritize.Position + resolver_offset)
-                    local point, onscreen = camera:WorldToViewportPoint(pos)
-                    if not onscreen and aimbot_fov < 180 then continue end
-                    --local object_fov = self:GetFOV(part, scan_part)
-                    if (fov and vector.dist2d(fov.Position, point) > fov.Radius) then continue end
-                    if wall_scale > 100 then
-                        table.insert(organizedPlayers, {v, part, pos, name})
-                        scan_count = scan_count + 1
-                    else
-                        local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-                        if (not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos) then continue end
-                        table.insert(organizedPlayers, {v, part, pos, cam_position, name})
-                        scan_count = scan_count + 1
+                
+                if not inserted_priority then
+                    for name, part in pairs(parts) do
+                        local name = partstosimple[name]
+                        if part == prioritize or not name or name == "Legs" or name == "Arms" then continue end
+                        local pos = (isabsolute and resolver_offset or prioritize.Position + resolver_offset)
+                        local point, onscreen = camera:WorldToViewportPoint(pos)
+                        if not onscreen and aimbot_fov < 180 then continue end
+                        --local object_fov = self:GetFOV(part, scan_part)
+                        if (fov and vector.dist2d(fov.Position, point) > fov.Radius) then continue end
+                        if wall_scale > 100 then
+                            table.insert(organizedPlayers, {v, part, pos, name})
+                            scan_count = scan_count + 1
+                        else
+                            local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+                            if (not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos) then continue end
+                            table.insert(organizedPlayers, {v, part, pos, cam_position, name})
+                            scan_count = scan_count + 1
+                        end
                     end
                 end
             end
+            
+            table.sort(organizedPlayers, function(a, b)
+                return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
+            end)
+            
+            return organizedPlayers[1]
         end
-        
-        table.sort(organizedPlayers, function(a, b)
-            return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
-        end)
-        
-        return organizedPlayers[1]
-    end
 
-    do
-        function aimbot:RageChanged(target)
-            if (target == nil and self.rage_target) or (self.rage_target == nil and target) or (target and self.rage_target and target[1] ~= self.rage_target[1]) then
-                hook:Call("RageBot.Changed", (target and unpack(target) or nil))
+        do
+            function aimbot:RageChanged(target)
+                if (target == nil and self.rage_target) or (self.rage_target == nil and target) or (target and self.rage_target and target[1] ~= self.rage_target[1]) then
+                    hook:Call("RageBot.Changed", (target and unpack(target) or nil))
+                end
+            end
+
+            function aimbot:RageStep(gun)
+                if not self:GetRageConfig("Aimbot", "Rage Bot", "KeyBind") then
+                    self.rage_target = nil
+                    self:RageChanged(nil)
+                    return
+                end
+                local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+
+                local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
+                self:RageChanged(target)
+                if not target then return end
+                self.rage_target = target
+                local position = target[3]
+                local part_pos = part.Position
+
+                local dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
+                local magnitude = (position-part_pos).Magnitude
+
+                local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
+                part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
+
+                if self:GetRageConfig("Aimbot", "Auto Shoot") then
+                    aimbot.fire = true
+                    gun:shoot(true)
+                end
+
+                self.silent = part
             end
         end
 
-        function aimbot:RageStep(gun)
-            if not self:GetRageConfig("Aimbot", "Rage Bot", "KeyBind") then
-                self.rage_target = nil
-                self:RageChanged(nil)
-                return
-            end
-            local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-
-            local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
-            self:RageChanged(target)
-            if not target then return end
-            self.rage_target = target
-            local position = target[3]
-            local part_pos = part.Position
-
-            local dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
-            local magnitude = (position-part_pos).Magnitude
-
-            local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
-            part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
-
-            if self:GetRageConfig("Aimbot", "Auto Shoot") then
-                aimbot.fire = true
-                gun:shoot(true)
-            end
-
-            self.silent = part
+        function aimbot:LegitStep(gun)
+            if not gun or not gun.data.bulletspeed then return end
+            self:SetCurrentType(gun)
+            self:MouseStep(gun)
+            self:TriggerBotStep(gun)
+            self:RedirectionStep(gun)
         end
-    end
 
-    function aimbot:LegitStep(gun)
-        if not gun or not gun.data.bulletspeed then return end
-        self:SetCurrentType(gun)
-        self:MouseStep(gun)
-        self:TriggerBotStep(gun)
-        self:RedirectionStep(gun)
-    end
+        do
+            --(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
+            --[[Draw:Circle(false, 20, 20, 10, 3, 20, { 10, 10, 10, 215 }, menu.fovcircle)
+            Draw:Circle(false, 20, 20, 10, 1, 20, { 255, 255, 255, 255 }, menu.fovcircle)]]
+            local draw = BBOT.draw
+            --(x, y, size, thickness, sides, color, transparency, visible)
+            local fov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
+            local fov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
+            fov.Filled = false
+            fov_outline.Filled = false
+            aimbot.fov_circle = fov
+            aimbot.fov_circle_last = {Position = Vector2.new(), Radius = 0}
+            aimbot.fov_outline_circle = fov_outline
 
-    do
-        --(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
-        --[[Draw:Circle(false, 20, 20, 10, 3, 20, { 10, 10, 10, 215 }, menu.fovcircle)
-        Draw:Circle(false, 20, 20, 10, 1, 20, { 255, 255, 255, 255 }, menu.fovcircle)]]
-        local draw = BBOT.draw
-        --(x, y, size, thickness, sides, color, transparency, visible)
-        local fov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
-        local fov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
-        fov.Filled = false
-        fov_outline.Filled = false
-        aimbot.fov_circle = fov
-        aimbot.fov_circle_last = {Position = Vector2.new(), Radius = 0}
-        aimbot.fov_outline_circle = fov_outline
+            local dzfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
+            local dzfov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
+            dzfov.Filled = false
+            dzfov_outline.Filled = false
+            aimbot.dzfov_circle = dzfov
+            aimbot.dzfov_circle_last = {Position = Vector2.new(), Radius = 0}
+            aimbot.dzfov_outline_circle = dzfov_outline
 
-        local dzfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
-        local dzfov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
-        dzfov.Filled = false
-        dzfov_outline.Filled = false
-        aimbot.dzfov_circle = dzfov
-        aimbot.dzfov_circle_last = {Position = Vector2.new(), Radius = 0}
-        aimbot.dzfov_outline_circle = dzfov_outline
+            local sfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
+            local sfov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
+            sfov.Filled = false
+            sfov_outline.Filled = false
+            aimbot.sfov_circle = sfov
+            aimbot.sfov_circle_last = {Position = Vector2.new(), Radius = 0}
+            aimbot.sfov_outline_circle = sfov_outline
 
-        local sfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
-        local sfov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
-        sfov.Filled = false
-        sfov_outline.Filled = false
-        aimbot.sfov_circle = sfov
-        aimbot.sfov_circle_last = {Position = Vector2.new(), Radius = 0}
-        aimbot.sfov_outline_circle = sfov_outline
-
-        local rfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
-        local rfov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
-        rfov.Filled = false
-        rfov_outline.Filled = false
-        aimbot.rfov_circle = rfov
-        aimbot.rfov_circle_last = {Position = Vector2.new(), Radius = 0}
-        aimbot.rfov_outline_circle = rfov_outline
-        
-        hook:Add("Initialize", "BBOT:Visuals.Aimbot.FOV", function()
-            fov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist", "Color")
-            dzfov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone", "Color")
-            sfov.Color = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect", "Color")
-            rfov.Color = config:GetValue("Main", "Visuals", "FOV", "Ragebot", "Color")
-        end)
-        
-        hook:Add("OnConfigChanged", "BBOT:Visuals.Aimbot.FOV", function(steps, old, new)
-            if config:IsPathwayEqual(steps, "Main", "Visuals", "FOV") or config:IsPathwayEqual(steps, "Main", "Legit") or config:IsPathwayEqual(steps, "Main", "Rage", "Aimbot") then
-                local center = camera.ViewportSize/2
-                fov.Position = center
-                fov_outline.Position = fov.Position
-                dzfov.Position = center
-                dzfov_outline.Position = dzfov.Position
-                sfov.Position = center
-                sfov_outline.Position = sfov.Position
-                rfov.Position = center
-                rfov_outline.Position = rfov.Position
-                
+            local rfov_outline = draw:Circle(0, 0, 1, 3, 314, { 10, 10, 10, 215 }, 1, false)
+            local rfov = draw:Circle(0, 0, 1, 1, 314, { 255, 255, 255, 255 }, 1, false)
+            rfov.Filled = false
+            rfov_outline.Filled = false
+            aimbot.rfov_circle = rfov
+            aimbot.rfov_circle_last = {Position = Vector2.new(), Radius = 0}
+            aimbot.rfov_outline_circle = rfov_outline
+            
+            hook:Add("Initialize", "BBOT:Visuals.Aimbot.FOV", function()
                 fov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist", "Color")
                 dzfov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone", "Color")
                 sfov.Color = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect", "Color")
                 rfov.Color = config:GetValue("Main", "Visuals", "FOV", "Ragebot", "Color")
-                
-                fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
-                fov_outline.Visible = fov.Visible
-                dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
-                dzfov_outline.Visible = dzfov.Visible
-                sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect")
-                sfov_outline.Visible = sfov.Visible
-                rfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Ragebot")
-                rfov_outline.Visible = rfov.Visible
-    
-                local yport = camera.ViewportSize.y
-                
-                if not char.alive and config:IsPathwayEqual(steps, "Main", "Legit") and steps[3] then
-                    local _fov = config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Aimbot FOV")
-                    local _dzfov = config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Deadzone FOV")
-                    local _sfov = config:GetValue("Main", "Legit", steps[3], "Bullet Redirect", "Redirection FOV")
-                    if config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Dynamic FOV") then
-                        _fov = camera.FieldOfView / char.unaimedfov * _fov
-                        _dzfov = camera.FieldOfView / char.unaimedfov * _dzfov
-                        _sfov = camera.FieldOfView / char.unaimedfov * _sfov
-                    end
-                    fov.Radius = _fov / camera.FieldOfView  * yport
-                    aimbot.fov_circle_last.Radius = _fov / camera.FieldOfView  * yport
-                    fov_outline.Radius = fov.Radius
-
-                    dzfov.Radius = _dzfov / camera.FieldOfView  * yport
-                    aimbot.dzfov_circle_last.Radius = _dzfov / camera.FieldOfView  * yport
-                    dzfov_outline.Radius = dzfov.Radius
-
-                    sfov.Radius = _sfov / camera.FieldOfView  * yport
-                    aimbot.sfov_circle_last.Radius = _sfov / camera.FieldOfView  * yport
-                    sfov_outline.Radius = sfov.Radius
-                end
-
-                
-                local _rfov = config:GetValue("Main", "Rage", "Aimbot", "Aimbot FOV")
-                _rfov = camera.FieldOfView / char.unaimedfov * _rfov
-                rfov.Radius = _rfov / camera.FieldOfView  * yport
-                aimbot.rfov_circle_last.Radius = _rfov / camera.FieldOfView  * yport
-                rfov_outline.Radius = rfov.Radius
-                aimbot.rfov_circle_last = {Position = center, Radius = rfov.Radius}
-
-                if not config:GetValue("Main", "Visuals", "FOV", "Enabled") then
-                    fov.Visible = false
-                    fov_outline.Visible = fov.Visible
-                    dzfov.Visible = false
-                    dzfov_outline.Visible = dzfov.Visible
-                    sfov.Visible = false
-                    sfov_outline.Visible = sfov.Visible
-                    rfov.Visible = false
-                    rfov_outline.Visible = rfov.Visible
-                end
-            end
-        end)
-        
-        local alive, curgun = false, false
-        hook:Add("PreCalculateCrosshair", "BBOT:Visuals.Aimbot.FOV", function(position_override, onscreen)
-            local enabled = config:GetValue("Main", "Visuals", "FOV", "Enabled")
-            position_override = Vector2.new(position_override.X, position_override.Y)
-            local set = false
-            if enabled and alive ~= char.alive then
-                alive = char.alive
-                local bool = (alive and true or false)
-                fov.Visible = bool
-                fov_outline.Visible = fov.Visible
-                dzfov.Visible = bool
-                dzfov_outline.Visible = dzfov.Visible
-                sfov.Visible = bool
-                sfov_outline.Visible = sfov.Visible
-                rfov.Visible = bool
-                rfov_outline.Visible = rfov.Visible
-                set = true
-            end
-        
-            local mycurgun = gamelogic.currentgun
-            if mycurgun and mycurgun.data and mycurgun.data.bulletspeed then
-                aimbot:SetCurrentType(mycurgun)
-                local _fov = aimbot:GetLegitConfig("Aim Assist", "Aimbot FOV")
-                local _dzfov = aimbot:GetLegitConfig("Aim Assist", "Deadzone FOV")
-                local _sfov = aimbot:GetLegitConfig("Bullet Redirect", "Redirection FOV")
-                if aimbot:GetLegitConfig("Aim Assist", "Dynamic FOV") then
-                    _fov = camera.FieldOfView / char.unaimedfov * _fov
-                    _dzfov = camera.FieldOfView / char.unaimedfov * _dzfov
-                    _sfov = camera.FieldOfView / char.unaimedfov * _sfov
-                end
-                local yport = camera.ViewportSize.y
-                fov.Radius = _fov / camera.FieldOfView  * yport
-                fov_outline.Radius = fov.Radius
-                dzfov.Radius = _dzfov / camera.FieldOfView  * yport
-                dzfov_outline.Radius = dzfov.Radius
-                sfov.Radius = _sfov / camera.FieldOfView  * yport
-                sfov_outline.Radius = sfov.Radius
-
-                if aimbot:GetLegitConfig("Aim Assist", "Use Barrel") then
-                    fov.Position = position_override
-                    fov_outline.Position = fov.Position
-                    dzfov.Position = position_override
-                    dzfov_outline.Position = dzfov.Position
-                    aimbot.fov_circle_last.Position = position_override
-                    aimbot.dzfov_circle_last.Position = position_override
-                    if onscreen then
-                        fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
-                        fov_outline.Visible = fov.Visible
-                        dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
-                        dzfov_outline.Visible = dzfov.Visible
-                    else
-                        fov.Visible = false
-                        fov_outline.Visible = fov.Visible
-                        dzfov.Visible = false
-                        dzfov_outline.Visible = dzfov.Visible
-                    end
-                else
+            end)
+            
+            hook:Add("OnConfigChanged", "BBOT:Visuals.Aimbot.FOV", function(steps, old, new)
+                if config:IsPathwayEqual(steps, "Main", "Visuals", "FOV") or config:IsPathwayEqual(steps, "Main", "Legit") or config:IsPathwayEqual(steps, "Main", "Rage", "Aimbot") then
                     local center = camera.ViewportSize/2
                     fov.Position = center
                     fov_outline.Position = fov.Position
                     dzfov.Position = center
                     dzfov_outline.Position = dzfov.Position
-                    aimbot.fov_circle_last.Position = center
-                    aimbot.dzfov_circle_last.Position = center
-                end
-                if aimbot:GetLegitConfig("Bullet Redirect", "Use Barrel") then
-                    sfov.Position = position_override
-                    sfov_outline.Position = sfov.Position
-                    aimbot.sfov_circle_last.Position = position_override
-                    if onscreen then
-                        sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect")
-                        sfov_outline.Visible = sfov.Visible
-                    else
-                        sfov.Visible = false
-                        sfov_outline.Visible = sfov.Visible
-                    end
-                else
-                    local center = camera.ViewportSize/2
                     sfov.Position = center
                     sfov_outline.Position = sfov.Position
-                    aimbot.sfov_circle_last.Position = center
-                end
-            end
-            
-            if enabled and curgun ~= gamelogic.currentgun or set then
-                curgun = gamelogic.currentgun
-                if curgun and curgun.data and curgun.data.bulletspeed then
+                    rfov.Position = center
+                    rfov_outline.Position = rfov.Position
+                    
+                    fov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist", "Color")
+                    dzfov.Color = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone", "Color")
+                    sfov.Color = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect", "Color")
+                    rfov.Color = config:GetValue("Main", "Visuals", "FOV", "Ragebot", "Color")
+                    
                     fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
                     fov_outline.Visible = fov.Visible
                     dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
                     dzfov_outline.Visible = dzfov.Visible
                     sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect")
                     sfov_outline.Visible = sfov.Visible
-                else
-                    local bool = false
+                    rfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Ragebot")
+                    rfov_outline.Visible = rfov.Visible
+        
+                    local yport = camera.ViewportSize.y
+                    
+                    if not char.alive and config:IsPathwayEqual(steps, "Main", "Legit") and steps[3] then
+                        local _fov = config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Aimbot FOV")
+                        local _dzfov = config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Deadzone FOV")
+                        local _sfov = config:GetValue("Main", "Legit", steps[3], "Bullet Redirect", "Redirection FOV")
+                        if config:GetValue("Main", "Legit", steps[3], "Aim Assist", "Dynamic FOV") then
+                            _fov = camera.FieldOfView / char.unaimedfov * _fov
+                            _dzfov = camera.FieldOfView / char.unaimedfov * _dzfov
+                            _sfov = camera.FieldOfView / char.unaimedfov * _sfov
+                        end
+                        fov.Radius = _fov / camera.FieldOfView  * yport
+                        aimbot.fov_circle_last.Radius = _fov / camera.FieldOfView  * yport
+                        fov_outline.Radius = fov.Radius
+
+                        dzfov.Radius = _dzfov / camera.FieldOfView  * yport
+                        aimbot.dzfov_circle_last.Radius = _dzfov / camera.FieldOfView  * yport
+                        dzfov_outline.Radius = dzfov.Radius
+
+                        sfov.Radius = _sfov / camera.FieldOfView  * yport
+                        aimbot.sfov_circle_last.Radius = _sfov / camera.FieldOfView  * yport
+                        sfov_outline.Radius = sfov.Radius
+                    end
+
+                    
+                    local _rfov = config:GetValue("Main", "Rage", "Aimbot", "Aimbot FOV")
+                    _rfov = camera.FieldOfView / char.unaimedfov * _rfov
+                    rfov.Radius = _rfov / camera.FieldOfView  * yport
+                    aimbot.rfov_circle_last.Radius = _rfov / camera.FieldOfView  * yport
+                    rfov_outline.Radius = rfov.Radius
+                    aimbot.rfov_circle_last = {Position = center, Radius = rfov.Radius}
+
+                    if not config:GetValue("Main", "Visuals", "FOV", "Enabled") then
+                        fov.Visible = false
+                        fov_outline.Visible = fov.Visible
+                        dzfov.Visible = false
+                        dzfov_outline.Visible = dzfov.Visible
+                        sfov.Visible = false
+                        sfov_outline.Visible = sfov.Visible
+                        rfov.Visible = false
+                        rfov_outline.Visible = rfov.Visible
+                    end
+                end
+            end)
+            
+            local alive, curgun = false, false
+            hook:Add("PreCalculateCrosshair", "BBOT:Visuals.Aimbot.FOV", function(position_override, onscreen)
+                local enabled = config:GetValue("Main", "Visuals", "FOV", "Enabled")
+                position_override = Vector2.new(position_override.X, position_override.Y)
+                local set = false
+                if enabled and alive ~= char.alive then
+                    alive = char.alive
+                    local bool = (alive and true or false)
                     fov.Visible = bool
                     fov_outline.Visible = fov.Visible
                     dzfov.Visible = bool
                     dzfov_outline.Visible = dzfov.Visible
                     sfov.Visible = bool
                     sfov_outline.Visible = sfov.Visible
+                    rfov.Visible = bool
+                    rfov_outline.Visible = rfov.Visible
+                    set = true
                 end
-            end
-        end)
-    end
-
-    do -- Crosshair
-        --draw:Box(x, y, w, h, thickness, color, transparency, visible)
-        --draw:Line(thickness, start_x, start_y, end_x, end_y, color, transparency, visible)\
-        --[[
-		object.Visible = visible
-		object.Thickness = thickness
-		object.From = Vector2.new(start_x, start_y)
-		object.To = Vector2.new(end_x, end_y)
-		object.Color = self:VerifyColor(color)
-		object.Transparency = transparency 
-        ]]
-        local crosshair_objects = {
-            center_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            top_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            bottom_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            left_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            right_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            center = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            top = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            bottom = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            left = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-            right = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
-        }
-
-        hook:Add("OnConfigChanged", "BBOT:Crosshair.Changed", function(steps, old, new)
-            if config:IsPathwayEqual(steps, "Main", "Visuals", "Crosshair", "Basic") then
-                local enabled = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled")
-                local inner, inner_transparency = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled", "Inner")
-                local outter, outter_transparency = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled", "Outter")
-                local width = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Width")
-                local height = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Height")
-                if not enabled then
-                    for k, v in pairs(crosshair_objects) do
-                        v.Visible = false
+            
+                local mycurgun = gamelogic.currentgun
+                if mycurgun and mycurgun.data and mycurgun.data.bulletspeed then
+                    aimbot:SetCurrentType(mycurgun)
+                    local _fov = aimbot:GetLegitConfig("Aim Assist", "Aimbot FOV")
+                    local _dzfov = aimbot:GetLegitConfig("Aim Assist", "Deadzone FOV")
+                    local _sfov = aimbot:GetLegitConfig("Bullet Redirect", "Redirection FOV")
+                    if aimbot:GetLegitConfig("Aim Assist", "Dynamic FOV") then
+                        _fov = camera.FieldOfView / char.unaimedfov * _fov
+                        _dzfov = camera.FieldOfView / char.unaimedfov * _dzfov
+                        _sfov = camera.FieldOfView / char.unaimedfov * _sfov
                     end
-                else
-                    for k, v in pairs(crosshair_objects) do
-                        if string.find(k, "outline", 1, true) then
-                            v.Color = outter
-                            v.Transparency = outter_transparency
-                        else
-                            v.Color = inner
-                            v.Transparency = inner_transparency
-                        end
-                    end
+                    local yport = camera.ViewportSize.y
+                    fov.Radius = _fov / camera.FieldOfView  * yport
+                    fov_outline.Radius = fov.Radius
+                    dzfov.Radius = _dzfov / camera.FieldOfView  * yport
+                    dzfov_outline.Radius = dzfov.Radius
+                    sfov.Radius = _sfov / camera.FieldOfView  * yport
+                    sfov_outline.Radius = sfov.Radius
 
-                    local setup = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Setup")
-                    crosshair_objects.center.Visible = setup.Center
-                    crosshair_objects.top.Visible = setup.Top
-                    crosshair_objects.bottom.Visible = setup.Bottom
-                    crosshair_objects.left.Visible = setup.Left
-                    crosshair_objects.right.Visible = setup.Right
-
-                    crosshair_objects.center_outline.Visible = setup.Center
-                    crosshair_objects.top_outline.Visible = setup.Top
-                    crosshair_objects.bottom_outline.Visible = setup.Bottom
-                    crosshair_objects.left_outline.Visible = setup.Left
-                    crosshair_objects.right_outline.Visible = setup.Right
-
-
-                    crosshair_objects.center.Size = Vector2.new(2, 2)
-                    crosshair_objects.top.Thickness = width
-                    crosshair_objects.bottom.Thickness = width
-                    crosshair_objects.left.Thickness = width
-                    crosshair_objects.right.Thickness = width
-
-                    width, height = width+2, height+2
-                    crosshair_objects.center_outline.Size = Vector2.new(2+2, 2+2)
-                    crosshair_objects.top_outline.Thickness = width
-                    crosshair_objects.bottom_outline.Thickness = width
-                    crosshair_objects.left_outline.Thickness = width
-                    crosshair_objects.right_outline.Thickness = width
-                end
-            end
-        end)
-
-        local lastrot = 0
-        function aimbot:CrosshairStep(delta, gun)
-            local positionoverride, ondascreen
-            if gun then
-                local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-                if part then
-                    for k, v in pairs(crosshair_objects) do
-                        v.Visible = false
-                    end
-                    ondascreen = false
-
-                    local raycastdata = self:raycastbullet(camera.CFrame.Position,part.CFrame.Position-camera.CFrame.Position)
-                    if raycastdata and raycastdata.Position then
-                        local point, onscreen = camera:WorldToViewportPoint(raycastdata.Position)
+                    if aimbot:GetLegitConfig("Aim Assist", "Use Barrel") then
+                        fov.Position = position_override
+                        fov_outline.Position = fov.Position
+                        dzfov.Position = position_override
+                        dzfov_outline.Position = dzfov.Position
+                        aimbot.fov_circle_last.Position = position_override
+                        aimbot.dzfov_circle_last.Position = position_override
                         if onscreen then
-                            positionoverride = point
+                            fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
+                            fov_outline.Visible = fov.Visible
+                            dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
+                            dzfov_outline.Visible = dzfov.Visible
+                        else
+                            fov.Visible = false
+                            fov_outline.Visible = fov.Visible
+                            dzfov.Visible = false
+                            dzfov_outline.Visible = dzfov.Visible
                         end
                     else
-                        raycastdata = self:raycastbullet(part.CFrame.Position,part.CFrame.LookVector * 10000)
+                        local center = camera.ViewportSize/2
+                        fov.Position = center
+                        fov_outline.Position = fov.Position
+                        dzfov.Position = center
+                        dzfov_outline.Position = dzfov.Position
+                        aimbot.fov_circle_last.Position = center
+                        aimbot.dzfov_circle_last.Position = center
+                    end
+                    if aimbot:GetLegitConfig("Bullet Redirect", "Use Barrel") then
+                        sfov.Position = position_override
+                        sfov_outline.Position = sfov.Position
+                        aimbot.sfov_circle_last.Position = position_override
+                        if onscreen then
+                            sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect")
+                            sfov_outline.Visible = sfov.Visible
+                        else
+                            sfov.Visible = false
+                            sfov_outline.Visible = sfov.Visible
+                        end
+                    else
+                        local center = camera.ViewportSize/2
+                        sfov.Position = center
+                        sfov_outline.Position = sfov.Position
+                        aimbot.sfov_circle_last.Position = center
+                    end
+                end
+                
+                if enabled and curgun ~= gamelogic.currentgun or set then
+                    curgun = gamelogic.currentgun
+                    if curgun and curgun.data and curgun.data.bulletspeed then
+                        fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
+                        fov_outline.Visible = fov.Visible
+                        dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
+                        dzfov_outline.Visible = dzfov.Visible
+                        sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect")
+                        sfov_outline.Visible = sfov.Visible
+                    else
+                        local bool = false
+                        fov.Visible = bool
+                        fov_outline.Visible = fov.Visible
+                        dzfov.Visible = bool
+                        dzfov_outline.Visible = dzfov.Visible
+                        sfov.Visible = bool
+                        sfov_outline.Visible = sfov.Visible
+                    end
+                end
+            end)
+        end
+
+        do -- Crosshair
+            --draw:Box(x, y, w, h, thickness, color, transparency, visible)
+            --draw:Line(thickness, start_x, start_y, end_x, end_y, color, transparency, visible)\
+            --[[
+            object.Visible = visible
+            object.Thickness = thickness
+            object.From = Vector2.new(start_x, start_y)
+            object.To = Vector2.new(end_x, end_y)
+            object.Color = self:VerifyColor(color)
+            object.Transparency = transparency 
+            ]]
+            local crosshair_objects = {
+                center_outline = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+                top_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+                bottom_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+                left_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+                right_outline = draw:Line(2, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+                center = draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+                top = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+                bottom = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+                left = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+                right = draw:Line(0, 0, 0, 0, 0, Color3.new(1,1,1), 1, false),
+            }
+
+            hook:Add("OnConfigChanged", "BBOT:Crosshair.Changed", function(steps, old, new)
+                if config:IsPathwayEqual(steps, "Main", "Visuals", "Crosshair", "Basic") then
+                    local enabled = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled")
+                    local inner, inner_transparency = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled", "Inner")
+                    local outter, outter_transparency = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled", "Outter")
+                    local width = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Width")
+                    local height = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Height")
+                    if not enabled then
+                        for k, v in pairs(crosshair_objects) do
+                            v.Visible = false
+                        end
+                    else
+                        for k, v in pairs(crosshair_objects) do
+                            if string.find(k, "outline", 1, true) then
+                                v.Color = outter
+                                v.Transparency = outter_transparency
+                            else
+                                v.Color = inner
+                                v.Transparency = inner_transparency
+                            end
+                        end
+
+                        local setup = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Setup")
+                        crosshair_objects.center.Visible = setup.Center
+                        crosshair_objects.top.Visible = setup.Top
+                        crosshair_objects.bottom.Visible = setup.Bottom
+                        crosshair_objects.left.Visible = setup.Left
+                        crosshair_objects.right.Visible = setup.Right
+
+                        crosshair_objects.center_outline.Visible = setup.Center
+                        crosshair_objects.top_outline.Visible = setup.Top
+                        crosshair_objects.bottom_outline.Visible = setup.Bottom
+                        crosshair_objects.left_outline.Visible = setup.Left
+                        crosshair_objects.right_outline.Visible = setup.Right
+
+
+                        crosshair_objects.center.Size = Vector2.new(2, 2)
+                        crosshair_objects.top.Thickness = width
+                        crosshair_objects.bottom.Thickness = width
+                        crosshair_objects.left.Thickness = width
+                        crosshair_objects.right.Thickness = width
+
+                        width, height = width+2, height+2
+                        crosshair_objects.center_outline.Size = Vector2.new(2+2, 2+2)
+                        crosshair_objects.top_outline.Thickness = width
+                        crosshair_objects.bottom_outline.Thickness = width
+                        crosshair_objects.left_outline.Thickness = width
+                        crosshair_objects.right_outline.Thickness = width
+                    end
+                end
+            end)
+
+            local lastrot = 0
+            function aimbot:CrosshairStep(delta, gun)
+                local positionoverride, ondascreen
+                if gun then
+                    local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+                    if part then
+                        for k, v in pairs(crosshair_objects) do
+                            v.Visible = false
+                        end
+                        ondascreen = false
+
+                        local raycastdata = self:raycastbullet(camera.CFrame.Position,part.CFrame.Position-camera.CFrame.Position)
                         if raycastdata and raycastdata.Position then
                             local point, onscreen = camera:WorldToViewportPoint(raycastdata.Position)
                             if onscreen then
                                 positionoverride = point
                             end
                         else
-                            local point, onscreen = camera:WorldToViewportPoint(part.CFrame.Position + part.CFrame.LookVector * 10000)
-                            if onscreen then
-                                positionoverride = point
+                            raycastdata = self:raycastbullet(part.CFrame.Position,part.CFrame.LookVector * 10000)
+                            if raycastdata and raycastdata.Position then
+                                local point, onscreen = camera:WorldToViewportPoint(raycastdata.Position)
+                                if onscreen then
+                                    positionoverride = point
+                                end
+                            else
+                                local point, onscreen = camera:WorldToViewportPoint(part.CFrame.Position + part.CFrame.LookVector * 10000)
+                                if onscreen then
+                                    positionoverride = point
+                                end
                             end
                         end
-                    end
-                    if positionoverride then
-                        for k, v in pairs(crosshair_objects) do
-                            v.Visible = true
+                        if positionoverride then
+                            for k, v in pairs(crosshair_objects) do
+                                v.Visible = true
+                            end
+                            ondascreen = true
                         end
-                        ondascreen = true
                     end
                 end
-            end
 
-            hook:Call("PreCalculateCrosshair", (positionoverride and positionoverride or (camera.ViewportSize/2)), ondascreen)
-            if not config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled") then return end
+                hook:Call("PreCalculateCrosshair", (positionoverride and positionoverride or (camera.ViewportSize/2)), ondascreen)
+                if not config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled") then return end
 
-            local setup = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Setup")
-            local gap = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Gap")
-            local width = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Width")
-            local height = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Height")
+                local setup = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Setup")
+                local gap = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Gap")
+                local width = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Width")
+                local height = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Height")
 
-            local addrot = 0
-            if config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Enabled") then
-                local type = config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Type")
-                if type == "Wave" then
-                    addrot = math.sin(config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Speed") * tick()) * config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Amplitude")
-                else
-                    addrot = lastrot + config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Speed") * delta
-                    if addrot > 360 then
-                        addrot = addrot - 360
+                local addrot = 0
+                if config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Enabled") then
+                    local type = config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Type")
+                    if type == "Wave" then
+                        addrot = math.sin(config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Speed") * tick()) * config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Amplitude")
+                    else
+                        addrot = lastrot + config:GetValue("Main", "Visuals", "Crosshair", "Advanced", "Speed") * delta
+                        if addrot > 360 then
+                            addrot = addrot - 360
+                        end
+                        lastrot = addrot
                     end
-                    lastrot = addrot
                 end
-            end
-            
-            local rot = 0 + addrot
-            local rad = math.rad(rot)
-            local cs, sn = math.cos(rad), math.sin(rad)
-            local outline_vec = Vector2.new(1,1)
-            
-            if setup.Center then
-                local part = crosshair_objects.center
-                local part_outline = crosshair_objects.center_outline
-                if positionoverride then
-                    part.Position = Vector2.new(positionoverride.x-part.Size.X/2,positionoverride.y-part.Size.Y/2)
-                else
-                    part.Position = (camera.ViewportSize/2) + Vector2.new(-part.Size.X/2,-part.Size.Y/2)
-                end
-                part_outline.Position = part.Position-outline_vec
-                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot
-            elseif crosshair_objects.center_outline.Visible then
-                crosshair_objects.center.Visible = false
-                crosshair_objects.center_outline.Visible = false
-            end
-            
-            local addgap = 0
-            --[[if config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Enable") then
-                local type = config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Type")
-                if type == "Wave" then
-                    addgap = math.sin(config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Speed") * tick()) * config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Amplitude")
-                else
-                    addgap = lastgap + config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Speed") * DeltaTime
-                    if addgap > config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Max") then
-                        addgap = addgap - config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Max")
-                        addgap = addgap + config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Min")
+                
+                local rot = 0 + addrot
+                local rad = math.rad(rot)
+                local cs, sn = math.cos(rad), math.sin(rad)
+                local outline_vec = Vector2.new(1,1)
+                
+                if setup.Center then
+                    local part = crosshair_objects.center
+                    local part_outline = crosshair_objects.center_outline
+                    if positionoverride then
+                        part.Position = Vector2.new(positionoverride.x-part.Size.X/2,positionoverride.y-part.Size.Y/2)
+                    else
+                        part.Position = (camera.ViewportSize/2) + Vector2.new(-part.Size.X/2,-part.Size.Y/2)
                     end
-                    lastgap = addgap
+                    part_outline.Position = part.Position-outline_vec
+                    --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot
+                elseif crosshair_objects.center_outline.Visible then
+                    crosshair_objects.center.Visible = false
+                    crosshair_objects.center_outline.Visible = false
                 end
-            end]]
-            
-            gap = gap + addgap
-            
-            if setup.Top then
-                local part = crosshair_objects.top
-                local part_outline = crosshair_objects.top_outline
-                local gapx = 0 * cs - (-gap) * sn;
-                local gapy = 0 * sn + (-gap) * cs;
-                local heightx = 0 * cs - (-height) * sn;
-                local heighty = 0 * sn + (-height) * cs;
-            
-                if positionoverride then
-                    part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
-                else
-                    part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
-                end
-                part.To = part.From + Vector2.new(heightx, heighty)
-                local outlinex = 0 * cs - (-1) * sn;
-                local outliney = 0 * sn + (-1) * cs;
-                part_outline.From = part.From - Vector2.new(outlinex, outliney)
-                part_outline.To = part.To + Vector2.new(outlinex, outliney)
                 
-                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot
-            elseif crosshair_objects.top_outline.Visible then
-                crosshair_objects.top.Visible = false
-                crosshair_objects.top_outline.Visible = false
-            end
-            
-            if setup.Bottom then
-                local part = crosshair_objects.bottom
-                local part_outline = crosshair_objects.bottom_outline
-                local gapx = 0 * cs - (gap) * sn;
-                local gapy = 0 * sn + (gap) * cs;
-                local heightx = 0 * cs - (height) * sn;
-                local heighty = 0 * sn + (height) * cs;
-            
-                if positionoverride then
-                    part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
-                else
-                    part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
-                end
-                part.To = part.From + Vector2.new(heightx, heighty)
-                local outlinex = 0 * cs - (1) * sn;
-                local outliney = 0 * sn + (1) * cs;
-                part_outline.From = part.From - Vector2.new(outlinex, outliney)
-                part_outline.To = part.To + Vector2.new(outlinex, outliney)
+                local addgap = 0
+                --[[if config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Enable") then
+                    local type = config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Type")
+                    if type == "Wave" then
+                        addgap = math.sin(config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Speed") * tick()) * config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Amplitude")
+                    else
+                        addgap = lastgap + config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Speed") * DeltaTime
+                        if addgap > config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Max") then
+                            addgap = addgap - config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Max")
+                            addgap = addgap + config:GetValue("Visuals", "Crosshair", "Animation", "Gap", "Min")
+                        end
+                        lastgap = addgap
+                    end
+                end]]
                 
-                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot - 180
-            elseif crosshair_objects.bottom_outline.Visible then
-                crosshair_objects.bottom.Visible = false
-                crosshair_objects.bottom_outline.Visible = false
-            end
-            
-            if setup.Left then
-                local part = crosshair_objects.left
-                local part_outline = crosshair_objects.left_outline
-                local gapx = (-gap) * cs - 0 * sn;
-                local gapy = (-gap) * sn + 0 * cs;
-                local heightx = (-height) * cs - 0 * sn;
-                local heighty = (-height) * sn + 0 * cs;
-            
-                if positionoverride then
-                    part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
-                else
-                    part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
-                end
-                part.To = part.From + Vector2.new(heightx, heighty)
-                local outlinex = (-1) * cs - 0 * sn;
-                local outliney = (-1) * sn + 0 * cs;
-                part_outline.From = part.From - Vector2.new(outlinex, outliney)
-                part_outline.To = part.To + Vector2.new(outlinex, outliney)
+                gap = gap + addgap
                 
-                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot - 90
-            elseif crosshair_objects.left_outline.Visible then
-                crosshair_objects.left.Visible = false
-                crosshair_objects.left_outline.Visible = false
-            end
-            
-            if setup.Right then
-                local part = crosshair_objects.right
-                local part_outline = crosshair_objects.right_outline
-                local gapx = (gap) * cs - 0 * sn;
-                local gapy = (gap) * sn + 0 * cs;
-                local heightx = (height) * cs - 0 * sn;
-                local heighty = (height) * sn + 0 * cs;
-            
-                if positionoverride then
-                    part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
-                else
-                    part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
-                end
-                part.To = part.From + Vector2.new(heightx, heighty)
-                local outlinex = (1) * cs - 0 * sn;
-                local outliney = (1) * sn + 0 * cs;
-                part_outline.From = part.From - Vector2.new(outlinex, outliney)
-                part_outline.To = part.To + Vector2.new(outlinex, outliney)
+                if setup.Top then
+                    local part = crosshair_objects.top
+                    local part_outline = crosshair_objects.top_outline
+                    local gapx = 0 * cs - (-gap) * sn;
+                    local gapy = 0 * sn + (-gap) * cs;
+                    local heightx = 0 * cs - (-height) * sn;
+                    local heighty = 0 * sn + (-height) * cs;
                 
-                --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot + 90
-            elseif crosshair_objects.right_outline.Visible then
-                crosshair_objects.right.Visible = false
-                crosshair_objects.right_outline.Visible = false
-            end
-        end
-    end
-
-    local t = 0
-    hook:Add("RenderStep.Last", "BBOT:Aimbot.CrosshairStep", function(DeltaTime)
-        if gamelogic.currentgun and gamelogic.currentgun.data and gamelogic.currentgun.data.bulletspeed then return end
-        t = tick()
-        aimbot:CrosshairStep(DeltaTime)
-    end)
-
-    -- Do aimbot stuff here
-    hook:Add("PreFireStep", "BBOT:Aimbot.Calculate", function(gun)
-        aimbot:CrosshairStep(tick()-t, gun)
-        aimbot.rage_target = nil
-        aimbot:RageChanged(nil)
-        if config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
-            aimbot:RageStep(gun)
-        else
-            aimbot:LegitStep(gun)
-        end
-        t = tick()
-    end)
-
-    -- If the aimbot stuff before is persistant, use this to restore
-    hook:Add("PostFireStep", "BBOT:Aimbot.Calculate", function(gun)
-        if aimbot.silent and aimbot.silent.Parent then
-            aimbot.silent.Orientation = aimbot.silent.Parent.Trigger.Orientation
-            aimbot.silent = false
-        end
-
-        if aimbot.fire then
-            aimbot.fire = nil
-            gun:shoot(false)
-        end
-    end)
-
-    local enque = {}
-    aimbot.silent_bullet_query = enque
-    -- Ta da magical right?
-    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Slient.Prevent", function(networkname, Entity, HitPos, Part, bulletID, ...)
-        if networkname == "bullethit" then
-            if enque[bulletID] == Entity then
-                return true
-            end
-        end
-    end)
-
-    -- When silent aim isn't enough, resort to this, and make even cheaters rage that their config is garbage
-    hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, ...)
-        if networkname == "newbullets" then
-            if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
-            if aimbot.rage_target then -- who are we targeting today?
-                local target = aimbot.rage_target
-                -- timescale is to determine how quick the bullet hits
-                -- don't want to get too cocky or the system might silent flag
-                local timescale = 0
-                local campos = camera.CFrame.p
-                local dir = target[3]-campos
-                local firepos = bullettable.firepos
-                local gundata = gamelogic.currentgun.data
-                local t = dir.Magnitude/gundata.bulletspeed -- get the time it takes for the bullet to arrive
-                -- remind me to not do this, some cheats fucks with velocity...
-                local targetpos = target[3]
-                bullettable.firepos = target[4]--campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
-
-                for i=1, #bullettable.bullets do
-                    local bullet = bullettable.bullets[i]
-                    -- we need the direction we are firing at
-                    -- using kinematics, find the direction needed to fire from long distance and compensate for drop
-                    -- set the new velocity of the bullet directly towards them
-                    bullet[1] = aimbot:DropPrediction(bullettable.firepos, targetpos, gundata.bulletspeed).Unit * bullet[1].Magnitude
-                    timer:Simple(1.5, function() -- bullets last 1.5 seconds, this is basically garbage cleanup
-                        enque[bullet[2]] = nil
-                    end)
-                    timer:Simple(t * timescale, function() -- We need to simulate it being a true bullet arrival
-                        -- enque means we have a bullet to be hit, if it is in the table then it's ready
-                        if not enque[bullet[2]] then return end
-                        if not hud:isplayeralive(target[1]) then return end
-                        enque[bullet[2]] = nil
-                        -- Simulate a direct hit, fooling the system with a confirmed hit
-                        network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
-                        enque[bullet[2]] = target[1]
-                    end)
-                    enque[bullet[2]] = target[1] -- this bullet is a magic bullet now, supress networking for this bullet!
+                    if positionoverride then
+                        part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
+                    else
+                        part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
+                    end
+                    part.To = part.From + Vector2.new(heightx, heighty)
+                    local outlinex = 0 * cs - (-1) * sn;
+                    local outliney = 0 * sn + (-1) * cs;
+                    part_outline.From = part.From - Vector2.new(outlinex, outliney)
+                    part_outline.To = part.To + Vector2.new(outlinex, outliney)
+                    
+                    --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot
+                elseif crosshair_objects.top_outline.Visible then
+                    crosshair_objects.top.Visible = false
+                    crosshair_objects.top_outline.Visible = false
                 end
-                network:send(networkname, bullettable, ...)
                 
-                return true
+                if setup.Bottom then
+                    local part = crosshair_objects.bottom
+                    local part_outline = crosshair_objects.bottom_outline
+                    local gapx = 0 * cs - (gap) * sn;
+                    local gapy = 0 * sn + (gap) * cs;
+                    local heightx = 0 * cs - (height) * sn;
+                    local heighty = 0 * sn + (height) * cs;
+                
+                    if positionoverride then
+                        part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
+                    else
+                        part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
+                    end
+                    part.To = part.From + Vector2.new(heightx, heighty)
+                    local outlinex = 0 * cs - (1) * sn;
+                    local outliney = 0 * sn + (1) * cs;
+                    part_outline.From = part.From - Vector2.new(outlinex, outliney)
+                    part_outline.To = part.To + Vector2.new(outlinex, outliney)
+                    
+                    --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot - 180
+                elseif crosshair_objects.bottom_outline.Visible then
+                    crosshair_objects.bottom.Visible = false
+                    crosshair_objects.bottom_outline.Visible = false
+                end
+                
+                if setup.Left then
+                    local part = crosshair_objects.left
+                    local part_outline = crosshair_objects.left_outline
+                    local gapx = (-gap) * cs - 0 * sn;
+                    local gapy = (-gap) * sn + 0 * cs;
+                    local heightx = (-height) * cs - 0 * sn;
+                    local heighty = (-height) * sn + 0 * cs;
+                
+                    if positionoverride then
+                        part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
+                    else
+                        part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
+                    end
+                    part.To = part.From + Vector2.new(heightx, heighty)
+                    local outlinex = (-1) * cs - 0 * sn;
+                    local outliney = (-1) * sn + 0 * cs;
+                    part_outline.From = part.From - Vector2.new(outlinex, outliney)
+                    part_outline.To = part.To + Vector2.new(outlinex, outliney)
+                    
+                    --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot - 90
+                elseif crosshair_objects.left_outline.Visible then
+                    crosshair_objects.left.Visible = false
+                    crosshair_objects.left_outline.Visible = false
+                end
+                
+                if setup.Right then
+                    local part = crosshair_objects.right
+                    local part_outline = crosshair_objects.right_outline
+                    local gapx = (gap) * cs - 0 * sn;
+                    local gapy = (gap) * sn + 0 * cs;
+                    local heightx = (height) * cs - 0 * sn;
+                    local heighty = (height) * sn + 0 * cs;
+                
+                    if positionoverride then
+                        part.From = Vector2.new(positionoverride.x+gapx,positionoverride.y+gapy)
+                    else
+                        part.From = (camera.ViewportSize/2) + Vector2.new(gapx,gapy)
+                    end
+                    part.To = part.From + Vector2.new(heightx, heighty)
+                    local outlinex = (1) * cs - 0 * sn;
+                    local outliney = (1) * sn + 0 * cs;
+                    part_outline.From = part.From - Vector2.new(outlinex, outliney)
+                    part_outline.To = part.To + Vector2.new(outlinex, outliney)
+                    
+                    --part.Rotation = config:GetValue("Visuals", "Crosshair", "Outter", "Rotation") + rot + 90
+                elseif crosshair_objects.right_outline.Visible then
+                    crosshair_objects.right.Visible = false
+                    crosshair_objects.right_outline.Visible = false
+                end
             end
         end
-    end)
 
-    -- Knife Aura --
-    function aimbot:kniferaycast(campos,diff,playerteamdata)
-        return self:raycastbullet(campos,diff,playerteamdata,function(p1)
-            local instance = p1.Instance
-            if instance.Name == "Window" then return true end
-            return not instance.CanCollide or instance.Transparency == 1
+        local t = 0
+        hook:Add("RenderStep.Last", "BBOT:Aimbot.CrosshairStep", function(DeltaTime)
+            if gamelogic.currentgun and gamelogic.currentgun.data and gamelogic.currentgun.data.bulletspeed then return end
+            t = tick()
+            aimbot:CrosshairStep(DeltaTime)
+        end)
+
+        -- Do aimbot stuff here
+        hook:Add("PreFireStep", "BBOT:Aimbot.Calculate", function(gun)
+            aimbot:CrosshairStep(tick()-t, gun)
+            aimbot.rage_target = nil
+            aimbot:RageChanged(nil)
+            if config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
+                aimbot:RageStep(gun)
+            else
+                aimbot:LegitStep(gun)
+            end
+            t = tick()
+        end)
+
+        -- If the aimbot stuff before is persistant, use this to restore
+        hook:Add("PostFireStep", "BBOT:Aimbot.Calculate", function(gun)
+            if aimbot.silent and aimbot.silent.Parent then
+                aimbot.silent.Orientation = aimbot.silent.Parent.Trigger.Orientation
+                aimbot.silent = false
+            end
+
+            if aimbot.fire then
+                aimbot.fire = nil
+                gun:shoot(false)
+            end
+        end)
+
+        local enque = {}
+        aimbot.silent_bullet_query = enque
+        -- Ta da magical right?
+        hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Slient.Prevent", function(networkname, Entity, HitPos, Part, bulletID, ...)
+            if networkname == "bullethit" then
+                if enque[bulletID] == Entity then
+                    return true
+                end
+            end
+        end)
+
+        -- When silent aim isn't enough, resort to this, and make even cheaters rage that their config is garbage
+        hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, ...)
+            if networkname == "newbullets" then
+                if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
+                if aimbot.rage_target then -- who are we targeting today?
+                    local target = aimbot.rage_target
+                    -- timescale is to determine how quick the bullet hits
+                    -- don't want to get too cocky or the system might silent flag
+                    local timescale = 0
+                    local campos = camera.CFrame.p
+                    local dir = target[3]-campos
+                    local firepos = bullettable.firepos
+                    local gundata = gamelogic.currentgun.data
+                    local t = dir.Magnitude/gundata.bulletspeed -- get the time it takes for the bullet to arrive
+                    -- remind me to not do this, some cheats fucks with velocity...
+                    local targetpos = target[3]
+                    bullettable.firepos = target[4]--campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
+
+                    for i=1, #bullettable.bullets do
+                        local bullet = bullettable.bullets[i]
+                        -- we need the direction we are firing at
+                        -- using kinematics, find the direction needed to fire from long distance and compensate for drop
+                        -- set the new velocity of the bullet directly towards them
+                        bullet[1] = aimbot:DropPrediction(bullettable.firepos, targetpos, gundata.bulletspeed).Unit * bullet[1].Magnitude
+                        timer:Simple(1.5, function() -- bullets last 1.5 seconds, this is basically garbage cleanup
+                            enque[bullet[2]] = nil
+                        end)
+                        timer:Simple(t * timescale, function() -- We need to simulate it being a true bullet arrival
+                            -- enque means we have a bullet to be hit, if it is in the table then it's ready
+                            if not enque[bullet[2]] then return end
+                            if not hud:isplayeralive(target[1]) then return end
+                            enque[bullet[2]] = nil
+                            -- Simulate a direct hit, fooling the system with a confirmed hit
+                            network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
+                            enque[bullet[2]] = target[1]
+                        end)
+                        enque[bullet[2]] = target[1] -- this bullet is a magic bullet now, supress networking for this bullet!
+                    end
+                    network:send(networkname, bullettable, ...)
+                    
+                    return true
+                end
+            end
+        end)
+
+        -- Knife Aura --
+        function aimbot:kniferaycast(campos,diff,playerteamdata)
+            return self:raycastbullet(campos,diff,playerteamdata,function(p1)
+                local instance = p1.Instance
+                if instance.Name == "Window" then return true end
+                return not instance.CanCollide or instance.Transparency == 1
+            end)
+        end
+        
+        function aimbot:GetKnifeTarget()
+            local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
+            local cam_position = camera.CFrame.p
+            local team = (localplayer.Team and localplayer.Team.Name or "NA")
+            local playerteamdata = workspace["Players"][team]
+            local aura_type = config:GetValue("Main", "Rage", "Extra", "Knife Bot Type")
+            local hitscan_points = config:GetValue("Main", "Rage", "Extra", "Knife Hitscan")
+            local visible_only = config:GetValue("Main", "Rage", "Extra", "Knife Visible Only")
+            local range = config:GetValue("Main", "Rage", "Extra", "Knife Range")
+        
+            local organizedPlayers = {}
+            local plys = players:GetPlayers()
+            for i=1, #plys do
+                local v = plys[i]
+                if v == localplayer then
+                    continue
+                end
+            
+                if config.priority[v.UserId] then continue end
+                local parts = self:GetParts(v)
+                if not parts then continue end
+            
+                if v.Team and v.Team == localplayer.Team then
+                    continue
+                end
+        
+                for name, part in pairs(parts) do
+                    local name = partstosimple[name]
+                    if part == prioritize or not name or hitscan_points ~= name then continue end
+                    local pos = part.Position
+                    if (pos-cam_position).Magnitude > range then continue end
+                    if visible_only then
+                        local raydata = self:kniferaycast(cam_position,pos-cam_position,playerteamdata)
+                        if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
+                    end
+                    table.insert(organizedPlayers, {v, part, name})
+                end
+            end
+
+            return organizedPlayers
+        end
+        
+        local nextstab, block_equip = tick(), false
+        hook:Add("RenderStepped", "KnifeAura", function()
+            if not char.alive or not config:GetValue("Main", "Rage", "Extra", "Knife Bot") or not config:GetValue("Main", "Rage", "Extra", "Knife Bot", "KeyBind") then return end
+            local target = aimbot:GetKnifeTarget()
+            if not target then return end
+            if nextstab > tick() then return end
+            block_equip = true
+            local lastequipped = aimbot.equipped
+            if lastequipped ~= 3 then
+                network:send("equip", 3);
+            end
+            network:send("stab");
+            for i=1, #target do
+                local v = target[i]
+                network:send("knifehit", v[1], tick(), v[2].Name);
+            end
+            if lastequipped ~= 3 then
+                network:send("equip", lastequipped);
+            end
+            block_equip = false
+            nextstab = tick() + config:GetValue("Main", "Rage", "Extra", "Knife Delay")
+        end)
+        
+        aimbot.equipped = 1
+        hook:Add("PostNetworkSend", "Aimbot.Equipped", function(netname, slot)
+            if netname ~= "equip" or block_equip then return end
+            aimbot.equipped = slot
         end)
     end
-    
-    function aimbot:GetKnifeTarget()
-        local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
-        local cam_position = camera.CFrame.p
-        local team = (localplayer.Team and localplayer.Team.Name or "NA")
-        local playerteamdata = workspace["Players"][team]
-        local aura_type = config:GetValue("Main", "Rage", "Extra", "Knife Bot Type")
-        local hitscan_points = config:GetValue("Main", "Rage", "Extra", "Knife Hitscan")
-        local visible_only = config:GetValue("Main", "Rage", "Extra", "Knife Visible Only")
-        local range = config:GetValue("Main", "Rage", "Extra", "Knife Range")
-    
-        local organizedPlayers = {}
-        local plys = players:GetPlayers()
-        for i=1, #plys do
-            local v = plys[i]
-            if v == localplayer then
-                continue
+
+    -- ESP
+    -- Entity Visuals Controller [ESP, Chams, Grenades, etc] (Conversion In Progress)
+    -- Styled as a constructor with meta tables btw, I'll tell ya later - WholeCream
+    do
+        -- Why this?
+        -- Because it's more organized :|
+        local hook = BBOT.hook
+        local timer = BBOT.timer
+        local config = BBOT.config
+        local font = BBOT.font
+        local gui = BBOT.gui
+        local draw = BBOT.draw
+        local log = BBOT.log
+        local math = BBOT.math
+        local string = BBOT.string
+        local service = BBOT.service
+        local esp = {
+            registry = {}
+        }
+        BBOT.esp = esp
+
+        local localplayer = service:GetService("LocalPlayer")
+        local playergui = service:GetService("PlayerGui")
+        local camera = BBOT.service:GetService("CurrentCamera")
+
+        esp.container = Instance.new("Folder")
+        esp.container.Name = string.random(8, 14) -- you gonna try that GetChildren attack anytime soon?
+        syn.protect_gui(esp.container) -- for chams only!
+        esp.container.Parent = playergui.MainGui
+
+        -- Adds an ESP object to the rendering query
+        function esp:Add(construct)
+            local reg = self.registry
+            for i=1, #reg do
+                if reg[i].uniqueid == construct.uniqueid then return false end
             end
-        
-            if config.priority[v.UserId] then continue end
-            local parts = self:GetParts(v)
-            if not parts then continue end
-        
-            if v.Team and v.Team == localplayer.Team then
-                continue
-            end
-    
-            for name, part in pairs(parts) do
-                local name = partstosimple[name]
-                if part == prioritize or not name or hitscan_points ~= name then continue end
-                local pos = part.Position
-                if (pos-cam_position).Magnitude > range then continue end
-                if visible_only then
-                    local raydata = self:kniferaycast(cam_position,pos-cam_position,playerteamdata)
-                    if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
-                end
-                table.insert(organizedPlayers, {v, part, name})
-            end
-        end
-
-        return organizedPlayers
-    end
-    
-    local nextstab, block_equip = tick(), false
-    hook:Add("RenderStepped", "KnifeAura", function()
-        if not char.alive or not config:GetValue("Main", "Rage", "Extra", "Knife Bot") or not config:GetValue("Main", "Rage", "Extra", "Knife Bot", "KeyBind") then return end
-        local target = aimbot:GetKnifeTarget()
-        if not target then return end
-        if nextstab > tick() then return end
-        block_equip = true
-        local lastequipped = aimbot.equipped
-        if lastequipped ~= 3 then
-            network:send("equip", 3);
-        end
-        network:send("stab");
-        for i=1, #target do
-            local v = target[i]
-            network:send("knifehit", v[1], tick(), v[2].Name);
-        end
-        if lastequipped ~= 3 then
-            network:send("equip", lastequipped);
-        end
-        block_equip = false
-        nextstab = tick() + config:GetValue("Main", "Rage", "Extra", "Knife Delay")
-    end)
-    
-    aimbot.equipped = 1
-    hook:Add("PostNetworkSend", "Aimbot.Equipped", function(netname, slot)
-        if netname ~= "equip" or block_equip then return end
-        aimbot.equipped = slot
-    end)
-end
-
--- ESP
--- Entity Visuals Controller [ESP, Chams, Grenades, etc] (Conversion In Progress)
--- Styled as a constructor with meta tables btw, I'll tell ya later - WholeCream
-do
-    -- Why this?
-    -- Because it's more organized :|
-    local hook = BBOT.hook
-    local timer = BBOT.timer
-    local config = BBOT.config
-    local font = BBOT.font
-    local gui = BBOT.gui
-    local draw = BBOT.draw
-    local log = BBOT.log
-    local math = BBOT.math
-    local string = BBOT.string
-    local service = BBOT.service
-    local esp = {
-        registry = {}
-    }
-    BBOT.esp = esp
-
-    local localplayer = service:GetService("LocalPlayer")
-    local playergui = service:GetService("PlayerGui")
-    local camera = BBOT.service:GetService("CurrentCamera")
-
-    esp.container = Instance.new("Folder")
-    esp.container.Name = string.random(8, 14) -- you gonna try that GetChildren attack anytime soon?
-    syn.protect_gui(esp.container) -- for chams only!
-    esp.container.Parent = playergui.MainGui
-
-    -- Adds an ESP object to the rendering query
-    function esp:Add(construct)
-        local reg = self.registry
-        for i=1, #reg do
-            if reg[i].uniqueid == construct.uniqueid then return false end
-        end
-        reg[#reg+1] = construct
-        if construct.OnCreate then
-            construct:OnCreate()
-        end
-    end
-
-    -- Use this to find an esp object
-    function esp:Find(uniqueid)
-        local reg = self.registry
-        for i=1, #reg do
-            if reg[i].uniqueid == uniqueid then
-                return reg[i], i
+            reg[#reg+1] = construct
+            if construct.OnCreate then
+                construct:OnCreate()
             end
         end
-    end
 
-    -- Self-explanitory
-    function esp:Remove(uniqueid)
-        local reg = self.registry
-        local c = 0
-        for i=1, #reg do
-            if reg[i-c].uniqueid == uniqueid then
-                local v = reg[i-c]
-                table.remove(reg, i-c)
-                c=c+1
-                if v.OnRemove then
-                    v:OnRemove()
-                end
-                break
-            end
-        end
-    end
-
-    hook:Add("Unload", "BBOT:ESP.Destroy", function()
-        local reg = esp.registry
-        for i=1, #reg do
-            local v = reg[i]
-            if v.OnRemove then
-                v:OnRemove()
-            end
-        end
-        esp.registry = {}
-        esp.container:Destroy()
-    end)
-
-    function esp.Render(v)
-        if v.IsValid and v:IsValid() then
-            if v:CanRender() then
-                if v.PreRender then
-                    v:PreRender()
-                end
-                if v.Render then
-                    v:Render()
-                end
-                if v.PostRender then
-                    v:PostRender()
+        -- Use this to find an esp object
+        function esp:Find(uniqueid)
+            local reg = self.registry
+            for i=1, #reg do
+                if reg[i].uniqueid == uniqueid then
+                    return reg[i], i
                 end
             end
-        else
-            return true
         end
-    end
 
-    function esp:Rebuild()
-        timer:Create("BBOT:ESP.Rebuild", 1, 1, function() self:_Rebuild() end)
-    end
-
-    function esp:_Rebuild()
-        local controllers = self.registry
-        for i=1, #controllers do
-            local v = controllers[i]
-            if v.Rebuild then
-                v:Rebuild()
-            end
-        end
-    end
-
-    function esp.EmptyTable( tab )
-        for k, v in pairs( tab ) do
-            tab[ k ] = nil
-        end
-    end
-
-    local errors = 0
-    hook:Add("RenderStepped", "BBOT:ESP.Render", function()
-        if errors > 20 then return end
-        local controllers = esp.registry
-        local istablemissalined = false
-        local c = 0
-        for i=1, #controllers do
-            local v = controllers[i-c]
-            if v then
-                local ran, destroy = xpcall(esp.Render, debug.traceback, v)
-                if not ran then
-                    log(LOG_ERROR, "ESP render error - ", destroy)
-                    log(LOG_ANON, "Object - ", v.uniqueid)
-                    log(LOG_WARN,"Auto removing to prevent error cascade!")
-                    table.remove(controllers, i-c)
-                    c = c + 1
-                    errors = errors + 1
-                elseif destroy then
-                    table.remove(controllers, i-c)
-                    c = c + 1
+        -- Self-explanitory
+        function esp:Remove(uniqueid)
+            local reg = self.registry
+            local c = 0
+            for i=1, #reg do
+                if reg[i-c].uniqueid == uniqueid then
+                    local v = reg[i-c]
+                    table.remove(reg, i-c)
+                    c=c+1
                     if v.OnRemove then
                         v:OnRemove()
                     end
+                    break
+                end
+            end
+        end
+
+        hook:Add("Unload", "BBOT:ESP.Destroy", function()
+            local reg = esp.registry
+            for i=1, #reg do
+                local v = reg[i]
+                if v.OnRemove then
+                    v:OnRemove()
+                end
+            end
+            esp.registry = {}
+            esp.container:Destroy()
+        end)
+
+        function esp.Render(v)
+            if v.IsValid and v:IsValid() then
+                if v:CanRender() then
+                    if v.PreRender then
+                        v:PreRender()
+                    end
+                    if v.Render then
+                        v:Render()
+                    end
+                    if v.PostRender then
+                        v:PostRender()
+                    end
                 end
             else
-                istablemissalined = true
+                return true
             end
         end
 
-        if istablemissalined then
-            local sorted = {}
-            for k, v in pairs(controllers) do
-                sorted[#sorted+1] = v
-            end
-            esp.EmptyTable(controllers)
-            for i=1, #sorted do
-                controllers[i] = sorted[i]
-            end
+        function esp:Rebuild()
+            timer:Create("BBOT:ESP.Rebuild", 1, 1, function() self:_Rebuild() end)
         end
-    end)
 
-    hook:Add("OnConfigChanged", "BBOT:ESP.Reload", function(steps, old, new)
-        if config:IsPathwayEqual(steps, "Main", "Visuals") then
-            esp:Rebuild()
-        end
-    end)
-
-    do -- players
-        local workspace = BBOT.service:GetService("Workspace")
-        local players = BBOT.service:GetService("Players")
-        local replication = BBOT.aux.replication
-        local hud = BBOT.aux.hud
-        local aimbot = BBOT.aimbot
-        local color = BBOT.color
-        local updater = replication.getupdater
-        local ups = debug.getupvalues(updater)
-        local player_registry
-        for k, v in pairs(ups) do
-            if typeof(v) == "table" then
-                player_registry = v
-            elseif typeof(v) == "function" then
-                local function createupdater(player)
-                    timer:Async(function() if (localplayer ~= player) then hook:Call("CreateUpdater", player) end end)
-                    return v(player)
+        function esp:_Rebuild()
+            local controllers = self.registry
+            for i=1, #controllers do
+                local v = controllers[i]
+                if v.Rebuild then
+                    v:Rebuild()
                 end
-                debug.setupvalue(updater, k, newcclosure(createupdater))
-                hook:Add("Unload", "Replication.UndoUpdaterDetour", function()
-                    debug.setupvalue(updater, k, v)
-                end)
             end
         end
 
-        esp.playercontainer = Instance.new("Folder", esp.container)
-        esp.playercontainer.Name = "Players"
-
-        if player_registry then
-            local player_meta = {}
-            esp.player_meta = {__index = player_meta}
-
-            function player_meta:IsValid()
-                return self.player:IsDescendantOf(players) and player_registry[self.player]
+        function esp.EmptyTable( tab )
+            for k, v in pairs( tab ) do
+                tab[ k ] = nil
             end
+        end
 
-            function player_meta:OnRemove()
-                self:Destroy(true, true)
-                self.removed = true
-                log(LOG_DEBUG, "Player ESP: Removing ", self.player.Name)
-            end
-
-            function player_meta:CanRender()
-                local alive = hud:isplayeralive(self.player)
-                if alive ~= self.alive then
-                    self.alive = alive
-                    if self.alive then
-                        self:Setup()
-                    else
-                        self:Destroy()
-                    end
-                end
-                
-                self:KillRender()
-
-                if self.alive then
-                    return true
-                else
-                    return false
-                end
-            end
-
-            function player_meta:Cache(draw)
-                for i=1, #self.draw_cache do
-                    if self.draw_cache[i][1] == draw then
-                        self.draw_cache[i][2] = draw.Transparency
-                        return draw
-                    end
-                end
-                self.draw_cache[#self.draw_cache+1] = {draw, draw.Transparency}
-                return draw
-            end
-
-            function player_meta:Render(points)
-                if not self:GetConfig("Enabled") then return end
-                if not self.parts and not points then return end
-
-                local points = points
-                if not points then
-                    points = {}
-                    self._points = points
-                    local offset, absolute = Vector3.new(), false
-                    if self:GetConfig("Flags").Resolved then
-                        offset, absolute = BBOT.aimbot:GetResolvedPosition(self.player)
-                    end
-                    for k, v in pairs(self.parts) do
-                        if k ~= "rootpart" then
-                            local object_bounds_cframe = (CFrame.new(v.Size):ToWorldSpace(CFrame.Angles(v.CFrame:ToOrientation()))).Position
-                            local min, max = v.Position - object_bounds_cframe + offset, v.Position + object_bounds_cframe + offset
-                            if absolute then
-                                min, max = offset - object_bounds_cframe, offset + object_bounds_cframe
-                            end
-                            local current_points_length = #points
-                            points[current_points_length+1] = Vector3.new(min.x, min.y, min.z)
-                            points[current_points_length+2] = Vector3.new(min.x, max.y, min.z)
-                            points[current_points_length+3] = Vector3.new(max.x, max.y, min.z)
-                            points[current_points_length+4] = Vector3.new(max.x, min.y, min.z)
-                            points[current_points_length+5] = Vector3.new(max.x, max.y, max.z)
-                            points[current_points_length+6] = Vector3.new(min.x, max.y, max.z)
-                            points[current_points_length+7] = Vector3.new(min.x, min.y, max.z)
-                            points[current_points_length+8] = Vector3.new(max.x, min.y, max.z)
+        local errors = 0
+        hook:Add("RenderStepped", "BBOT:ESP.Render", function()
+            if errors > 20 then return end
+            local controllers = esp.registry
+            local istablemissalined = false
+            local c = 0
+            for i=1, #controllers do
+                local v = controllers[i-c]
+                if v then
+                    local ran, destroy = xpcall(esp.Render, debug.traceback, v)
+                    if not ran then
+                        log(LOG_ERROR, "ESP render error - ", destroy)
+                        log(LOG_ANON, "Object - ", v.uniqueid)
+                        log(LOG_WARN,"Auto removing to prevent error cascade!")
+                        table.remove(controllers, i-c)
+                        c = c + 1
+                        errors = errors + 1
+                    elseif destroy then
+                        table.remove(controllers, i-c)
+                        c = c + 1
+                        if v.OnRemove then
+                            v:OnRemove()
                         end
                     end
-                end
-
-                -- L, W, H
-                local fail = 0
-                local points2d = {}
-                for i=1, #points do
-                    local point, onscreen = camera:WorldToViewportPoint(points[i])
-                    if not onscreen then
-                        fail = fail + 1
-                    end
-                    points2d[#points2d+1] = point
-                end
-
-                if fail >= #points then
-                    fail = true
                 else
-                    fail = false
+                    istablemissalined = true
+                end
+            end
+
+            if istablemissalined then
+                local sorted = {}
+                for k, v in pairs(controllers) do
+                    sorted[#sorted+1] = v
+                end
+                esp.EmptyTable(controllers)
+                for i=1, #sorted do
+                    controllers[i] = sorted[i]
+                end
+            end
+        end)
+
+        hook:Add("OnConfigChanged", "BBOT:ESP.Reload", function(steps, old, new)
+            if config:IsPathwayEqual(steps, "Main", "Visuals") then
+                esp:Rebuild()
+            end
+        end)
+
+        do -- players
+            local workspace = BBOT.service:GetService("Workspace")
+            local players = BBOT.service:GetService("Players")
+            local replication = BBOT.aux.replication
+            local hud = BBOT.aux.hud
+            local aimbot = BBOT.aimbot
+            local color = BBOT.color
+            local updater = replication.getupdater
+            local ups = debug.getupvalues(updater)
+            local player_registry
+            for k, v in pairs(ups) do
+                if typeof(v) == "table" then
+                    player_registry = v
+                elseif typeof(v) == "function" then
+                    local function createupdater(player)
+                        timer:Async(function() if (localplayer ~= player) then hook:Call("CreateUpdater", player) end end)
+                        return v(player)
+                    end
+                    debug.setupvalue(updater, k, newcclosure(createupdater))
+                    hook:Add("Unload", "Replication.UndoUpdaterDetour", function()
+                        debug.setupvalue(updater, k, v)
+                    end)
+                end
+            end
+
+            esp.playercontainer = Instance.new("Folder", esp.container)
+            esp.playercontainer.Name = "Players"
+
+            if player_registry then
+                local player_meta = {}
+                esp.player_meta = {__index = player_meta}
+
+                function player_meta:IsValid()
+                    return self.player:IsDescendantOf(players) and player_registry[self.player]
                 end
 
-                local bounding_box = {x=0,y=0,w=0,h=0}
-                if not fail then
-                    local left = points2d[1].X
-                    local top = points2d[1].Y
-                    local right = points2d[1].X
-                    local bottom = points2d[1].Y
+                function player_meta:OnRemove()
+                    self:Destroy(true, true)
+                    self.removed = true
+                    log(LOG_DEBUG, "Player ESP: Removing ", self.player.Name)
+                end
+
+                function player_meta:CanRender()
+                    local alive = hud:isplayeralive(self.player)
+                    if alive ~= self.alive then
+                        self.alive = alive
+                        if self.alive then
+                            self:Setup()
+                        else
+                            self:Destroy()
+                        end
+                    end
                     
-                    for i=1,#points2d do
-                        if(points2d[i]) then
-                            if (left > points2d[i].X) then
-                                left = points2d[i].X
-                            end
-                            if (bottom < points2d[i].Y) then
-                                bottom = points2d[i].Y
-                            end
-                            if (right < points2d[i].X) then
-                                right = points2d[i].X
-                            end
-                            if (top > points2d[i].Y) then
-                                top = points2d[i].Y
-                            end
-                        end
-                    end
+                    self:KillRender()
 
-                    bounding_box.x = left
-                    bounding_box.y = top
-                    bounding_box.w = right - left
-                    bounding_box.h = bottom - top
-                end
-
-                local lefty, righty = 0, 0
-
-                if self.box and self.box_enabled then
-                    if fail then
-                        self.box_fill.Visible = false
-                        self.box_outline.Visible = false
-                        self.box.Visible = false
+                    if self.alive then
+                        return true
                     else
-                        self.box_fill.Visible = true
-                        self.box_outline.Visible = true
-                        self.box.Visible = true
-
-                        local pos, size = Vector2.new(bounding_box.x, bounding_box.y), Vector2.new(bounding_box.w, bounding_box.h)
-
-                        self.box_fill.Position = pos
-                        self.box_fill.Size = size
-                        self.box_outline.Position = pos
-                        self.box_outline.Size = size
-                        self.box.Position = pos
-                        self.box.Size = size
-                    end
-                end
-
-                if self.name and self.name_enabled then
-                    if fail then
-                        self.name.Visible = false
-                    else
-                        self.name.Visible = true
-                        self.name.Position = Vector2.new(bounding_box.x + (bounding_box.w/2) - (self.name.TextBounds.X/2), bounding_box.y - self.name.TextBounds.Y)
-                    end
-                end
-
-                local health = math.ceil(hud:getplayerhealth(self.player))
-                if self.healthbar and self.healthbar_enabled then
-                    if fail then
-                        self.healthbar.Visible = false
-                        self.healthbar_outline.Visible = false
-                    else
-                        self.healthbar.Visible = true
-                        self.healthbar_outline.Visible = true
-                        self.healthbar.Color = color.range(health, {
-                            [1] = {
-                                start = 0,
-                                color = self:GetConfig("Health Bar", "Color Low"),
-                            },
-                            [2] = {
-                                start = 100,
-                                color = self:GetConfig("Health Bar", "Color Max"),
-                            },
-                        })
-
-                        self.healthbar.Position = Vector2.new(bounding_box.x - 6, bounding_box.y + (bounding_box.h * math.clamp(1-(health/100), 0, 1)))
-                        self.healthbar.Size = Vector2.new(2, bounding_box.h * math.clamp(health/100, 0, 1))
-                        self.healthbar_outline.Position = Vector2.new(bounding_box.x - 6 - 1, bounding_box.y-1)
-                        self.healthbar_outline.Size = Vector2.new(2+2, bounding_box.h+2)
-                    end
-                end
-
-                if self.healthtext and self.healthtext_enabled then
-                    if fail then
-                        self.healthtext.Visible = false
-                    else
-                        self.healthtext.Visible = true
-                        local offsety = (self.healthbar_enabled and (bounding_box.h * math.remap(math.clamp(health/100, 0, 1),0,1,1,0)) or lefty)
-                        self.healthtext.Position = Vector2.new(bounding_box.x - self.healthtext.TextBounds.X - (self.healthbar_enabled and 8 or 1), bounding_box.y + offsety - (self.healthbar_enabled and self.healthtext.TextBounds.Y/2 or 0))
-                        self.healthtext.Text = (self.healthbar_enabled and tostring(health) or tostring(health) .. "hp")
-                        lefty = lefty + self.healthtext.TextBounds.Y + 2
-                    end
-                end
-            end
-
-            function player_meta:GetConfig(...)
-                if self.player and self.player.Team ~= localplayer.team then
-                    return config:GetValue("Main", "Visuals", "Enemy ESP", ...)
-                else
-                    return config:GetValue("Main", "Visuals", "Team ESP", ...)
-                end
-            end
-
-            -- draw:TextOutlined(text, font, x, y, size, centered, color, color2, transparency, visible)
-            -- draw:BoxOutline(x, y, w, h, thickness, color, transparency, visible)
-            local black = Color3.new(0,0,0)
-            function player_meta:OnCreate()
-                local color, color_transparency = self:GetConfig("Name", "Color")
-                self.name = self:Cache(draw:TextOutlined(self.player.name, 2, 0, 0, 12, false, color, black, color_transparency, false))
-                color, color_transparency = self:GetConfig("Box", "Color Fill")
-                self.box_fill = self:Cache(draw:Box(0, 0, 0, 0, 0, color, color_transparency, false))
-                color, color_transparency = self:GetConfig("Box", "Color Box")
-                self.box_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 3, Color3.new(0,0,0), color_transparency, false))
-                self.box = self:Cache(draw:BoxOutline(0, 0, 0, 0, 0, color, color_transparency, false))
-                
-                color, color_transparency = self:GetConfig("Health Bar", "Color Max")
-                self.healthbar_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.new(0,0,0), color_transparency, false))
-                self.healthbar = self:Cache(draw:Box(0, 0, 0, 0, 0, color, color_transparency, false))
-                
-                color, color_transparency = self:GetConfig("Health Number", "Color")
-                self.healthtext = self:Cache(draw:TextOutlined("100", 2, 0, 0, 12, false, color, black, color_transparency, false))
-            end
-
-            function player_meta:GetColor(...)
-                local color, color_transparency = self:GetConfig(...)
-                if config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target") and aimbot.rage_target and aimbot.rage_target[1] == self.player then
-                    color = config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target", "Aimbot Target")
-                end
-                return color, color_transparency
-            end
-
-            function player_meta:Setup()
-                self.begin_fading = false
-                local parts = replication.getbodyparts(self.player)
-                if not parts then return end
-                self.model = parts.head.Parent
-                self.parts = parts
-                local esp_enabled = self:GetConfig("Enabled")
-                
-                local color, color_transparency = self:GetColor("Name", "Color")
-                self.name_enabled = (esp_enabled and self:GetConfig("Name") or false)
-                self.name.Visible = self.name_enabled
-                self.name.Color = color
-                self.name.Transparency = color_transparency
-                self:Cache(self.name)
-
-                self.box_enabled = (esp_enabled and self:GetConfig("Box") or false)
-                self.box_fill.Visible = self.box_enabled
-                self.box_outline.Visible = self.box_enabled
-                self.box.Visible = self.box_enabled
-
-                color, color_transparency = self:GetColor("Box", "Color Fill")
-                self.box_fill.Color = color
-                self.box_fill.Transparency = color_transparency
-
-                color, color_transparency = self:GetColor("Box", "Color Box")
-                self.box.Color = color
-                self.box.Transparency = color_transparency
-                self.box_outline.Transparency = color_transparency
-                self:Cache(self.box)
-                self:Cache(self.box_outline)
-                self:Cache(self.box_fill)
-                
-                color, color_transparency = self:GetConfig("Health Bar", "Color Max")
-                self.healthbar_enabled = (esp_enabled and self:GetConfig("Health Bar") or false)
-                self.healthbar.Color = color
-                self.healthbar.Transparency = color_transparency
-                self.healthbar_outline.Transparency = color_transparency
-                self.healthbar.Visible = self.healthbar_enabled
-                self.healthbar_outline.Visible = self.healthbar_enabled
-                self:Cache(self.healthbar)
-                self:Cache(self.healthbar_outline)
-                
-                color, color_transparency = self:GetConfig("Health Number", "Color")
-                self.healthtext_enabled = (esp_enabled and self:GetConfig("Health Number") or false)
-                self.healthtext.Visible = self.healthtext_enabled
-                self.healthtext.Color = color
-                self.healthtext.Transparency = color_transparency
-                self:Cache(self.healthtext)
-
-                self:RemoveInstances()
-
-                local container = Instance.new("Folder", esp.playercontainer)
-                self.container = container
-                container.Name = self.player.Name
-
-                if self:GetConfig("Chams") then
-                    local visible, transparency = self:GetConfig("Chams", "Visible Chams")
-                    local invisible, itransparency = self:GetConfig("Chams", "Invisible Chams")
-                    local scale = 0.1
-                    local chams = {}
-                    self.chams = chams
-                    for k, v in pairs(parts) do
-                        if k ~= "rootpart" then
-                            local boxhandle
-                            if v.Name ~= "Head" then
-								boxhandle = Instance.new("BoxHandleAdornment", Part)
-                                chams[#chams+1] = {k, boxhandle, itransparency}
-                                boxhandle.Size = (v.Size + Vector3.new(0.1, 0.1, 0.1))
-							else
-								boxhandle = Instance.new("CylinderHandleAdornment", Part)
-                                chams[#chams+1] = {k, boxhandle, itransparency}
-								boxhandle.Height = v.Size.y + 0.3
-								boxhandle.Radius = v.Size.x * 0.5 + 0.2
-                                boxhandle.Height -= 0.2
-                                boxhandle.Radius -= 0.2
-								boxhandle.CFrame = CFrame.new(Vector3.new(), Vector3.new(0, 1, 0))
-							end
-                            boxhandle.Parent = container
-                            boxhandle.Name = "Chams_"..k
-                            boxhandle.Adornee = v
-                            boxhandle.AlwaysOnTop = true
-                            boxhandle.Color3 = invisible
-                            boxhandle.Transparency = 1-itransparency
-                            boxhandle.Visible = true
-                            boxhandle.ZIndex = 1
-                        end
-                    end
-                    scale = 0.25
-                    for k, v in pairs(parts) do
-                        if k ~= "rootpart" then
-                            local boxhandle
-                            if v.Name ~= "Head" then
-								boxhandle = Instance.new("BoxHandleAdornment", Part)
-                                chams[#chams+1] = {k, boxhandle, transparency}
-                                boxhandle.Size = (v.Size + Vector3.new(0.25, 0.25, 0.25))
-							else
-								boxhandle = Instance.new("CylinderHandleAdornment", Part)
-                                chams[#chams+1] = {k, boxhandle, transparency}
-								boxhandle.Height = v.Size.y + 0.3
-								boxhandle.Radius = v.Size.x * 0.5 + 0.2
-								boxhandle.CFrame = CFrame.new(Vector3.new(), Vector3.new(0, 1, 0))
-							end
-                            boxhandle.Parent = container
-                            boxhandle.Name = "UChams_"..k
-                            boxhandle.Adornee = v
-                            boxhandle.AlwaysOnTop = false
-                            boxhandle.Color3 = visible
-                            boxhandle.Transparency = 1-transparency
-                            boxhandle.Visible = true
-                            boxhandle.ZIndex = 1
-                        end
-                    end
-                end
-
-                log(LOG_DEBUG, "Player ESP: Now Alive ", self.player.Name)
-            end
-
-            function player_meta:Rebuild()
-                self:Destroy(true)
-                self.alive = false
-            end
-
-            function player_meta:RemoveInstances()
-                if self.chams then
-                    for i=1, #self.chams do
-                        local v = self.chams[i]
-                        if v[2] then
-                            v[2]:Destroy()
-                        end
-                    end
-                    self.chams = nil
-                end
-                
-                if self.container then
-                    self.container:Destroy()
-                    self.container = nil
-                end
-            end
-
-            function player_meta:KillRender()
-                if self.alive or not self.timedestroyed or not self.begin_fading then return end
-                local fadetime = config:GetValue("Main", "Visuals", "ESP Settings", "ESP Fade Time")
-                local fraction = math.timefraction(self.timedestroyed, self.timedestroyed+fadetime, tick())
-                
-                if fraction > 1 then
-                    for i=1, #self.draw_cache do
-                        local v = self.draw_cache[i]
-                        if v[1].Visible then
-                            v[1].Visible = false
-                        end
-                    end
-
-                    self:RemoveInstances()
-                else
-                    fraction = math.remap(fraction, 0, 1, 1, 0)
-
-                    for i=1, #self.draw_cache do
-                        local v = self.draw_cache[i]
-                        if v[1].Visible then
-                            v[1].Transparency = v[2]*fraction
-                        end
-                    end
-
-                    if self.chams then
-                        for i=1, #self.chams do
-                            local v = self.chams[i]
-                            if v[2] then
-                                v[2].Transparency = 1-(v[3]*fraction)
-                            end
-                        end
-                    end
-
-                    self:Render(self._points)
-                end
-            end
-
-            function player_meta:Destroy(forced, kill)
-                self.timesdestroyed = self.timesdestroyed + 1
-                self.timedestroyed = tick()
-                self.fulldestroy = (forced or kill)
-                self.begin_fading = not (forced or kill)
-
-                for i=1, #self.draw_cache do
-                    local v = self.draw_cache[i][1]
-                    if kill then
-                        v:Remove()
-                    elseif forced then
-                        v.Visible = false
-                    end
-                end
-
-                if forced or kill then
-                    self:RemoveInstances()
-                end
-
-                self.parts = nil
-                log(LOG_DEBUG, "Player ESP: Died ", self.player.Name)
-            end
-        end
-
-        function esp:CreatePlayer(player, controller)
-            local uid = "PLAYER_" .. player.UserId
-            local esp_controller = setmetatable({
-                draw_cache = {},
-                position_cache = {},
-                uniqueid = uid,
-                player = player,
-                players = players,
-                controller = controller,
-                parent = workspace.Players,
-                timesdestroyed = 0,
-            }, self.player_meta)
-            self:Remove(uid)
-            self:Add(esp_controller)
-
-            log(LOG_DEBUG, "Player ESP: Created ", player.Name)
-            return esp_controller
-        end
-
-        local last = ""
-        hook:Add("RageBot.Changed", "BBOT:ESP.Players.Targeted", function(target)
-            if not config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target") then return end
-            local oldobject = esp:Find("PLAYER_" .. last)
-            if oldobject then
-                oldobject:Rebuild()
-            end
-            if target then
-                local object = esp:Find("PLAYER_" .. target.UserId)
-                last = target.UserId
-                if object then
-                    object:Rebuild()
-                end
-            end
-        end)
-
-        hook:Add("PostInitialize", "BBOT:ESP.Players.Load", function()
-            for player, controller in pairs(player_registry) do
-                if controller.updater and player ~= localplayer then
-                    esp:CreatePlayer(player, controller.updater)
-                end
-            end
-
-            timer:Create("esp.checkplayers", 5, 0, function()
-                for player, controller in pairs(player_registry) do
-                    if controller.updater and player ~= localplayer and not esp:Find("PLAYER_" .. player.UserId) then
-                        esp:CreatePlayer(player, controller.updater)
-                    end
-                end
-            end)
-
-            hook:Add("PlayerAdded", "BBOT:ESP.Players", function(player)
-                timer:Create("BBOT:ESP.Players."..player.UserId, 1, 0, function()
-                    if not player_registry[player] or not player_registry[player].updater then return end
-                    timer:Remove("BBOT:ESP.Players."..player.UserId)
-                    esp:CreatePlayer(player, player_registry[player].updater)
-                end)
-            end)
-
-            hook:Add("PlayerRemoving", "BBOT:ESP.Players", function(player)
-                timer:Remove("BBOT:ESP.Players."..player.UserId)
-            end)
-
-            hook:Add("CreateUpdater", "BBOT:ESP.Players", function(player)
-                if player_registry[player] and player_registry[player].updater then
-                    timer:Remove("BBOT:ESP.Players."..player.UserId)
-                    esp:CreatePlayer(player, player_registry[player].updater)
-                end
-            end)
-        end)
-    end
-
-    do
-        local workspace = service:GetService("Workspace")
-
-        do
-            local grenade_meta = {}
-            esp.grenade_meta = {__index = grenade_meta}
-            local char = BBOT.aux.char
-            local roundsystem = BBOT.aux.roundsystem
-            local math = BBOT.math
-
-            function grenade_meta:IsValid()
-                return self.object:IsDescendantOf(self.parent)
-            end
-
-            function grenade_meta:OnRemove()
-                self:Destroy(true)
-                log(LOG_DEBUG, "Grenade ESP: Removing ", self.object.Name)
-            end
-
-            function grenade_meta:Cache(draw)
-                for i=1, #self.draw_cache do
-                    if self.draw_cache[i] == draw then
-                        self.draw_cache[i] = draw
-                        return draw
-                    end
-                end
-                self.draw_cache[#self.draw_cache+1] = draw
-                return draw
-            end
-
-            function grenade_meta:CanRender()
-                if not self.setup then
-                    self.setup = self:Setup()
-                    if not self.setup or (self.physics.time + self.physics.blowuptime) - tick() < 0 then
-                        esp:Remove(self.uniqueid)
                         return false
                     end
                 end
 
-                return true
-            end
-            local col1 = Color3.fromRGB(20, 20, 20)
-            local col2 = Color3.fromRGB(150, 20, 20)
-            local col3 = Color3.fromRGB(50, 50, 50)
-            local col4 = Color3.fromRGB(220, 20, 20)
-            local color = BBOT.color
+                function player_meta:Cache(draw)
+                    for i=1, #self.draw_cache do
+                        if self.draw_cache[i][1] == draw then
+                            self.draw_cache[i][2] = draw.Transparency
+                            return draw
+                        end
+                    end
+                    self.draw_cache[#self.draw_cache+1] = {draw, draw.Transparency}
+                    return draw
+                end
 
-            function grenade_meta:Render()
-                if not self.setup or not self.finalposition then return end
-                if not config:GetValue("Main", "Visuals", "Grenades", "Grenade Warning") then return end
-                local position = self.finalposition.p0
-                local cam_position = camera.CFrame.p
-                local nade_dist = (position - cam_position).Magnitude
-                local draw_cache = self.draw_cache
-                local point, onscreen = camera:WorldToViewportPoint(position)
+                function player_meta:Render(points)
+                    if not self:GetConfig("Enabled") then return end
+                    if not self.parts and not points then return end
+
+                    local points = points
+                    if not points then
+                        points = {}
+                        self._points = points
+                        local offset, absolute = Vector3.new(), false
+                        if self:GetConfig("Flags").Resolved then
+                            offset, absolute = BBOT.aimbot:GetResolvedPosition(self.player)
+                        end
+                        for k, v in pairs(self.parts) do
+                            if k ~= "rootpart" then
+                                local object_bounds_cframe = (CFrame.new(v.Size):ToWorldSpace(CFrame.Angles(v.CFrame:ToOrientation()))).Position
+                                local min, max = v.Position - object_bounds_cframe + offset, v.Position + object_bounds_cframe + offset
+                                if absolute then
+                                    min, max = offset - object_bounds_cframe, offset + object_bounds_cframe
+                                end
+                                local current_points_length = #points
+                                points[current_points_length+1] = Vector3.new(min.x, min.y, min.z)
+                                points[current_points_length+2] = Vector3.new(min.x, max.y, min.z)
+                                points[current_points_length+3] = Vector3.new(max.x, max.y, min.z)
+                                points[current_points_length+4] = Vector3.new(max.x, min.y, min.z)
+                                points[current_points_length+5] = Vector3.new(max.x, max.y, max.z)
+                                points[current_points_length+6] = Vector3.new(min.x, max.y, max.z)
+                                points[current_points_length+7] = Vector3.new(min.x, min.y, max.z)
+                                points[current_points_length+8] = Vector3.new(max.x, min.y, max.z)
+                            end
+                        end
+                    end
+
+                    -- L, W, H
+                    local fail = 0
+                    local points2d = {}
+                    for i=1, #points do
+                        local point, onscreen = camera:WorldToViewportPoint(points[i])
+                        if not onscreen then
+                            fail = fail + 1
+                        end
+                        points2d[#points2d+1] = point
+                    end
+
+                    if fail >= #points then
+                        fail = true
+                    else
+                        fail = false
+                    end
+
+                    local bounding_box = {x=0,y=0,w=0,h=0}
+                    if not fail then
+                        local left = points2d[1].X
+                        local top = points2d[1].Y
+                        local right = points2d[1].X
+                        local bottom = points2d[1].Y
+                        
+                        for i=1,#points2d do
+                            if(points2d[i]) then
+                                if (left > points2d[i].X) then
+                                    left = points2d[i].X
+                                end
+                                if (bottom < points2d[i].Y) then
+                                    bottom = points2d[i].Y
+                                end
+                                if (right < points2d[i].X) then
+                                    right = points2d[i].X
+                                end
+                                if (top > points2d[i].Y) then
+                                    top = points2d[i].Y
+                                end
+                            end
+                        end
+
+                        bounding_box.x = left
+                        bounding_box.y = top
+                        bounding_box.w = right - left
+                        bounding_box.h = bottom - top
+                    end
+
+                    local lefty, righty = 0, 0
+
+                    if self.box and self.box_enabled then
+                        if fail then
+                            self.box_fill.Visible = false
+                            self.box_outline.Visible = false
+                            self.box.Visible = false
+                        else
+                            self.box_fill.Visible = true
+                            self.box_outline.Visible = true
+                            self.box.Visible = true
+
+                            local pos, size = Vector2.new(bounding_box.x, bounding_box.y), Vector2.new(bounding_box.w, bounding_box.h)
+
+                            self.box_fill.Position = pos
+                            self.box_fill.Size = size
+                            self.box_outline.Position = pos
+                            self.box_outline.Size = size
+                            self.box.Position = pos
+                            self.box.Size = size
+                        end
+                    end
+
+                    if self.name and self.name_enabled then
+                        if fail then
+                            self.name.Visible = false
+                        else
+                            self.name.Visible = true
+                            self.name.Position = Vector2.new(bounding_box.x + (bounding_box.w/2) - (self.name.TextBounds.X/2), bounding_box.y - self.name.TextBounds.Y)
+                        end
+                    end
+
+                    local health = math.ceil(hud:getplayerhealth(self.player))
+                    if self.healthbar and self.healthbar_enabled then
+                        if fail then
+                            self.healthbar.Visible = false
+                            self.healthbar_outline.Visible = false
+                        else
+                            self.healthbar.Visible = true
+                            self.healthbar_outline.Visible = true
+                            self.healthbar.Color = color.range(health, {
+                                [1] = {
+                                    start = 0,
+                                    color = self:GetConfig("Health Bar", "Color Low"),
+                                },
+                                [2] = {
+                                    start = 100,
+                                    color = self:GetConfig("Health Bar", "Color Max"),
+                                },
+                            })
+
+                            self.healthbar.Position = Vector2.new(bounding_box.x - 6, bounding_box.y + (bounding_box.h * math.clamp(1-(health/100), 0, 1)))
+                            self.healthbar.Size = Vector2.new(2, bounding_box.h * math.clamp(health/100, 0, 1))
+                            self.healthbar_outline.Position = Vector2.new(bounding_box.x - 6 - 1, bounding_box.y-1)
+                            self.healthbar_outline.Size = Vector2.new(2+2, bounding_box.h+2)
+                        end
+                    end
+
+                    if self.healthtext and self.healthtext_enabled then
+                        if fail then
+                            self.healthtext.Visible = false
+                        else
+                            self.healthtext.Visible = true
+                            local offsety = (self.healthbar_enabled and (bounding_box.h * math.remap(math.clamp(health/100, 0, 1),0,1,1,0)) or lefty)
+                            self.healthtext.Position = Vector2.new(bounding_box.x - self.healthtext.TextBounds.X - (self.healthbar_enabled and 8 or 1), bounding_box.y + offsety - (self.healthbar_enabled and self.healthtext.TextBounds.Y/2 or 0))
+                            self.healthtext.Text = (self.healthbar_enabled and tostring(health) or tostring(health) .. "hp")
+                            lefty = lefty + self.healthtext.TextBounds.Y + 2
+                        end
+                    end
+                end
+
+                function player_meta:GetConfig(...)
+                    if self.player and self.player.Team ~= localplayer.team then
+                        return config:GetValue("Main", "Visuals", "Enemy ESP", ...)
+                    else
+                        return config:GetValue("Main", "Visuals", "Team ESP", ...)
+                    end
+                end
+
+                -- draw:TextOutlined(text, font, x, y, size, centered, color, color2, transparency, visible)
+                -- draw:BoxOutline(x, y, w, h, thickness, color, transparency, visible)
+                local black = Color3.new(0,0,0)
+                function player_meta:OnCreate()
+                    local color, color_transparency = self:GetConfig("Name", "Color")
+                    self.name = self:Cache(draw:TextOutlined(self.player.name, 2, 0, 0, 12, false, color, black, color_transparency, false))
+                    color, color_transparency = self:GetConfig("Box", "Color Fill")
+                    self.box_fill = self:Cache(draw:Box(0, 0, 0, 0, 0, color, color_transparency, false))
+                    color, color_transparency = self:GetConfig("Box", "Color Box")
+                    self.box_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 3, Color3.new(0,0,0), color_transparency, false))
+                    self.box = self:Cache(draw:BoxOutline(0, 0, 0, 0, 0, color, color_transparency, false))
+                    
+                    color, color_transparency = self:GetConfig("Health Bar", "Color Max")
+                    self.healthbar_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.new(0,0,0), color_transparency, false))
+                    self.healthbar = self:Cache(draw:Box(0, 0, 0, 0, 0, color, color_transparency, false))
+                    
+                    color, color_transparency = self:GetConfig("Health Number", "Color")
+                    self.healthtext = self:Cache(draw:TextOutlined("100", 2, 0, 0, 12, false, color, black, color_transparency, false))
+                end
+
+                function player_meta:GetColor(...)
+                    local color, color_transparency = self:GetConfig(...)
+                    if config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target") and aimbot.rage_target and aimbot.rage_target[1] == self.player then
+                        color = config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target", "Aimbot Target")
+                    end
+                    return color, color_transparency
+                end
+
+                function player_meta:Setup()
+                    self.begin_fading = false
+                    local parts = replication.getbodyparts(self.player)
+                    if not parts then return end
+                    self.model = parts.head.Parent
+                    self.parts = parts
+                    local esp_enabled = self:GetConfig("Enabled")
+                    
+                    local color, color_transparency = self:GetColor("Name", "Color")
+                    self.name_enabled = (esp_enabled and self:GetConfig("Name") or false)
+                    self.name.Visible = self.name_enabled
+                    self.name.Color = color
+                    self.name.Transparency = color_transparency
+                    self:Cache(self.name)
+
+                    self.box_enabled = (esp_enabled and self:GetConfig("Box") or false)
+                    self.box_fill.Visible = self.box_enabled
+                    self.box_outline.Visible = self.box_enabled
+                    self.box.Visible = self.box_enabled
+
+                    color, color_transparency = self:GetColor("Box", "Color Fill")
+                    self.box_fill.Color = color
+                    self.box_fill.Transparency = color_transparency
+
+                    color, color_transparency = self:GetColor("Box", "Color Box")
+                    self.box.Color = color
+                    self.box.Transparency = color_transparency
+                    self.box_outline.Transparency = color_transparency
+                    self:Cache(self.box)
+                    self:Cache(self.box_outline)
+                    self:Cache(self.box_fill)
+                    
+                    color, color_transparency = self:GetConfig("Health Bar", "Color Max")
+                    self.healthbar_enabled = (esp_enabled and self:GetConfig("Health Bar") or false)
+                    self.healthbar.Color = color
+                    self.healthbar.Transparency = color_transparency
+                    self.healthbar_outline.Transparency = color_transparency
+                    self.healthbar.Visible = self.healthbar_enabled
+                    self.healthbar_outline.Visible = self.healthbar_enabled
+                    self:Cache(self.healthbar)
+                    self:Cache(self.healthbar_outline)
+                    
+                    color, color_transparency = self:GetConfig("Health Number", "Color")
+                    self.healthtext_enabled = (esp_enabled and self:GetConfig("Health Number") or false)
+                    self.healthtext.Visible = self.healthtext_enabled
+                    self.healthtext.Color = color
+                    self.healthtext.Transparency = color_transparency
+                    self:Cache(self.healthtext)
+
+                    self:RemoveInstances()
+
+                    local container = Instance.new("Folder", esp.playercontainer)
+                    self.container = container
+                    container.Name = self.player.Name
+
+                    if self:GetConfig("Chams") then
+                        local visible, transparency = self:GetConfig("Chams", "Visible Chams")
+                        local invisible, itransparency = self:GetConfig("Chams", "Invisible Chams")
+                        local scale = 0.1
+                        local chams = {}
+                        self.chams = chams
+                        for k, v in pairs(parts) do
+                            if k ~= "rootpart" then
+                                local boxhandle
+                                if v.Name ~= "Head" then
+                                    boxhandle = Instance.new("BoxHandleAdornment", Part)
+                                    chams[#chams+1] = {k, boxhandle, itransparency}
+                                    boxhandle.Size = (v.Size + Vector3.new(0.1, 0.1, 0.1))
+                                else
+                                    boxhandle = Instance.new("CylinderHandleAdornment", Part)
+                                    chams[#chams+1] = {k, boxhandle, itransparency}
+                                    boxhandle.Height = v.Size.y + 0.3
+                                    boxhandle.Radius = v.Size.x * 0.5 + 0.2
+                                    boxhandle.Height -= 0.2
+                                    boxhandle.Radius -= 0.2
+                                    boxhandle.CFrame = CFrame.new(Vector3.new(), Vector3.new(0, 1, 0))
+                                end
+                                boxhandle.Parent = container
+                                boxhandle.Name = "Chams_"..k
+                                boxhandle.Adornee = v
+                                boxhandle.AlwaysOnTop = true
+                                boxhandle.Color3 = invisible
+                                boxhandle.Transparency = 1-itransparency
+                                boxhandle.Visible = true
+                                boxhandle.ZIndex = 1
+                            end
+                        end
+                        scale = 0.25
+                        for k, v in pairs(parts) do
+                            if k ~= "rootpart" then
+                                local boxhandle
+                                if v.Name ~= "Head" then
+                                    boxhandle = Instance.new("BoxHandleAdornment", Part)
+                                    chams[#chams+1] = {k, boxhandle, transparency}
+                                    boxhandle.Size = (v.Size + Vector3.new(0.25, 0.25, 0.25))
+                                else
+                                    boxhandle = Instance.new("CylinderHandleAdornment", Part)
+                                    chams[#chams+1] = {k, boxhandle, transparency}
+                                    boxhandle.Height = v.Size.y + 0.3
+                                    boxhandle.Radius = v.Size.x * 0.5 + 0.2
+                                    boxhandle.CFrame = CFrame.new(Vector3.new(), Vector3.new(0, 1, 0))
+                                end
+                                boxhandle.Parent = container
+                                boxhandle.Name = "UChams_"..k
+                                boxhandle.Adornee = v
+                                boxhandle.AlwaysOnTop = false
+                                boxhandle.Color3 = visible
+                                boxhandle.Transparency = 1-transparency
+                                boxhandle.Visible = true
+                                boxhandle.ZIndex = 1
+                            end
+                        end
+                    end
+
+                    log(LOG_DEBUG, "Player ESP: Now Alive ", self.player.Name)
+                end
+
+                function player_meta:Rebuild()
+                    self:Destroy(true)
+                    self.alive = false
+                end
+
+                function player_meta:RemoveInstances()
+                    if self.chams then
+                        for i=1, #self.chams do
+                            local v = self.chams[i]
+                            if v[2] then
+                                v[2]:Destroy()
+                            end
+                        end
+                        self.chams = nil
+                    end
+                    
+                    if self.container then
+                        self.container:Destroy()
+                        self.container = nil
+                    end
+                end
+
+                function player_meta:KillRender()
+                    if self.alive or not self.timedestroyed or not self.begin_fading then return end
+                    local fadetime = config:GetValue("Main", "Visuals", "ESP Settings", "ESP Fade Time")
+                    local fraction = math.timefraction(self.timedestroyed, self.timedestroyed+fadetime, tick())
+                    
+                    if fraction > 1 then
+                        for i=1, #self.draw_cache do
+                            local v = self.draw_cache[i]
+                            if v[1].Visible then
+                                v[1].Visible = false
+                            end
+                        end
+
+                        self:RemoveInstances()
+                    else
+                        fraction = math.remap(fraction, 0, 1, 1, 0)
+
+                        for i=1, #self.draw_cache do
+                            local v = self.draw_cache[i]
+                            if v[1].Visible then
+                                v[1].Transparency = v[2]*fraction
+                            end
+                        end
+
+                        if self.chams then
+                            for i=1, #self.chams do
+                                local v = self.chams[i]
+                                if v[2] then
+                                    v[2].Transparency = 1-(v[3]*fraction)
+                                end
+                            end
+                        end
+
+                        self:Render(self._points)
+                    end
+                end
+
+                function player_meta:Destroy(forced, kill)
+                    self.timesdestroyed = self.timesdestroyed + 1
+                    self.timedestroyed = tick()
+                    self.fulldestroy = (forced or kill)
+                    self.begin_fading = not (forced or kill)
+
+                    for i=1, #self.draw_cache do
+                        local v = self.draw_cache[i][1]
+                        if kill then
+                            v:Remove()
+                        elseif forced then
+                            v.Visible = false
+                        end
+                    end
+
+                    if forced or kill then
+                        self:RemoveInstances()
+                    end
+
+                    self.parts = nil
+                    log(LOG_DEBUG, "Player ESP: Died ", self.player.Name)
+                end
+            end
+
+            function esp:CreatePlayer(player, controller)
+                local uid = "PLAYER_" .. player.UserId
+                local esp_controller = setmetatable({
+                    draw_cache = {},
+                    position_cache = {},
+                    uniqueid = uid,
+                    player = player,
+                    players = players,
+                    controller = controller,
+                    parent = workspace.Players,
+                    timesdestroyed = 0,
+                }, self.player_meta)
+                self:Remove(uid)
+                self:Add(esp_controller)
+
+                log(LOG_DEBUG, "Player ESP: Created ", player.Name)
+                return esp_controller
+            end
+
+            local last = ""
+            hook:Add("RageBot.Changed", "BBOT:ESP.Players.Targeted", function(target)
+                if not config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target") then return end
+                local oldobject = esp:Find("PLAYER_" .. last)
+                if oldobject then
+                    oldobject:Rebuild()
+                end
+                if target then
+                    local object = esp:Find("PLAYER_" .. target.UserId)
+                    last = target.UserId
+                    if object then
+                        object:Rebuild()
+                    end
+                end
+            end)
+
+            hook:Add("PostInitialize", "BBOT:ESP.Players.Load", function()
+                for player, controller in pairs(player_registry) do
+                    if controller.updater and player ~= localplayer then
+                        esp:CreatePlayer(player, controller.updater)
+                    end
+                end
+
+                timer:Create("esp.checkplayers", 5, 0, function()
+                    for player, controller in pairs(player_registry) do
+                        if controller.updater and player ~= localplayer and not esp:Find("PLAYER_" .. player.UserId) then
+                            esp:CreatePlayer(player, controller.updater)
+                        end
+                    end
+                end)
+
+                hook:Add("PlayerAdded", "BBOT:ESP.Players", function(player)
+                    timer:Create("BBOT:ESP.Players."..player.UserId, 1, 0, function()
+                        if not player_registry[player] or not player_registry[player].updater then return end
+                        timer:Remove("BBOT:ESP.Players."..player.UserId)
+                        esp:CreatePlayer(player, player_registry[player].updater)
+                    end)
+                end)
+
+                hook:Add("PlayerRemoving", "BBOT:ESP.Players", function(player)
+                    timer:Remove("BBOT:ESP.Players."..player.UserId)
+                end)
+
+                hook:Add("CreateUpdater", "BBOT:ESP.Players", function(player)
+                    if player_registry[player] and player_registry[player].updater then
+                        timer:Remove("BBOT:ESP.Players."..player.UserId)
+                        esp:CreatePlayer(player, player_registry[player].updater)
+                    end
+                end)
+            end)
+        end
+
+        do
+            local workspace = service:GetService("Workspace")
+
+            do
+                local grenade_meta = {}
+                esp.grenade_meta = {__index = grenade_meta}
+                local char = BBOT.aux.char
+                local roundsystem = BBOT.aux.roundsystem
+                local math = BBOT.math
+
+                function grenade_meta:IsValid()
+                    return self.object:IsDescendantOf(self.parent)
+                end
+
+                function grenade_meta:OnRemove()
+                    self:Destroy(true)
+                    log(LOG_DEBUG, "Grenade ESP: Removing ", self.object.Name)
+                end
+
+                function grenade_meta:Cache(draw)
+                    for i=1, #self.draw_cache do
+                        if self.draw_cache[i] == draw then
+                            self.draw_cache[i] = draw
+                            return draw
+                        end
+                    end
+                    self.draw_cache[#self.draw_cache+1] = draw
+                    return draw
+                end
+
+                function grenade_meta:CanRender()
+                    if not self.setup then
+                        self.setup = self:Setup()
+                        if not self.setup or (self.physics.time + self.physics.blowuptime) - tick() < 0 then
+                            esp:Remove(self.uniqueid)
+                            return false
+                        end
+                    end
+
+                    return true
+                end
+                local col1 = Color3.fromRGB(20, 20, 20)
+                local col2 = Color3.fromRGB(150, 20, 20)
+                local col3 = Color3.fromRGB(50, 50, 50)
+                local col4 = Color3.fromRGB(220, 20, 20)
+                local color = BBOT.color
+
+                function grenade_meta:Render()
+                    if not self.setup or not self.finalposition then return end
+                    if not config:GetValue("Main", "Visuals", "Grenades", "Grenade Warning") then return end
+                    local position = self.finalposition.p0
+                    local cam_position = camera.CFrame.p
+                    local nade_dist = (position - cam_position).Magnitude
+                    local draw_cache = self.draw_cache
+                    local point, onscreen = camera:WorldToViewportPoint(position)
+                    local screensize = camera.ViewportSize
+                    if not onscreen or point.x > screensize.x - 36 or point.y > screensize.y - 72 then
+                        local relativePos = camera.CFrame:PointToObjectSpace(position)
+                        local angle = math.atan2(-relativePos.y, relativePos.x)
+                        local ox = math.cos(angle)
+                        local oy = math.sin(angle)
+                        local slope = oy / ox
+
+                        local h_edge = screensize.x - 36
+                        local v_edge = screensize.y - 72
+                        if oy < 0 then
+                            v_edge = 0
+                        end
+                        if ox < 0 then
+                            h_edge = 36
+                        end
+                        local y = (slope * h_edge) + (screensize.y / 2) - slope * (screensize.x / 2)
+                        if y > 0 and y < screensize.y - 72 then
+                            point = Vector2.new(h_edge, y)
+                        else
+                            point = Vector2.new(
+                                (v_edge - screensize.y / 2 + slope * (screensize.x / 2)) / slope,
+                                v_edge
+                            )
+                        end
+                    end
+
+                    draw_cache[1].Visible = true
+                    draw_cache[1].Position = Vector2.new(math.floor(point.x), math.floor(point.y + 36))
+
+                    draw_cache[2].Visible = true
+                    draw_cache[2].Position = Vector2.new(math.floor(point.x), math.floor(point.y + 36))
+
+                    draw_cache[4].Visible = true
+                    draw_cache[4].Position = Vector2.new(math.floor(point.x) - 10, math.floor(point.y + 10))
+
+                    draw_cache[3].Visible = true
+                    draw_cache[3].Position = Vector2.new(math.floor(point.x), math.floor(point.y + 36))
+
+                    local d0 = 250 -- max damage
+                    local d1 = 15 -- min damage
+                    local r0 = 8 -- maximum range before the damage starts dropping off due to distance
+                    local r1 = 30 -- minimum range i think idk
+
+                    local damage = nade_dist < r0 and d0 or nade_dist < r1 and (d1 - d0) / (r1 - r0) * (nade_dist - r0) + d0 or 0
+
+                    local wall
+                    if damage > 0 then
+                        wall = workspace:FindPartOnRayWithWhitelist(
+                            Ray.new(cam_position, (position - cam_position)),
+                            roundsystem.raycastwhitelist
+                        )
+                        if wall then
+                            damage = 0
+                        end
+                    end
+
+                    local health = char:gethealth()
+                    local str = damage == 0 and "Safe" or damage >= health and "LETHAL" or string.format("-%d hp", damage)
+                    local nade_percent = math.timefraction(self.physics.time, self.physics.time + self.physics.blowuptime, tick())
+
+                    draw_cache[3].Text = str
+
+                    draw_cache[1].Color = color.range(damage, {
+                        [1] = { start = 15, color = col1 },
+                        [2] = { start = health, color = col2 },
+                    })
+
+                    draw_cache[2].Color = color.range(damage, {
+                        [1] = { start = 15, color = col3 },
+                        [2] = { start = health, color = col4 },
+                    })
+
+                    draw_cache[5].Visible = true
+                    draw_cache[5].Position = Vector2.new(math.floor(point.x) - 16, math.floor(point.y + 50))
+
+                    draw_cache[6].Visible = true
+                    draw_cache[6].Position = Vector2.new(math.floor(point.x) - 15, math.floor(point.y + 51))
+
+                    draw_cache[7].Visible = true
+                    draw_cache[7].Size = Vector2.new(30 * (1 - nade_percent), 2)
+                    draw_cache[7].Position = Vector2.new(math.floor(point.x) - 15, math.floor(point.y + 51))
+                    draw_cache[7].Color = self.color1
+
+                    draw_cache[8].Visible = true
+                    draw_cache[8].Size = Vector2.new(30 * (1 - nade_percent), 2)
+                    draw_cache[8].Position = Vector2.new(math.floor(point.x) - 15, math.floor(point.y + 53))
+                    draw_cache[8].Color = self.color2
+
+                    local tranz = 1
+                    if nade_dist >= 50 then
+                        local closedist = nade_dist - 50
+                        tranz = 1 - (1 * closedist / 30)
+                    end
+
+                    local cache = self.draw_cache
+                    for i = 1, #cache do
+                        cache[i].Transparency = tranz
+                    end
+                end
+
+                --[[{
+                    curi = 1, 
+                    time = initiatetime, 
+                    blowuptime = delaytime - initiatetime, 
+                    frames = { {
+                            t0 = 0, 
+                            p0 = u195, 
+                            v0 = u193, 
+                            offset = Vector3.new(), 
+                            a = gravity, 
+                            rot0 = grenade_mainpart_cframe - grenade_mainpart_cframe.p,
+                            timedelta = 0,
+                            hit = false,
+                            hitnormal = Vector3.new(0,1,0),
+                            rotv = u197, 
+                            glassbreaks = {}
+                        } }
+                };]]
+
+                function grenade_meta:OnCreate()
+                    if self.player ~= localplayer and self.player.Team == localplayer.Team then return end
+                    self.run = true
+
+                    self:Cache(draw:Circle(0, 0, 32, 1, 20, { 20, 20, 20, 215 }, 1, false))
+                    self:Cache(draw:CircleOutline(0, 0, 30, 1, 20, { 50, 50, 50, 255 }, 1, false))
+                    self:Cache(draw:TextOutlined("", 2, 0, 0, 13, true, { 255, 255, 255, 255 }, { 0, 0, 0, 0 }, 1, false))
+                    self:Cache(draw:Image(BBOT.menu.images[6], 0, 0, 23, 30, 1, false))
+                    self:Cache(draw:BoxOutline(0, 0, 32, 6, 0, { 50, 50, 50, 255 }, 1, false))
+                    self:Cache(draw:Box(0, 0, 30, 4, 0, { 30, 30, 30, 255 }, 1, false))
+                    self:Cache(draw:Box(0, 0, 2, 20, 0, { 30, 30, 30, 255 }, 1, false))
+                    self:Cache(draw:Box(0, 0, 2, 20, 0, { 30, 30, 30, 255 }, 1, false))
+
+                    --[[
+                    --(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
+                    Draw:FilledCircle(false, 60, 60, 32, 1, 20, { 20, 20, 20, 215 }, draw_cache[1])
+                    Draw:Circle(false, 60, 60, 30, 1, 20, { 50, 50, 50, 255 }, draw_cache[2])
+                    --(text, font, visible, pos_x, pos_y, size, centered, clr, clr2, tablename)
+                    Draw:OutlinedText("", 2, false, 20, 20, 13, true, { 255, 255, 255, 255 }, { 0, 0, 0 }, draw_cache[3])
+                    --(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+                    Draw:Image(false, BBOT_IMAGES[6], 20, 20, 23, 30, 1, draw_cache[4])
+
+                    --(visible, pos_x, pos_y, width, height, clr, tablename)
+                    Draw:OutlinedRect(false, 20, 20, 32, 6, { 50, 50, 50, 255 }, draw_cache[5])
+                    Draw:FilledRect(false, 20, 20, 30, 4, { 30, 30, 30, 255 }, draw_cache[6])
+            
+                    Draw:FilledRect(false, 20, 20, 2, 20, { 30, 30, 30, 255 }, draw_cache[7])
+                    Draw:FilledRect(false, 20, 20, 2, 20, { 30, 30, 30, 255 }, draw_cache[8])]]
+                end
+
+                function grenade_meta:Setup()
+                    if not self.run then return false end
+                    self.finalposition = self.physics.frames[#self.physics.frames]
+                    self.color1 = config:GetValue("Main", "Visuals", "Grenades", "Grenade Warning", "Warning Color")
+                    self.color2 = Color3.new(
+                        self.color1.R - (20/255),
+                        self.color1.G - (20/255),
+                        self.color1.B - (20/255)
+                    )
+                    return true
+                end
+
+                function grenade_meta:Rebuild()
+                    self:Destroy()
+                    self.setup = false
+                end
+
+                function grenade_meta:Destroy(remove)
+                    if remove then
+                        for i=1, #self.draw_cache do
+                            local v = self.draw_cache[i]
+                            if draw:IsValid(v) then
+                                v:Remove()
+                            end
+                        end
+                    end
+                end
+            end
+
+            function esp:CreateGrenade(object, player, grenadename, physics)
+                local uid = "GRENADE_" .. object.Name .. "_" .. object:GetDebugId()
+                local esp_controller = setmetatable({
+                    draw_cache = {},
+                    uniqueid = uid,
+                    object = object,
+                    name = grenadename,
+                    physics = physics,
+                    player = player,
+                    parent = workspace.Ignore.Misc,
+                }, self.grenade_meta)
+                self:Remove(uid)
+                self:Add(esp_controller)
+
+                log(LOG_DEBUG, "Grenade ESP: Created ", player.Name, " ", object.Name)
+                return esp_controller
+            end
+
+            hook:Add("Initialize", "BBOT:ESP.Grenades", function()
+                hook:Add("GrenadeCreated", "BBOT:ESP.Grenades", function(...)
+                    esp:CreateGrenade(...)
+                end)
+            end)
+        end
+
+        -- Will make examples...
+    end
+
+    -- Weapon Modifications, I know you cannot do changes while playing, but this allows you to customize the entire gun (Conversion In Progress)
+    -- Skin changer
+    do
+        -- From wholecream
+        -- configs aren't done so they are default to screw-pf aka my stuff...
+        -- this weapon module allows complete utter freedom of the gun's functions
+        -- this is also exactly why a skin changer client-side works fantasticly well...
+        local weapons = {}
+        BBOT.weapons = weapons
+        local hook = BBOT.hook
+        local math = BBOT.math
+        local table = BBOT.table
+        local timer = BBOT.timer
+        local config = BBOT.config
+        local char = BBOT.aux.char
+        local gamelogic = BBOT.aux.gamelogic
+        local network = BBOT.aux.network
+
+        weapons.WeaponDB = require(game:GetService("ReplicatedStorage").AttachmentModules.GunDatabase)
+
+        function weapons.GetToggledSight(weapon)
+            local updateaimstatus = debug.getupvalue(weapon.toggleattachment, 3)
+            return debug.getupvalue(updateaimstatus, 1)
+        end
+
+        -- Welcome to my hell.
+        -- ft. debug.setupvalue
+        local upvaluemods = {} -- testing? no problem reloading the script...
+        hook:Add("Unload", "BBOT:WeaponModifications", function()
+            for i=1, #upvaluemods do
+                local v = upvaluemods[i]
+                debug.setupvalue(unpack(v))
+            end
+        end)
+
+        local function DetourKnifeLoader(related_func, index, knifeloader)
+            local newfunc = function(...)
+                hook:CallP("PreLoadKnife", ...)
+                local knifedata = knifeloader(...)
+                hook:CallP("PostLoadKnife", knifedata, ...)
+                return knifedata
+            end
+            upvaluemods[#upvaluemods+1] = {related_func, index, knifeloader}
+            debug.setupvalue(related_func, index, newcclosure(newfunc))
+        end
+
+        local function DetourGunLoader(related_func, index, gunloader)
+            local newfunc = function(...)
+                hook:CallP("PreLoadGun", ...)
+                local gundata = gunloader(...)
+                hook:CallP("PostLoadGun", gundata, ...)
+                return gundata
+            end
+            upvaluemods[#upvaluemods+1] = {related_func, index, gunloader}
+            debug.setupvalue(related_func, index, newcclosure(newfunc))
+        end
+
+        local done = false -- Causes synapse to crash LOL
+        local function DetourWeaponRequire(related_func, index, getweapoondata)
+            --[[if done then return end
+            done = true
+            local newfunc = function(...)
+                local modifications = getweapoondata(...)
+                modifications = BBOT.CopyTable(modifications)
+                hook:Call("GetWeaponData", modifications)
+                return modifications
+            end
+            upvaluemods[#upvaluemods+1] = {related_func, index, getweapoondata}
+            debug.setupvalue(related_func, index, newfunc)]]
+        end
+
+        local function DetourModifyData(related_func, index, modifydata)
+            local newfunc = function(...)
+                local modifications = modifydata(...)
+                hook:CallP("WeaponModifyData", modifications)
+                return modifications
+            end
+            upvaluemods[#upvaluemods+1] = {related_func, index, modifydata}
+            debug.setupvalue(related_func, index, newcclosure(newfunc))
+        end
+
+        local done = false
+        local function DetourGunSway(related_func, index, gunmovement)
+            if done then return end
+            done = true
+            local newfunc = function(...)
+                local cf = gunmovement(...)
+                local mul = 1 -- sway factor config here
+                if mul == 0 then
+                    return CFrame.new()
+                end
+                local x, y, z = cf:GetComponents()
+                x = x * mul
+                y = y * mul
+                z = z * mul
+                local pitch, yaw, roll = cf:ToEulerAnglesYXZ()
+                pitch, yaw, roll = pitch * mul, yaw * mul, roll * mul
+                cf = CFrame.Angles(pitch, yaw, roll) + Vector3.new(x, y, z)
+                return cf
+            end
+            upvaluemods[#upvaluemods+1] = {related_func, index, gunmovement}
+            debug.setupvalue(related_func, index, newcclosure(newfunc))
+        end
+
+        local function DetourGunBob(related_func, index, gunmovement)
+            local newfunc = function(...)
+                local cf = gunmovement(...)
+                local mul = config:GetValue("Main", "Misc", "Tweaks", "Weapon Bob")/100 -- bob factor config here
+                if mul == 0 then
+                    return CFrame.new()
+                end
+                local style = config:GetValue("Main", "Misc", "Tweaks", "Weapon Style")
+                if style == "Doom" then
+                    local mul2 = (math.clamp(char.velocity.Magnitude, 0, 30)/25)
+                    cf = CFrame.Angles((math.sin(tick()*5.5)^2) * (mul*mul2)/16, -math.sin(tick()*5.5) * (mul*mul2)/8, 0) + Vector3.new(math.sin(tick()*5.5) * mul/6, (math.sin(tick()*5.5)^2) * mul/6, 0)*mul2
+                    return cf
+                elseif style == "Quake III" then
+                    local mul2 = (math.clamp(char.velocity.Magnitude, 0, 30)/25)
+                    cf = CFrame.Angles(0, -math.sin(tick()*8) * (mul*mul2)/8, 0) + Vector3.new(math.sin(tick()*8) * mul/5, -(math.sin(tick()*8)^2) * mul/5, 0)*mul2
+                    return cf
+                elseif style == "Half-Life" then
+                    cf = CFrame.Angles(0, 0, 0) + Vector3.new(0, 0, (math.sin(tick()*8) * mul/6))*(math.clamp(char.velocity.Magnitude, 0, 35)/30)
+                    return cf
+                else
+                    local x, y, z = cf:GetComponents()
+                    x = x * mul
+                    y = y * mul
+                    z = z * mul
+                    local pitch, yaw, roll = cf:ToEulerAnglesYXZ()
+                    pitch, yaw, roll = pitch * mul, yaw * mul, roll * mul
+                    cf = CFrame.Angles(pitch, yaw, roll) + Vector3.new(x, y, z)
+                    return cf
+                end
+            end
+            upvaluemods[#upvaluemods+1] = {related_func, index, gunmovement}
+            debug.setupvalue(related_func, index, newcclosure(newfunc))
+        end
+
+        local workspace = BBOT.service:GetService("Workspace")
+        hook:Add("Initialize", "BBOT:Weapons.Detour", function()
+            local receivers = network.receivers
+            for k, v in pairs(receivers) do
+                local const = debug.getconstants(v)
+                if table.quicksearch(const, "Trigger") and table.quicksearch(const, "Indicator") and table.quicksearch(const, "Ticking") then
+                    hook:Add("Unload", "BBOT:GrenadeThrown-"..tostring(k), function()
+                        rawset(receivers, k, v)
+                    end)
+                    rawset(receivers, k, function(player, grenadename, animtable, ...)
+                        local thingy = workspace.Ignore.Misc.DescendantAdded:Connect(function(descendant)
+                            if descendant.Name ~= "Trigger" then return end
+                            timer:Async(function() hook:Call("GrenadeCreated", descendant, player, grenadename, animtable) end)
+                        end)
+                        v(player, grenadename, animtable, ...)
+                        thingy:Disconnect()
+                    end)
+                end
+                local ups = debug.getupvalues(v)
+                for upperindex, related_func in pairs(ups) do
+                    if typeof(related_func) == "function" then
+                        local funcname = debug.getinfo(related_func).name
+                        if funcname == "loadgun" then
+                            local _ups = debug.getupvalues(related_func)
+                            for index, modifydata in pairs(_ups) do
+                                if typeof(modifydata) == "function" then
+                                    -- this also contains "gunbob" and "gunsway"
+                                    -- we can change these as well...
+                                    local name = debug.getinfo(modifydata).name
+                                    if name == "gunrequire" then
+                                        DetourWeaponRequire(related_func, index, modifydata)
+                                    elseif name == "modifydata" then
+                                        DetourModifyData(related_func, index, modifydata) -- Stats modification
+                                    elseif name == "gunbob" then
+                                        DetourGunBob(related_func, index, modifydata)
+                                    elseif name == "gunsway" then
+                                        DetourGunSway(related_func, index, modifydata)
+                                    end
+                                end
+                            end
+                            DetourGunLoader(v, upperindex, related_func) -- this will allow us to modify before and after events of gun loading
+                            -- Want rainbow guns? well there ya go
+                        elseif funcname == "loadknife" then
+                            local _ups = debug.getupvalues(related_func)
+                            for index, modifydata in pairs(_ups) do
+                                if typeof(modifydata) == "function" then
+                                    -- this also contains "gunbob" and "gunsway"
+                                    -- we can change these as well...
+                                    local name = debug.getinfo(modifydata).name
+                                    if name == "gunbob" then
+                                        DetourGunBob(related_func, index, modifydata)
+                                    elseif name == "gunsway" then
+                                        DetourGunSway(related_func, index, modifydata)
+                                    end
+                                end
+                            end
+
+                            DetourKnifeLoader(v, upperindex, related_func)
+                        end
+                    end
+                end
+            end
+
+            do
+                local ogrenadeloader = rawget(char, "loadgrenade")
+                hook:Add("Unload", "UndoWeaponDetourGrenades", function()
+                    rawset(char, "loadgrenade", ogrenadeloader)
+                end)
+                local function loadgrenadee(self, ...)
+                    hook:CallP("PreLoadGrenade", ...)
+                    local gundata = ogrenadeloader(self, ...)
+                    hook:CallP("PostLoadGrenade", gundata)
+                    return gundata
+                end
+                rawset(char, "loadgrenade", newcclosure(loadgrenadee))
+            end
+        end)
+
+        -- setup of our detoured controllers
+        hook:Add("PostLoadKnife", "PostLoadKnife", function(gundata, gunname)
+            local ups = debug.getupvalues(gundata.destroy)
+            for k, v in pairs(ups) do
+                local t = typeof(v)
+                if t == "Instance" and v.ClassName == "Model" then
+                    gundata._model = v
+                end
+            end
+
+            local oldhide = gundata.hide
+            function gundata.hide(...)
+                hook:Call("PreHideKnife", gundata, ...)
+                return oldhide(...), hook:Call("PostHideKnife", gundata, ...)
+            end
+
+            local oldshow = gundata.show
+            function gundata.show(...)
+                hook:Call("PreShowKnife", gundata, ...)
+                return oldshow(...), hook:Call("PostShowKnife", gundata, ...)
+            end
+
+            local olddestroy = gundata.destroy
+            function gundata.destroy(...)
+                hook:Call("PreDestroyKnife", gundata, ...)
+                return olddestroy(...), hook:Call("PostDestroyKnife", gundata, ...)
+            end
+
+            local oldsetequipped = gundata.setequipped
+            function gundata.setequipped(...)
+                hook:Call("PreEquippedKnife", gundata, ...)
+                return oldsetequipped(...), hook:Call("PostEquippedKnife", gundata, ...)
+            end
+
+            local ups = debug.getupvalues(gundata.playanimation)
+            for k, v in pairs(ups) do
+                local t = typeof(v)
+                if t == "table" and v.camodata and typeof(v.larm) == "table" and v.larm.basec0 then
+                    gundata._anims = v
+                end
+            end
+
+            local oldstep = gundata.step
+            function gundata.step(...)
+                if gamelogic.currentgun == gundata then
+                    hook:CallP("PreKnifeStep", gundata)
+                end
+                local a, b, c, d = oldstep(...)
+                if gamelogic.currentgun == gundata then
+                    hook:CallP("PostKnifeStep", gundata)
+                end
+                return a, b, c, d
+            end
+        end)
+
+        hook:Add("PostLoadGun", "PostLoadGun", function(gundata, gunname)
+            local oldstep = gundata.step
+            local ups = debug.getupvalues(gundata.playanimation)
+            for k, v in pairs(ups) do
+                local t = typeof(v)
+                if t == "table" and v.camodata and typeof(v.larm) == "table" and v.larm.basec0 then
+                    gundata._anims = v
+                end
+            end
+
+            local ups = debug.getupvalues(gundata.destroy)
+            for k, v in pairs(ups) do
+                local t = typeof(v)
+                if t == "Instance" and v.ClassName == "Model" then
+                    gundata._model = v
+                end
+            end
+
+            local oldhide = gundata.hide
+            function gundata.hide(...)
+                hook:Call("PreHideWeapon", gundata, ...)
+                return oldhide(...), hook:Call("PostHideWeapon", gundata, ...)
+            end
+
+            local oldshow = gundata.show
+            function gundata.show(...)
+                hook:Call("PreShowWeapon", gundata, ...)
+                return oldshow(...), hook:Call("PostShowWeapon", gundata, ...)
+            end
+
+            local olddestroy = gundata.destroy
+            function gundata.destroy(...)
+                hook:Call("PreDestroyWeapon", gundata, ...)
+                return olddestroy(...), hook:Call("PostDestroyWeapon", gundata, ...)
+            end
+
+            local oldsetequipped = gundata.setequipped
+            function gundata.setequipped(...)
+                hook:Call("PreEquippedWeapon", gundata, ...)
+                return oldsetequipped(...), hook:Call("PostEquippedWeapon", gundata, ...)
+            end
+
+            local ups = debug.getupvalues(oldsetequipped)
+            for k, v in pairs(ups) do
+                if typeof(v) == "function" then
+                    local name = debug.getinfo(v).name
+                    if name == "updatefiremodestability" then
+                        local ups = debug.getupvalues(v)
+                        for kk, vv in pairs(ups) do
+                            if typeof(vv) == "number" then
+                                if kk == 4 and vv == 1 then
+                                    function gundata:getfiremode()
+                                        local mode = debug.getupvalue(v, kk) or 1
+                                        local rate
+                                        if typeof(self.data.firerate) == "table" then
+                                            rate = self.data.firerate[mode]
+                                        else
+                                            rate = self.data.firerate
+                                        end
+                                        return self.data.firemodes[mode], rate
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            local ups = debug.getupvalues(oldstep)
+            for k, v in pairs(ups) do
+                if typeof(v) == "function" then
+                    local ran, consts = pcall(debug.getconstants, v)
+                    if ran and table.quicksearch(consts, "onfire") and table.quicksearch(consts, "pullout") and table.quicksearch(consts, "straightpull") and table.quicksearch(consts, "zoom") and table.quicksearch(consts, "zoompullout") then
+                        debug.setupvalue(oldstep, k, function(...)
+                            if gamelogic.currentgun == gundata then
+                                hook:CallP("PreFireStep", gundata)
+                            end
+                            local a, b, c, d = v(...)
+                            if gamelogic.currentgun == gundata then
+                                hook:CallP("PostFireStep", gundata)
+                            end
+                            return a, b, c, d
+                        end)
+                    end
+                end
+            end
+
+            function gundata.step(...)
+                -- this is where the aimbot controller will be
+                if gamelogic.currentgun == gundata then
+                    hook:CallP("PreWeaponStep", gundata)
+                end
+                local a, b, c, d = oldstep(...)
+                if gamelogic.currentgun == gundata then
+                    hook:CallP("PostWeaponStep", gundata)
+                end
+                return a, b, c, d
+            end
+
+            for class, v in pairs(weapons.WeaponDB.weplist) do
+                for i=1, #v do
+                    if v[i] == gunname then
+                        gundata.___class = class
+                        return
+                    end
+                end
+            end
+        end)
+
+        -- Grenades Wow
+        -- config:GetValue("Main", "Visuals", "Grenades", "Grenade Warning")
+
+        do
+            local camera = BBOT.service:GetService("CurrentCamera")
+            local localplayer = BBOT.service:GetService("LocalPlayer")
+            local char = BBOT.aux.char
+            local roundsystem = BBOT.aux.roundsystem
+            local cframe = BBOT.aux.cframe
+            local draw = BBOT.draw
+            local grenade_prediction_lines = {}
+
+            local function CalculateGrenadePathway(grenade_mainpart, grenadedata, delaytime)
+                local initiatetime = 0
+            
+                local me_HumanoidRootPart = localplayer.Character:FindFirstChild("HumanoidRootPart")
+                local u193 = char.alive and (camera.CFrame * CFrame.Angles(math.rad(grenadedata.throwangle and 0), 0, 0)).lookVector * grenadedata.throwspeed + me_HumanoidRootPart.Velocity or Vector3.new(math.random(-3, 5), math.random(0, 2), math.random(-3, 5));
+                local u195 = char.deadcf and char.deadcf.p or grenade_mainpart.CFrame.p;
+                local u197 = (camera.CFrame - camera.CFrame.p) * Vector3.new(19.539, -5, 0);
+                local u198 = grenade_mainpart.CFrame - grenade_mainpart.CFrame.p;
+                local grenade_mainpart_cframe = grenade_mainpart.CFrame;
+                local gravity = Vector3.new(0, -80, 0)
+                local windowsbroken = 0
+                local u202 = Vector3.new()
+                local u146 = u202.Dot
+                local u203 = false
+                local timedelta = 0.016666666666666666
+                local pathtable = {
+                    curi = 1, 
+                    time = initiatetime, 
+                    blowuptime = delaytime - initiatetime, 
+                    frames = { {
+                            t0 = 0, 
+                            p0 = u195, 
+                            v0 = u193, 
+                            offset = Vector3.new(), 
+                            a = gravity, 
+                            rot0 = grenade_mainpart_cframe - grenade_mainpart_cframe.p,
+                            timedelta = 0,
+                            hit = false,
+                            hitnormal = Vector3.new(0,1,0),
+                            rotv = u197, 
+                            glassbreaks = {}
+                        } }
+                };
+                local timedeltaacc = (timedelta ^ 2)*0.5
+                for v765 = 1, (delaytime - initiatetime) / timedelta + 1 do
+                    local v766 = u195 + timedelta * u193 + timedeltaacc * gravity; -- kinematics basically
+                    local v767, v768, v769 = workspace:FindPartOnRayWithWhitelist(Ray.new(u195, v766 - u195 - 0.05 * u202),roundsystem.raycastwhitelist);
+                    local v770 = timedelta * v765;
+                    if v767 and v767.Name ~= "Window" and v767.Name ~= "Col" then
+                        u198 = grenade_mainpart.CFrame - grenade_mainpart.CFrame.p;
+                        u202 = 0.2 * v769;
+                        u197 = v769:Cross(u193) / 0.2;
+                        local v771 = v768 - u195;
+                        local v772 = 1 - 0.001 / v771.magnitude;
+                        if v772 < 0 then
+                            local v773 = 0;
+                        else
+                            v773 = v772;
+                        end;
+                        u195 = u195 + v773 * v771 + 0.05 * v769;
+                        local v774 = u146(v769, u193) * v769;
+                        local v775 = u193 - v774;
+                        local v776 = -u146(v769, gravity);
+                        local v777 = -1.2 * u146(v769, u193);
+                        if v776 < 0 then
+                            local v778 = 0;
+                        else
+                            v778 = v776;
+                        end;
+                        if v777 < 0 then
+                            local v779 = 0;
+                        else
+                            v779 = v777;
+                        end;
+                        local v780 = 1 - 0.08 * (10 * v778 * timedelta + v779) / v775.magnitude;
+                        if v780 < 0 then
+                            local v781 = 0;
+                        else
+                            v781 = v780;
+                        end;
+                        u193 = v781 * v775 - 0.2 * v774;
+                        if u193.magnitude < 1 then
+                            local l__frames__782 = pathtable.frames;
+                            l__frames__782[#l__frames__782 + 1] = {
+                                t0 = v770 - timedelta * (v766 - v768).magnitude / (v766 - u195).magnitude, 
+                                p0 = u195, 
+                                v0 = u161, 
+                                a = u161, 
+                                rot0 = cframe.fromaxisangle (v770 * u197) * u198, 
+                                offset = 0.2 * v769, 
+                                rotv = u161,
+                                hitnormal = v769,
+                                hit = true,
+                                timedelta = timedelta * v765,
+                                glassbreaks = {}
+                            };
+                            break;
+                        end;
+                        local l__frames__783 = pathtable.frames;
+                        l__frames__783[#l__frames__783 + 1] = {
+                            t0 = v770 - timedelta * (v766 - v768).magnitude / (v766 - u195).magnitude, 
+                            p0 = u195, 
+                            v0 = u193, 
+                            a = u203 and u161 or gravity, 
+                            rot0 = cframe.fromaxisangle (v770 * u197) * u198, 
+                            offset = 0.2 * v769, 
+                            rotv = u197,
+                            timedelta = timedelta * v765,
+                            hitnormal = v769,
+                            hit = true,
+                            glassbreaks = {}
+                        };
+                        u203 = true;
+                    else
+                        u195 = v766;
+                        u193 = u193 + timedelta * gravity;
+                        u203 = false;
+                        local l__frames__783 = pathtable.frames;
+                        l__frames__783[#l__frames__783 + 1] = {
+                            t0 = v770 - timedelta * (v766 - v768).magnitude / (v766 - u195).magnitude, 
+                            p0 = u195, 
+                            v0 = u193, 
+                            a = u203 and u161 or gravity, 
+                            rot0 = cframe.fromaxisangle (v770 * u197) * u198, 
+                            offset = 0.2 * v769, 
+                            rotv = u197,
+                            timedelta = timedelta * v765,
+                            hitnormal = Vector3.new(0,1,0),
+                            hit = false,
+                            glassbreaks = {}
+                        };
+                        --[[if v767 and v767.Name == "Window" and windowsbroken < 5 then
+                            windowsbroken = windowsbroken + 1;
+                            local l__frames__784 = pathtable.frames;
+                            local l__glassbreaks__785 = l__frames__784[#l__frames__784].glassbreaks;
+                            l__glassbreaks__785[#l__glassbreaks__785 + 1] = {
+                                t = v770, 
+                                part = v767
+                            };
+                        end;]]
+                    end;
+                end;
+                return pathtable
+            end
+            
+            local draw_endpos, draw_endpos_outline
+            local function RemovePredictionLines()
+                for i=1, #grenade_prediction_lines do
+                    local v = grenade_prediction_lines[i]
+                    if v and draw:IsValid(v[1]) and draw:IsValid(v[2]) then
+                        v[1]:Remove()
+                        v[2]:Remove()
+                    end
+                end
+                grenade_prediction_lines = {}
+                if draw_endpos then
+                    draw_endpos:Remove()
+                    draw_endpos_outline:Remove()
+                    draw_endpos = nil
+                    draw_endpos_outline = nil
+                end
+            end
+
+            hook:Add("OnAliveChanged", "BBOT:GrenadePrediction", function(alive)
+                if not alive then
+                    RemovePredictionLines()
+                end
+            end)
+            
+            local dark = Color3.new(0,0,0)
+
+            local function ManagePredictionLines(frames, curframe)
+                local parts = grenade_prediction_lines
+                local partlen, framelen = #parts, #frames
+                local col = config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction", "Prediction Color")
+                if partlen < framelen then
+                    local creates = framelen - partlen
+                    for i=1, creates do
+                        local darkline = draw:Line(0, 0, 0, 0, 4, dark, 1, true)
+                        darkline.ZIndex = 0
+                        local line = draw:Line(0, 0, 0, 0, 0, col, 1, true)
+                        line.ZIndex = 1
+                        parts[#parts+1]={darkline, line}
+                    end
+                elseif partlen > framelen then
+                    local c = 0
+                    for i=framelen, partlen do
+                        if parts[i-c] then
+                            parts[i-c][1]:Remove()
+                            parts[i-c][2]:Remove()
+                            table.remove(parts, i-c)
+                        end
+                    end
+                end
+
+                local lastframe = frames[1]
+                local final = frames[#frames]
+                if not draw_endpos then
+                    draw_endpos_outline = draw:Circle(x, y, 10, 1, 20, dark, 1, true)
+                    draw_endpos_outline.ZIndex = 2
+                    draw_endpos = draw:Circle(x, y, 8, 1, 20, col, 1, true)
+                    draw_endpos.ZIndex = 3
+                end
+                local point, onscreen = camera:WorldToViewportPoint(final.p0)
                 local screensize = camera.ViewportSize
                 if not onscreen or point.x > screensize.x - 36 or point.y > screensize.y - 72 then
-                    local relativePos = camera.CFrame:PointToObjectSpace(position)
+                    local relativePos = camera.CFrame:PointToObjectSpace(final.p0)
                     local angle = math.atan2(-relativePos.y, relativePos.x)
                     local ox = math.cos(angle)
                     local oy = math.sin(angle)
@@ -12251,1361 +13077,569 @@ do
                         )
                     end
                 end
-
-                draw_cache[1].Visible = true
-                draw_cache[1].Position = Vector2.new(math.floor(point.x), math.floor(point.y + 36))
-
-                draw_cache[2].Visible = true
-                draw_cache[2].Position = Vector2.new(math.floor(point.x), math.floor(point.y + 36))
-
-                draw_cache[4].Visible = true
-                draw_cache[4].Position = Vector2.new(math.floor(point.x) - 10, math.floor(point.y + 10))
-
-                draw_cache[3].Visible = true
-                draw_cache[3].Position = Vector2.new(math.floor(point.x), math.floor(point.y + 36))
-
-                local d0 = 250 -- max damage
-                local d1 = 15 -- min damage
-                local r0 = 8 -- maximum range before the damage starts dropping off due to distance
-                local r1 = 30 -- minimum range i think idk
-
-                local damage = nade_dist < r0 and d0 or nade_dist < r1 and (d1 - d0) / (r1 - r0) * (nade_dist - r0) + d0 or 0
-
-                local wall
-                if damage > 0 then
-                    wall = workspace:FindPartOnRayWithWhitelist(
-                        Ray.new(cam_position, (position - cam_position)),
-                        roundsystem.raycastwhitelist
-                    )
-                    if wall then
-                        damage = 0
+                draw_endpos.Position = Vector2.new(point.X, point.Y)
+                draw_endpos_outline.Position = Vector2.new(point.X, point.Y)
+                for i=(curframe and curframe+1 or 2), framelen do
+                    local v = parts[i]
+                    if not v then break end
+                    local framedata = frames[i]
+                    local point1, onscreen1 = camera:WorldToViewportPoint(lastframe.p0)
+                    local point2, onscreen2 = camera:WorldToViewportPoint(framedata.p0)
+                    if not onscreen1 and not onscreen2 then
+                        v[1].Visible = false
+                        v[2].Visible = false
+                        lastframe = framedata
+                        continue
                     end
-                end
-
-                local health = char:gethealth()
-                local str = damage == 0 and "Safe" or damage >= health and "LETHAL" or string.format("-%d hp", damage)
-                local nade_percent = math.timefraction(self.physics.time, self.physics.time + self.physics.blowuptime, tick())
-
-                draw_cache[3].Text = str
-
-                draw_cache[1].Color = color.range(damage, {
-                    [1] = { start = 15, color = col1 },
-                    [2] = { start = health, color = col2 },
-                })
-
-                draw_cache[2].Color = color.range(damage, {
-                    [1] = { start = 15, color = col3 },
-                    [2] = { start = health, color = col4 },
-                })
-
-                draw_cache[5].Visible = true
-                draw_cache[5].Position = Vector2.new(math.floor(point.x) - 16, math.floor(point.y + 50))
-
-                draw_cache[6].Visible = true
-                draw_cache[6].Position = Vector2.new(math.floor(point.x) - 15, math.floor(point.y + 51))
-
-                draw_cache[7].Visible = true
-                draw_cache[7].Size = Vector2.new(30 * (1 - nade_percent), 2)
-                draw_cache[7].Position = Vector2.new(math.floor(point.x) - 15, math.floor(point.y + 51))
-                draw_cache[7].Color = self.color1
-
-                draw_cache[8].Visible = true
-                draw_cache[8].Size = Vector2.new(30 * (1 - nade_percent), 2)
-                draw_cache[8].Position = Vector2.new(math.floor(point.x) - 15, math.floor(point.y + 53))
-                draw_cache[8].Color = self.color2
-
-                local tranz = 1
-                if nade_dist >= 50 then
-                    local closedist = nade_dist - 50
-                    tranz = 1 - (1 * closedist / 30)
-                end
-
-                local cache = self.draw_cache
-                for i = 1, #cache do
-                    cache[i].Transparency = tranz
+                    v[1].Visible = true
+                    v[2].Visible = true
+                    v[1].From = Vector2.new(point1.X, point1.Y)
+                    v[1].To = Vector2.new(point2.X, point2.Y)
+                    v[2].From = Vector2.new(point1.X, point1.Y)
+                    v[2].To = Vector2.new(point2.X, point2.Y)
+                    lastframe = framedata
                 end
             end
 
-            --[[{
-                curi = 1, 
-                time = initiatetime, 
-                blowuptime = delaytime - initiatetime, 
-                frames = { {
-                        t0 = 0, 
-                        p0 = u195, 
-                        v0 = u193, 
-                        offset = Vector3.new(), 
-                        a = gravity, 
-                        rot0 = grenade_mainpart_cframe - grenade_mainpart_cframe.p,
-                        timedelta = 0,
-                        hit = false,
-                        hitnormal = Vector3.new(0,1,0),
-                        rotv = u197, 
-                        glassbreaks = {}
-                    } }
-            };]]
-
-            function grenade_meta:OnCreate()
-                if self.player ~= localplayer and self.player.Team == localplayer.Team then return end
-                self.run = true
-
-                self:Cache(draw:Circle(0, 0, 32, 1, 20, { 20, 20, 20, 215 }, 1, false))
-                self:Cache(draw:CircleOutline(0, 0, 30, 1, 20, { 50, 50, 50, 255 }, 1, false))
-                self:Cache(draw:TextOutlined("", 2, 0, 0, 13, true, { 255, 255, 255, 255 }, { 0, 0, 0, 0 }, 1, false))
-                self:Cache(draw:Image(BBOT.menu.images[6], 0, 0, 23, 30, 1, false))
-                self:Cache(draw:BoxOutline(0, 0, 32, 6, 0, { 50, 50, 50, 255 }, 1, false))
-                self:Cache(draw:Box(0, 0, 30, 4, 0, { 30, 30, 30, 255 }, 1, false))
-                self:Cache(draw:Box(0, 0, 2, 20, 0, { 30, 30, 30, 255 }, 1, false))
-                self:Cache(draw:Box(0, 0, 2, 20, 0, { 30, 30, 30, 255 }, 1, false))
-
-                --[[
-                --(visible, pos_x, pos_y, size, thickness, sides, clr, tablename)
-                Draw:FilledCircle(false, 60, 60, 32, 1, 20, { 20, 20, 20, 215 }, draw_cache[1])
-                Draw:Circle(false, 60, 60, 30, 1, 20, { 50, 50, 50, 255 }, draw_cache[2])
-                --(text, font, visible, pos_x, pos_y, size, centered, clr, clr2, tablename)
-                Draw:OutlinedText("", 2, false, 20, 20, 13, true, { 255, 255, 255, 255 }, { 0, 0, 0 }, draw_cache[3])
-                --(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
-                Draw:Image(false, BBOT_IMAGES[6], 20, 20, 23, 30, 1, draw_cache[4])
-
-                --(visible, pos_x, pos_y, width, height, clr, tablename)
-                Draw:OutlinedRect(false, 20, 20, 32, 6, { 50, 50, 50, 255 }, draw_cache[5])
-                Draw:FilledRect(false, 20, 20, 30, 4, { 30, 30, 30, 255 }, draw_cache[6])
-        
-                Draw:FilledRect(false, 20, 20, 2, 20, { 30, 30, 30, 255 }, draw_cache[7])
-                Draw:FilledRect(false, 20, 20, 2, 20, { 30, 30, 30, 255 }, draw_cache[8])]]
-            end
-
-            function grenade_meta:Setup()
-                if not self.run then return false end
-                self.finalposition = self.physics.frames[#self.physics.frames]
-                self.color1 = config:GetValue("Main", "Visuals", "Grenades", "Grenade Warning", "Warning Color")
-                self.color2 = Color3.new(
-                    self.color1.R - (20/255),
-                    self.color1.G - (20/255),
-                    self.color1.B - (20/255)
-                )
-                return true
-            end
-
-            function grenade_meta:Rebuild()
-                self:Destroy()
-                self.setup = false
-            end
-
-            function grenade_meta:Destroy(remove)
-                if remove then
-                    for i=1, #self.draw_cache do
-                        local v = self.draw_cache[i]
-                        if draw:IsValid(v) then
-                            v:Remove()
+            hook:Add("PostLoadGrenade", "PostLoadGrenade", function(grenadehandler)
+                local ups = debug.getupvalues(grenadehandler.throw)
+                local createnade, createnadeid
+                for k, v in pairs(ups) do
+                    if typeof(v) == "function" then
+                        local name = debug.getinfo(v).name
+                        if name == "createnade" then
+                            createnade = v
+                            createnadeid = k
                         end
                     end
                 end
-            end
-        end
 
-        function esp:CreateGrenade(object, player, grenadename, physics)
-            local uid = "GRENADE_" .. object.Name .. "_" .. object:GetDebugId()
-            local esp_controller = setmetatable({
-                draw_cache = {},
-                uniqueid = uid,
-                object = object,
-                name = grenadename,
-                physics = physics,
-                player = player,
-                parent = workspace.Ignore.Misc,
-            }, self.grenade_meta)
-            self:Remove(uid)
-            self:Add(esp_controller)
+                local mainpart = debug.getupvalue(createnade, 2)
+                if typeof(mainpart) ~= "Instance" then
+                    mainpart = nil
+                end
 
-            log(LOG_DEBUG, "Grenade ESP: Created ", player.Name, " ", object.Name)
-            return esp_controller
-        end
+                local _pull = grenadehandler.pull
+                local ups = debug.getupvalues(_pull)
 
-        hook:Add("Initialize", "BBOT:ESP.Grenades", function()
-            hook:Add("GrenadeCreated", "BBOT:ESP.Grenades", function(...)
-                esp:CreateGrenade(...)
+                local blowuptimeindex = #ups
+                local throwinhandindex = #ups-2
+                local grenadedataindex
+                local grenadedata
+                for k, v in pairs(ups) do
+                    if typeof(v) == "table" then
+                        if v.throwspeed then
+                            grenadedata = v
+                            grenadedata = table.deepcopy(grenadedata)
+                            grenadedataindex = k
+                            debug.setupvalue(_pull, k, grenadedata)
+                        end
+                    end
+                end
+
+                local showpath = true
+                local created = false
+                local function _createnade(...)
+                    created = true
+                    RemovePredictionLines()
+                    return createnade(...)
+                end
+
+                debug.setupvalue(grenadehandler.throw, createnadeid, newcclosure(_createnade))
+
+                local pathway
+                function grenadehandler.pull(...)
+                    _pull(...)
+                    local step = grenadehandler.step
+                    function grenadehandler.step()
+                        step()
+                        if config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction") then
+                            if not created and mainpart then
+                                pathway = CalculateGrenadePathway(mainpart, grenadedata, onimpact and 3 or debug.getupvalue(_pull, blowuptimeindex) - tick())
+                                ManagePredictionLines(pathway.frames)
+                            end
+                        end
+                    end
+                end
             end)
-        end)
-    end
-
-    -- Will make examples...
-end
-
--- Weapon Modifications, I know you cannot do changes while playing, but this allows you to customize the entire gun (Conversion In Progress)
--- Skin changer
-do
-    -- From wholecream
-    -- configs aren't done so they are default to screw-pf aka my stuff...
-    -- this weapon module allows complete utter freedom of the gun's functions
-    -- this is also exactly why a skin changer client-side works fantasticly well...
-    local weapons = {}
-    BBOT.weapons = weapons
-    local hook = BBOT.hook
-    local math = BBOT.math
-    local table = BBOT.table
-    local timer = BBOT.timer
-    local config = BBOT.config
-    local char = BBOT.aux.char
-    local gamelogic = BBOT.aux.gamelogic
-    local network = BBOT.aux.network
-
-    weapons.WeaponDB = require(game:GetService("ReplicatedStorage").AttachmentModules.GunDatabase)
-
-    function weapons.GetToggledSight(weapon)
-        local updateaimstatus = debug.getupvalue(weapon.toggleattachment, 3)
-        return debug.getupvalue(updateaimstatus, 1)
-    end
-
-    -- Welcome to my hell.
-    -- ft. debug.setupvalue
-    local upvaluemods = {} -- testing? no problem reloading the script...
-    hook:Add("Unload", "BBOT:WeaponModifications", function()
-        for i=1, #upvaluemods do
-            local v = upvaluemods[i]
-            debug.setupvalue(unpack(v))
         end
-    end)
 
-    local function DetourKnifeLoader(related_func, index, knifeloader)
-        local newfunc = function(...)
-            hook:CallP("PreLoadKnife", ...)
-            local knifedata = knifeloader(...)
-            hook:CallP("PostLoadKnife", knifedata, ...)
-            return knifedata
-        end
-        upvaluemods[#upvaluemods+1] = {related_func, index, knifeloader}
-        debug.setupvalue(related_func, index, newcclosure(newfunc))
-    end
-
-    local function DetourGunLoader(related_func, index, gunloader)
-        local newfunc = function(...)
-            hook:CallP("PreLoadGun", ...)
-            local gundata = gunloader(...)
-            hook:CallP("PostLoadGun", gundata, ...)
-            return gundata
-        end
-        upvaluemods[#upvaluemods+1] = {related_func, index, gunloader}
-        debug.setupvalue(related_func, index, newcclosure(newfunc))
-    end
-
-    local done = false -- Causes synapse to crash LOL
-    local function DetourWeaponRequire(related_func, index, getweapoondata)
-        --[[if done then return end
-        done = true
-        local newfunc = function(...)
-            local modifications = getweapoondata(...)
-            modifications = BBOT.CopyTable(modifications)
-            hook:Call("GetWeaponData", modifications)
-            return modifications
-        end
-        upvaluemods[#upvaluemods+1] = {related_func, index, getweapoondata}
-        debug.setupvalue(related_func, index, newfunc)]]
-    end
-
-    local function DetourModifyData(related_func, index, modifydata)
-        local newfunc = function(...)
-            local modifications = modifydata(...)
-            hook:CallP("WeaponModifyData", modifications)
-            return modifications
-        end
-        upvaluemods[#upvaluemods+1] = {related_func, index, modifydata}
-        debug.setupvalue(related_func, index, newcclosure(newfunc))
-    end
-
-    local done = false
-    local function DetourGunSway(related_func, index, gunmovement)
-        if done then return end
-        done = true
-        local newfunc = function(...)
-            local cf = gunmovement(...)
-            local mul = 1 -- sway factor config here
-            if mul == 0 then
-                return CFrame.new()
+        -- Modifications
+        --[[hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
+            if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
+            local firemodes = table.deepcopy(modifications.firemodes)
+            local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
+            local single = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Single") and 1 or nil
+            if single and not table.quicksearch(firemodes, single) then
+                table.insert(firemodes, 1, single)
             end
-            local x, y, z = cf:GetComponents()
-            x = x * mul
-            y = y * mul
-            z = z * mul
-            local pitch, yaw, roll = cf:ToEulerAnglesYXZ()
-            pitch, yaw, roll = pitch * mul, yaw * mul, roll * mul
-            cf = CFrame.Angles(pitch, yaw, roll) + Vector3.new(x, y, z)
-            return cf
-        end
-        upvaluemods[#upvaluemods+1] = {related_func, index, gunmovement}
-        debug.setupvalue(related_func, index, newcclosure(newfunc))
-    end
-
-    local function DetourGunBob(related_func, index, gunmovement)
-        local newfunc = function(...)
-            local cf = gunmovement(...)
-            local mul = config:GetValue("Main", "Misc", "Tweaks", "Weapon Bob")/100 -- bob factor config here
-            if mul == 0 then
-                return CFrame.new()
+            local burst3 = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Burst3") and 3 or nil
+            if burst3 and not table.quicksearch(firemodes, burst3) then
+                table.insert(firemodes, 1, burst3)
             end
-            local style = config:GetValue("Main", "Misc", "Tweaks", "Weapon Style")
-            if style == "Doom" then
-                local mul2 = (math.clamp(char.velocity.Magnitude, 0, 30)/25)
-                cf = CFrame.Angles((math.sin(tick()*5.5)^2) * (mul*mul2)/16, -math.sin(tick()*5.5) * (mul*mul2)/8, 0) + Vector3.new(math.sin(tick()*5.5) * mul/6, (math.sin(tick()*5.5)^2) * mul/6, 0)*mul2
-                return cf
-            elseif style == "Quake III" then
-                local mul2 = (math.clamp(char.velocity.Magnitude, 0, 30)/25)
-                cf = CFrame.Angles(0, -math.sin(tick()*8) * (mul*mul2)/8, 0) + Vector3.new(math.sin(tick()*8) * mul/5, -(math.sin(tick()*8)^2) * mul/5, 0)*mul2
-                return cf
-            elseif style == "Half-Life" then
-                cf = CFrame.Angles(0, 0, 0) + Vector3.new(0, 0, (math.sin(tick()*8) * mul/6))*(math.clamp(char.velocity.Magnitude, 0, 35)/30)
-                return cf
+            local auto = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Auto") and true or nil
+            if auto and not table.quicksearch(firemodes, auto) then
+                table.insert(firemodes, 1, auto)
+            end
+            modifications.firemodes = firemodes
+            if firerates and #firerates < #firemodes then
+                local default = firerates[#firerates]
+                for i=1, #firemodes-#firerates do
+                    table.insert(firerates, 1, default)
+                end
+                modifications.firerate = firerates
+            end
+            local mul = config:GetValue("Weapons", "Stat Modifications", "Bullet", "Firerate")
+            if firerates then
+                for i=1, #firerates do
+                    firerates[i] = firerates[i] * mul
+                end
+                modifications.firerate = firerates
             else
-                local x, y, z = cf:GetComponents()
-                x = x * mul
-                y = y * mul
-                z = z * mul
-                local pitch, yaw, roll = cf:ToEulerAnglesYXZ()
-                pitch, yaw, roll = pitch * mul, yaw * mul, roll * mul
-                cf = CFrame.Angles(pitch, yaw, roll) + Vector3.new(x, y, z)
-                return cf
+                modifications.firerate = modifications.firerate * mul;
             end
-        end
-        upvaluemods[#upvaluemods+1] = {related_func, index, gunmovement}
-        debug.setupvalue(related_func, index, newcclosure(newfunc))
-    end
+        end)]]
 
-    local workspace = BBOT.service:GetService("Workspace")
-    hook:Add("Initialize", "BBOT:Weapons.Detour", function()
-        local receivers = network.receivers
-        for k, v in pairs(receivers) do
-            local const = debug.getconstants(v)
-            if table.quicksearch(const, "Trigger") and table.quicksearch(const, "Indicator") and table.quicksearch(const, "Ticking") then
-                hook:Add("Unload", "BBOT:GrenadeThrown-"..tostring(k), function()
-                    rawset(receivers, k, v)
-                end)
-                rawset(receivers, k, function(player, grenadename, animtable, ...)
-                    local thingy = workspace.Ignore.Misc.DescendantAdded:Connect(function(descendant)
-                        if descendant.Name ~= "Trigger" then return end
-                        timer:Async(function() hook:Call("GrenadeCreated", descendant, player, grenadename, animtable) end)
-                    end)
-                    v(player, grenadename, animtable, ...)
-                    thingy:Disconnect()
-                end)
-            end
-            local ups = debug.getupvalues(v)
-            for upperindex, related_func in pairs(ups) do
-                if typeof(related_func) == "function" then
-                    local funcname = debug.getinfo(related_func).name
-                    if funcname == "loadgun" then
-                        local _ups = debug.getupvalues(related_func)
-                        for index, modifydata in pairs(_ups) do
-                            if typeof(modifydata) == "function" then
-                                -- this also contains "gunbob" and "gunsway"
-                                -- we can change these as well...
-                                local name = debug.getinfo(modifydata).name
-                                if name == "gunrequire" then
-                                    DetourWeaponRequire(related_func, index, modifydata)
-                                elseif name == "modifydata" then
-                                    DetourModifyData(related_func, index, modifydata) -- Stats modification
-                                elseif name == "gunbob" then
-                                    DetourGunBob(related_func, index, modifydata)
-                                elseif name == "gunsway" then
-                                    DetourGunSway(related_func, index, modifydata)
-                                end
-                            end
-                        end
-                        DetourGunLoader(v, upperindex, related_func) -- this will allow us to modify before and after events of gun loading
-                        -- Want rainbow guns? well there ya go
-                    elseif funcname == "loadknife" then
-                        local _ups = debug.getupvalues(related_func)
-                        for index, modifydata in pairs(_ups) do
-                            if typeof(modifydata) == "function" then
-                                -- this also contains "gunbob" and "gunsway"
-                                -- we can change these as well...
-                                local name = debug.getinfo(modifydata).name
-                                if name == "gunbob" then
-                                    DetourGunBob(related_func, index, modifydata)
-                                elseif name == "gunsway" then
-                                    DetourGunSway(related_func, index, modifydata)
-                                end
-                            end
-                        end
-
-                        DetourKnifeLoader(v, upperindex, related_func)
+        hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
+            --if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
+            local timescale = config:GetValue("Main", "Misc", "Tweaks", "Reload Speed")/100
+            for i, v in next, modifications.animations do
+                if string.find(string.lower(i), "reload") then
+                    if typeof(modifications.animations[i]) == "table" and modifications.animations[i].timescale then
+                        modifications.animations[i].timescale = (modifications.animations[i].timescale or 1) * timescale
                     end
                 end
             end
-        end
+        end)
 
+        hook:Add("PreKnifeStep", "BBOT:Weapon.SwaySpring", function()
+            local swayspring = debug.getupvalue(BBOT.aux.char.reloadsprings, 6)
+            swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
+        end)
+        
+        hook:Add("PreWeaponStep", "BBOT:Weapon.SwaySpring", function()
+            local swayspring = debug.getupvalue(BBOT.aux.char.reloadsprings, 6)
+            swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
+        end)
+
+        hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
+            local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
+            local mul = config:GetValue("Main", "Misc", "Tweaks", "Firerate")/100
+            if firerates then
+                for i=1, #firerates do
+                    firerates[i] = firerates[i] * mul
+                end
+                modifications.firerate = firerates
+            else
+                modifications.firerate = modifications.firerate * mul;
+            end
+        end)
+
+
+        hook:Add("WeaponModifyData", "ModifyWeapon.OnFire", function(modifications)
+            local timescale = config:GetValue("Main", "Misc", "Tweaks", "OnFire Speed")/100
+            for i, v in next, modifications.animations do
+                if string.find(string.lower(i), "onfire") then
+                    if typeof(modifications.animations[i]) == "table" and modifications.animations[i].timescale then
+                        modifications.animations[i].timescale = (modifications.animations[i].timescale or 1) * timescale
+                    end
+                end
+            end
+        end)
+
+        hook:Add("WeaponModifyData", "ModifyWeapon.Offsets", function(modifications)
+            local style = config:GetValue("Main", "Misc", "Tweaks", "Weapon Style")
+            if style == "Doom" or style == "Quake III" or style == "Rambo" then
+                local ang = Vector3.new(0, 0, 0)
+                modifications.mainoffset = CFrame.new(Vector3.new(0,-1.5,-1.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
+
+                local ang = Vector3.new(-0.479, 0.610, 0.779)
+                modifications.sprintoffset = CFrame.new(Vector3.new(0.1,0,-0.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
+
+                local ang = Vector3.new(0, 0, 0)
+                modifications.crouchoffset = CFrame.new(Vector3.new(0.25,0.25,0.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
+            end
+        end)
+
+        -- Skins
         do
-            local ogrenadeloader = rawget(char, "loadgrenade")
-            hook:Add("Unload", "UndoWeaponDetourGrenades", function()
-                rawset(char, "loadgrenade", ogrenadeloader)
-            end)
-            local function loadgrenadee(self, ...)
-                hook:CallP("PreLoadGrenade", ...)
-                local gundata = ogrenadeloader(self, ...)
-                hook:CallP("PostLoadGrenade", gundata)
-                return gundata
+            local texture_animtypes = {
+                ["OffsetStudsU"] = true,
+                ["OffsetStudsV"] = true,
+                ["StudsPerTileU"] = true,
+                ["StudsPerTileV"] = true,
+                ["Transparency"] = true,
+            }
+            function weapons:SetupAnimations(reg, objects, type, animtable)
+                if not reg.Enable then return end
+                for k, v in pairs(reg) do
+                    if typeof(v) == "table" and v.Enable then
+                        if texture_animtypes[k] and type == "Texture" then
+                            if v.Type.value == "Additive" then
+                                animtable[#animtable+1] = {
+                                    t = "Additive",
+                                    s = v.Speed,
+                                    p0 = v.Min,
+                                    min = v.Min,
+                                    max = v.Max,
+                                    objects = objects,
+                                    property = k
+                                }
+                            else
+                                animtable[#animtable+1] = {
+                                    t = "Wave",
+                                    a = v.Amplitude,
+                                    o = v.Offset,
+                                    s = v.Speed,
+                                    objects = objects,
+                                    property = k
+                                }
+                            end
+                        elseif (k == "BrickColor" and type ~= "Texture") or (k == "TextureColor" and type == "Texture") then
+                            local col = (type == "Texture" and "Color3" or "Color")
+                            if v.Type.value == "Fade" then
+                                animtable[#animtable+1] = {
+                                    t = "Fade",
+                                    s = v.Speed,
+                                    c0 = v.Color1,
+                                    c1 = v.Color2,
+                                    objects = objects,
+                                    property = col
+                                }
+                            else
+                                animtable[#animtable+1] = {
+                                    t = "Cycle",
+                                    s = v.Speed,
+                                    sa = v.Saturation,
+                                    da = v.Darkness,
+                                    objects = objects,
+                                    property = col
+                                }
+                            end
+                        end
+                    end
+                end
             end
-            rawset(char, "loadgrenade", newcclosure(loadgrenadee))
-        end
-    end)
 
-    -- setup of our detoured controllers
-    hook:Add("PostLoadKnife", "PostLoadKnife", function(gundata, gunname)
-        local ups = debug.getupvalues(gundata.destroy)
-        for k, v in pairs(ups) do
-            local t = typeof(v)
-            if t == "Instance" and v.ClassName == "Model" then
-                gundata._model = v
+            function weapons:RenderAnimations(animtable, delta)
+                for i=1, #animtable do
+                    local anim = animtable[i]
+                    local position
+                    if anim.t == "Wave" then
+                        position = anim.o + math.sin(anim.s * tick()) * anim.a
+                    elseif anim.t == "Additive" then
+                        position = anim.p0 + anim.s * delta
+                        if position > anim.max then
+                            position = position - anim.max
+                            position = position + anim.min
+                        end
+                        anim.p0 = position
+                    elseif anim.t == "Fade" then
+                        local pos = math.sin(anim.s * tick())
+                        local c0, c1 = anim.c0, anim.c1
+                        c0, c1 = Vector3.new(c0.r, c0.g, c0.b), Vector3.new(c1.r, c1.g, c1.b)
+                        local dc = math.remap(pos, -1, 1, c0, c1)
+                        position = Color3.new(dc.x, dc.y, dc.z)
+                    elseif anim.t == "Cycle" then
+                        position = Color3.fromHSV((tick() * anim.s) % 360, anim.sa, anim.da)
+                    end
+                    if position then
+                        for i=1, #anim.objects do
+                            local object = anim.objects[i]
+                            object[anim.property] = position or object[anim.property]
+                        end
+                    end
+                end
             end
-        end
 
-        local oldhide = gundata.hide
-        function gundata.hide(...)
-            hook:Call("PreHideKnife", gundata, ...)
-            return oldhide(...), hook:Call("PostHideKnife", gundata, ...)
-        end
+            function weapons:ApplySkin(reg, gundata, slot1, slot2)
+                local skins = {
+                    slot1 = {
+                        objects = {},
+                        textures = {},
+                        animations = {}
+                    },
+                    slot2 = {
+                        objects = {},
+                        textures = {},
+                        animations = {}
+                    },
+                }
+                if gundata then
+                    gundata._skins = skins
+                end
+                local slot1_data = reg["Slot 1"]
+                if slot1_data.Enable then
+                    skins.slot1.objects = slot1
+                    local textures = {}
+                    for i=1, #slot1 do
+                        local object = slot1[i]
+                        object.Color = slot1_data["Brick Color"]
+                        object.Material = config.matstoid[slot1_data["Material"].value]
+                        object.Reflectance = slot1_data["Reflectance"].value
+                        if object:IsA("UnionOperation") then
+                            object.UsePartColor = true
+                        end
+                        local texture = slot1_data["Texture"]
+                        if texture.Enable and texture.AssetID ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
+                            for i=0, 5 do
+                                local itexture = Instance.new("Texture")
+                                itexture.Parent = object
+                                itexture.Face = i
+                                itexture.Name = "Slot1"
+                                itexture.Color3 = texture.Color
+                                itexture.Texture = texture.AssetID
+                                itexture.Transparency = texture.Transparency.value
+                                itexture.OffsetStudsU = texture.OffsetStudsU.value
+                                itexture.OffsetStudsV = texture.OffsetStudsV.value
+                                itexture.StudsPerTileU = texture.StudsPerTileU.value
+                                itexture.StudsPerTileV = texture.StudsPerTileV.value
+                                if gundata then
+                                    if not gundata._anims.camodata[object] then
+                                        gundata._anims.camodata[object] = {}
+                                    end
+                                    gundata._anims.camodata[object][itexture] = {
+                                        Transparency = itexture.Transparency
+                                    }
+                                end
+                                skins.slot1.textures[#skins.slot1.textures+1] = {object, itexture}
+                                textures[#textures+1] = itexture
+                            end
+                        end
+                    end
+                    self:SetupAnimations(slot1_data.Animation, textures, "Texture", skins.slot1.animations)
+                    self:SetupAnimations(slot1_data.Animation, slot1, "Part", skins.slot1.animations)
+                end
 
-        local oldshow = gundata.show
-        function gundata.show(...)
-            hook:Call("PreShowKnife", gundata, ...)
-            return oldshow(...), hook:Call("PostShowKnife", gundata, ...)
-        end
+                local slot2_data = reg["Slot 2"]
+                if slot2_data.Enable then
+                    skins.slot2.objects = slot2
+                    local textures = {}
+                    for i=1, #slot2 do
+                        local object = slot2[i]
+                        object.Color = slot2_data["Brick Color"]
+                        object.Material = config.matstoid[slot2_data["Material"].value]
+                        object.Reflectance = slot2_data["Reflectance"].value
+                        if object:IsA("UnionOperation") then
+                            object.UsePartColor = true
+                        end
+                        local texture = slot2_data["Texture"]
+                        if texture.Enable and texture.AssetID ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
+                            for i=0, 5 do
+                                local itexture = Instance.new("Texture")
+                                itexture.Parent = object
+                                itexture.Name = "Slot2"
+                                itexture.Face = i
+                                itexture.Color3 = texture.Color
+                                itexture.Texture = texture.AssetID
+                                itexture.Transparency = texture.Transparency.value
+                                itexture.OffsetStudsU = texture.OffsetStudsU.value
+                                itexture.OffsetStudsV = texture.OffsetStudsV.value
+                                itexture.StudsPerTileU = texture.StudsPerTileU.value
+                                itexture.StudsPerTileV = texture.StudsPerTileV.value
+                                if gundata then
+                                    if not gundata._anims.camodata[object] then
+                                        gundata._anims.camodata[object] = {}
+                                    end
+                                    gundata._anims.camodata[object][itexture] = {
+                                        Transparency = itexture.Transparency
+                                    }
+                                end
+                                skins.slot1.textures[#skins.slot1.textures+1] = {object, itexture}
+                                textures[#textures+1] = itexture
+                            end
+                        end
+                    end
+                    self:SetupAnimations(slot2_data.Animation, textures, "Texture", skins.slot2.animations)
+                    self:SetupAnimations(slot2_data.Animation, slot2, "Part", skins.slot2.animations)
+                end
 
-        local olddestroy = gundata.destroy
-        function gundata.destroy(...)
-            hook:Call("PreDestroyKnife", gundata, ...)
-            return olddestroy(...), hook:Call("PostDestroyKnife", gundata, ...)
-        end
-
-        local oldsetequipped = gundata.setequipped
-        function gundata.setequipped(...)
-            hook:Call("PreEquippedKnife", gundata, ...)
-            return oldsetequipped(...), hook:Call("PostEquippedKnife", gundata, ...)
-        end
-
-        local ups = debug.getupvalues(gundata.playanimation)
-        for k, v in pairs(ups) do
-            local t = typeof(v)
-            if t == "table" and v.camodata and typeof(v.larm) == "table" and v.larm.basec0 then
-                gundata._anims = v
+                return skins
             end
-        end
 
-        local oldstep = gundata.step
-        function gundata.step(...)
-            if gamelogic.currentgun == gundata then
-                hook:CallP("PreKnifeStep", gundata)
-            end
-            local a, b, c, d = oldstep(...)
-            if gamelogic.currentgun == gundata then
-                hook:CallP("PostKnifeStep", gundata)
-            end
-            return a, b, c, d
-        end
-    end)
-
-    hook:Add("PostLoadGun", "PostLoadGun", function(gundata, gunname)
-        local oldstep = gundata.step
-        local ups = debug.getupvalues(gundata.playanimation)
-        for k, v in pairs(ups) do
-            local t = typeof(v)
-            if t == "table" and v.camodata and typeof(v.larm) == "table" and v.larm.basec0 then
-                gundata._anims = v
-            end
-        end
-
-        local ups = debug.getupvalues(gundata.destroy)
-        for k, v in pairs(ups) do
-            local t = typeof(v)
-            if t == "Instance" and v.ClassName == "Model" then
-                gundata._model = v
-            end
-        end
-
-        local oldhide = gundata.hide
-        function gundata.hide(...)
-            hook:Call("PreHideWeapon", gundata, ...)
-            return oldhide(...), hook:Call("PostHideWeapon", gundata, ...)
-        end
-
-        local oldshow = gundata.show
-        function gundata.show(...)
-            hook:Call("PreShowWeapon", gundata, ...)
-            return oldshow(...), hook:Call("PostShowWeapon", gundata, ...)
-        end
-
-        local olddestroy = gundata.destroy
-        function gundata.destroy(...)
-            hook:Call("PreDestroyWeapon", gundata, ...)
-            return olddestroy(...), hook:Call("PostDestroyWeapon", gundata, ...)
-        end
-
-        local oldsetequipped = gundata.setequipped
-        function gundata.setequipped(...)
-            hook:Call("PreEquippedWeapon", gundata, ...)
-            return oldsetequipped(...), hook:Call("PostEquippedWeapon", gundata, ...)
-        end
-
-        local ups = debug.getupvalues(oldsetequipped)
-        for k, v in pairs(ups) do
-            if typeof(v) == "function" then
-                local name = debug.getinfo(v).name
-                if name == "updatefiremodestability" then
+            hook:Add("Initialize", "BBOT:Weapons.SkinDB", function()
+                local receivers = network.receivers
+                for k, v in pairs(receivers) do
                     local ups = debug.getupvalues(v)
                     for kk, vv in pairs(ups) do
-                        if typeof(vv) == "number" then
-                            if kk == 4 and vv == 1 then
-                                function gundata:getfiremode()
-                                    local mode = debug.getupvalue(v, kk) or 1
-                                    local rate
-                                    if typeof(self.data.firerate) == "table" then
-                                        rate = self.data.firerate[mode]
-                                    else
-                                        rate = self.data.firerate
-                                    end
-                                    return self.data.firemodes[mode], rate
-                                end
+                        if typeof(vv) == "function" then
+                            local ran, consts = pcall(debug.getconstants, vv)
+                            if ran and table.quicksearch(consts, " times this month)") then
+                                weapons.skindatabase = debug.getupvalue(vv, 4)
                             end
                         end
                     end
-                end
-            end
-        end
-
-        local ups = debug.getupvalues(oldstep)
-        for k, v in pairs(ups) do
-            if typeof(v) == "function" then
-                local ran, consts = pcall(debug.getconstants, v)
-                if ran and table.quicksearch(consts, "onfire") and table.quicksearch(consts, "pullout") and table.quicksearch(consts, "straightpull") and table.quicksearch(consts, "zoom") and table.quicksearch(consts, "zoompullout") then
-                    debug.setupvalue(oldstep, k, function(...)
-                        if gamelogic.currentgun == gundata then
-                            hook:CallP("PreFireStep", gundata)
-                        end
-                        local a, b, c, d = v(...)
-                        if gamelogic.currentgun == gundata then
-                            hook:CallP("PostFireStep", gundata)
-                        end
-                        return a, b, c, d
-                    end)
-                end
-            end
-        end
-
-        function gundata.step(...)
-            -- this is where the aimbot controller will be
-            if gamelogic.currentgun == gundata then
-                hook:CallP("PreWeaponStep", gundata)
-            end
-            local a, b, c, d = oldstep(...)
-            if gamelogic.currentgun == gundata then
-                hook:CallP("PostWeaponStep", gundata)
-            end
-            return a, b, c, d
-        end
-
-        for class, v in pairs(weapons.WeaponDB.weplist) do
-            for i=1, #v do
-                if v[i] == gunname then
-                    gundata.___class = class
-                    return
-                end
-            end
-        end
-    end)
-
-    -- Grenades Wow
-    -- config:GetValue("Main", "Visuals", "Grenades", "Grenade Warning")
-
-    do
-        local camera = BBOT.service:GetService("CurrentCamera")
-        local localplayer = BBOT.service:GetService("LocalPlayer")
-        local char = BBOT.aux.char
-        local roundsystem = BBOT.aux.roundsystem
-        local cframe = BBOT.aux.cframe
-        local draw = BBOT.draw
-        local grenade_prediction_lines = {}
-
-        local function CalculateGrenadePathway(grenade_mainpart, grenadedata, delaytime)
-            local initiatetime = 0
-        
-            local me_HumanoidRootPart = localplayer.Character:FindFirstChild("HumanoidRootPart")
-            local u193 = char.alive and (camera.CFrame * CFrame.Angles(math.rad(grenadedata.throwangle and 0), 0, 0)).lookVector * grenadedata.throwspeed + me_HumanoidRootPart.Velocity or Vector3.new(math.random(-3, 5), math.random(0, 2), math.random(-3, 5));
-            local u195 = char.deadcf and char.deadcf.p or grenade_mainpart.CFrame.p;
-            local u197 = (camera.CFrame - camera.CFrame.p) * Vector3.new(19.539, -5, 0);
-            local u198 = grenade_mainpart.CFrame - grenade_mainpart.CFrame.p;
-            local grenade_mainpart_cframe = grenade_mainpart.CFrame;
-            local gravity = Vector3.new(0, -80, 0)
-            local windowsbroken = 0
-            local u202 = Vector3.new()
-            local u146 = u202.Dot
-            local u203 = false
-            local timedelta = 0.016666666666666666
-            local pathtable = {
-                curi = 1, 
-                time = initiatetime, 
-                blowuptime = delaytime - initiatetime, 
-                frames = { {
-                        t0 = 0, 
-                        p0 = u195, 
-                        v0 = u193, 
-                        offset = Vector3.new(), 
-                        a = gravity, 
-                        rot0 = grenade_mainpart_cframe - grenade_mainpart_cframe.p,
-                        timedelta = 0,
-                        hit = false,
-                        hitnormal = Vector3.new(0,1,0),
-                        rotv = u197, 
-                        glassbreaks = {}
-                    } }
-            };
-            local timedeltaacc = (timedelta ^ 2)*0.5
-            for v765 = 1, (delaytime - initiatetime) / timedelta + 1 do
-                local v766 = u195 + timedelta * u193 + timedeltaacc * gravity; -- kinematics basically
-                local v767, v768, v769 = workspace:FindPartOnRayWithWhitelist(Ray.new(u195, v766 - u195 - 0.05 * u202),roundsystem.raycastwhitelist);
-                local v770 = timedelta * v765;
-                if v767 and v767.Name ~= "Window" and v767.Name ~= "Col" then
-                    u198 = grenade_mainpart.CFrame - grenade_mainpart.CFrame.p;
-                    u202 = 0.2 * v769;
-                    u197 = v769:Cross(u193) / 0.2;
-                    local v771 = v768 - u195;
-                    local v772 = 1 - 0.001 / v771.magnitude;
-                    if v772 < 0 then
-                        local v773 = 0;
-                    else
-                        v773 = v772;
-                    end;
-                    u195 = u195 + v773 * v771 + 0.05 * v769;
-                    local v774 = u146(v769, u193) * v769;
-                    local v775 = u193 - v774;
-                    local v776 = -u146(v769, gravity);
-                    local v777 = -1.2 * u146(v769, u193);
-                    if v776 < 0 then
-                        local v778 = 0;
-                    else
-                        v778 = v776;
-                    end;
-                    if v777 < 0 then
-                        local v779 = 0;
-                    else
-                        v779 = v777;
-                    end;
-                    local v780 = 1 - 0.08 * (10 * v778 * timedelta + v779) / v775.magnitude;
-                    if v780 < 0 then
-                        local v781 = 0;
-                    else
-                        v781 = v780;
-                    end;
-                    u193 = v781 * v775 - 0.2 * v774;
-                    if u193.magnitude < 1 then
-                        local l__frames__782 = pathtable.frames;
-                        l__frames__782[#l__frames__782 + 1] = {
-                            t0 = v770 - timedelta * (v766 - v768).magnitude / (v766 - u195).magnitude, 
-                            p0 = u195, 
-                            v0 = u161, 
-                            a = u161, 
-                            rot0 = cframe.fromaxisangle (v770 * u197) * u198, 
-                            offset = 0.2 * v769, 
-                            rotv = u161,
-                            hitnormal = v769,
-                            hit = true,
-                            timedelta = timedelta * v765,
-                            glassbreaks = {}
-                        };
-                        break;
-                    end;
-                    local l__frames__783 = pathtable.frames;
-                    l__frames__783[#l__frames__783 + 1] = {
-                        t0 = v770 - timedelta * (v766 - v768).magnitude / (v766 - u195).magnitude, 
-                        p0 = u195, 
-                        v0 = u193, 
-                        a = u203 and u161 or gravity, 
-                        rot0 = cframe.fromaxisangle (v770 * u197) * u198, 
-                        offset = 0.2 * v769, 
-                        rotv = u197,
-                        timedelta = timedelta * v765,
-                        hitnormal = v769,
-                        hit = true,
-                        glassbreaks = {}
-                    };
-                    u203 = true;
-                else
-                    u195 = v766;
-                    u193 = u193 + timedelta * gravity;
-                    u203 = false;
-                    local l__frames__783 = pathtable.frames;
-                    l__frames__783[#l__frames__783 + 1] = {
-                        t0 = v770 - timedelta * (v766 - v768).magnitude / (v766 - u195).magnitude, 
-                        p0 = u195, 
-                        v0 = u193, 
-                        a = u203 and u161 or gravity, 
-                        rot0 = cframe.fromaxisangle (v770 * u197) * u198, 
-                        offset = 0.2 * v769, 
-                        rotv = u197,
-                        timedelta = timedelta * v765,
-                        hitnormal = Vector3.new(0,1,0),
-                        hit = false,
-                        glassbreaks = {}
-                    };
-                    --[[if v767 and v767.Name == "Window" and windowsbroken < 5 then
-                        windowsbroken = windowsbroken + 1;
-                        local l__frames__784 = pathtable.frames;
-                        local l__glassbreaks__785 = l__frames__784[#l__frames__784].glassbreaks;
-                        l__glassbreaks__785[#l__glassbreaks__785 + 1] = {
-                            t = v770, 
-                            part = v767
-                        };
-                    end;]]
-                end;
-            end;
-            return pathtable
-        end
-        
-        local draw_endpos, draw_endpos_outline
-        local function RemovePredictionLines()
-            for i=1, #grenade_prediction_lines do
-                local v = grenade_prediction_lines[i]
-                if v and draw:IsValid(v[1]) and draw:IsValid(v[2]) then
-                    v[1]:Remove()
-                    v[2]:Remove()
-                end
-            end
-            grenade_prediction_lines = {}
-            if draw_endpos then
-                draw_endpos:Remove()
-                draw_endpos_outline:Remove()
-                draw_endpos = nil
-                draw_endpos_outline = nil
-            end
-        end
-
-        hook:Add("OnAliveChanged", "BBOT:GrenadePrediction", function(alive)
-            if not alive then
-                RemovePredictionLines()
-            end
-        end)
-        
-        local dark = Color3.new(0,0,0)
-
-        local function ManagePredictionLines(frames, curframe)
-            local parts = grenade_prediction_lines
-            local partlen, framelen = #parts, #frames
-            local col = config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction", "Prediction Color")
-            if partlen < framelen then
-                local creates = framelen - partlen
-                for i=1, creates do
-                    local darkline = draw:Line(0, 0, 0, 0, 4, dark, 1, true)
-                    darkline.ZIndex = 0
-                    local line = draw:Line(0, 0, 0, 0, 0, col, 1, true)
-                    line.ZIndex = 1
-                    parts[#parts+1]={darkline, line}
-                end
-            elseif partlen > framelen then
-                local c = 0
-                for i=framelen, partlen do
-                    if parts[i-c] then
-                        parts[i-c][1]:Remove()
-                        parts[i-c][2]:Remove()
-                        table.remove(parts, i-c)
-                    end
-                end
-            end
-
-            local lastframe = frames[1]
-            local final = frames[#frames]
-            if not draw_endpos then
-                draw_endpos_outline = draw:Circle(x, y, 10, 1, 20, dark, 1, true)
-                draw_endpos_outline.ZIndex = 2
-                draw_endpos = draw:Circle(x, y, 8, 1, 20, col, 1, true)
-                draw_endpos.ZIndex = 3
-            end
-            local point, onscreen = camera:WorldToViewportPoint(final.p0)
-            local screensize = camera.ViewportSize
-            if not onscreen or point.x > screensize.x - 36 or point.y > screensize.y - 72 then
-                local relativePos = camera.CFrame:PointToObjectSpace(final.p0)
-                local angle = math.atan2(-relativePos.y, relativePos.x)
-                local ox = math.cos(angle)
-                local oy = math.sin(angle)
-                local slope = oy / ox
-
-                local h_edge = screensize.x - 36
-                local v_edge = screensize.y - 72
-                if oy < 0 then
-                    v_edge = 0
-                end
-                if ox < 0 then
-                    h_edge = 36
-                end
-                local y = (slope * h_edge) + (screensize.y / 2) - slope * (screensize.x / 2)
-                if y > 0 and y < screensize.y - 72 then
-                    point = Vector2.new(h_edge, y)
-                else
-                    point = Vector2.new(
-                        (v_edge - screensize.y / 2 + slope * (screensize.x / 2)) / slope,
-                        v_edge
-                    )
-                end
-            end
-            draw_endpos.Position = Vector2.new(point.X, point.Y)
-            draw_endpos_outline.Position = Vector2.new(point.X, point.Y)
-            for i=(curframe and curframe+1 or 2), framelen do
-                local v = parts[i]
-                if not v then break end
-                local framedata = frames[i]
-                local point1, onscreen1 = camera:WorldToViewportPoint(lastframe.p0)
-                local point2, onscreen2 = camera:WorldToViewportPoint(framedata.p0)
-                if not onscreen1 and not onscreen2 then
-                    v[1].Visible = false
-                    v[2].Visible = false
-                    lastframe = framedata
-                    continue
-                end
-                v[1].Visible = true
-                v[2].Visible = true
-                v[1].From = Vector2.new(point1.X, point1.Y)
-                v[1].To = Vector2.new(point2.X, point2.Y)
-                v[2].From = Vector2.new(point1.X, point1.Y)
-                v[2].To = Vector2.new(point2.X, point2.Y)
-                lastframe = framedata
-            end
-        end
-
-        hook:Add("PostLoadGrenade", "PostLoadGrenade", function(grenadehandler)
-            local ups = debug.getupvalues(grenadehandler.throw)
-            local createnade, createnadeid
-            for k, v in pairs(ups) do
-                if typeof(v) == "function" then
-                    local name = debug.getinfo(v).name
-                    if name == "createnade" then
-                        createnade = v
-                        createnadeid = k
-                    end
-                end
-            end
-
-            local mainpart = debug.getupvalue(createnade, 2)
-            if typeof(mainpart) ~= "Instance" then
-                mainpart = nil
-            end
-
-            local _pull = grenadehandler.pull
-            local ups = debug.getupvalues(_pull)
-
-            local blowuptimeindex = #ups
-            local throwinhandindex = #ups-2
-            local grenadedataindex
-            local grenadedata
-            for k, v in pairs(ups) do
-                if typeof(v) == "table" then
-                    if v.throwspeed then
-                        grenadedata = v
-                        grenadedata = table.deepcopy(grenadedata)
-                        grenadedataindex = k
-                        debug.setupvalue(_pull, k, grenadedata)
-                    end
-                end
-            end
-
-            local showpath = true
-            local created = false
-            local function _createnade(...)
-                created = true
-                RemovePredictionLines()
-                return createnade(...)
-            end
-
-            debug.setupvalue(grenadehandler.throw, createnadeid, newcclosure(_createnade))
-
-            local pathway
-            function grenadehandler.pull(...)
-                _pull(...)
-                local step = grenadehandler.step
-                function grenadehandler.step()
-                    step()
-                    if config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction") then
-                        if not created and mainpart then
-                            pathway = CalculateGrenadePathway(mainpart, grenadedata, onimpact and 3 or debug.getupvalue(_pull, blowuptimeindex) - tick())
-                            ManagePredictionLines(pathway.frames)
-                        end
-                    end
-                end
-            end
-        end)
-    end
-
-    -- Modifications
-    --[[hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
-        if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
-        local firemodes = table.deepcopy(modifications.firemodes)
-        local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
-        local single = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Single") and 1 or nil
-        if single and not table.quicksearch(firemodes, single) then
-            table.insert(firemodes, 1, single)
-        end
-        local burst3 = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Burst3") and 3 or nil
-        if burst3 and not table.quicksearch(firemodes, burst3) then
-            table.insert(firemodes, 1, burst3)
-        end
-        local auto = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Auto") and true or nil
-        if auto and not table.quicksearch(firemodes, auto) then
-            table.insert(firemodes, 1, auto)
-        end
-        modifications.firemodes = firemodes
-        if firerates and #firerates < #firemodes then
-            local default = firerates[#firerates]
-            for i=1, #firemodes-#firerates do
-                table.insert(firerates, 1, default)
-            end
-            modifications.firerate = firerates
-        end
-        local mul = config:GetValue("Weapons", "Stat Modifications", "Bullet", "Firerate")
-        if firerates then
-            for i=1, #firerates do
-                firerates[i] = firerates[i] * mul
-            end
-            modifications.firerate = firerates
-        else
-            modifications.firerate = modifications.firerate * mul;
-        end
-    end)]]
-
-    hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
-        --if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
-        local timescale = config:GetValue("Main", "Misc", "Tweaks", "Reload Speed")/100
-        for i, v in next, modifications.animations do
-            if string.find(string.lower(i), "reload") then
-                if typeof(modifications.animations[i]) == "table" and modifications.animations[i].timescale then
-                    modifications.animations[i].timescale = (modifications.animations[i].timescale or 1) * timescale
-                end
-            end
-        end
-    end)
-
-    hook:Add("PreKnifeStep", "BBOT:Weapon.SwaySpring", function()
-        local swayspring = debug.getupvalue(BBOT.aux.char.reloadsprings, 6)
-        swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
-    end)
-    
-    hook:Add("PreWeaponStep", "BBOT:Weapon.SwaySpring", function()
-        local swayspring = debug.getupvalue(BBOT.aux.char.reloadsprings, 6)
-        swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
-    end)
-
-    hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
-        local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
-        local mul = config:GetValue("Main", "Misc", "Tweaks", "Firerate")/100
-        if firerates then
-            for i=1, #firerates do
-                firerates[i] = firerates[i] * mul
-            end
-            modifications.firerate = firerates
-        else
-            modifications.firerate = modifications.firerate * mul;
-        end
-    end)
-
-
-    hook:Add("WeaponModifyData", "ModifyWeapon.OnFire", function(modifications)
-        local timescale = config:GetValue("Main", "Misc", "Tweaks", "OnFire Speed")/100
-        for i, v in next, modifications.animations do
-            if string.find(string.lower(i), "onfire") then
-                if typeof(modifications.animations[i]) == "table" and modifications.animations[i].timescale then
-                    modifications.animations[i].timescale = (modifications.animations[i].timescale or 1) * timescale
-                end
-            end
-        end
-    end)
-
-    hook:Add("WeaponModifyData", "ModifyWeapon.Offsets", function(modifications)
-        local style = config:GetValue("Main", "Misc", "Tweaks", "Weapon Style")
-        if style == "Doom" or style == "Quake III" or style == "Rambo" then
-            local ang = Vector3.new(0, 0, 0)
-            modifications.mainoffset = CFrame.new(Vector3.new(0,-1.5,-1.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
-
-            local ang = Vector3.new(-0.479, 0.610, 0.779)
-            modifications.sprintoffset = CFrame.new(Vector3.new(0.1,0,-0.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
-
-            local ang = Vector3.new(0, 0, 0)
-            modifications.crouchoffset = CFrame.new(Vector3.new(0.25,0.25,0.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
-        end
-    end)
-
-    -- Skins
-    do
-        local texture_animtypes = {
-            ["OffsetStudsU"] = true,
-            ["OffsetStudsV"] = true,
-            ["StudsPerTileU"] = true,
-            ["StudsPerTileV"] = true,
-            ["Transparency"] = true,
-        }
-        function weapons:SetupAnimations(reg, objects, type, animtable)
-            if not reg.Enable then return end
-            for k, v in pairs(reg) do
-                if typeof(v) == "table" and v.Enable then
-                    if texture_animtypes[k] and type == "Texture" then
-                        if v.Type.value == "Additive" then
-                            animtable[#animtable+1] = {
-                                t = "Additive",
-                                s = v.Speed,
-                                p0 = v.Min,
-                                min = v.Min,
-                                max = v.Max,
-                                objects = objects,
-                                property = k
-                            }
-                        else
-                            animtable[#animtable+1] = {
-                                t = "Wave",
-                                a = v.Amplitude,
-                                o = v.Offset,
-                                s = v.Speed,
-                                objects = objects,
-                                property = k
-                            }
-                        end
-                    elseif (k == "BrickColor" and type ~= "Texture") or (k == "TextureColor" and type == "Texture") then
-                        local col = (type == "Texture" and "Color3" or "Color")
-                        if v.Type.value == "Fade" then
-                            animtable[#animtable+1] = {
-                                t = "Fade",
-                                s = v.Speed,
-                                c0 = v.Color1,
-                                c1 = v.Color2,
-                                objects = objects,
-                                property = col
-                            }
-                        else
-                            animtable[#animtable+1] = {
-                                t = "Cycle",
-                                s = v.Speed,
-                                sa = v.Saturation,
-                                da = v.Darkness,
-                                objects = objects,
-                                property = col
-                            }
-                        end
-                    end
-                end
-            end
-        end
-
-        function weapons:RenderAnimations(animtable, delta)
-            for i=1, #animtable do
-                local anim = animtable[i]
-                local position
-                if anim.t == "Wave" then
-                    position = anim.o + math.sin(anim.s * tick()) * anim.a
-                elseif anim.t == "Additive" then
-                    position = anim.p0 + anim.s * delta
-                    if position > anim.max then
-                        position = position - anim.max
-                        position = position + anim.min
-                    end
-                    anim.p0 = position
-                elseif anim.t == "Fade" then
-                    local pos = math.sin(anim.s * tick())
-                    local c0, c1 = anim.c0, anim.c1
-                    c0, c1 = Vector3.new(c0.r, c0.g, c0.b), Vector3.new(c1.r, c1.g, c1.b)
-                    local dc = math.remap(pos, -1, 1, c0, c1)
-                    position = Color3.new(dc.x, dc.y, dc.z)
-                elseif anim.t == "Cycle" then
-                    position = Color3.fromHSV((tick() * anim.s) % 360, anim.sa, anim.da)
-                end
-                if position then
-                    for i=1, #anim.objects do
-                        local object = anim.objects[i]
-                        object[anim.property] = position or object[anim.property]
-                    end
-                end
-            end
-        end
-
-        function weapons:ApplySkin(reg, gundata, slot1, slot2)
-            local skins = {
-                slot1 = {
-                    objects = {},
-                    textures = {},
-                    animations = {}
-                },
-                slot2 = {
-                    objects = {},
-                    textures = {},
-                    animations = {}
-                },
-            }
-            if gundata then
-                gundata._skins = skins
-            end
-            local slot1_data = reg["Slot 1"]
-            if slot1_data.Enable then
-                skins.slot1.objects = slot1
-                local textures = {}
-                for i=1, #slot1 do
-                    local object = slot1[i]
-                    object.Color = slot1_data["Brick Color"]
-                    object.Material = config.matstoid[slot1_data["Material"].value]
-                    object.Reflectance = slot1_data["Reflectance"].value
-                    if object:IsA("UnionOperation") then
-                        object.UsePartColor = true
-                    end
-                    local texture = slot1_data["Texture"]
-                    if texture.Enable and texture.AssetID ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
-                        for i=0, 5 do
-                            local itexture = Instance.new("Texture")
-                            itexture.Parent = object
-                            itexture.Face = i
-                            itexture.Name = "Slot1"
-                            itexture.Color3 = texture.Color
-                            itexture.Texture = texture.AssetID
-                            itexture.Transparency = texture.Transparency.value
-                            itexture.OffsetStudsU = texture.OffsetStudsU.value
-                            itexture.OffsetStudsV = texture.OffsetStudsV.value
-                            itexture.StudsPerTileU = texture.StudsPerTileU.value
-                            itexture.StudsPerTileV = texture.StudsPerTileV.value
-                            if gundata then
-                                if not gundata._anims.camodata[object] then
-                                    gundata._anims.camodata[object] = {}
-                                end
-                                gundata._anims.camodata[object][itexture] = {
-                                    Transparency = itexture.Transparency
-                                }
-                            end
-                            skins.slot1.textures[#skins.slot1.textures+1] = {object, itexture}
-                            textures[#textures+1] = itexture
-                        end
-                    end
-                end
-                self:SetupAnimations(slot1_data.Animation, textures, "Texture", skins.slot1.animations)
-                self:SetupAnimations(slot1_data.Animation, slot1, "Part", skins.slot1.animations)
-            end
-
-            local slot2_data = reg["Slot 2"]
-            if slot2_data.Enable then
-                skins.slot2.objects = slot2
-                local textures = {}
-                for i=1, #slot2 do
-                    local object = slot2[i]
-                    object.Color = slot2_data["Brick Color"]
-                    object.Material = config.matstoid[slot2_data["Material"].value]
-                    object.Reflectance = slot2_data["Reflectance"].value
-                    if object:IsA("UnionOperation") then
-                        object.UsePartColor = true
-                    end
-                    local texture = slot2_data["Texture"]
-                    if texture.Enable and texture.AssetID ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
-                        for i=0, 5 do
-                            local itexture = Instance.new("Texture")
-                            itexture.Parent = object
-                            itexture.Name = "Slot2"
-                            itexture.Face = i
-                            itexture.Color3 = texture.Color
-                            itexture.Texture = texture.AssetID
-                            itexture.Transparency = texture.Transparency.value
-                            itexture.OffsetStudsU = texture.OffsetStudsU.value
-                            itexture.OffsetStudsV = texture.OffsetStudsV.value
-                            itexture.StudsPerTileU = texture.StudsPerTileU.value
-                            itexture.StudsPerTileV = texture.StudsPerTileV.value
-                            if gundata then
-                                if not gundata._anims.camodata[object] then
-                                    gundata._anims.camodata[object] = {}
-                                end
-                                gundata._anims.camodata[object][itexture] = {
-                                    Transparency = itexture.Transparency
-                                }
-                            end
-                            skins.slot1.textures[#skins.slot1.textures+1] = {object, itexture}
-                            textures[#textures+1] = itexture
-                        end
-                    end
-                end
-                self:SetupAnimations(slot2_data.Animation, textures, "Texture", skins.slot2.animations)
-                self:SetupAnimations(slot2_data.Animation, slot2, "Part", skins.slot2.animations)
-            end
-
-            return skins
-        end
-
-        hook:Add("Initialize", "BBOT:Weapons.SkinDB", function()
-            local receivers = network.receivers
-            for k, v in pairs(receivers) do
-                local ups = debug.getupvalues(v)
-                for kk, vv in pairs(ups) do
-                    if typeof(vv) == "function" then
-                        local ran, consts = pcall(debug.getconstants, vv)
-                        if ran and table.quicksearch(consts, " times this month)") then
-                            weapons.skindatabase = debug.getupvalue(vv, 4)
-                        end
-                    end
-                end
-            end
-        end)
-
-        do
-            weapons.weaponstorage = debug.getupvalue(char.unloadguns, 2)
-
-            hook:Add("OnConfigChanged", "Skin.LiveChanger", function(steps, old, new)
-                if config:IsPathwayEqual(steps, "Weapons", "Skins", "Primary") then
-                    local wep
-                    for k, v in pairs(weapons.weaponstorage) do
-                        if v.gunnumber == 1 then
-                            wep = v
-                            break
-                        end
-                    end
-                    if not wep then return end
-                    weapons:SkinApplyGun(wep, 1)
-                elseif config:IsPathwayEqual(steps, "Weapons", "Skins", "Secondary") then
-                    local wep
-                    for k, v in pairs(weapons.weaponstorage) do
-                        if v.gunnumber == 2 then
-                            wep = v
-                            break
-                        end
-                    end
-                    if not wep then return end
-                    weapons:SkinApplyGun(wep, 2)
-                elseif config:IsPathwayEqual(steps, "Weapons", "Skins", "Tertiary") then
-                    local wep
-                    for k, v in pairs(weapons.weaponstorage) do
-                        if v._isknife then
-                            wep = v
-                            break
-                        end
-                    end
-                    if not wep then return end
-                    weapons:SkinApplyGun(wep, 3)
                 end
             end)
-        end
 
-        function weapons:SkinApplyGun(gundata, slot)
-            if not config:GetValue("Weapons", "Skins", "Enable") then return end
-            local slot = slot or gundata.gunnumber
-            local model = gundata._model
-            if not model then return end
+            do
+                weapons.weaponstorage = debug.getupvalue(char.unloadguns, 2)
 
-            local classtype = "Tertiary"
-            if slot == 1 then
-                classtype = "Primary"
-            elseif slot == 2 then
-                classtype = "Secondary"
-            end
-
-
-            local reg = config:GetValue("Weapons", "Skins", classtype)
-            if not reg.Enable then return end
-
-            local descendants = model:GetDescendants()
-            local slot1, slot2 = {}, {}
-            for k, v in pairs(descendants) do
-                if v.ClassName == 'Texture' and (v.Name == "Slot1" or v.Name == "Slot2") then
-                    v:Destroy()
-                elseif v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
-                    if v:FindFirstChild("Slot1") then
-                        slot1[#slot1+1] = v
-                    elseif v:FindFirstChild("Slot2") then
-                        slot2[#slot2+1] = v
-                    end
-                end
-            end
-
-            weapons:ApplySkin(reg, gundata, slot1, slot2)
-        end
-
-        hook:Add("PostLoadGun", "Skin.Apply", function(gundata, name)
-            if not config:GetValue("Weapons", "Skins", "Enable") then return end
-            weapons:SkinApplyGun(gundata)
-        end)
-
-        hook:Add("FullyLoaded", "Skin.LiveApply", function()
-            timer:Simple(1, function()
-                local workspace = BBOT.service:GetService("Workspace")
-                hook:Add("OnConfigChanged", "Skin.Preview", function(steps, old, new)
-                    if not config:IsPathwayEqual(steps, "Weapons", "Skins", "Preview") then return end
-                    local model = workspace.MenuLobby.GunStage.GunModel:GetChildren()[1]
-                    if not model then return end
-                    local reg = config:GetValue("Weapons", "Skins", "Preview")
-                    if not reg.Enable then return end
-
-                    local descendants = model:GetDescendants()
-                    local slot1, slot2 = {}, {}
-                    for k, v in pairs(descendants) do
-                        if v.ClassName == 'Texture' and (v.Name == "Slot1" or v.Name == "Slot2") then
-                            v:Destroy()
-                        elseif v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
-                            if v:FindFirstChild("Slot1") then
-                                slot1[#slot1+1] = v
-                            elseif v:FindFirstChild("Slot2") then
-                                slot2[#slot2+1] = v
+                hook:Add("OnConfigChanged", "Skin.LiveChanger", function(steps, old, new)
+                    if config:IsPathwayEqual(steps, "Weapons", "Skins", "Primary") then
+                        local wep
+                        for k, v in pairs(weapons.weaponstorage) do
+                            if v.gunnumber == 1 then
+                                wep = v
+                                break
                             end
                         end
+                        if not wep then return end
+                        weapons:SkinApplyGun(wep, 1)
+                    elseif config:IsPathwayEqual(steps, "Weapons", "Skins", "Secondary") then
+                        local wep
+                        for k, v in pairs(weapons.weaponstorage) do
+                            if v.gunnumber == 2 then
+                                wep = v
+                                break
+                            end
+                        end
+                        if not wep then return end
+                        weapons:SkinApplyGun(wep, 2)
+                    elseif config:IsPathwayEqual(steps, "Weapons", "Skins", "Tertiary") then
+                        local wep
+                        for k, v in pairs(weapons.weaponstorage) do
+                            if v._isknife then
+                                wep = v
+                                break
+                            end
+                        end
+                        if not wep then return end
+                        weapons:SkinApplyGun(wep, 3)
                     end
+                end)
+            end
 
-                    local applied = weapons:ApplySkin(reg, nil, slot1, slot2)
-                    
-                    hook:Add("RenderStep.First", "Skin.Preview.Animations", function(delta)
-                        weapons:RenderAnimations(applied.slot1.animations, delta)
-                        weapons:RenderAnimations(applied.slot2.animations, delta)
-                    end)
+            function weapons:SkinApplyGun(gundata, slot)
+                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                local slot = slot or gundata.gunnumber
+                local model = gundata._model
+                if not model then return end
 
-                    local connection
-                    connection = workspace.MenuLobby.GunStage.GunModel.ChildRemoved:Connect(function()
-                        hook:Remove("RenderStep.First", "Skin.Preview.Animations")
-                        connection:Disconnect()
+                local classtype = "Tertiary"
+                if slot == 1 then
+                    classtype = "Primary"
+                elseif slot == 2 then
+                    classtype = "Secondary"
+                end
+
+
+                local reg = config:GetValue("Weapons", "Skins", classtype)
+                if not reg.Enable then return end
+
+                local descendants = model:GetDescendants()
+                local slot1, slot2 = {}, {}
+                for k, v in pairs(descendants) do
+                    if v.ClassName == 'Texture' and (v.Name == "Slot1" or v.Name == "Slot2") then
+                        v:Destroy()
+                    elseif v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
+                        if v:FindFirstChild("Slot1") then
+                            slot1[#slot1+1] = v
+                        elseif v:FindFirstChild("Slot2") then
+                            slot2[#slot2+1] = v
+                        end
+                    end
+                end
+
+                weapons:ApplySkin(reg, gundata, slot1, slot2)
+            end
+
+            hook:Add("PostLoadGun", "Skin.Apply", function(gundata, name)
+                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                weapons:SkinApplyGun(gundata)
+            end)
+
+            hook:Add("FullyLoaded", "Skin.LiveApply", function()
+                timer:Simple(1, function()
+                    local workspace = BBOT.service:GetService("Workspace")
+                    hook:Add("OnConfigChanged", "Skin.Preview", function(steps, old, new)
+                        if not config:IsPathwayEqual(steps, "Weapons", "Skins", "Preview") then return end
+                        local model = workspace.MenuLobby.GunStage.GunModel:GetChildren()[1]
+                        if not model then return end
+                        local reg = config:GetValue("Weapons", "Skins", "Preview")
+                        if not reg.Enable then return end
+
+                        local descendants = model:GetDescendants()
+                        local slot1, slot2 = {}, {}
+                        for k, v in pairs(descendants) do
+                            if v.ClassName == 'Texture' and (v.Name == "Slot1" or v.Name == "Slot2") then
+                                v:Destroy()
+                            elseif v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
+                                if v:FindFirstChild("Slot1") then
+                                    slot1[#slot1+1] = v
+                                elseif v:FindFirstChild("Slot2") then
+                                    slot2[#slot2+1] = v
+                                end
+                            end
+                        end
+
+                        local applied = weapons:ApplySkin(reg, nil, slot1, slot2)
+                        
+                        hook:Add("RenderStep.First", "Skin.Preview.Animations", function(delta)
+                            weapons:RenderAnimations(applied.slot1.animations, delta)
+                            weapons:RenderAnimations(applied.slot2.animations, delta)
+                        end)
+
+                        local connection
+                        connection = workspace.MenuLobby.GunStage.GunModel.ChildRemoved:Connect(function()
+                            hook:Remove("RenderStep.First", "Skin.Preview.Animations")
+                            connection:Disconnect()
+                        end)
                     end)
                 end)
             end)
-        end)
 
-        hook:Add("PostLoadKnife", "Skin.Apply", function(gundata, name)
-            if not config:GetValue("Weapons", "Skins", "Enable") then return end
-            local model = gundata._model
-            gundata._isknife = true
-            if not model then return end
-            local reg = config:GetValue("Weapons", "Skins", "Tertiary")
-            if not reg.Enable then return end
+            hook:Add("PostLoadKnife", "Skin.Apply", function(gundata, name)
+                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                local model = gundata._model
+                gundata._isknife = true
+                if not model then return end
+                local reg = config:GetValue("Weapons", "Skins", "Tertiary")
+                if not reg.Enable then return end
 
-            local descendants = model:GetDescendants()
-            local slot1, slot2 = {}, {}
-            for k, v in pairs(descendants) do
-                if v.ClassName == 'Texture' and (v.Name == "Slot1" or v.Name == "Slot2") then
-                    v:Destroy()
-                elseif v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
-                    if v:FindFirstChild("Slot1") then
-                        slot1[#slot1+1] = v
-                    elseif v:FindFirstChild("Slot2") then
-                        slot2[#slot2+1] = v
+                local descendants = model:GetDescendants()
+                local slot1, slot2 = {}, {}
+                for k, v in pairs(descendants) do
+                    if v.ClassName == 'Texture' and (v.Name == "Slot1" or v.Name == "Slot2") then
+                        v:Destroy()
+                    elseif v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
+                        if v:FindFirstChild("Slot1") then
+                            slot1[#slot1+1] = v
+                        elseif v:FindFirstChild("Slot2") then
+                            slot2[#slot2+1] = v
+                        end
                     end
                 end
-            end
 
-            weapons:ApplySkin(reg, gundata, slot1, slot2)
-        end)
+                weapons:ApplySkin(reg, gundata, slot1, slot2)
+            end)
 
-        hook:Add("PostWeaponThink", "Skin.Animation", function(gundata, partdata)
-            if not config:GetValue("Weapons", "Skins", "Enable") then return end
-            if not gundata._skins then return end
-            if not gundata._skinlast then
-                gundata._skinlast = tick()
-                return
-            end
-            local delta = tick()
-            weapons:RenderAnimations(gundata._skins.slot1.animations, delta-gundata._skinlast)
-            weapons:RenderAnimations(gundata._skins.slot2.animations, delta-gundata._skinlast)
-            gundata._skinlast = delta
-        end)
+            hook:Add("PostWeaponThink", "Skin.Animation", function(gundata, partdata)
+                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                if not gundata._skins then return end
+                if not gundata._skinlast then
+                    gundata._skinlast = tick()
+                    return
+                end
+                local delta = tick()
+                weapons:RenderAnimations(gundata._skins.slot1.animations, delta-gundata._skinlast)
+                weapons:RenderAnimations(gundata._skins.slot2.animations, delta-gundata._skinlast)
+                gundata._skinlast = delta
+            end)
 
-        hook:Add("PostKnifeThink", "Skin.Animation", function(gundata, partdata)
-            if not config:GetValue("Weapons", "Skins", "Enable") then return end
-            if not gundata._skins then return end
-            if not gundata._skinlast then
-                gundata._skinlast = tick()
-                return
-            end
-            local delta = tick()
-            weapons:RenderAnimations(gundata._skins.slot1.animations, delta-gundata._skinlast)
-            weapons:RenderAnimations(gundata._skins.slot2.animations, delta-gundata._skinlast)
-            gundata._skinlast = delta
-        end)
+            hook:Add("PostKnifeThink", "Skin.Animation", function(gundata, partdata)
+                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                if not gundata._skins then return end
+                if not gundata._skinlast then
+                    gundata._skinlast = tick()
+                    return
+                end
+                local delta = tick()
+                weapons:RenderAnimations(gundata._skins.slot1.animations, delta-gundata._skinlast)
+                weapons:RenderAnimations(gundata._skins.slot2.animations, delta-gundata._skinlast)
+                gundata._skinlast = delta
+            end)
+        end
     end
 end
 
