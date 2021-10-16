@@ -3499,6 +3499,13 @@ do
             self.input_repeater_delay = 0
         end
 
+        function GUI:SetTextSize(size)
+            self.textsize = size
+            self.text.Size = size
+            self.cursor.Size = Vector2.new(1, size)
+            self.cursor_outline.Size = Vector2.new(1, size)
+        end
+
         local mouse = BBOT.service:GetService("Mouse")
         function GUI:ProcessClipping()
             local text = self:AutoTruncate()
@@ -3815,7 +3822,8 @@ do
                 self.scrollpanel:Add(button)
             end
 
-            self:SetSize(1, 0, 0, self.scrollpanel:GetTall(8))
+            self:SetSize(1, 0, 0, self.scrollpanel:GetTall(8) + 5)
+            self.scrollpanel:PerformOrganization()
         end
 
         function GUI:IsHoverTotal()
@@ -5082,14 +5090,20 @@ do
 
         function GUI:Scrolled()
             local canvas_size = self.parent:GetTall()
-            local scroll_position = self.parent:GetTall(self.parent.Y_scrol)
+            local scroll_position = self.parent:GetTall(self.parent.Y_scroll)
             local maxLength = canvas_size - self.parent.absolutesize.Y
             self.heightRatio = self.parent.absolutesize.Y / canvas_size
+
+            if self.heightRatio > 1 then
+                self:SetEnabled(false)
+            else
+                self:SetEnabled(true)
+            end
+
             self.height = math.max(math.ceil(self.heightRatio * self.parent.absolutesize.Y), 20)
-            local position = math.clamp(scroll_position / maxLength, 0, 1) * (self.absolutesize.Y - self.height)
-    
+            local position = math.clamp(scroll_position / maxLength, 0, 1) * (self.parent.absolutesize.Y-self.height)
             self:SetSize(0, self.size.X.Offset, self.height/self.parent.absolutesize.Y, 0)
-            self:SetPos(0, -self.size.X.Offset-1, position/self.parent.absolutesize.Y, 0)
+            self:SetPos(1, -self.size.X.Offset-1, position/self.parent.absolutesize.Y, 0)
         end
 
         gui:Register(GUI, "ScrollBar")
@@ -5102,13 +5116,14 @@ do
             self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
             self.scrollbar = gui:Create("ScrollBar", self)
-            self.scrollbar:SetSize(0,3,0,1)
-            self.scrollbar:SetPos(1,-3,0,0)
+            self.scrollbar:SetSize(0,2,0,1)
+            self.scrollbar:SetPos(1,-2,0,0)
+            self.scrollbar:SetZIndex(10)
 
             self.canvas = gui:Create("Container", self)
             self.canvas:SetSize(1,0,1,0)
 
-            self.Y_scroll = 0 -- for now this is by object
+            self.Y_scroll = 1 -- for now this is by object
             self.Spacing = 2
             self.Padding = 0
         end
@@ -5145,6 +5160,7 @@ do
                 local v = children[i]
                 if not gui:IsValid(v) then continue end
                 if not v:GetVisible() then continue end
+                local sizeY = v.absolutesize.Y
                 y_axis = y_axis + sizeY + self.Spacing
             end
             return y_axis
@@ -5201,12 +5217,20 @@ do
                 end
             end
 
+            self.scrollbar:Scrolled()
+
+            if self.scrollbar:GetEnabled() then
+                self.canvas:SetSize(1,-4,1,0)
+            else
+                self.canvas:SetSize(1,0,1,0)
+            end
+
             --self:InvalidateLayout(true, true)
         end
 
         function GUI:WheelForward()
             if not gui:IsHovering(self) then return end
-            self.Y_scroll = math.max(0, self.Y_scroll - 1)
+            self.Y_scroll = math.max(1, self.Y_scroll - 1)
             self:PerformOrganization()
         end
 
@@ -5222,6 +5246,125 @@ do
         end
 
         gui:Register(GUI, "ScrollPanel")
+    end
+
+    do
+        local GUI = {}
+
+        function GUI:Init()
+            self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+            self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+            self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
+            self.mouseinputs = true
+
+            self.gradient = gui:Create("Gradient", self)
+            self.gradient:SetPos(0, 0, 0, -1)
+            self.gradient:SetSize(1, 0, 0, 20)
+            self.gradient:Generate()
+
+            self.title = gui:Create("Text", self)
+            self.title:SetTextAlignmentX(Enum.TextXAlignment.Center)
+            self.title:SetTextAlignmentY(Enum.TextYAlignment.Center)
+            self.title:SetPos(.5,0,.5,0)
+            self.title:SetText("")
+        end
+
+        function GUI:PerformLayout(pos, size)
+            self.background_border.Position = pos - Vector2.new(2,2)
+            self.background_outline.Position = pos - Vector2.new(1,1)
+            self.background.Position = pos
+            self.background_border.Size = size + Vector2.new(4,4)
+            self.background_outline.Size = size + Vector2.new(2,2)
+            self.background.Size = size
+        end
+
+        gui:Register(GUI, "ListColumn")
+
+        local GUI = {}
+
+        function GUI:Init()
+            
+        end
+
+        function GUI:PerformLayout(pos, size)
+
+        end
+
+        function GUI:Calibrate()
+            local columns = self.controller.columns
+            for i=1, #columns do
+                local child = self.children[i]
+                local col = columns[i]
+                child:SetPos(col.pos.X.Scale, 0, 0, 0)
+                child:SetSize(col.size.X.Scale, 0, 0, 20)
+            end
+        end
+
+        function GUI:SetOptions(...)
+            local options = {...}
+            for i=1, #options do
+                local container = gui:Create("Container", self)
+                local row_column = gui:Create("Text", container)
+                container.text = row_column
+                row_column:SetTextAlignmentX(Enum.TextXAlignment.Left)
+                row_column:SetTextAlignmentY(Enum.TextYAlignment.Center)
+                row_column:SetPos(0,0,.5,0)
+                row_column:SetText(options[i])
+            end
+            self:Calibrate()
+        end
+
+        gui:Register(GUI, "ListRow")
+
+        local GUI = {}
+
+        function GUI:Init()
+            self.scrollpanel = gui:Create("ScrollPanel", self)
+            self.scrollpanel:SetPos(0,0,0,19)
+            self.scrollpanel:SetSize(1,0,1,-19)
+
+            self.columns = {}
+        end
+
+        function GUI:PerformLayout() end
+
+        function GUI:Recalibrate()
+            self:RecalibrateColumns()
+        end
+
+        function GUI:RecalibrateColumns()
+            local columns_len = #self.columns
+            if ( columns_len == 0 ) then return end
+            local ideal_wide = 1/columns_len
+
+            for i=1, columns_len do
+                local v = self.columns[i]
+                v:SetPos(ideal_wide*(i-1), 0, 0, 0)
+                v:SetSize(ideal_wide, 0, 0, 20)
+            end
+        end
+
+        function GUI:AddLine(...)
+            local row = gui:Create("ListRow")
+            row.controller = self
+            row:SetOptions(...)
+            row:SetSize(1,0,0,20)
+            self.scrollpanel:Add(row)
+            return row
+        end
+
+        function GUI:AddColumn(name, pos, wide)
+            local newcolumn = gui:Create("ListColumn", self)
+            newcolumn.title:SetText(name)
+            newcolumn.name = name
+            newcolumn.position = pos or (#self.columns+1)
+            newcolumn.wide = wide
+            self.columns[#self.columns+1] = newcolumn
+            self:Recalibrate()
+            return newcolumn
+        end
+
+        gui:Register(GUI, "List")
     end
 
     local camera = BBOT.service:GetService("CurrentCamera")
@@ -6253,7 +6396,7 @@ do
             if chatgame then
                 local version = chatgame:FindFirstChild("Version")
                 if version and not string.find(version.Text, "loading", 1, true) then
-                    wait(3)
+                    wait(5)
                     break
                 end
             end
@@ -6276,7 +6419,7 @@ do
             local anims = {
                 {
                     type = "Toggle",
-                    name = "Enable",
+                    name = "Enabled",
                     value = false,
                 },
                 {
@@ -6313,7 +6456,7 @@ do
             local skins_anims = {
                 {
                     type = "Toggle",
-                    name = "Enable",
+                    name = "Enabled",
                     value = false,
                     extra = {},
                 },
@@ -6353,7 +6496,7 @@ do
             local skins_content = {
                 {
                     type = "Toggle",
-                    name = "Enable",
+                    name = "Enabled",
                     value = false,
                     extra = {},
                     tooltip = "Do note this is not server-sided!"
@@ -6362,7 +6505,7 @@ do
                     type = "DropBox",
                     name = "Material",
                     value = 1,
-                    values = {"Plastic", "Ghost", "Forcefield", "Neon", "Foil", "Glass"},
+                    values = BBOT.config.enums.Material.List,
                     extra = {
                         {
                             type = "ColorPicker",
@@ -6377,23 +6520,29 @@ do
                     name = "Reflectance",
                     value = 0,
                     min = 0,
-                    max = 100,
+                    max = 200,
                     suffix = "%",
                     decimal = 1,
                     extra = {},
                     tooltip = "Gives the material reflectance, this may be buggy or not work on some materials."
                 },
                 {
-                    name = "Textures",
+                    name = "Texture",
                     pos = UDim2.new(0,0,0,90),
                     size = UDim2.new(1,0,1,-96),
                     type = "Panel",
                     content = {
                         {
                             type = "Toggle",
-                            name = "Enable",
+                            name = "Enabled",
                             value = false,
-                            extra = {},
+                            extra = {
+                                {
+                                    type = "ColorPicker",
+                                    name = "Texture Color",
+                                    color = { 255, 255, 255, 255 },
+                                },
+                            },
                         },
                         {
                             type = "Text",
@@ -6438,16 +6587,6 @@ do
                             min = 0,
                             max = 10,
                             suffix = "studs/tile",
-                            decimal = 1,
-                            extra = {},
-                        },
-                        {
-                            type = "Slider",
-                            name = "Transparency",
-                            value = 0,
-                            min = 0,
-                            max = 100,
-                            suffix = "%",
                             decimal = 1,
                             extra = {},
                         },
@@ -6564,7 +6703,7 @@ do
                 {
                     name = "Ballistics",
                     pos = UDim2.new(.5,4,0,0),
-                    size = UDim2.new(.5,-4,1/2,-4),
+                    size = UDim2.new(.5,-4,4/10,-4),
                     type = "Panel",
                     content = {
                         {
@@ -6593,8 +6732,8 @@ do
                 },
                 {
                     name = {"Bullet Redirect", "Trigger Bot"},
-                    pos = UDim2.new(.5,4,1/2,4),
-                    size = UDim2.new(.5,-4,1/2,-4),
+                    pos = UDim2.new(.5,4,4/10,4),
+                    size = UDim2.new(.5,-4,6/10,-4),
                     type = "Panel",
                     {content = {
                         {
@@ -7568,7 +7707,7 @@ do
                                                 value = 0,
                                                 min = -3,
                                                 max = 3,
-                                                decimal = 0.01,
+                                                decimal = 2,
                                                 suffix = " studs",
                                             },
                                             {
@@ -7577,7 +7716,7 @@ do
                                                 value = 0,
                                                 min = -3,
                                                 max = 3,
-                                                decimal = 0.01,
+                                                decimal = 2,
                                                 suffix = " studs",
                                             },
                                             {
@@ -7586,7 +7725,7 @@ do
                                                 value = 0,
                                                 min = -3,
                                                 max = 3,
-                                                decimal = 0.01,
+                                                decimal = 2,
                                                 suffix = " studs",
                                             },
                                             {
@@ -7652,7 +7791,7 @@ do
                                                 value = 0,
                                                 min = 0,
                                                 max = 24,
-                                                decimal = 0.1,
+                                                decimal = 1,
                                                 suffix = "hr",
                                             },
                                             {
@@ -8088,7 +8227,15 @@ do
                                                     toggletype = 2,
                                                 }
                                             },
-                                        }
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Circle Strafe Scale",
+                                            value = 20,
+                                            min = 0,
+                                            max = 100,
+                                            suffix = "x",
+                                        },
                                     }},
                                     {content = {
                                         {
@@ -8357,7 +8504,7 @@ do
                                         },
                                         {
                                             type = "Toggle",
-                                            name = "Semi-God",
+                                            name = "Blink",
                                             value = false,
                                             tooltip = "Enables when you are standing still. Staying longer than 8 seconds may result in a auto-slay when you move. Grenades and knives still affect you!",
                                             extra = {
@@ -8368,10 +8515,16 @@ do
                                             }
                                         },
                                         {
+                                            type = "Toggle",
+                                            name = "Blink Allow Movement",
+                                            value = false,
+                                            tooltip = "Won't check if you are standling still, it will just activate immediately",
+                                        },
+                                        {
                                             type = "Slider",
-                                            name = "Semi-God Keep Alive",
+                                            name = "Blink Keep Alive",
                                             min = 0,
-                                            max = 8,
+                                            max = 12,
                                             suffix = "s",
                                             decimal = 1,
                                             value = 7,
@@ -8541,7 +8694,7 @@ do
                         },
                     }
                 },
-                --[[{
+                {
                     Id = "Weapons",
                     name = "Weapon Customization",
                     pos = UDim2.new(.75, 0, 0, 100),
@@ -8556,7 +8709,7 @@ do
                             content = {
                                 {
                                     type = "Toggle",
-                                    name = "Enable",
+                                    name = "Enabled",
                                     value = false,
                                     extra = {},
                                     tooltip = "Do note that modifying weapons can make things obvious like firerate!"
@@ -8571,7 +8724,7 @@ do
                             content = {
                                 {
                                     type = "Toggle",
-                                    name = "Enable",
+                                    name = "Enabled",
                                     value = false,
                                     extra = {},
                                 },
@@ -8592,7 +8745,7 @@ do
                             }
                         },
                     }
-                },]]
+                },
                 {
                     -- The first layer here is the frame
                     Id = "Env",
@@ -8610,20 +8763,24 @@ do
                                 {
                                     name = "Player List", -- No type means auto-set to panel
                                     pos = UDim2.new(0,0,0,0),
-                                    size = UDim2.new(1,0,1,-80-4),
+                                    size = UDim2.new(1,0,1,-8),
                                     type = "Custom",
                                     callback = function()
                                         local container = gui:Create("Container")
                                         local search = gui:Create("TextEntry", container)
+                                        search:SetTextSize(13)
                                         search:SetText("")
-                                        search:SetSize(1,0,0,21)
+                                        search:SetSize(1,0,0,16)
 
-                                        local playerlist = gui:Create("ScrollPanel", container)
-                                        playerlist:SetPos(0,0,0,21+4)
-                                        playerlist:SetSize(1,0,1,-21-4)
+                                        local playerlist = gui:Create("List", container)
+                                        playerlist:SetPos(0,0,0,16+4)
+                                        playerlist:SetSize(1,0,1,-16-4)
 
-                                        
-                                        
+                                        playerlist:AddColumn("Name")
+                                        playerlist:AddColumn("Team")
+                                        playerlist:AddColumn("Resolver")
+                                        playerlist:AddColumn("Priority")
+
                                         local function Refresh_List()
                                             local tosearch = search:GetText()
                                             local table = BBOT.table
@@ -8633,7 +8790,7 @@ do
 
                                             for i, v in next, players:GetChildren() do
                                                 if v == localplayer then continue end
-                                                local children = playerlist.canvas.children
+                                                local children = playerlist.scrollpanel.canvas.children
                                                 for i=1, #children do
                                                     if children[i].player == v then
                                                         checked[v] = true
@@ -8641,31 +8798,23 @@ do
                                                     end
                                                 end
                                                 if not checked[v] then
-                                                    local player_item = gui:Create("Panel")
-                                                    player_item:SetSize(1,0,0,26)
-                                                    player_item.player = v
-
-                                                    local name = gui:Create("Text", player_item)
-                                                    player_item.name = name
-                                                    name:SetPos(0, 3, 0, 5)
-                                                    name:SetText(v.Name)
-
-                                                    playerlist:Add(player_item)
+                                                    local line = playerlist:AddLine(v.Name, v.Team.Name, "Normal", "Neutral")
+                                                    line.player = v
                                                     checked[v] = true
                                                 end
                                             end
 
-                                            for i, v in next, playerlist.canvas.children do
+                                            for i, v in next, playerlist.scrollpanel.canvas.children do
                                                 if not v.player or not checked[v.player] then
                                                     v:Remove()
-                                                elseif tosearch == "" or string.find(string.lower(v.name:GetText()), string.lower(tosearch), 1, true) then
+                                                elseif tosearch == "" or string.find(string.lower(v.children[1].text:GetText()), string.lower(tosearch), 1, true) then
                                                     v:SetVisible(true)
                                                 else
                                                     v:SetVisible(false)
                                                 end
                                             end
 
-                                            playerlist:PerformOrganization()
+                                            playerlist.scrollpanel:PerformOrganization()
                                         end
 
                                         function search:OnValueChanged()
@@ -8684,13 +8833,6 @@ do
 
                                         return container
                                     end,
-                                    content = {},
-                                },
-                                {
-                                    name = "Player Control",
-                                    pos = UDim2.new(0,0,1,-80+4),
-                                    size = UDim2.new(1,0,0,80-4),
-                                    type = "Container",
                                     content = {},
                                 },
                             },
@@ -9524,12 +9666,53 @@ if BBOT.game == "pf" then
         end)
     end
 
+    -- Lighting
+    do
+        local math = BBOT.math
+        local color = BBOT.color
+        local vector = BBOT.vector
+        local config = BBOT.config
+        local hook = BBOT.hook
+        local timer = BBOT.timer
+        local loop = BBOT.loop
+        local lighting = {}
+        BBOT.lighting = lighting
+
+        function lighting.step()
+            if not game.Lighting then return end
+            if config:GetValue("Main", "Visuals", "World", "Force Time") then
+                game.Lighting.ClockTime = config:GetValue("Main", "Visuals", "World", "Custom Time")
+            end
+
+            if config:GetValue("Main", "Visuals", "World", "Ambience") then
+                game.Lighting.Ambient = config:GetValue("Main", "Visuals", "World", "Ambience", "Inside Ambience")
+                game.Lighting.OutdoorAmbient = config:GetValue("Main", "Visuals", "World", "Ambience", "Outside Ambience")
+            else
+                game.Lighting.Ambient = game.Lighting.MapLighting.Ambient.Value
+                game.Lighting.OutdoorAmbient = game.Lighting.MapLighting.OutdoorAmbient.Value
+            end
+
+            --[[if config:GetValue("Main", "Visuals", "World", "Specular") then
+                game.Lighting.EnvironmentSpecularScale = config:GetValue("Main", "Visuals", "World", "Specular Scale")/100
+            end]]
+            
+            --[[if config:GetValue("Main", "Visuals", "World", "Custom Saturation") and game.Lighting.MapSaturation then
+                game.Lighting.MapSaturation.TintColor = config:GetValue("Main", "Visuals", "World", "Custom Saturation", "Saturation Tint")
+                game.Lighting.MapSaturation.Saturation = config:GetValue("Main", "Visuals", "World", "Saturation Density") / 50
+            end]]
+        end
+
+        local runservice = BBOT.service:GetService("RunService")
+        loop:Run("BBOT:Lighting.Step", lighting.step, runservice.RenderStepped)
+    end
+
     -- Misc
     do
         local userinputservice = BBOT.service:GetService("UserInputService")
         local camera = BBOT.service:GetService("CurrentCamera")
         local localplayer = BBOT.service:GetService("LocalPlayer")
         local hook = BBOT.hook
+        local math = BBOT.math
         local config = BBOT.config
         local roundsystem = BBOT.aux.roundsystem
         local network = BBOT.aux.network
@@ -9567,7 +9750,7 @@ if BBOT.game == "pf" then
             end
         end)
 
-        function misc:Fly()
+        function misc:Fly(delta)
             if not config:GetValue("Main", "Misc", "Movement", "Fly") or not config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
             local speed = config:GetValue("Main", "Misc", "Movement", "Fly Speed")
             local rootpart = self.rootpart -- Invis compatibility
@@ -9593,6 +9776,26 @@ if BBOT.game == "pf" then
             if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
                 travel -= Vector3.new(0, 1, 0)
             end
+
+            if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
+                if misc.speedDirection.x ~= misc.speedDirection.x then 
+                    misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
+                end
+                local origin = travel.Y
+                misc.circleStrafeAngle = -0.1
+                if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+                    misc.circleStrafeAngle = 0.1
+                end
+                if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+                    misc.circleStrafeAngle = -0.1
+                end
+                local cd = Vector2.new(misc.speedDirection.x, misc.speedDirection.z)
+                local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
+                cd = vector.rotate(cd, misc.circleStrafeAngle * scale)
+                misc.speedDirection = Vector3.new(cd.x, travel.Y, cd.y)
+                travel = misc.speedDirection
+            end
+
             if travel.Unit.x == travel.Unit.x then
                 rootpart.Anchored = false
                 rootpart.Velocity = travel.Unit * speed --multiplaye the unit by the speed to make
@@ -9603,7 +9806,7 @@ if BBOT.game == "pf" then
         end
 
         misc.speedDirection = Vector3.new(1,0,0)
-        function misc:Speed()
+        function misc:Speed(delta)
             if config:GetValue("Main", "Misc", "Movement", "Fly") and config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
             local speedtype = config:GetValue("Main", "Misc", "Movement", "Speed Type")
             local rootpart = self.rootpart
@@ -9646,7 +9849,8 @@ if BBOT.game == "pf" then
                         misc.circleStrafeAngle = -0.1
                     end
                     local cd = Vector2.new(misc.speedDirection.x, misc.speedDirection.z)
-                    cd = vector.rotate(cd, misc.circleStrafeAngle)
+                    local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
+                    cd = vector.rotate(cd, misc.circleStrafeAngle * scale)
                     misc.speedDirection = Vector3.new(cd.x, 0, cd.y)
                 end
 
@@ -9823,7 +10027,7 @@ if BBOT.game == "pf" then
             end
         end)
 
-        hook:Add("RenderStepped", "BBOT:Misc.Calculate", function()
+        hook:Add("RenderStepped", "BBOT:Misc.Calculate", function(delta)
             misc:UpdateBeams()
             if config:GetValue("Main", "Misc", "Exploits", "Server Crasher") and config:GetValue("Main", "Misc", "Exploits", "Server Crasher", "KeyBind") then
                 for i = 1, config:GetValue("Main", "Misc", "Exploits", "Server Crasher Intensity") ^ 2 do
@@ -9844,9 +10048,9 @@ if BBOT.game == "pf" then
             misc.rootpart = (misc.newroot or misc.oldroot)
             char.rootpart = misc.rootpart
             if not CHAT_BOX.Active then
-                misc:Fly()
-                misc:Speed()
-                misc:AutoJump()
+                misc:Fly(delta)
+                misc:Speed(delta)
+                misc:AutoJump(delta)
             end
         end)
 
@@ -9951,38 +10155,102 @@ if BBOT.game == "pf" then
         end)
 
         local last_pos, last_ang, last_send, should_start = nil, nil, tick(), 0
-        hook:Add("SuppressNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, ...)
+        local absolute_pos = nil
+        local blink_record = {}
+
+        hook:Add("SuppressNetworkSend", "BBOT:Blink", function(networkname, pos, ang, timestamp, ...)
             if networkname == "repupdate" then
-                if config:GetValue("Main", "Misc", "Exploits", "Semi-God") and config:GetValue("Main", "Misc", "Exploits", "Semi-God", "KeyBind") then
-                    if last_pos == pos then
-                        if last_send < tick() and config:GetValue("Main", "Misc", "Exploits", "Semi-God Keep Alive") > 0 then
-                            last_send = tick() + config:GetValue("Main", "Misc", "Exploits", "Semi-God Keep Alive")
+                absolute_pos = pos
+                if config:GetValue("Main", "Misc", "Exploits", "Blink") and config:GetValue("Main", "Misc", "Exploits", "Blink", "KeyBind") then
+                    local allowmove = config:GetValue("Main", "Misc", "Exploits", "Blink Allow Movement")
+                    if last_pos == pos or allowmove then
+                        if not last_pos then
                             last_pos = pos
-                            BBOT.menu:UpdateStatus("Semi-God", "Buffering...")
-                            network:send(networkname, last_pos, last_ang, ...)
+                            last_ang = ang
+                            return
+                        end
+                        local t = config:GetValue("Main", "Misc", "Exploits", "Blink Keep Alive")
+                        if last_send + t < tick() and t > 0 then
+                            BBOT.menu:UpdateStatus("Blink", "Buffering...")
+                            misc:SendBlinkRecord()
+                            last_pos = pos
+                            --last_ang = ang
+                            network:send(networkname, last_pos, last_ang, timestamp)
+                            last_send = tick()
                         else
-                            BBOT.menu:UpdateStatus("Semi-God", "Active")
+                            BBOT.menu:UpdateStatus("Blink", "Active"
+                            .. (t > 0 and " [" .. math.abs(math.round(last_send+t-tick(),1)) .. "s]" or "")
+                            .. (allowmove and " [" .. math.round((pos-last_pos).Magnitude, 1) .. " studs]" or ""))
+                            if not blink_record[1] or blink_record[#blink_record][1] ~= pos then
+                                local last = blink_record[#blink_record]
+                                if last then
+                                    local lasttime = last[3]
+                                    if lasttime and timestamp < lasttime then
+                                        last[3] = timestamp
+                                    end
+                                end
+                                blink_record[#blink_record+1] = {pos, ang, timestamp}
+                            end
                         end
                         return true
                     else
-                        BBOT.menu:UpdateStatus("Semi-God", "Stand Still")
+                        BBOT.menu:UpdateStatus("Blink", "Stand Still")
+                        last_send = tick()
                         last_pos = pos
                         last_ang = ang
                     end
                 else
+                    last_send = tick()
                     last_pos = pos
                     last_ang = ang
                 end
             end
         end)
 
-        hook:Add("RenderStepped", "BBOT:RepUpdate", function()
-            if not config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Force") then return end
-            if not char.alive then return end
-            local l__angles__1304 = BBOT.aux.camera.angles;
-            for i=1, 10 do
-                network:send("repupdate", char.rootpart.Position, Vector2.new(l__angles__1304.x, l__angles__1304.y), tick());
+        function misc:SendBlinkRecord()
+            if #blink_record > 0 and last_pos and (absolute_pos-last_pos).Magnitude > 9 then
+                local finaltime = blink_record[#blink_record]
+                local firsttime = blink_record[1]
+                if firsttime == finaltime then
+                    for i=1, #blink_record do
+                        network:send("repupdate", blink_record[i][1], blink_record[i][2], blink_record[i][3])
+                    end
+                else
+                    local timediff = finaltime[3]-firsttime[3]
+                    local first = firsttime[3]
+                    local len = #blink_record
+                    for i=1, len do
+                        network:send("repupdate", blink_record[i][1], blink_record[i][2], ((timediff/len)*i/20)+first)
+                    end
+                end
             end
+            blink_record = {}
+        end
+
+        function misc:UnBlink()
+            misc:SendBlinkRecord()
+            last_send = tick()
+            last_pos = nil
+            last_ang = nil
+        end
+
+        hook:Add("OnConfigChanged", "BBOT:Blink", function(steps)
+            if config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Blink", true) then
+                misc:UnBlink()
+            end
+        end)
+
+        hook:Add("OnKeyBindChanged", "BBOT:Blink", function(steps)
+            if config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Blink", "KeyBind") then
+                misc:UnBlink()
+            end
+        end)
+
+        hook:Add("OnAliveChanged", "BBOT:Blink", function()
+            blink_record = {}
+            last_send = tick()
+            last_pos = nil
+            last_ang = nil
         end)
 
         local workspace = BBOT.service:GetService("Workspace")
@@ -10549,7 +10817,22 @@ if BBOT.game == "pf" then
 
         local vector_cache = Vector3.new()
         function aimbot:GetResolvedPosition(player)
-            if not self:GetRageConfig("Hack vs. Hack", "Resolver") then return vector_cache end
+            if not self:GetRageConfig("Hack vs. Hack", "Resolver") then
+                local updater = replication.getupdater(player)
+                local parts = aimbot:GetParts(player)
+                if updater and updater.receivedPosition and parts then
+                    local headpart = parts.head
+                    local offset = (updater.getpos()-headpart.Position)+Vector3.new(0,1.25,0)
+                    if offset.Magnitude > 1 then
+                        if offset.Magnitude >= math.huge then
+                            return updater.getpos(), true
+                        else
+                            return offset
+                        end
+                    end
+                end
+                return vector_cache
+            end
             --[[local bodyparts, rootpart = aimbot:GetParts(player)
             local resolvedoffset = vector_cache
             -- method 1
@@ -10562,10 +10845,10 @@ if BBOT.game == "pf" then
             local parts = aimbot:GetParts(player)
             if updater and updater.receivedPosition and parts then
                 local headpart = parts.head
-                local offset = (updater.getpos()-headpart.Position)+Vector3.new(0,1.25,0)
+                local offset = (updater.receivedPosition-headpart.Position)+Vector3.new(0,1.25,0)
                 if offset.Magnitude > 1 then
                     if offset.Magnitude >= math.huge then
-                        return updater.getpos(), true
+                        return updater.receivedPosition, true
                     else
                         return offset
                     end
@@ -11468,7 +11751,7 @@ if BBOT.game == "pf" then
                     if (pos-cam_position).Magnitude > range then continue end
                     if visible_only then
                         local raydata = self:kniferaycast(cam_position,pos-cam_position,playerteamdata)
-                        if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
+                        if (not raydata or not raydata.Instance:IsDescendantOf(parts.head.Parent)) and (raydata and raydata.Position ~= pos) then continue end
                     end
                     table.insert(organizedPlayers, {v, part, name})
                 end
@@ -13271,7 +13554,7 @@ if BBOT.game == "pf" then
                 ["Transparency"] = true,
             }
             function weapons:SetupAnimations(reg, objects, type, animtable)
-                if not reg.Enable then return end
+                if not reg.Enabled then return end
                 for k, v in pairs(reg) do
                     if typeof(v) == "table" and v.Enable then
                         if texture_animtypes[k] and type == "Texture" then
@@ -13368,32 +13651,32 @@ if BBOT.game == "pf" then
                 if gundata then
                     gundata._skins = skins
                 end
-                local slot1_data = reg["Slot 1"]
-                if slot1_data.Enable then
+                local slot1_data = reg["Slot1"]
+                if slot1_data.Enabled then
                     skins.slot1.objects = slot1
                     local textures = {}
                     for i=1, #slot1 do
                         local object = slot1[i]
-                        object.Color = slot1_data["Brick Color"]
-                        object.Material = config.matstoid[slot1_data["Material"].value]
-                        object.Reflectance = slot1_data["Reflectance"].value
+                        object.Color = Color3.fromRGB(unpack(slot1_data["Material"]["Brick Color"].value))
+                        object.Material = config.enums.Material.Id[slot1_data["Material"]["self"].value]
+                        object.Reflectance = slot1_data["Reflectance"]/100
                         if object:IsA("UnionOperation") then
                             object.UsePartColor = true
                         end
                         local texture = slot1_data["Texture"]
-                        if texture.Enable and texture.AssetID ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
+                        if texture.Enabled.self and texture["Asset-Id"] ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
                             for i=0, 5 do
                                 local itexture = Instance.new("Texture")
                                 itexture.Parent = object
                                 itexture.Face = i
                                 itexture.Name = "Slot1"
-                                itexture.Color3 = texture.Color
-                                itexture.Texture = texture.AssetID
-                                itexture.Transparency = texture.Transparency.value
-                                itexture.OffsetStudsU = texture.OffsetStudsU.value
-                                itexture.OffsetStudsV = texture.OffsetStudsV.value
-                                itexture.StudsPerTileU = texture.StudsPerTileU.value
-                                itexture.StudsPerTileV = texture.StudsPerTileV.value
+                                itexture.Color3 = Color3.fromRGB(unpack(texture["Enabled"]["Texture Color"].value))
+                                itexture.Texture = texture["Asset-Id"]
+                                itexture.Transparency = (texture["Enabled"]["Texture Color"].value[4]/255)
+                                itexture.OffsetStudsU = texture.OffsetStudsU
+                                itexture.OffsetStudsV = texture.OffsetStudsV
+                                itexture.StudsPerTileU = texture.StudsPerTileU
+                                itexture.StudsPerTileV = texture.StudsPerTileV
                                 if gundata then
                                     if not gundata._anims.camodata[object] then
                                         gundata._anims.camodata[object] = {}
@@ -13407,36 +13690,36 @@ if BBOT.game == "pf" then
                             end
                         end
                     end
-                    self:SetupAnimations(slot1_data.Animation, textures, "Texture", skins.slot1.animations)
-                    self:SetupAnimations(slot1_data.Animation, slot1, "Part", skins.slot1.animations)
+                    --[[self:SetupAnimations(slot1_data.Animation, textures, "Texture", skins.slot1.animations)
+                    self:SetupAnimations(slot1_data.Animation, slot1, "Part", skins.slot1.animations)]]
                 end
 
-                local slot2_data = reg["Slot 2"]
-                if slot2_data.Enable then
+                local slot2_data = reg["Slot2"]
+                if slot2_data.Enabled then
                     skins.slot2.objects = slot2
                     local textures = {}
                     for i=1, #slot2 do
                         local object = slot2[i]
-                        object.Color = slot2_data["Brick Color"]
-                        object.Material = config.matstoid[slot2_data["Material"].value]
-                        object.Reflectance = slot2_data["Reflectance"].value
+                        object.Color = Color3.fromRGB(unpack(slot2_data["Material"]["Brick Color"].value))
+                        object.Material = config.enums.Material.Id[slot2_data["Material"]["self"].value]
+                        object.Reflectance = slot2_data["Reflectance"]/100
                         if object:IsA("UnionOperation") then
                             object.UsePartColor = true
                         end
                         local texture = slot2_data["Texture"]
-                        if texture.Enable and texture.AssetID ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
+                        if texture.Enabled.self and texture["Asset-Id"] ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
                             for i=0, 5 do
                                 local itexture = Instance.new("Texture")
                                 itexture.Parent = object
                                 itexture.Name = "Slot2"
                                 itexture.Face = i
-                                itexture.Color3 = texture.Color
-                                itexture.Texture = texture.AssetID
-                                itexture.Transparency = texture.Transparency.value
-                                itexture.OffsetStudsU = texture.OffsetStudsU.value
-                                itexture.OffsetStudsV = texture.OffsetStudsV.value
-                                itexture.StudsPerTileU = texture.StudsPerTileU.value
-                                itexture.StudsPerTileV = texture.StudsPerTileV.value
+                                itexture.Color3 = Color3.fromRGB(unpack(texture["Enabled"]["Texture Color"].value))
+                                itexture.Texture = texture["Asset-Id"]
+                                itexture.Transparency = (texture["Enabled"]["Texture Color"].value[4]/255)
+                                itexture.OffsetStudsU = texture.OffsetStudsU
+                                itexture.OffsetStudsV = texture.OffsetStudsV
+                                itexture.StudsPerTileU = texture.StudsPerTileU
+                                itexture.StudsPerTileV = texture.StudsPerTileV
                                 if gundata then
                                     if not gundata._anims.camodata[object] then
                                         gundata._anims.camodata[object] = {}
@@ -13450,8 +13733,8 @@ if BBOT.game == "pf" then
                             end
                         end
                     end
-                    self:SetupAnimations(slot2_data.Animation, textures, "Texture", skins.slot2.animations)
-                    self:SetupAnimations(slot2_data.Animation, slot2, "Part", skins.slot2.animations)
+                    --[[self:SetupAnimations(slot2_data.Animation, textures, "Texture", skins.slot2.animations)
+                    self:SetupAnimations(slot2_data.Animation, slot2, "Part", skins.slot2.animations)]]
                 end
 
                 return skins
@@ -13511,7 +13794,7 @@ if BBOT.game == "pf" then
             end
 
             function weapons:SkinApplyGun(gundata, slot)
-                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                if not config:GetValue("Weapons", "Skins", "Enabled") then return end
                 local slot = slot or gundata.gunnumber
                 local model = gundata._model
                 if not model then return end
@@ -13523,9 +13806,7 @@ if BBOT.game == "pf" then
                     classtype = "Secondary"
                 end
 
-
                 local reg = config:GetValue("Weapons", "Skins", classtype)
-                if not reg.Enable then return end
 
                 local descendants = model:GetDescendants()
                 local slot1, slot2 = {}, {}
@@ -13545,19 +13826,19 @@ if BBOT.game == "pf" then
             end
 
             hook:Add("PostLoadGun", "Skin.Apply", function(gundata, name)
-                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                if not config:GetValue("Weapons", "Skins", "Enabled") then return end
                 weapons:SkinApplyGun(gundata)
             end)
 
-            hook:Add("FullyLoaded", "Skin.LiveApply", function()
+            hook:Add("PostInitialize", "Skin.LiveApply", function()
                 timer:Simple(1, function()
                     local workspace = BBOT.service:GetService("Workspace")
                     hook:Add("OnConfigChanged", "Skin.Preview", function(steps, old, new)
-                        if not config:IsPathwayEqual(steps, "Weapons", "Skins", "Preview") then return end
+                        if not config:GetValue("Weapons", "Skins", "Enabled") then return end
+                        if not config:IsPathwayEqual(steps, "Weapons", "Skins", "Primary") then return end
                         local model = workspace.MenuLobby.GunStage.GunModel:GetChildren()[1]
                         if not model then return end
-                        local reg = config:GetValue("Weapons", "Skins", "Preview")
-                        if not reg.Enable then return end
+                        local reg = config:GetValue("Weapons", "Skins", "Primary")
 
                         local descendants = model:GetDescendants()
                         local slot1, slot2 = {}, {}
@@ -13572,6 +13853,7 @@ if BBOT.game == "pf" then
                                 end
                             end
                         end
+
 
                         local applied = weapons:ApplySkin(reg, nil, slot1, slot2)
                         
@@ -13590,7 +13872,7 @@ if BBOT.game == "pf" then
             end)
 
             hook:Add("PostLoadKnife", "Skin.Apply", function(gundata, name)
-                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                if not config:GetValue("Weapons", "Skins", "Enabled") then return end
                 local model = gundata._model
                 gundata._isknife = true
                 if not model then return end
@@ -13615,7 +13897,7 @@ if BBOT.game == "pf" then
             end)
 
             hook:Add("PostWeaponThink", "Skin.Animation", function(gundata, partdata)
-                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                if not config:GetValue("Weapons", "Skins", "Enabled") then return end
                 if not gundata._skins then return end
                 if not gundata._skinlast then
                     gundata._skinlast = tick()
@@ -13628,7 +13910,7 @@ if BBOT.game == "pf" then
             end)
 
             hook:Add("PostKnifeThink", "Skin.Animation", function(gundata, partdata)
-                if not config:GetValue("Weapons", "Skins", "Enable") then return end
+                if not config:GetValue("Weapons", "Skins", "Enabled") then return end
                 if not gundata._skins then return end
                 if not gundata._skinlast then
                     gundata._skinlast = tick()
