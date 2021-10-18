@@ -7057,7 +7057,7 @@ do
                                             type = "DropBox",
                                             name = "Knife Hitscan",
                                             value = 1,
-                                            values = { "Head", "Torso" },
+                                            values = { "Head", "Body" },
                                         },
                                         {
                                             type = "Toggle",
