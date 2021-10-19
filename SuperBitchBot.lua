@@ -1732,16 +1732,15 @@ do
             end
             return object
         end
+        function base:Draw(class)
+            return self:Cache(class.new())
+        end
         function base:Destroy()
             self:PreDestroy()
             local objects = self.objects
             while true do
                 local v = objects[1]
                 if not v then break end
-                v = v[1]
-                if v and type(v) ~= "number" and v.__OBJECT_EXISTS then
-                    v:Remove()
-                end
                 table.remove(objects, 1)
             end
             self:PostDestroy()
@@ -2142,6 +2141,78 @@ do
             end
         end
     end)
+end
+
+-- GUI Extended
+do
+    local hook = BBOT.hook
+    local font = BBOT.font
+    local color = BBOT.color
+    local gui = BBOT.gui
+
+    -- Core
+    do
+        local GUI = {}
+
+        function GUI:Init()
+            self:SetZIndex(0)
+        end
+
+        function GUI:PerformLayout(pos, size)
+            setcliprect(self:GetAbsoluteZIndex(), Rect.new(pos, size))
+        end
+
+        gui:Register(GUI, "Scissor")
+    end
+
+    do -- Aesthetic Line :D 
+        local GUI = {}
+
+        function GUI:Init()
+            local gradient = self:Draw(GradientRectDynamic)
+            local accent = gui:GetColor("Accent")
+            gradient.ColorUpperLeft = accent
+            gradient.ColorUpperRight = accent
+            local accent_dark = color.darkness(accent, 0.5)
+            gradient.ColorBottomLeft = accent_dark
+            gradient.ColorBottomRight = accent_dark
+        end
+
+        function GUI:PerformLayout(pos, size)
+            gradient.Position = pos
+            gradient.Size = size
+        end
+
+        gui:Register(GUI, "VeryBeautifulLine")
+    end
+
+    local simple_line = gui:Create("VeryBeautifulLine")
+    simple_line:SetPos(0,0,0,20)
+    simple_line:SetSize(1,0,0,2)
+end
+
+-- Lua API
+do
+    local string = BBOT.string
+    local lua_api = {}
+    BBOT.lua_api = lua_api
+
+    function lua_api:Execute(code, identity)
+        local func, err = loadstring(code, string.random(16) .. "-" .. identity)
+        if not func then
+            BBOT.log(LOG_ERROR, "Error compiling " .. identity .. " - " .. err)
+            return
+        end
+        setfenv(func, getfenv())
+        local ran, err = xpcall(func, debug.traceback())
+        if not ran then
+            BBOT.log(LOG_ERROR, "Error executing " .. identity .. " - " .. err)
+        end
+    end
+
+    function lua_api:Find()
+
+    end
 end
 
 -- Init, tell all modules we are ready
