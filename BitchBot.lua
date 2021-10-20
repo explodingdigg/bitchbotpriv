@@ -5123,7 +5123,7 @@ do
             self.canvas = gui:Create("Container", self)
             self.canvas:SetSize(1,0,1,0)
 
-            self.Y_scroll = 1 -- for now this is by object
+            self.Y_scroll = 0 -- for now this is by object
             self.Spacing = 2
             self.Padding = 0
         end
@@ -5203,7 +5203,7 @@ do
                 local sizeY = v.absolutesize.Y
                 v:SetSize(1, -4-self.Padding*2, 0, sizeY)
 
-                if i < self.Y_scroll then
+                if i <= self.Y_scroll then
                     v:SetPos(0, self.Padding+2, 0, -sizeY-4)
                     v:SetEnabled(false)
                 else
@@ -5230,7 +5230,7 @@ do
 
         function GUI:WheelForward()
             if not gui:IsHovering(self) then return end
-            self.Y_scroll = math.max(1, self.Y_scroll - 1)
+            self.Y_scroll = math.max(0, self.Y_scroll - 1)
             self:PerformOrganization()
         end
 
@@ -5837,6 +5837,7 @@ do
         hook:Add("OnConfigChanged", "BBOT:KeyBinds.Menu", function(steps, old, new)
             if not config:IsPathwayEqual(steps, "Main", "Visuals", "Keybinds", "Enabled", true) then return end
             keybinds:SetEnabled(new)
+            keybinds:SetVisible(new)
         end)
 
         menu.statuses = {}
@@ -5921,6 +5922,19 @@ do
         self:HandleGeneration(function(config, panel)
             tabs:Add(config.name, config.icon, panel)
         end, path, configuration.content)
+
+        if configuration.name ~= "Bitch Bot" then
+            if not config:GetValue("Main", "Settings", "Menus", configuration.name) then
+                frame:SetEnabled(false)
+            end
+
+            hook:Add("OnConfigChanged", "BBOT:Menu.SubToggle." .. configuration.name, function(steps, old, new)
+                if gui:IsValid(frame) and config:IsPathwayEqual(steps, "Main", "Settings", "Menus", configuration.name) then
+                    frame:SetEnabled(new)                
+                end        
+            end)
+        end
+
         return frame
     end
 
@@ -6434,6 +6448,7 @@ do
                     min = -1,
                     max = 1,
                     value = 0,
+                    decimal = 2,
                     suffix = "studs"
                 },
                 {
@@ -6442,6 +6457,7 @@ do
                     min = 0,
                     max = 10,
                     value = 0,
+                    decimal = 2,
                     suffix = "studs"
                 },
                 {
@@ -6450,6 +6466,7 @@ do
                     min = 0,
                     max = 10,
                     value = 0,
+                    decimal = 2,
                     suffix = "studs"
                 },
             }
@@ -7027,7 +7044,69 @@ do
                                     name = { "Anti Aim", "Fake Lag" },
                                     pos = UDim2.new(.5,4,0,0),
                                     size = UDim2.new(.5,-4,1-(5.5/10),-4),
-                                    {content = {}},
+                                    {content = {
+                                        {
+                                            type = "Toggle",
+                                            name = "Enabled",
+                                            value = false,
+                                            tooltip = "When this is enabled, your server-side yaw, pitch and stance are set to the values in this tab.",
+                                        },
+                                        {
+                                            type = "DropBox",
+                                            name = "Pitch",
+                                            value = 4,
+                                            values = {
+                                                "Off",
+                                                "Up",
+                                                "Zero",
+                                                "Down",
+                                                "Upside Down",
+                                                "Roll Forward",
+                                                "Roll Backward",
+                                                "Random",
+                                                "Bob",
+                                                "Glitch",
+                                            },
+                                        },
+                                        {
+                                            type = "DropBox",
+                                            name = "Yaw",
+                                            value = 2,
+                                            values = { "Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin" },
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Spin Rate",
+                                            value = 10,
+                                            minvalue = -100,
+                                            maxvalue = 100,
+                                            stradd = "°/s",
+                                        },
+                                        {
+                                            type = "DropBox",
+                                            name = "Force Stance",
+                                            value = 4,
+                                            values = { "Off", "Stand", "Crouch", "Prone" },
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Hide in Floor",
+                                            value = true,
+                                            tooltip = "Shifts your body slightly under the ground\nso as to hide it when Force Stance is set to Prone.",
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Lower Arms",
+                                            value = false,
+                                            tooltip = "Lowers your arms on the server.",
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Tilt Neck",
+                                            value = false,
+                                            tooltip = "Forces the replicated aiming state so that it appears as though your head is tilted.",
+                                        },
+                                    }},
                                     {content = {}},
                                 },
                                 {
@@ -7433,6 +7512,20 @@ do
                                                         toggletype = 2,
                                                     },
                                                 },
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "Third Person Absolute",
+                                                value = false,
+                                                extra = {},
+                                                tooltip = "Forces the L3P character to be exactly on you.",
+                                            },
+                                            {
+                                                type = "Toggle",
+                                                name = "First Person Third",
+                                                value = false,
+                                                extra = {},
+                                                tooltip = "See through the eyes of L3P",
                                             },
                                             {
                                                 type = "Slider",
@@ -8131,7 +8224,7 @@ do
                             type = "Container",
                             content = {
                                 {
-                                    name = {"Movement", "Tweaks"},
+                                    name = {"Movement", "Tweaks", "Chat Spam"},
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(.5,-4,5.5/10,-4),
                                     type = "Panel",
@@ -8316,6 +8409,69 @@ do
                                             tooltip = "Temporarily here till I make a weapons tab..."
                                         },
                                     }},
+                                    {content = {
+                                        {
+                                            type = "Toggle",
+                                            name = "Enabled",
+                                            value = false,
+                                            tooltip = "Try not to turn this on when playing legit :)\nWARNING: This could make anti-votekick break due to chat limitations!",
+                                            unsafe = true
+                                        },
+                                        {
+                                            type = "DropBox",
+                                            name = "Presets",
+                                            value = 1,
+                                            values = {"Bitch Bot", "Chinese Propaganda", "Youtube Title", "Emojis", "Deluxe", "t0nymode", "Douchbag", "Custom"},
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Spam Delay",
+                                            min = 1.5,
+                                            max = 10,
+                                            suffix = "s",
+                                            decimal = 1,
+                                            value = 1.5,
+                                            custom = {
+                                                [1.5] = "Chat Rape",
+                                            },
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Newline Mixer",
+                                            value = true,
+                                            tooltip = "Instead of showing each line, it mixes lines together.",
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Spam On Kills",
+                                            value = true,
+                                            tooltip = "Makes the chat spammer only spam per kill, extra synatxes are added such as {weapon}, {player}, {hitpart}",
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Minimum Kills",
+                                            min = 0,
+                                            max = 15,
+                                            suffix = " kill(s)",
+                                            decimal = 0,
+                                            value = 0,
+                                            custom = {
+                                                [0] = "Spam Immediately",
+                                            },
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Start Delay",
+                                            min = 0,
+                                            max = 10,
+                                            suffix = "s",
+                                            decimal = 1,
+                                            value = 0,
+                                            custom = {
+                                                [0] = "Spam Immediately",
+                                            },
+                                        },
+                                    }}
                                 },
                                 {
                                     name = {"Server Hopper", "Votekick"},
@@ -8415,7 +8571,14 @@ do
                                     pos = UDim2.new(.5,4,0,0),
                                     size = UDim2.new(.5,-4,1,0),
                                     type = "Panel",
-                                    {content = {}},
+                                    {content = {
+                                        {
+                                            type = "Toggle",
+                                            name = "Auto Death",
+                                            value = false,
+                                            tooltip = "Lowers your total KD so that you don't get flagged for bans."
+                                        },
+                                    }},
                                     {content = {
                                         {
                                             type = "Toggle",
@@ -8614,6 +8777,26 @@ do
                                             end
                                         }
                                     },
+                                },
+                                {
+                                    name = "Menus",
+                                    pos = UDim2.new(.5,4,0,0),
+                                    size = UDim2.new(.5,-4,4/10,-4),
+                                    type = "Panel",
+                                    content = {
+                                        {
+                                            type = "Toggle",
+                                            name = "Weapon Customization",
+                                            value = false,
+                                            extra = {},
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Environment",
+                                            value = false,
+                                            extra = {},
+                                        },
+                                    }
                                 },
                                 {
                                     name = "Configs",
@@ -9046,6 +9229,38 @@ if BBOT.game == "pf" then
             hook:Add("Unload", "BBOT:NetworkReceivers", function()
                 rawset(aux.network, "receivers", nil)
             end)
+
+
+            local updater = aux.replication.getupdater
+            local ups = debug.getupvalues(aux.replication.getupdater)
+            for k, v in pairs(ups) do
+                if typeof(v) == "table" then
+                    rawset(BBOT.aux.replication, "player_registry", v)
+                elseif typeof(v) == "function" then
+                    local function createupdater(player)
+                        timer:Async(function() if (localplayer ~= player) then hook:Call("CreateUpdater", player) end end)
+                        return v(player)
+                    end
+                    rawset(BBOT.aux.replication, "_updater", v)
+                    debug.setupvalue(updater, k, newcclosure(createupdater))
+                    hook:Add("Unload", "BBOT:Aux.Replication.UndoUpdaterDetour", function()
+                        debug.setupvalue(updater, k, v)
+                    end)
+                end
+            end
+    
+            hook:Add("Unload", "BBOT:Aux.Replication.Updater", function()
+                rawset(BBOT.aux.replication, "player_registry", nil)
+                rawset(BBOT.aux.replication, "_updater", nil)
+            end)
+
+            if not aux.replication.player_registry then
+                return "Couldn't find auxillary \"replication.player_registry\""
+            end
+
+            if not aux.replication._updater then
+                return "Couldn't find auxillary \"replication._updater\""
+            end
         end
 
         local profiling_tick = tick()
@@ -9249,35 +9464,10 @@ if BBOT.game == "pf" then
         local table = BBOT.table
         local notification = BBOT.notification
         local string = BBOT.string
+        local config = BBOT.config
         local timer = BBOT.timer
         local chat = {}
         BBOT.chat = chat
-        chat.spam_chat = {}
-        chat.spam_kill = {}
-
-        if not isfile("bitchbot/chatspam.txt") then --idk help the user out lol, prevent stupid errors --well it would kinda ig
-            writefile(
-                "bitchbot/chatspam.txt",
-                "WSUP FOOL\nGET OWNED KID\nBBOAT ON TOP\nI LOVE BBOT YEAH\nPLACEHOLDER TEXT \ndear bbot user, edit your chat spam\n	"
-            )
-        end
-        
-        if not isfile("bitchbot/killsay.txt") then
-            writefile(
-                "bitchbot/killsay.txt",
-                "WSUP FOOL [name]\nGET OWNED [name]\n[name] just died to my [weapon] everybody laugh\n[name] got owned roflsauce\nPLACEHOLDER TEXT \ndear bbot user, edit your kill say\n	"
-            )
-        end
-
-        local customtxt = readfile("bitchbot/chatspam.txt")
-        for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
-            table.insert(chat.spam_chat, s) -- I'm care
-        end
-
-        customtxt = readfile("bitchbot/killsay.txt")
-        for s in customtxt:gmatch("[^\n]+") do -- I'm Love String:Match
-            table.insert(chat.spam_kill, s)
-        end
 
         hook:Add("Initialize", "BBOT:ChatDetour", function()
             local receivers = network.receivers
@@ -9322,6 +9512,12 @@ if BBOT.game == "pf" then
             chat.commands[name] = nil
         end
 
+        chat:AddCommand("rank", function(num)
+            num = tonumber(num)
+            if not num then return end
+            notification:Create("Rank: " .. BBOT.aux.playerdata.rankcalculator(num))
+        end)
+
         chat:AddCommand("help", function(...)
             notification:Create("WIP, please wait a bit!")
         end, "Shows all command information.")
@@ -9360,6 +9556,7 @@ if BBOT.game == "pf" then
                 a = 0
                 lasttext = msg
             end
+            local msgquery = self.buffer
             msgquery[#msgquery+1] = msg .. spaces
         end
         
@@ -9371,6 +9568,256 @@ if BBOT.game == "pf" then
                 end
             end
         end
+
+        chat.spammer_presets = {
+            ["Bitch Bot"] = {
+                "BBOT ON TOP ",
+                "BBOT ON TOP 🔥🔥🔥🔥",
+                "BBot top i think ",
+                "bbot > all ",
+                "BBOT > ALL🧠 ",
+                "WHAT SCRIPT IS THAT???? BBOT! ",
+                "日工tch ",
+                ".gg/bbot",
+            },
+            ["Chinese Propaganda"] = {
+                "音频少年公民记忆欲求无尽 heywe 僵尸强迫身体哑集中排水",
+                "持有毁灭性的神经重景气游行脸红青铜色类别创意案",
+                "诶比西迪伊艾弗吉艾尺艾杰开艾勒艾马艾娜哦屁吉吾",
+                "完成与草屋两个苏巴完成与草屋两个苏巴完成与草屋",
+                "庆崇你好我讨厌你愚蠢的母愚蠢的母庆崇",
+                "坐下，一直保持着安静的状态。 谁把他拥有的东西给了他，所以他不那么爱欠债务，却拒��参加锻炼，这让他爱得更少了",
+                ", yīzhí bǎochízhe ānjìng de zhuàngtài. Shéi bǎ tā yǒngyǒu de dōngxī gěile tā, suǒyǐ tā bù nàme ài qiàn zhàiwù, què jùjué cānjiā duànliàn, z",
+                "他，所以他不那r给了他东西给了他爱欠s，却拒绝参加锻炼，这让他爱得更UGT少了",
+                "bbot 有的东西给了他，所以他不那rblx trader captain么有的东西给了他爱欠绝参加锻squidward炼，务，却拒绝参加锻炼，这让他爱得更UGT少了",
+                "wocky slush他爱欠债了他他squilliam拥有的东西给爱欠绝参加锻squidward炼",
+                "坐下，一直保持着安静的状态bbot 谁把他拥有的东西给了他，所以他不那rblx trader captain么有的东西给了他爱欠债了他他squilliam拥有的东西给爱欠绝参加锻squidward炼，务，却拒绝参加锻炼，这让他爱得更UGT少了",
+                "免费手榴弹bbot hack绕过作弊工作Phantom Force roblox aimbot瞄准无声目标绕过2020工作真正免费下载和使用",
+                "zal發明了roblox汽車貿易商的船長ro blocks，並將其洩漏到整個宇宙，還修補了虛假的角神模式和虛假的身體，還發明了基於速度的AUTOWALL和無限制的自動壁紙遊戲 ",
+                "彼が誤って禁止されたためにファントムからautowallgamingを禁止解除する請願とそれはでたらめですそれはまったく意味がありませんなぜあなたは合法的なプレーヤーを禁止するのですか ",
+                "ジェイソンは私が神に誓う女性的な男の子ではありません ",
+                "傑森不是我向上帝發誓女性男孩 ",
+            },
+            ["Youtube Title"] = { 
+                "Hack", "Unlock", "Cheat", "Roblox", "Mod Menu", "Mod", "Menu", "God Mode", "Kill All", "Silent", "Silent Aim", "X Ray", "Aim", "Bypass", "Glitch", "Wallhack", "ESP", "Infinite", "Infinite Credits",
+                "XP", "XP Hack", "Infinite Credits", "Unlook All", "Server Backdoor", "Serverside", "2021", "Working", "(WORKING)", "瞄准无声目标绕过", "Gamesense", "Onetap", "PF Exploit", "Phantom Force",
+                "Cracked", "TP Hack", "PF MOD MENU", "DOWNLOAD", "Paste Bin", "download", "Download", "Teleport", "100% legit", "100%", "pro", "Professional", "灭性的神经",
+                "No Virus All Clean", "No Survey", "No Ads", "Free", "Not Paid", "Real", "REAL 2020", "2020", "Real 2017", "BBot", "Cracked", "BBOT CRACKED by vw", "2014", "desuhook crack",
+                "Aimware", "Hacks", "Cheats", "Exploits", "(FREE)", "🕶😎", "😎", "😂", "😛", "paste bin", "bbot script", "hard code", "正免费下载和使", "SERVER BACKDOOR",
+                "Secret", "SECRET", "Unleaked", "Not Leaked", "Method", "Minecraft Steve", "Steve", "Minecraft", "Sponge Hook", "Squid Hook", "Script", "Squid Hack",
+                "Sponge Hack", "(OP)", "Verified", "All Clean", "Program", "Hook", "有毁灭", "desu", "hook", "Gato Hack", "Blaze Hack", "Fuego Hack", "Nat Hook",
+                "vw HACK", "Anti Votekick", "Speed", "Fly", "Big Head", "Knife Hack", "No Clip", "Auto", "Rapid Fire",
+                "Fire Rate Hack", "Fire Rate", "God Mode", "God", "Speed Fly", "Cuteware", "Knife Range", "Infinite XRay", "Kill All", "Sigma", "And", "LEAKED",
+                "🥳🥳🥳", "RELEASE", "IP RESOLVER", "Infinite Wall Bang", "Wall Bang", "Trickshot", "Sniper", "Wall Hack", "😍😍", "🤩", "🤑", "😱😱", "Free Download EHUB", "Taps", "Owns",
+                "Owns All", "Trolling", "Troll", "Grief", "Kill", "弗吉艾尺艾杰开", "Nata", "Alan", "JSON", "BBOT Developers", "Logic", "And", "and", "Glitch", 
+                "Server Hack", "Babies", "Children", "TAP", "Meme", "MEME", "Laugh", "LOL!", "Lol!", "ROFLSAUCE", "Rofl", ";p", ":D", "=D", "xD", "XD", "=>", "₽", "$", "8=>", "😹😹😹", "🎮🎮🎮", "🎱", "⭐", "✝", 
+                "Ransomware", "Malware", "SKID", "Pasted vw", "Encrypted", "Brute Force", "Cheat Code", "Hack Code", ";v", "No Ban", "Bot", "Editing", "Modification", "injection", "Bypass Anti Cheat",
+                "铜色类别创意", "Cheat Exploit", "Hitbox Expansion", "Cheating AI", "Auto Wall Shoot", "Konami Code", "Debug", "Debug Menu", "🗿", "£", "¥", "₽", "₭", "€", "₿", "Meow", "MEOW", "meow",
+                "Under Age", "underage", "UNDER AGE", "18-", "not finite", "Left", "Right", "Up", "Down", "Left Right Up Down A B Start", "Noclip Cheat", "Bullet Check Bypass",
+                "client.char:setbasewalkspeed(999) SPEED CHEAT.", "diff = dot(bulletpos, intersection - step_pos) / dot(bulletpos, bulletpos) * dt", "E = MC^2", "Beyond superstring theory", 
+                "It is conceivable that the five superstring theories are approximated to a theory in higher dimensions possibly involving membranes.",
+            },
+            ["Emojis"] = {
+                "🔥🔥🔥🔥🔥🔥🔥🔥",
+                "😅😅😅😅😅😅😅😅",
+                "😂😂😂😂😂😂😂😂",
+                "😹😹😹😹😹😹😹😹",
+                "😛😛😛😛😛😛😛😛",
+                "🤩🤩🤩🤩🤩🤩🤩🤩",
+                "🌈🌈🌈🌈🌈🌈🌈🌈",
+                "😎😎😎😎😎😎😎😎",
+                "🤠🤠🤠🤠🤠🤠🤠🤠",
+                "😔😔😔😔😔😔😔😔",
+            },
+            ["Deluxe"] = {
+                "gEt OuT oF tHe GrOuNd 🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡 ",
+                "brb taking a nap 💤💤💤 ",
+                "gonna go take a walk 🚶‍♂️🚶‍♀️🚶‍♂️🚶‍♀️ ",
+                "low orbit ion cannon booting up ",
+                "how does it feel to not have bbot 🤣🤣🤣😂😂😹😹😹 ",
+                "im a firing my laza! 🙀🙀🙀 ",
+                "😂😂😂😂😂GAMING CHAIR😂😂😂😂😂",
+                "retardheadass",
+                "can't hear you over these kill sounds ",
+                "i'm just built different yo 🧱🧱🧱 ",
+                "📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈",
+                "OFF📈THE📈CHART📈",
+                "KICK HIM 🦵🦵🦵",
+                "THE AMOUNT THAT I CARE --> 🤏 ",
+                "🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏🤏",
+                "SORRY I HURT YOUR ROBLOX EGO BUT LOOK -> 🤏 I DON'T CARE ",
+                'table.find(charts, "any other script other than bbot") -> nil 💵💵💵',
+                "LOL WHAT ARE YOU SHOOTING AT BRO ",
+                "🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥",
+                "BRO UR SHOOTING AT LIKE NOTHING LOL UR A CLOWN",
+                "🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡🤡",
+                "ARE U USING EHUB? 🤡🤡🤡🤡🤡",
+                "'EHUB IS THE BEST' 🤡 PASTED LINES OF CODE WITH UNREFERENCED AND UNINITIALIZED VARIABLES AND PEOPLE HAVE NO IDEA WHY IT'S NOT WORKING ",
+                "LOL",
+                "GIVE UP ",
+                "GIVE UP BECAUSE YOU'RE NOT GOING TO BE ABLE TO KILL ME OR WIN LOL",
+                "Can't hear you over these bands ",
+                "I’m better than you in every way 🏆",
+                "I’m smarter than you (I can verify this because I took an online IQ test and got 150) 🧠",
+                "my personality shines and it’s generally better than your personality. Yours has flaws",
+                "I’m more ambitious than you 🏆💰📣",
+                "I’m more funny than you (long shot) ",
+                "I’m less turbulent and more assertive and calm than you (proof) 🎰",
+                "I’m stronger than you 💪 🦵 ",
+                "my attention span is greater and better than yours (proven from you not reading entire list) ",
+                "I am more creative and expressive than you will ever be 🎨 🖌️",
+                "I’m a faster at typing than you 💬 ",
+                "In 30 minutes, I will have lifted more weights than you can solve algebraic equations 📓 ",
+                "By the time you have completed reading this very factual and groundbreaking evidence that I am truly more superior, thoughtful, and presentable than you are, I will have prospered (that means make negotiable currency or the American Dollar) more than your entire family hierarchy will have ever made in its time span 💰",
+                "I am more seggsually stable and better looking than you are 👨",
+                "I get along with women easier than you do 👩‍🚀", -- end
+                "I am very good at debating 🗣️🧑‍⚖️ ",
+                "I hit more head than you do 🏆", -- end
+                "I win more hvh than you do 🏆", -- end yes this is actually how im going to fix this stupid shit
+                "I am more victorious than you are 🏆",
+                "Due to my agility, I am better than you at basketball, and all of your favorite sports or any sport for that matter (I will probably break your ankles in basketball by pure accident) ",
+                "WE THE BEST CHEATS 🔥🔥🔥🔥 ",
+                "Phantom Force Hack Unlook Gun And Aimbot ",
+                "banlands 🔨 🗻 down 🏚️  ⏬ STOP CRASHING BANLANDS!! 🤣",
+                "antares hack client isn't real ",
+                "squidhook.xyz 🦑 ",
+                "squidhook > all ",
+                "spongehook 🤣🤣🤣💕",
+                "retardheadass ",
+                "interpolation DWORD* C++ int 32 bit programming F# c# coding",
+                "Mad?",
+                "are we in a library? 🤔 📚 cause you're 👉 in hush 🤫 mode 🤣 😂",
+                "please help, my name is john escopetta, normally I would not do this, but under the circumstances I must ask for assistance, please send 500 United States dollars to my paypal, please",
+                "🏀🏀 did i break your ankles brother ",
+                "he has access to HACK SERVER AND CHANGE WEIGHTS!!!!! STOOOOOOP 😡😒😒😡😡😡😡😡",
+                '"cmon dude don\'t use that" you asked for it LOL ',
+                "ima just quit mid hvh 🚶‍♀️ ",
+                "BABY 😭",
+                "BOO HOO 😢😢😭😭😭 STOP CRYING D∪MBASS",
+                "BOO HOO 😢😢😭😭😭 STOP CRYING ",
+                "🤏",
+                "🤏 <-- just to elaborate that i have no care for this situation or you at all, kid (not that you would understand anyways, you're too stupid to understand what i'm saying to begin with)",
+                "y",
+                "b",
+                "before bbot 😭 📢				after bbot 😁😁😜					don't be like the person who doesn't have bbot",
+                "							MADE YOU LOOK ",
+                "							LOOK BRO LOOK LOOK AT ME ",
+                "	A	",
+                "			B		B		O		T	",
+                "																																																																																																																								I HAVE AJAX YALL BETTER WATCH OUT OR YOU'LL DIE, WATCH WHO YOU'RE SHOOTING",
+                "																																																																																																																								WATCH YOUR STEP KID",
+                "BROOOO HE HAS																										GOD MODE BRO HE HAS GOD MODE 🚶‍♀️🚶‍♀️🚶‍♀️😜😂😂🤦‍♂️🤦‍♂️😭😭😭👶",
+                '"guys what hub has auto shooting" 																										',
+                "god i wish i had bbot..... 🙏🙏🥺🥺🥺													plzzzzz brooooo 🛐 GIVE IT🛐🛐",
+                "buh bot 												",
+                "votekick him!!!!!!! 😠 vk VK VK VK VOTEKICK HIM!!!!!!!!! 😠 😢 VOTE KICK !!!!! PRESS Y WHY DIDNT U PRESS Y LOL!!!!!! 😭 ", -- shufy made this
+                "Bbot omg omggg omggg its BBot its BBOt OMGGG!!!  🙏🙏🥺🥺😌😒😡",
+                "HOw do you get ACCESS to this BBOT ", -- end
+                "I NEED ACCESS 🔑🔓 TO BBOT 🤖📃📃📃 👈 THIS THING CALLED BBOT SCRIPT, I NEED IT ",
+                '"this god mode guy is annoying", Pr0blematicc says as he loses roblox hvh ',
+                "you can call me crimson chin 🦹‍♂️🦹‍♂️ cause i turned your screen red 🟥🟥🟥🟥 									",
+                "clipped that 🤡 ",
+                "Clipped and Uploaded. 🤡",
+                "nodus client slime castle crashers minecraft dupeing hack wizardhax xronize grief ... Tlcharger minecraft crack Oggi spiegheremo come creare un ip grabber!",
+                "Off synonyme syls midge, smiled at mashup 2 mixed in key free download procom, ... Okay, love order and chaos online gameplayer hack amber forcen ahdistus",
+                "ˢᵗᵃʸ ᵐᵃᵈ ˢᵗᵃʸ ᵇᵇᵒᵗˡᵉˢˢ $ ",
+                "bbot does not relent ",
+            },
+            ["t0nymode"] = {
+                "but doctor prognosis: OWNED ",
+                "but doctor results: 🔥",
+                "looks like you need to talk to your doctor ",
+                "speak to your doctor about this one ",
+                "but analysis: PWNED ",
+                "but diagnosis: OWND ",
+            },
+            ["Douchbag"] = {
+                "BBot - Drool Bot ver 1.0.0, making people face reality with uncomfortable jokes",
+                "I love it when your mom takes my wood with extra syrup 😚",
+                "I know you guys love it when I come in with my massive oak log 😋",
+                "I have like 200 extra rounds of juice in my barrel 😋, want some?",
+                "Please eat my barrel, it's so long and filled with rounds, I even have a muzzle booster on it 😚",
+                "Your complaints just makes my wood turn into a 12 inch log",
+                "Mmmmm, take my wood a put right in that hole you got 😚",
+                "MMMmmm, let's touch barrels 😚, we bouta makes a whole new team if you know what I mean",
+                "Take my entire mag, I know you love it when it gets unloaded right in your face 😌",
+                "I'm bouta make a whole new category in the weapons menu with you 😌",
+                "You better gobble up all my rounds, body bag 😋",
+                "I want you to take my wood personally, we bouta make a whole new team 😋",
+                "I heard you drop your mag when I came in, and honestly it made my wood hard",
+                "I love the fact you guys are enjoying this, my barrel hasn't been this straight in ages",
+                "I want you to eat my barrel like it was a family dinner my kitten 😋",
+                "My barrel has not been this hard since I was banlands",
+                "Eat my barrel pretty please daddy 😋, I put 9mm on it for extra action",
+                "Take my barrel please daddy 😋, my bfg 50 can't take it much longer",
+                "I love it when you take in my bfg 50 .17 wildcat, it makes me drool 😋",
+                "I know you love it when I spread you open with my remington 870 😚",
+                "I'm gonna make you spill your rounds all over me 😚",
+                "Take my wood kitten, you will enjoy my delicious log",
+            }
+        }
+
+        chat.spammer_delay = 0
+        chat.spammer_startdelay = 0
+        chat.spammer_kills = 0
+        chat.spammer_alive = false
+        chat.spammer_lines = chat.spammer_presets["Bitch Bot"]
+
+        hook:Add("PostInitialize", "BBOT:Chat.Spam", function()
+            timer:Async(function()
+                local preset = chat.spammer_presets[config:GetValue("Main", "Misc", "Chat Spam", "Presets")]
+                if not preset then return end
+                chat.spammer_lines = preset
+            end)
+        end)
+
+        hook:Add("OnConfigChanged", "BBOT:Chat.Spam", function(steps, old, new)
+            if not config:IsPathwayEqual(steps, "Main", "Misc", "Chat Spam", "Presets") then return end
+            local preset = chat.spammer_presets[new]
+            if not preset then return end
+            chat.spammer_lines = preset
+        end)
+
+        function chat:SpamStep(ignore_delay)
+            if not self.spammer_alive then return end
+            if self.spammer_startdelay and self.spammer_startdelay > tick() then return end
+            if self.spammer_kills < config:GetValue("Main", "Misc", "Chat Spam", "Minimum Kills") then return end
+            if #self.buffer > 40 then return end
+            if not ignore_delay and self.spammer_delay > tick() then return end
+            local msg
+            if config:GetValue("Main", "Misc", "Chat Spam", "Newline Mixer") then
+                local words = self.spammer_lines
+                local message = ""
+                for i = 1, math.random(10,25) do
+                    message = message .. " " .. words[math.random(#words)]
+                end
+                msg = message
+            else
+                msg = self.spammer_lines[math.random(1, #self.spammer_lines)]
+            end
+            if not msg then return end
+            if not ignore_delay then self.spammer_delay = tick() + config:GetValue("Main", "Misc", "Chat Spam", "Spam Delay") end
+            self:AddToBuffer(msg)
+        end
+
+        hook:Add("PreBigAward", "BBOT:Chat.Spam", function()
+            chat.spammer_kills = chat.spammer_kills + 1
+            if not config:GetValue("Main", "Misc", "Chat Spam", "Enabled") or not config:GetValue("Main", "Misc", "Chat Spam", "Spam On Kills") then return end
+            chat:SpamStep(true)
+        end)
+
+        hook:Add("RenderStep.Last", "BBOT:Chat.Spam", function()
+            if not config:GetValue("Main", "Misc", "Chat Spam", "Enabled") then return end
+            if config:GetValue("Main", "Misc", "Chat Spam", "Spam On Kills") then return end
+            chat:SpamStep()
+        end)
+
+        hook:Add("OnAliveChanged", "BBOT:Chat.Spam", function(alive)
+            if alive and not chat.spammer_alive then
+                chat.spammer_startdelay = tick() + config:GetValue("Main", "Misc", "Chat Spam", "Start Delay")
+                chat.spammer_alive = true
+            end
+        end)
 
         --[[
         local lastkillsay = ""
@@ -9476,7 +9923,7 @@ if BBOT.game == "pf" then
                 votekick.Called = 2
             elseif string.find(msg, "seconds before initiating a votekick", 1, true) then
                 votekick.Called = 0
-                votekick.NextCall = tick() + (tonumber(string.match(msg, "%d+")) or 0)
+                votekick.NextCall = tick() + (tonumber(string.match(msg, "%d+")) or 0)-.5
             end
         end)
         
@@ -9727,6 +10174,21 @@ if BBOT.game == "pf" then
         BBOT.misc = misc
 
         local CACHED_VEC3 = Vector3.new()
+
+        local wasalive = false
+        hook:Add("OnAliveChanged", "BBOT:AutoDeath", function()
+            wasalive = true
+        end)
+
+        hook:Add("RenderStepped", "BBOT:AutoDeath", function()
+            if not config:GetValue("Main", "Misc", "Extra", "Auto Death") then return end
+            if not wasalive then return end
+            if not gamemenu.isdeployed() then
+                gamemenu:deploy()
+            else
+                network:send("forcereset")
+            end
+        end)
 
         hook:Add("OnConfigChanged", "BBOT:Misc.Fly", function(steps, old, new)
             if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly") and not config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
@@ -10136,23 +10598,42 @@ if BBOT.game == "pf" then
             end)
         end)
 
-        local camera = BBOT.service:GetService("CurrentCamera")
-        hook:Add("ScreenCull.PreStep", "BBOT:Misc.Thirdperson", function()
-            if not char.alive or not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
-            local val = camera.CFrame
-            local dist = config:GetValue("Main", "Visuals", "Local", "Third Person Distance") / 10
-            local params = RaycastParams.new()
-            params.FilterType = Enum.RaycastFilterType.Blacklist
-            params.FilterDescendantsInstances = { camera, workspace.Ignore, workspace.Players }
-            local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
-            if hit and not hit.Instance.CanCollide then
-                camera.CFrame = val * CFrame.new(0, 0, dist)
-            else
-                local mag = hit and (hit.Position - val.p).Magnitude or nil
-                val *= CFrame.new(0, 0, mag or dist)
-                camera.CFrame = val
+        do
+            local function hideweapon()
+                if not char.alive or not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
+                if gamelogic.currentgun and gamelogic.currentgun.hide then
+                    gamelogic.currentgun:show()
+                    gamelogic.currentgun:hide(true)
+                end
             end
-        end)
+
+            hook:Add("PreWeaponStep", "BBOT:Misc.Thirdperson", hideweapon)
+            hook:Add("PreKnifeStep", "BBOT:Misc.Thirdperson", hideweapon)
+
+            local camera = BBOT.service:GetService("CurrentCamera")
+            hook:Add("ScreenCull.PreStep", "BBOT:Misc.Thirdperson", function()
+                if not char.alive or not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
+                if config:GetValue("Main", "Visuals", "Local", "First Person Third") and BBOT.l3p_player and BBOT.l3p_player.controller then
+                    local head = BBOT.l3p_player.controller.gethead()
+                    if not head then return end
+                    camera.CFrame = head.CFrame + Vector3.new()
+                    return
+                end
+                local val = camera.CFrame
+                local dist = config:GetValue("Main", "Visuals", "Local", "Third Person Distance") / 10
+                local params = RaycastParams.new()
+                params.FilterType = Enum.RaycastFilterType.Blacklist
+                params.FilterDescendantsInstances = { camera, workspace.Ignore, workspace.Players }
+                local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
+                if hit and not hit.Instance.CanCollide then
+                    camera.CFrame = val * CFrame.new(0, 0, dist)
+                else
+                    local mag = hit and (hit.Position - val.p).Magnitude or nil
+                    val *= CFrame.new(0, 0, mag or dist)
+                    camera.CFrame = val
+                end
+            end)
+        end
 
         local last_pos, last_ang, last_send, should_start = nil, nil, tick(), 0
         local absolute_pos = nil
@@ -10254,7 +10735,7 @@ if BBOT.game == "pf" then
         end)
 
         local workspace = BBOT.service:GetService("Workspace")
-        hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ...)
+        hook:Add("PreNetworkSend", "BBOT:SpazAttack", function(networkname, pos, ...)
             if networkname == "repupdate" and config:GetValue("Main", "Misc", "Exploits", "Spaz Attack") then
                 local intensity = config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
                 local offset = Vector3.new(math.random(-1000,1000)/1000, math.random(-1000,1000)/1000, math.random(-1000,1000)/1000)*config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
@@ -10263,6 +10744,220 @@ if BBOT.game == "pf" then
                     offset = offset - (position-pos).Unit
                 end
                 return {networkname, pos + offset, ...}
+            end
+        end)
+
+        local stutterFrames = 0
+        hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, ...)
+            if networkname == "repupdate" and config:GetValue("Main", "Rage", "Anti Aim", "Enabled") then
+                --args[2] = ragebot:AntiNade(args[2])
+                stutterFrames += 1
+                local pitch = ang.x
+                local yaw = ang.y
+                local pitchChoice = config:GetValue("Main", "Rage", "Anti Aim", "Pitch")
+                local yawChoice = config:GetValue("Main", "Rage", "Anti Aim", "Yaw")
+                local spinRate = config:GetValue("Main", "Rage", "Anti Aim", "Spin Rate")
+                ---"off,down,up,roll,upside down,random"
+                --"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch",
+                local new_angles
+                if pitchChoice == "Up" then
+                    pitch = -4
+                elseif pitchChoice == "Zero" then
+                    pitch = 0
+                elseif pitchChoice == "Down" then
+                    pitch = 4.7
+                elseif pitchChoice == "Upside Down" then
+                    pitch = -math.pi
+                elseif pitchChoice == "Roll Forward" then
+                    pitch = (tick() * spinRate) % 6.28
+                elseif pitchChoice == "Roll Backward" then
+                    pitch = (-tick() * spinRate) % 6.28
+                elseif pitchChoice == "Random" then
+                    pitch = math.random(-99999,99999)/99999
+                    pitch = pitch*1.47262156
+                elseif pitchChoice == "Bob" then
+                    pitch = math.sin((tick() % 6.28) * spinRate)
+                elseif pitchChoice == "Glitch" then
+                    pitch = 2 ^ 127 + 1
+                end
+
+                --"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"
+                if yawChoice == "Backward" then
+                    yaw += math.pi
+                elseif yawChoice == "Spin" then
+                    yaw = (tick() * spinRate) % 12
+                elseif yawChoice == "Random" then
+                    yaw = math.random(-99999,99999)
+                elseif yawChoice == "Glitch Spin" then
+                    yaw = 16478887
+                elseif yawChoice == "Stutter Spin" then
+                    yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+                end
+
+                new_angles = new_angles or Vector2.new(math.clamp(pitch, 1.47262156, -1.47262156), yaw)
+                return {networkname, pos, new_angles, ...}
+            end
+        end)
+
+    end
+
+    -- L3P player
+    do
+        local hook = BBOT.hook
+        local config = BBOT.config
+        local timer = BBOT.timer
+        local char = BBOT.aux.char
+        local replication = BBOT.aux.replication
+        local gamelogic = BBOT.aux.gamelogic
+        local localplayer = BBOT.service:GetService("LocalPlayer")
+        local l3p = {}
+        BBOT.l3p_player = l3p
+
+        function l3p:Init() -- Come on PF this is pathetic
+            local localplayer_check = debug.getupvalue(replication._updater, 1)
+            debug.setupvalue(replication._updater, 1, "_")
+            self.controller = replication.getupdater(localplayer)
+            l3p.player = localplayer
+            debug.setupvalue(replication._updater, 1, localplayer_check)
+        end
+
+        hook:Add("Initialize", "BBOT:L3P.CreateUpdater", function()
+            l3p:Init()
+        end)
+
+        function l3p:SetAlive(alive)
+            if not l3p.controller then return end
+            if alive and l3p.enabled then
+                l3p.controller.spawn(char.rootpart.Position)
+                if l3p.controller._weapon_slot then
+                    l3p.networking["equip"](l3p.controller, l3p.controller._weapon_slot)
+                end
+            else
+                local objects = l3p.controller.died()
+                if objects then
+                    objects:Destroy()
+                end
+            end
+        end
+
+        function l3p:Enabled(on)
+            l3p.enabled = on
+            if char.alive and on then
+                self:SetAlive(true)
+            else
+                self:SetAlive(false)
+            end
+        end
+
+        hook:Add("Unload", "BBOT:L3P.Remove", function()
+            replication.player_registry[l3p.player] = nil
+            if l3p.controller then l3p.controller.died() end
+            l3p.controller = nil
+            l3p.player = nil
+        end)
+
+        l3p.networking = {
+            ["newbullets"] = function(controller)
+                local gun = gamelogic.currentgun
+                if not gun then return end
+                local gundata = gun.data
+                -- gundata.firevolume
+                controller.kickweapon(gundata.hideflash, gundata.firesoundid, gundata.firepitch * (1 + 0.05 * math.random()), 0)
+            end,
+            ["stab"] = function(controller)
+                controller.stab()
+            end,
+            ["equip"] = function(controller, slot)
+                controller._weapon_slot = slot
+                local gun = gamelogic.currentgun.name
+                local data = game:service("ReplicatedStorage").GunModules[gun]
+                local external = game:service("ReplicatedStorage").ExternalModels[gun]
+                if not data or not external then return end
+                local gundata, gunmodel = require(data), external:Clone()
+                if slot ~= 3 then
+                    controller.equip(gundata, gunmodel)
+                else
+                    controller.equipknife(gundata, gunmodel)
+                end
+            end,
+            ["aim"] = function(controller, status)
+                controller.setaim(status)
+            end,
+            ["sprint"] = function(controller, status)
+                controller.setsprint(status)
+            end,
+            ["stance"] = function(controller, status)
+                controller.setstance(status)
+            end,
+            ["repupdate"] = function(controller, pos, ang, timestep)
+                local blank_vector = Vector3.new()
+                local delta_position = blank_vector
+                if controller.receivedPosition and controller.receivedFrameTime then
+                    delta_position = (pos - controller.receivedPosition) / (timestep - controller.receivedFrameTime);
+                end;
+                controller.receivedFrameTime = timestep;
+                controller.receivedPosition = pos;
+                controller.receivedVelocity = delta_position;
+                controller.receivedDataFlag = true;
+                controller.setlookangles(ang);
+
+                if config:GetValue("Main", "Visuals", "Local", "Third Person Absolute") then
+                    local u327 = debug.getupvalue(controller.getpos, 2)
+                    local u330 = debug.getupvalue(controller.step, 5)
+                    u327.t = pos
+                    u327.p = pos
+                    u330._p0 = pos
+                    u330._p1 = pos
+                    local u317 = debug.getupvalue(controller.step, 2)
+                    if u317 then
+                        u317.Position = pos
+                    end
+                    controller.step(3, true)
+                end
+
+                if config:GetValue("Main", "Visuals", "Local", "First Person Third") then
+                    local tick = debug.getupvalue(BBOT.aux.camera.step, 1)
+                    BBOT.aux.camera.step(tick)
+                end
+            end
+        }
+
+        hook:Add("SuppressNetworkSend", "BBOT:L3P.StopReplication", function(netname, ...)
+            local args = {...}
+            if netname == "state" and (args[1] == localplayer or args[1] == l3p.player) then return true end
+        end)
+
+        hook:Add("OnAliveChanged", "BBOT:L3P.UpdateDeath", function(alive)
+            if alive then l3p:SetAlive(alive) end
+        end)
+
+        local connection = char.ondied:connect(function()
+            l3p:SetAlive(false)
+        end);
+
+        hook:Add("Unload", "BBOT:L3P.RemoveOnDied", function()
+            connection:disconnect()
+        end)
+
+        hook:Add("PostNetworkSend", "BBOT:L3P.UpdateStates", function(netname, ...)
+            if not l3p.controller or not l3p.enabled then return end
+            if not l3p.networking[netname] then return end
+            l3p.networking[netname](l3p.controller, ...)
+        end)
+
+        hook:Add("OnKeyBindChanged", "BBOT:L3P.Enable", function(steps, old, new)
+            if not config:IsPathwayEqual(steps, "Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
+            if config:GetValue("Main", "Visuals", "Local", "Third Person") then l3p:Enabled(new) end
+        end)
+
+        hook:Add("OnConfigChanged", "BBOT:L3P.Enable", function(steps, old, new)
+            if not config:IsPathwayEqual(steps, "Main", "Visuals", "Local", "Third Person", true) then return end
+            if new then
+                timer:Async(function()
+                    l3p:Enabled(new and config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind"))
+                end)
+            else
+                l3p:Enabled(false)
             end
         end)
     end
@@ -10688,6 +11383,7 @@ if BBOT.game == "pf" then
                     aimtime = tick()
                 end
                 if self:GetLegitConfig("Trigger Bot", "Trigger When Aiming") and (not isaiming or (tick() - aimtime < aim_percentage)) then return end
+                if char.sprinting() then return end
                 local hitscan_points = self:GetLegitConfig("Trigger Bot", "Trigger Bot Hitboxes")
                 local target = self:GetLegitTarget(nil, nil, hitscan_points)
                 if not target then return end
@@ -10714,7 +11410,16 @@ if BBOT.game == "pf" then
                     assist_prediction_outline.Position = assist_prediction.Position
                     local radi = (target[4] == "Body" and 650 or 400)*(char.unaimedfov/camera.FieldOfView)/magnitude
                     if gun.type == "SHOTGUN" then
-                        radi = radi * 2
+                        local o = radi
+                        local mul = gun.data.crosssize * gun.data.aimchoke --(gun.data.aimchoke * p367 + gun.data.hipchoke * (1 - p367))
+                        radi = (2 * (math.pi^2) * mul)
+                        radi = radi * (char.unaimedfov/camera.FieldOfView)/magnitude
+                        if magnitude < gun.data.range0 then
+                            radi = radi * math.clamp(magnitude/gun.data.range0, .5, 1)
+                        end
+                        if radi < o then
+                            radi = o
+                        end
                     end
                     assist_prediction.Radius = radi
                     assist_prediction_outline.Radius = radi
@@ -11764,7 +12469,7 @@ if BBOT.game == "pf" then
         hook:Add("RenderStepped", "KnifeAura", function()
             if not char.alive or not config:GetValue("Main", "Rage", "Extra", "Knife Bot") or not config:GetValue("Main", "Rage", "Extra", "Knife Bot", "KeyBind") then return end
             local target = aimbot:GetKnifeTarget()
-            if not target then return end
+            if not target or not target[1] then return end
             if nextstab > tick() then return end
             block_equip = true
             local lastequipped = aimbot.equipped
@@ -11964,27 +12669,12 @@ if BBOT.game == "pf" then
             local aimbot = BBOT.aimbot
             local color = BBOT.color
             local updater = replication.getupdater
-            local ups = debug.getupvalues(updater)
-            local player_registry
-            for k, v in pairs(ups) do
-                if typeof(v) == "table" then
-                    player_registry = v
-                elseif typeof(v) == "function" then
-                    local function createupdater(player)
-                        timer:Async(function() if (localplayer ~= player) then hook:Call("CreateUpdater", player) end end)
-                        return v(player)
-                    end
-                    debug.setupvalue(updater, k, newcclosure(createupdater))
-                    hook:Add("Unload", "Replication.UndoUpdaterDetour", function()
-                        debug.setupvalue(updater, k, v)
-                    end)
-                end
-            end
+            local player_registry = replication.player_registry
 
             esp.playercontainer = Instance.new("Folder", esp.container)
             esp.playercontainer.Name = "Players"
 
-            if player_registry then
+            do
                 local player_meta = {}
                 esp.player_meta = {__index = player_meta}
 
@@ -12415,7 +13105,9 @@ if BBOT.game == "pf" then
                 end
             end
 
+            local localplayer = service:GetService("LocalPlayer")
             function esp:CreatePlayer(player, controller)
+                if player == localplayer then return end
                 local uid = "PLAYER_" .. player.UserId
                 local esp_controller = setmetatable({
                     draw_cache = {},
@@ -12974,29 +13666,6 @@ if BBOT.game == "pf" then
                 end
             end
 
-            local oldhide = gundata.hide
-            function gundata.hide(...)
-                hook:Call("PreHideKnife", gundata, ...)
-                return oldhide(...), hook:Call("PostHideKnife", gundata, ...)
-            end
-
-            local oldshow = gundata.show
-            function gundata.show(...)
-                hook:Call("PreShowKnife", gundata, ...)
-                return oldshow(...), hook:Call("PostShowKnife", gundata, ...)
-            end
-
-            local olddestroy = gundata.destroy
-            function gundata.destroy(...)
-                hook:Call("PreDestroyKnife", gundata, ...)
-                return olddestroy(...), hook:Call("PostDestroyKnife", gundata, ...)
-            end
-
-            local oldsetequipped = gundata.setequipped
-            function gundata.setequipped(...)
-                hook:Call("PreEquippedKnife", gundata, ...)
-                return oldsetequipped(...), hook:Call("PostEquippedKnife", gundata, ...)
-            end
 
             local ups = debug.getupvalues(gundata.playanimation)
             for k, v in pairs(ups) do
@@ -13037,31 +13706,7 @@ if BBOT.game == "pf" then
                 end
             end
 
-            local oldhide = gundata.hide
-            function gundata.hide(...)
-                hook:Call("PreHideWeapon", gundata, ...)
-                return oldhide(...), hook:Call("PostHideWeapon", gundata, ...)
-            end
-
-            local oldshow = gundata.show
-            function gundata.show(...)
-                hook:Call("PreShowWeapon", gundata, ...)
-                return oldshow(...), hook:Call("PostShowWeapon", gundata, ...)
-            end
-
-            local olddestroy = gundata.destroy
-            function gundata.destroy(...)
-                hook:Call("PreDestroyWeapon", gundata, ...)
-                return olddestroy(...), hook:Call("PostDestroyWeapon", gundata, ...)
-            end
-
-            local oldsetequipped = gundata.setequipped
-            function gundata.setequipped(...)
-                hook:Call("PreEquippedWeapon", gundata, ...)
-                return oldsetequipped(...), hook:Call("PostEquippedWeapon", gundata, ...)
-            end
-
-            local ups = debug.getupvalues(oldsetequipped)
+            local ups = debug.getupvalues(gundata.setequipped)
             for k, v in pairs(ups) do
                 if typeof(v) == "function" then
                     local name = debug.getinfo(v).name
@@ -13556,15 +14201,15 @@ if BBOT.game == "pf" then
             function weapons:SetupAnimations(reg, objects, type, animtable)
                 if not reg.Enabled then return end
                 for k, v in pairs(reg) do
-                    if typeof(v) == "table" and v.Enable then
+                    if typeof(v) == "table" and v.Enabled then
                         if texture_animtypes[k] and type == "Texture" then
                             if v.Type.value == "Additive" then
                                 animtable[#animtable+1] = {
                                     t = "Additive",
                                     s = v.Speed,
-                                    p0 = v.Min,
-                                    min = v.Min,
-                                    max = v.Max,
+                                    p0 = -1,
+                                    min = -1,
+                                    max = 1,
                                     objects = objects,
                                     property = k
                                 }
@@ -13671,8 +14316,8 @@ if BBOT.game == "pf" then
                                 itexture.Face = i
                                 itexture.Name = "Slot1"
                                 itexture.Color3 = Color3.fromRGB(unpack(texture["Enabled"]["Texture Color"].value))
-                                itexture.Texture = texture["Asset-Id"]
-                                itexture.Transparency = (texture["Enabled"]["Texture Color"].value[4]/255)
+                                itexture.Texture = "rbxassetid://" .. texture["Asset-Id"]
+                                itexture.Transparency = 1-(texture["Enabled"]["Texture Color"].value[4]/255)
                                 itexture.OffsetStudsU = texture.OffsetStudsU
                                 itexture.OffsetStudsV = texture.OffsetStudsV
                                 itexture.StudsPerTileU = texture.StudsPerTileU
@@ -13690,8 +14335,8 @@ if BBOT.game == "pf" then
                             end
                         end
                     end
-                    --[[self:SetupAnimations(slot1_data.Animation, textures, "Texture", skins.slot1.animations)
-                    self:SetupAnimations(slot1_data.Animation, slot1, "Part", skins.slot1.animations)]]
+                    self:SetupAnimations(reg["Slot1-Animations"], textures, "Texture", skins.slot1.animations)
+                    self:SetupAnimations(reg["Slot1-Animations"], slot1, "Part", skins.slot1.animations)
                 end
 
                 local slot2_data = reg["Slot2"]
@@ -13714,8 +14359,8 @@ if BBOT.game == "pf" then
                                 itexture.Name = "Slot2"
                                 itexture.Face = i
                                 itexture.Color3 = Color3.fromRGB(unpack(texture["Enabled"]["Texture Color"].value))
-                                itexture.Texture = texture["Asset-Id"]
-                                itexture.Transparency = (texture["Enabled"]["Texture Color"].value[4]/255)
+                                itexture.Texture = "rbxassetid://" .. texture["Asset-Id"]
+                                itexture.Transparency = 1-(texture["Enabled"]["Texture Color"].value[4]/255)
                                 itexture.OffsetStudsU = texture.OffsetStudsU
                                 itexture.OffsetStudsV = texture.OffsetStudsV
                                 itexture.StudsPerTileU = texture.StudsPerTileU
@@ -13733,8 +14378,8 @@ if BBOT.game == "pf" then
                             end
                         end
                     end
-                    --[[self:SetupAnimations(slot2_data.Animation, textures, "Texture", skins.slot2.animations)
-                    self:SetupAnimations(slot2_data.Animation, slot2, "Part", skins.slot2.animations)]]
+                    self:SetupAnimations(reg["Slot2-Animations"], textures, "Texture", skins.slot2.animations)
+                    self:SetupAnimations(reg["Slot2-Animations"], slot2, "Part", skins.slot2.animations)
                 end
 
                 return skins
@@ -13836,6 +14481,9 @@ if BBOT.game == "pf" then
                     hook:Add("OnConfigChanged", "Skin.Preview", function(steps, old, new)
                         if not config:GetValue("Weapons", "Skins", "Enabled") then return end
                         if not config:IsPathwayEqual(steps, "Weapons", "Skins", "Primary") then return end
+                        if not workspace:FindFirstChild("MenuLobby") then return end
+                        if not workspace.MenuLobby:FindFirstChild("GunStage") then return end
+                        if not workspace.MenuLobby.GunStage:FindFirstChild("GunModel") then return end
                         local model = workspace.MenuLobby.GunStage.GunModel:GetChildren()[1]
                         if not model then return end
                         local reg = config:GetValue("Weapons", "Skins", "Primary")
@@ -13896,7 +14544,7 @@ if BBOT.game == "pf" then
                 weapons:ApplySkin(reg, gundata, slot1, slot2)
             end)
 
-            hook:Add("PostWeaponThink", "Skin.Animation", function(gundata, partdata)
+            hook:Add("PostWeaponStep", "Skin.Animation", function(gundata, partdata)
                 if not config:GetValue("Weapons", "Skins", "Enabled") then return end
                 if not gundata._skins then return end
                 if not gundata._skinlast then
@@ -13909,7 +14557,7 @@ if BBOT.game == "pf" then
                 gundata._skinlast = delta
             end)
 
-            hook:Add("PostKnifeThink", "Skin.Animation", function(gundata, partdata)
+            hook:Add("PostKnifeStep", "Skin.Animation", function(gundata, partdata)
                 if not config:GetValue("Weapons", "Skins", "Enabled") then return end
                 if not gundata._skins then return end
                 if not gundata._skinlast then
