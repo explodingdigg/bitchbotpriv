@@ -4238,7 +4238,11 @@ do
             self.background.Position = pos
             self.background_border.Size = size + Vector2.new(4,4)
             self.background_outline.Size = size + Vector2.new(2,2)
-            self.background.Size = size + (self.activated and Vector2.new(0,4) or Vector2.new())
+            if self.parent and self.parent.borderless then
+                self.background.Size = size
+            else
+                self.background.Size = size + (self.activated and Vector2.new(0,4) or Vector2.new())
+            end
         end
 
         function GUI:SetActive(value)
@@ -4348,6 +4352,30 @@ do
             self.background_border.Size = size + Vector2.new(4,4)
             self.background_outline.Size = size + Vector2.new(2,2)
             self.background.Size = size
+        end
+
+        function GUI:SetBorderless(bool)
+            self.borderless = bool
+            if bool then
+                self.container:SetPos(0,0,0,36+6)
+                self.container:SetSize(1,0,1,-36-6)
+                self.background_border.Visible = false
+                self.background_outline.Visible = false
+                self.background.Visible = false
+                self.tablist.borderless = bool
+            else
+                self.container:SetPos(0,8,0,36+8)
+                self.container:SetSize(1,-16,1,-36-16)
+                self.background_border.Visible = true
+                self.background_outline.Visible = true
+                self.background.Visible = true
+                self.tablist.borderless = bool
+            end
+
+            self.tablist:InvalidateLayout(true, true)
+            self.background_border = self:Cache(self.background_border)
+            self.background_outline = self:Cache(self.background_outline)
+            self.background = self:Cache(self.background)
         end
 
         function GUI:GetActive()
@@ -4612,14 +4640,15 @@ do
             local guis = gui.registry
             for i=1, #guis do
                 local v = guis[i]
-                if gui:IsValid(v) and v.class == "KeyBind" then
+                if v.class == "KeyBind" and gui:IsValid(v) then
                     local cfg = table.deepcopy(v.config)
                     cfg[#cfg] = nil
                     local parentoption = config:GetRaw(unpack(cfg))
                     if (typeof(parentoption) == "boolean" and not parentoption) or not v.key then
                         menu:UpdateStatus(cfg[#cfg], nil, false, v.text:GetText())
                     else
-                        menu:UpdateStatus(cfg[#cfg], "Disabled", true, v.text:GetText())
+                        local state = menu:GetStatus(cfg[#cfg])
+                        menu:UpdateStatus(cfg[#cfg], (state and state[2] or "Disabled"), true, v.text:GetText())
                     end
                 end
             end
@@ -5616,6 +5645,9 @@ do
                         frame:SetTopBarMargin(25)
                         frame:SizeByContent(true)
                     end
+                    if config.borderless then
+                        frame:SetBorderless(true)
+                    end
                     if typeof(container) == "function" then
                         container(config, frame)
                     else
@@ -5852,6 +5884,10 @@ do
 
             self.statuses[name] = {status, extra, bind or (cur and cur[3] or "")}
             self:ReloadStatus()
+        end
+
+        function menu:GetStatus(name)
+            return self.statuses[name]
         end
 
         function menu:ReloadStatus()
@@ -6615,6 +6651,7 @@ do
                     name = { "Slot1", "Slot1-Animations", "Slot2", "Slot2-Animations", },
                     pos = UDim2.new(0,0,0,0),
                     size = UDim2.new(1,0,1,0),
+                    borderless = true,
                     type = "Tabs",
                     {content=skins_content},
                     {content=skins_anims},
@@ -6852,6 +6889,7 @@ do
                             name = "Legit",
                             pos = UDim2.new(0,0,0,0),
                             size = UDim2.new(1,0,1,0),
+                            borderless = true,
                             type = "Tabs",
                             content = {
                                 {
@@ -7081,30 +7119,6 @@ do
                                             minvalue = -100,
                                             maxvalue = 100,
                                             stradd = "°/s",
-                                        },
-                                        {
-                                            type = "DropBox",
-                                            name = "Force Stance",
-                                            value = 4,
-                                            values = { "Off", "Stand", "Crouch", "Prone" },
-                                        },
-                                        {
-                                            type = "Toggle",
-                                            name = "Hide in Floor",
-                                            value = true,
-                                            tooltip = "Shifts your body slightly under the ground\nso as to hide it when Force Stance is set to Prone.",
-                                        },
-                                        {
-                                            type = "Toggle",
-                                            name = "Lower Arms",
-                                            value = false,
-                                            tooltip = "Lowers your arms on the server.",
-                                        },
-                                        {
-                                            type = "Toggle",
-                                            name = "Tilt Neck",
-                                            value = false,
-                                            tooltip = "Forces the replicated aiming state so that it appears as though your head is tilted.",
                                         },
                                     }},
                                     {content = {}},
@@ -7531,7 +7545,7 @@ do
                                                 type = "Slider",
                                                 name = "Third Person Distance",
                                                 value = 60,
-                                                min = 1,
+                                                min = -10,
                                                 max = 150,
                                             },
                                             {
@@ -7740,50 +7754,18 @@ do
                                                 suffix = "°",
                                             },
                                             {
-                                                type = "Toggle",
-                                                name = "No Camera Bob",
-                                                value = false,
-                                            },
-                                            {
-                                                type = "Toggle",
-                                                name = "No Scope Sway",
-                                                value = false,
-                                            },
-                                            {
-                                                type = "Toggle",
-                                                name = "Disable ADS FOV",
-                                                value = false,
-                                            },
-                                            {
-                                                type = "Toggle",
-                                                name = "No Scope Border",
-                                                value = false,
-                                            },
-                                            {
-                                                type = "Toggle",
-                                                name = "No Visual Suppression",
-                                                value = false,
-                                                tooltip = "Removes the suppression of enemies' bullets.",
-                                            },
-                                            {
-                                                type = "Toggle",
-                                                name = "No Gun Bob or Sway",
-                                                value = false,
-                                                tooltip = "Removes the bob and sway of weapons when walking. This does not remove the swing effect when moving the mouse.",
-                                            },
-                                            {
-                                                type = "Toggle",
-                                                name = "Reduce Camera Recoil",
-                                                value = false,
-                                                tooltip = "Reduces camera recoil by X%. Does not affect visible weapon recoil or kick.",
+                                                type = "Slider",
+                                                name = "Third Person X Offset",
+                                                value = 0,
+                                                min = -50,
+                                                max = 50,
                                             },
                                             {
                                                 type = "Slider",
-                                                name = "Camera Recoil Reduction",
-                                                value = 10,
-                                                min = 0,
-                                                max = 100,
-                                                suffix = "%",
+                                                name = "Third Person Y Offset",
+                                                value = 0,
+                                                min = -50,
+                                                max = 50,
                                             },
                                         },
                                     },
@@ -8402,7 +8384,7 @@ do
                                             type = "Slider",
                                             name = "Firerate",
                                             min = 0,
-                                            max = 600,
+                                            max = 2000,
                                             suffix = "%",
                                             decimal = 1,
                                             value = 100,
@@ -8578,6 +8560,17 @@ do
                                             value = false,
                                             tooltip = "Lowers your total KD so that you don't get flagged for bans."
                                         },
+                                        {
+                                            type = "Toggle",
+                                            name = "Auto Spawn",
+                                            value = false,
+                                            extra = {
+                                                {
+                                                    type = "KeyBind",
+                                                    toggletype = 2,
+                                                }
+                                            }
+                                        },
                                     }},
                                     {content = {
                                         {
@@ -8695,6 +8688,58 @@ do
                                                 [0] = "Invulnerable",
                                             },
                                             tooltip = "Attempts to allow movement when in temp-god when needed, WARNING: This can make you vulnerable for a split second",
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Spawn Offset",
+                                            value = false,
+                                            tooltip = "Makes you spawn in a weird position so that you have an upper hand.",
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Anti Grenade TP",
+                                            value = false,
+                                            tooltip = "Moves you right after a kill, to hopefully... HOPEFULLY. Avoid a grenade TP.",
+                                        },
+                                        {
+                                            type = "ComboBox",
+                                            name = "Anti Grenade TP Points",
+                                            values = {
+                                                { "Up", true },
+                                                { "Down", true },
+                                                { "Left", false },
+                                                { "Right", false },
+                                                { "Forward", true },
+                                                { "Backward", true },
+                                            },
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "TP Scanning",
+                                            value = false,
+                                            tooltip = "Moves you to a position to kill",
+                                        },
+                                        {
+                                            type = "ComboBox",
+                                            name = "TP Scanning Points",
+                                            values = {
+                                                { "Up", true },
+                                                { "Down", true },
+                                                { "Left", false },
+                                                { "Right", false },
+                                                { "Forward", true },
+                                                { "Backward", true },
+                                            },
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "TP Scanning Distance",
+                                            min = 2,
+                                            max = 100,
+                                            suffix = " studs",
+                                            decimal = 1,
+                                            value = 25,
+                                            custom = {},
                                         },
                                     }},
                                 },
@@ -8913,6 +8958,7 @@ do
                                 },
                                 {
                                     name = { "Primary", "Secondary", "Tertiary" },
+                                    borderless = true,
                                     pos = UDim2.new(0,0,0,20),
                                     size = UDim2.new(1,0,1,-20),
                                     {
@@ -10181,11 +10227,10 @@ if BBOT.game == "pf" then
         end)
 
         hook:Add("RenderStepped", "BBOT:AutoDeath", function()
-            if not config:GetValue("Main", "Misc", "Extra", "Auto Death") then return end
             if not wasalive then return end
-            if not gamemenu.isdeployed() then
+            if config:GetValue("Main", "Misc", "Extra", "Auto Spawn") and config:GetValue("Main", "Misc", "Extra", "Auto Spawn", "KeyBind") and not gamemenu.isdeployed() then
                 gamemenu:deploy()
-            else
+            elseif config:GetValue("Main", "Misc", "Extra", "Auto Death") then
                 network:send("forcereset")
             end
         end)
@@ -10600,10 +10645,18 @@ if BBOT.game == "pf" then
 
         do
             local function hideweapon()
-                if not char.alive or not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
+                if not char.alive then return end
+                if not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then
+                    if gamelogic.currentgun.___ta then
+                        gamelogic.currentgun.___ta = nil
+                        gamelogic.currentgun:show()
+                    end
+                    return
+                end
                 if gamelogic.currentgun and gamelogic.currentgun.hide then
                     gamelogic.currentgun:show()
                     gamelogic.currentgun:hide(true)
+                    gamelogic.currentgun.___ta = true
                 end
             end
 
@@ -10616,28 +10669,33 @@ if BBOT.game == "pf" then
                 if config:GetValue("Main", "Visuals", "Local", "First Person Third") and BBOT.l3p_player and BBOT.l3p_player.controller then
                     local head = BBOT.l3p_player.controller.gethead()
                     if not head then return end
-                    camera.CFrame = head.CFrame + Vector3.new()
-                    return
+                    local p, y, rr = camera.CFrame:ToOrientation()
+                    camera.CFrame = CFrame.new(head.CFrame.Position)
+                    local _, __, r = head.CFrame:ToOrientation()
+                    camera.CFrame *= CFrame.fromOrientation(p,y,r)
                 end
                 local val = camera.CFrame
-                local dist = config:GetValue("Main", "Visuals", "Local", "Third Person Distance") / 10
+                local dist = Vector3.new(
+                    config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person X Offset"),
+                    config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Y Offset"),
+                    config:GetValue("Main", "Visuals", "Local", "Third Person Distance")
+                )/10
                 local params = RaycastParams.new()
                 params.FilterType = Enum.RaycastFilterType.Blacklist
-                params.FilterDescendantsInstances = { camera, workspace.Ignore, workspace.Players }
-                local hit = workspace:Raycast(val.p, -val.LookVector * dist, params)
-                if hit and not hit.Instance.CanCollide then
-                    camera.CFrame = val * CFrame.new(0, 0, dist)
-                else
-                    local mag = hit and (hit.Position - val.p).Magnitude or nil
-                    val *= CFrame.new(0, 0, mag or dist)
-                    camera.CFrame = val
-                end
+                params.FilterDescendantsInstances = { camera, workspace.Ignore, localplayer.Character, workspace.Players }
+                local hit = workspace:Raycast(val.p, (val * CFrame.new(dist)).p-val.p, params)
+                val *= CFrame.new(hit and dist*((hit.Position - val.p).Magnitude/dist.Magnitude) or dist)
+                camera.CFrame = val
             end)
         end
 
-        local last_pos, last_ang, last_send, should_start = nil, nil, tick(), 0
+        local last_pos, last_ang, last_send, should_start = Vector3.new(), Vector2.new(), tick(), 0
         local absolute_pos = nil
         local blink_record = {}
+
+        function misc:BlinkPosition()
+            return absolute_pos, last_pos
+        end
 
         hook:Add("SuppressNetworkSend", "BBOT:Blink", function(networkname, pos, ang, timestamp, ...)
             if networkname == "repupdate" then
@@ -10646,6 +10704,7 @@ if BBOT.game == "pf" then
                     local allowmove = config:GetValue("Main", "Misc", "Exploits", "Blink Allow Movement")
                     if last_pos == pos or allowmove then
                         if not last_pos then
+                            misc.inblink = false
                             last_pos = pos
                             last_ang = ang
                             return
@@ -10658,10 +10717,12 @@ if BBOT.game == "pf" then
                             --last_ang = ang
                             network:send(networkname, last_pos, last_ang, timestamp)
                             last_send = tick()
+                            misc.inblink = false
                         else
                             BBOT.menu:UpdateStatus("Blink", "Active"
                             .. (t > 0 and " [" .. math.abs(math.round(last_send+t-tick(),1)) .. "s]" or "")
                             .. (allowmove and " [" .. math.round((pos-last_pos).Magnitude, 1) .. " studs]" or ""))
+                            misc.inblink = true
                             if not blink_record[1] or blink_record[#blink_record][1] ~= pos then
                                 local last = blink_record[#blink_record]
                                 if last then
@@ -10676,12 +10737,14 @@ if BBOT.game == "pf" then
                         return true
                     else
                         BBOT.menu:UpdateStatus("Blink", "Stand Still")
+                        misc.inblink = false
                         last_send = tick()
                         last_pos = pos
                         last_ang = ang
                     end
                 else
                     last_send = tick()
+                    misc.inblink = false
                     last_pos = pos
                     last_ang = ang
                 end
@@ -10709,6 +10772,7 @@ if BBOT.game == "pf" then
         end
 
         function misc:UnBlink()
+            misc.inblink = false
             misc:SendBlinkRecord()
             last_send = tick()
             last_pos = nil
@@ -10747,55 +10811,182 @@ if BBOT.game == "pf" then
             end
         end)
 
+        local changed = 0
+        hook:Add("OnAliveChanged", "BBOT:RepUpdate", function(alive)
+            changed = 4
+        end)
+        function misc:SendBlinkRecord()
+            if #blink_record > 0 and last_pos and (absolute_pos-last_pos).Magnitude > 9 then
+                local finaltime = blink_record[#blink_record]
+                local firsttime = blink_record[1]
+                if firsttime == finaltime then
+                    for i=1, #blink_record do
+                        network:send("repupdate", blink_record[i][1], blink_record[i][2], blink_record[i][3])
+                    end
+                else
+                    local timediff = finaltime[3]-firsttime[3]
+                    local first = firsttime[3]
+                    local len = #blink_record
+                    for i=1, len do
+                        network:send("repupdate", blink_record[i][1], blink_record[i][2], ((timediff/len)*i/20)+first)
+                    end
+                end
+            end
+            blink_record = {}
+        end
+
+        function misc:CanMoveTo(position)
+            local current_position = char.rootpart.Position
+            local occupied = workspace:FindPartOnRayWithWhitelist(
+                Ray.new(current_position, position-current_position),
+                BBOT.aux.roundsystem.raycastwhitelist
+            )
+            if occupied then return false else return true end
+        end
+
+        local _tick, _last_ang = tick(), Vector2.new()
+        function misc:MoveTo(position, move_char)
+            local current_position = char.rootpart.Position
+
+            local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+                Ray.new(current_position, position-current_position),
+                BBOT.aux.roundsystem.raycastwhitelist
+            ) 
+            if part then
+                position = position - (position - current_position).Unit
+            end
+
+            local diff = (position-current_position)
+
+            if diff.Magnitude > 7 then
+                local timescale = diff.Magnitude/7
+                local tdiff = diff/timescale
+                for i=1, timescale do
+                    network:send("repupdate", current_position + (tdiff*i), _last_ang, tick())
+                end
+            else
+                network:send("repupdate", current_position + diff, _last_ang, tick())
+            end
+
+            if move_char then
+                char.rootpart.CFrame = CFrame.new(current_position + diff, char.rootpart.CFrame.LookVector)
+            end
+        end
+
+        hook:Add("PostNetworkSend", "BBOT:Misc.MoveTo", function(netname, pos, ang, t)
+            if netname ~= "repupdate" then return end
+            _tick = t
+            _last_ang = ang
+        end)
+
+        function misc:AntiGrenadeStep()
+            if not char.alive then return end
+            if config:GetValue("Main", "Misc", "Exploits", "Anti Grenade TP") then
+                local points_allowed = config:GetValue("Main", "Misc", "Exploits", "Anti Grenade TP Points")
+                local grenade_move_dist = 35
+                local grenade_move_points = {}
+                if points_allowed.Up then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,grenade_move_dist,0) end
+                if points_allowed.Down then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,-grenade_move_dist,0) end
+                if points_allowed.Left then grenade_move_points[#grenade_move_points+1] = Vector3.new(-grenade_move_dist,0,0) end
+                if points_allowed.Right then grenade_move_points[#grenade_move_points+1] = Vector3.new(grenade_move_dist,0,0) end
+                if points_allowed.Forward then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,0,-grenade_move_dist) end
+                if points_allowed.Backward then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,0,grenade_move_dist) end
+
+                local generation = {}
+                local start = char.rootpart.Position
+                for i=1, #grenade_move_points do
+                    local point = grenade_move_points[i]
+                    local offset = (point*grenade_move_dist)
+                    local final = start + offset
+                    local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+                        Ray.new(start, offset),
+                        BBOT.aux.roundsystem.raycastwhitelist
+                    ) 
+                    if part then
+                        final = position - (position - start).Unit
+                    end
+                    generation[#generation+1] = {final, (final-start).Magnitude}
+                end
+
+                table.sort(generation, function(a, b)
+                    return a[2] > b[2]
+                end)
+
+                misc:MoveTo(generation[1][1], true)
+            end
+        end
+
+        hook:Add("RageBot.DamagePredictionKilled", "BBOT:AntiGrenadeTP", function()
+            misc:AntiGrenadeStep()
+        end)
+
+        hook:Add("PreBigAward", "BBOT:AntiGrenadeTP", function()
+            if config:GetValue("Main", "Rage", "Settings", "Damage Prediction") then return end
+            misc:AntiGrenadeStep()
+        end)
+
         local stutterFrames = 0
-        hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, ...)
-            if networkname == "repupdate" and config:GetValue("Main", "Rage", "Anti Aim", "Enabled") then
-                --args[2] = ragebot:AntiNade(args[2])
-                stutterFrames += 1
-                local pitch = ang.x
-                local yaw = ang.y
-                local pitchChoice = config:GetValue("Main", "Rage", "Anti Aim", "Pitch")
-                local yawChoice = config:GetValue("Main", "Rage", "Anti Aim", "Yaw")
-                local spinRate = config:GetValue("Main", "Rage", "Anti Aim", "Spin Rate")
-                ---"off,down,up,roll,upside down,random"
-                --"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch",
-                local new_angles
-                if pitchChoice == "Up" then
-                    pitch = -4
-                elseif pitchChoice == "Zero" then
-                    pitch = 0
-                elseif pitchChoice == "Down" then
-                    pitch = 4.7
-                elseif pitchChoice == "Upside Down" then
-                    pitch = -math.pi
-                elseif pitchChoice == "Roll Forward" then
-                    pitch = (tick() * spinRate) % 6.28
-                elseif pitchChoice == "Roll Backward" then
-                    pitch = (-tick() * spinRate) % 6.28
-                elseif pitchChoice == "Random" then
-                    pitch = math.random(-99999,99999)/99999
-                    pitch = pitch*1.47262156
-                elseif pitchChoice == "Bob" then
-                    pitch = math.sin((tick() % 6.28) * spinRate)
-                elseif pitchChoice == "Glitch" then
-                    pitch = 2 ^ 127 + 1
+        hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, tick, ...)
+            if networkname == "repupdate" then
+                local ran = false
+                if config:GetValue("Main", "Misc", "Exploits", "Spawn Offset") and changed > 0 then
+                    changed = changed - 1
+                    pos=pos+Vector3.new(0,-1e6,0)
+                    tick=2
+                    network:send("repupdate", pos, ang, tick)
+                    ran = true
                 end
+                if config:GetValue("Main", "Rage", "Anti Aim", "Enabled") then
+                    --args[2] = ragebot:AntiNade(args[2])
+                    stutterFrames += 1
+                    local pitch = ang.x
+                    local yaw = ang.y
+                    local pitchChoice = config:GetValue("Main", "Rage", "Anti Aim", "Pitch")
+                    local yawChoice = config:GetValue("Main", "Rage", "Anti Aim", "Yaw")
+                    local spinRate = config:GetValue("Main", "Rage", "Anti Aim", "Spin Rate")
+                    ---"off,down,up,roll,upside down,random"
+                    --"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch",
+                    local new_angles
+                    if pitchChoice == "Up" then
+                        pitch = -4
+                    elseif pitchChoice == "Zero" then
+                        pitch = 0
+                    elseif pitchChoice == "Down" then
+                        pitch = 4.7
+                    elseif pitchChoice == "Upside Down" then
+                        pitch = -math.pi
+                    elseif pitchChoice == "Roll Forward" then
+                        pitch = (tick() * spinRate) % 6.28
+                    elseif pitchChoice == "Roll Backward" then
+                        pitch = (-tick() * spinRate) % 6.28
+                    elseif pitchChoice == "Random" then
+                        pitch = math.random(-99999,99999)/99999
+                        pitch = pitch*1.47262156
+                    elseif pitchChoice == "Bob" then
+                        pitch = math.sin((tick() % 6.28) * spinRate)
+                    elseif pitchChoice == "Glitch" then
+                        pitch = 2 ^ 127 + 1
+                    end
 
-                --"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"
-                if yawChoice == "Backward" then
-                    yaw += math.pi
-                elseif yawChoice == "Spin" then
-                    yaw = (tick() * spinRate) % 12
-                elseif yawChoice == "Random" then
-                    yaw = math.random(-99999,99999)
-                elseif yawChoice == "Glitch Spin" then
-                    yaw = 16478887
-                elseif yawChoice == "Stutter Spin" then
-                    yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+                    --"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"
+                    if yawChoice == "Backward" then
+                        yaw += math.pi
+                    elseif yawChoice == "Spin" then
+                        yaw = (tick() * spinRate) % 12
+                    elseif yawChoice == "Random" then
+                        yaw = math.random(-99999,99999)
+                    elseif yawChoice == "Glitch Spin" then
+                        yaw = 16478887
+                    elseif yawChoice == "Stutter Spin" then
+                        yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+                    end
+
+                    new_angles = new_angles or Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
+                    return {networkname, pos, new_angles, tick}
                 end
-
-                new_angles = new_angles or Vector2.new(math.clamp(pitch, 1.47262156, -1.47262156), yaw)
-                return {networkname, pos, new_angles, ...}
+                if ran then
+                    return {networkname, pos, ang, tick}
+                end
             end
         end)
 
@@ -10859,7 +11050,7 @@ if BBOT.game == "pf" then
         l3p.networking = {
             ["newbullets"] = function(controller)
                 local gun = gamelogic.currentgun
-                if not gun then return end
+                if not gun or not gun.data then return end
                 local gundata = gun.data
                 -- gundata.firevolume
                 controller.kickweapon(gundata.hideflash, gundata.firesoundid, gundata.firepitch * (1 + 0.05 * math.random()), 0)
@@ -11185,7 +11376,7 @@ if BBOT.game == "pf" then
                 local updater = replication.getupdater(v)
                 local prioritize
                 if hitscan_priority == "Head" then
-                    prioritize = updater.gethead()
+                    prioritize = replication.getbodyparts(v).head
                 elseif hitscan_priority == "Body" then
                     prioritize = replication.getbodyparts(v).torso
                 end
@@ -11287,11 +11478,11 @@ if BBOT.game == "pf" then
                     dir = dir + self:BarrelPrediction(position, dir, gun)
                 end
 
-                pos, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
+                local pos, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
                 if onscreen then
                     local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
                     local smoothing = smoothing_incrimental * 5 + 10
-                    local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
+                    local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, ((pos.Y-36) - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
                     Move_Mouse(inc)
                 end
             end
@@ -11593,20 +11784,23 @@ if BBOT.game == "pf" then
                         aimbot.predictedDamageDealt[Entity] = 0
                     end
                     aimbot.predictedDamageDealt[Entity] += damageDealt
+                    if aimbot.predictedDamageDealt[Entity] >= aimbot:GetRageConfig("Settings", "Damage Prediction Limit") then
+                        hook:Call("RageBot.DamagePredictionKilled", Entity)
+                    end
                     aimbot.predictedDamageDealtRemovals[Entity] = tick() + GetLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
                 end
                 syn.set_thread_identity(curthread)
-            elseif netname == "newbullets" then
-                local a = {...}
-                local bullet_table, time_stamp = a[1], a[2]
-                local dataset = {gamelogic.currentgun.data, bullet_table.firepos}
-                for i=1, #bullet_table.bullets do
-                    local v = bullet_table.bullets[i]
+            elseif netname == "newbullets" and gamelogic.currentgun and gamelogic.currentgun.data then
+                local args = {...}
+                local bullettable = args[1]
+                local dataset = {gamelogic.currentgun.data, bullettable.firepos}
+                for i=1, #bullettable.bullets do
+                    local v = bullettable.bullets[i]
                     aimbot.BulletQuery[v[2]] = dataset
                 end
                 timer:Simple(1.5, function()
-                    for i=1, #bullet_table.bullets do
-                        local v = bullet_table.bullets[i]
+                    for i=1, #bullettable.bullets do
+                        local v = bullettable.bullets[i]
                         aimbot.BulletQuery[v[2]] = nil
                     end
                 end)
@@ -11622,10 +11816,16 @@ if BBOT.game == "pf" then
             end
         end)
 
+        local last_repupdate_position
+        hook:Add("PostNetworkSend", "BBOT:RageBot.LastPosition", function(netname, pos, ang, t)
+            if netname ~= "repupdate" then return end
+            last_repupdate_position = pos
+        end)
+
         function aimbot:GetRageTarget(fov, gun)
             local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
             local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-            local cam_position = aux_camera.basecframe.p
+            local cam_position = last_repupdate_position or aux_camera.basecframe.p
             local team = (localplayer.Team and localplayer.Team.Name or "NA")
             local playerteamdata = workspace["Players"][team]
             local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
@@ -11663,6 +11863,19 @@ if BBOT.game == "pf" then
                 if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(firepos_shift_distance,0,0) end
                 if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) end
                 if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) end
+            end
+
+            local tp_scanning_points = #firepos_points
+            if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") then
+                local points_allowed = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Points")
+                local grenade_move_dist = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Distance")
+                local grenade_move_points = {}
+                if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,grenade_move_dist,0) end
+                if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-grenade_move_dist,0) end
+                if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-grenade_move_dist,0,0) end
+                if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(grenade_move_dist,0,0) end
+                if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-grenade_move_dist) end
+                if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,grenade_move_dist) end
             end
 
             local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
@@ -11716,26 +11929,29 @@ if BBOT.game == "pf" then
                                         local point = firepos_points[i]
                                         local newcf = targetcframe * lookatme * point
                                         local cam_position = newcf.p
-                                        if hitbox_shift then
-                                            local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
-                                            local targetcframe = CFrame.new(pos)
-                                            for i=1, #hitbox_points do
-                                                local point = hitbox_points[i]
-                                                local newcf = targetcframe * lookatme * point
-                                                local pos = newcf.p
+                                        if i <= tp_scanning_points or (i > tp_scanning_points and BBOT.misc:CanMoveTo(cam_position)) then
+                                            local u = i
+                                            if hitbox_shift then
+                                                local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
+                                                local targetcframe = CFrame.new(pos)
+                                                for i=1, #hitbox_points do
+                                                    local point = hitbox_points[i]
+                                                    local newcf = targetcframe * lookatme * point
+                                                    local pos = newcf.p
+                                                    local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+                                                    if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+                                                        table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points)})
+                                                        inserted_priority = true
+                                                        scan_count = scan_count + 1
+                                                    end
+                                                end
+                                            else
                                                 local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
                                                 if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-                                                    table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
+                                                    table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points)})
                                                     inserted_priority = true
                                                     scan_count = scan_count + 1
                                                 end
-                                            end
-                                        else
-                                            local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-                                            if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-                                                table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
-                                                inserted_priority = true
-                                                scan_count = scan_count + 1
                                             end
                                         end
                                     end
@@ -11752,7 +11968,7 @@ if BBOT.game == "pf" then
                     end
                 end
                 
-                if not inserted_priority then
+                --[[if not inserted_priority then
                     for name, part in pairs(parts) do
                         local name = partstosimple[name]
                         if part == prioritize or not name or name == "Legs" or name == "Arms" then continue end
@@ -11771,7 +11987,7 @@ if BBOT.game == "pf" then
                             scan_count = scan_count + 1
                         end
                     end
-                end
+                end]]
             end
             
             table.sort(organizedPlayers, function(a, b)
@@ -11794,6 +12010,15 @@ if BBOT.game == "pf" then
                     self:RageChanged(nil)
                     return
                 end
+                if BBOT.misc.inblink then
+                    local a, b = BBOT.misc:BlinkPosition()
+                    if (a-b).Magnitude > 9 then
+                        self.rage_target = nil
+                        self:RageChanged(nil)
+                        return
+                    end
+                end
+
                 local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
                 local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
@@ -11802,6 +12027,12 @@ if BBOT.game == "pf" then
                 self.rage_target = target
                 local position = target[3]
                 local part_pos = part.Position
+
+                if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") and target[6] then
+                    local original_position = char.rootpart.Position
+                    self._original_position = original_position
+                    BBOT.misc:MoveTo(target[4], true)
+                end
 
                 local dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
                 local magnitude = (position-part_pos).Magnitude
@@ -12356,6 +12587,11 @@ if BBOT.game == "pf" then
                 aimbot.fire = nil
                 gun:shoot(false)
             end
+
+            if aimbot._original_position then
+                BBOT.misc:MoveTo(aimbot._original_position, true)
+                aimbot._original_position = nil
+            end
         end)
 
         local enque = {}
@@ -12370,11 +12606,12 @@ if BBOT.game == "pf" then
         end)
 
         -- When silent aim isn't enough, resort to this, and make even cheaters rage that their config is garbage
-        hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, ...)
+        hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, timestamp)
             if networkname == "newbullets" then
                 if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
                 if aimbot.rage_target then -- who are we targeting today?
                     local target = aimbot.rage_target
+
                     -- timescale is to determine how quick the bullet hits
                     -- don't want to get too cocky or the system might silent flag
                     local timescale = 0
@@ -12407,8 +12644,7 @@ if BBOT.game == "pf" then
                         end)
                         enque[bullet[2]] = target[1] -- this bullet is a magic bullet now, supress networking for this bullet!
                     end
-                    network:send(networkname, bullettable, ...)
-                    
+                    network:send(networkname, bullettable, tick()+(target[6] and -.1 or .01))
                     return true
                 end
             end
