@@ -1215,6 +1215,23 @@ do
     end, runservice.RenderStepped)
 end
 
+-- Extras
+do
+    local hook = BBOT.hook
+    local extras = {}
+    BBOT.extras = extras
+
+    local PingStat = BBOT.service:GetService("Stats").PerformanceStats.Ping
+    local current_latency = 0
+    hook:Add("RenderStep.Last", "BBOT:extras.getlatency", function()
+        current_latency = PingStat:GetValue() / 1000
+    end)
+
+    function extras:getLatency()
+        return current_latency
+    end
+end
+
 -- Draw
 do
     local hook = BBOT.hook
@@ -4292,6 +4309,7 @@ do
             local container = gui:Create("Container", self)
             container:SetPos(0,8,0,36+8)
             container:SetSize(1,-16,1,-36-16)
+            self.top_margin = 36
             self.container = container
 
             local tablist = gui:Create("Container", self)
@@ -4339,6 +4357,7 @@ do
         end
 
         function GUI:SetTopBarMargin(margin)
+            self.top_margin = margin
             self.container:SetPos(0,8,0,margin+8)
             self.container:SetSize(1,-16,1,-margin-16)
             self.tablist:SetPos(0,0,0,2)
@@ -4357,15 +4376,15 @@ do
         function GUI:SetBorderless(bool)
             self.borderless = bool
             if bool then
-                self.container:SetPos(0,0,0,36+6)
-                self.container:SetSize(1,0,1,-36-6)
+                self.container:SetPos(0,0,0,self.top_margin+6)
+                self.container:SetSize(1,0,1,-self.top_margin-6)
                 self.background_border.Visible = false
                 self.background_outline.Visible = false
                 self.background.Visible = false
                 self.tablist.borderless = bool
             else
-                self.container:SetPos(0,8,0,36+8)
-                self.container:SetSize(1,-16,1,-36-16)
+                self.container:SetPos(0,8,0,self.top_margin+8)
+                self.container:SetSize(1,-16,1,-self.top_margin-16)
                 self.background_border.Visible = true
                 self.background_outline.Visible = true
                 self.background.Visible = true
@@ -5853,7 +5872,7 @@ do
         local alias = gui:Create("Text", keybinds)
         keybinds.alias = alias
         alias:SetPos(0, 3, 0, 4)
-        alias:SetText("Keybinds")
+        alias:SetText("Status")
         alias:SetTextSize(13)
         local w, h = alias:GetTextSize()
         keybinds.min_w = w
@@ -5892,8 +5911,22 @@ do
 
         function menu:ReloadStatus()
             local txt = ""
+            local a = false
             for k, v in pairs(self.statuses) do
-                if v[1] then txt = txt .. ((v[3] and v[3] ~= "") and "[" .. v[3] .. "] " or "") .. k .. (v[2] and ": " .. v[2] or "") .. "\n" end
+                if v[1] and v[3] and v[3] ~= "" then
+                    a = true
+                    txt = txt .. "[" .. v[3] .. "] " .. k .. (v[2] and ": " .. v[2] or "") .. "\n"
+                end
+            end
+            local b = true
+            for k, v in pairs(self.statuses) do
+                if v[1] and not (v[3] and v[3] ~= "") then
+                    if a and b then
+                        txt = txt .. "\n"
+                        b = false
+                    end
+                    txt = txt .. k .. (v[2] and ": " .. v[2] or "") .. "\n"
+                end
             end
             activity:SetText(txt)
             local w, h = activity:GetTextSize()
@@ -6646,19 +6679,7 @@ do
                     },
                 }
             }
-            local skins = {
-                {
-                    name = { "Slot1", "Slot1-Animations", "Slot2", "Slot2-Animations", },
-                    pos = UDim2.new(0,0,0,0),
-                    size = UDim2.new(1,0,1,0),
-                    borderless = true,
-                    type = "Tabs",
-                    {content=skins_content},
-                    {content=skins_anims},
-                    {content=skins_content},
-                    {content=skins_anims},
-                }
-            }
+
             local weapon_legit = {
                 {
                     name = "Aim Assist",
@@ -7076,6 +7097,12 @@ do
                                             value = true,
                                             tooltip = "Rage aimbot attempts to resolve player offsets and positions, Disable if you are having issues with resolver.",
                                         },
+                                        {
+                                            type = "Toggle",
+                                            name = "Zero Velocity",
+                                            value = true,
+                                            tooltip = "Makes all the characters not have velocity, so the people like pf pwner can cry.",
+                                        },
                                     }
                                 },
                                 {
@@ -7300,7 +7327,7 @@ do
                                             {
                                                 type = "ComboBox",
                                                 name = "Flags",
-                                                values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Resolved", false }, { "Backtrack", false },  },
+                                                values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Frozen", true }, { "Resolved", false }, { "Backtrack", false },  },
                                             },
                                             {
                                                 type = "Toggle",
@@ -7445,7 +7472,7 @@ do
                                             {
                                                 type = "ComboBox",
                                                 name = "Flags",
-                                                values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false }, { "Resolved", false }  },
+                                                values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false }, { "Frozen", true }, { "Resolved", false }  },
                                             },
                                             {
                                                 type = "Toggle",
@@ -8537,7 +8564,7 @@ do
                                             type = "Slider",
                                             name = "Votekick On Kills",
                                             min = 0,
-                                            max = 10,
+                                            max = 30,
                                             suffix = " kills",
                                             decimal = 0,
                                             value = 4,
@@ -8586,15 +8613,9 @@ do
                                             tooltip = "Literally makes you look like your having a stroke."
                                         },
                                         {
-                                            type = "Toggle",
-                                            name = "Spaz Attack Force",
-                                            value = false,
-                                            tooltip = "Forces the repupdate regardless."
-                                        },
-                                        {
                                             type = "Slider",
                                             name = "Spaz Attack Intensity",
-                                            min = 1,
+                                            min = 0.1,
                                             max = 6,
                                             suffix = "",
                                             decimal = 1,
@@ -8603,7 +8624,7 @@ do
                                                 [8] = "Unbearable",
                                             },
                                         },
-                                        {
+                                        --[[{
                                             type = "Toggle",
                                             name = "Invisibility",
                                             value = false,
@@ -8651,6 +8672,25 @@ do
                                                 [15] = "Literally Unplayable",
                                                 [16] = "Insta-Crash",
                                             },
+                                        },]]
+                                        {
+                                            type = "Toggle",
+                                            name = "Tick Division Manipulation",
+                                            value = false,
+                                            tooltip = "Makes your velocity go 10^n m/s, god why raspi you fucking idiot",
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Tick Division Scale",
+                                            min = 0.1,
+                                            max = 12,
+                                            suffix = "^10 studs/s",
+                                            decimal = 1,
+                                            value = 3,
+                                            custom = {
+                                                [12] = "Fucking Insane",
+                                            },
+                                            tooltip = "Each value here is tick/10^n, so velocity go *wait what the fuck*",
                                         },
                                         {
                                             type = "Toggle",
@@ -8951,26 +8991,16 @@ do
                             type = "Container",
                             content = {
                                 {
-                                    type = "Toggle",
-                                    name = "Enabled",
-                                    value = false,
-                                    extra = {},
-                                },
-                                {
-                                    name = { "Primary", "Secondary", "Tertiary" },
+                                    name = { "Slot1", "Slot1-Animations", "Slot2", "Slot2-Animations", },
+                                    pos = UDim2.new(0,0,0,0),
+                                    size = UDim2.new(1,0,1,0),
                                     borderless = true,
-                                    pos = UDim2.new(0,0,0,20),
-                                    size = UDim2.new(1,0,1,-20),
-                                    {
-                                        content = table.deepcopy(skins),
-                                    },
-                                    {
-                                        content = table.deepcopy(skins),
-                                    },
-                                    {
-                                        content = table.deepcopy(skins),
-                                    }
-                                },
+                                    type = "Tabs",
+                                    {content=skins_content},
+                                    {content=skins_anims},
+                                    {content=skins_content},
+                                    {content=skins_anims},
+                                }
                             }
                         },
                     }
@@ -9100,6 +9130,7 @@ if BBOT.game == "pf" then
         local table = BBOT.table
         local hook = BBOT.hook
         local timer = BBOT.timer
+        local localplayer = BBOT.service:GetService("LocalPlayer")
         local aux = {}
         BBOT.aux = aux
 
@@ -9281,13 +9312,34 @@ if BBOT.game == "pf" then
             local ups = debug.getupvalues(aux.replication.getupdater)
             for k, v in pairs(ups) do
                 if typeof(v) == "table" then
-                    rawset(BBOT.aux.replication, "player_registry", v)
+                    rawset(aux.replication, "player_registry", v)
+                    for player, v in pairs(v) do
+                        if (localplayer ~= player and v.updater) then
+                            local controller = v.updater
+                            local upd_updateReplication = controller.updateReplication
+                            controller._upd_updateReplication = upd_updateReplication
+                            function controller.updateReplication(...)
+                                hook:CallP("PreupdateReplication", player, controller, ...)
+                                return upd_updateReplication(...), hook:CallP("PostupdateReplication", player, controller, ...)
+                            end
+                            hook:CallP("CreateUpdater", player)
+                        end
+                    end
                 elseif typeof(v) == "function" then
                     local function createupdater(player)
-                        timer:Async(function() if (localplayer ~= player) then hook:Call("CreateUpdater", player) end end)
-                        return v(player)
+                        local controller = v(player)
+                        if (localplayer ~= player) then
+                            local upd_updateReplication = controller.updateReplication
+                            controller._upd_updateReplication = upd_updateReplication
+                            function controller.updateReplication(...)
+                                hook:CallP("PreupdateReplication", player, controller, ...)
+                                return upd_updateReplication(...), hook:CallP("PostupdateReplication", player, controller, ...)
+                            end
+                            hook:CallP("CreateUpdater", player)
+                        end
+                        return controller
                     end
-                    rawset(BBOT.aux.replication, "_updater", v)
+                    rawset(aux.replication, "_updater", v)
                     debug.setupvalue(updater, k, newcclosure(createupdater))
                     hook:Add("Unload", "BBOT:Aux.Replication.UndoUpdaterDetour", function()
                         debug.setupvalue(updater, k, v)
@@ -9296,8 +9348,14 @@ if BBOT.game == "pf" then
             end
     
             hook:Add("Unload", "BBOT:Aux.Replication.Updater", function()
-                rawset(BBOT.aux.replication, "player_registry", nil)
-                rawset(BBOT.aux.replication, "_updater", nil)
+                for k, v in pairs(aux.replication.player_registry) do
+                    if v.updater and v.updater._upd_updateReplication then
+                        v.updater.updateReplication = v.updater._upd_updateReplication
+                        v.updater._upd_updateReplication = nil
+                    end
+                end
+                rawset(aux.replication, "player_registry", nil)
+                rawset(aux.replication, "_updater", nil)
             end)
 
             if not aux.replication.player_registry then
@@ -9893,6 +9951,7 @@ if BBOT.game == "pf" then
         local config = BBOT.config
         local hook = BBOT.hook
         local timer = BBOT.timer
+        local math = BBOT.math
         local notification = BBOT.notification
         local table = BBOT.table
         local hud = BBOT.aux.hud
@@ -9903,7 +9962,7 @@ if BBOT.game == "pf" then
         BBOT.votekick = votekick
         votekick.CallDelay = 90
         votekick.NextCall = 0
-        votekick.Called = 0
+        votekick.Called = 3
 
         hook:Add("PreInitialize", "BBOT:Votekick.Load", function()
             local receivers = BBOT.aux.network.receivers
@@ -9958,18 +10017,22 @@ if BBOT.game == "pf" then
             notification:Create("Votekick called on " .. target .. "; time till end: " .. delay .. "; votes required: " .. votesrequired)
             if votekick.Called == 1 then
                 votekick.Called = 2
+                votekick.NextCall = tick() + votekick.CallDelay + delay
             elseif votekick.Called == 2 or votekick.Called == 0 then
-                votekick.Called = 0
-                votekick.NextCall = tick() + 1000000000
+                votekick.Called = 3
+                votekick.NextCall = tick() + votekick.CallDelay + delay
             end
         end)
         
         hook:Add("Console", "BBOT:Votekick.AntiVotekick", function(msg)
             if string.find(msg, "The last votekick was initiated by you", 1, true) then
-                votekick.Called = 2
+                if votekick.NextCall <= tick() then
+                    votekick.Called = 2
+                    BBOT.menu:UpdateStatus("Anti-Votekick", "!!! Kickable !!! (Unknown duration)")
+                end
             elseif string.find(msg, "seconds before initiating a votekick", 1, true) then
                 votekick.Called = 0
-                votekick.NextCall = tick() + (tonumber(string.match(msg, "%d+")) or 0)-.5
+                votekick.NextCall = tick() + (tonumber(string.match(msg, "%d+")) or 0)-(.5+BBOT.extras:getLatency())
             end
         end)
         
@@ -9991,14 +10054,17 @@ if BBOT.game == "pf" then
         
         function votekick:CanCall(target, reason)
             if self:IsVoteActive() then return false, "VoteActive" end
-            if self.NextCall > tick() or self.Called > 0 then return false, "RateLimit" end
+            if self.NextCall > tick() or (self.Called > 0 and self.Called < 3) then return false, "RateLimit" end
             return true
         end
         
         function votekick:Call(target, reason)
             BBOT.chat:Say("/votekick:"..target..":"..reason)
-            self.NextCall = 0
-            self.Called = 1
+            if self.Called ~= 2 and self.NextCall <= tick() then
+                self.Called = 1
+                self.NextCall = 0
+                BBOT.menu:UpdateStatus("Anti-Votekick", "Server response...")
+            end
         end
         
         function votekick:RandomCall()
@@ -10011,6 +10077,17 @@ if BBOT.game == "pf" then
         hook:Add("PreBigAward", "BBOT:Votekick.Kills", function()
             totalkills = totalkills + 1
         end)
+
+        hook:Add("OnConfigChanged", "BBOT:Votekick.AntiVotekick", function(steps, old, new)
+            if config:IsPathwayEqual(steps, "Main", "Misc", "Votekick", "Anti Votekick") then
+                if playerdata.rankcalculator(playerdata:getdata().stats.experience) < 25 then
+                    BBOT.menu:UpdateStatus("Anti-Votekick", "Rank 25 required")
+                else
+                    local state = BBOT.menu:GetStatus("Anti-Votekick")
+                    BBOT.menu:UpdateStatus("Anti-Votekick", (state and state[2] or "Waiting..."), new)
+                end
+            end
+        end)
         
         hook:Add("RenderStep.First", "BBOT:Votekick.AntiVotekick", function()
             if not config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then return end
@@ -10019,10 +10096,26 @@ if BBOT.game == "pf" then
             end
             if not votekick.WasAlive then return end
             if playerdata.rankcalculator(playerdata:getdata().stats.experience) < 25 then return end
+            if votekick.Called == 3 or votekick.Called == 0 then
+                BBOT.menu:UpdateStatus("Anti-Votekick", "Calling in " .. math.round(votekick.NextCall-tick()) .. "s")
+            elseif votekick.Called == 2 then
+                local t = votekick.NextCall-tick()
+                local amount = ""
+                for i=1, math.round(tick()%4) do
+                    amount = amount .. "!"
+                end
+                if t < 0 then
+                    BBOT.menu:UpdateStatus("Anti-Votekick", "Kickable" .. amount)
+                else
+                    BBOT.menu:UpdateStatus("Anti-Votekick", "Kickable in " .. math.round(t) .. "s" .. (t < 15 and amount or ""))
+                end
+            end
             if votekick:CanCall() then
                 local kills = config:GetValue("Main", "Misc", "Votekick", "Votekick On Kills")
                 if kills == 0 or totalkills >= kills then
                     votekick:RandomCall()
+                elseif kills > 0 then
+                    BBOT.menu:UpdateStatus("Anti-Votekick", (kills - totalkills) .. " kills remaining")
                 end
             end
         end)
@@ -10798,19 +10891,6 @@ if BBOT.game == "pf" then
             last_ang = nil
         end)
 
-        local workspace = BBOT.service:GetService("Workspace")
-        hook:Add("PreNetworkSend", "BBOT:SpazAttack", function(networkname, pos, ...)
-            if networkname == "repupdate" and config:GetValue("Main", "Misc", "Exploits", "Spaz Attack") then
-                local intensity = config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
-                local offset = Vector3.new(math.random(-1000,1000)/1000, math.random(-1000,1000)/1000, math.random(-1000,1000)/1000)*config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
-                local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(pos, offset), BBOT.aux.roundsystem.raycastwhitelist)
-                if part then
-                    offset = offset - (position-pos).Unit
-                end
-                return {networkname, pos + offset, ...}
-            end
-        end)
-
         local changed = 0
         hook:Add("OnAliveChanged", "BBOT:RepUpdate", function(alive)
             changed = 4
@@ -10862,10 +10942,10 @@ if BBOT.game == "pf" then
                 local timescale = diff.Magnitude/7
                 local tdiff = diff/timescale
                 for i=1, timescale do
-                    network:send("repupdate", current_position + (tdiff*i), _last_ang, tick())
+                    network:send("repupdate", current_position + (tdiff*i), _last_ang, self:GetTickDivisionScale())
                 end
             else
-                network:send("repupdate", current_position + diff, _last_ang, tick())
+                network:send("repupdate", current_position + diff, _last_ang, self:GetTickDivisionScale())
             end
 
             if move_char then
@@ -10925,17 +11005,41 @@ if BBOT.game == "pf" then
             misc:AntiGrenadeStep()
         end)
 
+        function misc:GetTickDivisionScale()
+            if config:GetValue("Main", "Misc", "Exploits", "Tick Division Manipulation") then
+                return tick()/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale"))
+            end
+            return tick()
+        end
+
+        local workspace = BBOT.service:GetService("Workspace")
         local stutterFrames = 0
         hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, tick, ...)
             if networkname == "repupdate" then
                 local ran = false
-                if config:GetValue("Main", "Misc", "Exploits", "Spawn Offset") and changed > 0 then
+                if config:GetValue("Main", "Misc", "Exploits", "Tick Division Manipulation") then
+                    tick = tick/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale"))
+                    ran = true
+                end
+
+                if config:GetValue("Main", "Misc", "Exploits", "Spaz Attack") then
+                    local intensity = config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
+                    local offset = Vector3.new(math.random(-1000,1000)/1000, math.random(-1000,1000)/1000, math.random(-1000,1000)/1000)*config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
+                    local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(pos, offset), BBOT.aux.roundsystem.raycastwhitelist)
+                    if part then
+                        offset = offset - (position-pos).Unit
+                    end
+                    pos = pos + offset
+                    ran = true
+                end
+
+                --[[if config:GetValue("Main", "Misc", "Exploits", "Spawn Offset") and changed > 0 then
                     changed = changed - 1
                     pos=pos+Vector3.new(0,-1e6,0)
                     tick=2
                     network:send("repupdate", pos, ang, tick)
                     ran = true
-                end
+                end]]
                 if config:GetValue("Main", "Rage", "Anti Aim", "Enabled") then
                     --args[2] = ragebot:AntiNade(args[2])
                     stutterFrames += 1
@@ -11017,17 +11121,23 @@ if BBOT.game == "pf" then
         end)
 
         function l3p:SetAlive(alive)
-            if not l3p.controller then return end
-            if alive and l3p.enabled then
-                l3p.controller.spawn(char.rootpart.Position)
-                if l3p.controller._weapon_slot then
-                    l3p.networking["equip"](l3p.controller, l3p.controller._weapon_slot)
+            if not self.controller then return end
+            if alive and self.enabled then
+                self.controller.spawn(char.rootpart.Position)
+                if self.controller._weapon_slot then
+                    self.networking["equip"](l3p.controller, l3p.controller._weapon_slot)
                 end
             else
-                local objects = l3p.controller.died()
+                local objects = self.controller.died()
                 if objects then
                     objects:Destroy()
                 end
+            end
+        end
+
+        function l3p:GetCharacter()
+            if self.controller and self.controller.alive then
+                return self.controller.gethead().Parent
             end
         end
 
@@ -11170,6 +11280,7 @@ if BBOT.game == "pf" then
         local log = BBOT.log
         local draw = BBOT.draw
         local replication = BBOT.aux.replication
+        local extras = BBOT.extras
         local raycast = BBOT.aux.raycast
         local cam = BBOT.aux.camera
         local localplayer = BBOT.service:GetService("LocalPlayer")
@@ -11221,7 +11332,7 @@ if BBOT.game == "pf" then
 
             local camera = BBOT.service:GetService("CurrentCamera")
             function aimbot:raycastbullet(vec, dir, extra, cb)
-                return aimbot:fullcast(vec, dir, {camera, workspace.Terrain, localplayer.Character, workspace.Ignore, extra}, cb or raycastbullet)
+                return aimbot:fullcast(vec, dir, {camera, workspace.Terrain, localplayer.Character, workspace.Ignore, BBOT.l3p_player:GetCharacter(), extra}, cb or raycastbullet)
             end
         end
 
@@ -11696,8 +11807,14 @@ if BBOT.game == "pf" then
             end
         end)
 
+        hook:Add("PostupdateReplication", "BBOT:Aimbot.ZeroVelocity", function(player, controller)
+            if aimbot:GetRageConfig("Hack vs. Hack", "Zero Velocity") then
+                controller.receivedVelocity = Vector3.new()
+            end
+        end)
+
         local Resolver_NewBullet = {}
-        hook:Add("NewBullet", "Resolver", function(data)
+        hook:Add("NewBullet", "BBOT:Aimbot.Resolver", function(data)
             local firepos, player = data.firepos, data.player
             local isalive = hud:isplayeralive(player)
             if isalive then
@@ -11758,11 +11875,6 @@ if BBOT.game == "pf" then
             return vector_cache
         end
 
-        local PingStat = BBOT.service:GetService("Stats").PerformanceStats.Ping
-        local function GetLatency()
-            return PingStat:GetValue() / 1000
-        end
-
         function aimbot:GetDamage(data, distance, headshot)
             local r0, r1, d0, d1 = data.range0, data.range1, data.damage0, data.damage1
             return (distance < r0 and d0 or distance < r1 and (d1 - d0) / (r1 - r0) * (distance - r0) + d0 or d1)  * (headshot and data.multhead or 1)
@@ -11787,7 +11899,7 @@ if BBOT.game == "pf" then
                     if aimbot.predictedDamageDealt[Entity] >= aimbot:GetRageConfig("Settings", "Damage Prediction Limit") then
                         hook:Call("RageBot.DamagePredictionKilled", Entity)
                     end
-                    aimbot.predictedDamageDealtRemovals[Entity] = tick() + GetLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
+                    aimbot.predictedDamageDealtRemovals[Entity] = tick() + extras:getLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
                 end
                 syn.set_thread_identity(curthread)
             elseif netname == "newbullets" and gamelogic.currentgun and gamelogic.currentgun.data then
@@ -11820,6 +11932,10 @@ if BBOT.game == "pf" then
         hook:Add("PostNetworkSend", "BBOT:RageBot.LastPosition", function(netname, pos, ang, t)
             if netname ~= "repupdate" then return end
             last_repupdate_position = pos
+        end)
+
+        hook:Add("PostupdateReplication", "BBOT:RageBot.CheckAlive", function(player, controller)
+            controller.__t_received = tick()
         end)
 
         function aimbot:GetRageTarget(fov, gun)
@@ -11901,6 +12017,10 @@ if BBOT.game == "pf" then
                 end
 
                 local updater = replication.getupdater(v)
+                if updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.1 < tick() then
+                    continue
+                end
+
                 local prioritize
                 if hitscan_priority == "Head" then
                     prioritize = updater.gethead()
@@ -12644,7 +12764,7 @@ if BBOT.game == "pf" then
                         end)
                         enque[bullet[2]] = target[1] -- this bullet is a magic bullet now, supress networking for this bullet!
                     end
-                    network:send(networkname, bullettable, tick()+(target[6] and -.1 or .01))
+                    network:send(networkname, bullettable, BBOT.misc:GetTickDivisionScale()+(target[6] and -.1 or -extras:getLatency()))
                     return true
                 end
             end
@@ -13098,9 +13218,32 @@ if BBOT.game == "pf" then
                         else
                             self.healthtext.Visible = true
                             local offsety = (self.healthbar_enabled and (bounding_box.h * math.remap(math.clamp(health/100, 0, 1),0,1,1,0)) or lefty)
-                            self.healthtext.Position = Vector2.new(bounding_box.x - self.healthtext.TextBounds.X - (self.healthbar_enabled and 8 or 1), bounding_box.y + offsety - (self.healthbar_enabled and self.healthtext.TextBounds.Y/2 or 0))
                             self.healthtext.Text = (self.healthbar_enabled and tostring(health) or tostring(health) .. "hp")
+                            self.healthtext.Position = Vector2.new(bounding_box.x - self.healthtext.TextBounds.X - (self.healthbar_enabled and 8 or 1), bounding_box.y + offsety - (self.healthbar_enabled and self.healthtext.TextBounds.Y/2 or 0))
                             lefty = lefty + self.healthtext.TextBounds.Y + 2
+                        end
+                    end
+
+                    if self.distance and self.distance_enabled then
+                        if fail then
+                            self.distance.Visible = false
+                        else
+                            self.distance.Visible = true
+                            local pos = self.controller.receivedPosition or self.controller.gethead().Position
+                            self.distance.Text = math.round((pos-camera.CFrame.p).Magnitude) .. " stud(s)"
+                            self.distance.Position = Vector2.new(bounding_box.x + bounding_box.w + 2, bounding_box.y + righty)
+                            righty = righty + self.distance.TextBounds.Y + 2
+                        end
+                    end
+
+                    if self.frozen and self.frozen_enabled then
+                        local on = self.controller.__t_received and self.controller.__t_received + (BBOT.extras:getLatency()*2)+.1 < tick()
+                        if fail or not on then
+                            self.frozen.Visible = false
+                        else
+                            self.frozen.Visible = true
+                            self.frozen.Position = Vector2.new(bounding_box.x + bounding_box.w + 2, bounding_box.y + righty)
+                            righty = righty + self.frozen.TextBounds.Y + 2
                         end
                     end
                 end
@@ -13131,6 +13274,9 @@ if BBOT.game == "pf" then
                     
                     color, color_transparency = self:GetConfig("Health Number", "Color")
                     self.healthtext = self:Cache(draw:TextOutlined("100", 2, 0, 0, 12, false, color, black, color_transparency, false))
+                    
+                    self.distance = self:Cache(draw:TextOutlined("0 studs", 2, 0, 0, 12, false, color, black, color_transparency, false))
+                    self.frozen = self:Cache(draw:TextOutlined("FROZEN", 2, 0, 0, 12, false, color, black, color_transparency, false))
                 end
 
                 function player_meta:GetColor(...)
@@ -13189,6 +13335,20 @@ if BBOT.game == "pf" then
                     self.healthtext.Color = color
                     self.healthtext.Transparency = color_transparency
                     self:Cache(self.healthtext)
+
+                    local flags = self:GetConfig("Flags")
+
+                    self.distance_enabled = (esp_enabled and flags.Distance or false)
+                    self.distance.Visible = self.distance_enabled
+                    self.distance.Color = color
+                    self.distance.Transparency = color_transparency
+                    self:Cache(self.distance)
+
+                    self.frozen_enabled = (esp_enabled and flags.Frozen or false)
+                    self.frozen.Visible = self.frozen_enabled
+                    self.frozen.Color = color
+                    self.frozen.Transparency = color_transparency
+                    self:Cache(self.frozen)
 
                     self:RemoveInstances()
 
@@ -13379,12 +13539,6 @@ if BBOT.game == "pf" then
             end)
 
             hook:Add("PostInitialize", "BBOT:ESP.Players.Load", function()
-                for player, controller in pairs(player_registry) do
-                    if controller.updater and player ~= localplayer then
-                        esp:CreatePlayer(player, controller.updater)
-                    end
-                end
-
                 timer:Create("esp.checkplayers", 5, 0, function()
                     for player, controller in pairs(player_registry) do
                         if controller.updater and player ~= localplayer and not esp:Find("PLAYER_" .. player.UserId) then
@@ -14426,7 +14580,7 @@ if BBOT.game == "pf" then
         end)
 
         -- Skins
-        do
+        --[[do
             local texture_animtypes = {
                 ["OffsetStudsU"] = true,
                 ["OffsetStudsV"] = true,
@@ -14805,7 +14959,7 @@ if BBOT.game == "pf" then
                 weapons:RenderAnimations(gundata._skins.slot2.animations, delta-gundata._skinlast)
                 gundata._skinlast = delta
             end)
-        end
+        end]]
     end
 end
 
