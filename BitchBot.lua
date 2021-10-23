@@ -882,10 +882,86 @@ do
         table.insert(connections, con)
         return con
     end
+
+    --[[
+    function original_func = hook:bindFunction(function func, string name, any extra)
+    - Automatically hooks a function and adds it to the hook registry
+    - hooks called: Pre[name], Post[name]
+        - Pre: ran before the function, use this for pre stuff
+        - Post: ran after the function, use this for post stuff
+
+    function original_func = hook:bindFunctionReturn(function func, string name, any extra)
+    - Automatically hooks a function and adds it to the hook registry with return override capabilities
+    - hooks called: Suppress[name], Pre[name], Post[name]
+        - Suppress: ran before the function, by returning true, you will prevent anything else from running
+        - Pre: ran before the function, by returning values in table format will override the inputs to the function
+            ex: return {networkname, arguments_of_network}
+        - Post: ran after the function, use this for post stuff
+    ]]
+
+    function hook:bindFunction(func, name, extra)
+        local t = {self, func, name, extra}
+        t[2] = hookfunction(func, function(...)
+            if t[1].killed then return end
+            local extra_add = {}
+            if t[4] ~= nil then
+                extra_add[1] = t[4]
+            end
+            local vararg = {...}
+            for i=1, #vararg do
+                extra_add[#extra_add+1] = vararg[i]
+            end
+            t[1]:CallP("Pre" .. t[3], unpack(extra_add))
+            local a, b, c, d, e, f = t[2](...)
+            local args = {a, b, c, d, e, f}
+            if t[4] ~= nil then
+                table.insert(args, 1, t[4])
+            end
+            for i=1, #vararg do
+                args[#args+1] = vararg[i]
+            end
+            t[1]:CallP("Post" .. t[3], unpack(args))
+            return unpack(args)
+        end)
+        return t[2]
+    end
+    function hook:bindFunctionReturn(func, name, extra)
+        local t = {self, func, name, extra, false}
+        t[2] = hookfunction(func, function(...)
+            if t[1].killed then return end
+            local extra_add = {}
+            if t[4] ~= nil then
+                extra_add[1] = t[4]
+            end
+            local vararg = {...}
+            for i=1, #vararg do
+                extra_add[#extra_add+1] = vararg[i]
+            end
+            if not t[5] then
+                t[5] = true
+                local s = t[1]:CallP("Suppress" .. t[3], unpack(extra_add))
+                t[5] = false
+                if s then return end
+            end
+            local override = t[1]:CallP("Pre" .. t[3], unpack(extra_add)) or vararg
+            local a, b, c, d, e, f = t[2](unpack(override))
+            local args = {a, b, c, d, e, f}
+            if t[4] ~= nil then
+                table.insert(args, 1, t[4])
+            end
+            for i=1, #override do
+                args[#args+1] = override[i]
+            end
+            t[1]:CallP("Post" .. t[3], unpack(args))
+            return unpack(args)
+        end)
+        return t[2]
+    end
     hook:Add("Unload", "Unload", function() -- Reloading the cheat? no problem.
         for i=1, #connections do
             connections[i]:Disconnect()
         end
+        hook.killed = true
         --[[self.registry = {}
         self._registry_qa = {}]]
     end)
@@ -2196,7 +2272,7 @@ do
                 self:InvalidateLayout()
             end
 
-            if last_trans ~= self._transparency or last_zind ~= self.zindex or last_vis ~= self._visible then
+            if last_trans ~= self._transparency or last_zind ~= self.zindex or last_vis ~= self._visible or wasenabled ~= self._enabled then
                 local cache = self.objects
                 for i=1, #cache do
                     local v = cache[i]
@@ -5189,17 +5265,17 @@ do
             local scroll_position = self.parent:GetTall(self.parent.Y_scroll)
             local maxLength = canvas_size - self.parent.absolutesize.Y
             self.heightRatio = self.parent.absolutesize.Y / canvas_size
+            self.height = math.max(math.ceil(self.heightRatio * self.parent.absolutesize.Y), 20)
+            local position = math.clamp(scroll_position / maxLength, 0, 1) * (self.parent.absolutesize.Y-self.height)
 
-            if self.heightRatio > 1 then
+            if self.height/self.parent.absolutesize.Y > 1 then
                 self:SetEnabled(false)
             else
                 self:SetEnabled(true)
             end
 
-            self.height = math.max(math.ceil(self.heightRatio * self.parent.absolutesize.Y), 20)
-            local position = math.clamp(scroll_position / maxLength, 0, 1) * (self.parent.absolutesize.Y-self.height)
-            self:SetSize(0, self.size.X.Offset, self.height/self.parent.absolutesize.Y, 0)
-            self:SetPos(1, -self.size.X.Offset-1, position/self.parent.absolutesize.Y, 0)
+            self:SetSize(0, self.size.X.Offset, self.height/self.parent.absolutesize.Y, -6)
+            self:SetPos(1, -self.size.X.Offset-1, scroll_position/canvas_size, 4)
         end
 
         gui:Register(GUI, "ScrollBar")
@@ -5249,15 +5325,17 @@ do
 
         function GUI:GetTall(max)
             local children = self.canvas.children
-            max = max or #children
-            max = math.min(max, #children)
-            local y_axis = 0
-            for i=1, max do
-                local v = children[i]
+            local max_childs = #children
+            max = max or max_childs
+            max = math.min(max, max_childs)
+            local y_axis, count, count_children = 0, 0, 0
+            while count < max and count_children < max_childs do
+                count_children = count_children + 1
+                local v = children[count_children]
                 if not gui:IsValid(v) then continue end
                 if not v:GetVisible() then continue end
-                local sizeY = v.absolutesize.Y
-                y_axis = y_axis + sizeY + self.Spacing
+                count = count + 1
+                y_axis = y_axis + v.absolutesize.Y + self.Spacing
             end
             return y_axis
         end
@@ -5268,10 +5346,12 @@ do
             local y_axis = 0
 
             local count, onpage = 0, 0
+            local c = 0
             for i=1, #children do
                 local v = children[i]
-                if not gui:IsValid(v) then continue end
-                if not v:GetVisible() then continue end
+                if not gui:IsValid(v) then c=c+1 continue end
+                if not v:GetVisible() then c=c+1 continue end
+                i = i - c
                 count = count + 1
 
                 local sizeY = v.absolutesize.Y
@@ -5288,14 +5368,17 @@ do
             end
 
             y_axis = 0
+            c = 0
 
             for i=1, #children do
                 local v = children[i]
-                if not gui:IsValid(v) then continue end
+                if not gui:IsValid(v) then c=c+1 continue end
                 if not v:GetVisible() then
+                    c=c+1
                     v:SetEnabled(false)
                     continue
                 end
+                i=i-c
                 local sizeY = v.absolutesize.Y
                 v:SetSize(1, -4-self.Padding*2, 0, sizeY)
 
@@ -9193,15 +9276,68 @@ do
                             type = "Container",
                             content = {
                                 {
-                                    name = { "Slot1", "Slot1-Animations", "Slot2", "Slot2-Animations", },
+                                    name = { "Slot1", "Slot2", "SkinDB" },
                                     pos = UDim2.new(0,0,0,0),
                                     size = UDim2.new(1,0,1,0),
                                     borderless = true,
                                     type = "Tabs",
                                     {content=skins_content},
-                                    {content=skins_anims},
                                     {content=skins_content},
-                                    {content=skins_anims},
+                                    {
+                                        content = {
+                                            {
+                                                name = "SkinDBList", -- No type means auto-set to panel
+                                                pos = UDim2.new(0,0,0,0),
+                                                size = UDim2.new(1,0,1,0),
+                                                type = "Custom",
+                                                callback = function()
+                                                    local container = gui:Create("Container")
+                                                    local search = gui:Create("TextEntry", container)
+                                                    search:SetTextSize(13)
+                                                    search:SetText("")
+                                                    search:SetSize(1,0,0,16)
+
+                                                    local skinlist = gui:Create("List", container)
+                                                    skinlist:SetPos(0,0,0,16+4)
+                                                    skinlist:SetSize(1,0,1,-16-4)
+
+                                                    skinlist:AddColumn("Name")
+                                                    skinlist:AddColumn("AssetId")
+                                                    skinlist:AddColumn("Case")
+                                                    
+                                                    if not BBOT.weapons.skindatabase then return container end
+
+                                                    for name, skinId in next, BBOT.weapons.skindatabase do
+                                                        local a, b, c = tostring(name), tostring(skinId.TextureId or "Unknown"), tostring(skinId.Case or "Unknown")
+                                                        local line = skinlist:AddLine(a, b, c)
+                                                        line.searcher = a .. " " .. b .. " " .. c
+                                                    end
+
+                                                    local function Refresh_List()
+                                                        if not BBOT.weapons.skindatabase then return end
+                                                        local tosearch = search:GetText()
+                                                        for i, v in next, skinlist.scrollpanel.canvas.children do
+                                                            if tosearch == "" or string.find(string.lower(v.searcher), string.lower(tosearch), 1, true) then
+                                                                v:SetVisible(true)
+                                                            else
+                                                                v:SetVisible(false)
+                                                            end
+                                                        end
+                                                        skinlist.scrollpanel:PerformOrganization()
+                                                    end
+
+                                                    function search:OnValueChanged()
+                                                        Refresh_List()
+                                                    end
+
+                                                    Refresh_List()
+
+                                                    return container
+                                                end,
+                                                content = {}
+                                            }
+                                        }
+                                    },
                                 }
                             }
                         },
@@ -9579,7 +9715,7 @@ if BBOT.game == "pf" then
         end
         
         BBOT:SetLoadingStatus(nil, 45)
-
+        --hook:bindFunctionReturn(aux.network.send, "NetworkSend")
         do -- using rawget just in case...
             local send = rawget(aux.network, "send")
             local osend = rawget(aux.network, "_send")
@@ -9634,17 +9770,6 @@ if BBOT.game == "pf" then
                 hook:Call("InternalMessage", message)
             end
         end)
-        
-        do
-            local old = aux.char.loadcharacter
-            function aux.char.loadcharacter(char, pos, ...)
-                hook:Call("PreLoadCharacter", char, pos, ...)
-                return old(char, pos, ...), hook:Call("PostLoadCharacter", char, pos, ...)
-            end
-            hook:Add("Unload", "BBOT:LoadCharacter", function()
-                aux.char.loadcharacter = old
-            end)
-        end
         
         do
             local oplay = rawget(aux.sound, "PlaySound")
@@ -9725,17 +9850,8 @@ if BBOT.game == "pf" then
                 end
             end
         end)
-        
-        local old = aux.char.step
-        function aux.char.step(...)
-            hook:Call("PreCharacterStep")
-            local a, b, c, d = old(...)
-            hook:Call("PostCharacterStep")
-            return a, b, c, d
-        end
-        hook:Add("Unload", "BBOT:CharStepDetour", function()
-            aux.char.step = old
-        end)
+
+        hook:bindFunction(aux.char.step, "CharacterStep")
 
         hook:Add("Initialize", "BigRewardDetour", function()
             local receivers = aux.network.receivers
@@ -9745,15 +9861,7 @@ if BBOT.game == "pf" then
                     local run, consts = pcall(debug.getconstants, a)
                     if run then
                         if table.quicksearch(consts, "killshot") and table.quicksearch(consts, "kill") then
-                            receivers[k] = function(type, entity, gunname, earnings, ...)
-                                hook:CallP("PreBigAward", type, entity, gunname, earnings, ...)
-                                v(type, entity, gunname, earnings, ...)
-                                hook:CallP("PostBigAward", type, entity, gunname, earnings, ...)
-                            end
-        
-                            hook:Add("Unload", "BBOT:RewardDetour." .. tostring(k), function()
-                                receivers[k] = v
-                            end)
+                            hook:bindFunction(receivers[k], "BigAward")
                         end
                     end
                 end
@@ -10536,7 +10644,7 @@ if BBOT.game == "pf" then
             end
         end)
 
-        hook:Add("WeaponModifyData", "BBOT:Sounds.Override", function(gundata)
+        hook:Add("PreModifyWeaponData", "BBOT:Sounds.Override", function(gundata)
             local snd = config:GetValue("Main", "Misc", "Sounds", "Fire")
             if snd ~= "" then
                 gundata.firesoundid = "rbxassetid://" .. snd
@@ -14165,28 +14273,6 @@ if BBOT.game == "pf" then
             end
         end)
 
-        local function DetourKnifeLoader(related_func, index, knifeloader)
-            local newfunc = function(...)
-                hook:CallP("PreLoadKnife", ...)
-                local knifedata = knifeloader(...)
-                hook:CallP("PostLoadKnife", knifedata, ...)
-                return knifedata
-            end
-            upvaluemods[#upvaluemods+1] = {related_func, index, knifeloader}
-            debug.setupvalue(related_func, index, newcclosure(newfunc))
-        end
-
-        local function DetourGunLoader(related_func, index, gunloader)
-            local newfunc = function(...)
-                hook:CallP("PreLoadGun", ...)
-                local gundata = gunloader(...)
-                hook:CallP("PostLoadGun", gundata, ...)
-                return gundata
-            end
-            upvaluemods[#upvaluemods+1] = {related_func, index, gunloader}
-            debug.setupvalue(related_func, index, newcclosure(newfunc))
-        end
-
         local done = false -- Causes synapse to crash LOL
         local function DetourWeaponRequire(related_func, index, getweapoondata)
             --[[if done then return end
@@ -14199,16 +14285,6 @@ if BBOT.game == "pf" then
             end
             upvaluemods[#upvaluemods+1] = {related_func, index, getweapoondata}
             debug.setupvalue(related_func, index, newfunc)]]
-        end
-
-        local function DetourModifyData(related_func, index, modifydata)
-            local newfunc = function(...)
-                local modifications = modifydata(...)
-                hook:CallP("WeaponModifyData", modifications)
-                return modifications
-            end
-            upvaluemods[#upvaluemods+1] = {related_func, index, modifydata}
-            debug.setupvalue(related_func, index, newcclosure(newfunc))
         end
 
         local done = false
@@ -14286,6 +14362,7 @@ if BBOT.game == "pf" then
                         thingy:Disconnect()
                     end)
                 end
+                local a, b = false, false
                 local ups = debug.getupvalues(v)
                 for upperindex, related_func in pairs(ups) do
                     if typeof(related_func) == "function" then
@@ -14300,7 +14377,7 @@ if BBOT.game == "pf" then
                                     if name == "gunrequire" then
                                         DetourWeaponRequire(related_func, index, modifydata)
                                     elseif name == "modifydata" then
-                                        DetourModifyData(related_func, index, modifydata) -- Stats modification
+                                        hook:bindFunction(related_func, "ModifyWeaponData") -- Stats modification
                                     elseif name == "gunbob" then
                                         DetourGunBob(related_func, index, modifydata)
                                     elseif name == "gunsway" then
@@ -14308,9 +14385,10 @@ if BBOT.game == "pf" then
                                     end
                                 end
                             end
-                            DetourGunLoader(v, upperindex, related_func) -- this will allow us to modify before and after events of gun loading
+                            hook:bindFunction(related_func, "LoadGun") -- this will allow us to modify before and after events of gun loading
                             -- Want rainbow guns? well there ya go
-                        elseif funcname == "loadknife" then
+                        elseif funcname == "loadknife" and not b then
+                            b = true
                             local _ups = debug.getupvalues(related_func)
                             for index, modifydata in pairs(_ups) do
                                 if typeof(modifydata) == "function" then
@@ -14325,25 +14403,13 @@ if BBOT.game == "pf" then
                                 end
                             end
 
-                            DetourKnifeLoader(v, upperindex, related_func)
+                            hook:bindFunction(related_func, "LoadKnife")
                         end
                     end
                 end
             end
 
-            do
-                local ogrenadeloader = rawget(char, "loadgrenade")
-                hook:Add("Unload", "UndoWeaponDetourGrenades", function()
-                    rawset(char, "loadgrenade", ogrenadeloader)
-                end)
-                local function loadgrenadee(self, ...)
-                    hook:CallP("PreLoadGrenade", ...)
-                    local gundata = ogrenadeloader(self, ...)
-                    hook:CallP("PostLoadGrenade", gundata)
-                    return gundata
-                end
-                rawset(char, "loadgrenade", newcclosure(loadgrenadee))
-            end
+            hook:bindFunction(char.loadgrenade, "LoadGrenade")
         end)
 
         -- setup of our detoured controllers
@@ -14365,17 +14431,7 @@ if BBOT.game == "pf" then
                 end
             end
 
-            local oldstep = gundata.step
-            function gundata.step(...)
-                if gamelogic.currentgun == gundata then
-                    hook:CallP("PreKnifeStep", gundata)
-                end
-                local a, b, c, d = oldstep(...)
-                if gamelogic.currentgun == gundata then
-                    hook:CallP("PostKnifeStep", gundata)
-                end
-                return a, b, c, d
-            end
+            hook:bindFunction(gundata.step, "KnifeStep", gundata)
         end)
 
         hook:Add("PostLoadGun", "PostLoadGun", function(gundata, gunname)
@@ -14427,31 +14483,12 @@ if BBOT.game == "pf" then
                 if typeof(v) == "function" then
                     local ran, consts = pcall(debug.getconstants, v)
                     if ran and table.quicksearch(consts, "onfire") and table.quicksearch(consts, "pullout") and table.quicksearch(consts, "straightpull") and table.quicksearch(consts, "zoom") and table.quicksearch(consts, "zoompullout") then
-                        debug.setupvalue(oldstep, k, function(...)
-                            if gamelogic.currentgun == gundata then
-                                hook:CallP("PreFireStep", gundata)
-                            end
-                            local a, b, c, d = v(...)
-                            if gamelogic.currentgun == gundata then
-                                hook:CallP("PostFireStep", gundata)
-                            end
-                            return a, b, c, d
-                        end)
+                        hook:bindFunction(v, "FireStep", gundata)
                     end
                 end
             end
 
-            function gundata.step(...)
-                -- this is where the aimbot controller will be
-                if gamelogic.currentgun == gundata then
-                    hook:CallP("PreWeaponStep", gundata)
-                end
-                local a, b, c, d = oldstep(...)
-                if gamelogic.currentgun == gundata then
-                    hook:CallP("PostWeaponStep", gundata)
-                end
-                return a, b, c, d
-            end
+            oldstep = hook:bindFunction(gundata.step, "WeaponStep", gundata)
 
             for class, v in pairs(weapons.WeaponDB.weplist) do
                 for i=1, #v do
@@ -14783,7 +14820,7 @@ if BBOT.game == "pf" then
         end
 
         -- Modifications
-        --[[hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
+        --[[hook:Add("PreModifyWeaponData", "ModifyWeapon.FireModes", function(modifications)
             if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
             local firemodes = table.deepcopy(modifications.firemodes)
             local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
@@ -14818,7 +14855,7 @@ if BBOT.game == "pf" then
             end
         end)]]
 
-        hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
+        hook:Add("PreModifyWeaponData", "ModifyWeapon.Reload", function(modifications)
             --if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
             local timescale = config:GetValue("Main", "Misc", "Tweaks", "Reload Speed")/100
             for i, v in next, modifications.animations do
@@ -14840,7 +14877,7 @@ if BBOT.game == "pf" then
             swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
         end)
 
-        hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
+        hook:Add("PreModifyWeaponData", "ModifyWeapon.FireModes", function(modifications)
             local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
             local mul = config:GetValue("Main", "Misc", "Tweaks", "Firerate")/100
             if firerates then
@@ -14854,7 +14891,7 @@ if BBOT.game == "pf" then
         end)
 
 
-        hook:Add("WeaponModifyData", "ModifyWeapon.OnFire", function(modifications)
+        hook:Add("PreModifyWeaponData", "ModifyWeapon.OnFire", function(modifications)
             local timescale = config:GetValue("Main", "Misc", "Tweaks", "OnFire Speed")/100
             for i, v in next, modifications.animations do
                 if string.find(string.lower(i), "onfire") then
@@ -14865,7 +14902,7 @@ if BBOT.game == "pf" then
             end
         end)
 
-        hook:Add("WeaponModifyData", "ModifyWeapon.Offsets", function(modifications)
+        hook:Add("PreModifyWeaponData", "ModifyWeapon.Offsets", function(modifications)
             local style = config:GetValue("Main", "Misc", "Tweaks", "Weapon Style")
             if style == "Doom" or style == "Quake III" or style == "Rambo" then
                 local ang = Vector3.new(0, 0, 0)
@@ -14880,7 +14917,7 @@ if BBOT.game == "pf" then
         end)
 
         -- Skins
-        --[[do
+        do
             local texture_animtypes = {
                 ["OffsetStudsU"] = true,
                 ["OffsetStudsV"] = true,
@@ -15075,7 +15112,7 @@ if BBOT.game == "pf" then
                 return skins
             end
 
-            hook:Add("Initialize", "BBOT:Weapons.SkinDB", function()
+            hook:Add("PreInitialize", "BBOT:Weapons.SkinDB", function()
                 local receivers = network.receivers
                 for k, v in pairs(receivers) do
                     local ups = debug.getupvalues(v)
@@ -15090,7 +15127,7 @@ if BBOT.game == "pf" then
                 end
             end)
 
-            do
+            --[[do
                 weapons.weaponstorage = debug.getupvalue(char.unloadguns, 2)
 
                 hook:Add("OnConfigChanged", "Skin.LiveChanger", function(steps, old, new)
@@ -15126,7 +15163,7 @@ if BBOT.game == "pf" then
                         weapons:SkinApplyGun(wep, 3)
                     end
                 end)
-            end
+            end]]
 
             function weapons:SkinApplyGun(gundata, slot)
                 if not config:GetValue("Weapons", "Skins", "Enabled") then return end
@@ -15160,7 +15197,7 @@ if BBOT.game == "pf" then
                 weapons:ApplySkin(reg, gundata, slot1, slot2)
             end
 
-            hook:Add("PostLoadGun", "Skin.Apply", function(gundata, name)
+            --[[hook:Add("PostLoadGun", "Skin.Apply", function(gundata, name)
                 if not config:GetValue("Weapons", "Skins", "Enabled") then return end
                 weapons:SkinApplyGun(gundata)
             end)
@@ -15258,8 +15295,8 @@ if BBOT.game == "pf" then
                 weapons:RenderAnimations(gundata._skins.slot1.animations, delta-gundata._skinlast)
                 weapons:RenderAnimations(gundata._skins.slot2.animations, delta-gundata._skinlast)
                 gundata._skinlast = delta
-            end)
-        end]]
+            end)]]
+        end
     end
 end
 
