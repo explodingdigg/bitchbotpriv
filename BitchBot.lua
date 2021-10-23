@@ -10793,7 +10793,7 @@ if BBOT.game == "pf" then
 					if Player.Team == game.Players.LocalPlayer.Team then continue end
 			
 					local updater = replication.getupdater(Player)
-					if updater then
+					if updater and updater.alive then
 						path:ComputeAsync(rp.Position, updater.getpos())
 						if path.Status ~= Enum.PathStatus.Success then continue end
 						local path_points = path:GetWaypoints()
