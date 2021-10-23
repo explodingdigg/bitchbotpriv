@@ -4824,7 +4824,7 @@ do
 					elseif v.toggletype == 4 then
 						v.value = true
 					end
-					if last ~= v.value then
+					if last ~= v.value or v.toggletype == 4 then
 						local cfg = table.deepcopy(v.config)
                         cfg[#cfg] = nil
 						if v.toggletype == 4 then
@@ -4834,9 +4834,10 @@ do
 						end
                         config:GetRaw(unpack(v.config)).toggle = v.value
                         hook:CallP("OnKeyBindChanged", v.config, last, v.value)
-                    end
-					if v.toggletype == 4 then
-                        v.value = false
+						if v.toggletype == 4 then
+							v.value = false
+						end
+                        config:GetRaw(unpack(v.config)).toggle = v.value
                     end
                 end
 			end
