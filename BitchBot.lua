@@ -882,7 +882,6 @@ do
         table.insert(connections, con)
         return con
     end
-
     --[[
     function original_func = hook:bindFunction(function func, string name, any extra)
     - Automatically hooks a function and adds it to the hook registry
@@ -9715,7 +9714,7 @@ if BBOT.game == "pf" then
         end
         
         BBOT:SetLoadingStatus(nil, 45)
-        --hook:bindFunctionReturn(aux.network.send, "NetworkSend")
+
         do -- using rawget just in case...
             local send = rawget(aux.network, "send")
             local osend = rawget(aux.network, "_send")
@@ -9770,6 +9769,17 @@ if BBOT.game == "pf" then
                 hook:Call("InternalMessage", message)
             end
         end)
+        
+        do
+            local old = aux.char.loadcharacter
+            function aux.char.loadcharacter(char, pos, ...)
+                hook:Call("PreLoadCharacter", char, pos, ...)
+                return old(char, pos, ...), hook:Call("PostLoadCharacter", char, pos, ...)
+            end
+            hook:Add("Unload", "BBOT:LoadCharacter", function()
+                aux.char.loadcharacter = old
+            end)
+        end
         
         do
             local oplay = rawget(aux.sound, "PlaySound")
@@ -9850,8 +9860,17 @@ if BBOT.game == "pf" then
                 end
             end
         end)
-
-        hook:bindFunction(aux.char.step, "CharacterStep")
+        
+        local old = aux.char.step
+        function aux.char.step(...)
+            hook:Call("PreCharacterStep")
+            local a, b, c, d = old(...)
+            hook:Call("PostCharacterStep")
+            return a, b, c, d
+        end
+        hook:Add("Unload", "BBOT:CharStepDetour", function()
+            aux.char.step = old
+        end)
 
         hook:Add("Initialize", "BigRewardDetour", function()
             local receivers = aux.network.receivers
@@ -9861,7 +9880,15 @@ if BBOT.game == "pf" then
                     local run, consts = pcall(debug.getconstants, a)
                     if run then
                         if table.quicksearch(consts, "killshot") and table.quicksearch(consts, "kill") then
-                            hook:bindFunction(receivers[k], "BigAward")
+                            receivers[k] = function(type, entity, gunname, earnings, ...)
+                                hook:CallP("PreBigAward", type, entity, gunname, earnings, ...)
+                                v(type, entity, gunname, earnings, ...)
+                                hook:CallP("PostBigAward", type, entity, gunname, earnings, ...)
+                            end
+        
+                            hook:Add("Unload", "BBOT:RewardDetour." .. tostring(k), function()
+                                receivers[k] = v
+                            end)
                         end
                     end
                 end
@@ -14273,6 +14300,28 @@ if BBOT.game == "pf" then
             end
         end)
 
+        local function DetourKnifeLoader(related_func, index, knifeloader)
+            local newfunc = function(...)
+                hook:CallP("PreLoadKnife", ...)
+                local knifedata = knifeloader(...)
+                hook:CallP("PostLoadKnife", knifedata, ...)
+                return knifedata
+            end
+            upvaluemods[#upvaluemods+1] = {related_func, index, knifeloader}
+            debug.setupvalue(related_func, index, newcclosure(newfunc))
+        end
+
+        local function DetourGunLoader(related_func, index, gunloader)
+            local newfunc = function(...)
+                hook:CallP("PreLoadGun", ...)
+                local gundata = gunloader(...)
+                hook:CallP("PostLoadGun", gundata, ...)
+                return gundata
+            end
+            upvaluemods[#upvaluemods+1] = {related_func, index, gunloader}
+            debug.setupvalue(related_func, index, newcclosure(newfunc))
+        end
+
         local done = false -- Causes synapse to crash LOL
         local function DetourWeaponRequire(related_func, index, getweapoondata)
             --[[if done then return end
@@ -14372,13 +14421,11 @@ if BBOT.game == "pf" then
                         thingy:Disconnect()
                     end)
                 end
-                local a, b = false, false
                 local ups = debug.getupvalues(v)
                 for upperindex, related_func in pairs(ups) do
                     if typeof(related_func) == "function" then
                         local funcname = debug.getinfo(related_func).name
-                        if funcname == "loadgun" and not a then
-                            a = true
+                        if funcname == "loadgun" then
                             local _ups = debug.getupvalues(related_func)
                             for index, modifydata in pairs(_ups) do
                                 if typeof(modifydata) == "function" then
@@ -14396,10 +14443,9 @@ if BBOT.game == "pf" then
                                     end
                                 end
                             end
-                            hook:bindFunction(related_func, "LoadGun") -- this will allow us to modify before and after events of gun loading
+                            DetourGunLoader(v, upperindex, related_func) -- this will allow us to modify before and after events of gun loading
                             -- Want rainbow guns? well there ya go
-                        elseif funcname == "loadknife" and not b then
-                            b = true
+                        elseif funcname == "loadknife" then
                             local _ups = debug.getupvalues(related_func)
                             for index, modifydata in pairs(_ups) do
                                 if typeof(modifydata) == "function" then
@@ -14414,13 +14460,25 @@ if BBOT.game == "pf" then
                                 end
                             end
 
-                            hook:bindFunction(related_func, "LoadKnife")
+                            DetourKnifeLoader(v, upperindex, related_func)
                         end
                     end
                 end
             end
 
-            hook:bindFunction(char.loadgrenade, "LoadGrenade")
+            do
+                local ogrenadeloader = rawget(char, "loadgrenade")
+                hook:Add("Unload", "UndoWeaponDetourGrenades", function()
+                    rawset(char, "loadgrenade", ogrenadeloader)
+                end)
+                local function loadgrenadee(self, ...)
+                    hook:CallP("PreLoadGrenade", ...)
+                    local gundata = ogrenadeloader(self, ...)
+                    hook:CallP("PostLoadGrenade", gundata)
+                    return gundata
+                end
+                rawset(char, "loadgrenade", newcclosure(loadgrenadee))
+            end
         end)
 
         -- setup of our detoured controllers
@@ -14442,7 +14500,13 @@ if BBOT.game == "pf" then
                 end
             end
 
-            hook:bindFunction(gundata.step, "KnifeStep", gundata)
+            local oldstep = gundata.step
+            function gundata.step(...)
+                hook:CallP("PreKnifeStep", gundata)
+                local a, b, c, d = oldstep(...)
+                hook:CallP("PostKnifeStep", gundata)
+                return a, b, c, d
+            end
         end)
 
         hook:Add("PostLoadGun", "PostLoadGun", function(gundata, gunname)
@@ -14494,12 +14558,27 @@ if BBOT.game == "pf" then
                 if typeof(v) == "function" then
                     local ran, consts = pcall(debug.getconstants, v)
                     if ran and table.quicksearch(consts, "onfire") and table.quicksearch(consts, "pullout") and table.quicksearch(consts, "straightpull") and table.quicksearch(consts, "zoom") and table.quicksearch(consts, "zoompullout") then
-                        hook:bindFunction(v, "FireStep", gundata)
+                        debug.setupvalue(oldstep, k, function(...)
+                            if gamelogic.currentgun == gundata then
+                                hook:CallP("PreFireStep", gundata)
+                            end
+                            local a, b, c, d = v(...)
+                            if gamelogic.currentgun == gundata then
+                                hook:CallP("PostFireStep", gundata)
+                            end
+                            return a, b, c, d
+                        end)
                     end
                 end
             end
 
-            oldstep = hook:bindFunction(gundata.step, "WeaponStep", gundata)
+            function gundata.step(...)
+                -- this is where the aimbot controller will be
+                hook:CallP("PreWeaponStep", gundata)
+                local a, b, c, d = oldstep(...)
+                hook:CallP("PostWeaponStep", gundata)
+                return a, b, c, d
+            end
 
             for class, v in pairs(weapons.WeaponDB.weplist) do
                 for i=1, #v do
