@@ -6049,7 +6049,7 @@ do
 	do
 		local keybinds = gui:Create("Panel")
 		menu.keybinds = keybinds
-		keybinds:SetPos(.01,0,.5,0)  
+		keybinds:SetPos(0,5,.5,0)  
 		keybinds:SetDraggable(true)
 		keybinds:SetEnabled(true)
 		keybinds.gradient:SetSize(1,0,0,15)
@@ -10786,20 +10786,16 @@ if BBOT.game == "pf" then
 			and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then		
 				local rp = char.rootpart
 				local points
-				local path = pathfinder:CreatePath({AgentRadius = 4, AgentCanJump = false})
+				local path = pathfinder:CreatePath({AgentRadius = 2.5, AgentHeight = 2.5, AgentCanJump = true, WaypointSpacing = 7})
 				local target_pos 
 			
 				for i, Player in pairs(game.Players:GetPlayers()) do
 					if Player.Team == game.Players.LocalPlayer.Team then continue end
 			
-					local parts = replication.getbodyparts(Player)
-			
-					if parts and parts.torso then
-			
-						path:ComputeAsync(rp.Position, parts.torso.Position)
-			
+					local updater = replication.getupdater(Player)
+					if updater then
+						path:ComputeAsync(rp.Position, updater.getpos())
 						if path.Status ~= Enum.PathStatus.Success then continue end
-						
 						local path_points = path:GetWaypoints()
 						points = path_points
 						break
@@ -10809,22 +10805,14 @@ if BBOT.game == "pf" then
 				notification:Create(points and "Teleporting with " .. #points .. " Points" or "Teleportation path not found")
 
 				if points then
-
 					for i, point in pairs(points) do
-
-						-- -- last_point = point.Position
+                        if not char.alive then return end
 						local pointpos = point.Position + Vector3.new(0,2,0)
-						misc:MoveTo(pointpos, true) -- to move the character 
-						-- repeat 
-						--     rp.Velocity = Vector3.new(rp.Position - pointpos).Unit * 100
+						misc:MoveTo(pointpos, true) -- to move the character
 						if config:GetValue("Main", "Misc", "Exploits", "Heartbeat Wait Teleport") then
 							game.RunService.Heartbeat:Wait() 
 						end
-						-- until (rp.Position - pointpos).Magnitude < 2
 					end
-					-- rp.CFrame = CFrame.new(last_point)
-			
-					-- client.net.send = oldsend
 				end
 			end
 		end)
@@ -11448,6 +11436,7 @@ if BBOT.game == "pf" then
 
 		local _tick, _last_ang = tick(), Vector2.new()
 		function misc:MoveTo(position, move_char)
+			if not char.alive then return end
 			local current_position = char.rootpart.Position
 
 			local part, position, normal = workspace:FindPartOnRayWithWhitelist(
