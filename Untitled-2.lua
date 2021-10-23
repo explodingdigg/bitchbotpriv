@@ -10,11 +10,6 @@
 	They tend to... Crash... A lot...
 	Reloading is still fine thought...
 ]]
---[[
-	Next on da list
-	Bad Business
-]]
-
 if not(game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459) then
 	return
 end
@@ -4792,13 +4787,11 @@ do
 					cfg[#cfg] = nil
 					local parentoption = config:GetRaw(unpack(cfg))
 					if (typeof(parentoption) == "boolean" and not parentoption) or not v.key then
-                        menu:UpdateStatus(cfg[#cfg], nil, false, v.text:GetText())
-					elseif v.toggletype == 4 then
-                        menu:UpdateStatus(cfg[#cfg], nil, true, v.text:GetText())
+						menu:UpdateStatus(cfg[#cfg], nil, false, v.text:GetText())
 					else
-                        local state = menu:GetStatus(cfg[#cfg])
-                        menu:UpdateStatus(cfg[#cfg], (state and state[2] or "Disabled"), true, v.text:GetText())
-                    end
+						local state = menu:GetStatus(cfg[#cfg])
+						menu:UpdateStatus(cfg[#cfg], (state and state[2] or "Disabled"), true, v.text:GetText())
+					end
 				end
 			end
 		end)
@@ -4824,24 +4817,17 @@ do
 					elseif v.toggletype == 4 then
 						v.value = true
 					end
-					if last ~= v.value or v.toggletype == 4 then
+					if last ~= v.value then
 						local cfg = table.deepcopy(v.config)
-                        cfg[#cfg] = nil
-						if v.toggletype == 4 then
-                        	menu:UpdateStatus(cfg[#cfg], nil, true)
-						else
-                        	menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
-						end
-                        config:GetRaw(unpack(v.config)).toggle = v.value
-                        hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
-						if v.toggletype == 4 then
-							v.value = false
-						end
-                        config:GetRaw(unpack(v.config)).toggle = v.value
-                    end
-                end
+						cfg[#cfg] = nil
+						menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
+						config:GetRaw(unpack(v.config)).toggle = v.value
+						hook:CallP("OnKeyBindChanged", v.config, last, v.value)
+					end
+				end
 			end
 		end)
+
 
 		hook:Add("InputEnded", "BBOT:Menu.KeyBinds", function(input)
 			--if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
@@ -4865,7 +4851,7 @@ do
 						cfg[#cfg] = nil
 						menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
 						config:GetRaw(unpack(v.config)).toggle = v.value
-						hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
+						hook:CallP("OnKeyBindChanged", v.config, last, v.value)
 					end
 				end
 			end
@@ -4906,10 +4892,10 @@ do
 			end
 		end)]]
 
-		hook:Add("OnKeyBindChanged", "BBOT:Notify", function(steps, old, new, toggletype)
+		hook:Add("OnKeyBindChanged", "BBOT:Notify", function(steps, old, new)
 			if ignorenotify then return end
 			
-			if config:GetValue("Main", "Visuals", "Keybinds", "Log Keybinds") and toggletype ~= 4 then
+			if config:GetValue("Main", "Visuals", "Keybinds", "Log Keybinds") then
 				local name = steps[#steps]
 				if name == "KeyBind" then
 					name = steps[#steps-1]
@@ -6049,7 +6035,7 @@ do
 	do
 		local keybinds = gui:Create("Panel")
 		menu.keybinds = keybinds
-		keybinds:SetPos(0,5,.5,0)  
+		keybinds:SetPos(0,0,.5,0)
 		keybinds:SetDraggable(true)
 		keybinds:SetEnabled(true)
 		keybinds.gradient:SetSize(1,0,0,15)
@@ -6185,11 +6171,8 @@ do
 
 			hook:Add("OnConfigChanged", "BBOT:Menu.SubToggle." .. configuration.name, function(steps, old, new)
 				if gui:IsValid(frame) and config:IsPathwayEqual(steps, "Main", "Settings", "Menus", configuration.name) then
-					gui:TransparencyTo(frame, (new and 1 or 0), 0.2, 0, 0.25, function()
-						if not new then frame:SetEnabled(false) end
-					end)
-					if new then frame:SetEnabled(true) end
-				end
+					frame:SetEnabled(new)                
+				end        
 			end)
 		end
 
@@ -8442,7 +8425,7 @@ do
 											decimal = 1,
 											value = 55,
 											custom = {
-												[400] = "Absurdly Fast",
+												[400] = "what the fuck are you doing",
 											},
 										},
 										{
@@ -8520,6 +8503,7 @@ do
 											max = 100,
 											suffix = "x",
 										},
+										
 									}},
 									{content = {
 										{
@@ -8604,7 +8588,7 @@ do
 											tooltip = "Temporarily here till I make a weapons tab..."
 										},
 									}},
-									{content = {
+									{content = { 
 										{
 											type = "Toggle",
 											name = "Enabled",
@@ -8762,7 +8746,7 @@ do
 									}},
 								},
 								{
-									name = {"Extra", "Sounds", "Exploits"},
+									name = {"Extra", "Sounds", "Exploits"}, 
 									pos = UDim2.new(.5,4,0,0),
 									size = UDim2.new(.5,-4,1,0),
 									type = "Panel",
@@ -8902,9 +8886,14 @@ do
 												{
 													type = "KeyBind",
 													key = nil,
-													toggletype = 4--? i'm not sure
+													toggletype = 3--? i'm not sure
 												}
 											},
+										},
+										{
+											type = "Toggle",
+											name = "Heartbeat Wait Teleport",
+											value = true,
 										},
 										--[[{
 											type = "Toggle",
@@ -10781,16 +10770,20 @@ if BBOT.game == "pf" then
 			and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then		
 				local rp = char.rootpart
 				local points
-				local path = pathfinder:CreatePath({AgentRadius = 2.5, AgentHeight = 2.5, AgentCanJump = true, WaypointSpacing = 7})
+				local path = pathfinder:CreatePath({AgentRadius = 4, AgentCanJump = false})
 				local target_pos 
 			
 				for i, Player in pairs(game.Players:GetPlayers()) do
 					if Player.Team == game.Players.LocalPlayer.Team then continue end
 			
-					local updater = replication.getupdater(Player)
-					if updater and updater.alive then
-						path:ComputeAsync(rp.Position, updater.getpos())
+					local parts = replication.getbodyparts(Player)
+			
+					if parts and parts.torso then
+			
+						path:ComputeAsync(rp.Position, parts.torso.Position)
+			
 						if path.Status ~= Enum.PathStatus.Success then continue end
+						
 						local path_points = path:GetWaypoints()
 						points = path_points
 						break
@@ -10800,15 +10793,26 @@ if BBOT.game == "pf" then
 				notification:Create(points and "Teleporting with " .. #points .. " Points" or "Teleportation path not found")
 
 				if points then
+
 					for i, point in pairs(points) do
-                        if not char.alive then return end
+
+						-- -- last_point = point.Position
 						local pointpos = point.Position + Vector3.new(0,2,0)
-						misc:MoveTo(pointpos, true) -- to move the character
-						
+						misc:MoveTo(pointpos, true) -- to move the character 
+						-- repeat 
+						--     rp.Velocity = Vector3.new(rp.Position - pointpos).Unit * 100
+						if config:GetValue("Main", "Misc", "Exploits", "Heartbeat Wait Teleport") then
+							game.RunService.Heartbeat:Wait() 
+						end
+						-- until (rp.Position - pointpos).Magnitude < 2
 					end
+					-- rp.CFrame = CFrame.new(last_point)
+			
+					-- client.net.send = oldsend
 				end
 			end
 		end)
+
 		hook:Add("OnConfigChanged", "BBOT:Misc.Fly", function(steps, old, new)
 			if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly") and not config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
 				if not new and char.alive and misc.rootpart then
@@ -11429,7 +11433,6 @@ if BBOT.game == "pf" then
 
 		local _tick, _last_ang = tick(), Vector2.new()
 		function misc:MoveTo(position, move_char)
-			if not char.alive then return end
 			local current_position = char.rootpart.Position
 
 			local part, position, normal = workspace:FindPartOnRayWithWhitelist(
@@ -11632,7 +11635,7 @@ if BBOT.game == "pf" then
 				else
 					self.networking["equip"](l3p.controller, -1)
 				end
-				self.controller.spawn()
+				self.controller.spawn(char.rootpart.Position)
 			else
 				local objects = self.controller.died()
 				if objects then
@@ -11739,7 +11742,7 @@ if BBOT.game == "pf" then
 		end)
 
 		hook:Add("OnAliveChanged", "BBOT:L3P.UpdateDeath", function(alive)
-			if alive then l3p:SetAlive(alive) end
+			timer:Async(function() if alive then l3p:SetAlive(alive) end end)
 		end)
 
 		local connection = char.ondied:connect(function()
@@ -12495,17 +12498,17 @@ if BBOT.game == "pf" then
 			end
 
 			local tp_scanning_points = #firepos_points
-			if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") then
+			--[[if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") then
 				local points_allowed = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Points")
 				local grenade_move_dist = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Distance")
 				local grenade_move_points = {}
-				if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,grenade_move_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
-				if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-grenade_move_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
-				if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-grenade_move_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
-				if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(grenade_move_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
-				if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-grenade_move_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
-				if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,grenade_move_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
-			end
+				if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,grenade_move_dist,0) end
+				if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-grenade_move_dist,0) end
+				if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-grenade_move_dist,0,0) end
+				if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(grenade_move_dist,0,0) end
+				if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-grenade_move_dist) end
+				if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,grenade_move_dist) end
+			end]]
 
 			local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
 			local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
@@ -13280,7 +13283,7 @@ if BBOT.game == "pf" then
 						end)
 						enque[bullet[2]] = target[1] -- this bullet is a magic bullet now, supress networking for this bullet!
 					end
-					network:send(networkname, bullettable, BBOT.misc:GetTickDivisionScale()-extras:getLatency())
+					network:send(networkname, bullettable, BBOT.misc:GetTickDivisionScale()+(target[6] and -.1 or -extras:getLatency()))
 					return true
 				end
 			end
