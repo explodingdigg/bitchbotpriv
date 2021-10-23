@@ -6175,7 +6175,7 @@ do
 
     hook:Add("InputBegan", "BBOT:Menu.Toggle", function(input)
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode == Enum.KeyCode.Delete then
+            if input.KeyCode == Enum.KeyCode.Delete or input.KeyCode == Enum.KeyCode.F7 then
                 local new = not main:GetEnabled()
                 gui:TransparencyTo(main, (new and 1 or 0), 0.2, 0, 0.25, function()
                     if not new then main:SetEnabled(false) end
@@ -8962,14 +8962,14 @@ do
                                             name = "Revenge Grenade",
                                             value = false,
                                             unsafe = true,
-                                            tooltip = "Automatically TP's a grenade to the person who killed you.",
+                                            tooltip = "Automatically teleports a grenade to the person who killed you.",
                                         },
                                         {
                                             type = "Toggle",
                                             name = "Auto Grenade Frozen",
                                             value = false,
                                             unsafe = true,
-                                            tooltip = "Automatically TP's a grenade to people frozen, useful against semi-god users.",
+                                            tooltip = "Automatically teleports a grenade to people frozen, useful against semi-god users.",
                                         },
                                         {
                                             type = "Slider",
@@ -13691,7 +13691,7 @@ if BBOT.game == "pf" then
                         else
                             self.distance.Visible = true
                             local pos = self.controller.receivedPosition or self.controller.gethead().Position
-                            self.distance.Text = math.round((pos-camera.CFrame.p).Magnitude) .. " stud(s)"
+                            self.distance.Text = math.round((pos-camera.CFrame.p).Magnitude/5) .. "m"
                             self.distance.Position = Vector2.new(bounding_box.x + bounding_box.w + 2, bounding_box.y + righty)
                             righty = righty + self.distance.TextBounds.Y + 2
                         end
