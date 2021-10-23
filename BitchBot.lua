@@ -10644,7 +10644,7 @@ if BBOT.game == "pf" then
             end
         end)
 
-        hook:Add("PreModifyWeaponData", "BBOT:Sounds.Override", function(gundata)
+        hook:Add("WeaponModifyData", "BBOT:Sounds.Override", function(gundata)
             local snd = config:GetValue("Main", "Misc", "Sounds", "Fire")
             if snd ~= "" then
                 gundata.firesoundid = "rbxassetid://" .. snd
@@ -14287,6 +14287,16 @@ if BBOT.game == "pf" then
             debug.setupvalue(related_func, index, newfunc)]]
         end
 
+        local function DetourModifyData(related_func, index, modifydata)
+            local newfunc = function(...)
+                local modifications = modifydata(...)
+                hook:CallP("WeaponModifyData", modifications)
+                return modifications
+            end
+            upvaluemods[#upvaluemods+1] = {related_func, index, modifydata}
+            debug.setupvalue(related_func, index, newcclosure(newfunc))
+        end
+
         local done = false
         local function DetourGunSway(related_func, index, gunmovement)
             if done then return end
@@ -14367,7 +14377,8 @@ if BBOT.game == "pf" then
                 for upperindex, related_func in pairs(ups) do
                     if typeof(related_func) == "function" then
                         local funcname = debug.getinfo(related_func).name
-                        if funcname == "loadgun" then
+                        if funcname == "loadgun" and not a then
+                            a = true
                             local _ups = debug.getupvalues(related_func)
                             for index, modifydata in pairs(_ups) do
                                 if typeof(modifydata) == "function" then
@@ -14377,7 +14388,7 @@ if BBOT.game == "pf" then
                                     if name == "gunrequire" then
                                         DetourWeaponRequire(related_func, index, modifydata)
                                     elseif name == "modifydata" then
-                                        hook:bindFunction(related_func, "ModifyWeaponData") -- Stats modification
+                                        DetourModifyData(related_func, index, modifydata) -- Stats modification
                                     elseif name == "gunbob" then
                                         DetourGunBob(related_func, index, modifydata)
                                     elseif name == "gunsway" then
@@ -14820,7 +14831,7 @@ if BBOT.game == "pf" then
         end
 
         -- Modifications
-        --[[hook:Add("PreModifyWeaponData", "ModifyWeapon.FireModes", function(modifications)
+        --[[hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
             if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
             local firemodes = table.deepcopy(modifications.firemodes)
             local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
@@ -14855,7 +14866,7 @@ if BBOT.game == "pf" then
             end
         end)]]
 
-        hook:Add("PreModifyWeaponData", "ModifyWeapon.Reload", function(modifications)
+        hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
             --if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
             local timescale = config:GetValue("Main", "Misc", "Tweaks", "Reload Speed")/100
             for i, v in next, modifications.animations do
@@ -14877,7 +14888,7 @@ if BBOT.game == "pf" then
             swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
         end)
 
-        hook:Add("PreModifyWeaponData", "ModifyWeapon.FireModes", function(modifications)
+        hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
             local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
             local mul = config:GetValue("Main", "Misc", "Tweaks", "Firerate")/100
             if firerates then
@@ -14891,7 +14902,7 @@ if BBOT.game == "pf" then
         end)
 
 
-        hook:Add("PreModifyWeaponData", "ModifyWeapon.OnFire", function(modifications)
+        hook:Add("WeaponModifyData", "ModifyWeapon.OnFire", function(modifications)
             local timescale = config:GetValue("Main", "Misc", "Tweaks", "OnFire Speed")/100
             for i, v in next, modifications.animations do
                 if string.find(string.lower(i), "onfire") then
@@ -14902,7 +14913,7 @@ if BBOT.game == "pf" then
             end
         end)
 
-        hook:Add("PreModifyWeaponData", "ModifyWeapon.Offsets", function(modifications)
+        hook:Add("WeaponModifyData", "ModifyWeapon.Offsets", function(modifications)
             local style = config:GetValue("Main", "Misc", "Tweaks", "Weapon Style")
             if style == "Doom" or style == "Quake III" or style == "Rambo" then
                 local ang = Vector3.new(0, 0, 0)
