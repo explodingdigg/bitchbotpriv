@@ -10,6 +10,11 @@
     They tend to... Crash... A lot...
     Reloading is still fine thought...
 ]]
+--[[
+    Next on da list
+    Bad Business
+]]
+
 if not(game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459) then
     return
 end
@@ -6170,8 +6175,12 @@ do
 
             hook:Add("OnConfigChanged", "BBOT:Menu.SubToggle." .. configuration.name, function(steps, old, new)
                 if gui:IsValid(frame) and config:IsPathwayEqual(steps, "Main", "Settings", "Menus", configuration.name) then
-                    frame:SetEnabled(new)                
-                end        
+                    local new = not frame:GetEnabled()
+                    gui:TransparencyTo(frame, (new and 1 or 0), 0.2, 0, 0.25, function()
+                        if not new then frame:SetEnabled(false) end
+                    end)
+                    if new then frame:SetEnabled(true) end
+                end
             end)
         end
 
@@ -11582,7 +11591,7 @@ if BBOT.game == "pf" then
                 else
                     self.networking["equip"](l3p.controller, -1)
                 end
-                self.controller.spawn(char.rootpart.Position)
+                self.controller.spawn()
             else
                 local objects = self.controller.died()
                 if objects then
@@ -11689,7 +11698,7 @@ if BBOT.game == "pf" then
         end)
 
         hook:Add("OnAliveChanged", "BBOT:L3P.UpdateDeath", function(alive)
-            timer:Async(function() if alive then l3p:SetAlive(alive) end end)
+            if alive then l3p:SetAlive(alive) end
         end)
 
         local connection = char.ondied:connect(function()
@@ -12445,17 +12454,17 @@ if BBOT.game == "pf" then
             end
 
             local tp_scanning_points = #firepos_points
-            --[[if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") then
+            if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") then
                 local points_allowed = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Points")
                 local grenade_move_dist = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Distance")
                 local grenade_move_points = {}
-                if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,grenade_move_dist,0) end
-                if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-grenade_move_dist,0) end
-                if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-grenade_move_dist,0,0) end
-                if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(grenade_move_dist,0,0) end
-                if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-grenade_move_dist) end
-                if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,grenade_move_dist) end
-            end]]
+                if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,grenade_move_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+                if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-grenade_move_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+                if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-grenade_move_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+                if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(grenade_move_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
+                if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-grenade_move_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
+                if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,grenade_move_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
+            end
 
             local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
             local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
@@ -13230,7 +13239,7 @@ if BBOT.game == "pf" then
                         end)
                         enque[bullet[2]] = target[1] -- this bullet is a magic bullet now, supress networking for this bullet!
                     end
-                    network:send(networkname, bullettable, BBOT.misc:GetTickDivisionScale()+(target[6] and -.1 or -extras:getLatency()))
+                    network:send(networkname, bullettable, BBOT.misc:GetTickDivisionScale()-extras:getLatency())
                     return true
                 end
             end
