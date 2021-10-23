@@ -4833,7 +4833,7 @@ do
                         	menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
 						end
                         config:GetRaw(unpack(v.config)).toggle = v.value
-                        hook:CallP("OnKeyBindChanged", v.config, last, v.value)
+                        hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
 						if v.toggletype == 4 then
 							v.value = false
 						end
@@ -4865,7 +4865,7 @@ do
 						cfg[#cfg] = nil
 						menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
 						config:GetRaw(unpack(v.config)).toggle = v.value
-						hook:CallP("OnKeyBindChanged", v.config, last, v.value)
+						hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
 					end
 				end
 			end
@@ -4906,10 +4906,10 @@ do
 			end
 		end)]]
 
-		hook:Add("OnKeyBindChanged", "BBOT:Notify", function(steps, old, new)
+		hook:Add("OnKeyBindChanged", "BBOT:Notify", function(steps, old, new, toggletype)
 			if ignorenotify then return end
 			
-			if config:GetValue("Main", "Visuals", "Keybinds", "Log Keybinds") then
+			if config:GetValue("Main", "Visuals", "Keybinds", "Log Keybinds") and toggletype ~= 4 then
 				local name = steps[#steps]
 				if name == "KeyBind" then
 					name = steps[#steps-1]
@@ -6185,7 +6185,6 @@ do
 
 			hook:Add("OnConfigChanged", "BBOT:Menu.SubToggle." .. configuration.name, function(steps, old, new)
 				if gui:IsValid(frame) and config:IsPathwayEqual(steps, "Main", "Settings", "Menus", configuration.name) then
-					local new = not frame:GetEnabled()
 					gui:TransparencyTo(frame, (new and 1 or 0), 0.2, 0, 0.25, function()
 						if not new then frame:SetEnabled(false) end
 					end)
