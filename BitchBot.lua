@@ -13412,7 +13412,7 @@ if BBOT.game == "pf" then
         end
 
         function esp:Rebuild()
-            timer:Create("BBOT:ESP.Rebuild", 1, 1, function() self:_Rebuild() end)
+            timer:Create("BBOT:ESP.Rebuild", 0, 1, function() self:_Rebuild() end)
         end
 
         function esp:_Rebuild()
