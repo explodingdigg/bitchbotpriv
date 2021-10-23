@@ -7131,7 +7131,7 @@ do
                                 {
                                     name = "Aimbot",
                                     pos = UDim2.new(0,0,0,0),
-                                    size = UDim2.new(.5,-4,5/10,-4),
+                                    size = UDim2.new(.5,-4,4/10,-4),
                                     type = "Panel",
                                     content = {
                                         {
@@ -7185,8 +7185,8 @@ do
                                 },
                                 {
                                     name = "Hack vs. Hack",
-                                    pos = UDim2.new(0,0,5/10,4),
-                                    size = UDim2.new(.5,-4,1-(5/10),-4),
+                                    pos = UDim2.new(0,0,4/10,4),
+                                    size = UDim2.new(.5,-4,1-(4/10),-4),
                                     type = "Panel",
                                     content = {
                                         {
@@ -7244,6 +7244,12 @@ do
                                             min = 1,
                                             max = 12,
                                             suffix = " studs",
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Relative Hitpoints Only",
+                                            value = true,
+                                            tooltip = "Makes the firpos and hitbox points align, so less calculations.",
                                         },
                                         {
                                             type = "Slider",
@@ -9659,6 +9665,12 @@ if BBOT.game == "pf" then
                                 hook:CallP("PreupdateReplication", player, controller, ...)
                                 return upd_updateReplication(...), hook:CallP("PostupdateReplication", player, controller, ...)
                             end
+                            local upd_spawn = controller.spawn
+                            controller._upd_spawn = upd_spawn
+                            function controller.spawn(...)
+                                hook:CallP("Preupdatespawn", player, controller, ...)
+                                return upd_spawn(...), hook:CallP("Postupdatespawn", player, controller, ...)
+                            end
                             hook:CallP("CreateUpdater", player)
                         end
                     end
@@ -9671,6 +9683,12 @@ if BBOT.game == "pf" then
                             function controller.updateReplication(...)
                                 hook:CallP("PreupdateReplication", player, controller, ...)
                                 return upd_updateReplication(...), hook:CallP("PostupdateReplication", player, controller, ...)
+                            end
+                            local upd_spawn = controller.spawn
+                            controller._upd_spawn = upd_spawn
+                            function controller.spawn(...)
+                                hook:CallP("Preupdatespawn", player, controller, ...)
+                                return upd_spawn(...), hook:CallP("Postupdatespawn", player, controller, ...)
                             end
                             hook:CallP("CreateUpdater", player)
                         end
@@ -9689,6 +9707,8 @@ if BBOT.game == "pf" then
                     if v.updater and v.updater._upd_updateReplication then
                         v.updater.updateReplication = v.updater._upd_updateReplication
                         v.updater._upd_updateReplication = nil
+                        v.updater.spawn = v.updater.spawn or v.updater._upd_spawn
+                        v.updater._upd_spawn = nil
                     end
                 end
                 rawset(aux.replication, "player_registry", nil)
@@ -11120,7 +11140,7 @@ if BBOT.game == "pf" then
             for player, v in pairs(replication.player_registry) do
                 if player ~= localplayer and player.Team and localplayer.Team and player.Team.Name ~= localplayer.Team.Name then
                     local controller = v.updater
-                    if controller.alive and controller.receivedDataFlag and controller.__t_received and controller.__t_received + t < tick() then
+                    if controller.alive and controller.__t_received and controller.__t_received + t < tick() then
                         misc:GrenadeTP(controller.getpos())
                     end
                 end
@@ -12269,8 +12289,7 @@ if BBOT.game == "pf" then
                 local updater = replication.getupdater(player)
                 local parts = aimbot:GetParts(player)
                 if updater and updater.receivedPosition and parts then
-                    local headpart = parts.head
-                    local offset = (updater.getpos()-headpart.Position)+Vector3.new(0,1.25,0)
+                    local offset = (updater.getpos()-updater.getpos())+Vector3.new(0,1.25,0)
                     if offset.Magnitude > 1 then
                         if offset.Magnitude >= math.huge then
                             return updater.getpos(), true
@@ -12292,8 +12311,7 @@ if BBOT.game == "pf" then
             local updater = replication.getupdater(player)
             local parts = aimbot:GetParts(player)
             if updater and updater.receivedPosition and parts then
-                local headpart = parts.head
-                local offset = (updater.receivedPosition-headpart.Position)+Vector3.new(0,1.25,0)
+                local offset = (updater.receivedPosition-updater.getpos())+Vector3.new(0,1.25,0)
                 if offset.Magnitude > 1 then
                     if offset.Magnitude >= math.huge then
                         return updater.receivedPosition, true
@@ -12373,6 +12391,10 @@ if BBOT.game == "pf" then
             controller.__t_received = tick()
         end)
 
+        hook:Add("Postupdatespawn", "BBOT:RageBot.CheckAlive", function(player, controller)
+            controller.__t_received = tick()
+        end)
+
         function aimbot:GetRageTarget(fov, gun)
             local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
             local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
@@ -12389,35 +12411,36 @@ if BBOT.game == "pf" then
             local hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
             local hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
             local max_points = self:GetRageConfig("Hack vs. Hack", "Max Hitpoints")
+            local relative_only = self:GetRageConfig("Hack vs. Hack", "Relative Hitpoints Only")
 
-            local hitbox_points = {}
+            local hitbox_points, hitbox_points_name = {}, {}
             if hitbox_shift then
-                if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) end
-                if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) end
-                if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) end
-                if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) end
-                if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) end
-                if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) end
-                if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) end
+                if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+                if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+                if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+                if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+                if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+                if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+                if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
             end
 
             local firepos_shift = self:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
             local firepos_shift_points = self:GetRageConfig("Hack vs. Hack", "FirePos Hitscan Points")
             local firepos_shift_distance = self:GetRageConfig("Hack vs. Hack", "FirePos Shift Distance")
             
-            local firepos_points = {}
+            local firepos_points, firepos_points_name = {}, {}
             if firepos_shift then
-                if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(part.CFrame.p-cam_position) end
-                if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,firepos_shift_distance,0) end
-                if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-firepos_shift_distance,0) end
-                if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-firepos_shift_distance,0,0) end
-                if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(firepos_shift_distance,0,0) end
-                if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) end
-                if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) end
+                if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(0,0,0) firepos_points_name[#firepos_points_name+1] = "Origin" end
+                if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+                if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+                if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+                if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
+                if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
+                if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
             end
 
             local tp_scanning_points = #firepos_points
-            if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") then
+            --[[if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") then
                 local points_allowed = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Points")
                 local grenade_move_dist = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Distance")
                 local grenade_move_points = {}
@@ -12427,7 +12450,7 @@ if BBOT.game == "pf" then
                 if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(grenade_move_dist,0,0) end
                 if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-grenade_move_dist) end
                 if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,grenade_move_dist) end
-            end
+            end]]
 
             local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
             local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
@@ -12452,7 +12475,7 @@ if BBOT.game == "pf" then
                 end
 
                 local updater = replication.getupdater(v)
-                if updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.1 < tick() then
+                if updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick() then
                     continue
                 end
 
@@ -12464,11 +12487,11 @@ if BBOT.game == "pf" then
                 end
                 local main_part = updater.gethead().Parent
                 local resolver_offset, isabsolute = self:GetResolvedPosition(v)
-
+                local abspos = updater.getpos()
                 local inserted_priority
                 if prioritize then
                     local part = prioritize
-                    local pos = (isabsolute and resolver_offset or prioritize.Position + resolver_offset)
+                    local pos = (isabsolute and resolver_offset or abspos + resolver_offset)
                     local point, onscreen = camera:WorldToViewportPoint(pos)
                     if onscreen or aimbot_fov >= 180 then
                         --local object_fov = self:GetFOV(part, scan_part)
@@ -12482,6 +12505,7 @@ if BBOT.game == "pf" then
                                     local targetcframe = CFrame.new(cam_position)
                                     for i=1, #firepos_points do
                                         local point = firepos_points[i]
+                                        local fp_name = firepos_points_name[i]
                                         local newcf = targetcframe * lookatme * point
                                         local cam_position = newcf.p
                                         if i <= tp_scanning_points or (i > tp_scanning_points and BBOT.misc:CanMoveTo(cam_position)) then
@@ -12490,6 +12514,8 @@ if BBOT.game == "pf" then
                                                 local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
                                                 local targetcframe = CFrame.new(pos)
                                                 for i=1, #hitbox_points do
+                                                    local hb_name = hitbox_points_name[i]
+                                                    if relative_only and fp_name ~= hb_name then continue end
                                                     local point = hitbox_points[i]
                                                     local newcf = targetcframe * lookatme * point
                                                     local pos = newcf.p
@@ -13672,7 +13698,7 @@ if BBOT.game == "pf" then
                     end
 
                     if self.frozen and self.frozen_enabled then
-                        local on = self.controller.__t_received and self.controller.__t_received + (BBOT.extras:getLatency()*2)+.1 < tick()
+                        local on = self.controller.__t_received and self.controller.__t_received + (BBOT.extras:getLatency()*2)+.25 < tick()
                         if fail or not on then
                             self.frozen.Visible = false
                         else
@@ -14559,13 +14585,9 @@ if BBOT.game == "pf" then
                     local ran, consts = pcall(debug.getconstants, v)
                     if ran and table.quicksearch(consts, "onfire") and table.quicksearch(consts, "pullout") and table.quicksearch(consts, "straightpull") and table.quicksearch(consts, "zoom") and table.quicksearch(consts, "zoompullout") then
                         debug.setupvalue(oldstep, k, function(...)
-                            if gamelogic.currentgun == gundata then
-                                hook:CallP("PreFireStep", gundata)
-                            end
+                            hook:CallP("PreFireStep", gundata)
                             local a, b, c, d = v(...)
-                            if gamelogic.currentgun == gundata then
-                                hook:CallP("PostFireStep", gundata)
-                            end
+                            hook:CallP("PostFireStep", gundata)
                             return a, b, c, d
                         end)
                     end
