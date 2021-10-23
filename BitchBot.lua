@@ -11689,7 +11689,7 @@ if BBOT.game == "pf" then
         end)
 
         hook:Add("OnAliveChanged", "BBOT:L3P.UpdateDeath", function(alive)
-            if alive then l3p:SetAlive(alive) end
+            timer:Async(function() if alive then l3p:SetAlive(alive) end end)
         end)
 
         local connection = char.ondied:connect(function()
@@ -11701,7 +11701,7 @@ if BBOT.game == "pf" then
         end)
 
         hook:Add("PostNetworkSend", "BBOT:L3P.UpdateStates", function(netname, ...)
-            if not l3p.controller or not l3p.enabled or not l3p.controller.alive then return end
+            if not char.alive and not l3p.controller or not l3p.enabled or not l3p.controller.alive then return end
             if not l3p.networking[netname] then return end
             l3p.networking[netname](l3p.controller, ...)
         end)
@@ -12421,12 +12421,12 @@ if BBOT.game == "pf" then
             local hitbox_points, hitbox_points_name = {}, {}
             if hitbox_shift then
                 if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
-                if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
-                if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
-                if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
-                if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
-                if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
-                if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+                if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Up" end
+                if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Down" end
+                if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Left" end
+                if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
+                if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
+                if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
             end
 
             local firepos_shift = self:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
