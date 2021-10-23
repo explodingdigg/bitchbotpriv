@@ -2515,7 +2515,7 @@ do
     end
 
     do
-        local a = draw:TextOutlined("", 2, 0, 0, 14, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0), 1, false)
+        local a = draw:TextOutlined("", 2, 0, 0, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0), 1, false)
         function gui:GetTextSize(content, font, size)
             a.Text = content
             a.Font = font
@@ -3616,7 +3616,7 @@ do
                 self.whitelist[k] = v
             end
 
-            self.text = self:Cache(draw:TextOutlined("", 2, 3, 3, 16, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
+            self.text = self:Cache(draw:TextOutlined("", 2, 3, 3, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
             self.content = ""
             self.content_position = 1 -- I like scrolling text
             self.textsize = 16
@@ -13609,10 +13609,10 @@ if BBOT.game == "pf" then
                             end
                         end
 
-                        bounding_box.x = left
-                        bounding_box.y = top
-                        bounding_box.w = right - left
-                        bounding_box.h = bottom - top
+                        bounding_box.x = math.floor(left)
+                        bounding_box.y = math.floor(top)
+                        bounding_box.w = math.floor(right - left)
+                        bounding_box.h = math.floor(bottom - top)
                     end
 
                     local lefty, righty = 0, 0
@@ -13722,7 +13722,7 @@ if BBOT.game == "pf" then
                 local black = Color3.new(0,0,0)
                 function player_meta:OnCreate()
                     local color, color_transparency = self:GetConfig("Name", "Color")
-                    self.name = self:Cache(draw:TextOutlined(self.player.name, 2, 0, 0, 12, false, color, black, color_transparency, false))
+                    self.name = self:Cache(draw:TextOutlined(self.player.name, 2, 0, 0, 13, false, color, black, color_transparency, false))
                     color, color_transparency = self:GetConfig("Box", "Color Fill")
                     self.box_fill = self:Cache(draw:Box(0, 0, 0, 0, 0, color, color_transparency, false))
                     color, color_transparency = self:GetConfig("Box", "Color Box")
@@ -13734,10 +13734,10 @@ if BBOT.game == "pf" then
                     self.healthbar = self:Cache(draw:Box(0, 0, 0, 0, 0, color, color_transparency, false))
                     
                     color, color_transparency = self:GetConfig("Health Number", "Color")
-                    self.healthtext = self:Cache(draw:TextOutlined("100", 2, 0, 0, 12, false, color, black, color_transparency, false))
+                    self.healthtext = self:Cache(draw:TextOutlined("100", 2, 0, 0, 13, false, color, black, color_transparency, false))
                     
-                    self.distance = self:Cache(draw:TextOutlined("0 studs", 2, 0, 0, 12, false, color, black, color_transparency, false))
-                    self.frozen = self:Cache(draw:TextOutlined("FROZEN", 2, 0, 0, 12, false, color, black, color_transparency, false))
+                    self.distance = self:Cache(draw:TextOutlined("0 studs", 2, 0, 0, 13, false, color, black, color_transparency, false))
+                    self.frozen = self:Cache(draw:TextOutlined("FROZEN", 2, 0, 0, 13, false, color, black, color_transparency, false))
                 end
 
                 function player_meta:GetColor(...)
