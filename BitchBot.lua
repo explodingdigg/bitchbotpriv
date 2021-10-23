@@ -1440,6 +1440,7 @@ do
     local hook = BBOT.hook
     local table = BBOT.table
     local string = BBOT.string
+    local timer = BBOT.timer
     local userinputservice = BBOT.service:GetService("UserInputService")
     local httpservice = BBOT.service:GetService("HttpService")
     local config = {
@@ -1707,8 +1708,11 @@ do
         ["ComboBox"] = function(v) return {type = "ComboBox", value = v.values} end,
     }
 
+    config.unsafe_paths = {}
+
     -- Converts a setup table (which is a mix of menu params and config) into a config quick lookup table
-    function config:ParseSetupToConfig(tbl, source)
+    function config:ParseSetupToConfig(tbl, source, path)
+        path = path or ""
         for i=1, #tbl do
             local v = tbl[i]
             if v.content or v[1] then
@@ -1716,14 +1720,18 @@ do
                 for i=1, (ismulti and #v.name or 1) do
                     local name = (ismulti and v.name[i] or (v.Id or v.name))
                     source[name] = {}
-                    self:ParseSetupToConfig((ismulti and v[i].content or v.content), source[name])
+                    self:ParseSetupToConfig((ismulti and v[i].content or v.content), source[name], path .. (path ~= "" and "." or "") .. name)
                 end
             elseif v.type and self.parsertovalue[v.type] then
                 if not v.name then v.name = v.type end
                 local name = v.Id or v.name
+                local _path = path .. (path ~= "" and "." or "") .. name
                 local conversion = self.parsertovalue[v.type]
                 if conversion then
                     source[name] = conversion(v)
+                    if v.unsafe then
+                        config.unsafe_paths[#config.unsafe_paths+1] = _path
+                    end
                 end
                 if v.extra then
                     local extra = v.extra
@@ -1758,6 +1766,7 @@ do
         local reg = {}
         self:ParseSetupToConfig(raw, reg)
         self.registry = reg
+        self._base_registry = table.deepcopy(reg)
     end
 
     function config:GetTableValue(tbl, ...)
@@ -1975,6 +1984,41 @@ do
         BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
         BBOT.menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
     end)
+
+    function config:BaseGetNormal(...)
+        local steps = {...}
+        local reg = self._base_registry
+        for i=1, #steps do
+            reg = reg[steps[i]]
+            if reg == nil then break end
+        end
+        if reg == nil then return end
+        if typeof(reg) == "table" then
+            if reg.self ~= nil then
+                local s = reg.self
+                if typeof(s) == "table" and reg.type and reg.type ~= "Button" then
+                    return s.value
+                end
+                return s
+            end
+            if reg.type and reg.type ~= "Button" then
+                return reg.value
+            end
+        end
+        return reg
+    end
+
+    hook:Add("OnConfigChanged", "BBOT:config.unsafefeatures", function(steps, old, new)
+        if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Allow Unsafe Features") and not new then
+            timer:Async(function()
+                for i=1, #config.unsafe_paths do
+                    local path = string.Explode(".", config.unsafe_paths[i])
+                    config:SetValue(config:BaseGetNormal(unpack(path)), unpack(path))
+                end
+            end)
+        end
+    end)
+
 
     hook:Add("PreInitialize", "BBOT:config.setup", function()
         config.storage_pathway = "bitchbot/" .. BBOT.game
@@ -4365,12 +4409,21 @@ do
         end
     
         function GUI:PerformLayout(pos, size)
-            self.background_border.Position = pos - Vector2.new(2,2)
-            self.background_outline.Position = pos - Vector2.new(1,1)
-            self.background.Position = pos
-            self.background_border.Size = size + Vector2.new(4,4)
-            self.background_outline.Size = size + Vector2.new(2,2)
-            self.background.Size = size
+            if self.borderless then
+                self.background_border.Position = pos - Vector2.new(2,2)
+                self.background_outline.Position = pos - Vector2.new(1,1)
+                self.background.Position = pos
+                self.background_border.Size = Vector2.new(size.X, self.top_margin) + Vector2.new(4,2)
+                self.background_outline.Size = Vector2.new(size.X, self.top_margin) + Vector2.new(2,1)
+                self.background.Size = Vector2.new(size.X, self.top_margin)
+            else
+                self.background_border.Position = pos - Vector2.new(2,2)
+                self.background_outline.Position = pos - Vector2.new(1,1)
+                self.background.Position = pos
+                self.background_border.Size = size + Vector2.new(4,4)
+                self.background_outline.Size = size + Vector2.new(2,2)
+                self.background.Size = size
+            end
         end
 
         function GUI:SetBorderless(bool)
@@ -4378,23 +4431,14 @@ do
             if bool then
                 self.container:SetPos(0,0,0,self.top_margin+6)
                 self.container:SetSize(1,0,1,-self.top_margin-6)
-                self.background_border.Visible = false
-                self.background_outline.Visible = false
-                self.background.Visible = false
                 self.tablist.borderless = bool
             else
                 self.container:SetPos(0,8,0,self.top_margin+8)
                 self.container:SetSize(1,-16,1,-self.top_margin-16)
-                self.background_border.Visible = true
-                self.background_outline.Visible = true
-                self.background.Visible = true
                 self.tablist.borderless = bool
             end
 
             self.tablist:InvalidateLayout(true, true)
-            self.background_border = self:Cache(self.background_border)
-            self.background_outline = self:Cache(self.background_outline)
-            self.background = self:Cache(self.background)
         end
 
         function GUI:GetActive()
@@ -4553,6 +4597,10 @@ do
         function GUI:SetText(txt)
             self.text:SetText(txt)
             self:InvalidateLayout()
+        end
+
+        function GUI:SetTextColor(col)
+            self.text:SetColor(col)
         end
         
         function GUI:PerformLayout(pos, size)
@@ -5519,6 +5567,7 @@ do
         return 0
     end
 
+    local unsafe_color = Color3.fromRGB(245, 239, 120)
     function menu:CreateOptions(container, config, path, Y)
         local name = config.name
         local Id = (config.Id or config.name)
@@ -5537,12 +5586,19 @@ do
             toggle:SetPos(0, 0, 0, Y)
             toggle:SetSize(1, -X, 0, 8)
             toggle:SetText(name)
+            if config.unsafe then
+                toggle.text:SetColor(unsafe_color)
+            end
             local w = toggle.text:GetTextSize()
             toggle:SetSize(0, 14 + w, 0, 8)
             toggle:InvalidateLayout(true)
             toggle:SetValue(_config_module:GetValue(unpack(path)))
             toggle.tooltip = config.tooltip
             function toggle:OnValueChanged(new)
+                if config.unsafe and not _config_module:GetValue("Main", "Settings", "Cheat Settings", "Allow Unsafe Features") then
+                    toggle:SetValue(_config_module:GetValue(unpack(path)))
+                    return
+                end
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = toggle
@@ -5553,6 +5609,9 @@ do
             text:SetPos(0, 0, 0, 0)
             text:SetTextSize(13)
             text:SetText(name)
+            if config.unsafe then
+                text:SetColor(unsafe_color)
+            end
             local slider = gui:Create("Slider", cont)
             slider.suffix = config.suffix or slider.suffix
             slider.min = config.min or slider.min
@@ -5567,6 +5626,10 @@ do
             cont:SetPos(0, 0, 0, Y-2)
             cont:SetSize(1, 0, 0, tall+2+10+1)
             function slider:OnValueChanged(new)
+                if config.unsafe and not _config_module:GetValue("Main", "Settings", "Cheat Settings", "Allow Unsafe Features") then
+                    slider:SetValue(_config_module:GetValue(unpack(path)))
+                    return
+                end
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = slider
@@ -5577,6 +5640,9 @@ do
             text:SetPos(0, 0, 0, 0)
             text:SetTextSize(13)
             text:SetText(name)
+            if config.unsafe then
+                text:SetColor(unsafe_color)
+            end
             local textentry = gui:Create("TextEntry", cont)
             local _, tall = text:GetTextScale()
             textentry:SetPos(0, 0, 0, tall+4)
@@ -5587,6 +5653,10 @@ do
             cont:SetPos(0, 0, 0, Y-2)
             cont:SetSize(1, 0, 0, tall+4+16)
             function textentry:OnValueChanged(new)
+                if config.unsafe and not _config_module:GetValue("Main", "Settings", "Cheat Settings", "Allow Unsafe Features") then
+                    textentry:SetValue(_config_module:GetValue(unpack(path)))
+                    return
+                end
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = textentry
@@ -5597,6 +5667,9 @@ do
             text:SetPos(0, 0, 0, 0)
             text:SetTextSize(13)
             text:SetText(name)
+            if config.unsafe then
+                text:SetColor(unsafe_color)
+            end
             local dropbox = gui:Create("DropBox", cont)
             local _, tall = text:GetTextScale()
             dropbox:SetPos(0, 0, 0, tall+4)
@@ -5607,6 +5680,10 @@ do
             cont:SetPos(0, 0, 0, Y-2)
             cont:SetSize(1, 0, 0, tall+4+16)
             function dropbox:OnValueChanged(new)
+                if config.unsafe and not _config_module:GetValue("Main", "Settings", "Cheat Settings", "Allow Unsafe Features") then
+                    dropbox:SetValue(_config_module:GetValue(unpack(path)))
+                    return
+                end
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = dropbox
@@ -5617,6 +5694,9 @@ do
             text:SetPos(0, 0, 0, 0)
             text:SetTextSize(13)
             text:SetText(name)
+            if config.unsafe then
+                text:SetColor(unsafe_color)
+            end
             local dropbox = gui:Create("ComboBox", cont)
             local _, tall = text:GetTextScale()
             dropbox:SetPos(0, 0, 0, tall+4)
@@ -5626,6 +5706,10 @@ do
             cont:SetPos(0, 0, 0, Y-2)
             cont:SetSize(1, 0, 0, tall+4+16)
             function dropbox:OnValueChanged(new)
+                if config.unsafe and not _config_module:GetValue("Main", "Settings", "Cheat Settings", "Allow Unsafe Features") then
+                    dropbox:SetValue(_config_module:GetRaw(unpack(path)).value)
+                    return
+                end
                 menu:ConfigSetValue(new, path)
             end
             self.config_pathways[uid] = dropbox
@@ -6892,6 +6976,7 @@ do
                             min = 0,
                             max = 2,
                             value = .75,
+                            decimal = 2,
                             suffix = "s",
                         },
                     }},
@@ -7114,6 +7199,7 @@ do
                                             type = "Toggle",
                                             name = "Enabled",
                                             value = false,
+                                            unsafe = true,
                                             tooltip = "When this is enabled, your server-side yaw, pitch and stance are set to the values in this tab.",
                                         },
                                         {
@@ -7546,6 +7632,7 @@ do
                                                 type = "Toggle",
                                                 name = "Third Person",
                                                 value = false,
+                                                unsafe = true,
                                                 extra = {
                                                     {
                                                         type = "KeyBind",
@@ -7679,6 +7766,7 @@ do
                                     {content={
                                         {
                                             name = {"Basic", "Advanced"},
+                                            borderless = true,
                                             pos = UDim2.new(0,0,0,0),
                                             size = UDim2.new(1,0,1,0),
                                             {content={
@@ -8274,6 +8362,7 @@ do
                                             type = "Toggle",
                                             name = "Speed",
                                             value = false,
+                                            unsafe = true,
                                             tooltip = "Manipulates your velocity to make you move faster, unlike fly it doesn't make you fly.\nUse 60 speed or below to never get flagged.",
                                             extra = {
                                                 {
@@ -8345,6 +8434,7 @@ do
                                             name = "Jump Power",
                                             value = false,
                                             tooltip = "Shifts movement jump power by X%.",
+                                            unsafe = true
                                         },
                                         {
                                             type = "Slider",
@@ -8395,6 +8485,7 @@ do
                                             suffix = "%",
                                             decimal = 1,
                                             value = 100,
+                                            unsafe = true,
                                             tooltip = "Temporarily here till I make a weapons tab..."
                                         },
                                         {
@@ -8405,6 +8496,7 @@ do
                                             suffix = "%",
                                             decimal = 1,
                                             value = 100,
+                                            unsafe = true,
                                             tooltip = "Temporarily here till I make a weapons tab..."
                                         },
                                         {
@@ -8415,6 +8507,7 @@ do
                                             suffix = "%",
                                             decimal = 1,
                                             value = 100,
+                                            unsafe = true,
                                             tooltip = "Temporarily here till I make a weapons tab..."
                                         },
                                     }},
@@ -8576,7 +8669,7 @@ do
                                     }},
                                 },
                                 {
-                                    name = {"Extra", "Exploits"},
+                                    name = {"Extra", "Sounds", "Exploits"},
                                     pos = UDim2.new(.5,4,0,0),
                                     size = UDim2.new(.5,-4,1,0),
                                     type = "Panel",
@@ -8601,15 +8694,98 @@ do
                                     }},
                                     {content = {
                                         {
+                                            type = "Text",
+                                            name = "Hit",
+                                            value = "6229978482",
+                                            tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Hit Volume",
+                                            min = 0,
+                                            max = 100,
+                                            suffix = "%",
+                                            decimal = 1,
+                                            value = 100,
+                                            custom = {},
+                                        },
+                                        {
+                                            type = "Text",
+                                            name = "Headshot",
+                                            value = "6229978482",
+                                            tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Headshot Volume",
+                                            min = 0,
+                                            max = 100,
+                                            suffix = "%",
+                                            decimal = 1,
+                                            value = 100,
+                                            custom = {},
+                                        },
+                                        {
+                                            type = "Text",
+                                            name = "Kill",
+                                            value = "6229978482",
+                                            tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Kill Volume",
+                                            min = 0,
+                                            max = 100,
+                                            suffix = "%",
+                                            decimal = 1,
+                                            value = 100,
+                                            custom = {},
+                                        },
+                                        {
+                                            type = "Text",
+                                            name = "Headshot Kill",
+                                            value = "6229978482",
+                                            tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Headshot Kill Volume",
+                                            min = 0,
+                                            max = 100,
+                                            suffix = "%",
+                                            decimal = 1,
+                                            value = 100,
+                                            custom = {},
+                                        },
+                                        {
+                                            type = "Text",
+                                            name = "Fire",
+                                            value = "",
+                                            tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Fire Volume",
+                                            min = 0,
+                                            max = 100,
+                                            suffix = "%",
+                                            decimal = 1,
+                                            value = 100,
+                                            custom = {},Fire
+                                        },
+                                    }},
+                                    {content = {
+                                        --[[{
                                             type = "Toggle",
                                             name = "Bypass Speed Checks",
                                             value = false,
                                             tooltip = "Attempts to bypass maximum speed limit on the server."
-                                        },
+                                        },]]
                                         {
                                             type = "Toggle",
                                             name = "Spaz Attack",
                                             value = false,
+                                            unsafe = true,
                                             tooltip = "Literally makes you look like your having a stroke."
                                         },
                                         {
@@ -8677,6 +8853,7 @@ do
                                             type = "Toggle",
                                             name = "Tick Division Manipulation",
                                             value = false,
+                                            unsafe = true,
                                             tooltip = "Makes your velocity go 10^n m/s, god why raspi you fucking idiot",
                                         },
                                         {
@@ -8696,12 +8873,34 @@ do
                                             type = "Toggle",
                                             name = "Revenge Grenade",
                                             value = false,
+                                            unsafe = true,
                                             tooltip = "Automatically TP's a grenade to the person who killed you.",
+                                        },
+                                        {
+                                            type = "Toggle",
+                                            name = "Auto Grenade Frozen",
+                                            value = false,
+                                            unsafe = true,
+                                            tooltip = "Automatically TP's a grenade to people frozen, useful against semi-god users.",
+                                        },
+                                        {
+                                            type = "Slider",
+                                            name = "Auto Grenade Wait",
+                                            min = 0,
+                                            max = 12,
+                                            suffix = "s",
+                                            decimal = 1,
+                                            value = 6,
+                                            custom = {
+                                                [0] = "Full Send It Bro",
+                                            },
+                                            tooltip = "Time till auto nade should send",
                                         },
                                         {
                                             type = "Toggle",
                                             name = "Blink",
                                             value = false,
+                                            unsafe = true,
                                             tooltip = "Enables when you are standing still. Staying longer than 8 seconds may result in a auto-slay when you move. Grenades and knives still affect you!",
                                             extra = {
                                                 {
@@ -8733,12 +8932,14 @@ do
                                             type = "Toggle",
                                             name = "Spawn Offset",
                                             value = false,
+                                            unsafe = true,
                                             tooltip = "Makes you spawn in a weird position so that you have an upper hand.",
                                         },
                                         {
                                             type = "Toggle",
                                             name = "Anti Grenade TP",
                                             value = false,
+                                            unsafe = true,
                                             tooltip = "Moves you right after a kill, to hopefully... HOPEFULLY. Avoid a grenade TP.",
                                         },
                                         {
@@ -8757,6 +8958,7 @@ do
                                             type = "Toggle",
                                             name = "TP Scanning",
                                             value = false,
+                                            unsafe = true,
                                             tooltip = "Moves you to a position to kill",
                                         },
                                         {
@@ -9445,12 +9647,11 @@ if BBOT.game == "pf" then
         end
         
         do
-            function aux.sound.playid(p39, p40, p41, p42, p43, p44)
-                aux.sound.PlaySoundId(p39, p40, p41, nil, nil, p42, nil, nil, nil, p43, p44);
-            end
             local oplay = rawget(aux.sound, "PlaySound")
-            hook:Add("Unload", "BBOT:SoundDetour", function()
+            local oplayid = rawget(aux.sound, "PlaySoundId")
+            hook:Add("Unload", "BBOT:Aux.SoundDetour", function()
                 rawset(aux.sound, "PlaySound", oplay)
+                rawset(aux.sound, "PlaySoundId", oplayid)
             end)
             local supressing = false
             local function newplay(...)
@@ -9463,7 +9664,24 @@ if BBOT.game == "pf" then
                 supressing = false
                 return oplay(...)
             end
+            local supressing = false
+            local function newplayid(...)
+                if supressing then return oplayid(...) end
+                supressing = true
+                if hook:Call("SupressSoundId", ...) then
+                    supressing = false
+                    return
+                end
+                supressing = false
+                return oplayid(...)
+            end
+            aux.sound._play = oplay
+            aux.sound._playid = oplayid
+            function aux.sound.playid(p39, p40, p41, p42, p43, p44)
+                aux.sound._playid(p39, p40, p41, nil, nil, p42, nil, nil, nil, p43, p44);
+            end
             rawset(aux.sound, "PlaySound", newcclosure(newplay))
+            rawset(aux.sound, "PlaySoundId", newcclosure(newplayid))
         end
         
         local setupvalueundo = {}
@@ -10081,7 +10299,7 @@ if BBOT.game == "pf" then
         hook:Add("OnConfigChanged", "BBOT:Votekick.AntiVotekick", function(steps, old, new)
             if config:IsPathwayEqual(steps, "Main", "Misc", "Votekick", "Anti Votekick") then
                 if playerdata.rankcalculator(playerdata:getdata().stats.experience) < 25 then
-                    BBOT.menu:UpdateStatus("Anti-Votekick", "Rank 25 required")
+                    BBOT.menu:UpdateStatus("Anti-Votekick", "Rank 25 required", new)
                 else
                     local state = BBOT.menu:GetStatus("Anti-Votekick")
                     BBOT.menu:UpdateStatus("Anti-Votekick", (state and state[2] or "Waiting..."), new)
@@ -10292,6 +10510,58 @@ if BBOT.game == "pf" then
         loop:Run("BBOT:Lighting.Step", lighting.step, runservice.RenderStepped)
     end
 
+    -- Sound overrides
+    do
+        local hook = BBOT.hook
+        local config = BBOT.config
+        local sound = BBOT.aux.sound
+
+        hook:Add("SupressSound", "BBOT:Sounds.Overrides", function(soundname, ...)
+            if soundname == "headshotkill" then
+                local snd = config:GetValue("Main", "Misc", "Sounds", "Headshot Kill")
+                if snd ~= "" then
+                    sound.playid("rbxassetid://" .. snd, config:GetValue("Main", "Misc", "Sounds", "Headshot Kill Volume")/100)
+                    return true
+                end
+            end
+            if soundname == "killshot" then
+                local snd = config:GetValue("Main", "Misc", "Sounds", "Kill")
+                if snd ~= "" then
+                    sound.playid("rbxassetid://" .. snd, config:GetValue("Main", "Misc", "Sounds", "Kill Volume")/100)
+                    return true
+                end
+            end
+            if soundname == "hitmarker" and (config:GetValue("Main", "Misc", "Sounds", "Headshot") ~= "" or config:GetValue("Main", "Misc", "Sounds", "Hit") ~= "") then
+                return true
+            end
+        end)
+
+        hook:Add("WeaponModifyData", "BBOT:Sounds.Override", function(gundata)
+            local snd = config:GetValue("Main", "Misc", "Sounds", "Fire")
+            if snd ~= "" then
+                gundata.firesoundid = "rbxassetid://" .. snd
+                gundata.firevolume = config:GetValue("Main", "Misc", "Sounds", "Fire Volume")/100
+                gundata.firepitch = nil
+            end
+        end)
+
+        hook:Add("PostNetworkSend", "BBOT:Sounds.Kills", function(netname, Entity, HitPos, Part, bulletID)
+            if netname == "bullethit" then
+                if Part == "Head" then
+                    local snd = config:GetValue("Main", "Misc", "Sounds", "Headshot")
+                    if snd ~= "" then
+                        sound.playid("rbxassetid://" .. snd, config:GetValue("Main", "Misc", "Sounds", "Headshot Volume")/100)
+                    end
+                else
+                    local snd = config:GetValue("Main", "Misc", "Sounds", "Hit")
+                    if snd ~= "" then
+                        sound.playid("rbxassetid://" .. snd, config:GetValue("Main", "Misc", "Sounds", "Hit Volume")/100)
+                    end
+                end
+            end
+        end)
+    end
+
     -- Misc
     do
         local userinputservice = BBOT.service:GetService("UserInputService")
@@ -10299,6 +10569,7 @@ if BBOT.game == "pf" then
         local localplayer = BBOT.service:GetService("LocalPlayer")
         local hook = BBOT.hook
         local math = BBOT.math
+        local timer = BBOT.timer
         local config = BBOT.config
         local roundsystem = BBOT.aux.roundsystem
         local network = BBOT.aux.network
@@ -10320,11 +10591,12 @@ if BBOT.game == "pf" then
         end)
 
         hook:Add("RenderStepped", "BBOT:AutoDeath", function()
-            if not wasalive then return end
             if config:GetValue("Main", "Misc", "Extra", "Auto Spawn") and config:GetValue("Main", "Misc", "Extra", "Auto Spawn", "KeyBind") and not gamemenu.isdeployed() then
                 gamemenu:deploy()
-            elseif config:GetValue("Main", "Misc", "Extra", "Auto Death") then
-                network:send("forcereset")
+            elseif config:GetValue("Main", "Misc", "Extra", "Auto Death") and wasalive then
+                hook:Call("AutoDeath")
+                wasalive = false
+                timer:Simple(1,function() network:send("forcereset") end)
             end
         end)
 
@@ -10704,6 +10976,28 @@ if BBOT.game == "pf" then
             if player == localplayer then return end
             if not config:GetValue("Main", "Misc", "Exploits", "Revenge Grenade") then return end
             misc:GrenadeTP(replication.getupdater(player).getpos())
+        end)
+
+        function misc:AutoGrenadeFrozen()
+            if not char.alive then return end
+            if not config:GetValue("Main", "Misc", "Exploits", "Auto Grenade Frozen") then return end
+            local t = config:GetValue("Main", "Misc", "Exploits", "Auto Grenade Wait")
+            for player, v in pairs(replication.player_registry) do
+                if player ~= localplayer and player.Team and localplayer.Team and player.Team.Name ~= localplayer.Team.Name then
+                    local controller = v.updater
+                    if controller.alive and controller.receivedDataFlag and controller.__t_received and controller.__t_received + t < tick() then
+                        misc:GrenadeTP(controller.getpos())
+                    end
+                end
+            end
+        end
+
+        timer:Create("BBOT:Misc.AutoGrenadeFrozen", 1, 0, function()
+            misc:AutoGrenadeFrozen()
+        end)
+
+        hook:Add("AutoDeath", "BBOT:Misc.AutoGrenadeFrozen", function()
+            misc:AutoGrenadeFrozen()
         end)
 
         hook:Add("Initialize", "BBOT:LocalKilled", function()
@@ -11123,10 +11417,12 @@ if BBOT.game == "pf" then
         function l3p:SetAlive(alive)
             if not self.controller then return end
             if alive and self.enabled then
-                self.controller.spawn(char.rootpart.Position)
                 if self.controller._weapon_slot then
                     self.networking["equip"](l3p.controller, l3p.controller._weapon_slot)
+                else
+                    self.networking["equip"](l3p.controller, -1)
                 end
+                self.controller.spawn(char.rootpart.Position)
             else
                 local objects = self.controller.died()
                 if objects then
@@ -11163,7 +11459,7 @@ if BBOT.game == "pf" then
                 if not gun or not gun.data then return end
                 local gundata = gun.data
                 -- gundata.firevolume
-                controller.kickweapon(gundata.hideflash, gundata.firesoundid, gundata.firepitch * (1 + 0.05 * math.random()), 0)
+                controller.kickweapon(gundata.hideflash, gundata.firesoundid, (gundata.firepitch and gundata.firepitch * (1 + 0.05 * math.random()) or nil), 0)
             end,
             ["stab"] = function(controller)
                 controller.stab()
@@ -11171,6 +11467,10 @@ if BBOT.game == "pf" then
             ["equip"] = function(controller, slot)
                 controller._weapon_slot = slot
                 local gun = gamelogic.currentgun.name
+                if slot == -1 then
+                    gun = "AK12"
+                    controller._weapon_slot = 1
+                end
                 local data = game:service("ReplicatedStorage").GunModules[gun]
                 local external = game:service("ReplicatedStorage").ExternalModels[gun]
                 if not data or not external then return end
@@ -11241,7 +11541,7 @@ if BBOT.game == "pf" then
         end)
 
         hook:Add("PostNetworkSend", "BBOT:L3P.UpdateStates", function(netname, ...)
-            if not l3p.controller or not l3p.enabled then return end
+            if not l3p.controller or not l3p.enabled or not l3p.controller.alive then return end
             if not l3p.networking[netname] then return end
             l3p.networking[netname](l3p.controller, ...)
         end)
