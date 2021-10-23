@@ -5160,7 +5160,9 @@ do
             self.title:SetText(txt)
         end
 
-        function GUI:SetColor() end
+        function GUI:SetColor(color, transparency) end
+
+        function GUI:OnChanged() end
 
         function GUI:IsHoverTotal()
             if self:IsHovering() then return true end
@@ -5211,6 +5213,9 @@ do
             picker:SetColor(self.background.Color, self.color_transparency)
             picker:SetTitle(self.title)
             picker:SetZIndex(100)
+            function picker.OnChanged(s, ...)
+                self:OnValueChanged(...)
+            end
             self.open = true
         end
 
