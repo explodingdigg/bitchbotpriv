@@ -8902,7 +8902,7 @@ do
 												{
 													type = "KeyBind",
 													key = nil,
-													toggletype = 3--? i'm not sure
+													toggletype = 4--? i'm not sure
 												}
 											},
 										},
