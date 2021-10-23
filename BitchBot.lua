@@ -10781,7 +10781,7 @@ if BBOT.game == "pf" then
 			and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then		
 				local rp = char.rootpart
 				local points
-				local path = pathfinder:CreatePath({AgentRadius = 2.5, AgentHeight = 2.5, AgentCanJump = true, WaypointSpacing = 7})
+				local path = pathfinder:CreatePath({AgentRadius = 2.5, AgentHeight = 4, AgentCanJump = true, WaypointSpacing = 7})
 				local target_pos 
 			
 				for i, Player in pairs(game.Players:GetPlayers()) do
