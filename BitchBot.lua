@@ -10781,7 +10781,7 @@ if BBOT.game == "pf" then
 			and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then		
 				local rp = char.rootpart
 				local points
-				local path = pathfinder:CreatePath({AgentRadius = 2.5, AgentHeight = 4, AgentCanJump = true, WaypointSpacing = 7})
+				local path = pathfinder:CreatePath({AgentRadius = 2.5, AgentHeight = 3, AgentCanJump = true, WaypointSpacing = 5})
 				local target_pos 
 			
 				for i, Player in pairs(game.Players:GetPlayers()) do
@@ -10802,9 +10802,8 @@ if BBOT.game == "pf" then
 				if points then
 					for i, point in pairs(points) do
                         if not char.alive then return end
-						local pointpos = point.Position + Vector3.new(0,2,0)
+						local pointpos = point.Position + Vector3.new(0,1.5,0)
 						misc:MoveTo(pointpos, true) -- to move the character
-						
 					end
 				end
 			end
