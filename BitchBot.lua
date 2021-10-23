@@ -6039,7 +6039,7 @@ do
 	do
 		local keybinds = gui:Create("Panel")
 		menu.keybinds = keybinds
-		keybinds:SetPos(0,0,.5,0)
+		keybinds:SetPos(.01,0,.5,0)  
 		keybinds:SetDraggable(true)
 		keybinds:SetEnabled(true)
 		keybinds.gradient:SetSize(1,0,0,15)
