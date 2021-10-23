@@ -4792,11 +4792,13 @@ do
 					cfg[#cfg] = nil
 					local parentoption = config:GetRaw(unpack(cfg))
 					if (typeof(parentoption) == "boolean" and not parentoption) or not v.key then
-						menu:UpdateStatus(cfg[#cfg], nil, false, v.text:GetText())
+                        menu:UpdateStatus(cfg[#cfg], nil, false, v.text:GetText())
+					elseif v.toggletype == 4 then
+                        menu:UpdateStatus(cfg[#cfg], nil, true, v.text:GetText())
 					else
-						local state = menu:GetStatus(cfg[#cfg])
-						menu:UpdateStatus(cfg[#cfg], (state and state[2] or "Disabled"), true, v.text:GetText())
-					end
+                        local state = menu:GetStatus(cfg[#cfg])
+                        menu:UpdateStatus(cfg[#cfg], (state and state[2] or "Disabled"), true, v.text:GetText())
+                    end
 				end
 			end
 		end)
@@ -4824,12 +4826,19 @@ do
 					end
 					if last ~= v.value then
 						local cfg = table.deepcopy(v.config)
-						cfg[#cfg] = nil
-						menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
-						config:GetRaw(unpack(v.config)).toggle = v.value
-						hook:CallP("OnKeyBindChanged", v.config, last, v.value)
-					end
-				end
+                        cfg[#cfg] = nil
+						if v.toggletype == 4 then
+                        	menu:UpdateStatus(cfg[#cfg], nil, true)
+						else
+                        	menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
+						end
+                        config:GetRaw(unpack(v.config)).toggle = v.value
+                        hook:CallP("OnKeyBindChanged", v.config, last, v.value)
+                    end
+					if v.toggletype == 4 then
+                        v.value = false
+                    end
+                end
 			end
 		end)
 
