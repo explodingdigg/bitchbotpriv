@@ -9036,10 +9036,10 @@ do
 										},
 										{
 											type = "Toggle",
-											name = "Spawn Offset",
+											name = "Repupdate Spammer",
 											value = false,
 											unsafe = true,
-											tooltip = "Makes you spawn in a weird position so that you have an upper hand.",
+											tooltip = "Sends repupdate per frame, just so you can move faster :)",
 										},
 										{
 											type = "Toggle",
@@ -9330,10 +9330,14 @@ do
 													
 													if not BBOT.weapons.skindatabase then return container end
 
+                                                    local c = 0
 													for name, skinId in next, BBOT.weapons.skindatabase do
-														local a, b, c = tostring(name), tostring(skinId.TextureId or "Unknown"), tostring(skinId.Case or "Unknown")
-														local line = skinlist:AddLine(a, b, c)
-														line.searcher = a .. " " .. b .. " " .. c
+														c=c+1
+                                                        BBOT.timer:Simple(0.001*c,function()
+                                                            local a, b, c = tostring(name), tostring(skinId.TextureId or "Unknown"), tostring(skinId.Case or "Unknown")
+                                                            local line = skinlist:AddLine(a, b, c)
+                                                            line.searcher = a .. " " .. b .. " " .. c
+                                                        end)
 													end
 
 													local function Refresh_List()
@@ -9352,9 +9356,6 @@ do
 													function search:OnValueChanged()
 														Refresh_List()
 													end
-
-													Refresh_List()
-
 													return container
 												end,
 												content = {}
@@ -10776,25 +10777,35 @@ if BBOT.game == "pf" then
 			end
 		end)
 
+        local mouse = BBOT.service:GetService("Mouse")
 		hook:Add("OnKeyBindChanged", "BBOT.Misc.Teleport", function(steps, old, new)
 			if char.alive and config:GetValue("Main", "Misc", "Exploits", "Teleport to Player") 
-			and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then		
-				local rp = char.rootpart
-				local points
-				local path = pathfinder:CreatePath({AgentRadius = 2.5, AgentHeight = 2.5, AgentCanJump = true, WaypointSpacing = 15})
-				local target_pos 
-			
+			and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then
+                local players = {}
 				for i, Player in pairs(game.Players:GetPlayers()) do
 					if Player.Team == game.Players.LocalPlayer.Team then continue end
-			
 					local updater = replication.getupdater(Player)
 					if updater and updater.alive then
-						path:ComputeAsync(rp.Position, updater.getpos())
-						if path.Status ~= Enum.PathStatus.Success then continue end
-						local path_points = path:GetWaypoints()
-						points = path_points
-						break
-					end
+                        players[#players+1] = {Player, updater, updater.getpos()}
+                    end
+                end
+
+                local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
+                table.sort(players, function(a, b)
+                    return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
+                end)
+
+                local height = 2.5+1.5
+				local path = pathfinder:CreatePath({AgentRadius = 0.75, AgentHeight = height, AgentCanJump = true, WaypointSpacing = 5})
+                local root_position = char.rootpart.Position
+				local points
+				for i=1, #players do
+                    local player = players[i]
+                    if not char.alive then return end
+                    path:ComputeAsync(root_position, player[3])
+                    if path.Status ~= Enum.PathStatus.Success then continue end
+                    points = path:GetWaypoints()
+                    break
 				end
 			
 				notification:Create(points and "Teleporting with " .. #points .. " Points" or "Teleportation path not found")
@@ -10802,7 +10813,7 @@ if BBOT.game == "pf" then
 				if points then
 					for i, point in pairs(points) do
                         if not char.alive then return end
-						local pointpos = point.Position + Vector3.new(0,1.5,0)
+						local pointpos = point.Position + Vector3.new(0,height+.25,0)
 						misc:MoveTo(pointpos, true) -- to move the character
 					end
 				end
@@ -11257,8 +11268,6 @@ if BBOT.game == "pf" then
 
 			hook:Add("PreWeaponStep", "BBOT:Misc.Thirdperson", hideweapon)
 			hook:Add("PreKnifeStep", "BBOT:Misc.Thirdperson", hideweapon)
-
-			local camera = BBOT.service:GetService("CurrentCamera")
 			hook:Add("ScreenCull.PreStep", "BBOT:Misc.Thirdperson", function()
 				if not char.alive or not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
 				if config:GetValue("Main", "Visuals", "Local", "First Person Third") and BBOT.l3p_player and BBOT.l3p_player.controller then
@@ -11291,60 +11300,6 @@ if BBOT.game == "pf" then
 		function misc:BlinkPosition()
 			return absolute_pos, last_pos
 		end
-
-		hook:Add("SuppressNetworkSend", "BBOT:Blink", function(networkname, pos, ang, timestamp, ...)
-			if networkname == "repupdate" then
-				absolute_pos = pos
-				if config:GetValue("Main", "Misc", "Exploits", "Blink") and config:GetValue("Main", "Misc", "Exploits", "Blink", "KeyBind") then
-					local allowmove = config:GetValue("Main", "Misc", "Exploits", "Blink Allow Movement")
-					if last_pos == pos or allowmove then
-						if not last_pos then
-							misc.inblink = false
-							last_pos = pos
-							last_ang = ang
-							return
-						end
-						local t = config:GetValue("Main", "Misc", "Exploits", "Blink Keep Alive")
-						if last_send + t < tick() and t > 0 then
-							BBOT.menu:UpdateStatus("Blink", "Buffering...")
-							misc:SendBlinkRecord()
-							last_pos = pos
-							--last_ang = ang
-							network:send(networkname, last_pos, last_ang, timestamp)
-							last_send = tick()
-							misc.inblink = false
-						else
-							BBOT.menu:UpdateStatus("Blink", "Active"
-							.. (t > 0 and " [" .. math.abs(math.round(last_send+t-tick(),1)) .. "s]" or "")
-							.. (allowmove and " [" .. math.round((pos-last_pos).Magnitude, 1) .. " studs]" or ""))
-							misc.inblink = true
-							if not blink_record[1] or blink_record[#blink_record][1] ~= pos then
-								local last = blink_record[#blink_record]
-								if last then
-									local lasttime = last[3]
-									if lasttime and timestamp < lasttime then
-										last[3] = timestamp
-									end
-								end
-								blink_record[#blink_record+1] = {pos, ang, timestamp}
-							end
-						end
-						return true
-					else
-						BBOT.menu:UpdateStatus("Blink", "Stand Still")
-						misc.inblink = false
-						last_send = tick()
-						last_pos = pos
-						last_ang = ang
-					end
-				else
-					last_send = tick()
-					misc.inblink = false
-					last_pos = pos
-					last_ang = ang
-				end
-			end
-		end)
 
 		function misc:SendBlinkRecord()
 			if #blink_record > 0 and last_pos and (absolute_pos-last_pos).Magnitude > 9 then
@@ -11445,10 +11400,10 @@ if BBOT.game == "pf" then
 				local timescale = math.round(diff.Magnitude/7)+1
 				local tdiff = diff/timescale
 				for i=1, timescale do
-					network:send("repupdate", current_position + (tdiff*i), _last_ang, self:GetTickDivisionScale())
+					network:send("repupdate", current_position + (tdiff*i), _last_ang, tick())
 				end
 			else
-				network:send("repupdate", current_position + diff, _last_ang, self:GetTickDivisionScale())
+				network:send("repupdate", current_position + diff, _last_ang, tick())
 			end
 
 			if move_char then
@@ -11514,6 +11469,70 @@ if BBOT.game == "pf" then
 			end
 			return tick()
 		end
+
+        local sending = false
+        hook:Add("RenderStepped", "BBOT:InternalRepupdate", function()
+            if not char.alive or not config:GetValue("Main", "Misc", "Exploits", "Repupdate Spammer") then return end
+            local l__angles__1304 = BBOT.aux.camera.angles;
+            sending = true
+		    network:send("repupdate", char.rootpart.Position, Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
+            sending = false
+        end)
+
+		hook:Add("SuppressNetworkSend", "BBOT:Blink", function(networkname, pos, ang, timestamp, ...)
+			if networkname == "repupdate" then
+                if not sending and config:GetValue("Main", "Misc", "Exploits", "Repupdate Spammer") then return end
+				absolute_pos = pos
+				if config:GetValue("Main", "Misc", "Exploits", "Blink") and config:GetValue("Main", "Misc", "Exploits", "Blink", "KeyBind") then
+					local allowmove = config:GetValue("Main", "Misc", "Exploits", "Blink Allow Movement")
+					if last_pos == pos or allowmove then
+						if not last_pos then
+							misc.inblink = false
+							last_pos = pos
+							last_ang = ang
+							return
+						end
+						local t = config:GetValue("Main", "Misc", "Exploits", "Blink Keep Alive")
+						if last_send + t < tick() and t > 0 then
+							BBOT.menu:UpdateStatus("Blink", "Buffering...")
+							misc:SendBlinkRecord()
+							last_pos = pos
+							--last_ang = ang
+							network:send(networkname, last_pos, last_ang, timestamp)
+							last_send = tick()
+							misc.inblink = false
+						else
+							BBOT.menu:UpdateStatus("Blink", "Active"
+							.. (t > 0 and " [" .. math.abs(math.round(last_send+t-tick(),1)) .. "s]" or "")
+							.. (allowmove and " [" .. math.round((pos-last_pos).Magnitude, 1) .. " studs]" or ""))
+							misc.inblink = true
+							if not blink_record[1] or blink_record[#blink_record][1] ~= pos then
+								local last = blink_record[#blink_record]
+								if last then
+									local lasttime = last[3]
+									if lasttime and timestamp < lasttime then
+										last[3] = timestamp
+									end
+								end
+								blink_record[#blink_record+1] = {pos, ang, timestamp}
+							end
+						end
+						return true
+					else
+						BBOT.menu:UpdateStatus("Blink", "Stand Still")
+						misc.inblink = false
+						last_send = tick()
+						last_pos = pos
+						last_ang = ang
+					end
+				else
+					last_send = tick()
+					misc.inblink = false
+					last_pos = pos
+					last_ang = ang
+				end
+			end
+		end)
 
 		local workspace = BBOT.service:GetService("Workspace")
 		local stutterFrames = 0
