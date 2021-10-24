@@ -10781,7 +10781,7 @@ if BBOT.game == "pf" then
 			and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then		
 				local rp = char.rootpart
 				local points
-				local path = pathfinder:CreatePath({AgentRadius = 2.5, AgentHeight = 3, AgentCanJump = true, WaypointSpacing = 5})
+				local path = pathfinder:CreatePath({AgentRadius = 2.5, AgentHeight = 2.5, AgentCanJump = true, WaypointSpacing = 15})
 				local target_pos 
 			
 				for i, Player in pairs(game.Players:GetPlayers()) do
@@ -11442,7 +11442,7 @@ if BBOT.game == "pf" then
 			local diff = (position-current_position)
 
 			if diff.Magnitude > 7 then
-				local timescale = diff.Magnitude/7
+				local timescale = math.round(diff.Magnitude/7)+1
 				local tdiff = diff/timescale
 				for i=1, timescale do
 					network:send("repupdate", current_position + (tdiff*i), _last_ang, self:GetTickDivisionScale())
