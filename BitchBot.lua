@@ -7435,7 +7435,7 @@ do
 							type = "Container",
 							content = {
 								{
-									name = { "Enemy ESP", "Team ESP", "Local" },
+									name = { "Enemy ESP", "Team ESP", "Local ESP" },
 									pos = UDim2.new(0,0,0,0),
 									size = UDim2.new(.5,-4,11/20,-4),
 									{
@@ -7706,93 +7706,120 @@ do
 										content = {
 											{
 												type = "Toggle",
-												name = "Arm Chams",
+												name = "Enabled",
+												value = false,
+												tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
+											},
+											{
+												type = "Toggle",
+												name = "Name",
 												value = false,
 												extra = {
 													{
 														type = "ColorPicker",
-														name = "Sleeve Color",
-														color = { 106, 136, 213, 255 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Hand Color",
-														color = { 181, 179, 253, 255 },
-													},
-												},
-											},
-											{
-												type = "DropBox",
-												name = "Arm Material",
-												value = 1,
-												values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-											},
-											{
-												type = "Toggle",
-												name = "Animate Ghost Material",
-												value = false,
-												tooltip = "Toggles whether or not the 'Ghost' material will be animated or not.",
-											},
-											{
-												type = "Toggle",
-												name = "Remove Weapon Skin",
-												value = false,
-												tooltip = "If a loaded weapon has a skin, it will remove it.",
-											},
-											{
-												type = "Toggle",
-												name = "Third Person",
-												value = false,
-												unsafe = true,
-												extra = {
-													{
-														type = "KeyBind",
-														key = nil,
-														toggletype = 2,
+														name = "Color",
+														color = { 255, 255, 255, 200 },
 													},
 												},
 											},
 											{
 												type = "Toggle",
-												name = "Third Person Absolute",
-												value = false,
-												extra = {},
-												tooltip = "Forces the L3P character to be exactly on you.",
+												name = "Box",
+												value = true,
+												extra = {
+													{
+														type = "ColorPicker",
+														name = "Color Fill",
+														color = { 127, 72, 163, 0 },
+													},
+													{
+														type = "ColorPicker",
+														name = "Color Box",
+														color = { 127, 72, 163, 150 },
+													},
+												},
 											},
 											{
 												type = "Toggle",
-												name = "First Person Third",
-												value = false,
-												extra = {},
-												tooltip = "See through the eyes of L3P",
-											},
-											{
-												type = "Slider",
-												name = "Third Person Distance",
-												value = 60,
-												min = -10,
-												max = 150,
-											},
-											{
-												type = "Toggle",
-												name = "Local Player Chams",
+												name = "Health Bar",
 												value = false,
 												extra = {
 													{
 														type = "ColorPicker",
-														name = "Local Player Chams",
-														color = { 106, 136, 213, 255 },
+														name = "Color Low",
+														color = { 255, 0, 0, 255 },
+													},
+													{
+														type = "ColorPicker",
+														name = "Color Max",
+														color = { 0, 255, 0, 255 },
 													},
 												},
-												tooltip = "Changes the color and material of the local third person body when it is on.",
 											},
 											{
-												type = "DropBox",
-												name = "Local Player Material",
-												value = 1,
-												values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
+												type = "Toggle",
+												name = "Health Number",
+												value = false,
+												extra = {
+													{
+														type = "ColorPicker",
+														name = "Color",
+														color = { 255, 255, 255, 255 },
+													},
+												},
 											},
-										},
+											{
+												type = "Toggle",
+												name = "Held Weapon",
+												value = false,
+												extra = {
+													{
+														type = "ColorPicker",
+														name = "Color",
+														color = { 255, 255, 255, 200 },
+													},
+												},
+											},
+											{
+												type = "Toggle",
+												name = "Held Weapon Icon",
+												value = false,
+											},
+											{
+												type = "ComboBox",
+												name = "Flags",
+												values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false }, { "Frozen", true }, { "Resolved", false }  },
+											},
+											{
+												type = "Toggle",
+												name = "Chams",
+												value = false,
+												extra = {
+													{
+														type = "ColorPicker",
+														name = "Visible Chams",
+														color = { 127, 72, 163, 200 },
+													},
+													{
+														type = "ColorPicker",
+														name = "Invisible Chams",
+														color = { 127, 72, 163, 100 },
+													},
+												},
+											},
+											{
+												type = "Toggle",
+												name = "Skeleton",
+												value = false,
+												extra = {
+													{
+														type = "ColorPicker",
+														name = "Team skeleton",
+														color = { 255, 255, 255, 120 },
+													},
+												},
+											},
+										}
 									},
 								},
 								{
@@ -7966,7 +7993,7 @@ do
 									}}
 								},
 								{
-									name = {"Camera Visuals", "Viewmodel"},
+									name = {"Camera Visuals", "Extra"},
 									pos = UDim2.new(.5,4,0,0),
 									size = UDim2.new(.5,-8,1/2,-4),
 									{
@@ -7978,6 +8005,39 @@ do
 												min = 60,
 												max = 120,
 												suffix = "°",
+											},
+											{
+												type = "Toggle",
+												name = "Third Person",
+												value = false,
+												extra = {
+													{
+														type = "KeyBind",
+														key = nil,
+														toggletype = 2,
+													},
+												},
+											},
+											{
+												type = "Toggle",
+												name = "Third Person Absolute",
+												value = false,
+												extra = {},
+												tooltip = "Forces the L3P character to be exactly on you.",
+											},
+											{
+												type = "Toggle",
+												name = "First Person Third",
+												value = false,
+												extra = {},
+												tooltip = "See through the eyes of L3P",
+											},
+											{
+												type = "Slider",
+												name = "Third Person Distance",
+												value = 60,
+												min = -10,
+												max = 150,
 											},
 											{
 												type = "Slider",
@@ -7999,59 +8059,57 @@ do
 										content = {
 											{
 												type = "Toggle",
-												name = "Enabled",
+												name = "Arm Chams",
 												value = false,
+												extra = {
+													{
+														type = "ColorPicker",
+														name = "Sleeve Color",
+														color = { 106, 136, 213, 255 },
+													},
+													{
+														type = "ColorPicker",
+														name = "Hand Color",
+														color = { 181, 179, 253, 255 },
+													},
+												},
 											},
 											{
-												type = "Slider",
-												name = "Offset X",
-												value = 0,
-												min = -3,
-												max = 3,
-												decimal = 2,
-												suffix = " studs",
+												type = "DropBox",
+												name = "Arm Material",
+												value = 1,
+												values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
 											},
 											{
-												type = "Slider",
-												name = "Offset Y",
-												value = 0,
-												min = -3,
-												max = 3,
-												decimal = 2,
-												suffix = " studs",
+												type = "Toggle",
+												name = "Animate Ghost Material",
+												value = false,
+												tooltip = "Toggles whether or not the 'Ghost' material will be animated or not.",
 											},
 											{
-												type = "Slider",
-												name = "Offset Z",
-												value = 0,
-												min = -3,
-												max = 3,
-												decimal = 2,
-												suffix = " studs",
+												type = "Toggle",
+												name = "Remove Weapon Skin",
+												value = false,
+												tooltip = "If a loaded weapon has a skin, it will remove it.",
 											},
 											{
-												type = "Slider",
-												name = "Pitch",
-												value = 0,
-												min = -360,
-												max = 360,
-												suffix = "°",
+												type = "Toggle",
+												name = "Local Player Chams",
+												value = false,
+												extra = {
+													{
+														type = "ColorPicker",
+														name = "Local Player Chams",
+														color = { 106, 136, 213, 255 },
+													},
+												},
+												tooltip = "Changes the color and material of the local third person body when it is on.",
 											},
 											{
-												type = "Slider",
-												name = "Yaw",
-												value = 0,
-												min = -360,
-												max = 360,
-												suffix = "°",
-											},
-											{
-												type = "Slider",
-												name = "Roll",
-												value = 0,
-												min = -360,
-												max = 360,
-												suffix = "°",
+												type = "DropBox",
+												name = "Local Player Material",
+												value = 1,
+												values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
 											},
 										},
 									},
@@ -8895,6 +8953,32 @@ do
 										},
 										{
 											type = "Toggle",
+											name = "Click TP",
+											value = false,
+											unsafe = true,
+											extra = {
+												{
+													type = "KeyBind",
+													key = nil,
+													toggletype = 4
+												}
+											},
+											tooltip = "Ez clap TP",
+										},
+										{
+											type = "Slider",
+											name = "Click TP Range",
+											min = 0,
+											max = 200,
+											suffix = " studs",
+											decimal = 1,
+											value = 50,
+											custom = {
+												[0] = "Fucking Insane",
+											},
+										},
+										{
+											type = "Toggle",
 											name = "Teleport to Player",
 											value = false,
 											unsafe = true,
@@ -8903,6 +8987,28 @@ do
 													type = "KeyBind",
 													key = nil,
 													toggletype = 4--? i'm not sure
+												}
+											},
+										},
+										{
+											type = "ComboBox",
+											name = "Auto Teleport",
+											values = {
+												{ "On Spawn", false },
+												{ "On Enemy Spawn", false },
+												{ "Enemies Alive", false },
+											},
+											unsafe = true,
+											extra = {
+												{
+													type = "KeyBind",
+													key = "M",
+													toggletype = 2--? i'm not sure
+												},
+												{
+													type = "ColorPicker",
+													name = "Path Color",
+													color = { 127, 72, 163, 150 },
 												}
 											},
 										},
@@ -10736,6 +10842,99 @@ if BBOT.game == "pf" then
 		end)
 	end
 
+	-- Draw Pather
+	do 
+		local camera = BBOT.service:GetService("CurrentCamera")
+		local math = BBOT.math
+		local table = BBOT.table
+		local hook = BBOT.hook
+		local draw = BBOT.draw
+		local color = BBOT.color 
+		local drawpather = {
+			registry = {},
+		}
+		BBOT.drawpather = drawpather
+
+		function drawpather:Simple(pathway, col, time)
+			local length = #pathway
+			local render_storage = {}
+			local dark = color.darkness(col, .25)
+			for i=1, length do
+				local darkline = draw:Line(4, 0, 0, 0, 0, dark, 1, true)
+				darkline.ZIndex = 0
+				local line = draw:Line(2, 0, 0, 0, 0, col, 1, true)
+				line.ZIndex = 1
+				render_storage[#render_storage+1] = {darkline, line}
+			end
+			self.registry[#self.registry+1] = {
+				objects = render_storage,
+				frames = pathway,
+				t0 = tick(),
+				duration = time,
+			}
+		end
+
+		function drawpather:unrender(t)
+			for i=1, #t do
+				local objects = t[i]
+				for k=1, #objects do
+					local v = objects[k]
+					if draw:IsValid(v) then
+						v:Remove()
+					end
+				end
+			end
+		end
+
+		hook:Add("RenderStep.First", "BBOT:DrawPather.render", function()
+			local t = tick()
+			local reg = drawpather.registry
+			local c = 0
+			for i=1, #reg do
+				i=i-c
+				local pather = reg[i]
+				local frames = pather.frames
+				local objects = pather.objects
+				local lastframe = frames[1]
+				if not lastframe or not frames[2] then
+					table.remove(reg, i);c=c+1;
+					drawpather:unrender(objects)
+					continue
+				end
+				local deltat = math.timefraction(pather.t0, pather.t0 + pather.duration, t)
+				if deltat > 1 then
+					table.remove(reg, i);c=c+1;
+					drawpather:unrender(objects)
+					continue
+				end
+				local transparency = math.remap(deltat,0,1,1,0)
+
+				-- 3D
+				for k=2, #frames do
+					local frame = frames[k]
+					local object = objects[k]
+					local point1, onscreen1 = camera:WorldToViewportPoint(lastframe)
+					local point2, onscreen2 = camera:WorldToViewportPoint(frame)
+					if not onscreen1 and not onscreen2 then
+						object[1].Visible = false
+						object[2].Visible = false
+						lastframe = frame
+						continue
+					end
+					object[1].Transparency = transparency
+					object[2].Transparency = transparency
+					object[1].Visible = true
+					object[2].Visible = true
+					object[1].From = Vector2.new(point1.X, point1.Y)
+					object[1].To = Vector2.new(point2.X, point2.Y)
+					object[2].From = Vector2.new(point1.X, point1.Y)
+					object[2].To = Vector2.new(point2.X, point2.Y)
+					lastframe = frame
+				end
+			end
+		end)
+	end
+
 	-- Misc
 	--misc for failsafe :3
 	do
@@ -10743,6 +10942,7 @@ if BBOT.game == "pf" then
 		local userinputservice = BBOT.service:GetService("UserInputService")
 		local camera = BBOT.service:GetService("CurrentCamera")
 		local localplayer = BBOT.service:GetService("LocalPlayer")
+		local _players = BBOT.service:GetService("Players")
 		local pathfinder = game:GetService("PathfindingService")
 		local hook = BBOT.hook
 		local math = BBOT.math
@@ -10776,51 +10976,161 @@ if BBOT.game == "pf" then
 				timer:Simple(1,function() network:send("forcereset") end)
 			end
 		end)
-
-        local mouse = BBOT.service:GetService("Mouse")
-		hook:Add("OnKeyBindChanged", "BBOT.Misc.Teleport", function(steps, old, new)
-			if char.alive and config:GetValue("Main", "Misc", "Exploits", "Teleport to Player") 
-			and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then
-                local players = {}
-				for i, Player in pairs(game.Players:GetPlayers()) do
-					if Player.Team == game.Players.LocalPlayer.Team then continue end
+		
+		do
+			local path = pathfinder:CreatePath({AgentRadius = .75, AgentHeight = 2, AgentCanJump = true, WaypointSpacing = math.huge})
+			local isteleporting = false
+			function misc:TeleportToClosest()
+				if isteleporting and tick()-isteleporting < 2 then return end
+				local players = {}
+				for i, Player in pairs(_players:GetPlayers()) do
+					if Player.Team == localplayer.Team then continue end
 					local updater = replication.getupdater(Player)
 					if updater and updater.alive then
-                        players[#players+1] = {Player, updater, updater.getpos()}
-                    end
-                end
-
-                local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
-                table.sort(players, function(a, b)
-                    return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
-                end)
-
-                local height = 2.5+1.5
-                local vheight = Vector3.new(0,height,0)
-				local path = pathfinder:CreatePath({AgentRadius = 0.75, AgentHeight = height, AgentCanJump = true, WaypointSpacing = 5})
-                local root_position = char.rootpart.Position
-				local points
-                local down = Vector3.new(0,-500,0)
-				for i=1, #players do
-                    local player = players[i]
-                    if not char.alive then return end
-                    local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(player[3], down), roundsystem.raycastwhitelist)
-                    path:ComputeAsync(root_position, part and (position + vheight) or player[3])
-                    if path.Status ~= Enum.PathStatus.Success then continue end
-                    points = path:GetWaypoints()
-                    break
-				end
-			
-				notification:Create(points and "Teleporting..." or "Teleportation path not found")
-
-				if points then
-					for i, point in pairs(points) do
-                        if not char.alive then return end
-						misc:MoveTo(point.Position + Vector3.new(0,height+.25,0), true) -- to move the character
+						players[#players+1] = {Player, updater, updater.getpos()}
 					end
 				end
+
+				if #players < 1 then return end
+
+				local root_position = char.rootpart.Position
+				table.sort(players, function(a, b)
+					return (a[3] - root_position).Magnitude < (b[3] - root_position).Magnitude
+				end)
+
+				isteleporting = tick()
+				local t = tick()
+				local height = 3
+				local vheight = Vector3.new(0,height,0)
+				local points
+				local down = Vector3.new(0,-500,0)
+				for i=1, #players do
+					local player = players[i]
+					if not char.alive or not player[2].alive then continue end
+					if tick()-t > 2 then break end
+					local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(player[3], down), roundsystem.raycastwhitelist)
+					path:ComputeAsync(root_position, part and position or player[3])
+					if path.Status ~= Enum.PathStatus.Success then continue end
+					points = path:GetWaypoints()
+					break
+				end
+
+				if tick()-t > 2 then return end
+
+				if points then
+					local up = Vector3.new(0,2,0)
+					local points_simple = {}
+					for i=1, #points do
+						local point = points[i]
+						if not char.alive then return end
+						local topos = point.Position + up
+						points_simple[#points_simple+1] = topos
+						misc:MoveTo(topos, true) -- to move the character
+					end
+					local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
+					BBOT.drawpather:Simple(points_simple, color, 4)
+				end
+				isteleporting = false
 			end
-		end)
+
+			local mouse = BBOT.service:GetService("Mouse")
+
+			hook:Add("OnKeyBindChanged", "BBOT.Misc.ClickTP", function(steps, old, new)
+				if char.alive and config:GetValue("Main", "Misc", "Exploits", "Click TP")
+				and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Click TP", "KeyBind") then
+					local range = config:GetValue("Main", "Misc", "Exploits", "Click TP Range")
+					local tp = BBOT.aimbot:raycastbullet(camera.CFrame.p, camera.CFrame.lookVector * (range == 0 and 2000 or range))
+					if tp then
+						misc:MoveTo(tp.Position - (camera.CFrame.lookVector * .5) + Vector3.new(0,3,0), true)
+					elseif range ~= 0 then
+						local pos = camera.CFrame.p + camera.CFrame.lookVector * range
+						misc:MoveTo(pos - (camera.CFrame.lookVector * .5) + Vector3.new(0,3,0), true)
+					end
+				end
+			end)
+
+			hook:Add("OnKeyBindChanged", "BBOT.Misc.Teleport", function(steps, old, new)
+				if char.alive and config:GetValue("Main", "Misc", "Exploits", "Teleport to Player")
+				and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then
+					if isteleporting and tick()-isteleporting < 2 then
+						notification:Create("Teleporter is busy")
+						return
+					end
+					local players = {}
+					for i, Player in pairs(_players:GetPlayers()) do
+						if Player.Team == localplayer.Team then continue end
+						local updater = replication.getupdater(Player)
+						if updater and updater.alive then
+							local abspos = updater.getpos()
+							local pos, onscreen = camera:WorldToViewportPoint(abspos)
+							players[#players+1] = {Player, (onscreen and pos or Vector3.new(100000,100000,100000)), abspos, updater}
+						end
+					end
+
+					local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
+					table.sort(players, function(a, b)
+						return (a[2] - mousePos).Magnitude < (b[2] - mousePos).Magnitude
+					end)
+
+					isteleporting = tick()
+					local t = tick()
+					local root_position = char.rootpart.Position
+					local points
+					local down = Vector3.new(0,-500,0)
+					for i=1, #players do
+						local player = players[i]
+						if not char.alive or not player[4].alive then continue end
+						if tick()-t > 2 then break end
+						local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(player[3], down), roundsystem.raycastwhitelist)
+						path:ComputeAsync(root_position, part and position or player[3])
+						if path.Status ~= Enum.PathStatus.Success then continue end
+						points = path:GetWaypoints()
+						break
+					end
+				
+					if tick()-t > 2 then return end
+					notification:Create(points and "Teleporting..." or "Teleportation path not found")
+
+					if points then
+						local up = Vector3.new(0,2,0)
+						local points_simple = {}
+						for i=1, #points do
+							local point = points[i]
+							if not char.alive then return end
+							local topos = point.Position + up
+							points_simple[#points_simple+1] = topos
+							misc:MoveTo(topos, true) -- to move the character
+						end
+						local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
+						BBOT.drawpather:Simple(points_simple, color, 4)
+					end
+					isteleporting = false
+				end
+			end)
+		end
+
+        local next_teleport = 0
+        hook:Add("OnAliveChanged", "BBOT:Misc.AutoTeleport", function(alive)
+            if alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["On Spawn"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind") then
+                next_teleport = tick() + 1
+                misc:TeleportToClosest()
+            end
+        end)
+
+        hook:Add("Postupdatespawn", "BBOT:Misc.AutoTeleport", function()
+            if char.alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["On Enemy Spawn"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind") then
+                next_teleport = tick() + 1
+                misc:TeleportToClosest()
+            end
+        end)
+
+        hook:Add("RenderStep.Last", "BBOT:Misc.AutoTeleport", function()
+            if char.alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["Enemies Alive"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind")  and next_teleport < tick() then
+                next_teleport = tick() + 1
+                misc:TeleportToClosest()
+            end
+        end)
+
 		hook:Add("OnConfigChanged", "BBOT:Misc.Fly", function(steps, old, new)
 			if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly") and not config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
 				if not new and char.alive and misc.rootpart then
@@ -11254,7 +11564,7 @@ if BBOT.game == "pf" then
 		do
 			local function hideweapon()
 				if not char.alive then return end
-				if not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then
+				if not config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person") or not config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person", "KeyBind") then
 					if gamelogic.currentgun.___ta then
 						gamelogic.currentgun.___ta = nil
 						gamelogic.currentgun:show()
@@ -11271,8 +11581,8 @@ if BBOT.game == "pf" then
 			hook:Add("PreWeaponStep", "BBOT:Misc.Thirdperson", hideweapon)
 			hook:Add("PreKnifeStep", "BBOT:Misc.Thirdperson", hideweapon)
 			hook:Add("ScreenCull.PreStep", "BBOT:Misc.Thirdperson", function()
-				if not char.alive or not config:GetValue("Main", "Visuals", "Local", "Third Person") or not config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
-				if config:GetValue("Main", "Visuals", "Local", "First Person Third") and BBOT.l3p_player and BBOT.l3p_player.controller then
+				if not char.alive or not config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person") or not config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person", "KeyBind") then return end
+				if config:GetValue("Main", "Visuals", "Camera Visuals", "First Person Third") and BBOT.l3p_player and BBOT.l3p_player.controller then
 					local head = BBOT.l3p_player.controller.gethead()
 					if not head then return end
 					local p, y, rr = camera.CFrame:ToOrientation()
@@ -11284,7 +11594,7 @@ if BBOT.game == "pf" then
 				local dist = Vector3.new(
 					config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person X Offset"),
 					config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Y Offset"),
-					config:GetValue("Main", "Visuals", "Local", "Third Person Distance")
+					config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Distance")
 				)/10
 				local params = RaycastParams.new()
 				params.FilterType = Enum.RaycastFilterType.Blacklist
@@ -11376,10 +11686,7 @@ if BBOT.game == "pf" then
 
 		function misc:CanMoveTo(position)
 			local current_position = char.rootpart.Position
-			local occupied = workspace:FindPartOnRayWithWhitelist(
-				Ray.new(current_position, position-current_position),
-				BBOT.aux.roundsystem.raycastwhitelist
-			)
+			local occupied = BBOT.aimbot:raycastbullet(current_position, position-current_position)
 			if occupied then return false else return true end
 		end
 
@@ -11387,14 +11694,7 @@ if BBOT.game == "pf" then
 		function misc:MoveTo(position, move_char)
 			if not char.alive then return end
 			local current_position = char.rootpart.Position
-
-			local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-				Ray.new(current_position, position-current_position),
-				BBOT.aux.roundsystem.raycastwhitelist
-			) 
-			if part then
-				position = position - (position - current_position).Unit
-			end
+			if not misc:CanMoveTo(position) then return end
 
 			local diff = (position-current_position)
 
@@ -11456,8 +11756,12 @@ if BBOT.game == "pf" then
 			end
 		end
 
-		hook:Add("RageBot.DamagePredictionKilled", "BBOT:AntiGrenadeTP", function()
+        local last_predicted = nil
+		hook:Add("RageBot.DamagePredictionKilled", "BBOT:AntiGrenadeTP", function(Entity)
+            if last_predicted == Entity then return end
 			misc:AntiGrenadeStep()
+            last_predicted = Entity
+            timer:Simple(0, function() last_predicted = nil end)
 		end)
 
 		hook:Add("PreBigAward", "BBOT:AntiGrenadeTP", function()
@@ -11636,12 +11940,16 @@ if BBOT.game == "pf" then
 		function l3p:Init() -- Come on PF this is pathetic
 			local localplayer_check = debug.getupvalue(replication._updater, 1)
 			debug.setupvalue(replication._updater, 1, "_")
-			self.controller = replication.getupdater(localplayer)
+			self.controller = replication._updater(localplayer)
 			l3p.player = localplayer
 			debug.setupvalue(replication._updater, 1, localplayer_check)
+
+			if config:GetValue("Main", "Visuals", "Local ESP", "Enabled") then
+				BBOT.esp:CreatePlayer(self.player, self.controller)
+			end
 		end
 
-		hook:Add("Initialize", "BBOT:L3P.CreateUpdater", function()
+		hook:Add("PostInitialize", "BBOT:L3P.CreateUpdater", function()
 			l3p:Init()
 		end)
 
@@ -11654,11 +11962,6 @@ if BBOT.game == "pf" then
 					self.networking["equip"](l3p.controller, -1)
 				end
 				self.controller.spawn(char.rootpart.Position)
-				self.controller.receivedFrameTime = tick();
-				self.controller.receivedPosition = char.rootpart.Position;
-				self.controller.receivedVelocity = Vector3.new();
-				self.controller.receivedDataFlag = true;
-				self.controller.setlookangles(Vector2.new(camera.angles.x, camera.angles.y));
 			elseif self.controller.alive then
 				local objects = self.controller.died()
 				if objects then
@@ -11683,7 +11986,6 @@ if BBOT.game == "pf" then
 		end
 
 		hook:Add("Unload", "BBOT:L3P.Remove", function()
-			replication.player_registry[l3p.player] = nil
 			if l3p.controller then l3p.controller.died() end
 			l3p.controller = nil
 			l3p.player = nil
@@ -11703,15 +12005,11 @@ if BBOT.game == "pf" then
 			["equip"] = function(controller, slot)
 				controller._weapon_slot = slot
 				local gun = gamelogic.currentgun.name
-				if slot == -1 then
-					gun = "AK12"
-					controller._weapon_slot = 1
-				end
 				local data = game:service("ReplicatedStorage").GunModules[gun]
 				local external = game:service("ReplicatedStorage").ExternalModels[gun]
 				if not data or not external then return end
 				local gundata, gunmodel = require(data), external:Clone()
-				if slot ~= 3 then
+				if gundata.type ~= "KNIFE" then
 					controller.equip(gundata, gunmodel)
 				else
 					controller.equipknife(gundata, gunmodel)
@@ -11738,7 +12036,7 @@ if BBOT.game == "pf" then
 				controller.receivedDataFlag = true;
 				controller.setlookangles(ang);
 
-				if config:GetValue("Main", "Visuals", "Local", "Third Person Absolute") then
+				if config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Absolute") then
 					local u327 = debug.getupvalue(controller.getpos, 2)
 					local u330 = debug.getupvalue(controller.step, 5)
 					u327.t = pos
@@ -11752,12 +12050,17 @@ if BBOT.game == "pf" then
 					controller.step(3, true)
 				end
 
-				if config:GetValue("Main", "Visuals", "Local", "First Person Third") then
+				if config:GetValue("Main", "Visuals", "Camera Visuals", "First Person Third") then
 					local tick = debug.getupvalue(BBOT.aux.camera.step, 1)
 					BBOT.aux.camera.step(tick)
 				end
 			end
 		}
+
+		hook:Add("RenderStep.Character", "BBOT:L3P.Render", function(delta)
+			if not l3p.controller or not l3p.controller.alive then return end
+			l3p.controller.step(3, true)
+		end)
 
 		hook:Add("SuppressNetworkSend", "BBOT:L3P.StopReplication", function(netname, ...)
 			local args = {...}
@@ -11783,19 +12086,27 @@ if BBOT.game == "pf" then
 		end)
 
 		hook:Add("OnKeyBindChanged", "BBOT:L3P.Enable", function(steps, old, new)
-			if not config:IsPathwayEqual(steps, "Main", "Visuals", "Local", "Third Person", "KeyBind") then return end
-			if config:GetValue("Main", "Visuals", "Local", "Third Person") then l3p:Enabled(new) end
+			if not config:IsPathwayEqual(steps, "Main", "Visuals", "Camera Visuals", "Third Person", "KeyBind") then return end
+			if config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person") then l3p:Enabled(new) end
 		end)
 
 		hook:Add("OnConfigChanged", "BBOT:L3P.Enable", function(steps, old, new)
-			if not config:IsPathwayEqual(steps, "Main", "Visuals", "Local", "Third Person", true) then return end
-			if new then
-				timer:Async(function()
-					l3p:Enabled(new and config:GetValue("Main", "Visuals", "Local", "Third Person", "KeyBind"))
-				end)
-			else
-				l3p:Enabled(false)
-			end
+            if config:IsPathwayEqual(steps, "Main", "Visuals", "Local ESP", "Enabled") then
+				if not l3p.controller then return end
+				if new then
+					BBOT.esp:CreatePlayer(l3p.player, l3p.controller)
+				else
+					BBOT.esp:Remove("PLAYER_"..l3p.player.UserId)
+				end
+			elseif config:IsPathwayEqual(steps, "Main", "Visuals", "Camera Visuals", "Third Person", true) then
+                if new then
+                    timer:Async(function()
+                        l3p:Enabled(new and config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person", "KeyBind"))
+                    end)
+                else
+                    l3p:Enabled(false)
+                end
+            end
 		end)
 	end
 
@@ -11837,13 +12148,13 @@ if BBOT.game == "pf" then
 
 			local workspace = BBOT.service:GetService("Workspace")
 			function aimbot:fullcast(p7, p8, p9, p10, p11)
-				local v3 = nil;
+				local v3=nil;
 				local v4 = RaycastParams.new();
 				v4.FilterDescendantsInstances = p9;
 				v4.IgnoreWater = true;
 				local calls = 0;
 				while calls < 2000 do
-					v3 = workspace:Raycast(p7, p8, v4);
+					v3, d, e = workspace:Raycast(p7, p8, v4);
 					if not p10 then
 						break;
 					end;
@@ -12429,11 +12740,14 @@ if BBOT.game == "pf" then
 					if not aimbot.predictedDamageDealt[Entity] then
 						aimbot.predictedDamageDealt[Entity] = 0
 					end
-					aimbot.predictedDamageDealt[Entity] += damageDealt
-					if aimbot.predictedDamageDealt[Entity] >= aimbot:GetRageConfig("Settings", "Damage Prediction Limit") then
-						hook:Call("RageBot.DamagePredictionKilled", Entity)
-					end
-					aimbot.predictedDamageDealtRemovals[Entity] = tick() + extras:getLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
+                    local limit = aimbot:GetRageConfig("Settings", "Damage Prediction Limit")
+					if aimbot.predictedDamageDealt[Entity] < limit then
+                        aimbot.predictedDamageDealt[Entity] += damageDealt
+                        if aimbot.predictedDamageDealt[Entity] >= limit then
+                            hook:Call("RageBot.DamagePredictionKilled", Entity)
+                        end
+					    aimbot.predictedDamageDealtRemovals[Entity] = tick() + extras:getLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
+                    end
 				end
 				syn.set_thread_identity(curthread)
 			elseif netname == "newbullets" and gamelogic.currentgun and gamelogic.currentgun.data then
@@ -13577,7 +13891,7 @@ if BBOT.game == "pf" then
 				esp.player_meta = {__index = player_meta}
 
 				function player_meta:IsValid()
-					return self.player:IsDescendantOf(players) and player_registry[self.player]
+					return self.player:IsDescendantOf(players)
 				end
 
 				function player_meta:OnRemove()
@@ -13791,7 +14105,9 @@ if BBOT.game == "pf" then
 				end
 
 				function player_meta:GetConfig(...)
-					if self.player and self.player.Team ~= localplayer.team then
+					if self.player == localplayer then
+						return config:GetValue("Main", "Visuals", "Local ESP", ...)
+					elseif self.player and self.player.Team ~= localplayer.team then
 						return config:GetValue("Main", "Visuals", "Enemy ESP", ...)
 					else
 						return config:GetValue("Main", "Visuals", "Team ESP", ...)
@@ -14045,7 +14361,6 @@ if BBOT.game == "pf" then
 
 			local localplayer = service:GetService("LocalPlayer")
 			function esp:CreatePlayer(player, controller)
-				if player == localplayer then return end
 				local uid = "PLAYER_" .. player.UserId
 				local esp_controller = setmetatable({
 					draw_cache = {},
@@ -14873,7 +15188,7 @@ if BBOT.game == "pf" then
 				if partlen < framelen then
 					local creates = framelen - partlen
 					for i=1, creates do
-						local darkline = draw:Line(0, 0, 0, 0, 4, dark, 1, true)
+						local darkline = draw:Line(2, 0, 0, 0, 0, dark, 1, true)
 						darkline.ZIndex = 0
 						local line = draw:Line(0, 0, 0, 0, 0, col, 1, true)
 						line.ZIndex = 1
