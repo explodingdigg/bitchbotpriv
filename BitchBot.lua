@@ -9330,7 +9330,7 @@ do
 													
 													if not BBOT.weapons.skindatabase then return container end
 
-                                                    local c = 0
+                                                    --[[local c = 0
 													for name, skinId in next, BBOT.weapons.skindatabase do
 														c=c+1
                                                         BBOT.timer:Simple(0.001*c,function()
@@ -9338,7 +9338,7 @@ do
                                                             local line = skinlist:AddLine(a, b, c)
                                                             line.searcher = a .. " " .. b .. " " .. c
                                                         end)
-													end
+													end]]
 
 													local function Refresh_List()
 														if not BBOT.weapons.skindatabase then return end
@@ -10796,25 +10796,27 @@ if BBOT.game == "pf" then
                 end)
 
                 local height = 2.5+1.5
+                local vheight = Vector3.new(0,height,0)
 				local path = pathfinder:CreatePath({AgentRadius = 0.75, AgentHeight = height, AgentCanJump = true, WaypointSpacing = 5})
                 local root_position = char.rootpart.Position
 				local points
+                local down = Vector3.new(0,-500,0)
 				for i=1, #players do
                     local player = players[i]
                     if not char.alive then return end
-                    path:ComputeAsync(root_position, player[3])
+                    local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(player[3], down), roundsystem.raycastwhitelist)
+                    path:ComputeAsync(root_position, part and (position + vheight) or player[3])
                     if path.Status ~= Enum.PathStatus.Success then continue end
                     points = path:GetWaypoints()
                     break
 				end
 			
-				notification:Create(points and "Teleporting with " .. #points .. " Points" or "Teleportation path not found")
+				notification:Create(points and "Teleporting..." or "Teleportation path not found")
 
 				if points then
 					for i, point in pairs(points) do
                         if not char.alive then return end
-						local pointpos = point.Position + Vector3.new(0,height+.25,0)
-						misc:MoveTo(pointpos, true) -- to move the character
+						misc:MoveTo(point.Position + Vector3.new(0,height+.25,0), true) -- to move the character
 					end
 				end
 			end
@@ -11623,6 +11625,7 @@ if BBOT.game == "pf" then
 		local hook = BBOT.hook
 		local config = BBOT.config
 		local timer = BBOT.timer
+        local camera = BBOT.aux.camera
 		local char = BBOT.aux.char
 		local replication = BBOT.aux.replication
 		local gamelogic = BBOT.aux.gamelogic
@@ -11644,14 +11647,19 @@ if BBOT.game == "pf" then
 
 		function l3p:SetAlive(alive)
 			if not self.controller then return end
-			if alive and self.enabled then
+			if not self.controller.alive and alive and self.enabled then
 				if self.controller._weapon_slot then
 					self.networking["equip"](l3p.controller, l3p.controller._weapon_slot)
 				else
 					self.networking["equip"](l3p.controller, -1)
 				end
-				self.controller.spawn()
-			else
+				self.controller.spawn(char.rootpart.Position)
+				self.controller.receivedFrameTime = tick();
+				self.controller.receivedPosition = char.rootpart.Position;
+				self.controller.receivedVelocity = Vector3.new();
+				self.controller.receivedDataFlag = true;
+				self.controller.setlookangles(Vector2.new(camera.angles.x, camera.angles.y));
+			elseif self.controller.alive then
 				local objects = self.controller.died()
 				if objects then
 					objects:Destroy()
