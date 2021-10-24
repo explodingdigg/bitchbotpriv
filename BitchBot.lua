@@ -9524,7 +9524,6 @@ if BBOT.game == "pf" then
 		local aux_functions = {
 			["bulletcheck"] = "raycast",
 			["trajectory"] = "physics",
-			["getupdater"] = "replication",
 			["rankcalculator"] = "playerdata",
 
 			-- Not sure where this is supposed to go but ok...
@@ -9730,6 +9729,7 @@ if BBOT.game == "pf" then
 						v.updater._upd_spawn = nil
 					end
 				end
+                aux.replication.player_registry[localplayer] = nil
 				rawset(aux.replication, "player_registry", nil)
 				rawset(aux.replication, "_updater", nil)
 			end)
@@ -14027,7 +14027,7 @@ if BBOT.game == "pf" then
 
 					for i=1, #self.draw_cache do
 						local v = self.draw_cache[i][1]
-						if kill then
+						if kill and draw:IsValid(v) then
 							v:Remove()
 						elseif forced then
 							v.Visible = false
