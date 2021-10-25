@@ -15,10 +15,6 @@
 	Bad Business
 ]]
 
-if not(game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459) then
-	return
-end
-
 local _BBOT = _G.BBOT
 local username = (BBOT and BBOT.username or nil)
 if BBOT and BBOT.__init then
@@ -1247,12 +1243,11 @@ do
 	function timer:Async(f)
 		self:Simple(0,f)
 	end
-	
-	local runservice = BBOT.service:GetService("RunService")
-	loop:Run("TIMER", function()
-		local c, ticks, timers = 0, tick(), timer.registry
 
-		timer.incalls = true
+	function timer:Step()
+		local c, ticks, timers = 0, tick(), self.registry
+
+		self.incalls = true
 		for i=1, #timers do
 			local v = timers[i-c]
 			if v.paused then
@@ -1275,23 +1270,28 @@ do
 				end
 			end
 		end
-		timer.incalls = false
-
-		for i=1, #timer.ToRemove do
-			local t, index = timer:Get(timer.ToRemove[i])
+		self.incalls = false
+		
+		for i=1, #self.ToRemove do
+			local t, index = self:Get(self.ToRemove[i])
 			if t then
-				table.remove(timer.registry, index)
+				table.remove(self.registry, index)
 				log(LOG_DEBUG, "Removed timer '" .. t.identifier .. "'")
 			end
 		end
-
-		timer.ToRemove = {}
-
-		for i=1, #timer.ToCreate do
-			timer:Create(unpack(timer.ToCreate[i]))
+		
+		self.ToRemove = {}
+		
+		for i=1, #self.ToCreate do
+			self:Create(unpack(self.ToCreate[i]))
 		end
-
-		timer.ToCreate = {}
+		
+		self.ToCreate = {}
+	end
+	
+	local runservice = BBOT.service:GetService("RunService")
+	loop:Run("BBOT:Timer.Step", function()
+		timer:Step()
 	end, runservice.RenderStepped)
 end
 
@@ -1506,6 +1506,166 @@ do
 		object.Color = self:VerifyColor(color)
 		return object
 	end
+end
+
+-- Draw Pather
+do 
+	local camera = BBOT.service:GetService("CurrentCamera")
+	local math = BBOT.math
+	local table = BBOT.table
+	local hook = BBOT.hook
+	local draw = BBOT.draw
+	local color = BBOT.color 
+	local drawpather = {
+		registry = {},
+	}
+	BBOT.drawpather = drawpather
+
+	function drawpather:Simple(pathway, col, time)
+		local length = #pathway
+		local render_storage = {}
+		local dark = color.darkness(col, .25)
+		for i=1, length do
+			local darkline = draw:Line(4, 0, 0, 0, 0, dark, 1, true)
+			darkline.ZIndex = 0
+			local line = draw:Line(2, 0, 0, 0, 0, col, 1, true)
+			line.ZIndex = 1
+			render_storage[#render_storage+1] = {darkline, line}
+		end
+		self.registry[#self.registry+1] = {
+			objects = render_storage,
+			frames = pathway,
+			t0 = tick(),
+			duration = time,
+		}
+	end
+
+	function drawpather:SimpleWithEnd(pathway, col, time)
+		local length = #pathway
+		local render_storage = {}
+		local dark = color.darkness(col, .25)
+		for i=1, length do
+			local darkline = draw:Line(4, 0, 0, 0, 0, dark, 1, true)
+			darkline.ZIndex = 0
+			local line = draw:Line(2, 0, 0, 0, 0, col, 1, true)
+			line.ZIndex = 1
+			if i == length then
+				local circledark = draw:Circle(x, y, 8, 1, 20, dark, 1, true)
+				circledark.ZIndex = 2
+				local circle = draw:Circle(x, y, 6, 1, 20, col, 1, true)
+				circle.ZIndex = 3
+				render_storage[#render_storage+1] = {darkline, line, circle, circledark}
+			else
+				render_storage[#render_storage+1] = {darkline, line}
+			end
+		end
+		self.registry[#self.registry+1] = {
+			objects = render_storage,
+			frames = pathway,
+			t0 = tick(),
+			duration = time or 1,
+		}
+	end
+
+	function drawpather:ManagedEnd(idx, pathway, col, time)
+		local length = #pathway
+		local render_storage = {}
+		local dark = color.darkness(col, .25)
+		for i=1, length do
+			local darkline = draw:Line(4, 0, 0, 0, 0, dark, 1, true)
+			darkline.ZIndex = 0
+			local line = draw:Line(2, 0, 0, 0, 0, col, 1, true)
+			line.ZIndex = 1
+			if i == length then
+				local circledark = draw:Circle(x, y, 8, 1, 20, dark, 1, true)
+				circledark.ZIndex = 2
+				local circle = draw:Circle(x, y, 6, 1, 20, col, 1, true)
+				circle.ZIndex = 3
+				render_storage[#render_storage+1] = {darkline, line, circle, circledark}
+			else
+				render_storage[#render_storage+1] = {darkline, line}
+			end
+		end
+		self.registry[#self.registry+1] = {
+			objects = render_storage,
+			frames = pathway,
+			t0 = tick(),
+			duration = time or 1,
+		}
+	end
+
+	function drawpather:unrender(t)
+		for i=1, #t do
+			local objects = t[i]
+			for k=1, #objects do
+				local v = objects[k]
+				if draw:IsValid(v) then
+					v:Remove()
+				end
+			end
+		end
+	end
+
+	hook:Add("RenderStep.First", "BBOT:DrawPather.render", function()
+		local t = tick()
+		local reg = drawpather.registry
+		local c = 0
+		for i=1, #reg do
+			i=i-c
+			local pather = reg[i]
+			local frames = pather.frames
+			local objects = pather.objects
+			local lastframe = frames[1]
+			if not lastframe or not frames[2] then
+				table.remove(reg, i);c=c+1;
+				drawpather:unrender(objects)
+				continue
+			end
+			local deltat = math.timefraction(pather.t0, pather.t0 + pather.duration, t)
+			if deltat > 1 then
+				table.remove(reg, i);c=c+1;
+				drawpather:unrender(objects)
+				continue
+			end
+			local transparency = math.remap(deltat,0,1,1,0)
+
+			-- 3D
+			for k=2, #frames do
+				local frame = frames[k]
+				local object = objects[k]
+				local point1, onscreen1 = camera:WorldToViewportPoint(lastframe)
+				local point2, onscreen2 = camera:WorldToViewportPoint(frame)
+				local line, line_outline, circle, circle_outline = object[1], object[2], object[3], object[4]
+				if not onscreen1 and not onscreen2 then
+					line.Visible = false
+					line_outline.Visible = false
+					if circle then 
+						circle.Visible = false
+						circle_outline.Visible = false
+					end
+					lastframe = frame
+					continue
+				end
+				line.Transparency = transparency
+				line_outline.Transparency = transparency
+				line.Visible = true
+				line_outline.Visible = true
+				line.From = Vector2.new(point1.X, point1.Y)
+				line.To = Vector2.new(point2.X, point2.Y)
+				line_outline.From = Vector2.new(point1.X, point1.Y)
+				line_outline.To = Vector2.new(point2.X, point2.Y)
+				if circle then
+					circle.Visible = true
+					circle_outline.Visible = true
+					circle.Position = Vector2.new(point2.X, point2.Y)
+					circle_outline.Position = Vector2.new(point2.X, point2.Y)
+					circle.Transparency = transparency
+					circle_outline.Transparency = transparency
+				end
+				lastframe = frame
+			end
+		end
+	end)
 end
 
 -- Configs
@@ -1913,13 +2073,14 @@ do
 		local c=0
 		for i=1, #list do
 			local v = list[i-c]
-			local file = v:match("^.+/(.+)$"):match("(.+)%..+")
-			if string.find(file, "\\") then
-				file = string.Explode("\\", file)[2]
-			end
 			if v:match("^.+(%..+)$") ~= ".bb" then
 				table.remove(list, i-c)
 				c=c+1
+				continue
+			end
+			local file = v:match("^.+/(.+)$"):match("(.+)%..+")
+			if string.find(file, "\\") then
+				file = string.Explode("\\", file)[2]
 			end
 			list[i-c]=file
 		end
@@ -2029,11 +2190,11 @@ do
 	function config:SaveBase()
 		local reg = table.deepcopy( self.registry["Main"]["Settings"]["Configs"] )
 		reg = self:ConfigToSaveable(reg)
-		writefile(self.storage_main .. "/configs" .. self.storage_extension, httpservice:JSONEncode(reg))
+		writefile(self.storage_pathway .. "/configs.internal", httpservice:JSONEncode(reg))
 	end
 
 	function config:OpenBase()
-		local path = self.storage_main .. "/configs" .. self.storage_extension
+		local path = self.storage_pathway .. "/configs.internal"
 		if isfile(path) then
 			local old = table.deepcopy(self.registry["Main"]["Settings"]["Configs"])
 			local newconfig = httpservice:JSONDecode(readfile(path))
@@ -2277,20 +2438,7 @@ do
 			end
 
 			if last_trans ~= self._transparency or last_zind ~= self.zindex or last_vis ~= self._visible or wasenabled ~= self._enabled then
-				local cache = self.objects
-				for i=1, #cache do
-					local v = cache[i]
-					if v[1] and draw:IsValid(v[1]) then
-						local drawing = v[1]
-						drawing.Transparency = v[2] * self._transparency
-						drawing.ZIndex = v[3] + self._zindex
-						if not v[4] or not self._enabled then
-							drawing.Visible = false
-						elseif self._visible then
-							drawing.Visible = self._visible
-						end
-					end
-				end
+				self:PerformDrawings()
 			end
 
 			if self._enabled or wasenabled then
@@ -2305,6 +2453,23 @@ do
 
 			self._absolutepos = self.absolutepos
 			self._absolutesize = self.absolutesize
+		end
+
+		function base:PerformDrawings()
+			local cache = self.objects
+			for i=1, #cache do
+				local v = cache[i]
+				if v[1] and draw:IsValid(v[1]) then
+					local drawing = v[1]
+					drawing.Transparency = v[2] * self._transparency
+					drawing.ZIndex = v[3] + self._zindex
+					if not v[4] or not self._enabled then
+						drawing.Visible = false
+					elseif self._visible then
+						drawing.Visible = self._visible
+					end
+				end
+			end
 		end
 
 		function base:SetParent(object)
@@ -2359,14 +2524,15 @@ do
 		function base:PostRemove() end
 		function base:PreDestroy() end
 		function base:PostDestroy() end
-		function base:Cache(object)
+		function base:Cache(object, transparency, zindex, visible)
 			local objects = self.objects
+			local exists = false
 			for i=1, #objects do
 				local v = objects[i]
 				if v[1] == object then
-					v[2] = object.Transparency
-					v[3] = object.ZIndex
-					v[4] = object.Visible
+					v[2] = transparency or object.Transparency
+					v[3] = zindex or object.ZIndex
+					v[4] = visible or object.Visible
 					return object
 				end
 			end
@@ -2811,7 +2977,7 @@ do
 	BBOT.icons = icons
 	local hook = BBOT.hook
 	hook:Add("PreInitialize", "BBOT.Icons:Load", function()
-		if BBOT.game == "pf" then
+		if BBOT.game == "phantom forces" then
 			icons.registry = {
 				-- MENU
 				["PISTOL"] = {"iVBORw0KGgoAAAANSUhEUgAAADQAAAAeCAYAAABjTz27AAACXUlEQVR4nNXYS6hNURzH8c9xLzeSR6SQgVIXA4k8SkhKSlHKAKUMjDBRZkZGSibKwISJUkqMiEylJMr7NZC886Z78/wbrHvrdJxz7ln77utc39qd3Vl7/fb/t57/tSsRYQAm4Dm24mzV/90Y26DOD9wcSLhEZuAovnYO8GAHdmEMTuEwRmEpFjWp18jQKxzHJzzGtD7tXHrwArMwHvswH58rTXqoE6exvsALW6EXXRhRoO4vfMfo2oJmho5he4GXtZVGhibjtWKt11aqA96A5X33q/2HZkjzpAM7cRCBHdjUzqAGwcdKRGyUJn8/gd+S0f+NA/1zaCwWYz+WtTWk4nzDzE5swx7MQ+UfB9BTgs5XvMFFvKxExBlpp+2nC3MMbsidwzOMxBpMryp7jL04L5kql4iod3VHxPXI43dE9EbE/YjoqNKaFBF3+555GBFTGryzlKvR0vwAm/Ezo20uSF1/UtrJ+3knDWl9v28y2zyLZnvNA1zL0LojDdP3dcqu4ItkekgZaPP8kqG1AJexsE7ZT6mnfmToFaKZoRHSytcqq/BUyp6n1pRNlI4hQ06z5HQ+bmTqPZGGXu1yPBsfsDJTL5tm56HcTHs3jkiZRtto1EPduCXtI61wDuvKCmowNJpDh7RuBi6VEEsp1DM0V35r3y4hllKoZ2hNAZ1bgw2kLOoZWp2p8Vb6+DEsqDXUiRWZGsOmd/jb0BKMy9QYNvOHvw3NLqAxrA0VOeA9LyOQsqg19KiAxpIyAimLWkNX5af4W/zbo3tTag31Yq20F51oof496Vt1W/O3av4ARjQk0oC+k4cAAAAASUVORK5CYII=", 52, 30},
@@ -3070,6 +3236,16 @@ do
 
 	local menu = {}
 	BBOT.menu = menu
+
+	local v1, v2, v3 = Vector2.new(1,1), Vector2.new(2,2), Vector2.new(4,4)
+	local function default_panel_borders(self, pos, size)
+		self.background_border.Position = pos - v2
+		self.background_outline.Position = pos - v1
+		self.background.Position = pos
+		self.background_border.Size = size + v3
+		self.background_outline.Size = size + v2
+		self.background.Size = size
+	end
 
 	do
 		local GUI = {}
@@ -3332,12 +3508,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 			self.sizablearearight.Position = pos + size - Vector2.new(2, 6)
 			self.sizableareabottom.Position = pos + size - Vector2.new(6, 2)
 		end
@@ -3695,12 +3866,7 @@ do
 			self.text.Position = Vector2.new(pos.X+3,pos.Y - (h/2) + (size.Y/2))
 			self.cursor.Size = Vector2.new(1,h)
 			self.cursor_outline.Size = Vector2.new(1,h)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 			self:ProcessClipping()
 		end
 
@@ -3932,12 +4098,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 		end
 
 		function GUI:SetOptions(options)
@@ -4048,12 +4209,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 		end
 
 		function GUI:OnValueChanged(i)
@@ -4109,12 +4265,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 		end
 
 		function GUI:SetOptions(options)
@@ -4222,12 +4373,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 		end
 
 		function GUI:OnValueChanged() end
@@ -4611,12 +4757,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 		end
 
 		function GUI:SetText(txt)
@@ -4804,7 +4945,7 @@ do
 		end)
 
 		hook:Add("InputBegan", "BBOT:Menu.KeyBinds", function(input)
-			--if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
+			--if not config:GetValue("Main", "Visuals", "Extra", "Enabled") then return end
 			if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetAbsoluteEnabled() then
 				return
 			end
@@ -4844,7 +4985,7 @@ do
 		end)
 
 		hook:Add("InputEnded", "BBOT:Menu.KeyBinds", function(input)
-			--if not config:GetValue("Main", "Visuals", "Keybinds", "Enabled") then return end
+			--if not config:GetValue("Main", "Visuals", "Extra", "Enabled") then return end
 			if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetAbsoluteEnabled() then
 				return
 			end
@@ -4873,7 +5014,7 @@ do
 
 		--[[local ignorenotify = false
 		hook:Add("OnConfigChanged", "BBOT:Menu.KeyBinds.Reset", function(step, old, new)
-			if config:IsPathwayEqual(step, "Main", "Visuals", "Keybinds", "Enabled") then
+			if config:IsPathwayEqual(step, "Main", "Visuals", "Extra", "Enabled") then
 				if new == false then
 					local guis = gui.registry
 					for i=1, #guis do
@@ -4909,7 +5050,7 @@ do
 		hook:Add("OnKeyBindChanged", "BBOT:Notify", function(steps, old, new, toggletype)
 			if ignorenotify then return end
 			
-			if config:GetValue("Main", "Visuals", "Keybinds", "Log Keybinds") and toggletype ~= 4 then
+			if config:GetValue("Main", "Visuals", "Extra", "Log Keybinds") and toggletype ~= 4 then
 				local name = steps[#steps]
 				if name == "KeyBind" then
 					name = steps[#steps-1]
@@ -4944,12 +5085,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 			self.gradient:SetSize(self.percentage, 0, 0, 8)
 		end
 
@@ -5086,12 +5222,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 		end
 
 		function GUI:CalculateValue(X)
@@ -5141,28 +5272,310 @@ do
 			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
 			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
+			
+			--(imagedata, x, y, w, h, transparency, visible)
+			self.color_fade = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.new(0,0,0)))
+			self.white_black_fade = self:Cache(draw:Image(BBOT.menu.images[1], 0, 0, 0, 0, 1, true))
+			self.cursor_outline = self:Cache(draw:BoxOutline(0, 0, 6, 6, 0, Color3.new(0,0,0)))
+			self.cursor = self:Cache(draw:BoxOutline(0, 0, 4, 4, 0, Color3.new(1,1,1)))
+			self.cursor_position = Vector2.new(2,2)
+			self.mouseinputs = true
+
+			--(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+			--[[
+				ColorpickerRect(false, 12, 25, 156, 156, { 0, 0, 0, 255 }, cp.drawings)
+				ColorpickerImage(false, BBOT_IMAGES[1], 12, 25, 156, 156, 1, cp.drawings)
+				ColorpickerImage(false, BBOT_IMAGES[2], 12, 191, 159, 10, 1, cp.drawings)
+			]]
+		end
+
+		function GUI:SetColor(color, transparency)
+			local h, s, v = Color3.toHSV(color)
+			self.color_fade.Color = Color3.fromHSV(h, 1, 1)
+			self.h = h
+			self.s = s
+			self.v = v
+			self.t = transparency
+			self.cursor_position = Vector2.new(self.s, 1-self.v) * self.absolutesize
+			self:MoveCursor()
+		end
+
+		function GUI:MoveCursor()
+			self.cursor.Position = self.absolutepos + self.cursor_position - Vector2.new(2, 2)
+			self.cursor_outline.Position = self.cursor.Position - Vector2.new(1, 1)
+		end
+
+		function GUI:PerformLayout(pos, size)
+			default_panel_borders(self, pos, size)
+			self.color_fade.Position = pos
+			self.color_fade.Size = size
+			self.white_black_fade.Position = pos
+			self.white_black_fade.Size = size
+			self:MoveCursor()
+		end
+
+		function GUI:CalculateValue(X, Y)
+			local APX = self.absolutepos.X
+			local ASX = self.absolutesize.X
+			local APY = self.absolutepos.Y
+			local ASY = self.absolutesize.Y
+			local newX = math.clamp(X, APX, APX + ASX )
+			local newY = math.clamp(Y, APY, APY + ASY )
+			local new_position = Vector2.new(newX-APX, newY-APY)
+			self.cursor_position = new_position
+			self:MoveCursor()
+
+			-- calculate new color
+			self.s = math.clamp(new_position.X/self.absolutesize.X, 0, 1)
+			self.v = math.clamp(1-(new_position.Y/self.absolutesize.Y), 0, 1)
+
+			self:OnValueChanged(Color3.fromHSV(self.h, self.s, self.v), self.t)
+		end
+
+		local mouse = BBOT.service:GetService("Mouse")
+		function GUI:Step()
+			if self.down then
+				self:CalculateValue(mouse.X, mouse.Y+36)
+			end
+		end
+
+		function GUI:InputBegan(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+				self.down = true
+			end
+		end
+
+		function GUI:InputEnded(input)
+			if self.down and input.UserInputType == Enum.UserInputType.MouseButton1 then
+				self.down = false
+			end
+		end
+
+		function GUI:OnValueChanged(color, transparency)
+			
+		end
+
+		gui:Register(GUI, "ColorPallet")
+
+		local GUI = {}
+
+		function GUI:Init()
+			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
+			
+			--(imagedata, x, y, w, h, transparency, visible)
+			self.color_fade = self:Cache(draw:Image(BBOT.menu.images[3], 0, 0, 0, 0, 1, true))
+			self.cursor_outline = self:Cache(draw:BoxOutline(0, 0, 6, 6, 0, Color3.new(0,0,0)))
+			self.cursor = self:Cache(draw:BoxOutline(0, 0, 4, 4, 0, Color3.new(1,1,1)))
+			self.cursor_position = Vector2.new(2,2)
+			self.mouseinputs = true
+
+			--(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+			--[[
+				ColorpickerRect(false, 12, 25, 156, 156, { 0, 0, 0, 255 }, cp.drawings)
+				ColorpickerImage(false, BBOT_IMAGES[1], 12, 25, 156, 156, 1, cp.drawings)
+				ColorpickerImage(false, BBOT_IMAGES[2], 12, 191, 159, 10, 1, cp.drawings)
+			]]
+		end
+
+		function GUI:SetColor(color, transparency)
+			local h, s, v = Color3.toHSV(color)
+			self.h = h
+			self.s = s
+			self.v = v
+			self.t = transparency
+			self.cursor_position = Vector2.new(0, 1-self.h) * self.absolutesize
+			self:MoveCursor()
+		end
+
+		function GUI:MoveCursor()
+			self.cursor.Position = self.absolutepos + self.cursor_position - Vector2.new(2, 2)
+			self.cursor_outline.Position = self.cursor.Position - Vector2.new(1, 1)
+			self.cursor.Size = Vector2.new(self.absolutesize.X+4, 4)
+			self.cursor_outline.Size = Vector2.new(self.absolutesize.X+6, 6)
+		end
+
+		function GUI:PerformLayout(pos, size)
+			default_panel_borders(self, pos, size)
+			self.color_fade.Position = pos
+			self.color_fade.Size = size
+			self:MoveCursor()
+		end
+
+		function GUI:CalculateValue(X, Y)
+			local APY = self.absolutepos.Y
+			local ASY = self.absolutesize.Y
+			local newY = math.clamp(Y, APY, APY + ASY )
+			self.cursor_position = Vector2.new(0, newY-APY)
+			self:MoveCursor()
+
+			-- calculate new color
+			self.h = math.clamp(1-(self.cursor_position.Y/self.absolutesize.Y), 0, 1)
+			self:OnValueChanged(Color3.fromHSV(self.h, self.s, self.v), self.t)
+		end
+
+		local mouse = BBOT.service:GetService("Mouse")
+		function GUI:Step()
+			if self.down then
+				self:CalculateValue(mouse.X, mouse.Y+36)
+			end
+		end
+
+		function GUI:InputBegan(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+				self.down = true
+			end
+		end
+
+		function GUI:InputEnded(input)
+			if self.down and input.UserInputType == Enum.UserInputType.MouseButton1 then
+				self.down = false
+			end
+		end
+
+		function GUI:OnValueChanged(color, transparency)
+			
+		end
+
+		gui:Register(GUI, "ColorSlider")
+
+		local GUI = {}
+
+		function GUI:Init()
+			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1)))
+			
+			--(imagedata, x, y, w, h, transparency, visible)
+			self.color_fade = self:Cache(draw:Image(BBOT.menu.images[1], 0, 0, 0, 0, 1, true))
+			self.cursor_outline = self:Cache(draw:BoxOutline(0, 0, 6, 6, 0, Color3.new(0,0,0)))
+			self.cursor = self:Cache(draw:BoxOutline(0, 0, 4, 4, 0, Color3.new(1,1,1)))
+			self.cursor_position = Vector2.new(2,2)
+			self.mouseinputs = true
+
+			--(visible, imagedata, pos_x, pos_y, width, height, transparency, tablename)
+			--[[
+				ColorpickerRect(false, 12, 25, 156, 156, { 0, 0, 0, 255 }, cp.drawings)
+				ColorpickerImage(false, BBOT_IMAGES[1], 12, 25, 156, 156, 1, cp.drawings)
+				ColorpickerImage(false, BBOT_IMAGES[2], 12, 191, 159, 10, 1, cp.drawings)
+			]]
+		end
+
+		function GUI:SetColor(color, transparency)
+			local h, s, v = Color3.toHSV(color)
+			self.h = h
+			self.s = s
+			self.v = v
+			self.t = transparency
+			self.cursor_position = Vector2.new(0, 1-transparency) * self.absolutesize
+			self:MoveCursor()
+		end
+
+		function GUI:MoveCursor()
+			self.cursor.Position = self.absolutepos + self.cursor_position - Vector2.new(2, 2)
+			self.cursor_outline.Position = self.cursor.Position - Vector2.new(1, 1)
+			self.cursor.Size = Vector2.new(self.absolutesize.X+4, 4)
+			self.cursor_outline.Size = Vector2.new(self.absolutesize.X+6, 6)
+		end
+
+		function GUI:PerformLayout(pos, size)
+			default_panel_borders(self, pos, size)
+			self.color_fade.Position = pos
+			self.color_fade.Size = size
+			self:MoveCursor()
+		end
+
+		function GUI:CalculateValue(X, Y)
+			local APY = self.absolutepos.Y
+			local ASY = self.absolutesize.Y
+			local newY = math.clamp(Y, APY, APY + ASY )
+			self.cursor_position = Vector2.new(0, newY-APY)
+			self:MoveCursor()
+
+			-- calculate new color
+			self.t = math.clamp(1-(self.cursor_position.Y/self.absolutesize.Y), 0, 1)
+			self:OnValueChanged(Color3.fromHSV(self.h, self.s, self.v), self.t)
+		end
+
+		local mouse = BBOT.service:GetService("Mouse")
+		function GUI:Step()
+			if self.down then
+				self:CalculateValue(mouse.X, mouse.Y+36)
+			end
+		end
+
+		function GUI:InputBegan(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+				self.down = true
+			end
+		end
+
+		function GUI:InputEnded(input)
+			if self.down and input.UserInputType == Enum.UserInputType.MouseButton1 then
+				self.down = false
+			end
+		end
+
+		function GUI:OnValueChanged(color, transparency)
+			
+		end
+
+		gui:Register(GUI, "AlphaSlider")
+
+		local GUI = {}
+
+		function GUI:Init()
+			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
 			self.gradient = gui:Create("Gradient", self)
-			self.gradient:SetPos(0, 2, 0, 2)
-			self.gradient:SetSize(1, -4, 0, 20)
+			self.gradient:SetPos(0, 0, 0, 0)
+			self.gradient:SetSize(1, 0, 0, 20)
 			self.gradient:Generate()
 
 			local title = gui:Create("Text", self)
 			self.title = title
-			title:SetPos(0, 5, 0, 5)
+			title:SetPos(0, 3, 0, 3)
 			title:SetText("")
+
+			self.pallet = gui:Create("ColorPallet", self)
+			self.pallet:SetPos(0, 6, 0, 21)
+			self.pallet:SetSize(1, -6, 1, -21-6)
+			self.pallet:SetSizeConstraint("Y")
+
+			self.hslider = gui:Create("ColorSlider", self)
+			self.hslider:SetPos(1, -21-16-6, 0, 21)
+			self.hslider:SetSize(0, 15, 1, -21-6)
+
+			self.tslider = gui:Create("AlphaSlider", self)
+			self.tslider:SetPos(1, -21, 0, 21)
+			self.tslider:SetSize(0, 15, 1, -21-6)
+
+			local s = self
+			function self.pallet:OnValueChanged(color, transparency)
+				s.hslider:SetColor(color, transparency)
+				s.tslider:SetColor(color, transparency)
+				s:OnChanged(color, transparency)
+			end
+			function self.hslider:OnValueChanged(color, transparency)
+				s.pallet:SetColor(color, transparency)
+				s.tslider:SetColor(color, transparency)
+				s:OnChanged(color, transparency)
+			end
+			function self.tslider:OnValueChanged(color, transparency)
+				s.pallet:SetColor(color, transparency)
+				s.hslider:SetColor(color, transparency)
+				s:OnChanged(color, transparency)
+			end
 
 			self:SetTransparency(0)
 			gui:TransparencyTo(self, 1, 0.2, 0, 0.25)
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background.Position = pos + Vector2.new(2, 2)
-			self.background.Size = size - Vector2.new(4, 4)
-			self.background_outline.Position = pos
-			self.background_outline.Size = size
-			self.background_border.Position = pos - Vector2.new(1, 1)
-			self.background_border.Size = size + Vector2.new(2, 2)
+			default_panel_borders(self, pos, size)
 		end
 
 		function GUI:Close()
@@ -5175,7 +5588,11 @@ do
 			self.title:SetText(txt)
 		end
 
-		function GUI:SetColor(color, transparency) end
+		function GUI:SetColor(color, transparency)
+			self.pallet:SetColor(color, transparency)
+			self.hslider:SetColor(color, transparency)
+			self.tslider:SetColor(color, transparency)
+		end
 
 		function GUI:OnChanged() end
 
@@ -5193,6 +5610,7 @@ do
 
 		function GUI:Init()
 			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+			self.background_nocolor = self:Cache(draw:Image(BBOT.menu.images[4], 0, 0, 0, 0, 1, true))
 			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 		end
@@ -5202,13 +5620,18 @@ do
 			self.background.Size = size - Vector2.new(4, 4)
 			self.background_outline.Position = pos
 			self.background_outline.Size = size
+			self.background_nocolor.Position = pos
+			self.background_nocolor.Size = size
 			self.background_border.Position = pos - Vector2.new(1, 1)
 			self.background_border.Size = size + Vector2.new(2, 2)
 		end
 
 		function GUI:SetColor(col, transparency)
 			self.background.Color = col
-			self.background_outline.Color = color.darkness(col, .5)
+			self.background_outline.Color = color.darkness(col, .75)
+			self:Cache(self.background, transparency, 0, true)
+			self:Cache(self.background_outline, transparency, 0, true)
+			self:PerformDrawings()
 			self.color_transparency = transparency
 		end
 
@@ -5224,12 +5647,13 @@ do
 			local picker = gui:Create("ColorPickerChange", self)
 			self.picker = picker
 			picker:SetPos(.5,0,.5,0)
-			picker:SetSize(0, 280, 0, 211)
+			picker:SetSize(0, 240, 0, 211)
 			picker:SetColor(self.background.Color, self.color_transparency)
 			picker:SetTitle(self.title)
 			picker:SetZIndex(100)
-			function picker.OnChanged(s, ...)
-				self:OnValueChanged(...)
+			function picker.OnChanged(s, rgb, alpha)
+				self:SetColor(rgb, alpha)
+				self:OnValueChanged({rgb.R*255, rgb.B*255, rgb.G*255, alpha*255})
 			end
 			self.open = true
 		end
@@ -5252,7 +5676,7 @@ do
 		end
 
 		function GUI:SetValue(col)
-			self:SetColor(Color3.fromRGB(unpack(col)), col[4])
+			self:SetColor(Color3.fromRGB(unpack(col)), col[4] and (col[4]/255) or 1)
 		end
 
 		function GUI:OnValueChanged() end
@@ -5271,12 +5695,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 		end
 
 		function GUI:Scrolled()
@@ -5330,12 +5749,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 		end
 
 		function GUI:GetCanvas()
@@ -5468,12 +5882,7 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.background_border.Position = pos - Vector2.new(2,2)
-			self.background_outline.Position = pos - Vector2.new(1,1)
-			self.background.Position = pos
-			self.background_border.Size = size + Vector2.new(4,4)
-			self.background_outline.Size = size + Vector2.new(2,2)
-			self.background.Size = size
+			default_panel_borders(self, pos, size)
 		end
 
 		gui:Register(GUI, "ListColumn")
@@ -6051,7 +6460,7 @@ do
 		menu.keybinds = keybinds
 		keybinds:SetPos(0,5,.5,0)  
 		keybinds:SetDraggable(true)
-		keybinds:SetEnabled(true)
+		keybinds:SetEnabled(false)
 		keybinds.gradient:SetSize(1,0,0,15)
 		keybinds.gradient:Generate()
 
@@ -6072,7 +6481,7 @@ do
 		activity:SetTextSize(13)
 
 		hook:Add("OnConfigChanged", "BBOT:KeyBinds.Menu", function(steps, old, new)
-			if not config:IsPathwayEqual(steps, "Main", "Visuals", "Keybinds", "Enabled", true) then return end
+			if not config:IsPathwayEqual(steps, "Main", "Visuals", "Extra", "Show Keybinds", true) then return end
 			keybinds:SetEnabled(new)
 			keybinds:SetVisible(new)
 		end)
@@ -6227,7 +6636,7 @@ do
 	hook:Add("PostInitialize", "BBOT:Menu", function()
 		menu:Initialize()
 
-		if BBOT.game == "pf" then
+		if BBOT.game == "phantom forces" then
 			local userinputservice = BBOT.service:GetService("UserInputService")
 			hook:Add("RenderStepped", "BBOT:Menu.MouseBehavior", function()
 				if main:GetEnabled() then
@@ -6518,72 +6927,26 @@ end
 --! POST LIBRARIES !--
 -- WholeCream here, do remember to sort all of this in order for a possible module based loader
 
+do
+	local NetworkClient = BBOT.service:GetService("NetworkClient")
+	NetworkClient:SetOutgoingKBPSLimit(0)
+	BBOT.networksettings = settings().Network
+end
+
 local loadstart = tick()
 -- Setup, are we playing PF, Universal or... Bad Business 😉
 do
 	local thread = BBOT.thread
 	local hook = BBOT.hook
 	local menu = BBOT.menu
+	local config = BBOT.config
 	local gui = BBOT.gui
-	local NetworkClient = BBOT.service:GetService("NetworkClient")
-	if game.PlaceId == 292439477 or game.PlaceId == 299659045 or game.PlaceId == 5281922586 or game.PlaceId == 3568020459 then
-		BBOT.game = "pf"    else
-		BBOT.game = "uni"
-	end
 
-	BBOT.networksettings = settings().Network
-	NetworkClient:SetOutgoingKBPSLimit(0)
-
-	setfpscap(getgenv().maxfps or 144)
-
-	if not isfolder("bitchbot") then
-		makefolder("bitchbot")
-		if not isfile("bitchbot/relations.bb") then
-			writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
-		end
-	else
-		if not isfile("bitchbot/relations.bb") then
-			writefile("bitchbot/relations.bb", "bb:{{friends:}{priority:}")
-		end
-		writefile("bitchbot/debuglog.bb", "")
-	end
-
-	if not isfolder("bitchbot/" .. BBOT.game) then
-		makefolder("bitchbot/" .. BBOT.game)
-	end
-
-	--[[do
-		local net
-
-		repeat
-			local gc = getgc(true)
-
-			for i = 1, #gc do
-				local garbage = gc[i]
-
-				local garbagetype = type(garbage)
-
-				if garbagetype == "table" then
-					net = rawget(garbage, "fetch")
-					if net then
-						break
-					end
-				end
-			end
-
-			gc = nil
-			game.RunService.RenderStepped:Wait()
-		until net
-
-		net = nil
-
-		local annoyingFuckingMusic = workspace:FindFirstChild("memes")
-		if annoyingFuckingMusic then
-			annoyingFuckingMusic:Destroy()
-		end
-	end -- wait for framwork to load]]
-
-	BBOT.log(LOG_NORMAL, "Waiting for Phantom Forces...")
+	local supported_games = {
+		[113491250] = "phantom forces",
+		[807930589] = "wild west"
+	}
+	BBOT.game = tostring(supported_games[game.GameId] or game.GameId)
 
 	local loading
 	function BBOT:SetLoadingText(txt)
@@ -6622,7 +6985,7 @@ do
 		message:SetPos(.5, 0, .5, -20)
 		message:SetTextAlignmentX(Enum.TextXAlignment.Center)
 		message:SetTextAlignmentY(Enum.TextYAlignment.Center)
-		message:SetText("Waiting for Phantom Forces...")
+		message:SetText("Waiting for "..game.Name.."...")
 		local w, h = message:GetTextSize()
 
 		local progress = gui:Create("ProgressBar", loading)
@@ -6660,2934 +7023,3302 @@ do
 	end)
 
 	-- Why spend the time using getgc, when you can simply check an object!
-	local waited = 0
-	while true do
-		if game:IsLoaded() then
-			local lp = game:GetService("Players").LocalPlayer;
-			local chatgame = lp.PlayerGui:FindFirstChild("ChatGame")
-			if chatgame then
-				local version = chatgame:FindFirstChild("Version")
-				if version and not string.find(version.Text, "loading", 1, true) then
-					wait(5)
-					break
+	if BBOT.game == "phantom forces" then
+		local waited = 0
+		while true do
+			if game:IsLoaded() then
+				local lp = game:GetService("Players").LocalPlayer;
+				local chatgame = lp.PlayerGui:FindFirstChild("ChatGame")
+				if chatgame then
+					local version = chatgame:FindFirstChild("Version")
+					if version and not string.find(version.Text, "loading", 1, true) then
+						wait(5)
+						break
+					end
 				end
+			end;
+			waited = waited + 1
+			if waited > 7 then
+				BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
+			elseif waited > 5 then
+				BBOT:SetLoadingStatus("What the hell is taking so long?")
 			end
+			wait(5)
 		end;
-		waited = waited + 1
-		if waited > 7 then
-			BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
-		elseif waited > 5 then
-			BBOT:SetLoadingStatus("What the hell is taking so long?")
-		end
-		wait(5)
-	end;
+	else
+		local waited = 0
+		while true do
+			if game:IsLoaded() then
+				wait(5)
+				break
+			end;
+			waited = waited + 1
+			if waited > 7 then
+				BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
+			elseif waited > 5 then
+				BBOT:SetLoadingStatus("What the hell is taking so long?")
+			end
+			wait(5)
+		end;
+	end
 
-	hook:Add("PreInitialize", "BBOT:SetupConfigurationScheme", function()
-	
-		local menu = BBOT.menu
-		local config = BBOT.config
-		if BBOT.game == "pf" then
-			local table = BBOT.table
-			local anims = {
-				{
-					type = "Toggle",
-					name = "Enabled",
-					value = false,
-				},
-				{
-					type = "DropBox",
-					name = "Type",
-					value = 1,
-					values = {"Additive", "Wave"},
-				},
-				{
-					type = "Slider",
-					name = "Offset",
-					min = -1,
-					max = 1,
-					value = 0,
-					decimal = 2,
-					suffix = "studs"
-				},
-				{
-					type = "Slider",
-					name = "Amplitude",
-					min = 0,
-					max = 10,
-					value = 0,
-					decimal = 2,
-					suffix = "studs"
-				},
-				{
-					type = "Slider",
-					name = "Speed",
-					min = 0,
-					max = 10,
-					value = 0,
-					decimal = 2,
-					suffix = "studs"
-				},
+	if BBOT.game == "phantom forces" then
+		local table = BBOT.table
+		local anims = {
+			{
+				type = "Toggle",
+				name = "Enabled",
+				value = false,
+			},
+			{
+				type = "DropBox",
+				name = "Type",
+				value = 1,
+				values = {"Additive", "Wave"},
+			},
+			{
+				type = "Slider",
+				name = "Offset",
+				min = -1,
+				max = 1,
+				value = 0,
+				decimal = 2,
+				suffix = "studs"
+			},
+			{
+				type = "Slider",
+				name = "Amplitude",
+				min = 0,
+				max = 10,
+				value = 0,
+				decimal = 2,
+				suffix = "studs"
+			},
+			{
+				type = "Slider",
+				name = "Speed",
+				min = 0,
+				max = 10,
+				value = 0,
+				decimal = 2,
+				suffix = "studs"
+			},
+		}
+		local skins_anims = {
+			{
+				type = "Toggle",
+				name = "Enabled",
+				value = false,
+				extra = {},
+			},
+			{
+				name = "OffsetStudsU",
+				pos = UDim2.new(0,0,0,20),
+				size = UDim2.new(.5,-3,0,175),
+				type = "Panel",
+				content = anims,
+				tooltip = "OffsetStuds changes the position of texture."
+			},
+			{
+				name = "OffsetStudsV",
+				pos = UDim2.new(.5,3,0,20),
+				size = UDim2.new(.5,-3,0,175),
+				type = "Panel",
+				content = anims,
+				tooltip = "OffsetStuds changes the position of texture."
+			},
+			{
+				name = "StudsPerTileU",
+				pos = UDim2.new(0,0,0,20+(175+6)),
+				size = UDim2.new(.5,-3,0,175),
+				type = "Panel",
+				content = anims,
+				tooltip = "StudsPerTile changes the scale of texture."
+			},
+			{
+				name = "StudsPerTileV",
+				pos = UDim2.new(.5,3,0,20+(175+6)),
+				size = UDim2.new(.5,-3,0,175),
+				type = "Panel",
+				content = anims,
+				tooltip = "StudsPerTile changes the scale of texture."
 			}
-			local skins_anims = {
-				{
-					type = "Toggle",
-					name = "Enabled",
-					value = false,
-					extra = {},
-				},
-				{
-					name = "OffsetStudsU",
-					pos = UDim2.new(0,0,0,20),
-					size = UDim2.new(.5,-3,0,175),
-					type = "Panel",
-					content = anims,
-					tooltip = "OffsetStuds changes the position of texture."
-				},
-				{
-					name = "OffsetStudsV",
-					pos = UDim2.new(.5,3,0,20),
-					size = UDim2.new(.5,-3,0,175),
-					type = "Panel",
-					content = anims,
-					tooltip = "OffsetStuds changes the position of texture."
-				},
-				{
-					name = "StudsPerTileU",
-					pos = UDim2.new(0,0,0,20+(175+6)),
-					size = UDim2.new(.5,-3,0,175),
-					type = "Panel",
-					content = anims,
-					tooltip = "StudsPerTile changes the scale of texture."
-				},
-				{
-					name = "StudsPerTileV",
-					pos = UDim2.new(.5,3,0,20+(175+6)),
-					size = UDim2.new(.5,-3,0,175),
-					type = "Panel",
-					content = anims,
-					tooltip = "StudsPerTile changes the scale of texture."
-				}
-			}
-			local skins_content = {
-				{
-					type = "Toggle",
-					name = "Enabled",
-					value = false,
-					extra = {},
-					tooltip = "Do note this is not server-sided!"
-				},
-				{
-					type = "DropBox",
-					name = "Material",
-					value = 1,
-					values = BBOT.config.enums.Material.List,
-					extra = {
-						{
-							type = "ColorPicker",
-							name = "Brick Color",
-							color = { 255, 255, 255, 255 },
-							tooltip = "Changes the base color of the material, not the texture."
-						},
+		}
+		local skins_content = {
+			{
+				type = "Toggle",
+				name = "Enabled",
+				value = false,
+				extra = {},
+				tooltip = "Do note this is not server-sided!"
+			},
+			{
+				type = "DropBox",
+				name = "Material",
+				value = 1,
+				values = BBOT.config.enums.Material.List,
+				extra = {
+					{
+						type = "ColorPicker",
+						name = "Brick Color",
+						color = { 255, 255, 255, 255 },
+						tooltip = "Changes the base color of the material, not the texture."
 					},
 				},
-				{
-					type = "Slider",
-					name = "Reflectance",
-					value = 0,
-					min = 0,
-					max = 200,
-					suffix = "%",
-					decimal = 1,
-					extra = {},
-					tooltip = "Gives the material reflectance, this may be buggy or not work on some materials."
-				},
-				{
-					name = "Texture",
-					pos = UDim2.new(0,0,0,90),
-					size = UDim2.new(1,0,1,-96),
-					type = "Panel",
-					content = {
-						{
-							type = "Toggle",
-							name = "Enabled",
-							value = false,
-							extra = {
-								{
-									type = "ColorPicker",
-									name = "Texture Color",
-									color = { 255, 255, 255, 255 },
-								},
+			},
+			{
+				type = "Slider",
+				name = "Reflectance",
+				value = 0,
+				min = 0,
+				max = 200,
+				suffix = "%",
+				decimal = 1,
+				extra = {},
+				tooltip = "Gives the material reflectance, this may be buggy or not work on some materials."
+			},
+			{
+				name = "Texture",
+				pos = UDim2.new(0,0,0,90),
+				size = UDim2.new(1,0,1,-96),
+				type = "Panel",
+				content = {
+					{
+						type = "Toggle",
+						name = "Enabled",
+						value = false,
+						extra = {
+							{
+								type = "ColorPicker",
+								name = "Texture Color",
+								color = { 255, 255, 255, 255 },
 							},
 						},
-						{
-							type = "Text",
-							name = "Asset-Id",
-							value = "3643887058",
-							extra = {},
-						},
-						{
-							type = "Slider",
-							name = "OffsetStudsU",
-							value = 0,
-							min = 0,
-							max = 10,
-							suffix = "studs",
-							decimal = 1,
-							extra = {},
-						},
-						{
-							type = "Slider",
-							name = "OffsetStudsV",
-							value = 0,
-							min = 0,
-							max = 10,
-							suffix = "studs",
-							decimal = 1,
-							extra = {},
-						},
-						{
-							type = "Slider",
-							name = "StudsPerTileU",
-							value = 1,
-							min = 0,
-							max = 10,
-							suffix = "studs/tile",
-							decimal = 1,
-							extra = {},
-						},
-						{
-							type = "Slider",
-							name = "StudsPerTileV",
-							value = 1,
-							min = 0,
-							max = 10,
-							suffix = "studs/tile",
-							decimal = 1,
-							extra = {},
-						},
+					},
+					{
+						type = "Text",
+						name = "Asset-Id",
+						value = "3643887058",
+						extra = {},
+					},
+					{
+						type = "Slider",
+						name = "OffsetStudsU",
+						value = 0,
+						min = 0,
+						max = 10,
+						suffix = "studs",
+						decimal = 1,
+						extra = {},
+					},
+					{
+						type = "Slider",
+						name = "OffsetStudsV",
+						value = 0,
+						min = 0,
+						max = 10,
+						suffix = "studs",
+						decimal = 1,
+						extra = {},
+					},
+					{
+						type = "Slider",
+						name = "StudsPerTileU",
+						value = 1,
+						min = 0,
+						max = 10,
+						suffix = "studs/tile",
+						decimal = 1,
+						extra = {},
+					},
+					{
+						type = "Slider",
+						name = "StudsPerTileV",
+						value = 1,
+						min = 0,
+						max = 10,
+						suffix = "studs/tile",
+						decimal = 1,
+						extra = {},
+					},
+				},
+			}
+		}
+
+		local weapon_legit = {
+			{
+				name = "Aim Assist",
+				pos = UDim2.new(0,0,0,0),
+				size = UDim2.new(.5,-4,1,0),
+				type = "Panel",
+				content = {
+					{
+						type = "Toggle",
+						name = "Enabled",
+						value = true,
+						tooltip = "Aim assistance only moves your mouse towards targets"
+					},
+					{
+						type = "Slider",
+						name = "Aimbot FOV",
+						min = 0,
+						max = 100,
+						suffix = "°",
+						value = 20
+					},
+					{
+						type = "Toggle",
+						name = "Dynamic FOV",
+						value = false,
+						tooltip = "Changes all FOV to change depending on the magnification."
+					},
+					{
+						type = "Toggle",
+						name = "Use Barrel",
+						value = false,
+						tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
+					},
+					{
+						type = "Slider",
+						name = "Start Smoothing",
+						value = 20,
+						min = 0,
+						max = 100,
+						suffix = "%",
+					},
+					{
+						type = "Slider",
+						name = "End Smoothing",
+						min = 0,
+						max = 100,
+						suffix = "%",
+						value = 20
+					},
+					{
+						type = "Slider",
+						name = "Smoothing Increment",
+						min = 0,
+						max = 100,
+						suffix = "%/s",
+						value = 20
+					},
+					{
+						type = "Slider",
+						name = "Randomization",
+						value = 5,
+						min = 0,
+						mas = 20,
+						suffix = "",
+						custom = { [0] = "Off" },
+					},
+					{
+						type = "Slider",
+						name = "Deadzone FOV",
+						value = 1,
+						min = 0,
+						max = 50,
+						suffix = "°",
+						decimal = 1,
+						custom = { [0] = "Off" },
+					},
+					{
+						type = "DropBox",
+						name = "Aimbot Key",
+						value = 1,
+						values = { "Mouse 1", "Mouse 2", "Always", "Dynamic Always" },
+					},
+					{
+						type = "DropBox",
+						name = "Hitscan Priority",
+						value = 1,
+						values = { "Head", "Body", "Closest" },
+					},
+					{
+						type = "ComboBox",
+						name = "Hitscan Points",
+						values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+					},
+				},
+			},
+			{
+				name = "Ballistics",
+				pos = UDim2.new(.5,4,0,0),
+				size = UDim2.new(.5,-4,4/10,-4),
+				type = "Panel",
+				content = {
+					{
+						type = "Toggle",
+						name = "Barrel Compensation",
+						value = true,
+						tooltip = "Attempts to aim based on the direction of the barrel",
+						extra = {}
+					},
+					{
+						type = "ComboBox",
+						name = "Disable Barrel Comp While",
+						values = { { "Fire Animation", true }, { "Scoping In", true }, { "Reloading", true } }
+					},
+					{
+						type = "Toggle",
+						name = "Drop Prediction",
+						value = true,
+					},
+					{
+						type = "Toggle",
+						name = "Movement Prediction",
+						value = true,
 					},
 				}
-			}
-
-			local weapon_legit = {
-				{
-					name = "Aim Assist",
-					pos = UDim2.new(0,0,0,0),
-					size = UDim2.new(.5,-4,1,0),
-					type = "Panel",
-					content = {
-						{
-							type = "Toggle",
-							name = "Enabled",
-							value = true,
-							tooltip = "Aim assistance only moves your mouse towards targets"
-						},
-						{
-							type = "Slider",
-							name = "Aimbot FOV",
-							min = 0,
-							max = 100,
-							suffix = "°",
-							value = 20
-						},
-						{
-							type = "Toggle",
-							name = "Dynamic FOV",
-							value = false,
-							tooltip = "Changes all FOV to change depending on the magnification."
-						},
-						{
-							type = "Toggle",
-							name = "Use Barrel",
-							value = false,
-							tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
-						},
-						{
-							type = "Slider",
-							name = "Start Smoothing",
-							value = 20,
-							min = 0,
-							max = 100,
-							suffix = "%",
-						},
-						{
-							type = "Slider",
-							name = "End Smoothing",
-							min = 0,
-							max = 100,
-							suffix = "%",
-							value = 20
-						},
-						{
-							type = "Slider",
-							name = "Smoothing Increment",
-							min = 0,
-							max = 100,
-							suffix = "%/s",
-							value = 20
-						},
-						{
-							type = "Slider",
-							name = "Randomization",
-							value = 5,
-							min = 0,
-							mas = 20,
-							suffix = "",
-							custom = { [0] = "Off" },
-						},
-						{
-							type = "Slider",
-							name = "Deadzone FOV",
-							value = 1,
-							min = 0,
-							max = 50,
-							suffix = "°",
-							decimal = 1,
-							custom = { [0] = "Off" },
-						},
-						{
-							type = "DropBox",
-							name = "Aimbot Key",
-							value = 1,
-							values = { "Mouse 1", "Mouse 2", "Always", "Dynamic Always" },
-						},
-						{
-							type = "DropBox",
-							name = "Hitscan Priority",
-							value = 1,
-							values = { "Head", "Body", "Closest" },
-						},
-						{
-							type = "ComboBox",
-							name = "Hitscan Points",
-							values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
-						},
+			},
+			{
+				name = {"Bullet Redirect", "Trigger Bot"},
+				pos = UDim2.new(.5,4,4/10,4),
+				size = UDim2.new(.5,-4,6/10,-4),
+				type = "Panel",
+				{content = {
+					{
+						type = "Toggle",
+						name = "Enabled",
+						value = false,
 					},
-				},
-				{
-					name = "Ballistics",
-					pos = UDim2.new(.5,4,0,0),
-					size = UDim2.new(.5,-4,4/10,-4),
-					type = "Panel",
-					content = {
-						{
-							type = "Toggle",
-							name = "Barrel Compensation",
-							value = true,
-							tooltip = "Attempts to aim based on the direction of the barrel",
-							extra = {}
-						},
-						{
-							type = "ComboBox",
-							name = "Disable Barrel Comp While",
-							values = { { "Fire Animation", true }, { "Scoping In", true }, { "Reloading", true } }
-						},
-						{
-							type = "Toggle",
-							name = "Drop Prediction",
-							value = true,
-						},
-						{
-							type = "Toggle",
-							name = "Movement Prediction",
-							value = true,
-						},
-					}
-				},
-				{
-					name = {"Bullet Redirect", "Trigger Bot"},
-					pos = UDim2.new(.5,4,4/10,4),
-					size = UDim2.new(.5,-4,6/10,-4),
-					type = "Panel",
-					{content = {
-						{
-							type = "Toggle",
-							name = "Enabled",
-							value = false,
-						},
-						{
-							type = "Toggle",
-							name = "Use Barrel",
-							value = true,
-							tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
-						},
-						{
-							type = "Slider",
-							name = "Redirection FOV",
-							value = 5,
-							min = 0,
-							max = 180,
-							suffix = "°",
-						},
-						{
-							type = "Slider",
-							name = "Hit Chance",
-							value = 30,
-							min = 0,
-							max = 100,
-							suffix = "%",
-						},
-						{
-							type = "Slider",
-							name = "Accuracy",
-							value = 90,
-							min = 0,
-							max = 100,
-							suffix = "%",
-						},
-						{
-							type = "DropBox",
-							name = "Hitscan Priority",
-							value = 1,
-							values = { "Head", "Body", "Closest" },
-						},
-						{
-							type = "ComboBox",
-							name = "Hitscan Points",
-							values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
-						},
-					}},
-					{content = {
-						{
-							type = "Toggle",
-							name = "Enabled",
-							value = false,
-							extra = {
-								{
-									type = "ColorPicker",
-									name = "Dot Color",
-									color = { 255, 0, 0, 255 },
-								},
-								{
-									type = "KeyBind",
-									key = nil,
-									toggletype = 2,
-								},
+					{
+						type = "Toggle",
+						name = "Use Barrel",
+						value = true,
+						tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
+					},
+					{
+						type = "Slider",
+						name = "Redirection FOV",
+						value = 5,
+						min = 0,
+						max = 180,
+						suffix = "°",
+					},
+					{
+						type = "Slider",
+						name = "Hit Chance",
+						value = 30,
+						min = 0,
+						max = 100,
+						suffix = "%",
+					},
+					{
+						type = "Slider",
+						name = "Accuracy",
+						value = 90,
+						min = 0,
+						max = 100,
+						suffix = "%",
+					},
+					{
+						type = "DropBox",
+						name = "Hitscan Priority",
+						value = 1,
+						values = { "Head", "Body", "Closest" },
+					},
+					{
+						type = "ComboBox",
+						name = "Hitscan Points",
+						values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+					},
+				}},
+				{content = {
+					{
+						type = "Toggle",
+						name = "Enabled",
+						value = false,
+						extra = {
+							{
+								type = "ColorPicker",
+								name = "Dot Color",
+								color = { 255, 0, 0, 255 },
+							},
+							{
+								type = "KeyBind",
+								key = nil,
+								toggletype = 2,
 							},
 						},
-						{
-							type = "ComboBox",
-							name = "Trigger Bot Hitboxes",
-							values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
-						},
-						{
-							type = "Toggle",
-							name = "Trigger When Aiming",
-							value = false,
-						},
-						{
-							type = "Slider",
-							name = "Aim In Time",
-							min = 0,
-							max = 2,
-							value = .75,
-							decimal = 2,
-							suffix = "s",
-						},
-					}},
-				},
-			}
+					},
+					{
+						type = "ComboBox",
+						name = "Trigger Bot Hitboxes",
+						values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+					},
+					{
+						type = "Toggle",
+						name = "Trigger When Aiming",
+						value = false,
+					},
+					{
+						type = "Slider",
+						name = "Aim In Time",
+						min = 0,
+						max = 2,
+						value = .75,
+						decimal = 2,
+						suffix = "s",
+					},
+				}},
+			},
+		}
 
-			BBOT.configuration = {
-				{
-					-- The first layer here is the frame
-					Id = "Main",
-					name = "Bitch Bot",
-					center = true,
-					size = UDim2.new(0, 500, 0, 600),
-					content = {
-						{
-							name = "Legit",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							borderless = true,
-							type = "Tabs",
-							content = {
-								{
-									name = "Pistol",
-									icon = "PISTOL",
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(1,0,1,0),
-									type = "Container",
-									content = weapon_legit
-								},
-								{
-									name = "Smg",
-									icon = "SMG",
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(1,0,1,0),
-									type = "Container",
-									content = weapon_legit
-								},
-								{
-									name = "Rifle",
-									icon = "RIFLE",
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(1,0,1,0),
-									type = "Container",
-									content = weapon_legit
-								},
-								{
-									name = "Shotgun",
-									icon = "SHOTGUN",
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(1,0,1,0),
-									type = "Container",
-									content = weapon_legit
-								},
-								{
-									name = "Sniper",
-									icon = "SNIPER",
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(1,0,1,0),
-									type = "Container",
-									content = weapon_legit
-								},
-							}
-						},
-						{
-							name = "Rage",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							type = "Container",
-							content = {
-								{
-									name = "Aimbot",
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(.5,-4,4/10,-4),
-									type = "Panel",
-									content = {
-										{
-											type = "Toggle",
-											name = "Rage Bot",
-											value = false,
-											unsafe = true,
-											extra = {
-												{
-													type = "KeyBind",
-													toggletype = 2,
-												},
-											}
-										},
-										{
-											type = "Slider",
-											name = "Aimbot FOV",
-											value = 180,
-											min = 0,
-											max = 181,
-											suffix = "°",
-											custom = { [181] = "Ignored" },
-										},
-										{
-											type = "Toggle",
-											name = "Auto Wallbang",
-											value = false
-										},
-										{
-											type = "Slider",
-											name = "Auto Wallbang Scale",
-											value = 100,
-											min = 0,
-											max = 121,
-											suffix = "%",
-											custom = { [121] = "Screw Walls" },
-										},
-										{
-											type = "Toggle",
-											name = "Auto Shoot",
-											value = false,
-											tooltip = "Automatically shoots players when a target is found."
-										},
-										{
-											type = "DropBox",
-											name = "Hitscan Priority",
-											value = 1,
-											values = { "Head", "Body" },
-										},
-									}
-								},
-								{
-									name = "Hack vs. Hack",
-									pos = UDim2.new(0,0,4/10,4),
-									size = UDim2.new(.5,-4,1-(4/10),-4),
-									type = "Panel",
-									content = {
-										{
-											type = "Toggle",
-											name = "Hitbox Shifting",
-											value = false,
-											tooltip = "Increases possible penetration with Autowall. The higher\nthe Hitbox Shift Distance the more likely it is to miss shots.\nWhen it misses it will try disable this.",
-										},
-										{
-											type = "ComboBox",
-											name = "Hitbox Hitscan Points",
-											values = {
-												{ "Up", true },
-												{ "Down", true },
-												{ "Left", false },
-												{ "Right", false },
-												{ "Forward", true },
-												{ "Backward", true },
-												{ "Origin", true },
-												{ "Towards", true },
+		BBOT.configuration = {
+			{
+				-- The first layer here is the frame
+				Id = "Main",
+				name = "Bitch Bot",
+				center = true,
+				size = UDim2.new(0, 500, 0, 600),
+				content = {
+					{
+						name = "Legit",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						borderless = true,
+						type = "Tabs",
+						content = {
+							{
+								name = "Pistol",
+								icon = "PISTOL",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+							{
+								name = "Smg",
+								icon = "SMG",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+							{
+								name = "Rifle",
+								icon = "RIFLE",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+							{
+								name = "Shotgun",
+								icon = "SHOTGUN",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+							{
+								name = "Sniper",
+								icon = "SNIPER",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+						}
+					},
+					{
+						name = "Rage",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {
+							{
+								name = "Aimbot",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(.5,-4,4/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Toggle",
+										name = "Rage Bot",
+										value = false,
+										unsafe = true,
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2,
 											},
-										},
-										{
-											type = "Slider",
-											name = "Hitbox Shift Distance",
-											value = 4,
-											min = 1,
-											max = 12,
-											suffix = " studs",
-										},
-										{
-											type = "Toggle",
-											name = "FirePos Shifting",
-											value = false,
-											tooltip = "Increases possible penetration with Autowall. The higher the Hitbox Shift Distance the more likely it is to miss shots. When it misses it will try disable this.",
-										},
-										{
-											type = "ComboBox",
-											name = "FirePos Hitscan Points",
-											values = {
-												{ "Up", true },
-												{ "Down", true },
-												{ "Left", false },
-												{ "Right", false },
-												{ "Forward", true },
-												{ "Backward", true },
-												{ "Origin", true },
-												{ "Towards", true },
-											},
-										},
-										{
-											type = "Slider",
-											name = "FirePos Shift Distance",
-											value = 4,
-											min = 1,
-											max = 12,
-											suffix = " studs",
-										},
-										{
-											type = "Toggle",
-											name = "Relative Hitpoints Only",
-											value = true,
-											tooltip = "Makes the firpos and hitbox points align, so less calculations.",
-										},
-										{
-											type = "Slider",
-											name = "Max Hitpoints",
-											value = 30,
-											min = 0,
-											max = 100,
-											suffix = " point(s)",
-											decimal = 0,
-											custom = {
-												[0] = "Infinite",
-											},
-											tooltip = "The maximum amount of scans per hitbox point, useful if you don't wana lag to shit",
-										},
-										{
-											type = "Toggle",
-											name = "Resolver",
-											value = true,
-											tooltip = "Rage aimbot attempts to resolve player offsets and positions, Disable if you are having issues with resolver.",
-										},
-										{
-											type = "Toggle",
-											name = "Zero Velocity",
-											value = true,
-											tooltip = "Makes all the characters not have velocity, so the people like pf pwner can cry.",
-										},
-									}
-								},
-								{
-									name = { "Anti Aim", "Fake Lag" },
-									pos = UDim2.new(.5,4,0,0),
-									size = UDim2.new(.5,-4,1-(5.5/10),-4),
-									{content = {
-										{
-											type = "Toggle",
-											name = "Enabled",
-											value = false,
-											unsafe = true,
-											tooltip = "When this is enabled, your server-side yaw, pitch and stance are set to the values in this tab.",
-										},
-										{
-											type = "DropBox",
-											name = "Pitch",
-											value = 4,
-											values = {
-												"Off",
-												"Up",
-												"Zero",
-												"Down",
-												"Upside Down",
-												"Roll Forward",
-												"Roll Backward",
-												"Random",
-												"Bob",
-												"Glitch",
-											},
-										},
-										{
-											type = "DropBox",
-											name = "Yaw",
-											value = 2,
-											values = { "Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin" },
-										},
-										{
-											type = "Slider",
-											name = "Spin Rate",
-											value = 10,
-											minvalue = -100,
-											maxvalue = 100,
-											stradd = "°/s",
-										},
-									}},
-									{content = {}},
-								},
-								{
-									name = { "Extra", "Settings" },
-									pos = UDim2.new(.5,4,1-(5.5/10),4),
-									size = UDim2.new(.5,-4,(5.5/10),-4),
-									{content = {
-										{
-											type = "Toggle",
-											name = "Knife Bot",
-											value = false,
-											extra = {
-												{
-													type = "KeyBind",
-													toggletype = 2,
-												}
-											},
-											unsafe = true,
-										},
-										{
-											type = "DropBox",
-											name = "Knife Bot Type",
-											value = 1,
-											values = { "Multi Aura" },
-										},
-										{
-											type = "DropBox",
-											name = "Knife Hitscan",
-											value = 1,
-											values = { "Head", "Body" },
-										},
-										{
-											type = "Toggle",
-											name = "Knife Visible Only",
-											value = false,
-										},
-										{
-											type = "Slider",
-											name = "Knife Range",
-											value = 26,
-											min = 1,
-											max = 26,
-											custom = {[26] = "Max"},
-											suffix = " studs",
-										},
-										{
-											type = "Slider",
-											name = "Knife Delay",
-											value = 0,
-											min = 0,
-											max = 1,
-											decimal = 2,
-											custom = {[0] = "Knife Party"},
-											suffix = "s",
-										},
-									}},
-									{content = {
-										{
-											type = "Toggle",
-											name = "Damage Prediction",
-											value = true,
-										},
-										{
-											type = "Slider",
-											name = "Damage Prediction Time",
-											value = 200,
-											min = 100,
-											max = 500,
-											suffix = "%",
-										},
-										{
-											type = "Slider",
-											name = "Damage Prediction Limit",
-											value = 100,
-											min = 0,
-											max = 300,
-											custom = {[0] = "What even is the point?"},
-											suffix = "hp",
-										},
-									}},
+										}
+									},
+									{
+										type = "Slider",
+										name = "Aimbot FOV",
+										value = 180,
+										min = 0,
+										max = 181,
+										suffix = "°",
+										custom = { [181] = "Ignored" },
+									},
+									{
+										type = "Toggle",
+										name = "Auto Wallbang",
+										value = false
+									},
+									{
+										type = "Slider",
+										name = "Auto Wallbang Scale",
+										value = 100,
+										min = 0,
+										max = 121,
+										suffix = "%",
+										custom = { [121] = "Screw Walls" },
+									},
+									{
+										type = "Toggle",
+										name = "Auto Shoot",
+										value = false,
+										tooltip = "Automatically shoots players when a target is found."
+									},
+									{
+										type = "DropBox",
+										name = "Hitscan Priority",
+										value = 1,
+										values = { "Head", "Body" },
+									},
 								}
 							},
-						},
-						{
-							name = "Visuals",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							type = "Container",
-							content = {
-								{
-									name = { "Enemy ESP", "Team ESP", "Local ESP" },
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(.5,-4,11/20,-4),
+							{
+								name = "Hack vs. Hack",
+								pos = UDim2.new(0,0,4/10,4),
+								size = UDim2.new(.5,-4,1-(4/10),-4),
+								type = "Panel",
+								content = {
 									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Enabled",
-												value = true,
-												tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
-											},
-											{
-												type = "Toggle",
-												name = "Name",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 255, 255, 200 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Box",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color Fill",
-														color = { 255, 0, 0, 0 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Color Box",
-														color = { 255, 0, 0, 150 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Health Bar",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color Low",
-														color = { 255, 0, 0, 0 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Color Max",
-														color = { 0, 255, 0, 150 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Health Number",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 255, 255, 255 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Held Weapon",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 255, 255, 200 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Held Weapon Icon",
-												value = false,
-											},
-											{
-												type = "ComboBox",
-												name = "Flags",
-												values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Frozen", true }, { "Resolved", false }, { "Backtrack", false },  },
-											},
-											{
-												type = "Toggle",
-												name = "Chams",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Visible Chams",
-														color = { 255, 0, 0, 200 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Invisible Chams",
-														color = { 100, 0, 0, 100 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Skeleton",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Enemy skeleton",
-														color = { 255, 255, 255, 120 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Out of View",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Arrow Color",
-														color = { 255, 255, 255, 255 },
-													},
-												},
-											},
-											{
-												type = "Slider",
-												name = "Arrow Distance",
-												value = 50,
-												min = 10,
-												max = 101,
-												custom = { [101] = "Max" },
-												suffix = "%",
-											},
-											{
-												type = "Toggle",
-												name = "Dynamic Arrow Size",
-												value = true,
-											},
+										type = "Toggle",
+										name = "Hitbox Shifting",
+										value = false,
+										tooltip = "Increases possible penetration with Autowall. The higher\nthe Hitbox Shift Distance the more likely it is to miss shots.\nWhen it misses it will try disable this.",
+									},
+									{
+										type = "ComboBox",
+										name = "Hitbox Hitscan Points",
+										values = {
+											{ "Up", true },
+											{ "Down", true },
+											{ "Left", false },
+											{ "Right", false },
+											{ "Forward", true },
+											{ "Backward", true },
+											{ "Origin", true },
+											{ "Towards", true },
 										},
 									},
 									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Enabled",
-												value = false,
-												tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
-											},
-											{
-												type = "Toggle",
-												name = "Name",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 255, 255, 200 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Box",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color Fill",
-														color = { 0, 255, 0, 0 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Color Box",
-														color = { 0, 255, 0, 150 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Health Bar",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color Low",
-														color = { 255, 0, 0, 255 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Color Max",
-														color = { 0, 255, 0, 255 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Health Number",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 255, 255, 255 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Held Weapon",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 255, 255, 200 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Held Weapon Icon",
-												value = false,
-											},
-											{
-												type = "ComboBox",
-												name = "Flags",
-												values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false }, { "Frozen", true }, { "Resolved", false }  },
-											},
-											{
-												type = "Toggle",
-												name = "Chams",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Visible Chams",
-														color = { 0, 255, 0, 200 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Invisible Chams",
-														color = { 0, 100, 0, 100 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Skeleton",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Team skeleton",
-														color = { 255, 255, 255, 120 },
-													},
-												},
-											},
+										type = "Slider",
+										name = "Hitbox Shift Distance",
+										value = 4,
+										min = 1,
+										max = 12,
+										suffix = " studs",
+									},
+									{
+										type = "Toggle",
+										name = "FirePos Shifting",
+										value = false,
+										tooltip = "Increases possible penetration with Autowall. The higher the Hitbox Shift Distance the more likely it is to miss shots. When it misses it will try disable this.",
+									},
+									{
+										type = "ComboBox",
+										name = "FirePos Hitscan Points",
+										values = {
+											{ "Up", true },
+											{ "Down", true },
+											{ "Left", false },
+											{ "Right", false },
+											{ "Forward", true },
+											{ "Backward", true },
+											{ "Origin", true },
+											{ "Towards", true },
 										},
 									},
 									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Enabled",
-												value = false,
-												tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
-											},
-											{
-												type = "Toggle",
-												name = "Name",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 255, 255, 200 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Box",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color Fill",
-														color = { 127, 72, 163, 0 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Color Box",
-														color = { 127, 72, 163, 150 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Health Bar",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color Low",
-														color = { 255, 0, 0, 255 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Color Max",
-														color = { 0, 255, 0, 255 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Health Number",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 255, 255, 255 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Held Weapon",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 255, 255, 200 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Held Weapon Icon",
-												value = false,
-											},
-											{
-												type = "ComboBox",
-												name = "Flags",
-												values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false }, { "Frozen", true }, { "Resolved", false }  },
-											},
-											{
-												type = "Toggle",
-												name = "Chams",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Visible Chams",
-														color = { 127, 72, 163, 200 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Invisible Chams",
-														color = { 127, 72, 163, 100 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Skeleton",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Team skeleton",
-														color = { 255, 255, 255, 120 },
-													},
-												},
-											},
-										}
-									},
-								},
-								{
-									name = {"ESP Settings", "Crosshair"},
-									pos = UDim2.new(0,0,11/20,4),
-									size = UDim2.new(.5,-4,9/20,-4),
-									type = "Panel",
-									{content = {
-										{
-											type = "Slider",
-											name = "Max HP Visibility Cap",
-											value = 90,
-											min = 50,
-											max = 100,
-											suffix = "hp",
-											custom = {
-												[100] = "Always"
-											}
-										},
-										{
-											type = "DropBox",
-											name = "Text Case",
-											value = 2,
-											values = { "lowercase", "Normal", "UPPERCASE" },
-										},
-										{
-											type = "Slider",
-											name = "Max Text Length",
-											value = 0,
-											min = 0,
-											max = 32,
-											custom = { [0] = "Unlimited" },
-											suffix = " letters",
-										},
-										{
-											type = "Slider",
-											name = "ESP Fade Time", 
-											value = 0.5,
-											min = 0,
-											max = 2,
-											suffix = "s",
-											decimal = 1,
-											custom = { [0] = "Off" }
-										},
-										{
-											type = "Toggle",
-											name = "Highlight Target",
-											value = false,
-											extra = {
-												{
-													type = "ColorPicker",
-													name = "Aimbot Target",
-													color = { 255, 0, 0, 255 },
-												}
-											},
-										},
-										{
-											type = "Toggle",
-											name = "Highlight Friends",
-											value = true,
-											extra = {
-												{
-													type = "ColorPicker",
-													name = "Friended Players",
-													color = { 0, 255, 255, 255 },
-												}
-											},
-										},
-										{
-											type = "Toggle",
-											name = "Highlight Priority",
-											value = true,
-											extra = {
-												{
-													type = "ColorPicker",
-													name = "Priority Players",
-													color = { 255, 210, 0, 255 },
-												}
-											},
-										},
-									}},
-									{content={
-										{
-											name = {"Basic", "Advanced"},
-											borderless = true,
-											pos = UDim2.new(0,0,0,0),
-											size = UDim2.new(1,0,1,0),
-											{content={
-												{
-													type = "Toggle",
-													name = "Enabled",
-													value = false,
-													extra = {
-														{
-															type = "ColorPicker",
-															name = "Outter",
-															color = { 0, 0, 0, 255 },
-														},
-														{
-															type = "ColorPicker",
-															name = "Inner",
-															color = { 127, 72, 163, 255 },
-														},
-													},
-												},
-												{
-													type = "ComboBox",
-													name = "Setup",
-													values = {{"Top",true},{"Bottom",true},{"Left",true},{"Right",true},{"Center",true}}
-												},
-												{
-													type = "Slider",
-													name = "Width",
-													value = 2,
-													min = 1,
-													max = 200,
-													decimal = 0,
-													suffix = "px",
-												},
-												{
-													type = "Slider",
-													name = "Height",
-													value = 15,
-													min = 1,
-													max = 200,
-													decimal = 0,
-													suffix = "px",
-												},
-												{
-													type = "Slider",
-													name = "Gap",
-													value = 25,
-													min = 0,
-													max = 200,
-													decimal = 0,
-													suffix = "px",
-												},
-											}},
-											{content={
-												{
-													type = "Toggle",
-													name = "Enabled",
-													value = false,
-												},
-												{
-													type = "DropBox",
-													name = "Type",
-													value = 1,
-													values = { "Additive", "Wave" },
-												},
-												{
-													type = "Slider",
-													name = "Speed",
-													value = 20,
-													min = -500,
-													max = 500,
-													custom = { [0] = "Nothing..." },
-													suffix = "",
-												},
-												{
-													type = "Slider",
-													name = "Amplitude",
-													value = 5,
-													min = -100,
-													max = 100,
-													custom = { [0] = "Nothing..." },
-													suffix = "",
-												},
-											}},
-										}
-									}}
-								},
-								{
-									name = {"Camera Visuals", "Extra"},
-									pos = UDim2.new(.5,4,0,0),
-									size = UDim2.new(.5,-8,1/2,-4),
-									{
-										content = {
-											{
-												type = "Slider",
-												name = "Camera FOV",
-												value = 80,
-												min = 60,
-												max = 120,
-												suffix = "°",
-											},
-											{
-												type = "Toggle",
-												name = "Third Person",
-												value = false,
-												extra = {
-													{
-														type = "KeyBind",
-														key = nil,
-														toggletype = 2,
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Third Person Absolute",
-												value = false,
-												extra = {},
-												tooltip = "Forces the L3P character to be exactly on you.",
-											},
-											{
-												type = "Toggle",
-												name = "First Person Third",
-												value = false,
-												extra = {},
-												tooltip = "See through the eyes of L3P",
-											},
-											{
-												type = "Slider",
-												name = "Third Person Distance",
-												value = 60,
-												min = -10,
-												max = 150,
-											},
-											{
-												type = "Slider",
-												name = "Third Person X Offset",
-												value = 0,
-												min = -50,
-												max = 50,
-											},
-											{
-												type = "Slider",
-												name = "Third Person Y Offset",
-												value = 0,
-												min = -50,
-												max = 50,
-											},
-										},
+										type = "Slider",
+										name = "FirePos Shift Distance",
+										value = 4,
+										min = 1,
+										max = 12,
+										suffix = " studs",
 									},
 									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Arm Chams",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Sleeve Color",
-														color = { 106, 136, 213, 255 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Hand Color",
-														color = { 181, 179, 253, 255 },
-													},
-												},
-											},
-											{
-												type = "DropBox",
-												name = "Arm Material",
-												value = 1,
-												values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-											},
-											{
-												type = "Toggle",
-												name = "Animate Ghost Material",
-												value = false,
-												tooltip = "Toggles whether or not the 'Ghost' material will be animated or not.",
-											},
-											{
-												type = "Toggle",
-												name = "Remove Weapon Skin",
-												value = false,
-												tooltip = "If a loaded weapon has a skin, it will remove it.",
-											},
-											{
-												type = "Toggle",
-												name = "Local Player Chams",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Local Player Chams",
-														color = { 106, 136, 213, 255 },
-													},
-												},
-												tooltip = "Changes the color and material of the local third person body when it is on.",
-											},
-											{
-												type = "DropBox",
-												name = "Local Player Material",
-												value = 1,
-												values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-											},
-										},
-									},
-								},
-								{
-									name = {"World", "Misc", "Keybinds", "FOV"},
-									pos = UDim2.new(.5,4,1/2,4),
-									size = UDim2.new(.5,-8,(12/20)/2,-8),
-									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Ambience",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Inside Ambience",
-														color = { 117, 76, 236 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Outside Ambience",
-														color = { 117, 76, 236 },
-													}
-												},
-												tooltip = "Changes the map's ambient colors to your defined colors.",
-											},
-											{
-												type = "Toggle",
-												name = "Force Time",
-												value = false,
-												tooltip = "Forces the time to the time set by your below.",
-											},
-											{
-												type = "Slider",
-												name = "Custom Time",
-												value = 0,
-												min = 0,
-												max = 24,
-												decimal = 1,
-												suffix = "hr",
-											},
-											{
-												type = "Toggle",
-												name = "Custom Saturation",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Saturation Tint",
-														color = { 255, 255, 255 },
-													},
-												},
-												tooltip = "Adds custom saturation the image of the game.",
-											},
-											{
-												type = "Slider",
-												name = "Saturation Density",
-												value = 0,
-												min = 0,
-												max = 100,
-												suffix = "%",
-											},
-										},
+										type = "Toggle",
+										name = "Relative Hitpoints Only",
+										value = true,
+										tooltip = "Makes the firpos and hitbox points align, so less calculations.",
 									},
 									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Ragdoll Chams",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Ragdoll Chams",
-														color = { 106, 136, 213, 255 },
-													},
-												},
-											},
-											{
-												type = "DropBox",
-												name = "Ragdoll Material",
-												value = 1,
-												values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
-											},
-											{
-												type = "Toggle",
-												name = "Bullet Tracers",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Tracer Color",
-														color = { 201, 69, 54, 255 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Tracer Outline",
-														color = { 101, 69, 54, 255 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Tracer Inner",
-														color = { 201, 100, 54, 255 },
-													},
-												},
-											}
+										type = "Slider",
+										name = "Max Hitpoints",
+										value = 30,
+										min = 0,
+										max = 100,
+										suffix = " point(s)",
+										decimal = 0,
+										custom = {
+											[0] = "Infinite",
 										},
+										tooltip = "The maximum amount of scans per hitbox point, useful if you don't wana lag to shit",
 									},
 									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Enabled",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Text Color",
-														color = { 127, 72, 163, 255 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Use List Sizes",
-												value = false,
-											},
-											{
-												type = "Toggle",
-												name = "Log Keybinds",
-												value = false
-											},
-										},
+										type = "Toggle",
+										name = "Resolver",
+										value = true,
+										tooltip = "Rage aimbot attempts to resolve player offsets and positions, Disable if you are having issues with resolver.",
 									},
 									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Enabled",
-												value = true,
-											},
-											{
-												type = "Toggle",
-												name = "Aim Assist",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 127, 72, 163, 255 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Aim Assist Deadzone",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 50, 50, 50, 255 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Bullet Redirect",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 163, 72, 127, 255 },
-													},
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Ragebot",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Color",
-														color = { 255, 210, 0, 255 },
-													},
-												},
-											},
-										},
+										type = "Toggle",
+										name = "Zero Velocity",
+										value = true,
+										tooltip = "Makes all the characters not have velocity, so the people like pf pwner can cry.",
 									},
-								},
-								{
-									name = {"Weapons", "Grenades", "Pickups"},
-									pos = UDim2.new(.5,4,(1/2) + ((12/20)/2),4),
-									size = UDim2.new(.5,-8,(8/20)/2,-4),
-									type = "Tabs",
-									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Weapon Names",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Highlighted Weapons",
-														color = { 255, 125, 255, 255 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Weapon Names",
-														color = { 255, 255, 255, 255 },
-													},
-												},
-												tooltip = "Displays dropped weapons as you get closer to them, Highlights the weapon you are holding in the second color.",
-											},
-											{
-												type = "Toggle",
-												name = "Weapon Icons",
-												value = false
-											},
-											{
-												type = "Toggle",
-												name = "Weapon Ammo",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Weapon Ammo",
-														color = { 61, 168, 235, 150 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Dropped Weapon Chams",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Dropped Weapon Color",
-														color = { 3, 252, 161, 150 },
-													}
-												},
-											},
-										}
-									},
-									{
-										content = {
-											{
-												type = "Toggle",
-												name = "Grenade Warning",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Warning Color",
-														color = { 68, 92, 227 },
-													}
-												},
-												tooltip = "Displays where grenades that will deal damage to you will land and the damage they will deal.",
-											},
-											{
-												type = "Toggle",
-												name = "Grenade Prediction",
-												value = true,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Prediction Color",
-														color = { 68, 92, 227 },
-													}
-												},
-												tooltip = "Shows where your grenades may land before throwing it.",
-											},
-										},
-									},
-									{
-										content = {
-											{
-												type = "Toggle",
-												name = "DogTags",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Enemy Color",
-														color = { 240, 0, 0 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Friendly Color",
-														color = { 0, 240, 240 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "DogTag Chams",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Enemy Color",
-														color = { 240, 0, 0 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Friendly Color",
-														color = { 0, 240, 240 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Flags",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Enemy Color",
-														color = { 240, 0, 0 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Friendly Color",
-														color = { 0, 240, 240 },
-													}
-												},
-											},
-											{
-												type = "Toggle",
-												name = "Flag Chams",
-												value = false,
-												extra = {
-													{
-														type = "ColorPicker",
-														name = "Enemy Color",
-														color = { 240, 0, 0 },
-													},
-													{
-														type = "ColorPicker",
-														name = "Friendly Color",
-														color = { 0, 240, 240 },
-													}
-												},
-											},
-										},
-									}
-								},
+								}
 							},
-						},
-						{
-							name = "Misc",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							type = "Container",
-							content = {
-								{
-									name = {"Movement", "Tweaks", "Chat Spam"},
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(.5,-4,5.5/10,-4),
-									type = "Panel",
-									{content = {
-										{
-											type = "Toggle",
-											name = "Fly",
-											value = false,
-											unsafe = true,
-											tooltip = "Manipulates your velocity to make you fly.\nUse 60 speed or below to never get flagged.",
-											extra = {
-												{
-													type = "KeyBind",
-													key = "B",
-													toggletype = 2,
-												}
-											},
-										},
-										{
-											type = "Slider",
-											name = "Fly Speed",
-											min = 0,
-											max = 400,
-											suffix = " stud/s",
-											decimal = 1,
-											value = 55,
-											custom = {
-												[400] = "Absurdly Fast",
-											},
-										},
-										{
-											type = "Toggle",
-											name = "Auto Jump",
-											value = false,
-											tooltip = "When you hold the spacebar, it will automatically jump repeatedly, ignoring jump delay.",
-										},
-										{
-											type = "Toggle",
-											name = "Speed",
-											value = false,
-											unsafe = true,
-											tooltip = "Manipulates your velocity to make you move faster, unlike fly it doesn't make you fly.\nUse 60 speed or below to never get flagged.",
-											extra = {
-												{
-													type = "KeyBind",
-													key = nil,
-													toggletype = 4,
-												}
-											},
-										},
-										{
-											type = "DropBox",
-											name = "Speed Type",
-											value = 1,
-											values = { "Always", "In Air", "On Hop" },
-										},
-										{
-											type = "Slider",
-											name = "Speed Factor",
-											value = 40,
-											min = 1,
-											max = 400,
-											suffix = " stud/s",
-										},
-										{
-											type = "Toggle",
-											name = "Avoid Collisions",
-											value = false,
-											tooltip = "Attempts to stops you from running into obstacles\nfor Speed and Circle Strafe.",
-											extra = {
-												{
-													type = "KeyBind",
-													toggletype = 4,
-												}
-											}
-										},
-										{
-											type = "Slider",
-											name = "Avoid Collisions Scale",
-											value = 100,
-											min = 0,
-											max = 100,
-											suffix = "%",
-										},
-										{
-											type = "Toggle",
-											name = "Circle Strafe",
-											value = false,
-											tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed Factor.",
-											extra = {
-												{
-													type = "KeyBind",
-													key = nil,
-													toggletype = 2,
-												}
-											},
-										},
-										{
-											type = "Slider",
-											name = "Circle Strafe Scale",
-											value = 20,
-											min = 0,
-											max = 100,
-											suffix = "x",
-										},
-									}},
-									{content = {
-										{
-											type = "Toggle",
-											name = "Jump Power",
-											value = false,
-											tooltip = "Shifts movement jump power by X%.",
-											unsafe = true
-										},
-										{
-											type = "Slider",
-											name = "Jump Power Percentage",
-											value = 150,
-											min = 0,
-											max = 1000,
-											suffix = "%",
-										},
-										{
-											type = "Toggle",
-											name = "Prevent Fall Damage",
-											value = false,
-											unsafe = true
-										},
-										{
-											type = "DropBox",
-											name = "Weapon Style",
-											value = 1,
-											values = {"Off", "Rambo", "Doom", "Quake III", "Half-Life"},
-											tooltip = "Temporarily here till I make a weapons tab..."
-										},
-										{
-											type = "Slider",
-											name = "Weapon Bob",
-											min = -200,
-											max = 200,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											tooltip = "Temporarily here till I make a weapons tab..."
-										},
-										{
-											type = "Slider",
-											name = "Swing Scale",
-											min = -200,
-											max = 200,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											tooltip = "Temporarily here till I make a weapons tab..."
-										},
-										{
-											type = "Slider",
-											name = "Reload Speed",
-											min = 0,
-											max = 100,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											unsafe = true,
-											tooltip = "Temporarily here till I make a weapons tab..."
-										},
-										{
-											type = "Slider",
-											name = "OnFire Speed",
-											min = 0,
-											max = 100,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											unsafe = true,
-											tooltip = "Temporarily here till I make a weapons tab..."
-										},
-										{
-											type = "Slider",
-											name = "Firerate",
-											min = 0,
-											max = 2000,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											unsafe = true,
-											tooltip = "Temporarily here till I make a weapons tab..."
-										},
-									}},
-									{content = {
-										{
-											type = "Toggle",
-											name = "Enabled",
-											value = false,
-											tooltip = "Try not to turn this on when playing legit :)\nWARNING: This could make anti-votekick break due to chat limitations!",
-											unsafe = true
-										},
-										{
-											type = "DropBox",
-											name = "Presets",
-											value = 1,
-											values = {"Bitch Bot", "Chinese Propaganda", "Youtube Title", "Emojis", "Deluxe", "t0nymode", "Douchbag", "Custom"},
-										},
-										{
-											type = "Slider",
-											name = "Spam Delay",
-											min = 1.5,
-											max = 10,
-											suffix = "s",
-											decimal = 1,
-											value = 1.5,
-											custom = {
-												[1.5] = "Chat Rape",
-											},
-										},
-										{
-											type = "Toggle",
-											name = "Newline Mixer",
-											value = true,
-											tooltip = "Instead of showing each line, it mixes lines together.",
-										},
-										{
-											type = "Toggle",
-											name = "Spam On Kills",
-											value = true,
-											tooltip = "Makes the chat spammer only spam per kill, extra synatxes are added such as {weapon}, {player}, {hitpart}",
-										},
-										{
-											type = "Slider",
-											name = "Minimum Kills",
-											min = 0,
-											max = 15,
-											suffix = " kill(s)",
-											decimal = 0,
-											value = 0,
-											custom = {
-												[0] = "Spam Immediately",
-											},
-										},
-										{
-											type = "Slider",
-											name = "Start Delay",
-											min = 0,
-											max = 10,
-											suffix = "s",
-											decimal = 1,
-											value = 0,
-											custom = {
-												[0] = "Spam Immediately",
-											},
-										},
-									}}
-								},
-								{
-									name = {"Server Hopper", "Votekick"},
-									pos = UDim2.new(0,0,5.5/10,4),
-									size = UDim2.new(.5,-4,1-(5.5/10),-4),
-									type = "Panel",
-									{content = {
-										{
-											type = "Toggle",
-											name = "Enabled",
-											value = false,
-											tooltip = "This will auto-hop you to your desired servers when kicked."
-										},
-										{
-											type = "Slider",
-											name = "Hop Delay",
-											min = 0,
-											max = 20,
-											suffix = "s",
-											decimal = 1,
-											value = 0,
-											custom = {
-												[0] = "Instantaneous Hop",
-											},
-											tooltip = "Delays server hopper by a certain amount of seconds."
-										},
-										{
-											type = "DropBox",
-											name = "Sorting",
-											value = 1,
-											values = {"Lowest Players", "Highest Players"},
-										},
-										{
-											type = "Button",
-											name = "Get JobId",
-											confirm = "Are you sure?",
-											clicked = "Copied to clipboard!",
-											callback = function()
-												setclipboard(game.JobId)
-											end
-										},
-										{
-											type = "Button",
-											name = "Clear Blacklist",
-											confirm = "Are you sure 100%?",
-											tooltip = "This will clear the server blacklist, careful as this would mean you may join votekicked servers!",
-											callback = function()
-												BBOT.serverhopper:ClearBlacklist()
-											end
-										},
-										{
-											type = "Button",
-											name = "Rejoin",
-											confirm = "Are you sure?",
-											callback = function()
-												BBOT.serverhopper:Hop(game.JobId)
-											end
-										},
-										{
-											type = "Button",
-											name = "Hop",
-											confirm = "Are you sure?",
-											callback = function()
-												BBOT.serverhopper:RandomHop()
-											end
-										},
-									}},
-									{content = {
-										{
-											type = "Toggle",
-											name = "Anti Votekick",
-											value = false,
-											tooltip = "WARNING: This requires 2 or more rank 25 accounts to work! You can do 1 rank 25 but it would only delay a votekick by ~90-120 seconds",
-										},
-										{
-											type = "Text",
-											name = "Reason",
-											value = "Aimbot",
-										},
-										{
-											type = "Slider",
-											name = "Votekick On Kills",
-											min = 0,
-											max = 30,
-											suffix = " kills",
-											decimal = 0,
-											value = 4,
-											custom = {
-												[0] = "Instantaneous Kick",
-											},
-											tooltip = "Delays votekick once at a certain amount of kills."
-										},
-									}},
-								},
-								{
-									name = {"Extra", "Sounds", "Exploits"},
-									pos = UDim2.new(.5,4,0,0),
-									size = UDim2.new(.5,-4,1,0),
-									type = "Panel",
-									{content = {
-										{
-											type = "Toggle",
-											name = "Auto Death",
-											value = false,
-											tooltip = "Lowers your total KD so that you don't get flagged for bans."
-										},
-										{
-											type = "Toggle",
-											name = "Auto Spawn",
-											value = false,
-											extra = {
-												{
-													type = "KeyBind",
-													toggletype = 2,
-												}
-											}
-										},
-									}},
-									{content = {
-										{
-											type = "Text",
-											name = "Hit",
-											value = "6229978482",
-											tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
-										},
-										{
-											type = "Slider",
-											name = "Hit Volume",
-											min = 0,
-											max = 100,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											custom = {},
-										},
-										{
-											type = "Text",
-											name = "Headshot",
-											value = "6229978482",
-											tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
-										},
-										{
-											type = "Slider",
-											name = "Headshot Volume",
-											min = 0,
-											max = 100,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											custom = {},
-										},
-										{
-											type = "Text",
-											name = "Kill",
-											value = "6229978482",
-											tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
-										},
-										{
-											type = "Slider",
-											name = "Kill Volume",
-											min = 0,
-											max = 100,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											custom = {},
-										},
-										{
-											type = "Text",
-											name = "Headshot Kill",
-											value = "6229978482",
-											tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
-										},
-										{
-											type = "Slider",
-											name = "Headshot Kill Volume",
-											min = 0,
-											max = 100,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											custom = {},
-										},
-										{
-											type = "Text",
-											name = "Fire",
-											value = "",
-											tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
-										},
-										{
-											type = "Slider",
-											name = "Fire Volume",
-											min = 0,
-											max = 100,
-											suffix = "%",
-											decimal = 1,
-											value = 100,
-											custom = {},Fire
-										},
-									}},
-									{content = {
-										--[[{
-											type = "Toggle",
-											name = "Bypass Speed Checks",
-											value = false,
-											tooltip = "Attempts to bypass maximum speed limit on the server."
-										},]]
-										{
-											type = "Toggle",
-											name = "Spaz Attack",
-											value = false,
-											unsafe = true,
-											tooltip = "Literally makes you look like your having a stroke."
-										},
-										{
-											type = "Slider",
-											name = "Spaz Attack Intensity",
-											min = 0.1,
-											max = 6,
-											suffix = "",
-											decimal = 1,
-											value = 3,
-											custom = {
-												[8] = "Unbearable",
-											},
-										},
-										{
-											type = "Toggle",
-											name = "Click TP",
-											value = false,
-											unsafe = true,
-											extra = {
-												{
-													type = "KeyBind",
-													key = nil,
-													toggletype = 4
-												}
-											},
-											tooltip = "Ez clap TP",
-										},
-										{
-											type = "Slider",
-											name = "Click TP Range",
-											min = 0,
-											max = 200,
-											suffix = " studs",
-											decimal = 1,
-											value = 50,
-											custom = {
-												[0] = "Fucking Insane",
-											},
-										},
-										{
-											type = "Toggle",
-											name = "Teleport to Player",
-											value = false,
-											unsafe = true,
-											extra = {
-												{
-													type = "KeyBind",
-													key = nil,
-													toggletype = 4--? i'm not sure
-												}
-											},
-										},
-										{
-											type = "ComboBox",
-											name = "Auto Teleport",
-											values = {
-												{ "On Spawn", false },
-												{ "On Enemy Spawn", false },
-												{ "Enemies Alive", false },
-											},
-											unsafe = true,
-											extra = {
-												{
-													type = "KeyBind",
-													key = "M",
-													toggletype = 2--? i'm not sure
-												},
-												{
-													type = "ColorPicker",
-													name = "Path Color",
-													color = { 127, 72, 163, 150 },
-												}
-											},
-										},
-										--[[{
-											type = "Toggle",
-											name = "Invisibility",
-											value = false,
-											tooltip = "Wtf where did he go?",
-											extra = {
-												{
-													type = "KeyBind",
-													toggletype = 2,
-												}
-											}
-										},
-										{
-											type = "Toggle",
-											name = "Client Crasher",
-											value = false,
-											tooltip = "Dear god...",
-											extra = {
-												{
-													type = "KeyBind",
-													toggletype = 2,
-												}
-											}
-										},
-										{
-											type = "Toggle",
-											name = "Server Crasher",
-											value = false,
-											tooltip = "Dear god...",
-											extra = {
-												{
-													type = "KeyBind",
-													toggletype = 2,
-												}
-											}
-										},
-										{
-											type = "Slider",
-											name = "Server Crasher Intensity",
-											min = 1,
-											max = 16,
-											suffix = "",
-											decimal = 0,
-											value = 4,
-											custom = {
-												[15] = "Literally Unplayable",
-												[16] = "Insta-Crash",
-											},
-										},]]
-										{
-											type = "Toggle",
-											name = "Tick Division Manipulation",
-											value = false,
-											unsafe = true,
-											tooltip = "Makes your velocity go 10^n m/s, god why raspi you fucking idiot",
-										},
-										{
-											type = "Slider",
-											name = "Tick Division Scale",
-											min = 0.1,
-											max = 12,
-											suffix = "^10 studs/s",
-											decimal = 1,
-											value = 3,
-											custom = {
-												[12] = "Fucking Insane",
-											},
-											tooltip = "Each value here is tick/10^n, so velocity go *wait what the fuck*",
-										},
-										{
-											type = "Toggle",
-											name = "Revenge Grenade",
-											value = false,
-											unsafe = true,
-											tooltip = "Automatically teleports a grenade to the person who killed you.",
-										},
-										{
-											type = "Toggle",
-											name = "Auto Grenade Frozen",
-											value = false,
-											unsafe = true,
-											tooltip = "Automatically teleports a grenade to people frozen, useful against semi-god users.",
-										},
-										{
-											type = "Slider",
-											name = "Auto Grenade Wait",
-											min = 0,
-											max = 12,
-											suffix = "s",
-											decimal = 1,
-											value = 6,
-											custom = {
-												[0] = "Full Send It Bro",
-											},
-											tooltip = "Time till auto nade should send",
-										},
-										{
-											type = "Toggle",
-											name = "Blink",
-											value = false,
-											unsafe = true,
-											tooltip = "Enables when you are standing still. Staying longer than 8 seconds may result in a auto-slay when you move. Grenades and knives still affect you!",
-											extra = {
-												{
-													type = "KeyBind",
-													toggletype = 2,
-												}
-											}
-										},
-										{
-											type = "Toggle",
-											name = "Blink Allow Movement",
-											value = false,
-											tooltip = "Won't check if you are standling still, it will just activate immediately",
-										},
-										{
-											type = "Slider",
-											name = "Blink Keep Alive",
-											min = 0,
-											max = 12,
-											suffix = "s",
-											decimal = 1,
-											value = 7,
-											custom = {
-												[0] = "Invulnerable",
-											},
-											tooltip = "Attempts to allow movement when in temp-god when needed, WARNING: This can make you vulnerable for a split second",
-										},
-										{
-											type = "Toggle",
-											name = "Repupdate Spammer",
-											value = false,
-											unsafe = true,
-											tooltip = "Sends repupdate per frame, just so you can move faster :)",
-										},
-										{
-											type = "Toggle",
-											name = "Anti Grenade TP",
-											value = false,
-											unsafe = true,
-											tooltip = "Moves you right after a kill, to hopefully... HOPEFULLY. Avoid a grenade TP.",
-										},
-										{
-											type = "ComboBox",
-											name = "Anti Grenade TP Points",
-											values = {
-												{ "Up", true },
-												{ "Down", true },
-												{ "Left", false },
-												{ "Right", false },
-												{ "Forward", true },
-												{ "Backward", true },
-											},
-										},
-										{
-											type = "Toggle",
-											name = "TP Scanning",
-											value = false,
-											unsafe = true,
-											tooltip = "Moves you to a position to kill",
-										},
-										{
-											type = "ComboBox",
-											name = "TP Scanning Points",
-											values = {
-												{ "Up", true },
-												{ "Down", true },
-												{ "Left", false },
-												{ "Right", false },
-												{ "Forward", true },
-												{ "Backward", true },
-											},
-										},
-										{
-											type = "Slider",
-											name = "TP Scanning Distance",
-											min = 2,
-											max = 100,
-											suffix = " studs",
-											decimal = 1,
-											value = 25,
-											custom = {},
-										},
-									}},
-								},
+							{
+								name = { "Anti Aim", "Fake Lag" },
+								pos = UDim2.new(.5,4,0,0),
+								size = UDim2.new(.5,-4,1-(5.5/10),-4),
+								{content = {
+									{
+										type = "Toggle",
+										name = "Enabled",
+										value = false,
+										unsafe = true,
+										tooltip = "When this is enabled, your server-side yaw, pitch and stance are set to the values in this tab.",
+									},
+									{
+										type = "DropBox",
+										name = "Pitch",
+										value = 4,
+										values = {
+											"Off",
+											"Up",
+											"Zero",
+											"Down",
+											"Upside Down",
+											"Roll Forward",
+											"Roll Backward",
+											"Random",
+											"Bob",
+											"Glitch",
+										},
+									},
+									{
+										type = "DropBox",
+										name = "Yaw",
+										value = 2,
+										values = { "Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin" },
+									},
+									{
+										type = "Slider",
+										name = "Spin Rate",
+										value = 10,
+										minvalue = -100,
+										maxvalue = 100,
+										stradd = "°/s",
+									},
+								}},
+								{content = {}},
 							},
+							{
+								name = { "Extra", "Settings" },
+								pos = UDim2.new(.5,4,1-(5.5/10),4),
+								size = UDim2.new(.5,-4,(5.5/10),-4),
+								{content = {
+									{
+										type = "Toggle",
+										name = "Knife Bot",
+										value = false,
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2,
+											}
+										},
+										unsafe = true,
+									},
+									{
+										type = "DropBox",
+										name = "Knife Bot Type",
+										value = 1,
+										values = { "Multi Aura" },
+									},
+									{
+										type = "DropBox",
+										name = "Knife Hitscan",
+										value = 1,
+										values = { "Head", "Body" },
+									},
+									{
+										type = "Toggle",
+										name = "Knife Visible Only",
+										value = false,
+									},
+									{
+										type = "Slider",
+										name = "Knife Range",
+										value = 26,
+										min = 1,
+										max = 26,
+										custom = {[26] = "Max"},
+										suffix = " studs",
+									},
+									{
+										type = "Slider",
+										name = "Knife Delay",
+										value = 0,
+										min = 0,
+										max = 1,
+										decimal = 2,
+										custom = {[0] = "Knife Party"},
+										suffix = "s",
+									},
+								}},
+								{content = {
+									{
+										type = "Toggle",
+										name = "Damage Prediction",
+										value = true,
+									},
+									{
+										type = "Slider",
+										name = "Damage Prediction Time",
+										value = 200,
+										min = 100,
+										max = 500,
+										suffix = "%",
+									},
+									{
+										type = "Slider",
+										name = "Damage Prediction Limit",
+										value = 100,
+										min = 0,
+										max = 300,
+										custom = {[0] = "What even is the point?"},
+										suffix = "hp",
+									},
+								}},
+							}
 						},
-						{
-							name = "Settings",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							type = "Container",
-							content = {
+					},
+					{
+						name = "Visuals",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {
+							{
+								name = { "Enemy ESP", "Team ESP", "Local" },
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(.5,-4,11/20,-4),
 								{
-									name = "Cheat Settings",
-									pos = UDim2.new(0,0,6/10,4),
-									size = UDim2.new(.5,-4,4/10,-4),
-									type = "Panel",
 									content = {
 										{
 											type = "Toggle",
-											name = "Menu Accent",
-											value = false,
-											extra = {
-												{
-													type = "ColorPicker",
-													name = "Accent",
-													color = { 127, 72, 163, 255 },
-												}
-											},
+											name = "Enabled",
+											value = true,
+											tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
 										},
 										{
 											type = "Toggle",
-											name = "Open Menu On Boot",
+											name = "Name",
 											value = true,
-											extra = {},
-										},
-										{
-											type = "Slider",
-											name = "Background Transparency",
-											value = 80,
-											min = 0,
-											max = 100,
-											suffix = "%",
-											custom = {
-												[100] = "Off"
-											},
 											extra = {
 												{
 													type = "ColorPicker",
 													name = "Color",
-													color = { 0, 0, 0, 255 },
+													color = { 255, 255, 255, 200 },
 												}
 											},
 										},
 										{
-											type = "Text",
-											name = "Custom Menu Name",
-											value = "Bitch Bot",
-											extra = {},
-										},
-										{
-											type = "Text",
-											name = "Custom Menu Logo",
-											value = "Bitch Bot",
-											extra = {},
-											tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
+											type = "Toggle",
+											name = "Box",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color Fill",
+													color = { 255, 0, 0, 0 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Color Box",
+													color = { 255, 0, 0, 150 },
+												}
+											},
 										},
 										{
 											type = "Toggle",
-											name = "Allow Unsafe Features",
-											value = false,
-											extra = {},
+											name = "Health Bar",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color Low",
+													color = { 255, 0, 0, 0 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Color Max",
+													color = { 0, 255, 0, 150 },
+												}
+											},
 										},
 										{
-											type = "Button",
-											name = "Unload Cheat",
-											confirm = "Are you sure?",
-											callback = function()
-												BBOT.hook:Call("Unload")
-												BBOT.Unloaded = true
-											end
-										}
+											type = "Toggle",
+											name = "Health Number",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 255, 255, 255, 255 },
+												}
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Held Weapon",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 255, 255, 255, 200 },
+												}
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Held Weapon Icon",
+											value = false,
+										},
+										{
+											type = "ComboBox",
+											name = "Flags",
+											values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Frozen", true }, { "Resolved", false }, { "Backtrack", false },  },
+										},
+										{
+											type = "Toggle",
+											name = "Chams",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Visible Chams",
+													color = { 255, 0, 0, 200 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Invisible Chams",
+													color = { 100, 0, 0, 100 },
+												}
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Skeleton",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Enemy skeleton",
+													color = { 255, 255, 255, 120 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Out of View",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Arrow Color",
+													color = { 255, 255, 255, 255 },
+												},
+											},
+										},
+										{
+											type = "Slider",
+											name = "Arrow Distance",
+											value = 50,
+											min = 10,
+											max = 101,
+											custom = { [101] = "Max" },
+											suffix = "%",
+										},
+										{
+											type = "Toggle",
+											name = "Dynamic Arrow Size",
+											value = true,
+										},
 									},
 								},
 								{
-									name = "Menus",
-									pos = UDim2.new(.5,4,0,0),
-									size = UDim2.new(.5,-4,4/10,-4),
-									type = "Panel",
 									content = {
 										{
 											type = "Toggle",
-											name = "Weapon Customization",
+											name = "Enabled",
 											value = false,
-											extra = {},
+											tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
 										},
 										{
 											type = "Toggle",
-											name = "Environment",
+											name = "Name",
 											value = false,
-											extra = {},
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 255, 255, 255, 200 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Box",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color Fill",
+													color = { 0, 255, 0, 0 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Color Box",
+													color = { 0, 255, 0, 150 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Health Bar",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color Low",
+													color = { 255, 0, 0, 255 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Color Max",
+													color = { 0, 255, 0, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Health Number",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 255, 255, 255, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Held Weapon",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 255, 255, 255, 200 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Held Weapon Icon",
+											value = false,
+										},
+										{
+											type = "ComboBox",
+											name = "Flags",
+											values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false }, { "Frozen", true }, { "Resolved", false }  },
+										},
+										{
+											type = "Toggle",
+											name = "Chams",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Visible Chams",
+													color = { 0, 255, 0, 200 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Invisible Chams",
+													color = { 0, 100, 0, 100 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Skeleton",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Team skeleton",
+													color = { 255, 255, 255, 120 },
+												},
+											},
+										},
+									},
+								},
+								{
+									content = {
+										{
+											type = "Toggle",
+											name = "Enabled",
+											value = false,
+											tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
+										},
+										{
+											type = "Toggle",
+											name = "Name",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 255, 255, 255, 200 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Box",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color Fill",
+													color = { 127, 72, 163, 0 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Color Box",
+													color = { 127, 72, 163, 150 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Health Bar",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color Low",
+													color = { 255, 0, 0, 255 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Color Max",
+													color = { 0, 255, 0, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Health Number",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 255, 255, 255, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Held Weapon",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 255, 255, 255, 200 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Held Weapon Icon",
+											value = false,
+										},
+										{
+											type = "ComboBox",
+											name = "Flags",
+											values = { { "Use Large Text", false }, { "Level", false }, { "Distance", false }, { "Frozen", true }, { "Resolved", false }  },
+										},
+										{
+											type = "Toggle",
+											name = "Chams",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Visible Chams",
+													color = { 127, 72, 163, 200 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Invisible Chams",
+													color = { 127, 72, 163, 100 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Skeleton",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Team skeleton",
+													color = { 255, 255, 255, 120 },
+												},
+											},
 										},
 									}
 								},
+							},
+							{
+								name = {"ESP Settings", "Crosshair"},
+								pos = UDim2.new(0,0,11/20,4),
+								size = UDim2.new(.5,-4,9/20,-4),
+								type = "Panel",
+								{content = {
+									{
+										type = "Slider",
+										name = "Max HP Visibility Cap",
+										value = 90,
+										min = 50,
+										max = 100,
+										suffix = "hp",
+										custom = {
+											[100] = "Always"
+										}
+									},
+									{
+										type = "DropBox",
+										name = "Text Case",
+										value = 2,
+										values = { "lowercase", "Normal", "UPPERCASE" },
+									},
+									{
+										type = "Slider",
+										name = "Max Text Length",
+										value = 0,
+										min = 0,
+										max = 32,
+										custom = { [0] = "Unlimited" },
+										suffix = " letters",
+									},
+									{
+										type = "Slider",
+										name = "ESP Fade Time", 
+										value = 0.5,
+										min = 0,
+										max = 2,
+										suffix = "s",
+										decimal = 1,
+										custom = { [0] = "Off" }
+									},
+									{
+										type = "Toggle",
+										name = "Highlight Target",
+										value = false,
+										extra = {
+											{
+												type = "ColorPicker",
+												name = "Aimbot Target",
+												color = { 255, 0, 0, 255 },
+											}
+										},
+									},
+									{
+										type = "Toggle",
+										name = "Highlight Friends",
+										value = true,
+										extra = {
+											{
+												type = "ColorPicker",
+												name = "Friended Players",
+												color = { 0, 255, 255, 255 },
+											}
+										},
+									},
+									{
+										type = "Toggle",
+										name = "Highlight Priority",
+										value = true,
+										extra = {
+											{
+												type = "ColorPicker",
+												name = "Priority Players",
+												color = { 255, 210, 0, 255 },
+											}
+										},
+									},
+								}},
+								{content={
+									{
+										name = {"Basic", "Advanced"},
+										borderless = true,
+										pos = UDim2.new(0,0,0,0),
+										size = UDim2.new(1,0,1,0),
+										{content={
+											{
+												type = "Toggle",
+												name = "Enabled",
+												value = false,
+												extra = {
+													{
+														type = "ColorPicker",
+														name = "Outter",
+														color = { 0, 0, 0, 255 },
+													},
+													{
+														type = "ColorPicker",
+														name = "Inner",
+														color = { 127, 72, 163, 255 },
+													},
+												},
+											},
+											{
+												type = "ComboBox",
+												name = "Setup",
+												values = {{"Top",true},{"Bottom",true},{"Left",true},{"Right",true},{"Center",true}}
+											},
+											{
+												type = "Slider",
+												name = "Width",
+												value = 2,
+												min = 1,
+												max = 200,
+												decimal = 0,
+												suffix = "px",
+											},
+											{
+												type = "Slider",
+												name = "Height",
+												value = 15,
+												min = 1,
+												max = 200,
+												decimal = 0,
+												suffix = "px",
+											},
+											{
+												type = "Slider",
+												name = "Gap",
+												value = 25,
+												min = 0,
+												max = 200,
+												decimal = 0,
+												suffix = "px",
+											},
+										}},
+										{content={
+											{
+												type = "Toggle",
+												name = "Enabled",
+												value = false,
+											},
+											{
+												type = "DropBox",
+												name = "Type",
+												value = 1,
+												values = { "Additive", "Wave" },
+											},
+											{
+												type = "Slider",
+												name = "Speed",
+												value = 20,
+												min = -500,
+												max = 500,
+												custom = { [0] = "Nothing..." },
+												suffix = "",
+											},
+											{
+												type = "Slider",
+												name = "Amplitude",
+												value = 5,
+												min = -100,
+												max = 100,
+												custom = { [0] = "Nothing..." },
+												suffix = "",
+											},
+										}},
+									}
+								}}
+							},
+							{
+								name = {"Camera Visuals", "Extra"},
+								pos = UDim2.new(.5,4,0,0),
+								size = UDim2.new(.5,-8,1/2,-4),
 								{
-									name = "Configs",
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(.5,-4,6/10,-4),
-									type = "Panel",
 									content = {
 										{
-											type = "Text",
-											name = "Config Name",
-											value = "Default",
+											type = "Slider",
+											name = "Camera FOV",
+											value = 80,
+											min = 60,
+											max = 120,
+											suffix = "°",
+										},
+										{
+											type = "Toggle",
+											name = "Third Person",
+											value = false,
+											extra = {
+												{
+													type = "KeyBind",
+													key = nil,
+													toggletype = 2,
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Third Person Absolute",
+											value = false,
 											extra = {},
+											tooltip = "Forces the L3P character to be exactly on you.",
+										},
+										{
+											type = "Toggle",
+											name = "First Person Third",
+											value = false,
+											extra = {},
+											tooltip = "See through the eyes of L3P",
+										},
+										{
+											type = "Slider",
+											name = "Third Person Distance",
+											value = 60,
+											min = -10,
+											max = 150,
+										},
+										{
+											type = "Slider",
+											name = "Third Person X Offset",
+											value = 0,
+											min = -50,
+											max = 50,
+										},
+										{
+											type = "Slider",
+											name = "Third Person Y Offset",
+											value = 0,
+											min = -50,
+											max = 50,
+										},
+									},
+								},
+								{
+									content = {
+										{
+											type = "Toggle",
+											name = "Show Keybinds",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Text Color",
+													color = { 127, 72, 163, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Log Keybinds",
+											value = false
+										},
+										{
+											type = "Toggle",
+											name = "Arm Chams",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Sleeve Color",
+													color = { 106, 136, 213, 255 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Hand Color",
+													color = { 181, 179, 253, 255 },
+												},
+											},
 										},
 										{
 											type = "DropBox",
-											name = "Configs",
+											name = "Arm Material",
 											value = 1,
-											values = {"Default"}
-										},
-										{
-											type = "Button",
-											name = "Save",
-											confirm = "Are you sure?",
-											callback = function()
-												local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Config Name")
-												BBOT.config:Save(s)
-												BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autosave File")
-												BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autoload File")
-												local configs = BBOT.config:Discover()
-												BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
-												menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
-												BBOT.notification:Create("Saved config: " .. s)
-											end
-										},
-										{
-											type = "Button",
-											name = "Load",
-											confirm = "Are you sure?",
-											callback = function()
-												local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Configs")
-												BBOT.config:Open(s)
-												BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Config Name")
-												BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autosave File")
-												BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autoload File")
-												local configs = BBOT.config:Discover()
-												BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
-												menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
-												BBOT.notification:Create("Loaded config: " .. s)
-											end
+											values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
 										},
 										{
 											type = "Toggle",
-											name = "Auto Save Config",
+											name = "Remove Weapon Skin",
 											value = false,
-											extra = {},
+											tooltip = "If a loaded weapon has a skin, it will remove it.",
 										},
+									},
+								},
+							},
+							{
+								name = {"World", "Misc", "FOV"},
+								pos = UDim2.new(.5,4,1/2,4),
+								size = UDim2.new(.5,-8,(12/20)/2,-8),
+								{
+									content = {
 										{
-											type = "Text",
-											name = "Autosave File",
-											value = "Default",
-											extra = {},
+											type = "Toggle",
+											name = "Ambience",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Inside Ambience",
+													color = { 117, 76, 236 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Outside Ambience",
+													color = { 117, 76, 236 },
+												}
+											},
+											tooltip = "Changes the map's ambient colors to your defined colors.",
 										},
 										{
 											type = "Toggle",
-											name = "Auto Load Config",
+											name = "Force Time",
 											value = false,
-											extra = {},
+											tooltip = "Forces the time to the time set by your below.",
 										},
 										{
-											type = "Text",
-											name = "Autoload File",
-											value = "Default",
-											extra = {},
+											type = "Slider",
+											name = "Custom Time",
+											value = 0,
+											min = 0,
+											max = 24,
+											decimal = 1,
+											suffix = "hr",
+										},
+										{
+											type = "Toggle",
+											name = "Custom Saturation",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Saturation Tint",
+													color = { 255, 255, 255 },
+												},
+											},
+											tooltip = "Adds custom saturation the image of the game.",
+										},
+										{
+											type = "Slider",
+											name = "Saturation Density",
+											value = 0,
+											min = 0,
+											max = 100,
+											suffix = "%",
+										},
+									},
+								},
+								{
+									content = {
+										{
+											type = "Toggle",
+											name = "Ragdoll Chams",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Ragdoll Chams",
+													color = { 106, 136, 213, 255 },
+												},
+											},
+										},
+										{
+											type = "DropBox",
+											name = "Ragdoll Material",
+											value = 1,
+											values = { "Plastic", "Ghost", "Neon", "Foil", "Glass" },
+										},
+										{
+											type = "Toggle",
+											name = "Bullet Tracers",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Tracer Color",
+													color = { 201, 69, 54, 255 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Tracer Outline",
+													color = { 101, 69, 54, 255 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Tracer Inner",
+													color = { 201, 100, 54, 255 },
+												},
+											},
+										}
+									},
+								},
+								{
+									content = {
+										{
+											type = "Toggle",
+											name = "Enabled",
+											value = true,
+										},
+										{
+											type = "Toggle",
+											name = "Aim Assist",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 127, 72, 163, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Aim Assist Deadzone",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 50, 50, 50, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Bullet Redirect",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 163, 72, 127, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Ragebot",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 255, 210, 0, 255 },
+												},
+											},
+										},
+									},
+								},
+							},
+							{
+								name = {"Weapons", "Grenades", "Pickups"},
+								pos = UDim2.new(.5,4,(1/2) + ((12/20)/2),4),
+								size = UDim2.new(.5,-8,(8/20)/2,-4),
+								type = "Tabs",
+								{
+									content = {
+										{
+											type = "Toggle",
+											name = "Weapon Names",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Highlighted Weapons",
+													color = { 255, 125, 255, 255 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Weapon Names",
+													color = { 255, 255, 255, 255 },
+												},
+											},
+											tooltip = "Displays dropped weapons as you get closer to them, Highlights the weapon you are holding in the second color.",
+										},
+										{
+											type = "Toggle",
+											name = "Weapon Icons",
+											value = false
+										},
+										{
+											type = "Toggle",
+											name = "Weapon Ammo",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Weapon Ammo",
+													color = { 61, 168, 235, 150 },
+												}
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Dropped Weapon Chams",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Dropped Weapon Color",
+													color = { 3, 252, 161, 150 },
+												}
+											},
 										},
 									}
+								},
+								{
+									content = {
+										{
+											type = "Toggle",
+											name = "Grenade Warning",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Warning Color",
+													color = { 68, 92, 227 },
+												}
+											},
+											tooltip = "Displays where grenades that will deal damage to you will land and the damage they will deal.",
+										},
+										{
+											type = "Toggle",
+											name = "Grenade Prediction",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Prediction Color",
+													color = { 68, 92, 227 },
+												}
+											},
+											tooltip = "Shows where your grenades may land before throwing it.",
+										},
+									},
+								},
+								{
+									content = {
+										{
+											type = "Toggle",
+											name = "DogTags",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Enemy Color",
+													color = { 240, 0, 0 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Friendly Color",
+													color = { 0, 240, 240 },
+												}
+											},
+										},
+										{
+											type = "Toggle",
+											name = "DogTag Chams",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Enemy Color",
+													color = { 240, 0, 0 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Friendly Color",
+													color = { 0, 240, 240 },
+												}
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Flags",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Enemy Color",
+													color = { 240, 0, 0 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Friendly Color",
+													color = { 0, 240, 240 },
+												}
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Flag Chams",
+											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Enemy Color",
+													color = { 240, 0, 0 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Friendly Color",
+													color = { 0, 240, 240 },
+												}
+											},
+										},
+									},
 								}
 							},
 						},
-					}
-				},
-				{
-					Id = "Weapons",
-					name = "Weapon Customization",
-					pos = UDim2.new(.75, 0, 0, 100),
-					size = UDim2.new(0, 425, 0, 575),
-					type = "Tabs",
-					content = {
-						{
-							name = "Stats Changer",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							type = "Container",
-							content = {
-								{
-									type = "Toggle",
-									name = "Enabled",
-									value = false,
-									extra = {},
-									tooltip = "Do note that modifying weapons can make things obvious like firerate!"
-								},
-							}
-						},
-						{
-							name = "Skins",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							type = "Container",
-							content = {
-								{
-									name = { "Slot1", "Slot2", "SkinDB" },
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(1,0,1,0),
-									borderless = true,
-									type = "Tabs",
-									{content=skins_content},
-									{content=skins_content},
+					},
+					{
+						name = "Misc",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {
+							{
+								name = {"Movement", "Tweaks", "Chat Spam"},
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(.5,-4,5.5/10,-4),
+								type = "Panel",
+								{content = {
 									{
-										content = {
+										type = "Toggle",
+										name = "Fly",
+										value = false,
+										unsafe = true,
+										tooltip = "Manipulates your velocity to make you fly.\nUse 60 speed or below to never get flagged.",
+										extra = {
 											{
-												name = "SkinDBList", -- No type means auto-set to panel
-												pos = UDim2.new(0,0,0,0),
-												size = UDim2.new(1,0,1,0),
-												type = "Custom",
-												callback = function()
-													local container = gui:Create("Container")
-													local search = gui:Create("TextEntry", container)
-													search:SetTextSize(13)
-													search:SetText("")
-													search:SetSize(1,0,0,16)
-
-													local skinlist = gui:Create("List", container)
-													skinlist:SetPos(0,0,0,16+4)
-													skinlist:SetSize(1,0,1,-16-4)
-
-													skinlist:AddColumn("Name")
-													skinlist:AddColumn("AssetId")
-													skinlist:AddColumn("Case")
-													
-													if not BBOT.weapons.skindatabase then return container end
-
-                                                    --[[local c = 0
-													for name, skinId in next, BBOT.weapons.skindatabase do
-														c=c+1
-                                                        BBOT.timer:Simple(0.001*c,function()
-                                                            local a, b, c = tostring(name), tostring(skinId.TextureId or "Unknown"), tostring(skinId.Case or "Unknown")
-                                                            local line = skinlist:AddLine(a, b, c)
-                                                            line.searcher = a .. " " .. b .. " " .. c
-                                                        end)
-													end]]
-
-													local function Refresh_List()
-														if not BBOT.weapons.skindatabase then return end
-														local tosearch = search:GetText()
-														for i, v in next, skinlist.scrollpanel.canvas.children do
-															if tosearch == "" or string.find(string.lower(v.searcher), string.lower(tosearch), 1, true) then
-																v:SetVisible(true)
-															else
-																v:SetVisible(false)
-															end
-														end
-														skinlist.scrollpanel:PerformOrganization()
-													end
-
-													function search:OnValueChanged()
-														Refresh_List()
-													end
-													return container
-												end,
-												content = {}
+												type = "KeyBind",
+												key = "B",
+												toggletype = 2,
+											}
+										},
+									},
+									{
+										type = "Slider",
+										name = "Fly Speed",
+										min = 0,
+										max = 400,
+										suffix = " stud/s",
+										decimal = 1,
+										value = 55,
+										custom = {
+											[400] = "Absurdly Fast",
+										},
+									},
+									{
+										type = "Toggle",
+										name = "Auto Jump",
+										value = false,
+										tooltip = "When you hold the spacebar, it will automatically jump repeatedly, ignoring jump delay.",
+									},
+									{
+										type = "Toggle",
+										name = "Speed",
+										value = false,
+										unsafe = true,
+										tooltip = "Manipulates your velocity to make you move faster, unlike fly it doesn't make you fly.\nUse 60 speed or below to never get flagged.",
+										extra = {
+											{
+												type = "KeyBind",
+												key = nil,
+												toggletype = 4,
+											}
+										},
+									},
+									{
+										type = "DropBox",
+										name = "Speed Type",
+										value = 1,
+										values = { "Always", "In Air", "On Hop" },
+									},
+									{
+										type = "Slider",
+										name = "Speed Factor",
+										value = 40,
+										min = 1,
+										max = 400,
+										suffix = " stud/s",
+									},
+									{
+										type = "Toggle",
+										name = "Avoid Collisions",
+										value = false,
+										tooltip = "Attempts to stops you from running into obstacles\nfor Speed and Circle Strafe.",
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 4,
 											}
 										}
+									},
+									{
+										type = "Slider",
+										name = "Avoid Collisions Scale",
+										value = 100,
+										min = 0,
+										max = 100,
+										suffix = "%",
+									},
+									{
+										type = "Toggle",
+										name = "Circle Strafe",
+										value = false,
+										tooltip = "When you hold this keybind, it will strafe in a perfect circle.\nSpeed of strafing is borrowed from Speed Factor.",
+										extra = {
+											{
+												type = "KeyBind",
+												key = nil,
+												toggletype = 2,
+											}
+										},
+									},
+									{
+										type = "Slider",
+										name = "Circle Strafe Scale",
+										value = 20,
+										min = 0,
+										max = 100,
+										suffix = "x",
+									},
+								}},
+								{content = {
+									{
+										type = "Toggle",
+										name = "Jump Power",
+										value = false,
+										tooltip = "Shifts movement jump power by X%.",
+										unsafe = true
+									},
+									{
+										type = "Slider",
+										name = "Jump Power Percentage",
+										value = 150,
+										min = 0,
+										max = 1000,
+										suffix = "%",
+									},
+									{
+										type = "Toggle",
+										name = "Prevent Fall Damage",
+										value = false,
+										unsafe = true
+									},
+									{
+										type = "DropBox",
+										name = "Weapon Style",
+										value = 1,
+										values = {"Off", "Rambo", "Doom", "Quake III", "Half-Life"},
+										tooltip = "Temporarily here till I make a weapons tab..."
+									},
+									{
+										type = "Slider",
+										name = "Weapon Bob",
+										min = -200,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										tooltip = "Temporarily here till I make a weapons tab..."
+									},
+									{
+										type = "Slider",
+										name = "Swing Scale",
+										min = -200,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										tooltip = "Temporarily here till I make a weapons tab..."
+									},
+									{
+										type = "Slider",
+										name = "Reload Speed",
+										min = 0,
+										max = 100,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+										tooltip = "Temporarily here till I make a weapons tab..."
+									},
+									{
+										type = "Slider",
+										name = "OnFire Speed",
+										min = 0,
+										max = 100,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+										tooltip = "Temporarily here till I make a weapons tab..."
+									},
+									{
+										type = "Slider",
+										name = "Firerate",
+										min = 0,
+										max = 2000,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+										tooltip = "Temporarily here till I make a weapons tab..."
+									},
+								}},
+								{content = {
+									{
+										type = "Toggle",
+										name = "Enabled",
+										value = false,
+										tooltip = "Try not to turn this on when playing legit :)\nWARNING: This could make anti-votekick break due to chat limitations!",
+										unsafe = true
+									},
+									{
+										type = "DropBox",
+										name = "Presets",
+										value = 1,
+										values = {"Bitch Bot", "Chinese Propaganda", "Youtube Title", "Emojis", "Deluxe", "t0nymode", "Douchbag", "Custom"},
+									},
+									{
+										type = "Slider",
+										name = "Spam Delay",
+										min = 1.5,
+										max = 10,
+										suffix = "s",
+										decimal = 1,
+										value = 1.5,
+										custom = {
+											[1.5] = "Chat Rape",
+										},
+									},
+									{
+										type = "Toggle",
+										name = "Newline Mixer",
+										value = true,
+										tooltip = "Instead of showing each line, it mixes lines together.",
+									},
+									{
+										type = "Toggle",
+										name = "Spam On Kills",
+										value = true,
+										tooltip = "Makes the chat spammer only spam per kill, extra synatxes are added such as {weapon}, {player}, {hitpart}",
+									},
+									{
+										type = "Slider",
+										name = "Minimum Kills",
+										min = 0,
+										max = 15,
+										suffix = " kill(s)",
+										decimal = 0,
+										value = 0,
+										custom = {
+											[0] = "Spam Immediately",
+										},
+									},
+									{
+										type = "Slider",
+										name = "Start Delay",
+										min = 0,
+										max = 10,
+										suffix = "s",
+										decimal = 1,
+										value = 0,
+										custom = {
+											[0] = "Spam Immediately",
+										},
+									},
+								}}
+							},
+							{
+								name = {"Server Hopper", "Votekick"},
+								pos = UDim2.new(0,0,5.5/10,4),
+								size = UDim2.new(.5,-4,1-(5.5/10),-4),
+								type = "Panel",
+								{content = {
+									{
+										type = "Toggle",
+										name = "Enabled",
+										value = false,
+										tooltip = "This will auto-hop you to your desired servers when kicked."
+									},
+									{
+										type = "Slider",
+										name = "Hop Delay",
+										min = 0,
+										max = 20,
+										suffix = "s",
+										decimal = 1,
+										value = 0,
+										custom = {
+											[0] = "Instantaneous Hop",
+										},
+										tooltip = "Delays server hopper by a certain amount of seconds."
+									},
+									{
+										type = "DropBox",
+										name = "Sorting",
+										value = 1,
+										values = {"Lowest Players", "Highest Players"},
+									},
+									{
+										type = "Button",
+										name = "Get JobId",
+										confirm = "Are you sure?",
+										clicked = "Copied to clipboard!",
+										callback = function()
+											setclipboard(game.JobId)
+										end
+									},
+									{
+										type = "Button",
+										name = "Clear Blacklist",
+										confirm = "Are you sure 100%?",
+										tooltip = "This will clear the server blacklist, careful as this would mean you may join votekicked servers!",
+										callback = function()
+											BBOT.serverhopper:ClearBlacklist()
+										end
+									},
+									{
+										type = "Button",
+										name = "Rejoin",
+										confirm = "Are you sure?",
+										callback = function()
+											BBOT.serverhopper:Hop(game.JobId)
+										end
+									},
+									{
+										type = "Button",
+										name = "Hop",
+										confirm = "Are you sure?",
+										callback = function()
+											BBOT.serverhopper:RandomHop()
+										end
+									},
+								}},
+								{content = {
+									{
+										type = "Toggle",
+										name = "Anti Votekick",
+										value = false,
+										tooltip = "WARNING: This requires 2 or more rank 25 accounts to work! You can do 1 rank 25 but it would only delay a votekick by ~90-120 seconds",
+									},
+									{
+										type = "Text",
+										name = "Reason",
+										value = "Aimbot",
+									},
+									{
+										type = "Slider",
+										name = "Votekick On Kills",
+										min = 0,
+										max = 30,
+										suffix = " kills",
+										decimal = 0,
+										value = 4,
+										custom = {
+											[0] = "Instantaneous Kick",
+										},
+										tooltip = "Delays votekick once at a certain amount of kills."
+									},
+								}},
+							},
+							{
+								name = {"Extra", "Sounds", "Exploits"},
+								pos = UDim2.new(.5,4,0,0),
+								size = UDim2.new(.5,-4,1,0),
+								type = "Panel",
+								{content = {
+									{
+										type = "Toggle",
+										name = "Auto Death",
+										value = false,
+										tooltip = "Lowers your total KD so that you don't get flagged for bans."
+									},
+									{
+										type = "Toggle",
+										name = "Auto Spawn",
+										value = false,
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2,
+											}
+										}
+									},
+								}},
+								{content = {
+									{
+										type = "Text",
+										name = "Hit",
+										value = "6229978482",
+										tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+									},
+									{
+										type = "Slider",
+										name = "Hit Volume",
+										min = 0,
+										max = 100,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										custom = {},
+									},
+									{
+										type = "Text",
+										name = "Headshot",
+										value = "6229978482",
+										tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+									},
+									{
+										type = "Slider",
+										name = "Headshot Volume",
+										min = 0,
+										max = 100,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										custom = {},
+									},
+									{
+										type = "Text",
+										name = "Kill",
+										value = "6229978482",
+										tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+									},
+									{
+										type = "Slider",
+										name = "Kill Volume",
+										min = 0,
+										max = 100,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										custom = {},
+									},
+									{
+										type = "Text",
+										name = "Headshot Kill",
+										value = "6229978482",
+										tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+									},
+									{
+										type = "Slider",
+										name = "Headshot Kill Volume",
+										min = 0,
+										max = 100,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										custom = {},
+									},
+									{
+										type = "Text",
+										name = "Fire",
+										value = "",
+										tooltip = "The Roblox sound ID or file inside of synapse workspace to play when Kill Sound is on."
+									},
+									{
+										type = "Slider",
+										name = "Fire Volume",
+										min = 0,
+										max = 100,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										custom = {},Fire
+									},
+								}},
+								{content = {
+									--[[{
+										type = "Toggle",
+										name = "Bypass Speed Checks",
+										value = false,
+										tooltip = "Attempts to bypass maximum speed limit on the server."
+									},]]
+									{
+										type = "Toggle",
+										name = "Spaz Attack",
+										value = false,
+										unsafe = true,
+										tooltip = "Literally makes you look like your having a stroke."
+									},
+									{
+										type = "Slider",
+										name = "Spaz Attack Intensity",
+										min = 0.1,
+										max = 6,
+										suffix = "",
+										decimal = 1,
+										value = 3,
+										custom = {
+											[8] = "Unbearable",
+										},
+									},
+									{
+										type = "Toggle",
+										name = "Click TP",
+										value = false,
+										unsafe = true,
+										extra = {
+											{
+												type = "KeyBind",
+												key = nil,
+												toggletype = 4
+											}
+										},
+										tooltip = "Ez clap TP",
+									},
+									{
+										type = "Slider",
+										name = "Click TP Range",
+										min = 0,
+										max = 200,
+										suffix = " studs",
+										decimal = 1,
+										value = 50,
+										custom = {
+											[0] = "Fucking Insane",
+										},
+									},
+									{
+										type = "Toggle",
+										name = "Teleport to Player",
+										value = false,
+										unsafe = true,
+										extra = {
+											{
+												type = "KeyBind",
+												key = nil,
+												toggletype = 4--? i'm not sure
+											}
+										},
+									},
+									{
+										type = "ComboBox",
+										name = "Auto Teleport",
+										values = {
+											{ "On Spawn", false },
+											{ "On Enemy Spawn", false },
+											{ "Enemies Alive", false },
+										},
+										unsafe = true,
+										extra = {
+											{
+												type = "KeyBind",
+												key = nil,
+												toggletype = 2--? i'm not sure
+											},
+											{
+												type = "ColorPicker",
+												name = "Path Color",
+												color = { 127, 72, 163, 150 },
+											}
+										},
+									},
+									--[[{
+										type = "Toggle",
+										name = "Invisibility",
+										value = false,
+										tooltip = "Wtf where did he go?",
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2,
+											}
+										}
+									},
+									{
+										type = "Toggle",
+										name = "Client Crasher",
+										value = false,
+										tooltip = "Dear god...",
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2,
+											}
+										}
+									},
+									{
+										type = "Toggle",
+										name = "Server Crasher",
+										value = false,
+										tooltip = "Dear god...",
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2,
+											}
+										}
+									},
+									{
+										type = "Slider",
+										name = "Server Crasher Intensity",
+										min = 1,
+										max = 16,
+										suffix = "",
+										decimal = 0,
+										value = 4,
+										custom = {
+											[15] = "Literally Unplayable",
+											[16] = "Insta-Crash",
+										},
+									},]]
+									{
+										type = "Toggle",
+										name = "Tick Division Manipulation",
+										value = false,
+										unsafe = true,
+										tooltip = "Makes your velocity go 10^n m/s, god why raspi you fucking idiot",
+									},
+									{
+										type = "Slider",
+										name = "Tick Division Scale",
+										min = 0.1,
+										max = 12,
+										suffix = "^10 studs/s",
+										decimal = 1,
+										value = 3,
+										custom = {
+											[12] = "Fucking Insane",
+										},
+										tooltip = "Each value here is tick/10^n, so velocity go *wait what the fuck*",
+									},
+									{
+										type = "Toggle",
+										name = "Revenge Grenade",
+										value = false,
+										unsafe = true,
+										tooltip = "Automatically teleports a grenade to the person who killed you.",
+									},
+									{
+										type = "Toggle",
+										name = "Auto Grenade Frozen",
+										value = false,
+										unsafe = true,
+										tooltip = "Automatically teleports a grenade to people frozen, useful against semi-god users.",
+									},
+									{
+										type = "Slider",
+										name = "Auto Grenade Wait",
+										min = 0,
+										max = 12,
+										suffix = "s",
+										decimal = 1,
+										value = 6,
+										custom = {
+											[0] = "Full Send It Bro",
+										},
+										tooltip = "Time till auto nade should send",
+									},
+									{
+										type = "Toggle",
+										name = "Blink",
+										value = false,
+										unsafe = true,
+										tooltip = "Enables when you are standing still. Staying longer than 8 seconds may result in a auto-slay when you move. Grenades and knives still affect you!",
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2,
+											}
+										}
+									},
+									{
+										type = "Toggle",
+										name = "Blink Allow Movement",
+										value = false,
+										tooltip = "Won't check if you are standling still, it will just activate immediately",
+									},
+									{
+										type = "Slider",
+										name = "Blink Keep Alive",
+										min = 0,
+										max = 12,
+										suffix = "s",
+										decimal = 1,
+										value = 7,
+										custom = {
+											[0] = "Invulnerable",
+										},
+										tooltip = "Attempts to allow movement when in temp-god when needed, WARNING: This can make you vulnerable for a split second",
+									},
+									{
+										type = "Toggle",
+										name = "Repupdate Spammer",
+										value = false,
+										unsafe = true,
+										tooltip = "Sends repupdate per frame, just so you can move faster :)",
+									},
+									{
+										type = "Toggle",
+										name = "Anti Grenade TP",
+										value = false,
+										unsafe = true,
+										tooltip = "Moves you right after a kill, to hopefully... HOPEFULLY. Avoid a grenade TP.",
+									},
+									{
+										type = "ComboBox",
+										name = "Anti Grenade TP Points",
+										values = {
+											{ "Up", true },
+											{ "Down", true },
+											{ "Left", false },
+											{ "Right", false },
+											{ "Forward", true },
+											{ "Backward", true },
+										},
+									},
+									{
+										type = "Toggle",
+										name = "TP Scanning",
+										value = false,
+										unsafe = true,
+										tooltip = "Moves you to a position to kill",
+									},
+									{
+										type = "ComboBox",
+										name = "TP Scanning Points",
+										values = {
+											{ "Up", true },
+											{ "Down", true },
+											{ "Left", false },
+											{ "Right", false },
+											{ "Forward", true },
+											{ "Backward", true },
+										},
+									},
+									{
+										type = "Slider",
+										name = "TP Scanning Distance",
+										min = 2,
+										max = 100,
+										suffix = " studs",
+										decimal = 1,
+										value = 25,
+										custom = {},
+									},
+								}},
+							},
+						},
+					},
+					{
+						name = "Settings",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {
+							{
+								name = "Cheat Settings",
+								pos = UDim2.new(0,0,6/10,4),
+								size = UDim2.new(.5,-4,4/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Toggle",
+										name = "Menu Accent",
+										value = false,
+										extra = {
+											{
+												type = "ColorPicker",
+												name = "Accent",
+												color = { 127, 72, 163, 255 },
+											}
+										},
+									},
+									{
+										type = "Toggle",
+										name = "Open Menu On Boot",
+										value = true,
+										extra = {},
+									},
+									{
+										type = "Slider",
+										name = "Background Transparency",
+										value = 80,
+										min = 0,
+										max = 100,
+										suffix = "%",
+										custom = {
+											[100] = "Off"
+										},
+										extra = {
+											{
+												type = "ColorPicker",
+												name = "Color",
+												color = { 0, 0, 0, 255 },
+											}
+										},
+									},
+									{
+										type = "Text",
+										name = "Custom Menu Name",
+										value = "Bitch Bot",
+										extra = {},
+									},
+									{
+										type = "Text",
+										name = "Custom Menu Logo",
+										value = "Bitch Bot",
+										extra = {},
+										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
+									},
+									{
+										type = "Toggle",
+										name = "Allow Unsafe Features",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Button",
+										name = "Unload Cheat",
+										confirm = "Are you sure?",
+										callback = function()
+											BBOT.hook:Call("Unload")
+											BBOT.Unloaded = true
+										end
+									}
+								},
+							},
+							{
+								name = "Menus",
+								pos = UDim2.new(.5,4,0,0),
+								size = UDim2.new(.5,-4,4/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Toggle",
+										name = "Weapon Customization",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Toggle",
+										name = "Environment",
+										value = false,
+										extra = {},
+									},
+								}
+							},
+							{
+								name = "Configs",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(.5,-4,6/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Text",
+										name = "Config Name",
+										value = "Default",
+										extra = {},
+									},
+									{
+										type = "DropBox",
+										name = "Configs",
+										value = 1,
+										values = {"Default"}
+									},
+									{
+										type = "Button",
+										name = "Save",
+										confirm = "Are you sure?",
+										callback = function()
+											local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Config Name")
+											BBOT.config:Save(s)
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autosave File")
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autoload File")
+											local configs = BBOT.config:Discover()
+											BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+											menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+											BBOT.notification:Create("Saved config: " .. s)
+										end
+									},
+									{
+										type = "Button",
+										name = "Load",
+										confirm = "Are you sure?",
+										callback = function()
+											local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Configs")
+											BBOT.config:Open(s)
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Config Name")
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autosave File")
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autoload File")
+											local configs = BBOT.config:Discover()
+											BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+											menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+											BBOT.notification:Create("Loaded config: " .. s)
+										end
+									},
+									{
+										type = "Toggle",
+										name = "Auto Save Config",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Text",
+										name = "Autosave File",
+										value = "Default",
+										extra = {},
+									},
+									{
+										type = "Toggle",
+										name = "Auto Load Config",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Text",
+										name = "Autoload File",
+										value = "Default",
+										extra = {},
 									},
 								}
 							}
 						},
-					}
-				},
-				{
-					-- The first layer here is the frame
-					Id = "Env",
-					name = "Environment",
-					pos = UDim2.new(0, 520, 0, 100),
-					size = UDim2.new(0, 599, 0, 501),
-					type = "Tabs",
-					content = { -- by default operation is tabs
-						{ -- Do not assign types in here, as tabs automatically assigns them as "Panel"
-							name = "Players",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							type = "Panel",
-							content = {
+					},
+				}
+			},
+			{
+				Id = "Weapons",
+				name = "Weapon Customization",
+				pos = UDim2.new(.75, 0, 0, 100),
+				size = UDim2.new(0, 425, 0, 575),
+				type = "Tabs",
+				content = {
+					{
+						name = "Stats Changer",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {
+							{
+								type = "Toggle",
+								name = "Enabled",
+								value = false,
+								extra = {},
+								tooltip = "Do note that modifying weapons can make things obvious like firerate!"
+							},
+						}
+					},
+					{
+						name = "Skins",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {
+							{
+								name = { "Slot1", "Slot2", "SkinDB" },
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								borderless = true,
+								type = "Tabs",
+								{content=skins_content},
+								{content=skins_content},
 								{
-									name = "Player List", -- No type means auto-set to panel
-									pos = UDim2.new(0,0,0,0),
-									size = UDim2.new(1,0,1,-8),
-									type = "Custom",
-									callback = function()
-										local container = gui:Create("Container")
-										local search = gui:Create("TextEntry", container)
-										search:SetTextSize(13)
-										search:SetText("")
-										search:SetSize(1,0,0,16)
+									content = {
+										{
+											name = "SkinDBList", -- No type means auto-set to panel
+											pos = UDim2.new(0,0,0,0),
+											size = UDim2.new(1,0,1,0),
+											type = "Custom",
+											callback = function()
+												local container = gui:Create("Container")
+												local search = gui:Create("TextEntry", container)
+												search:SetTextSize(13)
+												search:SetText("")
+												search:SetSize(1,0,0,16)
 
-										local playerlist = gui:Create("List", container)
-										playerlist:SetPos(0,0,0,16+4)
-										playerlist:SetSize(1,0,1,-16-4)
+												local skinlist = gui:Create("List", container)
+												skinlist:SetPos(0,0,0,16+4)
+												skinlist:SetSize(1,0,1,-16-4)
 
-										playerlist:AddColumn("Name")
-										playerlist:AddColumn("Team")
-										playerlist:AddColumn("Resolver")
-										playerlist:AddColumn("Priority")
+												skinlist:AddColumn("Name")
+												skinlist:AddColumn("AssetId")
+												skinlist:AddColumn("Case")
+												
+												if not BBOT.weapons or not BBOT.weapons.skindatabase then return container end
 
-										local function Refresh_List()
-											local tosearch = search:GetText()
-											local table = BBOT.table
-											local players = BBOT.service:GetService("Players")
-											local localplayer = BBOT.service:GetService("LocalPlayer")
-											local checked = {}
+												--[[local c = 0
+												for name, skinId in next, BBOT.weapons.skindatabase do
+													c=c+1
+													BBOT.timer:Simple(0.001*c,function()
+														local a, b, c = tostring(name), tostring(skinId.TextureId or "Unknown"), tostring(skinId.Case or "Unknown")
+														local line = skinlist:AddLine(a, b, c)
+														line.searcher = a .. " " .. b .. " " .. c
+													end)
+												end]]
 
-											for i, v in next, players:GetChildren() do
-												if v == localplayer then continue end
-												local children = playerlist.scrollpanel.canvas.children
-												for i=1, #children do
-													if children[i].player == v then
-														checked[v] = true
-														break 
+												local function Refresh_List()
+													if not BBOT.weapons.skindatabase then return end
+													local tosearch = search:GetText()
+													for i, v in next, skinlist.scrollpanel.canvas.children do
+														if tosearch == "" or string.find(string.lower(v.searcher), string.lower(tosearch), 1, true) then
+															v:SetVisible(true)
+														else
+															v:SetVisible(false)
+														end
 													end
+													skinlist.scrollpanel:PerformOrganization()
 												end
-												if not checked[v] then
-													local line = playerlist:AddLine(v.Name, v.Team.Name, "Normal", "Neutral")
-													line.player = v
-													checked[v] = true
+
+												function search:OnValueChanged()
+													Refresh_List()
 												end
-											end
-
-											for i, v in next, playerlist.scrollpanel.canvas.children do
-												if not v.player or not checked[v.player] then
-													v:Remove()
-												elseif tosearch == "" or string.find(string.lower(v.children[1].text:GetText()), string.lower(tosearch), 1, true) then
-													v:SetVisible(true)
-												else
-													v:SetVisible(false)
-												end
-											end
-
-											playerlist.scrollpanel:PerformOrganization()
-										end
-
-										function search:OnValueChanged()
-											Refresh_List()
-										end
-
-										hook:Add("PlayerAdded", "BBOT:PlayerList.Add", function(player)
-											Refresh_List()
-										end)
-
-										hook:Add("PlayerRemoving", "BBOT:PlayerList.Add", function(player)
-											Refresh_List()
-										end)
-
-										BBOT.timer:Simple(.1, Refresh_List)
-
-										return container
-									end,
-									content = {},
+												return container
+											end,
+											content = {}
+										}
+									}
 								},
+							}
+						}
+					},
+				}
+			},
+			{
+				-- The first layer here is the frame
+				Id = "Env",
+				name = "Environment",
+				pos = UDim2.new(0, 520, 0, 100),
+				size = UDim2.new(0, 599, 0, 501),
+				type = "Tabs",
+				content = { -- by default operation is tabs
+					{ -- Do not assign types in here, as tabs automatically assigns them as "Panel"
+						name = "Players",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Panel",
+						content = {
+							{
+								name = "Player List", -- No type means auto-set to panel
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,-8),
+								type = "Custom",
+								callback = function()
+									local container = gui:Create("Container")
+									local search = gui:Create("TextEntry", container)
+									search:SetTextSize(13)
+									search:SetText("")
+									search:SetSize(1,0,0,16)
+
+									local playerlist = gui:Create("List", container)
+									playerlist:SetPos(0,0,0,16+4)
+									playerlist:SetSize(1,0,1,-16-4)
+
+									playerlist:AddColumn("Name")
+									playerlist:AddColumn("Team")
+									playerlist:AddColumn("Resolver")
+									playerlist:AddColumn("Priority")
+
+									local function Refresh_List()
+										local tosearch = search:GetText()
+										local table = BBOT.table
+										local players = BBOT.service:GetService("Players")
+										local localplayer = BBOT.service:GetService("LocalPlayer")
+										local checked = {}
+
+										for i, v in next, players:GetChildren() do
+											if v == localplayer then continue end
+											local children = playerlist.scrollpanel.canvas.children
+											for i=1, #children do
+												if children[i].player == v then
+													checked[v] = true
+													break 
+												end
+											end
+											if not checked[v] then
+												local line = playerlist:AddLine(v.Name, v.Team.Name, "Normal", "Neutral")
+												line.player = v
+												checked[v] = true
+											end
+										end
+
+										for i, v in next, playerlist.scrollpanel.canvas.children do
+											if not v.player or not checked[v.player] then
+												v:Remove()
+											elseif tosearch == "" or string.find(string.lower(v.children[1].text:GetText()), string.lower(tosearch), 1, true) then
+												v:SetVisible(true)
+											else
+												v:SetVisible(false)
+											end
+										end
+
+										playerlist.scrollpanel:PerformOrganization()
+									end
+
+									function search:OnValueChanged()
+										Refresh_List()
+									end
+
+									hook:Add("PlayerAdded", "BBOT:PlayerList.Add", function(player)
+										Refresh_List()
+									end)
+
+									hook:Add("PlayerRemoving", "BBOT:PlayerList.Add", function(player)
+										Refresh_List()
+									end)
+
+									BBOT.timer:Simple(.1, Refresh_List)
+
+									return container
+								end,
+								content = {},
 							},
 						},
-						{ -- Do not assign types in here, as tabs automatically assigns them as "Panel"
-							name = "Priorties And Friends",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							type = "Container",
-							content = {},
-						},
-						{
-							name = "Bitch Bot Users",
-							pos = UDim2.new(0,0,0,0),
-							size = UDim2.new(1,0,1,0),
-							type = "Container",
-							content = {},
-						},
-					}
+					},
+					{ -- Do not assign types in here, as tabs automatically assigns them as "Panel"
+						name = "Priorties And Friends",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {},
+					},
+					{
+						name = "Bitch Bot Users",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {},
+					},
 				}
 			}
-		else
-			BBOT.configuration = {}
-		end
-	end)
+		}
+	elseif BBOT.game == "wild west" then
+		BBOT.configuration = {
+			{
+				-- The first layer here is the frame
+				Id = "Main",
+				name = "Bitch Bot",
+				center = true,
+				size = UDim2.new(0, 500, 0, 600),
+				content = {
+					{
+						name = "Legit",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						borderless = true,
+						type = "Tabs",
+						content = {}
+					},
+					{
+						name = "Rage",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {}
+					},
+					{
+						name = "Visuals",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {},
+					},
+					{
+						name = "Misc",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {},
+					},
+					{
+						name = "Settings",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {
+							{
+								name = "Cheat Settings",
+								pos = UDim2.new(0,0,6/10,4),
+								size = UDim2.new(.5,-4,4/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Toggle",
+										name = "Menu Accent",
+										value = false,
+										extra = {
+											{
+												type = "ColorPicker",
+												name = "Accent",
+												color = { 127, 72, 163, 255 },
+											}
+										},
+									},
+									{
+										type = "Toggle",
+										name = "Open Menu On Boot",
+										value = true,
+										extra = {},
+									},
+									{
+										type = "Slider",
+										name = "Background Transparency",
+										value = 80,
+										min = 0,
+										max = 100,
+										suffix = "%",
+										custom = {
+											[100] = "Off"
+										},
+										extra = {
+											{
+												type = "ColorPicker",
+												name = "Color",
+												color = { 0, 0, 0, 255 },
+											}
+										},
+									},
+									{
+										type = "Text",
+										name = "Custom Menu Name",
+										value = "Bitch Bot",
+										extra = {},
+									},
+									{
+										type = "Text",
+										name = "Custom Menu Logo",
+										value = "Bitch Bot",
+										extra = {},
+										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
+									},
+									{
+										type = "Toggle",
+										name = "Allow Unsafe Features",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Button",
+										name = "Unload Cheat",
+										confirm = "Are you sure?",
+										callback = function()
+											BBOT.hook:Call("Unload")
+											BBOT.Unloaded = true
+										end
+									}
+								},
+							},
+							{
+								name = "Configs",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(.5,-4,6/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Text",
+										name = "Config Name",
+										value = "Default",
+										extra = {},
+									},
+									{
+										type = "DropBox",
+										name = "Configs",
+										value = 1,
+										values = {"Default"}
+									},
+									{
+										type = "Button",
+										name = "Save",
+										confirm = "Are you sure?",
+										callback = function()
+											local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Config Name")
+											BBOT.config:Save(s)
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autosave File")
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autoload File")
+											local configs = BBOT.config:Discover()
+											BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+											menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+											BBOT.notification:Create("Saved config: " .. s)
+										end
+									},
+									{
+										type = "Button",
+										name = "Load",
+										confirm = "Are you sure?",
+										callback = function()
+											local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Configs")
+											BBOT.config:Open(s)
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Config Name")
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autosave File")
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autoload File")
+											local configs = BBOT.config:Discover()
+											BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+											menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+											BBOT.notification:Create("Loaded config: " .. s)
+										end
+									},
+									{
+										type = "Toggle",
+										name = "Auto Save Config",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Text",
+										name = "Autosave File",
+										value = "Default",
+										extra = {},
+									},
+									{
+										type = "Toggle",
+										name = "Auto Load Config",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Text",
+										name = "Autoload File",
+										value = "Default",
+										extra = {},
+									},
+								}
+							}
+						},
+					},
+				}
+			},
+		}
+	else
+		BBOT.configuration = {
+			{
+				-- The first layer here is the frame
+				Id = "Main",
+				name = "Bitch Bot",
+				center = true,
+				size = UDim2.new(0, 500, 0, 600),
+				content = {
+					{
+						name = "Legit",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						borderless = true,
+						type = "Tabs",
+						content = {}
+					},
+					{
+						name = "Rage",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {}
+					},
+					{
+						name = "Visuals",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {},
+					},
+					{
+						name = "Misc",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {},
+					},
+					{
+						name = "Settings",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {
+							{
+								name = "Cheat Settings",
+								pos = UDim2.new(0,0,6/10,4),
+								size = UDim2.new(.5,-4,4/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Toggle",
+										name = "Menu Accent",
+										value = false,
+										extra = {
+											{
+												type = "ColorPicker",
+												name = "Accent",
+												color = { 127, 72, 163, 255 },
+											}
+										},
+									},
+									{
+										type = "Toggle",
+										name = "Open Menu On Boot",
+										value = true,
+										extra = {},
+									},
+									{
+										type = "Slider",
+										name = "Background Transparency",
+										value = 80,
+										min = 0,
+										max = 100,
+										suffix = "%",
+										custom = {
+											[100] = "Off"
+										},
+										extra = {
+											{
+												type = "ColorPicker",
+												name = "Color",
+												color = { 0, 0, 0, 255 },
+											}
+										},
+									},
+									{
+										type = "Text",
+										name = "Custom Menu Name",
+										value = "Bitch Bot",
+										extra = {},
+									},
+									{
+										type = "Text",
+										name = "Custom Menu Logo",
+										value = "Bitch Bot",
+										extra = {},
+										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
+									},
+									{
+										type = "Toggle",
+										name = "Allow Unsafe Features",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Button",
+										name = "Unload Cheat",
+										confirm = "Are you sure?",
+										callback = function()
+											BBOT.hook:Call("Unload")
+											BBOT.Unloaded = true
+										end
+									}
+								},
+							},
+							{
+								name = "Configs",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(.5,-4,6/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Text",
+										name = "Config Name",
+										value = "Default",
+										extra = {},
+									},
+									{
+										type = "DropBox",
+										name = "Configs",
+										value = 1,
+										values = {"Default"}
+									},
+									{
+										type = "Button",
+										name = "Save",
+										confirm = "Are you sure?",
+										callback = function()
+											local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Config Name")
+											BBOT.config:Save(s)
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autosave File")
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autoload File")
+											local configs = BBOT.config:Discover()
+											BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+											menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+											BBOT.notification:Create("Saved config: " .. s)
+										end
+									},
+									{
+										type = "Button",
+										name = "Load",
+										confirm = "Are you sure?",
+										callback = function()
+											local s = BBOT.config:GetValue("Main", "Settings", "Configs", "Configs")
+											BBOT.config:Open(s)
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Config Name")
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autosave File")
+											BBOT.config:SetValue(s, "Main", "Settings", "Configs", "Autoload File")
+											local configs = BBOT.config:Discover()
+											BBOT.config:GetRaw("Main", "Settings", "Configs", "Configs").list = configs
+											menu.config_pathways[table.concat({"Main", "Settings", "Configs", "Configs"}, ".")]:SetOptions(configs)
+											BBOT.notification:Create("Loaded config: " .. s)
+										end
+									},
+									{
+										type = "Toggle",
+										name = "Auto Save Config",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Text",
+										name = "Autosave File",
+										value = "Default",
+										extra = {},
+									},
+									{
+										type = "Toggle",
+										name = "Auto Load Config",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Text",
+										name = "Autoload File",
+										value = "Default",
+										extra = {},
+									},
+								}
+							}
+						},
+					},
+				}
+			},
+		}
+	end
 end
 
-if BBOT.game == "pf" then
+if BBOT.game == "phantom forces" then
 	-- Auxillary, responsible for fetching, modifying,  (Done)
 	-- If AUX cannot find or a check is invalidated, it will prevent BBOT from loading
 	-- This should in theory prevent most bans related to updates by PF as it would prevent
@@ -10634,7 +11365,7 @@ if BBOT.game == "pf" then
 		local serverhopper = {}
 		BBOT.serverhopper = serverhopper
 
-		serverhopper.file = "bitchbot/votedoff-servers.txt"
+		serverhopper.file = "bitchbot/" .. BBOT.game .. "/server-blacklist.json"
 		serverhopper.blacklist = {}
 		serverhopper.UserId = tostring(localplayer.UserId)
 
@@ -10742,10 +11473,10 @@ if BBOT.game == "pf" then
 
 		hook:Add("InternalMessage", "BBOT:ServerHopper.HopOnKick", function(message)
 			if not string.find(message, "Server Kick Message:", 1, true) or not string.find(message, "votekicked", 1, true) then return end
-			if not config:GetValue("Main", "Misc", "Server Hopper", "Enabled") then return end
 			if not serverhopper:IsBlacklisted(game.JobId) then
 				serverhopper:AddToBlacklist(game.JobId, 86400)
 			end
+			if not config:GetValue("Main", "Misc", "Server Hopper", "Enabled") then return end
 			serverhopper:RandomHop()
 		end)
 	end
@@ -10837,99 +11568,6 @@ if BBOT.game == "pf" then
 					if snd ~= "" then
 						sound.playid("rbxassetid://" .. snd, config:GetValue("Main", "Misc", "Sounds", "Hit Volume")/100)
 					end
-				end
-			end
-		end)
-	end
-
-	-- Draw Pather
-	do 
-		local camera = BBOT.service:GetService("CurrentCamera")
-		local math = BBOT.math
-		local table = BBOT.table
-		local hook = BBOT.hook
-		local draw = BBOT.draw
-		local color = BBOT.color 
-		local drawpather = {
-			registry = {},
-		}
-		BBOT.drawpather = drawpather
-
-		function drawpather:Simple(pathway, col, time)
-			local length = #pathway
-			local render_storage = {}
-			local dark = color.darkness(col, .25)
-			for i=1, length do
-				local darkline = draw:Line(4, 0, 0, 0, 0, dark, 1, true)
-				darkline.ZIndex = 0
-				local line = draw:Line(2, 0, 0, 0, 0, col, 1, true)
-				line.ZIndex = 1
-				render_storage[#render_storage+1] = {darkline, line}
-			end
-			self.registry[#self.registry+1] = {
-				objects = render_storage,
-				frames = pathway,
-				t0 = tick(),
-				duration = time,
-			}
-		end
-
-		function drawpather:unrender(t)
-			for i=1, #t do
-				local objects = t[i]
-				for k=1, #objects do
-					local v = objects[k]
-					if draw:IsValid(v) then
-						v:Remove()
-					end
-				end
-			end
-		end
-
-		hook:Add("RenderStep.First", "BBOT:DrawPather.render", function()
-			local t = tick()
-			local reg = drawpather.registry
-			local c = 0
-			for i=1, #reg do
-				i=i-c
-				local pather = reg[i]
-				local frames = pather.frames
-				local objects = pather.objects
-				local lastframe = frames[1]
-				if not lastframe or not frames[2] then
-					table.remove(reg, i);c=c+1;
-					drawpather:unrender(objects)
-					continue
-				end
-				local deltat = math.timefraction(pather.t0, pather.t0 + pather.duration, t)
-				if deltat > 1 then
-					table.remove(reg, i);c=c+1;
-					drawpather:unrender(objects)
-					continue
-				end
-				local transparency = math.remap(deltat,0,1,1,0)
-
-				-- 3D
-				for k=2, #frames do
-					local frame = frames[k]
-					local object = objects[k]
-					local point1, onscreen1 = camera:WorldToViewportPoint(lastframe)
-					local point2, onscreen2 = camera:WorldToViewportPoint(frame)
-					if not onscreen1 and not onscreen2 then
-						object[1].Visible = false
-						object[2].Visible = false
-						lastframe = frame
-						continue
-					end
-					object[1].Transparency = transparency
-					object[2].Transparency = transparency
-					object[1].Visible = true
-					object[2].Visible = true
-					object[1].From = Vector2.new(point1.X, point1.Y)
-					object[1].To = Vector2.new(point2.X, point2.Y)
-					object[2].From = Vector2.new(point1.X, point1.Y)
-					object[2].To = Vector2.new(point2.X, point2.Y)
-					lastframe = frame
 				end
 			end
 		end)
@@ -11615,20 +12253,24 @@ if BBOT.game == "pf" then
 
 		function misc:SendBlinkRecord()
 			if #blink_record > 0 and last_pos and (absolute_pos-last_pos).Magnitude > 9 then
+				local a = {}
 				local finaltime = blink_record[#blink_record]
 				local firsttime = blink_record[1]
 				if firsttime == finaltime then
 					for i=1, #blink_record do
 						network:send("repupdate", blink_record[i][1], blink_record[i][2], blink_record[i][3])
+						a[#a+1]=blink_record[i][1]
 					end
 				else
 					local timediff = finaltime[3]-firsttime[3]
 					local first = firsttime[3]
 					local len = #blink_record
 					for i=1, len do
-						network:send("repupdate", blink_record[i][1], blink_record[i][2], ((timediff/len)*i/20)+first)
+						network:send("repupdate", blink_record[i][1], blink_record[i][2], ((timediff/len)*i)+first)
+						a[#a+1]=blink_record[i][1]
 					end
 				end
+				BBOT.drawpather:Simple(a, Color3.new(1,1,1), 4)
 			end
 			blink_record = {}
 		end
@@ -11664,25 +12306,6 @@ if BBOT.game == "pf" then
 		hook:Add("OnAliveChanged", "BBOT:RepUpdate", function(alive)
 			changed = 4
 		end)
-		function misc:SendBlinkRecord()
-			if #blink_record > 0 and last_pos and (absolute_pos-last_pos).Magnitude > 9 then
-				local finaltime = blink_record[#blink_record]
-				local firsttime = blink_record[1]
-				if firsttime == finaltime then
-					for i=1, #blink_record do
-						network:send("repupdate", blink_record[i][1], blink_record[i][2], blink_record[i][3])
-					end
-				else
-					local timediff = finaltime[3]-firsttime[3]
-					local first = firsttime[3]
-					local len = #blink_record
-					for i=1, len do
-						network:send("repupdate", blink_record[i][1], blink_record[i][2], ((timediff/len)*i/20)+first)
-					end
-				end
-			end
-			blink_record = {}
-		end
 
 		function misc:CanMoveTo(position)
 			local current_position = char.rootpart.Position
@@ -11778,16 +12401,15 @@ if BBOT.game == "pf" then
 
         local sending = false
         hook:Add("RenderStepped", "BBOT:InternalRepupdate", function()
-            if not char.alive or not config:GetValue("Main", "Misc", "Exploits", "Repupdate Spammer") then return end
+            if not char.alive or misc.inblink or not config:GetValue("Main", "Misc", "Exploits", "Repupdate Spammer") then return end
             local l__angles__1304 = BBOT.aux.camera.angles;
             sending = true
 		    network:send("repupdate", char.rootpart.Position, Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
             sending = false
         end)
 
-		hook:Add("SuppressNetworkSend", "BBOT:Blink", function(networkname, pos, ang, timestamp, ...)
+		hook:Add("SuppressNetworkSend", "BBOT:Blink", function(networkname, pos, ang, timestamp)
 			if networkname == "repupdate" then
-                if not sending and config:GetValue("Main", "Misc", "Exploits", "Repupdate Spammer") then return end
 				absolute_pos = pos
 				if config:GetValue("Main", "Misc", "Exploits", "Blink") and config:GetValue("Main", "Misc", "Exploits", "Blink", "KeyBind") then
 					local allowmove = config:GetValue("Main", "Misc", "Exploits", "Blink Allow Movement")
@@ -11944,7 +12566,7 @@ if BBOT.game == "pf" then
 			l3p.player = localplayer
 			debug.setupvalue(replication._updater, 1, localplayer_check)
 
-			if config:GetValue("Main", "Visuals", "Local ESP", "Enabled") then
+			if config:GetValue("Main", "Visuals", "Local", "Enabled") then
 				BBOT.esp:CreatePlayer(self.player, self.controller)
 			end
 		end
@@ -11993,6 +12615,7 @@ if BBOT.game == "pf" then
 
 		l3p.networking = {
 			["newbullets"] = function(controller)
+				if not char.alive or not controller.alive then return end
 				local gun = gamelogic.currentgun
 				if not gun or not gun.data then return end
 				local gundata = gun.data
@@ -12000,9 +12623,11 @@ if BBOT.game == "pf" then
 				controller.kickweapon(gundata.hideflash, gundata.firesoundid, (gundata.firepitch and gundata.firepitch * (1 + 0.05 * math.random()) or nil), 0)
 			end,
 			["stab"] = function(controller)
+				if not char.alive or not controller.alive then return end
 				controller.stab()
 			end,
 			["equip"] = function(controller, slot)
+				if not char.alive then return end
 				controller._weapon_slot = slot
 				local gun = gamelogic.currentgun.name
 				local data = game:service("ReplicatedStorage").GunModules[gun]
@@ -12014,6 +12639,7 @@ if BBOT.game == "pf" then
 				else
 					controller.equipknife(gundata, gunmodel)
 				end
+				controller.setaim(false)
 			end,
 			["aim"] = function(controller, status)
 				controller.setaim(status)
@@ -12025,6 +12651,7 @@ if BBOT.game == "pf" then
 				controller.setstance(status)
 			end,
 			["repupdate"] = function(controller, pos, ang, timestep)
+				if not char.alive or not controller.alive then return end
 				local blank_vector = Vector3.new()
 				local delta_position = blank_vector
 				if controller.receivedPosition and controller.receivedFrameTime then
@@ -12080,7 +12707,7 @@ if BBOT.game == "pf" then
 		end)
 
 		hook:Add("PostNetworkSend", "BBOT:L3P.UpdateStates", function(netname, ...)
-			if not char.alive and not l3p.controller or not l3p.enabled or not l3p.controller.alive then return end
+			if not l3p.controller or not l3p.enabled then return end
 			if not l3p.networking[netname] then return end
 			l3p.networking[netname](l3p.controller, ...)
 		end)
@@ -12091,7 +12718,7 @@ if BBOT.game == "pf" then
 		end)
 
 		hook:Add("OnConfigChanged", "BBOT:L3P.Enable", function(steps, old, new)
-            if config:IsPathwayEqual(steps, "Main", "Visuals", "Local ESP", "Enabled") then
+            if config:IsPathwayEqual(steps, "Main", "Visuals", "Local", "Enabled") then
 				if not l3p.controller then return end
 				if new then
 					BBOT.esp:CreatePlayer(l3p.player, l3p.controller)
@@ -12154,25 +12781,13 @@ if BBOT.game == "pf" then
 				v4.IgnoreWater = true;
 				local calls = 0;
 				while calls < 2000 do
-					v3, d, e = workspace:Raycast(p7, p8, v4);
-					if not p10 then
-						break;
-					end;
-					if not v3 then
-						break;
-					end;
-					local ran, err = pcall(p10, v3)
-					if not ran or not err then
+					v3 = workspace:Raycast(p7, p8, v4);
+					if not v3 or not p10(v3) then
 						break;
 					end;
 					table.insert(p9, v3.Instance);
 					v4.FilterDescendantsInstances = p9;
 					calls = calls + 1
-				end;
-				if not p11 then
-					for v5 = #p9, #p9 + 1, -1 do
-						p9[v5] = nil;
-					end;
 				end;
 				return v3;
 			end;
@@ -12976,21 +13591,22 @@ if BBOT.game == "pf" then
 		do
 			function aimbot:RageChanged(target)
 				if (target == nil and self.rage_target) or (self.rage_target == nil and target) or (target and self.rage_target and target[1] ~= self.rage_target[1]) then
+					self.rage_target = target
 					hook:Call("RageBot.Changed", (target and unpack(target) or nil))
 				end
 			end
 
 			function aimbot:RageStep(gun)
 				if not self:GetRageConfig("Aimbot", "Rage Bot", "KeyBind") then
-					self.rage_target = nil
 					self:RageChanged(nil)
+					self.rage_target = nil
 					return
 				end
 				if BBOT.misc.inblink then
 					local a, b = BBOT.misc:BlinkPosition()
 					if (a-b).Magnitude > 9 then
-						self.rage_target = nil
 						self:RageChanged(nil)
+						self.rage_target = nil
 						return
 					end
 				end
@@ -13542,8 +14158,8 @@ if BBOT.game == "pf" then
 		-- Do aimbot stuff here
 		hook:Add("PreFireStep", "BBOT:Aimbot.Calculate", function(gun)
 			aimbot:CrosshairStep(tick()-t, gun)
-			aimbot.rage_target = nil
 			aimbot:RageChanged(nil)
+			aimbot.rage_target = nil
 			if config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
 				aimbot:RageStep(gun)
 			else
@@ -13620,7 +14236,7 @@ if BBOT.game == "pf" then
 						end)
 						enque[bullet[2]] = target[1] -- this bullet is a magic bullet now, supress networking for this bullet!
 					end
-					network:send(networkname, bullettable, BBOT.misc:GetTickDivisionScale()-extras:getLatency())
+					network:send(networkname, bullettable, BBOT.misc:GetTickDivisionScale())
 					return true
 				end
 			end
@@ -14106,7 +14722,7 @@ if BBOT.game == "pf" then
 
 				function player_meta:GetConfig(...)
 					if self.player == localplayer then
-						return config:GetValue("Main", "Visuals", "Local ESP", ...)
+						return config:GetValue("Main", "Visuals", "Local", ...)
 					elseif self.player and self.player.Team ~= localplayer.team then
 						return config:GetValue("Main", "Visuals", "Enemy ESP", ...)
 					else
@@ -14278,7 +14894,10 @@ if BBOT.game == "pf" then
 
 				function player_meta:Rebuild()
 					self:Destroy(true)
-					self.alive = false
+					self:Setup()
+					if self:CanRender() then
+						self:Render()
+					end
 				end
 
 				function player_meta:RemoveInstances()
@@ -15214,34 +15833,15 @@ if BBOT.game == "pf" then
 					draw_endpos.ZIndex = 3
 				end
 				local point, onscreen = camera:WorldToViewportPoint(final.p0)
-				local screensize = camera.ViewportSize
-				if not onscreen or point.x > screensize.x - 36 or point.y > screensize.y - 72 then
-					local relativePos = camera.CFrame:PointToObjectSpace(final.p0)
-					local angle = math.atan2(-relativePos.y, relativePos.x)
-					local ox = math.cos(angle)
-					local oy = math.sin(angle)
-					local slope = oy / ox
-
-					local h_edge = screensize.x - 36
-					local v_edge = screensize.y - 72
-					if oy < 0 then
-						v_edge = 0
-					end
-					if ox < 0 then
-						h_edge = 36
-					end
-					local y = (slope * h_edge) + (screensize.y / 2) - slope * (screensize.x / 2)
-					if y > 0 and y < screensize.y - 72 then
-						point = Vector2.new(h_edge, y)
-					else
-						point = Vector2.new(
-							(v_edge - screensize.y / 2 + slope * (screensize.x / 2)) / slope,
-							v_edge
-						)
-					end
+				if onscreen then
+					draw_endpos.Visible = true
+					draw_endpos_outline.Visible = true
+					draw_endpos.Position = Vector2.new(point.X, point.Y)
+					draw_endpos_outline.Position = Vector2.new(point.X, point.Y)
+				else
+					draw_endpos.Visible = false
+					draw_endpos_outline.Visible = false
 				end
-				draw_endpos.Position = Vector2.new(point.X, point.Y)
-				draw_endpos_outline.Position = Vector2.new(point.X, point.Y)
 				for i=(curframe and curframe+1 or 2), framelen do
 					local v = parts[i]
 					if not v then break end
@@ -15305,6 +15905,17 @@ if BBOT.game == "pf" then
 				local function _createnade(...)
 					created = true
 					RemovePredictionLines()
+
+					if config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction") then
+						local blowtime = debug.getupvalue(_pull, blowuptimeindex) - tick()
+						local frames = CalculateGrenadePathway(mainpart, grenadedata, blowtime).frames
+						local pathway = {}
+						for i=1, #frames do
+							pathway[#pathway+1] = frames[i].p0
+						end
+						BBOT.drawpather:SimpleWithEnd(pathway, config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction", "Prediction Color"), blowtime)
+					end
+
 					return createnade(...)
 				end
 
