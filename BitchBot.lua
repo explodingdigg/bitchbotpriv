@@ -3442,6 +3442,28 @@ do
 			darkness = darkness / 2
 			self.asthetic_line_dark = self:Cache(draw:Box(0, 0, 0, 1, 0, Color3.fromHSV(hue, saturation, darkness)))
 			self.mouseinputs = false
+
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				self:SetColor(config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent"))
+			end
+
+			hook:Add("OnAccentChanged", "Menu.AstheticLine" .. self.uid, function(col, alpha)
+				self.asthetic_line.Color = col
+				local hue, saturation, darkness = Color3.toHSV(col)
+				darkness = darkness / 2
+				self.asthetic_line_dark.Color = Color3.fromHSV(hue, saturation, darkness)
+			end)
+		end
+
+		function GUI:SetColor(col)
+			self.asthetic_line.Color = col
+			local hue, saturation, darkness = Color3.toHSV(col)
+			darkness = darkness / 2
+			self.asthetic_line_dark.Color = Color3.fromHSV(hue, saturation, darkness)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu.AstheticLine" .. self.uid)
 		end
 
 		function GUI:PerformLayout(pos, size)
@@ -3595,7 +3617,7 @@ do
 			local container = self.container
 			for i=1, #container do
 				local v = container[i]
-				v.Color = color.range(i, {{start = 0, color = self.color1}, {start = self.absolutesize.Y-1, color = self.color2}})
+				v.Color = color.range(i, {{start = 0, color = self.color1}, {start = self.cachesize or (self.absolutesize.Y-1), color = self.color2}})
 			end
 		end
 
@@ -3608,6 +3630,7 @@ do
 				object.Color = color.range(i, {{start = 0, color = self.color1}, {start = self.absolutesize.Y-1, color = self.color2}})
 				self.container[#self.container+1] = object
 			end
+			self.cachesize = self.absolutesize.Y-1
 			self.rendersize = self.absolutesize.Y
 			self:InvalidateLayout()
 		end
@@ -3809,6 +3832,21 @@ do
 			self.input_repeater_start = 0
 			self.input_repeater_key = nil
 			self.input_repeater_delay = 0
+
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+				self.texthighlight = col
+				self.cursor.Color = col
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				self.texthighlight = col
+				self.cursor.Color = col
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:SetTextSize(size)
@@ -3926,7 +3964,7 @@ do
 			if not self.editable or not self._enabled then return end
 			if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
 				self.editing = true
-				self.text.Color = Color3.fromRGB(127, 72, 163)
+				self.text.Color = self.texthighlight
 				self.cursor_position = self:DetermineTextCursorPosition(mouse.X - self.absolutepos.X)
 			elseif self.editing then
 				if input.UserInputType == Enum.UserInputType.MouseButton1 and (not self:IsHovering() or (input.UserInputType == Enum.UserInputType.Keyboard and input.UserInputType == Enum.KeyCode.Return)) then
@@ -4095,6 +4133,20 @@ do
 			self.buttons = {}
 			self.max_length = 8
 			self.Id = 0
+			self.selectcolor = Color3.fromRGB(127, 72, 163)
+
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+				self.selectcolor = col
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				self.selectcolor = col
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:PerformLayout(pos, size)
@@ -4140,7 +4192,7 @@ do
 			self.Id = Id
 			local button = self.buttons[Id]
 			if not button then return end
-			button:SetTextColor(Color3.fromRGB(127, 72, 163))
+			button:SetTextColor(self.selectcolor)
 		end
 
 		gui:Register(GUI, "DropBoxSelection")
@@ -4262,6 +4314,20 @@ do
 			self.options = {}
 			self.buttons = {}
 			self.Id = 0
+			self.selectcolor = Color3.fromRGB(127, 72, 163)
+
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+				self.selectcolor = col
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				self.selectcolor = col
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:PerformLayout(pos, size)
@@ -4284,10 +4350,10 @@ do
 				button:SetSize(1, -5, 0, scaley)
 				offset = 4 + (scaley+4) * i
 				button:SetText(v[1])
-				button:SetTextColor(v[2] and Color3.fromRGB(127, 72, 163) or Color3.new(1,1,1))
+				button:SetTextColor(v[2] and self.selectcolor or Color3.new(1,1,1))
 				function button.OnClick()
 					self.parent:SetOption(i, not v[2])
-					button:SetTextColor(v[2] and Color3.fromRGB(127, 72, 163) or Color3.new(1,1,1))
+					button:SetTextColor(v[2] and self.selectcolor or Color3.new(1,1,1))
 				end
 			end
 
@@ -4754,6 +4820,19 @@ do
 			self.text:SetPos(.5, 0, .5, -1)
 
 			self.confirmation = false
+			self.confirmcolor = gui:GetColor("Accent")
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+				self.confirmcolor = col
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				self.confirmcolor = col
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:PerformLayout(pos, size)
@@ -4776,7 +4855,7 @@ do
 				if self.confirmation and not self.confirm then
 					self.confirm = true
 					self.text:SetText(self.confirmation)
-					self.text:SetColor(gui:GetColor("Accent"))
+					self.text:SetColor(self.confirmcolor)
 					timer:Simple(1, function()
 						if not gui:IsValid(self) then return end
 						self.text:SetText(self.content)
@@ -4813,6 +4892,24 @@ do
 			local col = Color3.fromRGB(127, 72, 163)
 			self.on = {col, color.darkness(col, .5)}
 			self.off = {self.button.gradient.color1, self.button.gradient.color2}
+
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+				self.on = {col, color.darkness(col, .5)}
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				self.on = {col, color.darkness(col, .5)}
+				local colors = self.off
+				if self.toggle then
+					colors = self.on
+				end
+				self.button.gradient:SetColor(unpack(colors))
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged","Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:SetText(txt)
@@ -5077,6 +5174,20 @@ do
 			self.basecolor = {col, color.darkness(col, .5)}
 			self.gradient:SetColor(unpack(self.basecolor))
 			self.percentage = 0
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+				self.basecolor = {col, color.darkness(col, .5)}
+				self.gradient:SetColor(unpack(self.basecolor))
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				self.basecolor = {col, color.darkness(col, .5)}
+				self.gradient:SetColor(unpack(self.basecolor))
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:SetPercentage(perc)
@@ -5199,6 +5310,21 @@ do
 			self.mouseinputs = true
 
 			self:SetPercentage(self.percentage)
+
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+				self.basecolor = {col, color.darkness(col, .5)}
+				self.bar:SetColor(unpack(self.basecolor))
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				self.basecolor = {col, color.darkness(col, .5)}
+				self.bar:SetColor(unpack(self.basecolor))
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:SetPercentage(perc)
@@ -5691,7 +5817,22 @@ do
 			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
 			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Accent")))
+			self.color = gui:GetColor("Accent")
 			self.mouseinputs = true
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+				self.color = col
+				self.background.Color = col
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				self.color = col
+				self.background.Color = col
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:PerformLayout(pos, size)
@@ -6536,9 +6677,15 @@ do
 
 
 	hook:Add("OnConfigChanged", "BBOT:Menu.Background", function(steps, old, new)
-		if config:IsPathwayEqual(steps, "Main","Settings","Cheat Settings","Background Transparency") then
-			main.background.Transparency = 1-(config:GetValue("Main","Settings","Cheat Settings","Background Transparency")/100)
-			main.background.Color = config:GetValue("Main","Settings","Cheat Settings","Background Transparency","Color")
+		if config:IsPathwayEqual(steps, "Main","Settings","Cheat Settings","Background") then
+			if config:GetValue("Main","Settings","Cheat Settings","Background") then
+				local col, alpha = config:GetValue("Main","Settings","Cheat Settings","Background","Color")
+				main.background.Transparency = alpha
+				main.background.Color = col
+			else
+				main.background.Transparency = 0
+				main.background.Color = Color3.new(1,1,1)
+			end
 			main:Cache(main.background)
 			main:Calculate()
 		end
@@ -6681,10 +6828,15 @@ do
 
 	hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info", function(steps, old, new)
 		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Menu Accent") then
-			if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Menu Accent", "Accent") then
-
+			local enabled = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent")
+			if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Menu Accent", "Accent") and enabled then
+				hook:Call("OnAccentChanged", config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent"))
 			else
-
+				if enabled then
+					hook:Call("OnAccentChanged", config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent"))
+				else
+					hook:Call("OnAccentChanged", Color3.fromRGB(127, 72, 163), 1)
+				end
 			end
 		end
 		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Name") then
@@ -9460,6 +9612,11 @@ do
 											{
 												type = "KeyBind",
 												toggletype = 2,
+											},
+											{
+												type = "ColorPicker",
+												name = "Path Color",
+												color = { 127, 72, 163, 150 },
 											}
 										}
 									},
@@ -9572,15 +9729,9 @@ do
 										extra = {},
 									},
 									{
-										type = "Slider",
-										name = "Background Transparency",
-										value = 80,
-										min = 0,
-										max = 100,
-										suffix = "%",
-										custom = {
-											[100] = "Off"
-										},
+										type = "Toggle",
+										name = "Background",
+										value = false,
 										extra = {
 											{
 												type = "ColorPicker",
@@ -12270,7 +12421,8 @@ if BBOT.game == "phantom forces" then
 						a[#a+1]=blink_record[i][1]
 					end
 				end
-				BBOT.drawpather:Simple(a, Color3.new(1,1,1), 4)
+				local col, transparency = config:GetValue("Main", "Misc", "Exploits", "Blink", "Path Color")
+				BBOT.drawpather:Simple(a, col, 4)
 			end
 			blink_record = {}
 		end
@@ -14423,7 +14575,7 @@ if BBOT.game == "phantom forces" then
 		end
 
 		function esp:Rebuild()
-			timer:Create("BBOT:ESP.Rebuild", 0, 1, function() self:_Rebuild() end)
+			timer:Create("BBOT:ESP.Rebuild", 0.05, 1, function() self:_Rebuild() end)
 		end
 
 		function esp:_Rebuild()
