@@ -5653,7 +5653,7 @@ do
 			picker:SetZIndex(100)
 			function picker.OnChanged(s, rgb, alpha)
 				self:SetColor(rgb, alpha)
-				self:OnValueChanged({rgb.R*255, rgb.B*255, rgb.G*255, alpha*255})
+				self:OnValueChanged({rgb.R*255, rgb.G*255, rgb.B*255, alpha*255})
 			end
 			self.open = true
 		end
