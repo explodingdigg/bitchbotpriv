@@ -6846,7 +6846,7 @@ do
 		text = string.Replace(text, "{date}", os.date("%b. %d, %Y"))
 		text = string.Replace(text, "{version}", BBOT.version)
 		text = string.Replace(text, "{fps}", math.round(1/runservice.RenderStepped:Wait()) .. " fps")
-		text = string.Replace(text, "{time}", os.date("%H:%M:%S %p"))
+		text = string.Replace(text, "{time}", os.date("%I:%M:%S %p"))
 		client_info:SetText(text)
 	end
 
@@ -7725,7 +7725,7 @@ do
 							{
 								name = "Aimbot",
 								pos = UDim2.new(0,0,0,0),
-								size = UDim2.new(.5,-4,4/10,-4),
+								size = UDim2.new(.5,-4,3.5/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -7779,8 +7779,8 @@ do
 							},
 							{
 								name = "Hack vs. Hack",
-								pos = UDim2.new(0,0,4/10,4),
-								size = UDim2.new(.5,-4,1-(4/10),-4),
+								pos = UDim2.new(0,0,3.5/10,4),
+								size = UDim2.new(.5,-4,1-(3.5/10),-4),
 								type = "Panel",
 								content = {
 									{
@@ -7860,15 +7860,31 @@ do
 									},
 									{
 										type = "Toggle",
-										name = "Resolver",
-										value = true,
-										tooltip = "Rage aimbot attempts to resolve player offsets and positions, Disable if you are having issues with resolver.",
+										name = "TP Scanning",
+										value = false,
+										tooltip = "Moves you to a position to kill",
 									},
 									{
-										type = "Toggle",
-										name = "Zero Velocity",
-										value = true,
-										tooltip = "Makes all the characters not have velocity, so the people like pf pwner can cry.",
+										type = "ComboBox",
+										name = "TP Scanning Points",
+										values = {
+											{ "Up", true },
+											{ "Down", true },
+											{ "Left", false },
+											{ "Right", false },
+											{ "Forward", true },
+											{ "Backward", true },
+										},
+									},
+									{
+										type = "Slider",
+										name = "TP Scanning Distance",
+										min = 2,
+										max = 100,
+										suffix = " studs",
+										decimal = 1,
+										value = 25,
+										custom = {},
 									},
 								}
 							},
@@ -7994,6 +8010,18 @@ do
 										max = 300,
 										custom = {[0] = "What even is the point?"},
 										suffix = "hp",
+									},
+									{
+										type = "Toggle",
+										name = "Resolver",
+										value = true,
+										tooltip = "Rage aimbot attempts to resolve player offsets and positions, Disable if you are having issues with resolver.",
+									},
+									{
+										type = "Toggle",
+										name = "Zero Velocity",
+										value = true,
+										tooltip = "Makes all the characters not have velocity, so the people like pf pwner can cry.",
 									},
 								}},
 							}
@@ -8768,16 +8796,6 @@ do
 													type = "ColorPicker",
 													name = "Tracer Color",
 													color = { 201, 69, 54, 255 },
-												},
-												{
-													type = "ColorPicker",
-													name = "Tracer Outline",
-													color = { 101, 69, 54, 255 },
-												},
-												{
-													type = "ColorPicker",
-													name = "Tracer Inner",
-													color = { 201, 100, 54, 255 },
 												},
 											},
 										}
@@ -9711,35 +9729,6 @@ do
 									{
 										type = "Slider",
 										name = "Anti Grenade TP Distance",
-										min = 2,
-										max = 100,
-										suffix = " studs",
-										decimal = 1,
-										value = 25,
-										custom = {},
-									},
-									{
-										type = "Toggle",
-										name = "TP Scanning",
-										value = false,
-										unsafe = true,
-										tooltip = "Moves you to a position to kill",
-									},
-									{
-										type = "ComboBox",
-										name = "TP Scanning Points",
-										values = {
-											{ "Up", true },
-											{ "Down", true },
-											{ "Left", false },
-											{ "Right", false },
-											{ "Forward", true },
-											{ "Backward", true },
-										},
-									},
-									{
-										type = "Slider",
-										name = "TP Scanning Distance",
 										min = 2,
 										max = 100,
 										suffix = " studs",
@@ -12628,12 +12617,17 @@ if BBOT.game == "phantom forces" then
 			return tick()
 		end
 
+		function misc:ForceRepupdate()
+            local l__angles__1304 = BBOT.aux.camera.angles;
+		    network:send("repupdate", char.rootpart.Position, Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
+		end
+
         local sending = false
         hook:Add("RenderStepped", "BBOT:InternalRepupdate", function()
             if not char.alive or misc.inblink or not config:GetValue("Main", "Misc", "Exploits", "Repupdate Spammer") then return end
-            local l__angles__1304 = BBOT.aux.camera.angles;
             sending = true
-		    network:send("repupdate", char.rootpart.Position, Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
+            local l__angles__1304 = BBOT.aux.camera.angles;
+		    misc:ForceRepupdate()
             sending = false
         end)
 
@@ -13499,7 +13493,7 @@ if BBOT.game == "phantom forces" then
 		end)
 
 		hook:Add("PostupdateReplication", "BBOT:Aimbot.ZeroVelocity", function(player, controller)
-			if aimbot:GetRageConfig("Hack vs. Hack", "Zero Velocity") then
+			if aimbot:GetRageConfig("Settings", "Zero Velocity") then
 				controller.receivedVelocity = Vector3.new()
 			end
 		end)
@@ -13521,7 +13515,7 @@ if BBOT.game == "phantom forces" then
 
 		local vector_cache = Vector3.new()
 		function aimbot:GetResolvedPosition(player)
-			if not self:GetRageConfig("Hack vs. Hack", "Resolver") then
+			if not self:GetRageConfig("Settings", "Resolver") then
 				local updater = replication.getupdater(player)
 				local parts = aimbot:GetParts(player)
 				if updater and updater.receivedPosition and parts then
@@ -13634,10 +13628,15 @@ if BBOT.game == "phantom forces" then
 			controller.__t_received = tick()
 		end)
 
+		hook:Add("OnAliveChanged", "BBOT:RageBot.LastPosition", function()
+			last_repupdate_position = nil
+		end)
+
+		aimbot.next_tpscan = 0
 		function aimbot:GetRageTarget(fov, gun)
 			local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
 			local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-			local cam_position = char.rootpart.CFrame.p
+			local cam_position = (self.tp_scanning and last_repupdate_position or char.rootpart.CFrame.p)
 			local team = (localplayer.Team and localplayer.Team.Name or "NA")
 			local playerteamdata = workspace["Players"][team]
 			local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
@@ -13679,10 +13678,9 @@ if BBOT.game == "phantom forces" then
 			end
 
 			local tp_scanning_points = #firepos_points
-			if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") then
-				local points_allowed = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Points")
-				local grenade_move_dist = config:GetValue("Main", "Misc", "Exploits", "TP Scanning Distance")
-				local grenade_move_points = {}
+			if self:GetRageConfig("Hack vs. Hack", "TP Scanning") then
+				local points_allowed = self:GetRageConfig("Hack vs. Hack", "TP Scanning Points")
+				local grenade_move_dist = self:GetRageConfig("Hack vs. Hack", "TP Scanning Distance")
 				if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,grenade_move_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
 				if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-grenade_move_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
 				if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-grenade_move_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
@@ -13728,6 +13726,7 @@ if BBOT.game == "phantom forces" then
 				local resolver_offset, isabsolute = self:GetResolvedPosition(v)
 				local abspos = updater.getpos()
 				local inserted_priority
+				local tp_scanned = false
 				if prioritize then
 					local part = prioritize
 					local pos = (isabsolute and resolver_offset or abspos + resolver_offset)
@@ -13747,31 +13746,38 @@ if BBOT.game == "phantom forces" then
 										local fp_name = firepos_points_name[i]
 										local newcf = targetcframe * lookatme * point
 										local cam_position = newcf.p
-										if i <= tp_scanning_points or (i > tp_scanning_points and BBOT.misc:CanMoveTo(cam_position)) then
-											local u = i
-											if hitbox_shift then
-												local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
-												local targetcframe = CFrame.new(pos)
-												for i=1, #hitbox_points do
-													local hb_name = hitbox_points_name[i]
-													if relative_only and fp_name ~= hb_name then continue end
-													local point = hitbox_points[i]
-													local newcf = targetcframe * lookatme * point
-													local pos = newcf.p
-													local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-													if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-														table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points)})
-														inserted_priority = true
-														scan_count = scan_count + 1
-													end
-												end
-											else
+										if i > tp_scanning_points and (self.tp_scanning or self.next_tpscan > tick() or not BBOT.misc:CanMoveTo(cam_position)) then
+											continue
+										end
+										local u = i
+										if hitbox_shift then
+											local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
+											local targetcframe = CFrame.new(pos)
+											for i=1, #hitbox_points do
+												local hb_name = hitbox_points_name[i]
+												if relative_only and fp_name ~= hb_name then continue end
+												local point = hitbox_points[i]
+												local newcf = targetcframe * lookatme * point
+												local pos = newcf.p
 												local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
 												if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
 													table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points)})
+													if (u > tp_scanning_points) then
+														tp_scanned = true
+													end
 													inserted_priority = true
 													scan_count = scan_count + 1
 												end
+											end
+										else
+											local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+											if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+												table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points)})
+												if (u > tp_scanning_points) then
+													tp_scanned = true
+												end
+												inserted_priority = true
+												scan_count = scan_count + 1
 											end
 										end
 									end
@@ -13787,27 +13793,10 @@ if BBOT.game == "phantom forces" then
 						end
 					end
 				end
-				
-				--[[if not inserted_priority then
-					for name, part in pairs(parts) do
-						local name = partstosimple[name]
-						if part == prioritize or not name or name == "Legs" or name == "Arms" then continue end
-						local pos = (isabsolute and resolver_offset or prioritize.Position + resolver_offset)
-						local point, onscreen = camera:WorldToViewportPoint(pos)
-						if not onscreen and aimbot_fov < 180 then continue end
-						--local object_fov = self:GetFOV(part, scan_part)
-						if (fov and vector.dist2d(fov.Position, point) > fov.Radius) then continue end
-						if wall_scale > 100 then
-							table.insert(organizedPlayers, {v, part, pos, name})
-							scan_count = scan_count + 1
-						else
-							local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-							if (not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos) then continue end
-							table.insert(organizedPlayers, {v, part, pos, cam_position, name})
-							scan_count = scan_count + 1
-						end
-					end
-				end]]
+			end
+
+			if tp_scanned then
+				self.next_tpscan = tick() + 0.25
 			end
 			
 			table.sort(organizedPlayers, function(a, b)
@@ -13833,7 +13822,7 @@ if BBOT.game == "phantom forces" then
 				end
 				if BBOT.misc.inblink then
 					local a, b = BBOT.misc:BlinkPosition()
-					if (a-b).Magnitude > 9 then
+					if a and b and (a-b).Magnitude > 9 then
 						self:RageChanged(nil)
 						self.rage_target = nil
 						return
@@ -13843,17 +13832,22 @@ if BBOT.game == "phantom forces" then
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
 				local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
+				if target and target[6] and self:GetRageConfig("Hack vs. Hack", "TP Scanning") and self.next_tpscan < tick() and not self.tp_scanning then
+					local original_position = char.rootpart.Position * 1
+					BBOT.misc:MoveTo(target[4], true)
+					self.tp_scanning = true
+					timer:Simple(0,function()
+						self.tp_scanning = false
+						BBOT.misc:MoveTo(original_position, true)
+					end)
+					return
+				end
+
 				self:RageChanged(target)
 				if not target then return end
 				self.rage_target = target
 				local position = target[3]
 				local part_pos = part.Position
-
-				if config:GetValue("Main", "Misc", "Exploits", "TP Scanning") and target[6] then
-					local original_position = char.rootpart.Position
-					self._original_position = original_position
-					BBOT.misc:MoveTo(target[4], true)
-				end
 
 				local dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
 				local magnitude = (position-part_pos).Magnitude
@@ -14408,11 +14402,6 @@ if BBOT.game == "phantom forces" then
 				aimbot.fire = nil
 				gun:shoot(false)
 			end
-
-			if aimbot._original_position then
-				BBOT.misc:MoveTo(aimbot._original_position, true)
-				aimbot._original_position = nil
-			end
 		end)
 
 		local enque = {}
@@ -14432,7 +14421,6 @@ if BBOT.game == "phantom forces" then
 				if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
 				if aimbot.rage_target then -- who are we targeting today?
 					local target = aimbot.rage_target
-
 					-- timescale is to determine how quick the bullet hits
 					-- don't want to get too cocky or the system might silent flag
 					local timescale = 0
