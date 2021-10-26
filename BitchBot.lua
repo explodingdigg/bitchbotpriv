@@ -13437,6 +13437,7 @@ if BBOT.game == "phantom forces" then
 		local dot = Vector3.new().Dot
 		local rcaster = BBOT.aux.raycast
 		function aimbot:raycastbullet_rage(start, dir, extra, depth, main, raytracepenetration)
+			local trace_amount = 0
 			local function bulletcb(p1)
 				local instance = p1.Instance
 				if instance.Name == "Window" then return true end
@@ -13456,6 +13457,7 @@ if BBOT.game == "phantom forces" then
 						end
 						if v24 < depth then
 							depth = depth - v24
+							trace_amount = trace_amount + v24
 							return true
 						else
 							return false
@@ -13465,7 +13467,7 @@ if BBOT.game == "phantom forces" then
 					return cancollide
 				end
 			end
-			return self:raycastbullet(start,dir,extra,bulletcb)
+			return self:raycastbullet(start,dir,extra,bulletcb), trace_amount
 		end
 
 		hook:Add("Initialize", "FindnewBullet", function()
@@ -13759,9 +13761,9 @@ if BBOT.game == "phantom forces" then
 												local point = hitbox_points[i]
 												local newcf = targetcframe * lookatme * point
 												local pos = newcf.p
-												local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+												local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
 												if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-													table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points)})
+													table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
 													if (u > tp_scanning_points) then
 														tp_scanned = true
 													end
@@ -13770,9 +13772,9 @@ if BBOT.game == "phantom forces" then
 												end
 											end
 										else
-											local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+											local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
 											if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-												table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points)})
+												table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
 												if (u > tp_scanning_points) then
 													tp_scanned = true
 												end
@@ -13782,9 +13784,9 @@ if BBOT.game == "phantom forces" then
 										end
 									end
 								else
-									local raydata = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+									local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
 									if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-										table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize})
+										table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, false, traceamount})
 										inserted_priority = true
 										scan_count = scan_count + 1
 									end
@@ -13799,11 +13801,31 @@ if BBOT.game == "phantom forces" then
 				self.next_tpscan = tick() + 0.25
 			end
 			
-			table.sort(organizedPlayers, function(a, b)
-				return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
+			local players_only, players_has = {}, {}
+			for i=1, #organizedPlayers do
+				local v = organizedPlayers[i]
+				if players_has[v[1]] then continue end
+				players_only[#players_only+1] = {v[1], v[3]}
+				players_has[v[1]] = true
+			end
+
+			table.sort(players_only, function(a, b)
+				return (a[2] - mousePos).Magnitude < (b[2] - mousePos).Magnitude
 			end)
+
+			local target = players_only[1]
+			local minimum_pen = {}
+			for i=1, #organizedPlayers do
+				local v = organizedPlayers[i]
+				if v[1] ~= target[1] then return end
+				minimum_pen[#minimum_pen+1] = v
+			end
 			
-			return organizedPlayers[1]
+			table.sort(minimum_pen, function(a, b)
+				return a[7] < b[7]
+			end)
+
+			return minimum_pen[1]
 		end
 
 		do
