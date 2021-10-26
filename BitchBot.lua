@@ -6882,27 +6882,35 @@ do
 			gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
 		end
 		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Logo") then
+			image:SetVisible(true)
+			client_info:SetPos(0, 20+8, .5, 1)
 			if new == "Bitch Bot" then
 				image:SetImage(menu.images[8])
 			else
-				image:SetImage(menu.images[5])
-				if #new > 4 then
-					thread:Create(function(img, image)
-						local img = game:HttpGet("https://i.imgur.com/" .. img .. ".png")
-						if img then
-							image:SetImage(img)
-						else
-							image:SetImage(menu.images[8])
-							BBOT.notification:Create("An error occured trying to get the menu logo!")
-						end
-					end, new, image)
+				if new == "" then
+					image:SetImage(menu.images[5])
+					image:SetVisible(false)
+					client_info:SetPos(0, 8, .5, 1)
+				else
+					image:SetImage(menu.images[5])
+					if #new > 4 then
+						thread:Create(function(img, image)
+							local img = game:HttpGet("https://i.imgur.com/" .. img .. ".png")
+							if img then
+								image:SetImage(img)
+							else
+								image:SetImage(menu.images[8])
+								BBOT.notification:Create("An error occured trying to get the menu logo!")
+							end
+						end, new, image)
+					end
 				end
 			end
 		end
 	end)
 
 	local sizex = client_info:GetTextSize()
-	infobar:SetPos(0, 50, 0, 8)
+	infobar:SetPos(0, 50, 0, 10)
 	gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
 end
 
