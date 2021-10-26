@@ -6527,7 +6527,7 @@ do
 			local screensize = camera.ViewportSize
 			local image = gui:Create("Image", intro)
 			local img = config:GetValue("Main", "Settings", "Cheat Settings", "Custom Logo")
-			if img ~= "Bitch Bot" then
+			if img ~= "Bitch Bot" and img ~= "" then
 				image:SetImage(menu.images[5])
 				if #img > 4 then
 					thread:Create(function(img, image)
@@ -6854,7 +6854,7 @@ do
 	timer:Create("BBOT:UpdateInfoBar", 1, 0, function()
 		menu:ProcessInfoBar(client_info.barinfo)
 		local sizex = client_info:GetTextSize()
-		gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
+		gui:SizeTo(infobar, UDim2.new(0, (image:GetEnabled() and 20 or 0) + sizex + 8, 0, 20), 0.775, 0, 0.25)
 	end)
 
 	hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info", function(steps, old, new)
@@ -6879,17 +6879,17 @@ do
 				client_info.barinfo = new
 			end
 			local sizex = client_info:GetTextSize()
-			gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
+			gui:SizeTo(infobar, UDim2.new(0, (image:GetEnabled() and 20 or 0) + sizex + 8, 0, 20), 0.775, 0, 0.25)
 		end
 		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Logo") then
-			image:SetVisible(true)
+			image:SetEnabled(true)
 			client_info:SetPos(0, 20+8, .5, 1)
 			if new == "Bitch Bot" then
 				image:SetImage(menu.images[8])
 			else
 				if new == "" then
 					image:SetImage(menu.images[5])
-					image:SetVisible(false)
+					image:SetEnabled(false)
 					client_info:SetPos(0, 8, .5, 1)
 				else
 					image:SetImage(menu.images[5])
@@ -6906,6 +6906,8 @@ do
 					end
 				end
 			end
+			local sizex = client_info:GetTextSize()
+			gui:SizeTo(infobar, UDim2.new(0, (image:GetEnabled() and 20 or 0) + sizex + 8, 0, 20), 0.775, 0, 0.25)
 		end
 	end)
 
@@ -10444,7 +10446,7 @@ do
 										name = "Custom Logo",
 										value = "Bitch Bot",
 										extra = {},
-										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
+										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part! Changing this to a blank box will remove the logo."
 									},
 									{
 										type = "Toggle",
