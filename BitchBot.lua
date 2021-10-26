@@ -3845,6 +3845,7 @@ do
 			self.input_repeater_start = 0
 			self.input_repeater_key = nil
 			self.input_repeater_delay = 0
+			self.texthighlight = Color3.fromRGB(127, 72, 163)
 
 			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
 				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
