@@ -3293,6 +3293,19 @@ do
 					false
 				))
 			end
+
+			if config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+				self.mouse.Color = col
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				self.mouse.Color = col
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:SetMode(mode)
@@ -6512,7 +6525,7 @@ do
 
 			local screensize = camera.ViewportSize
 			local image = gui:Create("Image", intro)
-			local img = config:GetValue("Main", "Settings", "Cheat Settings", "Custom Menu Logo")
+			local img = config:GetValue("Main", "Settings", "Cheat Settings", "Custom Logo")
 			if img ~= "Bitch Bot" then
 				image:SetImage(menu.images[5])
 				if #img > 4 then
@@ -6823,8 +6836,25 @@ do
 	infobar.client_info = infobar
 	client_info:SetPos(0, 20 + 8, .5, 1)
 	client_info:SetTextAlignmentY(Enum.TextYAlignment.Center)
-	client_info:SetText("Bitch Bot | " .. BBOT.username .. " | " .. os.date("%b. %d, %Y") .. " | Ver " .. BBOT.version)
+	client_info.barinfo = "Bitch Bot | {username} | {date} | version {version}"
+	client_info:SetText("Bitch Bot | " .. BBOT.username .. " | " .. os.date("%b. %d, %Y") .. " | version " .. BBOT.version)
 	client_info:SetTextSize(13)
+
+	local runservice = BBOT.service:GetService("RunService")
+	function menu:ProcessInfoBar(text)
+		text = string.Replace(text, "{username}", BBOT.username)
+		text = string.Replace(text, "{date}", os.date("%b. %d, %Y"))
+		text = string.Replace(text, "{version}", BBOT.version)
+		text = string.Replace(text, "{fps}", math.round(1/runservice.RenderStepped:Wait()) .. " fps")
+		text = string.Replace(text, "{time}", os.date("%H:%M:%S %p"))
+		client_info:SetText(text)
+	end
+
+	timer:Create("BBOT:UpdateInfoBar", 1, 0, function()
+		menu:ProcessInfoBar(client_info.barinfo)
+		local sizex = client_info:GetTextSize()
+		gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
+	end)
 
 	hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info", function(steps, old, new)
 		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Menu Accent") then
@@ -6839,12 +6869,18 @@ do
 				end
 			end
 		end
-		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Name") then
-			client_info:SetText(new .. " | " .. BBOT.username .. " | " .. os.date("%b. %d, %Y") .. " | Ver " .. BBOT.version)
+		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Watermark") then
+			if new == "Bitch Bot" then
+				menu:ProcessInfoBar("Bitch Bot | {username} | {date} | version {version}")
+				client_info.barinfo = "Bitch Bot | {username} | {date} | version {version}"
+			else
+				menu:ProcessInfoBar(new)
+				client_info.barinfo = new
+			end
 			local sizex = client_info:GetTextSize()
 			gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
 		end
-		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Logo") then
+		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Logo") then
 			if new == "Bitch Bot" then
 				image:SetImage(menu.images[8])
 			else
@@ -9723,8 +9759,8 @@ do
 						content = {
 							{
 								name = "Cheat Settings",
-								pos = UDim2.new(0,0,6/10,4),
-								size = UDim2.new(.5,-4,4/10,-4),
+								pos = UDim2.new(0,0,5.5/10,4),
+								size = UDim2.new(.5,-4,1-5.5/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -9762,10 +9798,18 @@ do
 										name = "Custom Menu Name",
 										value = "Bitch Bot",
 										extra = {},
+										tooltip = "Changes the menu name, not the watermark"
 									},
 									{
 										type = "Text",
-										name = "Custom Menu Logo",
+										name = "Custom Watermark",
+										value = "Bitch Bot",
+										extra = {},
+										tooltip = "Changes the watermark at the top left, there are text arguments as well such as {username}, {version}, {date}, {time} and {fps}"
+									},
+									{
+										type = "Text",
+										name = "Custom Logo",
 										value = "Bitch Bot",
 										extra = {},
 										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
@@ -9790,7 +9834,7 @@ do
 							{
 								name = "Menus",
 								pos = UDim2.new(.5,4,0,0),
-								size = UDim2.new(.5,-4,4/10,-4),
+								size = UDim2.new(.5,-4,5/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -9810,7 +9854,7 @@ do
 							{
 								name = "Configs",
 								pos = UDim2.new(0,0,0,0),
-								size = UDim2.new(.5,-4,6/10,-4),
+								size = UDim2.new(.5,-4,5.5/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -10137,8 +10181,8 @@ do
 						content = {
 							{
 								name = "Cheat Settings",
-								pos = UDim2.new(0,0,6/10,4),
-								size = UDim2.new(.5,-4,4/10,-4),
+								pos = UDim2.new(0,0,5.5/10,4),
+								size = UDim2.new(.5,-4,1-5.5/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -10182,10 +10226,18 @@ do
 										name = "Custom Menu Name",
 										value = "Bitch Bot",
 										extra = {},
+										tooltip = "Changes the menu name, not the watermark"
 									},
 									{
 										type = "Text",
-										name = "Custom Menu Logo",
+										name = "Custom Watermark",
+										value = "Bitch Bot",
+										extra = {},
+										tooltip = "Changes the watermark at the top left, there are text arguments as well such as {username}, {version}, {date}, {time} and {fps}"
+									},
+									{
+										type = "Text",
+										name = "Custom Logo",
 										value = "Bitch Bot",
 										extra = {},
 										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
@@ -10210,7 +10262,7 @@ do
 							{
 								name = "Configs",
 								pos = UDim2.new(0,0,0,0),
-								size = UDim2.new(.5,-4,6/10,-4),
+								size = UDim2.new(.5,-4,5.5/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -10333,8 +10385,8 @@ do
 						content = {
 							{
 								name = "Cheat Settings",
-								pos = UDim2.new(0,0,6/10,4),
-								size = UDim2.new(.5,-4,4/10,-4),
+								pos = UDim2.new(0,0,5.5/10,4),
+								size = UDim2.new(.5,-4,1-5.5/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -10378,10 +10430,18 @@ do
 										name = "Custom Menu Name",
 										value = "Bitch Bot",
 										extra = {},
+										tooltip = "Changes the menu name, not the watermark"
 									},
 									{
 										type = "Text",
-										name = "Custom Menu Logo",
+										name = "Custom Watermark",
+										value = "Bitch Bot",
+										extra = {},
+										tooltip = "Changes the watermark at the top left, there are text arguments as well such as {username}, {version}, {date}, {time} and {fps}"
+									},
+									{
+										type = "Text",
+										name = "Custom Logo",
 										value = "Bitch Bot",
 										extra = {},
 										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
@@ -10406,7 +10466,7 @@ do
 							{
 								name = "Configs",
 								pos = UDim2.new(0,0,0,0),
-								size = UDim2.new(.5,-4,6/10,-4),
+								size = UDim2.new(.5,-4,5.5/10,-4),
 								type = "Panel",
 								content = {
 									{
