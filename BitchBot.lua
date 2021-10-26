@@ -13817,7 +13817,7 @@ if BBOT.game == "phantom forces" then
 			local minimum_pen = {}
 			for i=1, #organizedPlayers do
 				local v = organizedPlayers[i]
-				if v[1] ~= target[1] then return end
+				if v[1] ~= target[1] then continue end
 				minimum_pen[#minimum_pen+1] = v
 			end
 			
