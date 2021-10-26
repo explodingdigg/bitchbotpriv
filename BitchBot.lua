@@ -9814,7 +9814,7 @@ do
 										name = "Custom Logo",
 										value = "Bitch Bot",
 										extra = {},
-										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
+										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part! Changing this to a blank box will remove the logo."
 									},
 									{
 										type = "Toggle",
@@ -10242,7 +10242,7 @@ do
 										name = "Custom Logo",
 										value = "Bitch Bot",
 										extra = {},
-										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part!"
+										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part! Changing this to a blank box will remove the logo."
 									},
 									{
 										type = "Toggle",
