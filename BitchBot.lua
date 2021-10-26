@@ -8014,14 +8014,14 @@ do
 									{
 										type = "Toggle",
 										name = "Resolver",
-										value = true,
+										value = false,
 										unsafe = true,
 										tooltip = "Rage aimbot attempts to resolve player offsets and positions, Disable if you are having issues with resolver.",
 									},
 									{
 										type = "Toggle",
 										name = "Zero Velocity",
-										value = true,
+										value = false,
 										unsafe = true,
 										tooltip = "Makes all the characters not have velocity, so the people like pf pwner can cry.",
 									},
