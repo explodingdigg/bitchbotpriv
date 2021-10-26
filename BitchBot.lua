@@ -6972,8 +6972,12 @@ do
 						drawing.Transparency = t < 0.4 and 0.4 or t
 					elseif i:find("line") then
 						drawing.Position = Vector2.new(locRect.x + linenum, locRect.y + 1)
-						if BBOT.menu then
-							local mencol = customcolor or Color3.fromRGB(127, 72, 163)
+						if BBOT.config then
+							local col = Color3.fromRGB(127, 72, 163)
+							if BBOT.config and BBOT.config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+								col = BBOT.config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+							end
+							local mencol = customcolor or col
 							local color = linenum == 1 and mencol or Color3.fromRGB(mencol.R * 255 - 40, mencol.G * 255 - 40, mencol.B * 255 - 40) -- super shit
 							if drawing.Color ~= color then
 								drawing.Color = color
@@ -7031,6 +7035,9 @@ do
 		end
 
 		local color = Color3.fromRGB(127, 72, 163)
+		if BBOT.config and BBOT.config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent") then
+			color = BBOT.config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
+		end
 
 		Note.drawings.text = Text(t)
 		if Note.drawings.text.TextBounds.x + 7 > Note.size.x then -- expand the note size to fit if it's less than the default size
@@ -9664,6 +9671,16 @@ do
 											{ "Forward", true },
 											{ "Backward", true },
 										},
+									},
+									{
+										type = "Slider",
+										name = "Anti Grenade TP Distance",
+										min = 2,
+										max = 100,
+										suffix = " studs",
+										decimal = 1,
+										value = 25,
+										custom = {},
 									},
 									{
 										type = "Toggle",
@@ -12498,7 +12515,7 @@ if BBOT.game == "phantom forces" then
 			if not char.alive then return end
 			if config:GetValue("Main", "Misc", "Exploits", "Anti Grenade TP") then
 				local points_allowed = config:GetValue("Main", "Misc", "Exploits", "Anti Grenade TP Points")
-				local grenade_move_dist = 35
+				local grenade_move_dist = config:GetValue("Main", "Misc", "Exploits", "Anti Grenade TP Distance")
 				local grenade_move_points = {}
 				if points_allowed.Up then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,grenade_move_dist,0) end
 				if points_allowed.Down then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,-grenade_move_dist,0) end
@@ -12534,7 +12551,7 @@ if BBOT.game == "phantom forces" then
         local last_predicted = nil
 		hook:Add("RageBot.DamagePredictionKilled", "BBOT:AntiGrenadeTP", function(Entity)
             if last_predicted == Entity then return end
-			misc:AntiGrenadeStep()
+			timer:Simple(BBOT.extras:getLatency(), function() misc:AntiGrenadeStep() end)
             last_predicted = Entity
             timer:Simple(0, function() last_predicted = nil end)
 		end)
@@ -13560,7 +13577,7 @@ if BBOT.game == "phantom forces" then
 		function aimbot:GetRageTarget(fov, gun)
 			local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
 			local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-			local cam_position = last_repupdate_position or aux_camera.basecframe.p
+			local cam_position = char.rootpart.CFrame.p
 			local team = (localplayer.Team and localplayer.Team.Name or "NA")
 			local playerteamdata = workspace["Players"][team]
 			local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
