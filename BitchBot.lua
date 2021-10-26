@@ -6912,7 +6912,7 @@ do
 	end)
 
 	local sizex = client_info:GetTextSize()
-	infobar:SetPos(0, 50, 0, 10)
+	infobar:SetPos(0, 52, 0, 10)
 	gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
 end
 
@@ -13863,7 +13863,9 @@ if BBOT.game == "phantom forces" then
 					BBOT.misc:MoveTo(target[4], true)
 					self.tp_scanning = true
 					timer:Simple(0,function()
-						BBOT.misc:MoveTo(original_position, true)
+						timer:Simple(0,function()
+							BBOT.misc:MoveTo(original_position, true)
+						end)
 					end)
 					timer:Simple(0.25,function()
 						self.tp_scanning = false
