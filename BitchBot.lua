@@ -13634,7 +13634,6 @@ if BBOT.game == "phantom forces" then
 			last_repupdate_position = nil
 		end)
 
-		aimbot.next_tpscan = 0
 		function aimbot:GetRageTarget(fov, gun)
 			local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
 			local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
@@ -13748,7 +13747,7 @@ if BBOT.game == "phantom forces" then
 										local fp_name = firepos_points_name[i]
 										local newcf = targetcframe * lookatme * point
 										local cam_position = newcf.p
-										if i > tp_scanning_points and (self.tp_scanning or self.next_tpscan > tick() or not BBOT.misc:CanMoveTo(cam_position)) then
+										if i > tp_scanning_points and (self.tp_scanning or not BBOT.misc:CanMoveTo(cam_position)) then
 											continue
 										end
 										local u = i
@@ -13764,9 +13763,6 @@ if BBOT.game == "phantom forces" then
 												local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
 												if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
 													table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
-													if (u > tp_scanning_points) then
-														tp_scanned = true
-													end
 													inserted_priority = true
 													scan_count = scan_count + 1
 												end
@@ -13775,9 +13771,6 @@ if BBOT.game == "phantom forces" then
 											local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
 											if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
 												table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
-												if (u > tp_scanning_points) then
-													tp_scanned = true
-												end
 												inserted_priority = true
 												scan_count = scan_count + 1
 											end
@@ -13797,14 +13790,11 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
-			if tp_scanned then
-				self.next_tpscan = tick() + 0.25
-			end
-			
 			local players_only, players_has = {}, {}
 			for i=1, #organizedPlayers do
 				local v = organizedPlayers[i]
 				if players_has[v[1]] then continue end
+				if v[6] and (self.tp_scanning or not BBOT.misc:CanMoveTo(v[4])) then continue end
 				players_only[#players_only+1] = {v[1], v[3]}
 				players_has[v[1]] = true
 			end
@@ -13818,6 +13808,7 @@ if BBOT.game == "phantom forces" then
 			for i=1, #organizedPlayers do
 				local v = organizedPlayers[i]
 				if v[1] ~= target[1] then continue end
+				if v[6] and (self.tp_scanning or not BBOT.misc:CanMoveTo(v[4])) then continue end
 				minimum_pen[#minimum_pen+1] = v
 			end
 			
@@ -13854,13 +13845,15 @@ if BBOT.game == "phantom forces" then
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
 				local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
-				if target and target[6] and self:GetRageConfig("Hack vs. Hack", "TP Scanning") and self.next_tpscan < tick() and not self.tp_scanning then
+				if target and target[6] and self:GetRageConfig("Hack vs. Hack", "TP Scanning") and not self.tp_scanning then
 					local original_position = char.rootpart.Position * 1
 					BBOT.misc:MoveTo(target[4], true)
 					self.tp_scanning = true
 					timer:Simple(0,function()
-						self.tp_scanning = false
 						BBOT.misc:MoveTo(original_position, true)
+					end)
+					timer:Simple(0.25,function()
+						self.tp_scanning = false
 					end)
 					return
 				end
