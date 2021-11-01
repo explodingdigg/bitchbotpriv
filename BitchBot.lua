@@ -20,7 +20,7 @@ local username = (BBOT and BBOT.username or nil)
 if BBOT and BBOT.__init then
 	BBOT = nil
 end
-local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "¯\\_(?)_/¯", __init = true } -- I... um... fuck off ok?
+local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "In-Dev 0.8.2a", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
 while true do
@@ -552,6 +552,10 @@ do
 		local h, s, v = Color3.toHSV(col)
 		return Color3.fromHSV(h, s, v*scale)
 	end
+
+	function color.tohex(col)
+		return string.format("#%02X%02X%02X", col.r * 255, col.g * 255, col.b * 255)
+	end
 end
 
 -- Vector
@@ -807,11 +811,11 @@ do
 			local k = l-c
 			local v = tbl[k]
 			if v[1] ~= name then
-				local name, func = v[1], v[2]
+				local _name, func = v[1], v[2]
 				if not func then 
 					table.remove(tbl, k); c = c + 1; tbln[_name] = nil
 				else
-					if not name then 
+					if not _name then 
 						table.remove(tbl, k); c = c + 1; tbln[_name] = nil
 					else
 						local a, b, c, d, e, f = func(...)
@@ -1052,39 +1056,34 @@ do
 		end
 	end
 	function loop:IsRunning(name)
-		return self.registry[name].Running
+		return self.registry[name].running
 	end
 	function loop:Create(name, func, waitt, ...)
 		local loops = self.registry
 		if loops[name] ~= nil then return end
 
 		log(LOG_DEBUG, 'Creating loop "' .. name .. '"')
+		local isuserdata = (type(wait) == "userdata")
 
-		loops[name] = { }
-		loops[name].Running = false
-		loops[name].Destroy = false
-		loops[name].Loop = coroutine.create(function(...)
-			while true do
-				if loops[name].Running then
-					local ran, err = xpcall(func, debug.traceback, ...)
-					if not ran then
-						loops[name].Destroy = true
-						log(LOG_ERROR, "Error in loop library - ", err)
-						break
+		loops[name] = {
+			running = false,
+			destroy = false,
+			Loop = coroutine.create(function(...)
+				local loop_data = loops[name]
+				while true do
+					if loop_data.running then
+						local ran, err = xpcall(func, debug.traceback, ...)
+						if not ran then
+							loops[name].destroy = true
+							log(LOG_ERROR, "Error in loop library - ", err)
+							break
+						end
 					end
+					if loop_data.destroy then break end
+					if isuserdata then waitt:wait() else task.wait(waitt) end
 				end
-	
-				if loops[name].Destroy then
-					break
-				end
-	
-				if type(wait) == "userdata" then
-					waitt:wait()
-				else
-					wait(waitt)
-				end
-			end
-		end)
+			end)
+		}
 	end
 	function loop:Run(name, func, waitt, ...)
 		local loops = self.registry
@@ -1094,12 +1093,12 @@ do
 			end
 		end
 		
-		log(LOG_DEBUG, 'Running loop "' .. name .. '"')
+		log(LOG_DEBUG, 'running loop "' .. name .. '"')
 
-		loops[name].Running = true
+		loops[name].running = true
 		local succ, out = coroutine.resume(loops[name].Loop)
 		if not succ then
-			warn("Loop: " .. tostring(name) .. " ERROR: " .. tostring(out))
+			log(LOG_ERROR, "Error in loop service - " .. tostring(name) .. " ERROR: " .. tostring(out))
 		end
 	end
 	function loop:Stop(name)
@@ -1108,14 +1107,14 @@ do
 
 		log(LOG_DEBUG, 'Stopping loop "' .. name .. '"')
 
-		loops[name].Running = false
+		loops[name].running = false
 	end
 	function loop:Remove(name)
 		local loops = self.registry
 		if loops[name] == nil then return end
 		self:Stop(name)
 		log(LOG_DEBUG, 'Removing loop "' .. name .. '"')
-		loops[name].Destroy = true
+		loops[name].destroy = true
 		loops[name] = nil
 	end
 	function loop:GetTable()
@@ -1292,7 +1291,7 @@ do
 	local runservice = BBOT.service:GetService("RunService")
 	loop:Run("BBOT:Timer.Step", function()
 		timer:Step()
-	end, runservice.RenderStepped)
+	end)
 end
 
 -- Extras
@@ -2859,7 +2858,7 @@ do
 		local inhover = {}
 		for i=1, #reg do
 			local v = reg[i]
-			if gui:IsValid(v) and v._enabled and v.class ~= "Mouse" and gui:IsHovering(v) then
+			if v and v._enabled and not v.__INVALID and v.class ~= "Mouse" and gui:IsHovering(v) then
 				if v.mouseinputs then
 					inhover[#inhover+1] = v
 				end
@@ -2902,7 +2901,7 @@ do
 		local reg = gui.registry
 		for i=1, #reg do
 			local v = reg[i]
-			if gui:IsValid(v) and v._enabled then
+			if v and v._enabled and not v.__INVALID then
 				if v.WheelForward then
 					v:WheelForward()
 				end
@@ -2914,7 +2913,7 @@ do
 		local reg = gui.registry
 		for i=1, #reg do
 			local v = reg[i]
-			if gui:IsValid(v) and v._enabled then
+			if v and v._enabled and not v.__INVALID then
 				if v.WheelBackward then
 					v:WheelBackward()
 				end
@@ -2926,19 +2925,19 @@ do
 		local reg = gui.registry
 		for i=1, #reg do
 			local v = reg[i]
-			if gui:IsValid(v) and v._enabled and not v.parent then
+			if v and v._enabled and not v.__INVALID and not v.parent then
 				v:Calculate()
 			end
 		end
 	end)
 
-	hook:Add("RenderStepped", "BBOT:GUI.Render", function()
+	hook:Add("RenderStepped", "BBOT:GUI.Render", function(delta)
 		local reg = gui.registry
 		for i=1, #reg do
 			local v = reg[i]
-			if gui:IsValid(v) and v._enabled then
+			if v and v._enabled and not v.__INVALID then
 				if v.Step then
-					v:Step()
+					v:Step(delta)
 				end
 			end
 		end
@@ -2948,7 +2947,7 @@ do
 		local reg = gui.registry
 		for i=1, #reg do
 			local v = reg[i]
-			if gui:IsValid(v) and v._enabled then
+			if v and v._enabled and not v.__INVALID then
 				if v.InputBegan then
 					v:InputBegan(input)
 				end
@@ -2960,7 +2959,7 @@ do
 		local reg = gui.registry
 		for i=1, #reg do
 			local v = reg[i]
-			if gui:IsValid(v) and v._enabled then
+			if v and v._enabled and not v.__INVALID then
 				if v.InputEnded then
 					v:InputEnded(input)
 				end
@@ -5677,6 +5676,7 @@ do
 
 			local title = gui:Create("Text", self)
 			self.title = title
+			self.title_content = ""
 			title:SetPos(0, 3, 0, 3)
 			title:SetText("")
 
@@ -5694,20 +5694,24 @@ do
 			self.tslider:SetSize(0, 15, 1, -21-6)
 
 			local s = self
+			local _color = color
 			function self.pallet:OnValueChanged(color, transparency)
 				s.hslider:SetColor(color, transparency)
 				s.tslider:SetColor(color, transparency)
 				s:OnChanged(color, transparency)
+				title:SetText(s.title_content .. " - " .. math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
 			end
 			function self.hslider:OnValueChanged(color, transparency)
 				s.pallet:SetColor(color, transparency)
 				s.tslider:SetColor(color, transparency)
 				s:OnChanged(color, transparency)
+				title:SetText(s.title_content .. " - " .. math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
 			end
 			function self.tslider:OnValueChanged(color, transparency)
 				s.pallet:SetColor(color, transparency)
 				s.hslider:SetColor(color, transparency)
 				s:OnChanged(color, transparency)
+				title:SetText(s.title_content .. " - " .. math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
 			end
 
 			self:SetTransparency(0)
@@ -5725,6 +5729,7 @@ do
 		end
 
 		function GUI:SetTitle(txt)
+			self.title_content = txt
 			self.title:SetText(txt)
 		end
 
@@ -5732,6 +5737,7 @@ do
 			self.pallet:SetColor(color, transparency)
 			self.hslider:SetColor(color, transparency)
 			self.tslider:SetColor(color, transparency)
+			self.title:SetText(self.title_content .. " - " .. math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
 		end
 
 		function GUI:OnChanged() end
@@ -5769,7 +5775,6 @@ do
 		function GUI:SetColor(col, transparency)
 			self.background.Color = col
 			self.background_outline.Color = color.darkness(col, .75)
-			self:Cache(self.background, transparency, 0, true)
 			self:Cache(self.background_outline, transparency, 0, true)
 			self:PerformDrawings()
 			self.color_transparency = transparency
@@ -5788,8 +5793,8 @@ do
 			self.picker = picker
 			picker:SetPos(.5,0,.5,0)
 			picker:SetSize(0, 240, 0, 211)
-			picker:SetColor(self.background.Color, self.color_transparency)
 			picker:SetTitle(self.title)
+			picker:SetColor(self.background.Color, self.color_transparency)
 			picker:SetZIndex(100)
 			function picker.OnChanged(s, rgb, alpha)
 				self:SetColor(rgb, alpha)
@@ -5868,7 +5873,7 @@ do
 			end
 
 			self:SetSize(0, self.size.X.Offset, self.height/self.parent.absolutesize.Y, -6)
-			self:SetPos(1, -self.size.X.Offset-1, scroll_position/canvas_size, 4)
+			self:SetPos(1, -self.size.X.Offset-1, scroll_position/canvas_size, 2)
 		end
 
 		gui:Register(GUI, "ScrollBar")
@@ -5889,6 +5894,7 @@ do
 			self.canvas:SetSize(1,0,1,0)
 
 			self.Y_scroll = 0 -- for now this is by object
+			self.Y_scroll_delta = 0
 			self.Spacing = 2
 			self.Padding = 0
 		end
@@ -5916,14 +5922,22 @@ do
 			local max_childs = #children
 			max = max or max_childs
 			max = math.min(max, max_childs)
+			local remainder = max % 1
+			local tosearch = max
+			if remainder < .5 then tosearch = tosearch + .5 end
+			tosearch = math.round(tosearch)
 			local y_axis, count, count_children = 0, 0, 0
-			while count < max and count_children < max_childs do
+			while count < tosearch and count_children < max_childs do
 				count_children = count_children + 1
 				local v = children[count_children]
 				if not gui:IsValid(v) then continue end
 				if not v:GetVisible() then continue end
 				count = count + 1
-				y_axis = y_axis + v.absolutesize.Y + self.Spacing
+				local spacing = v.absolutesize.Y + self.Spacing
+				if count == tosearch and remainder ~= 0 and remainder ~= 1 then
+					spacing = spacing * remainder
+				end
+				y_axis = y_axis + spacing
 			end
 			return y_axis
 		end
@@ -5953,6 +5967,7 @@ do
 
 			if self.Y_scroll > count-onpage then
 				self.Y_scroll = math.max(0, count-onpage)
+				self.Y_scroll_delta = self.Y_scroll
 			end
 
 			y_axis = 0
@@ -5995,21 +6010,27 @@ do
 			--self:InvalidateLayout(true, true)
 		end
 
+		function GUI:Step(delta)
+			self.Y_scroll = math.lerp(delta * 10, self.Y_scroll, self.Y_scroll_delta)
+			if self.Y_scroll ~= self.Y_scroll_delta then
+				self:PerformOrganization()
+			end
+		end
+
 		function GUI:WheelForward()
 			if not gui:IsHovering(self) then return end
-			self.Y_scroll = math.max(0, self.Y_scroll - 1)
+			self.Y_scroll_delta = math.max(0, self.Y_scroll_delta - 1)
 			self:PerformOrganization()
 		end
 
 		function GUI:WheelBackward()
 			if not gui:IsHovering(self) then return end
-			self.Y_scroll = math.min(#self.canvas.children, self.Y_scroll + 1)
+			self.Y_scroll_delta = math.min(#self.canvas.children, self.Y_scroll_delta + 1)
 			self:PerformOrganization()
 		end
 
 		function GUI:Add(object) -- Add GUI objects here to add to the canvas
 			object:SetParent(self.canvas)
-			self:PerformOrganization()
 		end
 
 		gui:Register(GUI, "ScrollPanel")
@@ -6113,6 +6134,10 @@ do
 			row:SetSize(1,0,0,20)
 			self.scrollpanel:Add(row)
 			return row
+		end
+
+		function GUI:PerformOrganization()
+			self.scrollpanel:PerformOrganization()
 		end
 
 		function GUI:AddColumn(name, pos, wide)
@@ -6842,11 +6867,21 @@ do
 	client_info:SetTextSize(13)
 
 	local runservice = BBOT.service:GetService("RunService")
+	local fps = 60
+
+	hook:Add("RenderStepped", "BBOT:Menu.FpsCounter", function(delta)
+		fps = (0.95 * fps) + (0.05 / delta)
+		local validate_fps = fps - (fps % 1);
+		if (not (((validate_fps == validate_fps) and (not (validate_fps == -(1/0)))) and (not (validate_fps == (1/0))))) then
+			fps = 60
+		end
+	end)
+
 	function menu:ProcessInfoBar(text)
 		text = string.Replace(text, "{username}", BBOT.username)
 		text = string.Replace(text, "{date}", os.date("%b. %d, %Y"))
 		text = string.Replace(text, "{version}", BBOT.version)
-		text = string.Replace(text, "{fps}", math.round(1/runservice.RenderStepped:Wait()) .. " fps")
+		text = string.Replace(text, "{fps}", math.round(fps) .. " fps")
 		text = string.Replace(text, "{time}", os.date("%I:%M:%S %p"))
 		client_info:SetText(text)
 	end
@@ -7565,6 +7600,26 @@ do
 						values = { { "Fire Animation", true }, { "Scoping In", true }, { "Reloading", true } }
 					},
 					{
+						type = "Slider",
+						name = "Barrel Comp X",
+						value = 100,
+						min = 0,
+						max = 1000,
+						suffix = "%",
+						decimal = 1,
+						custom = { [0] = "Off" },
+					},
+					{
+						type = "Slider",
+						name = "Barrel Comp Y",
+						value = 100,
+						min = 0,
+						max = 1000,
+						suffix = "%",
+						decimal = 1,
+						custom = { [0] = "Off" },
+					},
+					{
 						type = "Toggle",
 						name = "Drop Prediction",
 						value = true,
@@ -7665,6 +7720,27 @@ do
 						value = .75,
 						decimal = 2,
 						suffix = "s",
+						tooltip = "Time it takes to activate trigger bot by aiming in"
+					},
+					{
+						type = "Slider",
+						name = "Fire Time",
+						min = 0,
+						max = .5,
+						value = .1,
+						decimal = 3,
+						suffix = "s",
+						tooltip = "How long you need to stay in the circle to fire"
+					},
+					{
+						type = "Slider",
+						name = "Sprint to Fire Time",
+						min = 0,
+						max = .5,
+						value = .1,
+						decimal = 3,
+						suffix = "s",
+						tooltip = "Time from sprinting to the ability to fire"
 					},
 				}},
 			},
@@ -7798,7 +7874,7 @@ do
 										type = "Toggle",
 										name = "Hitbox Shifting",
 										value = false,
-										tooltip = "Increases possible penetration with Autowall. The higher\nthe Hitbox Shift Distance the more likely it is to miss shots.\nWhen it misses it will try disable this.",
+										tooltip = "Creates points around an enemy to hit, this will increase the likely hood of getting a kill",
 									},
 									{
 										type = "ComboBox",
@@ -7811,8 +7887,8 @@ do
 											{ "Forward", true },
 											{ "Backward", true },
 											{ "Origin", true },
-											{ "Towards", true },
 										},
+										tooltip = "You do not need to turn these all on, points are rotated relative to the direction of the ragebot",
 									},
 									{
 										type = "Slider",
@@ -7821,12 +7897,13 @@ do
 										min = 1,
 										max = 12,
 										suffix = " studs",
+										tooltip = "As of PF update 5.6.2k, I suggest you use 4.1-4.5 shift for the best hit chances",
 									},
 									{
 										type = "Toggle",
 										name = "FirePos Shifting",
 										value = false,
-										tooltip = "Increases possible penetration with Autowall. The higher the Hitbox Shift Distance the more likely it is to miss shots. When it misses it will try disable this.",
+										tooltip = "Creates points around you to fire from, this will increase the likely hood of getting a kill",
 									},
 									{
 										type = "ComboBox",
@@ -7839,8 +7916,8 @@ do
 											{ "Forward", true },
 											{ "Backward", true },
 											{ "Origin", true },
-											{ "Towards", true },
 										},
+										tooltip = "You do not need to turn these all on, points are rotated relative to the direction of the ragebot",
 									},
 									{
 										type = "Slider",
@@ -7849,31 +7926,30 @@ do
 										min = 1,
 										max = 12,
 										suffix = " studs",
+										tooltip = "As of PF update 5.6.2k, I suggest you use 8.5-9.8 shift for the best hit chances",
 									},
 									{
 										type = "Toggle",
 										name = "Relative Hitpoints Only",
 										value = true,
-										tooltip = "Makes the firpos and hitbox points align, so less calculations.",
-									},
-									{
-										type = "Slider",
-										name = "Max Hitpoints",
-										value = 30,
-										min = 0,
-										max = 100,
-										suffix = " point(s)",
-										decimal = 0,
-										custom = {
-											[0] = "Infinite",
-										},
-										tooltip = "The maximum amount of scans per hitbox point, useful if you don't wana lag to shit",
+										tooltip = "Makes the firepos and hitbox points align, so less calculations.",
 									},
 									{
 										type = "Toggle",
 										name = "TP Scanning",
 										value = false,
 										tooltip = "Moves you to a position to kill",
+									},
+									{
+										type = "Slider",
+										name = "TP Scanning Multi-Point",
+										min = 1,
+										max = 8,
+										suffix = " scale",
+										decimal = 0,
+										value = 1,
+										custom = {},
+										tooltip = "Creates multiple points to teleport towards",
 									},
 									{
 										type = "ComboBox",
@@ -7891,7 +7967,7 @@ do
 										type = "Slider",
 										name = "TP Scanning Distance",
 										min = 2,
-										max = 100,
+										max = 300,
 										suffix = " studs",
 										decimal = 1,
 										value = 25,
@@ -9992,15 +10068,11 @@ do
 												
 												if not BBOT.weapons or not BBOT.weapons.skindatabase then return container end
 
-												--[[local c = 0
 												for name, skinId in next, BBOT.weapons.skindatabase do
-													c=c+1
-													BBOT.timer:Simple(0.001*c,function()
-														local a, b, c = tostring(name), tostring(skinId.TextureId or "Unknown"), tostring(skinId.Case or "Unknown")
-														local line = skinlist:AddLine(a, b, c)
-														line.searcher = a .. " " .. b .. " " .. c
-													end)
-												end]]
+													local a, b, c = tostring(name), tostring(skinId.TextureId or "Unknown"), tostring(skinId.Case or "Unknown")
+													local line = skinlist:AddLine(a, b, c)
+													line.searcher = a .. " " .. b .. " " .. c
+												end
 
 												local function Refresh_List()
 													if not BBOT.weapons.skindatabase then return end
@@ -10012,12 +10084,14 @@ do
 															v:SetVisible(false)
 														end
 													end
-													skinlist.scrollpanel:PerformOrganization()
+													skinlist:PerformOrganization()
 												end
 
 												function search:OnValueChanged()
 													Refresh_List()
 												end
+
+												Refresh_List()
 												return container
 											end,
 											content = {}
@@ -10097,7 +10171,7 @@ do
 											end
 										end
 
-										playerlist.scrollpanel:PerformOrganization()
+										playerlist:PerformOrganization()
 									end
 
 									function search:OnValueChanged()
@@ -12384,7 +12458,7 @@ if BBOT.game == "phantom forces" then
 			for player, v in pairs(replication.player_registry) do
 				if player ~= localplayer and player.Team and localplayer.Team and player.Team.Name ~= localplayer.Team.Name then
 					local controller = v.updater
-					if controller.alive and controller.__t_received and controller.__t_received + t < tick() then
+					if controller.alive and ((controller.__t_received and controller.__t_received + t < tick()) or t == 0) then
 						misc:GrenadeTP(controller.getpos())
 					end
 				end
@@ -12552,8 +12626,8 @@ if BBOT.game == "phantom forces" then
 
 			local diff = (position-current_position)
 
-			if diff.Magnitude > 7 then
-				local timescale = math.round(diff.Magnitude/7)+1
+			if diff.Magnitude > 8 then
+				local timescale = math.round(diff.Magnitude/8)+1
 				local tdiff = diff/timescale
 				for i=1, timescale do
 					network:send("repupdate", current_position + (tdiff*i), _last_ang, tick())
@@ -12613,7 +12687,7 @@ if BBOT.game == "phantom forces" then
         local last_predicted = nil
 		hook:Add("RageBot.DamagePredictionKilled", "BBOT:AntiGrenadeTP", function(Entity)
             if last_predicted == Entity then return end
-			timer:Simple(BBOT.extras:getLatency(), function() misc:AntiGrenadeStep() end)
+			timer:Simple(BBOT.extras:getLatency()*1.5, function() misc:AntiGrenadeStep() end)
             last_predicted = Entity
             timer:Simple(0, function() last_predicted = nil end)
 		end)
@@ -12799,7 +12873,7 @@ if BBOT.game == "phantom forces" then
 			local localplayer_check = debug.getupvalue(replication._updater, 1)
 			debug.setupvalue(replication._updater, 1, "_")
 			self.controller = replication._updater(localplayer)
-			l3p.player = localplayer
+			self.player = localplayer
 			debug.setupvalue(replication._updater, 1, localplayer_check)
 
 			if config:GetValue("Main", "Visuals", "Local", "Enabled") then
@@ -12819,7 +12893,14 @@ if BBOT.game == "phantom forces" then
 				else
 					self.networking["equip"](l3p.controller, -1)
 				end
+				local old_char
+				if self.player == localplayer then -- Come on PF this is pathetic
+					old_char = self.player.Character
+				end
 				self.controller.spawn(char.rootpart.Position)
+				if old_char then
+					self.player.Character = old_char
+				end
 			elseif self.controller.alive then
 				local objects = self.controller.died()
 				if objects then
@@ -12897,13 +12978,13 @@ if BBOT.game == "phantom forces" then
 				controller.receivedPosition = pos;
 				controller.receivedVelocity = delta_position;
 				controller.receivedDataFlag = true;
-				controller.setlookangles(ang);
+				controller.receivedLookAngles = ang;
 
 				if config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Absolute") then
 					local u327 = debug.getupvalue(controller.getpos, 2)
-					local u330 = debug.getupvalue(controller.step, 5)
 					u327.t = pos
 					u327.p = pos
+					local u330 = debug.getupvalue(controller.step, 6)
 					u330._p0 = pos
 					u330._p1 = pos
 					local u317 = debug.getupvalue(controller.step, 2)
@@ -13008,6 +13089,8 @@ if BBOT.game == "phantom forces" then
 				if instance.Name == "Window" then return true end
 				return not instance.CanCollide or instance.Transparency == 1
 			end
+
+			
 
 			local workspace = BBOT.service:GetService("Workspace")
 			function aimbot:fullcast(p7, p8, p9, p10, p11)
@@ -13161,7 +13244,7 @@ if BBOT.game == "phantom forces" then
 		end
 
 		function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority, scan_part)
-			local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
+			local mousePos = Vector3.new(mouse.x, mouse.y, 0)
 			local cam_position = camera.CFrame.p
 			local team = (localplayer.Team and localplayer.Team.Name or "NA")
 			local playerteamdata = workspace["Players"][team]
@@ -13284,7 +13367,9 @@ if BBOT.game == "phantom forces" then
 				end
 
 				if self:GetLegitConfig("Ballistics", "Barrel Compensation") and self:CanBarrelPredict(gun) then
-					dir = dir + self:BarrelPrediction(position, dir, gun)
+					local X, Y = self:GetLegitConfig("Ballistics", "Barrel Comp X")/100, self:GetLegitConfig("Ballistics", "Barrel Comp Y")/100
+					local correction_dir = self:BarrelPrediction(position, dir, gun)
+					dir = dir + Vector3.new(correction_dir.X * X, correction_dir.Y * Y, 0)
 				end
 
 				local pos, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
@@ -13355,7 +13440,10 @@ if BBOT.game == "phantom forces" then
 				if mycurgun and mycurgun.data and mycurgun.data.bulletspeed then
 					aimbot:SetCurrentType(mycurgun)
 					if not aimbot:GetLegitConfig("Trigger Bot", "Enabled") then return end
-					assist_prediction.Color = aimbot:GetLegitConfig("Trigger Bot", "Enabled", "Dot Color")
+					local col, transparency = aimbot:GetLegitConfig("Trigger Bot", "Enabled", "Dot Color")
+					assist_prediction.Color = col
+					assist_prediction.Transparency = transparency
+					assist_prediction_outline.Transparency = transparency
 				elseif assist_prediction.Visible then
 					assist_prediction.Visible = false
 					assist_prediction_outline.Visible = assist_prediction.Visible
@@ -13370,6 +13458,8 @@ if BBOT.game == "phantom forces" then
 			end)
 
 			local isaiming, aimtime = nil, 0
+			local firetime = 0
+			local sprinttofiretime = 0
 			function aimbot:TriggerBotStep(gun)
 				self.trigger_target = nil
 				if assist_prediction.Visible then
@@ -13383,9 +13473,13 @@ if BBOT.game == "phantom forces" then
 					aimtime = tick()
 				end
 				if self:GetLegitConfig("Trigger Bot", "Trigger When Aiming") and (not isaiming or (tick() - aimtime < aim_percentage)) then return end
-				if char.sprinting() then return end
+				if char.sprinting() then
+					sprinttofiretime = tick() + self:GetLegitConfig("Trigger Bot", "Sprint to Fire Time")
+					return
+				elseif sprinttofiretime > tick() then return end
 				local hitscan_points = self:GetLegitConfig("Trigger Bot", "Trigger Bot Hitboxes")
 				local target = self:GetLegitTarget(nil, nil, hitscan_points)
+
 				if not target then return end
 				self.trigger_target = target
 
@@ -13408,11 +13502,11 @@ if BBOT.game == "phantom forces" then
 					assist_prediction_outline.Visible = assist_prediction.Visible
 					assist_prediction.Position = trigger_position
 					assist_prediction_outline.Position = assist_prediction.Position
-					local radi = (target[4] == "Body" and 650 or 400)*(char.unaimedfov/camera.FieldOfView)/magnitude
+					local radi = (target[4] == "Body" and 700 or 450)*(char.unaimedfov/camera.FieldOfView)/magnitude
 					if gun.type == "SHOTGUN" then
 						local o = radi
 						local mul = gun.data.crosssize * gun.data.aimchoke --(gun.data.aimchoke * p367 + gun.data.hipchoke * (1 - p367))
-						radi = (2 * (math.pi^2) * mul)
+						radi = (2.25 * (math.pi^2) * mul)
 						radi = radi * (char.unaimedfov/camera.FieldOfView)/magnitude
 						if magnitude < gun.data.range0 then
 							radi = radi * math.clamp(magnitude/gun.data.range0, .5, 1)
@@ -13440,8 +13534,12 @@ if BBOT.game == "phantom forces" then
 					local barrel_end_positon, onscreen = camera:WorldToViewportPoint(pointhit)
 					barrel_end_positon = Vector2.new(barrel_end_positon.X, barrel_end_positon.Y)
 					if onscreen and vector.dist2d(trigger_position, barrel_end_positon) <= radi then
-						aimbot.fire = true
-						gun:shoot(true)
+						if firetime < tick() then
+							aimbot.fire = true
+							gun:shoot(true)
+						end
+					else
+						firetime = tick() + self:GetLegitConfig("Trigger Bot", "Fire Time")
 					end
 				end
 			end
@@ -13647,24 +13745,17 @@ if BBOT.game == "phantom forces" then
 			last_repupdate_position = nil
 		end)
 
-		function aimbot:GetRageTarget(fov, gun)
-			local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
-			local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-			local cam_position = (self.tp_scanning and last_repupdate_position or char.rootpart.CFrame.p)
-			local team = (localplayer.Team and localplayer.Team.Name or "NA")
-			local playerteamdata = workspace["Players"][team]
-			local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
-			local penetration_depth = gun.data.penetrationdepth * wall_scale/100
-			local auto_wall = self:GetRageConfig("Aimbot", "Auto Wallbang")
-			local hitscan_priority = self:GetRageConfig("Aimbot", "Hitscan Priority")
-			local aimbot_fov = config:GetValue("Main", "Rage", "Aimbot", "Aimbot FOV")
-
-			local hitbox_shift = self:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
-			local hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
-			local hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
-			local max_points = self:GetRageConfig("Hack vs. Hack", "Max Hitpoints")
-			local relative_only = self:GetRageConfig("Hack vs. Hack", "Relative Hitpoints Only")
-
+		do
+			local auto_wall = aimbot:GetRageConfig("Aimbot", "Auto Wallbang")
+			local hitscan_priority = aimbot:GetRageConfig("Aimbot", "Hitscan Priority")
+			local aimbot_fov = aimbot:GetRageConfig("Aimbot", "Aimbot FOV")
+			
+			local hitbox_shift = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
+			local hitbox_shift_points = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
+			local hitbox_shift_distance = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
+			local max_points = 1
+			local relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Relative Hitpoints Only")
+			
 			local hitbox_points, hitbox_points_name = {}, {}
 			if hitbox_shift then
 				if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
@@ -13675,10 +13766,10 @@ if BBOT.game == "phantom forces" then
 				if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
 				if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
 			end
-
-			local firepos_shift = self:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
-			local firepos_shift_points = self:GetRageConfig("Hack vs. Hack", "FirePos Hitscan Points")
-			local firepos_shift_distance = self:GetRageConfig("Hack vs. Hack", "FirePos Shift Distance")
+			
+			local firepos_shift = aimbot:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
+			local firepos_shift_points = aimbot:GetRageConfig("Hack vs. Hack", "FirePos Hitscan Points")
+			local firepos_shift_distance = aimbot:GetRageConfig("Hack vs. Hack", "FirePos Shift Distance")
 			
 			local firepos_points, firepos_points_name = {}, {}
 			if firepos_shift then
@@ -13690,89 +13781,172 @@ if BBOT.game == "phantom forces" then
 				if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
 				if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
 			end
-
+			
 			local tp_scanning_points = #firepos_points
-			if self:GetRageConfig("Hack vs. Hack", "TP Scanning") then
-				local points_allowed = self:GetRageConfig("Hack vs. Hack", "TP Scanning Points")
-				local grenade_move_dist = self:GetRageConfig("Hack vs. Hack", "TP Scanning Distance")
-				if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,grenade_move_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
-				if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-grenade_move_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
-				if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-grenade_move_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
-				if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(grenade_move_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
-				if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-grenade_move_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
-				if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,grenade_move_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
+			if aimbot:GetRageConfig("Hack vs. Hack", "TP Scanning") then
+				local points_allowed = aimbot:GetRageConfig("Hack vs. Hack", "TP Scanning Points")
+				local tp_scan_dist = aimbot:GetRageConfig("Hack vs. Hack", "TP Scanning Distance")
+				local tp_scan_multi = aimbot:GetRageConfig("Hack vs. Hack", "TP Scanning Multi-Point")
+				for i=1, tp_scan_multi do
+					local scan_dist = (tp_scan_dist/tp_scan_multi)*i
+					if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+					if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+					if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+					if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
+					if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-scan_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
+					if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,scan_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
+				end
 			end
-
-			local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
-			local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
-
-			local scan_count = 0
-			local organizedPlayers = {}
-			local plys = players:GetPlayers()
-			for i=1, #plys do
-				local v = plys[i]
-				if v == localplayer then
-					continue
-				end
-				if max_points ~= 0 and scan_count > max_points then break end
 			
-				if config.priority[v.UserId] then continue end
-				if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
-				local parts = self:GetParts(v)
-				if not parts then continue end
-			
-				if v.Team and v.Team == localplayer.Team then
-					continue
-				end
+			local damage_prediction = aimbot:GetRageConfig("Settings", "Damage Prediction")
+			local damage_prediction_limit = aimbot:GetRageConfig("Settings", "Damage Prediction Limit")
 
-				local updater = replication.getupdater(v)
-				if updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick() then
-					continue
+			hook:Add("OnConfigChanged", "BBOT:RageBot.CacheConfig", function(steps)
+				if not config:IsPathwayEqual(steps, "Main", "Rage") then return end
+				local self = aimbot
+				auto_wall = self:GetRageConfig("Aimbot", "Auto Wallbang")
+				hitscan_priority = self:GetRageConfig("Aimbot", "Hitscan Priority")
+				aimbot_fov = self:GetRageConfig("Aimbot", "Aimbot FOV")
+				
+				hitbox_shift = self:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
+				hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
+				hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
+				max_points = 1
+				relative_only = self:GetRageConfig("Hack vs. Hack", "Relative Hitpoints Only")
+				
+				hitbox_points, hitbox_points_name = {}, {}
+				if hitbox_shift then
+					if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+					if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Up" end
+					if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Down" end
+					if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Left" end
+					if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
+					if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
+					if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
 				end
+				
+				firepos_shift = self:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
+				firepos_shift_points = self:GetRageConfig("Hack vs. Hack", "FirePos Hitscan Points")
+				firepos_shift_distance = self:GetRageConfig("Hack vs. Hack", "FirePos Shift Distance")
+				
+				firepos_points, firepos_points_name = {}, {}
+				if firepos_shift then
+					if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(0,0,0) firepos_points_name[#firepos_points_name+1] = "Origin" end
+					if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+					if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+					if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+					if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
+					if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
+					if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
+				end
+				
+				tp_scanning_points = #firepos_points
+				if self:GetRageConfig("Hack vs. Hack", "TP Scanning") then
+					points_allowed = self:GetRageConfig("Hack vs. Hack", "TP Scanning Points")
+					tp_scan_dist = self:GetRageConfig("Hack vs. Hack", "TP Scanning Distance")
+					tp_scan_multi = self:GetRageConfig("Hack vs. Hack", "TP Scanning Multi-Point")
+					for i=1, tp_scan_multi do
+						scan_dist = (tp_scan_dist/tp_scan_multi)*i
+						if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+						if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+						if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+						if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
+						if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-scan_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
+						if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,scan_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
+					end
+				end
+				
+				damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
+				damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
+			end)
 
-				local prioritize
-				if hitscan_priority == "Head" then
-					prioritize = updater.gethead()
-				elseif hitscan_priority == "Body" then
-					prioritize = replication.getbodyparts(v).torso
-				end
-				local main_part = updater.gethead().Parent
-				local resolver_offset, isabsolute = self:GetResolvedPosition(v)
-				local abspos = updater.getpos()
-				local inserted_priority
-				local tp_scanned = false
-				if prioritize then
-					local part = prioritize
-					local pos = (isabsolute and resolver_offset or abspos + resolver_offset)
-					local point, onscreen = camera:WorldToViewportPoint(pos)
-					if onscreen or aimbot_fov >= 180 then
-						--local object_fov = self:GetFOV(part, scan_part)
-						if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
-							if wall_scale > 120 then
-								table.insert(organizedPlayers, {v, part, pos, prioritize})
-								inserted_priority = true
-							else
-								if firepos_shift then
-									local lookatme = CFrame.new(Vector3.new(), pos-cam_position)
-									local targetcframe = CFrame.new(cam_position)
-									for i=1, #firepos_points do
-										local point = firepos_points[i]
-										local fp_name = firepos_points_name[i]
-										local newcf = targetcframe * lookatme * point
-										local cam_position = newcf.p
-										if i > tp_scanning_points and (self.tp_scanning or not BBOT.misc:CanMoveTo(cam_position)) then
-											continue
-										end
-										local u = i
-										if hitbox_shift then
-											local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
-											local targetcframe = CFrame.new(pos)
-											for i=1, #hitbox_points do
-												local hb_name = hitbox_points_name[i]
-												if relative_only and fp_name ~= hb_name then continue end
-												local point = hitbox_points[i]
-												local newcf = targetcframe * lookatme * point
-												local pos = newcf.p
+			function aimbot:GetRageTarget(fov, gun)
+				local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
+				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+				local cam_position = (self.tp_scanning and last_repupdate_position or char.rootpart.CFrame.p)
+				local team = (localplayer.Team and localplayer.Team.Name or "NA")
+				local playerteamdata = workspace["Players"][team]
+				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
+				local penetration_depth = gun.data.penetrationdepth * wall_scale/100
+
+				local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
+				local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
+
+				local scan_count = 0
+				local organizedPlayers = {}
+				local plys = players:GetPlayers()
+				for i=1, #plys do
+					local v = plys[i]
+					if v == localplayer then
+						continue
+					end
+					if max_points ~= 0 and scan_count > max_points then break end
+				
+					if config.priority[v.UserId] then continue end
+					if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
+					local parts = self:GetParts(v)
+					if not parts then continue end
+				
+					if v.Team and v.Team == localplayer.Team then
+						continue
+					end
+
+					local updater = replication.getupdater(v)
+					if updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick() then
+						continue
+					end
+
+					local prioritize
+					if hitscan_priority == "Head" then
+						prioritize = updater.gethead()
+					elseif hitscan_priority == "Body" then
+						prioritize = replication.getbodyparts(v).torso
+					end
+					local main_part = updater.gethead().Parent
+					local resolver_offset, isabsolute = self:GetResolvedPosition(v)
+					local abspos = updater.getpos()
+					local inserted_priority
+					local tp_scanned = false
+					if prioritize then
+						local part = prioritize
+						local pos = (isabsolute and resolver_offset or abspos + resolver_offset)
+						local point, onscreen = camera:WorldToViewportPoint(pos)
+						if onscreen or aimbot_fov >= 180 then
+							--local object_fov = self:GetFOV(part, scan_part)
+							if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
+								if wall_scale > 120 then
+									table.insert(organizedPlayers, {v, part, pos, prioritize})
+									inserted_priority = true
+								else
+									if firepos_shift then
+										local lookatme = CFrame.new(Vector3.new(), pos-cam_position)
+										local targetcframe = CFrame.new(cam_position)
+										for i=1, #firepos_points do
+											local point = firepos_points[i]
+											local fp_name = firepos_points_name[i]
+											local newcf = targetcframe * lookatme * point
+											local cam_position = newcf.p
+											if i > tp_scanning_points and (self.tp_scanning or not BBOT.misc:CanMoveTo(cam_position)) then
+												continue
+											end
+											local u = i
+											if hitbox_shift then
+												local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
+												local targetcframe = CFrame.new(pos)
+												for i=1, #hitbox_points do
+													local hb_name = hitbox_points_name[i]
+													if relative_only and fp_name ~= hb_name and fp_name ~= "Any" then continue end
+													local point = hitbox_points[i]
+													local newcf = targetcframe * lookatme * point
+													local pos = newcf.p
+													local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+													if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+														table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
+														inserted_priority = true
+														scan_count = scan_count + 1
+													end
+												end
+											else
 												local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
 												if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
 													table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
@@ -13780,56 +13954,49 @@ if BBOT.game == "phantom forces" then
 													scan_count = scan_count + 1
 												end
 											end
-										else
-											local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-											if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-												table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
-												inserted_priority = true
-												scan_count = scan_count + 1
-											end
 										end
-									end
-								else
-									local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-									if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
-										table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, false, traceamount})
-										inserted_priority = true
-										scan_count = scan_count + 1
+									else
+										local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
+										if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+											table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, false, traceamount})
+											inserted_priority = true
+											scan_count = scan_count + 1
+										end
 									end
 								end
 							end
 						end
 					end
 				end
+
+				local players_only, players_has = {}, {}
+				for i=1, #organizedPlayers do
+					local v = organizedPlayers[i]
+					if players_has[v[1]] then continue end
+					if v[6] and (self.tp_scanning or not BBOT.misc:CanMoveTo(v[4])) then continue end
+					players_only[#players_only+1] = {v[1], v[3]}
+					players_has[v[1]] = true
+				end
+
+				table.sort(players_only, function(a, b)
+					return (a[2] - mousePos).Magnitude < (b[2] - mousePos).Magnitude
+				end)
+
+				local target = players_only[1]
+				local minimum_pen = {}
+				for i=1, #organizedPlayers do
+					local v = organizedPlayers[i]
+					if v[1] ~= target[1] then continue end
+					if v[6] and (self.tp_scanning or not BBOT.misc:CanMoveTo(v[4])) then continue end
+					minimum_pen[#minimum_pen+1] = v
+				end
+				
+				table.sort(minimum_pen, function(a, b)
+					return a[7] < b[7]
+				end)
+
+				return minimum_pen[1]
 			end
-
-			local players_only, players_has = {}, {}
-			for i=1, #organizedPlayers do
-				local v = organizedPlayers[i]
-				if players_has[v[1]] then continue end
-				if v[6] and (self.tp_scanning or not BBOT.misc:CanMoveTo(v[4])) then continue end
-				players_only[#players_only+1] = {v[1], v[3]}
-				players_has[v[1]] = true
-			end
-
-			table.sort(players_only, function(a, b)
-				return (a[2] - mousePos).Magnitude < (b[2] - mousePos).Magnitude
-			end)
-
-			local target = players_only[1]
-			local minimum_pen = {}
-			for i=1, #organizedPlayers do
-				local v = organizedPlayers[i]
-				if v[1] ~= target[1] then continue end
-				if v[6] and (self.tp_scanning or not BBOT.misc:CanMoveTo(v[4])) then continue end
-				minimum_pen[#minimum_pen+1] = v
-			end
-			
-			table.sort(minimum_pen, function(a, b)
-				return a[7] < b[7]
-			end)
-
-			return minimum_pen[1]
 		end
 
 		do
@@ -13840,6 +14007,7 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
+			local runservice = BBOT.service:GetService("RunService")
 			function aimbot:RageStep(gun)
 				if not self:GetRageConfig("Aimbot", "Rage Bot", "KeyBind") then
 					self:RageChanged(nil)
@@ -13862,11 +14030,10 @@ if BBOT.game == "phantom forces" then
 					local original_position = char.rootpart.Position * 1
 					BBOT.misc:MoveTo(target[4], true)
 					self.tp_scanning = true
-					timer:Simple(0,function()
-						timer:Simple(0,function()
-							BBOT.misc:MoveTo(original_position, true)
-						end)
-					end)
+					wait(BBOT.extras:getLatency()*1.1)
+					BBOT.misc:ForceRepupdate()
+					self:RageStep(gun)
+					BBOT.misc:MoveTo(original_position, true)
 					timer:Simple(0.25,function()
 						self.tp_scanning = false
 					end)
@@ -14451,39 +14618,31 @@ if BBOT.game == "phantom forces" then
 				if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
 				if aimbot.rage_target then -- who are we targeting today?
 					local target = aimbot.rage_target
-					-- timescale is to determine how quick the bullet hits
-					-- don't want to get too cocky or the system might silent flag
 					local timescale = 0
 					local campos = camera.CFrame.p
 					local dir = target[3]-campos
 					local firepos = bullettable.firepos
 					local gundata = gamelogic.currentgun.data
-					local t = dir.Magnitude/gundata.bulletspeed -- get the time it takes for the bullet to arrive
-					-- remind me to not do this, some cheats fucks with velocity...
+					local t = dir.Magnitude/gundata.bulletspeed
 					local targetpos = target[3]
 					bullettable.firepos = target[4]--campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
 
 					for i=1, #bullettable.bullets do
 						local bullet = bullettable.bullets[i]
-						-- we need the direction we are firing at
-						-- using kinematics, find the direction needed to fire from long distance and compensate for drop
-						-- set the new velocity of the bullet directly towards them
 						bullet[1] = aimbot:DropPrediction(bullettable.firepos, targetpos, gundata.bulletspeed).Unit * bullet[1].Magnitude
-						timer:Simple(1.5, function() -- bullets last 1.5 seconds, this is basically garbage cleanup
-							enque[bullet[2]] = nil
-						end)
-						timer:Simple(t * timescale, function() -- We need to simulate it being a true bullet arrival
-							-- enque means we have a bullet to be hit, if it is in the table then it's ready
-							if not enque[bullet[2]] then return end
-							if not hud:isplayeralive(target[1]) then return end
-							enque[bullet[2]] = nil
-							-- Simulate a direct hit, fooling the system with a confirmed hit
-							network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
-							enque[bullet[2]] = target[1]
-						end)
-						enque[bullet[2]] = target[1] -- this bullet is a magic bullet now, supress networking for this bullet!
 					end
+
 					network:send(networkname, bullettable, BBOT.misc:GetTickDivisionScale())
+
+					for i=1, #bullettable.bullets do
+						local bullet = bullettable.bullets[i]
+						timer:Simple(1.5, function()
+							enque[bullet[2]] = nil
+						end)
+						if not hud:isplayeralive(target[1]) then continue end
+						network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
+						enque[bullet[2]] = target[1]
+					end
 					return true
 				end
 			end
@@ -14499,7 +14658,7 @@ if BBOT.game == "phantom forces" then
 		end
 		
 		function aimbot:GetKnifeTarget()
-			local mousePos = Vector3.new(mouse.x, mouse.y + 36, 0)
+			local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
 			local cam_position = camera.CFrame.p
 			local team = (localplayer.Team and localplayer.Team.Name or "NA")
 			local playerteamdata = workspace["Players"][team]
