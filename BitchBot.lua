@@ -20,14 +20,14 @@ local username = (BBOT and BBOT.username or nil)
 if BBOT and BBOT.__init then
 	BBOT = nil
 end
-local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "In-Dev 0.8.2a", __init = true } -- I... um... fuck off ok?
+local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "In-Dev 0.8.3b", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
 while true do
 	if game:IsLoaded() then
 		break
 	end;
-	wait(2)
+	wait(.25)
 end
 
 -- This should always start before hand, this module is responsible for debugging
@@ -827,6 +827,7 @@ do
 			end
 		end
 	end
+
 	function hook:CallP(name, ...) -- Same as @hook:Call, put with error isolation
 		if not self.registry[name] then return end
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
@@ -929,6 +930,7 @@ do
 		end)
 		return t[2]
 	end
+
 	function hook:bindFunctionReturn(func, name, extra)
 		local t = {self, func, name, extra, false}
 		t[2] = hookfunction(func, function(...)
@@ -1045,9 +1047,7 @@ do
 	local log = BBOT.log
 	local hook = BBOT.hook
 	hook:Add("Unload", "KillLoops", function()
-		log(LOG_DEBUG, "Purging old loops...")
-		BBOT.loop:KillAll()
-		log(LOG_DEBUG, "Done")
+		loop:KillAll()
 	end)
 	function loop:KillAll()
 		local tbl = self:GetTable()
@@ -1693,6 +1693,11 @@ do
 	-- -1 is friendly, > 0 is priority
 	config.priority = {}
 
+	function config:SetPriority(pl, level)
+		self.priority[pl.UserId] = tonumber(level)
+		writefile(self.storage_pathway .. "/priorities.json", httpservice:JSONEncode(self.priority))
+	end
+
 	do -- key binds
 		local enums = Enum.KeyCode:GetEnumItems()
 		local enumstable, enumtoID, IDtoenum = {}, {}, {}
@@ -2274,6 +2279,13 @@ do
 		end
 
 		config:Setup(BBOT.configuration)
+
+		if isfile(config.storage_pathway .. "/priorities.json") then
+			local tbl = httpservice:JSONDecode(readfile(config.storage_pathway .. "/priorities.json"))
+			for k, v in pairs(tbl) do
+				config.priority[tonumber(k)] = v
+			end
+		end
 
 		config:OpenBase()
 		if config:GetValue("Main", "Settings", "Configs", "Auto Load Config") then
@@ -4734,8 +4746,8 @@ do
 		function GUI:SetBorderless(bool)
 			self.borderless = bool
 			if bool then
-				self.container:SetPos(0,0,0,self.top_margin+6)
-				self.container:SetSize(1,0,1,-self.top_margin-6)
+				self.container:SetPos(0,0,0,self.top_margin+8)
+				self.container:SetSize(1,0,1,-self.top_margin-8)
 				self.tablist.borderless = bool
 			else
 				self.container:SetPos(0,8,0,self.top_margin+8)
@@ -7264,43 +7276,45 @@ do
 	end)
 
 	-- Why spend the time using getgc, when you can simply check an object!
-	if BBOT.game == "phantom forces" then
-		local waited = 0
-		while true do
-			if game:IsLoaded() then
-				local lp = game:GetService("Players").LocalPlayer;
-				local chatgame = lp.PlayerGui:FindFirstChild("ChatGame")
-				if chatgame then
-					local version = chatgame:FindFirstChild("Version")
-					if version and not string.find(version.Text, "loading", 1, true) then
-						wait(5)
-						break
+	if not _BBOT then
+		if BBOT.game == "phantom forces" then
+			local waited = 0
+			while true do
+				if game:IsLoaded() then
+					local lp = game:GetService("Players").LocalPlayer;
+					local chatgame = lp.PlayerGui:FindFirstChild("ChatGame")
+					if chatgame then
+						local version = chatgame:FindFirstChild("Version")
+						if version and not string.find(version.Text, "loading", 1, true) then
+							wait(5)
+							break
+						end
 					end
+				end;
+				waited = waited + 1
+				if waited > 7 then
+					BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
+				elseif waited > 5 then
+					BBOT:SetLoadingStatus("What the hell is taking so long?")
 				end
-			end;
-			waited = waited + 1
-			if waited > 7 then
-				BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
-			elseif waited > 5 then
-				BBOT:SetLoadingStatus("What the hell is taking so long?")
-			end
-			wait(5)
-		end;
-	else
-		local waited = 0
-		while true do
-			if game:IsLoaded() then
 				wait(5)
-				break
 			end;
-			waited = waited + 1
-			if waited > 7 then
-				BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
-			elseif waited > 5 then
-				BBOT:SetLoadingStatus("What the hell is taking so long?")
-			end
-			wait(5)
-		end;
+		else
+			local waited = 0
+			while true do
+				if game:IsLoaded() then
+					wait(5)
+					break
+				end;
+				waited = waited + 1
+				if waited > 7 then
+					BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
+				elseif waited > 5 then
+					BBOT:SetLoadingStatus("What the hell is taking so long?")
+				end
+				wait(5)
+			end;
+		end
 	end
 
 	if BBOT.game == "phantom forces" then
@@ -7324,110 +7338,149 @@ do
 				max = 1,
 				value = 0,
 				decimal = 2,
-				suffix = "studs"
+				suffix = " stud(s)"
 			},
 			{
 				type = "Slider",
 				name = "Amplitude",
-				min = 0,
+				min = -10,
 				max = 10,
 				value = 0,
 				decimal = 2,
-				suffix = "studs"
+				suffix = "x"
 			},
 			{
 				type = "Slider",
 				name = "Speed",
-				min = 0,
+				min = -10,
 				max = 10,
 				value = 0,
 				decimal = 2,
-				suffix = "studs"
+				suffix = "x"
 			},
 		}
-		local skins_anims = {
+
+		local anims_color = {
 			{
 				type = "Toggle",
 				name = "Enabled",
 				value = false,
-				extra = {},
-			},
-			{
-				name = "OffsetStudsU",
-				pos = UDim2.new(0,0,0,20),
-				size = UDim2.new(.5,-3,0,175),
-				type = "Panel",
-				content = anims,
-				tooltip = "OffsetStuds changes the position of texture."
-			},
-			{
-				name = "OffsetStudsV",
-				pos = UDim2.new(.5,3,0,20),
-				size = UDim2.new(.5,-3,0,175),
-				type = "Panel",
-				content = anims,
-				tooltip = "OffsetStuds changes the position of texture."
-			},
-			{
-				name = "StudsPerTileU",
-				pos = UDim2.new(0,0,0,20+(175+6)),
-				size = UDim2.new(.5,-3,0,175),
-				type = "Panel",
-				content = anims,
-				tooltip = "StudsPerTile changes the scale of texture."
-			},
-			{
-				name = "StudsPerTileV",
-				pos = UDim2.new(.5,3,0,20+(175+6)),
-				size = UDim2.new(.5,-3,0,175),
-				type = "Panel",
-				content = anims,
-				tooltip = "StudsPerTile changes the scale of texture."
-			}
-		}
-		local skins_content = {
-			{
-				type = "Toggle",
-				name = "Enabled",
-				value = false,
-				extra = {},
-				tooltip = "Do note this is not server-sided!"
 			},
 			{
 				type = "DropBox",
-				name = "Material",
+				name = "Type",
 				value = 1,
-				values = BBOT.config.enums.Material.List,
+				values = {"Fade", "Cycle"},
 				extra = {
 					{
 						type = "ColorPicker",
-						name = "Brick Color",
+						name = "Primary Color",
 						color = { 255, 255, 255, 255 },
-						tooltip = "Changes the base color of the material, not the texture."
+					},
+					{
+						type = "ColorPicker",
+						name = "Secondary Color",
+						color = { 0, 0, 0, 255 },
 					},
 				},
 			},
 			{
 				type = "Slider",
-				name = "Reflectance",
-				value = 0,
+				name = "Saturation",
 				min = 0,
-				max = 200,
-				suffix = "%",
+				max = 100,
+				value = 0,
 				decimal = 1,
-				extra = {},
-				tooltip = "Gives the material reflectance, this may be buggy or not work on some materials."
+				suffix = "%"
 			},
 			{
-				name = "Texture",
-				pos = UDim2.new(0,0,0,90),
-				size = UDim2.new(1,0,1,-96),
+				type = "Slider",
+				name = "Darkness",
+				min = 0,
+				max = 100,
+				value = 0,
+				decimal = 1,
+				suffix = "%"
+			},
+			{
+				type = "Slider",
+				name = "Speed",
+				min = -10,
+				max = 10,
+				value = 0,
+				decimal = 2,
+				suffix = "x"
+			},
+		}
+
+		local skins_content = {
+			{
+				name = "Basics",
+				pos = UDim2.new(0,0,0,0),
+				size = UDim2.new(.5,-4,1/3,-4),
 				type = "Panel",
 				content = {
 					{
 						type = "Toggle",
 						name = "Enabled",
 						value = false,
+						extra = {},
+						tooltip = "Do note this is not server-sided!"
+					},
+					{
+						type = "DropBox",
+						name = "Material",
+						value = 1,
+						values = BBOT.config.enums.Material.List,
+						extra = {
+							{
+								type = "ColorPicker",
+								name = "Brick Color",
+								color = { 255, 255, 255, 255 },
+								tooltip = "Changes the base color of the material, not the texture."
+							},
+						},
+					},
+					{
+						type = "Slider",
+						name = "Reflectance",
+						value = 0,
+						min = 0,
+						max = 200,
+						suffix = "%",
+						decimal = 1,
+						extra = {},
+						tooltip = "Gives the material reflectance, this may be buggy or not work on some materials."
+					},
+					{
+						type = "Slider",
+						name = "Color Modulation",
+						value = 0,
+						min = 1,
+						max = 20,
+						suffix = "x",
+						decimal = 1,
+						extra = {},
+						tooltip = "Pushes the color system even further by multiplying it"
+					},
+				},
+			},
+			{
+				name = "Texture",
+				pos = UDim2.new(0,0,(1/3),4),
+				size = UDim2.new(.5,-4,1-(1/3),-4),
+				type = "Panel",
+				content = {
+					{
+						type = "Toggle",
+						name = "Enabled",
+						value = false,
+						extra = {},
+					},
+					{
+						type = "Text",
+						name = "Asset-Id",
+						value = "3643887058",
 						extra = {
 							{
 								type = "ColorPicker",
@@ -7437,10 +7490,15 @@ do
 						},
 					},
 					{
-						type = "Text",
-						name = "Asset-Id",
-						value = "3643887058",
+						type = "Slider",
+						name = "Color Modulation",
+						value = 0,
+						min = 1,
+						max = 20,
+						suffix = "x",
+						decimal = 1,
 						extra = {},
+						tooltip = "Pushes the color system even further by multiplying it"
 					},
 					{
 						type = "Slider",
@@ -7483,7 +7541,53 @@ do
 						extra = {},
 					},
 				},
-			}
+			},
+			{
+				name = "Animations",
+				pos = UDim2.new(.5,4,0,0),
+				size = UDim2.new(.5,-4,1,0),
+				type = "Panel",
+				content = {
+					{
+						name = { "OSU", "OSV", "SPTU", "SPTV" },
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,.5,0),
+						borderless = true,
+						type = "Tabs",
+						{
+							content = anims,
+							tooltip = "OffsetStuds changes the position of texture."
+						},
+						{
+							content = anims,
+							tooltip = "OffsetStuds changes the position of texture."
+						},
+						{
+							content = anims,
+							tooltip = "StudsPerTile changes the scale of texture."
+						},
+						{
+							content = anims,
+							tooltip = "StudsPerTile changes the scale of texture."
+						},
+					},
+					{
+						name = {"BC", "TC" },
+						pos = UDim2.new(0,0,.5,0),
+						size = UDim2.new(1,0,.5,0),
+						borderless = true,
+						type = "Tabs",
+						{
+							content = anims_color,
+							tooltip = "Color change of brick color."
+						},
+						{
+							content = anims_color,
+							tooltip = "Color change of texture color."
+						},
+					},
+				}
+			},
 		}
 
 		local weapon_legit = {
@@ -7930,9 +8034,15 @@ do
 									},
 									{
 										type = "Toggle",
-										name = "Relative Hitpoints Only",
+										name = "Relative Points Only",
 										value = true,
 										tooltip = "Makes the firepos and hitbox points align, so less calculations.",
+									},
+									{
+										type = "Toggle",
+										name = "Cross Relative Points Only",
+										value = true,
+										tooltip = "Makes the firepos and hitbox points align by cross, so less calculations.",
 									},
 									{
 										type = "Toggle",
@@ -8111,6 +8221,13 @@ do
 										value = false,
 										unsafe = true,
 										tooltip = "Makes all the characters not have velocity, so the people like pf pwner can cry.",
+									},
+									{
+										type = "Toggle",
+										name = "Priority Only",
+										value = false,
+										unsafe = true,
+										tooltip = "Aimbot only targets prioritized players.",
 									},
 								}},
 							}
@@ -9245,66 +9362,6 @@ do
 										value = false,
 										unsafe = true
 									},
-									{
-										type = "DropBox",
-										name = "Weapon Style",
-										value = 1,
-										values = {"Off", "Rambo", "Doom", "Quake III", "Half-Life"},
-										tooltip = "Temporarily here till I make a weapons tab..."
-									},
-									{
-										type = "Slider",
-										name = "Weapon Bob",
-										min = -200,
-										max = 200,
-										suffix = "%",
-										decimal = 1,
-										value = 100,
-										tooltip = "Temporarily here till I make a weapons tab..."
-									},
-									{
-										type = "Slider",
-										name = "Swing Scale",
-										min = -200,
-										max = 200,
-										suffix = "%",
-										decimal = 1,
-										value = 100,
-										tooltip = "Temporarily here till I make a weapons tab..."
-									},
-									{
-										type = "Slider",
-										name = "Reload Speed",
-										min = 0,
-										max = 100,
-										suffix = "%",
-										decimal = 1,
-										value = 100,
-										unsafe = true,
-										tooltip = "Temporarily here till I make a weapons tab..."
-									},
-									{
-										type = "Slider",
-										name = "OnFire Speed",
-										min = 0,
-										max = 100,
-										suffix = "%",
-										decimal = 1,
-										value = 100,
-										unsafe = true,
-										tooltip = "Temporarily here till I make a weapons tab..."
-									},
-									{
-										type = "Slider",
-										name = "Firerate",
-										min = 0,
-										max = 2000,
-										suffix = "%",
-										decimal = 1,
-										value = 100,
-										unsafe = true,
-										tooltip = "Temporarily here till I make a weapons tab..."
-									},
 								}},
 								{content = {
 									{
@@ -10022,11 +10079,210 @@ do
 						type = "Container",
 						content = {
 							{
-								type = "Toggle",
-								name = "Enabled",
-								value = false,
-								extra = {},
-								tooltip = "Do note that modifying weapons can make things obvious like firerate!"
+								name = "Ballistics",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(.5,-4,2/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "ComboBox",
+										name = "Fire Modes",
+										values = {
+											{ "Semi-Auto", false },
+											{ "Burst-2", false },
+											{ "Burst-3", false },
+											{ "Full-Auto", false },
+										},
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "Firerate",
+										min = 0,
+										max = 2000,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+								}
+							},
+							{
+								name = "Accuracy",
+								pos = UDim2.new(0,0,2/10,4),
+								size = UDim2.new(.5,-4,4/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Slider",
+										name = "Camera Kick",
+										min = 0,
+										max = 600,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "Displacement Kick",
+										min = 0,
+										max = 600,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "Rotation Kick",
+										min = 0,
+										max = 600,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "Hip Choke",
+										min = 0,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "Aim Choke",
+										min = 0,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+								}
+							},
+							{
+								name = "Handling",
+								pos = UDim2.new(0,0,6/10,8),
+								size = UDim2.new(.5,-4,4/10,-8),
+								type = "Panel",
+								content = {
+									{
+										type = "Slider",
+										name = "Crosshair Spread",
+										min = 0,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+										tooltip = "This does affect the spread of your guns by the ways..."
+									},
+									{
+										type = "Slider",
+										name = "Aiming Speed",
+										min = 0,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "Equip Speed",
+										min = 0,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "Ready Speed",
+										min = 0,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+										tooltip = "The time it takes to go from a sprinting stance to a \"ready to fire\" stance"
+									},
+								}
+							},
+							{
+								name = "Movement",
+								pos = UDim2.new(.5,4,0,0),
+								size = UDim2.new(.5,-4,.5,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "DropBox",
+										name = "Weapon Style",
+										value = 1,
+										values = {"Off", "Rambo", "Doom", "Quake III", "Half-Life"}
+									},
+									{
+										type = "Slider",
+										name = "Bob Scale",
+										min = -200,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100
+									},
+									{
+										type = "Slider",
+										name = "Sway Scale",
+										min = -200,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100
+									},
+									{
+										type = "Slider",
+										name = "Swing Scale",
+										min = -200,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100
+									},
+								}
+							},
+							{
+								name = "Animations",
+								pos = UDim2.new(.5,4,.5,4),
+								size = UDim2.new(.5,-4,.5,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Slider",
+										name = "Reload Scale",
+										min = 0,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "OnFire Scale",
+										min = 0,
+										max = 200,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+								}
 							},
 						}
 					},
@@ -10037,9 +10293,16 @@ do
 						type = "Container",
 						content = {
 							{
+								type = "Toggle",
+								name = "Enabled",
+								value = false,
+								extra = {},
+								tooltip = "Do note this is not server-sided!"
+							},
+							{
 								name = { "Slot1", "Slot2", "SkinDB" },
-								pos = UDim2.new(0,0,0,0),
-								size = UDim2.new(1,0,1,0),
+								pos = UDim2.new(0,0,0,21),
+								size = UDim2.new(1,0,1,-21),
 								borderless = true,
 								type = "Tabs",
 								{content=skins_content},
@@ -10705,7 +10968,8 @@ if BBOT.game == "phantom forces" then
 
 			BBOT.log(LOG_DEBUG, "Scanning...")
 			local reg = getgc(true)
-			for _,v in next, reg do
+			for _=1, #reg do
+				local v = reg[_]
 				if(typeof(v) == 'table')then
 					local ax = self._CheckTable(v)
 					if ax then
@@ -10713,7 +10977,8 @@ if BBOT.game == "phantom forces" then
 					end
 				elseif(typeof(v) == 'function')then
 					local ups = debug.getupvalues(v)
-					for k, v in pairs(ups) do
+					for i=1, #ups do
+						local v = ups[i]
 						if typeof(v) == "table" then
 							local succ, ax = pcall(self._CheckTable, v)
 							if succ and ax ~= nil then
@@ -10738,7 +11003,8 @@ if BBOT.game == "phantom forces" then
 				for kk, vv in next, v do
 					if typeof(vv) == "function" then
 						local ups = debug.getupvalues(vv)
-						for kkk, vvv in pairs(ups) do
+						for kkk=1, #ups do
+							local vvv = ups[i]
 							if typeof(vvv) == "table" then
 								local ax = self._CheckTable(vvv)
 								if ax then
@@ -10785,12 +11051,14 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
-			for _,v in next, reg do
+			for _=1, #reg do
+				local v = reg[_]
 				if typeof(v) == "function" then
 					local dbg = debug.getinfo(v)
 					if string.find(dbg.short_src, "network", 1, true) then
 						local ups = debug.getupvalues(v)
-						for k, vv in pairs(ups) do
+						for k=1, #ups do
+							local vv = ups[k]
 							if typeof(vv) == "table" then
 								if #vv > 10 then
 									rawset(aux.network, "receivers", vv)
@@ -11153,6 +11421,25 @@ if BBOT.game == "phantom forces" then
 			num = tonumber(num)
 			if not num then return end
 			notification:Create("Rank: " .. BBOT.aux.playerdata.rankcalculator(num))
+		end)
+
+		local players = BBOT.service:GetService("Players")
+		chat:AddCommand("priority", function(pl, level)
+			if not level then return end
+			local target = nil
+			for k, v in pairs(players:GetPlayers()) do
+				if string.find(v.Name, pl, 1, true) then
+					target = v
+					break
+				end
+			end
+
+			if target then
+				notification:Create("Set priority for " .. target.Name .. " to " .. level)
+				config:SetPriority(target, level)
+			else
+				notification:Create("Player " .. pl .. " not found")
+			end
 		end)
 
 		chat:AddCommand("help", function(...)
@@ -12987,10 +13274,10 @@ if BBOT.game == "phantom forces" then
 					local u330 = debug.getupvalue(controller.step, 6)
 					u330._p0 = pos
 					u330._p1 = pos
-					local u317 = debug.getupvalue(controller.step, 2)
+					--[[local u317 = debug.getupvalue(controller.step, 2)
 					if u317 then
 						u317.Position = pos
-					end
+					end]]
 					controller.step(3, true)
 				end
 
@@ -13243,11 +13530,11 @@ if BBOT.game == "phantom forces" then
 			return math.deg(ang.Magnitude)
 		end
 
-		function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority, scan_part)
+		function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority, scan_part, multi)
 			local mousePos = Vector3.new(mouse.x, mouse.y, 0)
 			local cam_position = camera.CFrame.p
 			local team = (localplayer.Team and localplayer.Team.Name or "NA")
-			local playerteamdata = workspace["Players"][team]
+			local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
 
 			local organizedPlayers = {}
 			local plys = players:GetPlayers()
@@ -13256,8 +13543,7 @@ if BBOT.game == "phantom forces" then
 				if v == localplayer then
 					continue
 				end
-			
-				if config.priority[v.UserId] then continue end
+
 				local parts = self:GetParts(v)
 				if not parts then continue end
 			
@@ -13310,7 +13596,7 @@ if BBOT.game == "phantom forces" then
 				return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
 			end)
 			
-			return organizedPlayers[1]
+			return (multi and organizedPlayers or organizedPlayers[1])
 		end
 
 		do
@@ -13478,69 +13764,93 @@ if BBOT.game == "phantom forces" then
 					return
 				elseif sprinttofiretime > tick() then return end
 				local hitscan_points = self:GetLegitConfig("Trigger Bot", "Trigger Bot Hitboxes")
-				local target = self:GetLegitTarget(nil, nil, hitscan_points)
+				local multitarget = self:GetLegitTarget(nil, nil, hitscan_points, nil, nil, true)
+				local target_main = multitarget[1]
 
-				if not target then return end
-				self.trigger_target = target
+				if not target_main then return end
+				self.trigger_target = target_main
 
-				local position = target[2].Position
 				local cam_position = camera.CFrame.p
+				local movement_prediction = self:GetLegitConfig("Ballistics", "Movement Prediction")
+				local drop_prediction = self:GetLegitConfig("Ballistics", "Drop Prediction")
+				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+				local part_pos = part.Position
+				local team = (localplayer.Team and localplayer.Team.Name or "NA")
+				local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
+				local t = tick()
+				local hit = false
 
-				if self:GetLegitConfig("Ballistics", "Movement Prediction") then
-					position = self:VelocityPrediction(cam_position, position, replication.getupdater(target[1]).receivedVelocity, gun.data.bulletspeed)
+				local velocity = replication.getupdater(target_main[1]).receivedVelocity
+				local bulletspeed = gun.data.bulletspeed
+				for i=1, #multitarget do
+					local target = multitarget[i]
+					if target[1] ~= target_main[1] then continue end
+					local position = target[2].Position
+					if movement_prediction then
+						position = self:VelocityPrediction(cam_position, position, velocity, bulletspeed)
+					end
+
+					local dir = (position-cam_position).Unit
+					local magnitude = (position-cam_position).Magnitude
+					if drop_prediction then
+						dir = self:DropPrediction(cam_position, position, bulletspeed).Unit
+					end
+
+					local trigger_position, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
+					if onscreen then
+						trigger_position = Vector2.new(trigger_position.X, trigger_position.Y)
+
+						if i == 1 then
+							assist_prediction.Visible = true
+							assist_prediction_outline.Visible = assist_prediction.Visible
+							assist_prediction.Position = trigger_position
+							assist_prediction_outline.Position = assist_prediction.Position
+						end
+
+						local radi = (target[4] == "Body" and 700 or 450)*(char.unaimedfov/camera.FieldOfView)/magnitude
+						if gun.type == "SHOTGUN" then
+							local o = radi
+							local mul = gun.data.crosssize * gun.data.aimchoke --(gun.data.aimchoke * p367 + gun.data.hipchoke * (1 - p367))
+							radi = (2.25 * (math.pi^2) * mul)
+							radi = radi * (char.unaimedfov/camera.FieldOfView)/magnitude
+							if magnitude < gun.data.range0 then
+								radi = radi * math.clamp(magnitude/gun.data.range0, .5, 1)
+							end
+							if radi < o then
+								radi = o
+							end
+						end
+
+						if i == 1 then
+							assist_prediction.Radius = radi
+							assist_prediction_outline.Radius = radi
+						end
+
+						local endpositon = part.CFrame.LookVector*70000
+						local raydata = self:raycastbullet(part_pos,endpositon,playerteamdata)
+						local pointhit
+						if raydata and raydata.Position then
+							pointhit = raydata.Position
+						else
+							pointhit = endpositon
+						end
+
+						local barrel_end_positon, onscreen = camera:WorldToViewportPoint(pointhit)
+						barrel_end_positon = Vector2.new(barrel_end_positon.X, barrel_end_positon.Y)
+						if onscreen and vector.dist2d(trigger_position, barrel_end_positon) <= radi then
+							hit = true
+							break
+						end
+					end
 				end
 
-				local dir = (position-cam_position).Unit
-				local magnitude = (position-cam_position).Magnitude
-				if self:GetLegitConfig("Ballistics", "Drop Prediction") then
-					dir = self:DropPrediction(cam_position, position, gun.data.bulletspeed).Unit
-				end
-				local trigger_position, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
-				if onscreen then
-					trigger_position = Vector2.new(trigger_position.X, trigger_position.Y)
-					assist_prediction.Visible = true
-					assist_prediction_outline.Visible = assist_prediction.Visible
-					assist_prediction.Position = trigger_position
-					assist_prediction_outline.Position = assist_prediction.Position
-					local radi = (target[4] == "Body" and 700 or 450)*(char.unaimedfov/camera.FieldOfView)/magnitude
-					if gun.type == "SHOTGUN" then
-						local o = radi
-						local mul = gun.data.crosssize * gun.data.aimchoke --(gun.data.aimchoke * p367 + gun.data.hipchoke * (1 - p367))
-						radi = (2.25 * (math.pi^2) * mul)
-						radi = radi * (char.unaimedfov/camera.FieldOfView)/magnitude
-						if magnitude < gun.data.range0 then
-							radi = radi * math.clamp(magnitude/gun.data.range0, .5, 1)
-						end
-						if radi < o then
-							radi = o
-						end
+				if hit then
+					if firetime < t then
+						aimbot.fire = true
+						gun:shoot(true)
 					end
-					assist_prediction.Radius = radi
-					assist_prediction_outline.Radius = radi
-				
-					local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-					local part_pos = part.Position
-					local team = (localplayer.Team and localplayer.Team.Name or "NA")
-					local playerteamdata = workspace["Players"][team]
-
-					local endpositon = part.CFrame.LookVector*70000
-					local raydata = self:raycastbullet(part_pos,endpositon,playerteamdata)
-					local pointhit
-					if raydata and raydata.Position then
-						pointhit = raydata.Position
-					else
-						pointhit = endpositon
-					end
-					local barrel_end_positon, onscreen = camera:WorldToViewportPoint(pointhit)
-					barrel_end_positon = Vector2.new(barrel_end_positon.X, barrel_end_positon.Y)
-					if onscreen and vector.dist2d(trigger_position, barrel_end_positon) <= radi then
-						if firetime < tick() then
-							aimbot.fire = true
-							gun:shoot(true)
-						end
-					else
-						firetime = tick() + self:GetLegitConfig("Trigger Bot", "Fire Time")
-					end
+				else
+					firetime = t + self:GetLegitConfig("Trigger Bot", "Fire Time")
 				end
 			end
 		end
@@ -13754,7 +14064,8 @@ if BBOT.game == "phantom forces" then
 			local hitbox_shift_points = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
 			local hitbox_shift_distance = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
 			local max_points = 1
-			local relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Relative Hitpoints Only")
+			local relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Relative Points Only")
+			local cross_relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Cross Relative Points Only")
 			
 			local hitbox_points, hitbox_points_name = {}, {}
 			if hitbox_shift then
@@ -13812,7 +14123,8 @@ if BBOT.game == "phantom forces" then
 				hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
 				hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
 				max_points = 1
-				relative_only = self:GetRageConfig("Hack vs. Hack", "Relative Hitpoints Only")
+				relative_only = self:GetRageConfig("Hack vs. Hack", "Relative Points Only")
+				cross_relative_only = self:GetRageConfig("Hack vs. Hack", "Cross Relative Points Only")
 				
 				hitbox_points, hitbox_points_name = {}, {}
 				if hitbox_shift then
@@ -13859,22 +14171,43 @@ if BBOT.game == "phantom forces" then
 				damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
 				damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
 			end)
+			
+			local cross_relatives = {
+				["Up"] = "Down",
+				["Down"] = "Up",
+				["Left"] = "Right",
+				["Right"] = "Left",
+				["Forward"] = "Backward",
+				["Backward"] = "Forward",
+			}
 
 			function aimbot:GetRageTarget(fov, gun)
 				local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 				local cam_position = (self.tp_scanning and last_repupdate_position or char.rootpart.CFrame.p)
 				local team = (localplayer.Team and localplayer.Team.Name or "NA")
-				local playerteamdata = workspace["Players"][team]
+				local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
 				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
 				local penetration_depth = gun.data.penetrationdepth * wall_scale/100
 
 				local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
 				local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
+				local priority_only = self:GetRageConfig("Settings", "Priority Only")
 
 				local scan_count = 0
 				local organizedPlayers = {}
-				local plys = players:GetPlayers()
+				local plys = {}
+				local p = players:GetPlayers()
+				for i=1, #p do
+					local v = p[i]
+					local priority = config.priority[v.UserId] or 0
+					if priority > 0 then
+						table.insert(plys, 1, v)
+					elseif priority == 0 and not priority_only then
+						plys[#plys+1] = v
+					end
+				end
+
 				for i=1, #plys do
 					local v = plys[i]
 					if v == localplayer then
@@ -13882,7 +14215,6 @@ if BBOT.game == "phantom forces" then
 					end
 					if max_points ~= 0 and scan_count > max_points then break end
 				
-					if config.priority[v.UserId] then continue end
 					if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
 					local parts = self:GetParts(v)
 					if not parts then continue end
@@ -13935,7 +14267,17 @@ if BBOT.game == "phantom forces" then
 												local targetcframe = CFrame.new(pos)
 												for i=1, #hitbox_points do
 													local hb_name = hitbox_points_name[i]
-													if relative_only and fp_name ~= hb_name and fp_name ~= "Any" then continue end
+													if (relative_only or cross_relative_only) and fp_name ~= "Any" then
+														if relative_only and fp_name ~= hb_name then
+															if cross_relative_only and cross_relatives[fp_name] ~= hb_name then
+																continue
+															elseif not cross_relative_only then
+																continue
+															end
+														elseif not relative_only and cross_relative_only and cross_relatives[fp_name] ~= hb_name then
+															continue
+														end
+													end
 													local point = hitbox_points[i]
 													local newcf = targetcframe * lookatme * point
 													local pos = newcf.p
@@ -14030,7 +14372,7 @@ if BBOT.game == "phantom forces" then
 					local original_position = char.rootpart.Position * 1
 					BBOT.misc:MoveTo(target[4], true)
 					self.tp_scanning = true
-					wait(BBOT.extras:getLatency()*1.1)
+					wait(BBOT.extras:getLatency()/4)
 					BBOT.misc:ForceRepupdate()
 					self:RageStep(gun)
 					BBOT.misc:MoveTo(original_position, true)
@@ -14661,7 +15003,7 @@ if BBOT.game == "phantom forces" then
 			local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
 			local cam_position = camera.CFrame.p
 			local team = (localplayer.Team and localplayer.Team.Name or "NA")
-			local playerteamdata = workspace["Players"][team]
+			local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
 			local aura_type = config:GetValue("Main", "Rage", "Extra", "Knife Bot Type")
 			local hitscan_points = config:GetValue("Main", "Rage", "Extra", "Knife Hitscan")
 			local visible_only = config:GetValue("Main", "Rage", "Extra", "Knife Visible Only")
@@ -15163,6 +15505,10 @@ if BBOT.game == "phantom forces" then
 					local color, color_transparency = self:GetConfig(...)
 					if config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target") and aimbot.rage_target and aimbot.rage_target[1] == self.player then
 						color = config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target", "Aimbot Target")
+					elseif config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Friends") and config.priority[self.player.UserId] and config.priority[self.player.UserId] < 0 then
+						color = config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Friends", "Friended Players")
+					elseif config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Priority") and config.priority[self.player.UserId] and config.priority[self.player.UserId] > 0 then
+						color = config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Priority", "Priority Players")
 					end
 					return color, color_transparency
 				end
@@ -15368,10 +15714,12 @@ if BBOT.game == "phantom forces" then
 
 					for i=1, #self.draw_cache do
 						local v = self.draw_cache[i][1]
-						if kill and draw:IsValid(v) then
-							v:Remove()
-						elseif forced then
-							v.Visible = false
+						if draw:IsValid(v) then
+							if kill then
+								v:Remove()
+							elseif forced then
+								v.Visible = false
+							end
 						end
 					end
 
@@ -15819,11 +16167,11 @@ if BBOT.game == "phantom forces" then
 		local function DetourGunBob(related_func, index, gunmovement)
 			local newfunc = function(...)
 				local cf = gunmovement(...)
-				local mul = config:GetValue("Main", "Misc", "Tweaks", "Weapon Bob")/100 -- bob factor config here
+				local mul = config:GetValue("Weapons", "Stats Changer", "Movement", "Bob Scale")/100 -- bob factor config here
 				if mul == 0 then
 					return CFrame.new()
 				end
-				local style = config:GetValue("Main", "Misc", "Tweaks", "Weapon Style")
+				local style = config:GetValue("Weapons", "Stats Changer", "Movement", "Weapon Style")
 				if style == "Doom" then
 					local mul2 = (math.clamp(char.velocity.Magnitude, 0, 30)/25)
 					cf = CFrame.Angles((math.sin(tick()*5.5)^2) * (mul*mul2)/16, -math.sin(tick()*5.5) * (mul*mul2)/8, 0) + Vector3.new(math.sin(tick()*5.5) * mul/6, (math.sin(tick()*5.5)^2) * mul/6, 0)*mul2
@@ -16345,22 +16693,74 @@ if BBOT.game == "phantom forces" then
 		end
 
 		-- Modifications
-		--[[hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
-			if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
+		hook:Add("WeaponModifyData", "ModifyWeapon.Recoil", function(modifications)
+			local rot = config:GetValue("Weapons", "Stats Changer", "Accuracy", "Rotation Kick")/100
+			local trans = config:GetValue("Weapons", "Stats Changer", "Accuracy", "Displacement Kick")/100
+			local cam = config:GetValue("Weapons", "Stats Changer", "Accuracy", "Camera Kick")/100
+			local aim = 1
+			modifications.rotkickmin = modifications.rotkickmin * rot;
+			modifications.rotkickmax = modifications.rotkickmax * rot;
+			
+			modifications.transkickmin = modifications.transkickmin * trans;
+			modifications.transkickmax = modifications.transkickmax * trans;
+			
+			modifications.camkickmin = modifications.camkickmin * cam;
+			modifications.camkickmax = modifications.camkickmax * cam;
+			
+			modifications.aimrotkickmin = modifications.aimrotkickmin * rot * aim;
+			modifications.aimrotkickmax = modifications.aimrotkickmax * rot * aim;
+			
+			modifications.aimtranskickmin = modifications.aimtranskickmin * trans * aim;
+			modifications.aimtranskickmax = modifications.aimtranskickmax * trans * aim;
+			
+			modifications.aimcamkickmin = modifications.aimcamkickmin * cam * aim;
+			modifications.aimcamkickmax = modifications.aimcamkickmax * cam * aim;
+
+			local hchoke = config:GetValue("Weapons", "Stats Changer", "Accuracy", "Hip Choke")/100
+			local achoke = config:GetValue("Weapons", "Stats Changer", "Accuracy", "Aim Choke")/100
+
+			if modifications.hipchoke then
+				modifications.hipchoke = modifications.hipchoke * hchoke
+			end
+
+			if modifications.aimchoke then
+				modifications.aimchoke = modifications.aimchoke * achoke
+			end
+	
+			--[[local cks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "CamKickSpeed")
+			local acks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "AimCamKickSpeed")
+			local mks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "ModelKickSpeed")
+			local mrs = config:GetValue("Weapons", "Stat Modifications", "Recoil", "ModelRecoverSpeed")
+			local mkd = config:GetValue("Weapons", "Stat Modifications", "Recoil", "ModelKickDamper")
+	
+			modifications.camkickspeed = modifications.camkickspeed * cks;
+			modifications.aimcamkickspeed = modifications.aimcamkickspeed * acks;
+			modifications.modelkickspeed = modifications.modelkickspeed * mks;
+			modifications.modelrecoverspeed = modifications.modelrecoverspeed * mrs;
+			modifications.modelkickdamper = modifications.modelkickdamper * mkd;]]
+		end)
+
+		hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
 			local firemodes = table.deepcopy(modifications.firemodes)
 			local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
-			local single = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Single") and 1 or nil
+			local firerates_addition = config:GetValue("Weapons", "Stats Changer", "Ballistics", "Fire Modes")
+			local single = firerates_addition["Semi-Auto"] and 1 or nil
 			if single and not table.quicksearch(firemodes, single) then
 				table.insert(firemodes, 1, single)
 			end
-			local burst3 = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Burst3") and 3 or nil
+			local burst2 = firerates_addition["Burst-2"] and 2 or nil
+			if burst2 and not table.quicksearch(firemodes, burst2) then
+				table.insert(firemodes, 1, burst2)
+			end
+			local burst3 = firerates_addition["Burst-3"] and 3 or nil
 			if burst3 and not table.quicksearch(firemodes, burst3) then
 				table.insert(firemodes, 1, burst3)
 			end
-			local auto = config:GetValue("Weapons", "Stat Modifications", "FireModes", "Auto") and true or nil
+			local auto = firerates_addition["Full-Auto"] and true or nil
 			if auto and not table.quicksearch(firemodes, auto) then
 				table.insert(firemodes, 1, auto)
 			end
+
 			modifications.firemodes = firemodes
 			if firerates and #firerates < #firemodes then
 				local default = firerates[#firerates]
@@ -16369,7 +16769,7 @@ if BBOT.game == "phantom forces" then
 				end
 				modifications.firerate = firerates
 			end
-			local mul = config:GetValue("Weapons", "Stat Modifications", "Bullet", "Firerate")
+			local mul = config:GetValue("Weapons", "Stats Changer", "Ballistics", "Firerate")/100
 			if firerates then
 				for i=1, #firerates do
 					firerates[i] = firerates[i] * mul
@@ -16378,11 +16778,11 @@ if BBOT.game == "phantom forces" then
 			else
 				modifications.firerate = modifications.firerate * mul;
 			end
-		end)]]
+		end)
 
 		hook:Add("WeaponModifyData", "ModifyWeapon.Reload", function(modifications)
 			--if not config:GetValue("Weapons", "Stat Modifications", "Enable") then return end
-			local timescale = config:GetValue("Main", "Misc", "Tweaks", "Reload Speed")/100
+			local timescale = config:GetValue("Weapons", "Stats Changer", "Animations", "Reload Scale")/100
 			for i, v in next, modifications.animations do
 				if string.find(string.lower(i), "reload") then
 					if typeof(modifications.animations[i]) == "table" and modifications.animations[i].timescale then
@@ -16394,30 +16794,16 @@ if BBOT.game == "phantom forces" then
 
 		hook:Add("PreKnifeStep", "BBOT:Weapon.SwaySpring", function()
 			local swayspring = debug.getupvalue(BBOT.aux.char.reloadsprings, 6)
-			swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
+			swayspring.t = swayspring.t*(config:GetValue("Weapons", "Stats Changer", "Movement", "Swing Scale")/100)
 		end)
 		
 		hook:Add("PreWeaponStep", "BBOT:Weapon.SwaySpring", function()
 			local swayspring = debug.getupvalue(BBOT.aux.char.reloadsprings, 6)
-			swayspring.t = swayspring.t*(config:GetValue("Main", "Misc", "Tweaks", "Swing Scale")/100)
+			swayspring.t = swayspring.t*(config:GetValue("Weapons", "Stats Changer", "Movement", "Swing Scale")/100)
 		end)
-
-		hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
-			local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
-			local mul = config:GetValue("Main", "Misc", "Tweaks", "Firerate")/100
-			if firerates then
-				for i=1, #firerates do
-					firerates[i] = firerates[i] * mul
-				end
-				modifications.firerate = firerates
-			else
-				modifications.firerate = modifications.firerate * mul;
-			end
-		end)
-
 
 		hook:Add("WeaponModifyData", "ModifyWeapon.OnFire", function(modifications)
-			local timescale = config:GetValue("Main", "Misc", "Tweaks", "OnFire Speed")/100
+			local timescale = config:GetValue("Weapons", "Stats Changer", "Animations", "OnFire Scale")/100
 			for i, v in next, modifications.animations do
 				if string.find(string.lower(i), "onfire") then
 					if typeof(modifications.animations[i]) == "table" and modifications.animations[i].timescale then
@@ -16428,7 +16814,7 @@ if BBOT.game == "phantom forces" then
 		end)
 
 		hook:Add("WeaponModifyData", "ModifyWeapon.Offsets", function(modifications)
-			local style = config:GetValue("Main", "Misc", "Tweaks", "Weapon Style")
+			local style = config:GetValue("Weapons", "Stats Changer", "Movement", "Weapon Style")
 			if style == "Doom" or style == "Quake III" or style == "Rambo" then
 				local ang = Vector3.new(0, 0, 0)
 				modifications.mainoffset = CFrame.new(Vector3.new(0,-1.5,-1.25)) * CFrame.Angles(ang.X, ang.Y, ang.Z)
@@ -16441,6 +16827,12 @@ if BBOT.game == "phantom forces" then
 			end
 		end)
 
+		hook:Add("ApplyGunModifications", "ModifyWeapon.Speeds", function(modifications)
+			modifications.aimspeed = modifications.aimspeed * config:GetValue("Weapons", "Stats Changer", "Handling", "Aiming Speed")
+			modifications.equipspeed = modifications.equipspeed * config:GetValue("Weapons", "Stats Changer", "Handling", "Equip Speed")
+			modifications.sprintspeed = modifications.sprintspeed * config:GetValue("Weapons", "Stats Changer", "Handling", "Ready Speed")
+		end)
+
 		-- Skins
 		do
 			local texture_animtypes = {
@@ -16450,10 +16842,20 @@ if BBOT.game == "phantom forces" then
 				["StudsPerTileV"] = true,
 				["Transparency"] = true,
 			}
-			function weapons:SetupAnimations(reg, objects, type, animtable)
-				if not reg.Enabled then return end
+
+			local animation_to_simple = {
+				["OSU"] = "OffsetStudsU",
+				["OSV"] = "OffsetStudsV",
+				["SPTU"] = "StudsPerTileU",
+				["SPTV"] = "StudsPerTileV",
+				["BC"] = "BrickColor",
+				["TC"] = "TextureColor",
+			}
+
+			function weapons:SetupAnimations(reg, objects, type, animtable, extra)
 				for k, v in pairs(reg) do
 					if typeof(v) == "table" and v.Enabled then
+						k = animation_to_simple[k] or k
 						if texture_animtypes[k] and type == "Texture" then
 							if v.Type.value == "Additive" then
 								animtable[#animtable+1] = {
@@ -16477,12 +16879,13 @@ if BBOT.game == "phantom forces" then
 							end
 						elseif (k == "BrickColor" and type ~= "Texture") or (k == "TextureColor" and type == "Texture") then
 							local col = (type == "Texture" and "Color3" or "Color")
-							if v.Type.value == "Fade" then
+							if v.Type.self.value == "Fade" then
 								animtable[#animtable+1] = {
 									t = "Fade",
 									s = v.Speed,
-									c0 = v.Color1,
-									c1 = v.Color2,
+									c0 = Color3.fromRGB(unpack(v.Type["Primary Color"].value)),
+									c1 = Color3.fromRGB(unpack(v.Type["Secondary Color"].value)),
+									m = extra or 1,
 									objects = objects,
 									property = col
 								}
@@ -16490,8 +16893,9 @@ if BBOT.game == "phantom forces" then
 								animtable[#animtable+1] = {
 									t = "Cycle",
 									s = v.Speed,
-									sa = v.Saturation,
-									da = v.Darkness,
+									m = extra or 1,
+									sa = v.Saturation/100,
+									da = v.Darkness/100,
 									objects = objects,
 									property = col
 								}
@@ -16501,6 +16905,7 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
+			local color = BBOT.color
 			function weapons:RenderAnimations(animtable, delta)
 				for i=1, #animtable do
 					local anim = animtable[i]
@@ -16520,8 +16925,10 @@ if BBOT.game == "phantom forces" then
 						c0, c1 = Vector3.new(c0.r, c0.g, c0.b), Vector3.new(c1.r, c1.g, c1.b)
 						local dc = math.remap(pos, -1, 1, c0, c1)
 						position = Color3.new(dc.x, dc.y, dc.z)
+						position = color.mul(position, anim.m)
 					elseif anim.t == "Cycle" then
-						position = Color3.fromHSV((tick() * anim.s) % 360, anim.sa, anim.da)
+						position = Color3.fromHSV(((tick() * anim.s) % 90) / 90, anim.sa, anim.da)
+						position = color.mul(position, anim.m)
 					end
 					if position then
 						for i=1, #anim.objects do
@@ -16530,6 +16937,48 @@ if BBOT.game == "phantom forces" then
 						end
 					end
 				end
+			end
+
+			function weapons:CreateSkin(skin_databank, config_data, gun_objects, gun_data)
+				skin_databank.objects = gun_objects
+				local textures = {}
+				for i=1, #gun_objects do
+					local object = gun_objects[i]
+					object.Color = color.mul(Color3.fromRGB(unpack(config_data.Basics["Material"]["Brick Color"].value)), config_data.Basics["Color Modulation"])
+					object.Material = config.enums.Material.Id[config_data.Basics["Material"]["self"].value]
+					object.Reflectance = config_data.Basics["Reflectance"]/100
+					if object:IsA("UnionOperation") then
+						object.UsePartColor = true
+					end
+					local texture = config_data["Texture"]
+					if texture.Enabled.self and object.Transparency < 1 and not object:FindFirstChild("OtherHide") and texture["Asset-Id"] ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
+						for i=0, 5 do
+							local itexture = Instance.new("Texture")
+							itexture.Parent = object
+							itexture.Face = i
+							itexture.Name = "Slot1"
+							itexture.Color3 = color.mul(Color3.fromRGB(unpack(texture["Asset-Id"]["Texture Color"].value)), texture["Color Modulation"])
+							itexture.Texture = "rbxassetid://" .. texture["Asset-Id"].self
+							itexture.Transparency = 1-(texture["Asset-Id"]["Texture Color"].value[4]/255)
+							itexture.OffsetStudsU = texture.OffsetStudsU
+							itexture.OffsetStudsV = texture.OffsetStudsV
+							itexture.StudsPerTileU = texture.StudsPerTileU
+							itexture.StudsPerTileV = texture.StudsPerTileV
+							if gun_data then
+								if not gun_data._anims.camodata[object] then
+									gun_data._anims.camodata[object] = {}
+								end
+								gun_data._anims.camodata[object][itexture] = {
+									Transparency = itexture.Transparency
+								}
+							end
+							skin_databank.textures[#skin_databank.textures+1] = {object, itexture}
+							textures[#textures+1] = itexture
+						end
+					end
+				end
+				self:SetupAnimations(config_data.Animations, textures, "Texture", skin_databank.animations, config_data["Texture"]["Color Modulation"])
+				self:SetupAnimations(config_data.Animations, gun_objects, "Part", skin_databank.animations, config_data.Basics["Color Modulation"])
 			end
 
 			function weapons:ApplySkin(reg, gundata, slot1, slot2)
@@ -16549,89 +16998,13 @@ if BBOT.game == "phantom forces" then
 					gundata._skins = skins
 				end
 				local slot1_data = reg["Slot1"]
-				if slot1_data.Enabled then
-					skins.slot1.objects = slot1
-					local textures = {}
-					for i=1, #slot1 do
-						local object = slot1[i]
-						object.Color = Color3.fromRGB(unpack(slot1_data["Material"]["Brick Color"].value))
-						object.Material = config.enums.Material.Id[slot1_data["Material"]["self"].value]
-						object.Reflectance = slot1_data["Reflectance"]/100
-						if object:IsA("UnionOperation") then
-							object.UsePartColor = true
-						end
-						local texture = slot1_data["Texture"]
-						if texture.Enabled.self and texture["Asset-Id"] ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
-							for i=0, 5 do
-								local itexture = Instance.new("Texture")
-								itexture.Parent = object
-								itexture.Face = i
-								itexture.Name = "Slot1"
-								itexture.Color3 = Color3.fromRGB(unpack(texture["Enabled"]["Texture Color"].value))
-								itexture.Texture = "rbxassetid://" .. texture["Asset-Id"]
-								itexture.Transparency = 1-(texture["Enabled"]["Texture Color"].value[4]/255)
-								itexture.OffsetStudsU = texture.OffsetStudsU
-								itexture.OffsetStudsV = texture.OffsetStudsV
-								itexture.StudsPerTileU = texture.StudsPerTileU
-								itexture.StudsPerTileV = texture.StudsPerTileV
-								if gundata then
-									if not gundata._anims.camodata[object] then
-										gundata._anims.camodata[object] = {}
-									end
-									gundata._anims.camodata[object][itexture] = {
-										Transparency = itexture.Transparency
-									}
-								end
-								skins.slot1.textures[#skins.slot1.textures+1] = {object, itexture}
-								textures[#textures+1] = itexture
-							end
-						end
-					end
-					self:SetupAnimations(reg["Slot1-Animations"], textures, "Texture", skins.slot1.animations)
-					self:SetupAnimations(reg["Slot1-Animations"], slot1, "Part", skins.slot1.animations)
+				if slot1_data.Basics.Enabled then
+					self:CreateSkin(skins.slot1, slot1_data, slot1, gundata)
 				end
 
 				local slot2_data = reg["Slot2"]
-				if slot2_data.Enabled then
-					skins.slot2.objects = slot2
-					local textures = {}
-					for i=1, #slot2 do
-						local object = slot2[i]
-						object.Color = Color3.fromRGB(unpack(slot2_data["Material"]["Brick Color"].value))
-						object.Material = config.enums.Material.Id[slot2_data["Material"]["self"].value]
-						object.Reflectance = slot2_data["Reflectance"]/100
-						if object:IsA("UnionOperation") then
-							object.UsePartColor = true
-						end
-						local texture = slot2_data["Texture"]
-						if texture.Enabled.self and texture["Asset-Id"] ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
-							for i=0, 5 do
-								local itexture = Instance.new("Texture")
-								itexture.Parent = object
-								itexture.Name = "Slot2"
-								itexture.Face = i
-								itexture.Color3 = Color3.fromRGB(unpack(texture["Enabled"]["Texture Color"].value))
-								itexture.Texture = "rbxassetid://" .. texture["Asset-Id"]
-								itexture.Transparency = 1-(texture["Enabled"]["Texture Color"].value[4]/255)
-								itexture.OffsetStudsU = texture.OffsetStudsU
-								itexture.OffsetStudsV = texture.OffsetStudsV
-								itexture.StudsPerTileU = texture.StudsPerTileU
-								itexture.StudsPerTileV = texture.StudsPerTileV
-								if gundata then
-									if not gundata._anims.camodata[object] then
-										gundata._anims.camodata[object] = {}
-									end
-									gundata._anims.camodata[object][itexture] = {
-										Transparency = itexture.Transparency
-									}
-								end
-								skins.slot1.textures[#skins.slot1.textures+1] = {object, itexture}
-								textures[#textures+1] = itexture
-							end
-						end
-					end
-					self:SetupAnimations(reg["Slot2-Animations"], textures, "Texture", skins.slot2.animations)
-					self:SetupAnimations(reg["Slot2-Animations"], slot2, "Part", skins.slot2.animations)
+				if slot2_data.Basics.Enabled then
+					self:CreateSkin(skins.slot2, slot2_data, slot2, gundata)
 				end
 
 				return skins
@@ -16652,65 +17025,41 @@ if BBOT.game == "phantom forces" then
 				end
 			end)
 
-			--[[do
+			do
 				weapons.weaponstorage = debug.getupvalue(char.unloadguns, 2)
 
 				hook:Add("OnConfigChanged", "Skin.LiveChanger", function(steps, old, new)
-					if config:IsPathwayEqual(steps, "Weapons", "Skins", "Primary") then
-						local wep
+					if config:IsPathwayEqual(steps, "Weapons", "Skins") then
+						local reg = config:GetValue("Weapons", "Skins")
+						if not reg.Enabled then return end
 						for k, v in pairs(weapons.weaponstorage) do
-							if v.gunnumber == 1 then
-								wep = v
-								break
-							end
+							weapons:SkinApplyGun(v)
 						end
-						if not wep then return end
-						weapons:SkinApplyGun(wep, 1)
-					elseif config:IsPathwayEqual(steps, "Weapons", "Skins", "Secondary") then
-						local wep
-						for k, v in pairs(weapons.weaponstorage) do
-							if v.gunnumber == 2 then
-								wep = v
-								break
-							end
-						end
-						if not wep then return end
-						weapons:SkinApplyGun(wep, 2)
-					elseif config:IsPathwayEqual(steps, "Weapons", "Skins", "Tertiary") then
-						local wep
-						for k, v in pairs(weapons.weaponstorage) do
-							if v._isknife then
-								wep = v
-								break
-							end
-						end
-						if not wep then return end
-						weapons:SkinApplyGun(wep, 3)
 					end
 				end)
-			end]]
+			end
 
 			function weapons:SkinApplyGun(gundata, slot)
-				if not config:GetValue("Weapons", "Skins", "Enabled") then return end
 				local slot = slot or gundata.gunnumber
 				local model = gundata._model
 				if not model then return end
+				local reg = config:GetValue("Weapons", "Skins")
+				if not reg.Enabled then return end
+				local slot1, slot2 = weapons:PrepareSkins(model)
+				weapons:ApplySkin(reg, gundata, slot1, slot2)
+			end
 
-				local classtype = "Tertiary"
-				if slot == 1 then
-					classtype = "Primary"
-				elseif slot == 2 then
-					classtype = "Secondary"
-				end
-
-				local reg = config:GetValue("Weapons", "Skins", classtype)
-
+			function weapons:PrepareSkins(model)
 				local descendants = model:GetDescendants()
 				local slot1, slot2 = {}, {}
 				for k, v in pairs(descendants) do
 					if v.ClassName == 'Texture' and (v.Name == "Slot1" or v.Name == "Slot2") then
 						v:Destroy()
-					elseif v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
+					end
+				end
+
+				for k, v in pairs(descendants) do
+					if v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
 						if v:FindFirstChild("Slot1") then
 							slot1[#slot1+1] = v
 						elseif v:FindFirstChild("Slot2") then
@@ -16719,86 +17068,110 @@ if BBOT.game == "phantom forces" then
 					end
 				end
 
-				weapons:ApplySkin(reg, gundata, slot1, slot2)
+				return slot1, slot2
 			end
 
-			--[[hook:Add("PostLoadGun", "Skin.Apply", function(gundata, name)
-				if not config:GetValue("Weapons", "Skins", "Enabled") then return end
+			hook:Add("PostLoadGun", "Skin.Apply", function(gundata, name)
 				weapons:SkinApplyGun(gundata)
 			end)
 
 			hook:Add("PostInitialize", "Skin.LiveApply", function()
-				timer:Simple(1, function()
-					local workspace = BBOT.service:GetService("Workspace")
-					hook:Add("OnConfigChanged", "Skin.Preview", function(steps, old, new)
-						if not config:GetValue("Weapons", "Skins", "Enabled") then return end
-						if not config:IsPathwayEqual(steps, "Weapons", "Skins", "Primary") then return end
-						if not workspace:FindFirstChild("MenuLobby") then return end
-						if not workspace.MenuLobby:FindFirstChild("GunStage") then return end
-						if not workspace.MenuLobby.GunStage:FindFirstChild("GunModel") then return end
-						local model = workspace.MenuLobby.GunStage.GunModel:GetChildren()[1]
-						if not model then return end
-						local reg = config:GetValue("Weapons", "Skins", "Primary")
+				local workspace = BBOT.service:GetService("Workspace")
+				local gunstage_connection_add = false
+				local gunstage_connection_remove = false
 
-						local descendants = model:GetDescendants()
-						local slot1, slot2 = {}, {}
-						for k, v in pairs(descendants) do
-							if v.ClassName == 'Texture' and (v.Name == "Slot1" or v.Name == "Slot2") then
-								v:Destroy()
-							elseif v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
-								if v:FindFirstChild("Slot1") then
-									slot1[#slot1+1] = v
-								elseif v:FindFirstChild("Slot2") then
-									slot2[#slot2+1] = v
-								end
-							end
-						end
+				hook:Add("Unload", "BBOT:Skins.StagePreview", function()
+					if gunstage_connection_add then
+						gunstage_connection_add:Disconnect()
+						gunstage_connection_add = nil
+					end
+					if gunstage_connection_remove then
+						gunstage_connection_remove:Disconnect()
+						gunstage_connection_remove = nil
+					end
+				end)
 
+				local function performchanges(gunmodel)
+					local model = gunmodel:GetChildren()[1]
+					if not model then return end
+					local reg = config:GetValue("Weapons", "Skins")
+					if not reg.Enabled then return end
 
-						local applied = weapons:ApplySkin(reg, nil, slot1, slot2)
-						
-						hook:Add("RenderStep.First", "Skin.Preview.Animations", function(delta)
-							weapons:RenderAnimations(applied.slot1.animations, delta)
-							weapons:RenderAnimations(applied.slot2.animations, delta)
-						end)
-
-						local connection
-						connection = workspace.MenuLobby.GunStage.GunModel.ChildRemoved:Connect(function()
-							hook:Remove("RenderStep.First", "Skin.Preview.Animations")
-							connection:Disconnect()
-						end)
+					local slot1, slot2 = weapons:PrepareSkins(model)
+					local applied = weapons:ApplySkin(reg, nil, slot1, slot2)
+					
+					hook:Add("RenderStep.First", "Skin.Preview.Animations", function(delta)
+						if not reg.Enabled then return end
+						weapons:RenderAnimations(applied.slot1.animations, delta)
+						weapons:RenderAnimations(applied.slot2.animations, delta)
 					end)
+				end
+
+
+				local changing = false
+				hook:Add("Skins.GunStageChanged", "Skins.GunStageChanged", function(gunmodel)
+					timer:Create("Skins.ReloadStage", 0, 1, function()
+						changing = true
+						performchanges(gunmodel)
+						changing = false
+					end)
+				end)
+
+				hook:Add("OnConfigChanged", "Skin.Preview", function(steps, old, new)
+					if not config:IsPathwayEqual(steps, "Weapons", "Skins") then return end
+					if not workspace:FindFirstChild("MenuLobby") then return end
+					if not workspace.MenuLobby:FindFirstChild("GunStage") then return end
+					if not workspace.MenuLobby.GunStage:FindFirstChild("GunModel") then return end
+					local gunmodel = workspace.MenuLobby.GunStage.GunModel
+					
+					if gunstage_connection_add then
+						gunstage_connection_add:Disconnect()
+						gunstage_connection_add = nil
+					end
+
+					if gunstage_connection_remove then
+						gunstage_connection_remove:Disconnect()
+						gunstage_connection_remove = nil
+					end
+
+					gunstage_connection_add = gunmodel.DescendantAdded:Connect(function()
+						if changing then return end
+
+						changing = true
+						hook:CallP("Skins.GunStageChanged", gunmodel)
+						changing = false
+					end)
+
+					gunstage_connection_remove = gunmodel.DescendantRemoving:Connect(function()
+						if changing then return end
+
+						changing = true
+						hook:CallP("Skins.GunStageChanged", gunmodel)
+						changing = false
+					end)
+
+					changing = true
+					performchanges(gunmodel)
+					changing = false
 				end)
 			end)
 
 			hook:Add("PostLoadKnife", "Skin.Apply", function(gundata, name)
-				if not config:GetValue("Weapons", "Skins", "Enabled") then return end
 				local model = gundata._model
 				gundata._isknife = true
 				if not model then return end
-				local reg = config:GetValue("Weapons", "Skins", "Tertiary")
-				if not reg.Enable then return end
+				local reg = config:GetValue("Weapons", "Skins")
+				if not reg.Enabled then return end
 
-				local descendants = model:GetDescendants()
-				local slot1, slot2 = {}, {}
-				for k, v in pairs(descendants) do
-					if v.ClassName == 'Texture' and (v.Name == "Slot1" or v.Name == "Slot2") then
-						v:Destroy()
-					elseif v.ClassName == 'Part' or v.ClassName == 'MeshPart' or v.ClassName == 'UnionOperation' then
-						if v:FindFirstChild("Slot1") then
-							slot1[#slot1+1] = v
-						elseif v:FindFirstChild("Slot2") then
-							slot2[#slot2+1] = v
-						end
-					end
-				end
+				local slot1, slot2 = weapons:PrepareSkins(model)
 
 				weapons:ApplySkin(reg, gundata, slot1, slot2)
 			end)
 
 			hook:Add("PostWeaponStep", "Skin.Animation", function(gundata, partdata)
-				if not config:GetValue("Weapons", "Skins", "Enabled") then return end
 				if not gundata._skins then return end
+				local reg = config:GetValue("Weapons", "Skins")
+				if not reg.Enabled then return end
 				if not gundata._skinlast then
 					gundata._skinlast = tick()
 					return
@@ -16810,8 +17183,9 @@ if BBOT.game == "phantom forces" then
 			end)
 
 			hook:Add("PostKnifeStep", "Skin.Animation", function(gundata, partdata)
-				if not config:GetValue("Weapons", "Skins", "Enabled") then return end
 				if not gundata._skins then return end
+				local reg = config:GetValue("Weapons", "Skins")
+				if not reg.Enabled then return end
 				if not gundata._skinlast then
 					gundata._skinlast = tick()
 					return
@@ -16820,7 +17194,7 @@ if BBOT.game == "phantom forces" then
 				weapons:RenderAnimations(gundata._skins.slot1.animations, delta-gundata._skinlast)
 				weapons:RenderAnimations(gundata._skins.slot2.animations, delta-gundata._skinlast)
 				gundata._skinlast = delta
-			end)]]
+			end)
 		end
 	end
 end
