@@ -20,7 +20,7 @@ local username = (BBOT and BBOT.username or nil)
 if BBOT and BBOT.__init then
 	BBOT = nil
 end
-local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "In-Dev 0.8.3b", __init = true } -- I... um... fuck off ok?
+local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "0.8.6a", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
 while true do
@@ -14420,9 +14420,9 @@ if BBOT.game == "phantom forces" then
 					end
 
 					local updater = replication.getupdater(v)
-					if updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick() then
+					--[[if updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick() then
 						continue
-					end
+					end]]
 
 					local prioritize
 					if hitscan_priority == "Head" then
