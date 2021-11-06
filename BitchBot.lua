@@ -29,7 +29,7 @@ end
 	digit 3. Major Patch
 	letter 4. Minor Patch
 ]]
-local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.8.7a", __init = true } -- I... um... fuck off ok?
+local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.8.7d", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
 while true do
@@ -14870,10 +14870,6 @@ if BBOT.game == "phantom forces" then
 					players_only[#players_only+1] = {v[1], v[3]}
 					players_has[v[1]] = true
 				end
-
-				table.sort(players_only, function(a, b)
-					return (a[2] - mousePos).Magnitude < (b[2] - mousePos).Magnitude
-				end)
 
 				local target = players_only[1]
 				local minimum_pen = {}
