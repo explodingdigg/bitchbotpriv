@@ -20,7 +20,16 @@ local username = (BBOT and BBOT.username or nil)
 if BBOT and BBOT.__init then
 	BBOT = nil
 end
-local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "0.8.6a", __init = true } -- I... um... fuck off ok?
+
+--[[
+	version numbers go as so
+	0.0.0a
+	digit 1. Major Update
+	digit 2. Minor Update
+	digit 3. Major Patch
+	letter 4. Minor Patch
+]]
+local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.8.7a", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
 while true do
@@ -3377,6 +3386,15 @@ do
 				["ZIRCON TRIDENT"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAICAYAAAC73qx6AAABG0lEQVR4nM2UsS5FQRCGvz3u2StUwhuISqH0BgrxAirvQELFO5B4A4ncXiWhVBGFUqsVHXEc51ecf282N/eIgjiTTHZ3/szszsz+EyTRI1kCRsA+cGfbBrAHDAEB79Yr4GTsKakvWkq6VysvkpYlbUp6U7fsJP+B84nAFrAIPAMXwKexmSmVa6yDKZiAGig7qv5hvzBhz23R+yNg1vFOgQKYM14Cl95XQdIhsA2sOFgNPHpNiURrDVR+DA4cadve0La8MhYyjAxrJrAiw1azxJ6AeWDB54cs4ZRIbd/zoqNqP5HvyPXXxAvW8T3BZO/L17oB1oBXr2fAOt1fa9fvrf6b4L9G9tSRvkgavwfArW1p/Eaf0/i9Bo6T4xdM44pWBHcfuQAAAABJRU5ErkJggg==", 50, 8},
 				["ZWEIHANDER"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAOCAYAAABth09nAAAA7ElEQVR4nM3UPUpDQRTF8Z8mRBQUrBKwiJDWHdi4DXtrV+HCbFxBasFSLRIRMX4gz+I9IYYRfXcmPP8wMHOGC+cwc+9GVVVaMsIZLtoWrpPNQM0YR6WN5BIJcofb0kZyiQa5L20kl0iQBa5LG8klEmSA44Q+yfSSRR8n2G/2sIUd7KHXrI/mbhcznKqn1xcHzXm+pD0u1f1EhYeE/ornhP6OJ7yof8Zc/c2nqRf5yyutzuzfDK+dPi5b1gxwiPMVfaLD3on0yBuuEnqnAyASZFvHjZ0iEmSEYWkjuUSCDH2fWP+CSJAbTAv7yOYTCAcjy7oQ9i0AAAAASUVORK5CYII=", 50, 14},
 			}
+		else
+			icons.registry = {
+				-- MENU
+				["PISTOL"] = {"iVBORw0KGgoAAAANSUhEUgAAADQAAAAeCAYAAABjTz27AAACXUlEQVR4nNXYS6hNURzH8c9xLzeSR6SQgVIXA4k8SkhKSlHKAKUMjDBRZkZGSibKwISJUkqMiEylJMr7NZC886Z78/wbrHvrdJxz7ln77utc39qd3Vl7/fb/t57/tSsRYQAm4Dm24mzV/90Y26DOD9wcSLhEZuAovnYO8GAHdmEMTuEwRmEpFjWp18jQKxzHJzzGtD7tXHrwArMwHvswH58rTXqoE6exvsALW6EXXRhRoO4vfMfo2oJmho5he4GXtZVGhibjtWKt11aqA96A5X33q/2HZkjzpAM7cRCBHdjUzqAGwcdKRGyUJn8/gd+S0f+NA/1zaCwWYz+WtTWk4nzDzE5swx7MQ+UfB9BTgs5XvMFFvKxExBlpp+2nC3MMbsidwzOMxBpMryp7jL04L5kql4iod3VHxPXI43dE9EbE/YjoqNKaFBF3+555GBFTGryzlKvR0vwAm/Ezo20uSF1/UtrJ+3knDWl9v28y2zyLZnvNA1zL0LojDdP3dcqu4ItkekgZaPP8kqG1AJexsE7ZT6mnfmToFaKZoRHSytcqq/BUyp6n1pRNlI4hQ06z5HQ+bmTqPZGGXu1yPBsfsDJTL5tm56HcTHs3jkiZRtto1EPduCXtI61wDuvKCmowNJpDh7RuBi6VEEsp1DM0V35r3y4hllKoZ2hNAZ1bgw2kLOoZWp2p8Vb6+DEsqDXUiRWZGsOmd/jb0BKMy9QYNvOHvw3NLqAxrA0VOeA9LyOQsqg19KiAxpIyAimLWkNX5af4W/zbo3tTag31Yq20F51oof496Vt1W/O3av4ARjQk0oC+k4cAAAAASUVORK5CYII=", 52, 30},
+				["RIFLE"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAdCAYAAABcz8ldAAAD+klEQVR4nO3aS2hcVRjA8d+MRqTahqj4bIUujIKPBitasQsfUXHTouhGMKLiTjeCoKCIDwTduPIFKoq1IFQXFS2iLVGoaNWmlmqVKloNihvTGG0yscm4+O4wk8nMeCfzTOofLpd7zp1zzpzvfI/znZvJ5/OWGMdgLfqxH3/hZKzBCchiM86ro80pjODvpo6UIbyGa/EhHNvkDtJyC64Sk9cKVuBqRWH0ltRNY1BMQlryeAkHMF6hfiy578LBOtq9Ibn3FAoyHdCQIbyKTLs7bjJTigu6cH8LN6f8fRZbMYMXsI32CuTEpNN1OqeZxGqfwSHsKSk/E2ck5T+UlJ8rtCwvhFBNQ87C6bgLr6QYxyVYhb3CvG6jvRPTj8va3GclMskYehVNDaxEHybLypcl1294TvifShwvVvzLwhw+jZ9qjGM9HkUOjwm/l83kG1eRI/hMOKVfS8p7xOo6HxfhlAb7OSpohkCOFnZgVJitSsyKBTiF1cnzOzXaW4EbhZn7GL/zv0Dq4Un1RVBpyArTuRm/0Hl73my24A/heCdxGNeLEJswr59iJ35M6qeSe07sM6ZFuPwPJpLf5JJ3Wk67NCQn/MwELsdJFd75Do/gXuHsxsRkDeB1fI2fFWP3SqxL+iklK4SyDNtFFNW1tFJDvsf7IpwbVtzljqgskAN4Exfgg5Ly0+roc8B8gcwmY1gUZJvUzhGxgjeJFX5Oct2Dd81NOTxcpY2Cpo6IFEc5U5L0Qg3Wpxxv17JQkzUmVv0OsSL3CZudhuX4s6xsAk/gRWH/+xT3AgO4Iulnt9C6wSptjwuNyqUcS9eRViCTwhFuT67dYre7EC4Uu9NShoSfWIVTy+oOik3XaPK8Fl/UaH+D2uFmV1NNIDP4UlEAO1WPv+vlITxe8jyKsxVN1n+REamN1VXqhxWjqkVHqVPfryiAYa2LRjaWPW+VXhiSd7fg/ir1V+J2kdZedGTy+fwgvjE37dEqVorQtTTTe525UVUaLhYaXI0xEa214z81laz5OahWstFcYRwS2lgvu9UWYh+eX0C7HadZYW9ays3Ve2JHvBDuUzua2oC7F9h2x2inQJYL+17Krgba2ydC5Vo8q3qI3JW0UyCHxQR+IjaSRAjcCE+JjWQ1esQp3jUN9tM2OnGES2hLP77V+IcDa/C5knPpCkzjTrzRYF8tp90+pMCEiJKa8RXHVyIZWYvjxMbzAV1+lt8pDWk2GZFHu1XsU6pN+iwuVTtk7iid0pBmkxcm6SO1NeAZXSwMlo6GFOjF2+KbrHL2Cu3o6sTjUtGQAuPiAGtTWXkOt+lyYbD0BEJEVEPmOvoHzc8wdyVLzWSVc4fIDtwkHHrX8y9c6Q6XYJwubQAAAABJRU5ErkJggg==", 100, 29},
+				["SHOTGUN"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAbCAYAAACKlipAAAADgklEQVR4nO3aS2hcZRTA8V/StKYtEbGxLdr6QFsfUBHRhWhRqCiI2qAVXLkRurG4EVwpiK66caGg+Ni5UxeiFJQqiAaUFotB8bGoRRc+sLRFm1eT9Lg495rJdCaZZKYzaTt/uMw333fud8+d853vnHPv9ESEs8Q27MQQrscvuLkYGyn6+nEEa7Eex/E3ttaYbwx/NnjtF/DO0tTuMBHRqmNFRNwdES9HxOGYy1Ah81ZEvF60d0XEzxGxMiIGI2IiIrZERE9EDEdz7GnhfbX16GvSnmtwv/SEB7Gujtzl6JNeMI0VRd9aXIwNFX1/4Oom9Vpu9OASjGNiXsklWHF9RDwZER9GxNgiVu1onfZkREwX7ZmIGK8YOxkRuyPi9CKuE7H8PGSw0OuNhWQb9ZAtMhbsxB3obeCcGQzjAE4vIPtIcY1eGVdKLsJuucJqcQpf4WBxvZJR3NuAjovhS0wu8dyVxed9Cwn2xNygvglXSLfql0Z4GDctUZHzia9xcpHnrMFGDOCyom8Eq6ntDJUGGcDjCDwts6Qubaa00g687fwLpuccpYcM484O67LcGcOLcuuZlBnlqMwaDy9innVyN6qMw98Xc3YNsky4VhbODWVLXdpIGUNGO6rFucW/+EdmUKcwhb+anPP/dLo0yOcayJEr+AS/Fu3tuLGGzF68N88cq2R1Pyir/asqxo7gR7MevFHm8jfIir6TPIEPivZqWX23jDKGbMAreEz9ImxK5uLHZCFXFntXmjVOye/YbOGCsORRXNeA3Etmi6xOsV3G3LNCdWF4Fz6Sz12qmcYzsmh8s2psUq74kldlLdNqRqU3f4wfpHH65TZSPi86XsheKhdP2VbIbJNp/u3OLM7G5Y/9mSLIVjGGfU3fxTxUKzSM/dJTasmecGatMiT30oP4Bofwfgt1rGSH9NJmeBfPy63ylqLvkCyIR+W9dIxqgwxIL6nFAbkiT8i9/Cf5SKVPrsyZOue1kmaNUclRfNrC+VpC9Za1F8/WkJvBbfi2+H4rrsFv0jO6tIhKg2zFd+bGgpLX8FS7lLqQqTTIPjxQQ+aYfN16tF1KXciUef5DahsDntM1RtvoiYhVcquq9ceCCZkytrT46VKfXuxR2xjwha4x2kovds0zvr9dinRJeiJiSp3XibJwGmmfOl16zR+wN7VLkS5JL+6RDwNrsbl9qnSB/wBF8j6LJlmzYQAAAABJRU5ErkJggg==", 100, 27},
+				["SMG"] = {"iVBORw0KGgoAAAANSUhEUgAAAE0AAAAeCAYAAABpE5PpAAADmklEQVR4nO3ZS4iVZRgH8N+Mk6FRNpXlQrPLBEVN2WUhJSUkXSgs6EZBSG0KWrQJIlu00YKgRSuJdrbKkDYVU9pNi2rRZVBrkyGWKQ4U5oxMXs7T4v2mvnPmO9+cc2bOnDnhH154r8/zfM/7fu9zeXsiQpdhJUaxuw20v8At6EVdxfS2gXE7sRAP4vZOCtHTZSdtOfZhf1afaTR00vrawLiduB4V9OOrrO/vmjl9mJdrV3CiZs589OTap3Ayow/v4v56QnSb0hZifa79Aha1gc+KssFuU9oqDOOPrH2yTXwuljbjSNFgN91pZ0pWM7/Rb0n320CuzNTJW4Uviwa66aRdZbK8b2JnTd9iXC4p8IpcfQDnN8Fv0P9AaYMFfbsK+kay8nXBWL/qUzmAtTi3QX5ISltTLuucwZ017T9xU4u0JhS7Ax9iE45hSW7OZfUW92Fbi4w7jX4zJ/sxHFCttLqOf7dFBHMCs3mn7cH4NNZfivNy7VEcnpZE/2Gx5APWYgkWqHaED/dEF/kcs4zfcIHk6gzjWilJsLmbrOdsY2mu3iudth4Mnj5pzeO70yetGJ/hI5wj+XB5gzk+V5RWwafYLBkM0q+wFs+oNgBleAnvZ/UBvCIZkGaxWopvHygcjc5iLCLWR8SyiFCnnB0ROxqg9UnB2sGIqLQo29Z6MnXaT3scL+PXkjlH8aySpGCG9wr6dmFryZrAB3gHQ1PQ/xed/D1/l5J9jWDP1FMmJRon8BAextsFYztxT679OW7N6nPyjeCsJuY+p9rBLMK9Uhy9omBsixRj1mKspj2aq89JpS2SLvoyzMPr2NgAvTukWPSNOuP7CvoOlNCb8o3gR8ly5bFSSZ68Diqa24hNOIRvCsZuxAbcVbL+IB6T7qUFWd91UuZ1f25eb0avFttLaNdV2oRzOyKFCnksxZUlRIswJJn5pyVzPb/Bdb9IL0Hj0m94M66eYs1fuA0/4KcaWYewTopNz5BckRdr1lek2HIk13c3lmX1vfi4iHE7090X4kk8hUtmmPZx6QLfLm3MUZM36Ah+xkWqQ6IJfI8bWuJe4h/NVOmNiDURsSUiTrToM+VRiYh1OfqDLdJ5NVr8ptlQWr4sj4iNEXGoxQ+NiHi+huajLdAYymTpCqVNlPkR8UhEHGziQ4cjYnUBrQ1N0NgbEfdNV/5OObfHJWfzCSlfVYRT+FYKnLcpfkSBaxrgNyYZqNdMLxEK/gEIMckYAgwqoQAAAABJRU5ErkJggg==", 77, 30},
+				["SNIPER"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAXCAYAAAD9VOo7AAADIklEQVR4nO3ZS2hdVRSA4e/mYa310VajlapYRQRtFScOfEFFcCIojhw4kIoVrQhSHSmIUwURHPmYqAOhA3HgQBQFURR0YBRRaw0+20SDL6y9sU27HKx9yU1Nbm5ubu4j6Q+bs/c+Z+29DuuctdZZpxIReph78DyOYA/u7K46y89AtxVYgH3lOFzXX9EMdXCvYTyJU8r4CMZxFH/jOZxWrvu1XDNWJ1/fP7vI/1FkLsc2bC3tDBwz+4Hbgc/bdjfLRKWDLmstDjU4/wPW42R8UeZOxaWlvx8Tpb8VU/gdF6LSxP7X4sPFKNwNeskgy01fGKTXY8iqo5MxZBovmYkh09LlrEcVj+Jl6aK2lGtOxyWlP44Dpf89vsIdZuLGFeW4DRvK+p28v7bQSZc1H7fLwAwP4HzsRMjAXM+ADNjP4kc8VebH8NGya9oBumGQs3CXfAtGcLN8E2ocw6fzyA7hyuPmpvC1zNbgHxyuO/+X/xu2Z+mGQZ7GQ53etF/ohI89D7fgGvl0b+zAnt3kM7zaqvB8b8ganItN0q2MlHGtv0m6lYcbrD2IR/AETmpVwT7kE1zdqvBcBhmWQfPeBWRDZjVfznFui8yYrmtVsT7mkExSWopbQ3gFF+McmcGc2aRsBbtx93HzO/CMmcxptVGVHqbainAlIl7HrS1ufhgXybLGCF5osNZv0uBLjVsTeF9+a9yEP+Xb2gtMyZT9jZZXiIhdsTTei4j7I2KiwTVjEXFBRGyOiD0R8VhEbIyIDXXtxYj4ron93owIEbEmIh6PiEoZr4g2hI+X+FTcUNp8jGE7firjD/AOLiv9GuN4V7q8ZvhXJgwrigEzFdTl4FuzjQF7sVkaoEZFftDVl9hXJZWIqAWgZkrYi2EfbsTPc5y7TVZ/p8t4EKO4Dw8usO4ormqHgr1ILe2tyv8Q7eIbaYz9i5S7Xn7jNOIoXmtFqX6gEhHrcLBF+arMt9fVze2Vxjgwp8QJGjKk8XfH27JwN4lfSpssbVwacq0sFu4u6203Oz6cYBHUXNZbss40KaujB+U/h11m/PxCDMp/EaPtVnI18R9vKf2ssOnBPwAAAABJRU5ErkJggg==", 100, 23},
+			}
 		end
 
 		for k, v in pairs(icons.registry) do
@@ -5500,11 +5518,13 @@ do
 				local col = config:GetValue("Main", "Settings", "Cheat Settings", "Menu Accent", "Accent")
 				self.basecolor = {col, color.darkness(col, .5)}
 				self.bar:SetColor(unpack(self.basecolor))
+				onhover = col
 			end
 
 			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
 				self.basecolor = {col, color.darkness(col, .5)}
 				self.bar:SetColor(unpack(self.basecolor))
+				onhover = col
 			end)
 		end
 
@@ -7357,7 +7377,7 @@ do
 
 	local supported_games = {
 		[113491250] = "phantom forces",
-		[807930589] = "wild west"
+		[1168263273] = "bad business"
 	}
 	BBOT.game = tostring(supported_games[game.GameId] or game.GameId)
 
@@ -8287,6 +8307,13 @@ do
 										minvalue = -100,
 										maxvalue = 100,
 										stradd = "°/s",
+									},
+									{
+										type = "Toggle",
+										name = "In Floor",
+										value = false,
+										unsafe = true,
+										tooltip = "Puts you into the floor kinda..."
 									},
 								}},
 								{content = {}},
@@ -10643,7 +10670,268 @@ do
 				}
 			}
 		}
-	elseif BBOT.game == "wild west" then
+	elseif BBOT.game == "bad business" then
+
+		local weapon_legit = {
+			{
+				name = "Aim Assist",
+				pos = UDim2.new(0,0,0,0),
+				size = UDim2.new(.5,-4,1,0),
+				type = "Panel",
+				content = {
+					{
+						type = "Toggle",
+						name = "Enabled",
+						value = true,
+						tooltip = "Aim assistance only moves your mouse towards targets"
+					},
+					{
+						type = "Slider",
+						name = "Aimbot FOV",
+						min = 0,
+						max = 100,
+						suffix = "°",
+						value = 20
+					},
+					{
+						type = "Toggle",
+						name = "Dynamic FOV",
+						value = false,
+						tooltip = "Changes all FOV to change depending on the magnification."
+					},
+					{
+						type = "Toggle",
+						name = "Use Barrel",
+						value = false,
+						tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
+					},
+					{
+						type = "Slider",
+						name = "Start Smoothing",
+						value = 20,
+						min = 0,
+						max = 100,
+						suffix = "%",
+					},
+					{
+						type = "Slider",
+						name = "End Smoothing",
+						min = 0,
+						max = 100,
+						suffix = "%",
+						value = 20
+					},
+					{
+						type = "Slider",
+						name = "Smoothing Increment",
+						min = 0,
+						max = 100,
+						suffix = "%/s",
+						value = 20
+					},
+					{
+						type = "Slider",
+						name = "Randomization",
+						value = 5,
+						min = 0,
+						mas = 20,
+						suffix = "",
+						custom = { [0] = "Off" },
+					},
+					{
+						type = "Slider",
+						name = "Deadzone FOV",
+						value = 1,
+						min = 0,
+						max = 50,
+						suffix = "°",
+						decimal = 1,
+						custom = { [0] = "Off" },
+					},
+					{
+						type = "DropBox",
+						name = "Aimbot Key",
+						value = 1,
+						values = { "Mouse 1", "Mouse 2", "Always", "Dynamic Always" },
+					},
+					{
+						type = "DropBox",
+						name = "Hitscan Priority",
+						value = 1,
+						values = { "Head", "Body", "Closest" },
+					},
+					{
+						type = "ComboBox",
+						name = "Hitscan Points",
+						values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+					},
+				},
+			},
+			{
+				name = "Ballistics",
+				pos = UDim2.new(.5,4,0,0),
+				size = UDim2.new(.5,-4,4/10,-4),
+				type = "Panel",
+				content = {
+					{
+						type = "Toggle",
+						name = "Barrel Compensation",
+						value = true,
+						tooltip = "Attempts to aim based on the direction of the barrel",
+						extra = {}
+					},
+					{
+						type = "ComboBox",
+						name = "Disable Barrel Comp While",
+						values = { { "Fire Animation", true }, { "Scoping In", true }, { "Reloading", true } }
+					},
+					{
+						type = "Slider",
+						name = "Barrel Comp X",
+						value = 100,
+						min = 0,
+						max = 1000,
+						suffix = "%",
+						decimal = 1,
+						custom = { [0] = "Off" },
+					},
+					{
+						type = "Slider",
+						name = "Barrel Comp Y",
+						value = 100,
+						min = 0,
+						max = 1000,
+						suffix = "%",
+						decimal = 1,
+						custom = { [0] = "Off" },
+					},
+					{
+						type = "Toggle",
+						name = "Drop Prediction",
+						value = true,
+					},
+					{
+						type = "Toggle",
+						name = "Movement Prediction",
+						value = true,
+					},
+				}
+			},
+			{
+				name = {"Bullet Redirect", "Trigger Bot"},
+				pos = UDim2.new(.5,4,4/10,4),
+				size = UDim2.new(.5,-4,6/10,-4),
+				type = "Panel",
+				{content = {
+					{
+						type = "Toggle",
+						name = "Enabled",
+						value = false,
+					},
+					{
+						type = "Toggle",
+						name = "Use Barrel",
+						value = true,
+						tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
+					},
+					{
+						type = "Slider",
+						name = "Redirection FOV",
+						value = 5,
+						min = 0,
+						max = 180,
+						suffix = "°",
+					},
+					{
+						type = "Slider",
+						name = "Hit Chance",
+						value = 30,
+						min = 0,
+						max = 100,
+						suffix = "%",
+					},
+					{
+						type = "Slider",
+						name = "Accuracy",
+						value = 90,
+						min = 0,
+						max = 100,
+						suffix = "%",
+					},
+					{
+						type = "DropBox",
+						name = "Hitscan Priority",
+						value = 1,
+						values = { "Head", "Body", "Closest" },
+					},
+					{
+						type = "ComboBox",
+						name = "Hitscan Points",
+						values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+					},
+				}},
+				{content = {
+					{
+						type = "Toggle",
+						name = "Enabled",
+						value = false,
+						extra = {
+							{
+								type = "ColorPicker",
+								name = "Dot Color",
+								color = { 255, 0, 0, 255 },
+							},
+							{
+								type = "KeyBind",
+								key = nil,
+								toggletype = 2,
+							},
+						},
+					},
+					{
+						type = "ComboBox",
+						name = "Trigger Bot Hitboxes",
+						values = { { "Head", true }, { "Body", true }, { "Arms", false }, { "Legs", false } },
+					},
+					{
+						type = "Toggle",
+						name = "Trigger When Aiming",
+						value = false,
+					},
+					{
+						type = "Slider",
+						name = "Aim In Time",
+						min = 0,
+						max = 2,
+						value = .75,
+						decimal = 2,
+						suffix = "s",
+						tooltip = "Time it takes to activate trigger bot by aiming in"
+					},
+					{
+						type = "Slider",
+						name = "Fire Time",
+						min = 0,
+						max = .5,
+						value = .1,
+						decimal = 3,
+						suffix = "s",
+						tooltip = "How long you need to stay in the circle to fire"
+					},
+					{
+						type = "Slider",
+						name = "Sprint to Fire Time",
+						min = 0,
+						max = .5,
+						value = .1,
+						decimal = 3,
+						suffix = "s",
+						tooltip = "Time from sprinting to the ability to fire"
+					},
+				}},
+			},
+		}
+
 		BBOT.configuration = {
 			{
 				-- The first layer here is the frame
@@ -10658,7 +10946,48 @@ do
 						size = UDim2.new(1,0,1,0),
 						borderless = true,
 						type = "Tabs",
-						content = {}
+						content = {
+							{
+								name = "Pistol",
+								icon = "PISTOL",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+							{
+								name = "Smg",
+								icon = "SMG",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+							{
+								name = "Rifle",
+								icon = "RIFLE",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+							{
+								name = "Shotgun",
+								icon = "SHOTGUN",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+							{
+								name = "Sniper",
+								icon = "SNIPER",
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Container",
+								content = weapon_legit
+							},
+						}
 					},
 					{
 						name = "Rage",
@@ -10712,15 +11041,9 @@ do
 										extra = {},
 									},
 									{
-										type = "Slider",
-										name = "Background Transparency",
-										value = 80,
-										min = 0,
-										max = 100,
-										suffix = "%",
-										custom = {
-											[100] = "Off"
-										},
+										type = "Toggle",
+										name = "Background",
+										value = false,
 										extra = {
 											{
 												type = "ColorPicker",
@@ -10766,6 +11089,26 @@ do
 										end
 									}
 								},
+							},
+							{
+								name = "Menus",
+								pos = UDim2.new(.5,4,0,0),
+								size = UDim2.new(.5,-4,5/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Toggle",
+										name = "Weapon Customization",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Toggle",
+										name = "Environment",
+										value = false,
+										extra = {},
+									},
+								}
 							},
 							{
 								name = "Configs",
@@ -13150,7 +13493,7 @@ if BBOT.game == "phantom forces" then
         local last_predicted = nil
 		hook:Add("RageBot.DamagePredictionKilled", "BBOT:AntiGrenadeTP", function(Entity)
             if last_predicted == Entity then return end
-			timer:Simple(BBOT.extras:getLatency()*1.5, function() misc:AntiGrenadeStep() end)
+			timer:Simple(BBOT.extras:getLatency(), function() misc:AntiGrenadeStep() end)
             last_predicted = Entity
             timer:Simple(0, function() last_predicted = nil end)
 		end)
@@ -13299,13 +13642,17 @@ if BBOT.game == "phantom forces" then
 					if yawChoice == "Backward" then
 						yaw += math.pi
 					elseif yawChoice == "Spin" then
-						yaw = (tick() * spinRate) % 12
+						yaw = (tick() * spinRate) % 360
 					elseif yawChoice == "Random" then
 						yaw = math.random(-99999,99999)
 					elseif yawChoice == "Glitch Spin" then
 						yaw = 16478887
 					elseif yawChoice == "Stutter Spin" then
 						yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+					end
+
+					if config:GetValue("Main", "Rage", "Anti Aim", "In Floor") then
+						pos = pos + Vector3.new(0,-2,0)
 					end
 
 					new_angles = new_angles or Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
@@ -13434,6 +13781,10 @@ if BBOT.game == "phantom forces" then
 				if not char.alive or not controller.alive then return end
 				local blank_vector = Vector3.new()
 				local delta_position = blank_vector
+				if not pos or not ang then
+					pos, ang = controller.receivedPosition, controller.receivedLookAngles
+					if not pos or not ang then return end
+				end
 				if controller.receivedPosition and controller.receivedFrameTime then
 					delta_position = (pos - controller.receivedPosition) / (timestep - controller.receivedFrameTime);
 				end;
@@ -13466,6 +13817,10 @@ if BBOT.game == "phantom forces" then
 
 		hook:Add("RenderStep.Character", "BBOT:L3P.Render", function(delta)
 			if not l3p.controller or not l3p.controller.alive then return end
+			if config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Absolute") then
+				local l__angles__1304 = BBOT.aux.camera.angles;
+				l3p.networking["repupdate"](l3p.controller, nil, nil, tick())
+			end
 			l3p.controller.step(3, true)
 		end)
 
@@ -14380,7 +14735,7 @@ if BBOT.game == "phantom forces" then
 			function aimbot:GetRageTarget(fov, gun)
 				local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-				local cam_position = (self.tp_scanning and last_repupdate_position or char.rootpart.CFrame.p)
+				local cam_position = last_repupdate_position or char.rootpart.CFrame.p
 				local team = (localplayer.Team and localplayer.Team.Name or "NA")
 				local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
 				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
@@ -14592,7 +14947,6 @@ if BBOT.game == "phantom forces" then
 
 				if self:GetRageConfig("Aimbot", "Auto Shoot") then
 					aimbot.fire = true
-					network:send("repupdate", char.rootpart.Position, Vector2.new(CFrame.new(char.rootpart.CFrame.p, position-char.rootpart.CFrame.p):ToOrientation()), tick())
 					gun:shoot(true)
 				end
 
