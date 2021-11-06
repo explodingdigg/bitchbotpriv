@@ -506,6 +506,91 @@ do
 		end
 		return target
 	end
+
+	local err = 1.0E-10;
+
+	-- ax + b (real roots)
+	function math.linear(a, b) -- do I even need this?
+		return -b / a;
+	end
+	
+	-- ax^2 + bx + c (real roots)
+	function math.quadric(a, b, c)
+		local k = -b / (2 * a);
+		local u2 = k * k - c / a;
+		if u2 > -err and u2 < err then
+			return;
+		else
+			local u = u2 ^ 0.5;
+			return k - u, k + u;
+		end
+	end
+	
+	-- ax^3 + bx^2 + cx + d (real roots)
+	function math.cubic(a, b, c, d)
+		local k = -b / (3 * a);
+		local p = (3 * a * c - b * b) / (9 * a * a);
+		local q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / (54 * a * a * a);
+		local r = p * p * p + q * q;
+		local s = r ^ 0.5 + q;
+		if s > -err and s < err then
+			if q < 0 then
+				return k + (-2 * q) ^ 0.3333333333333333;
+			else
+				return k - (2 * q) ^ 0.3333333333333333;
+			end
+		elseif r < 0 then
+			local m = (-p) ^ 0.5
+			local d = math.atan2((-r) ^ 0.5, q) / 3;
+			local u = m * math.cos(d);
+			local v = m * math.sin(d);
+			return k - 2 * u, k + u - 1.7320508075688772 * v, k + u + 1.7320508075688772 * v;
+		elseif s < 0 then
+			local m = -(-s) ^ 0.3333333333333333;
+			return k + p / m - m;
+		else
+			local m = s ^ 0.3333333333333333;
+			return k + p / m - m;
+		end
+	end
+	
+	-- ax^4 + bx^3 + cx^2 + dx + e (real roots)
+	local quadric, cubic = math.quadric, math.cubic
+	function math.quartic(a, b, c, d, e)
+		local k = -b / (4 * a);
+		local p = (8 * a * c - 3 * b * b) / (8 * a * a);
+		local q = (b * b * b + 8 * a * a * d - 4 * a * b * c) / (8 * a * a * a);
+		local r = (16 * a * a * b * b * c + 256 * a * a * a * a * e - 3 * a * b * b * b * b - 64 * a * a * a * b * d) / (256 * a * a * a * a * a);
+		local h0, h1, h2 = cubic(1, 2 * p, p * p - 4 * r, -q * q);
+		local s = h2 or h0;
+		if s < err then
+			local f0, f1 = quadric(1, p, r);
+			if not f1 or f1 < 0 then
+				return;
+			else
+				local f = f1 ^ 0.5;
+				return k - f, k + f;
+			end
+		else
+			local h = s ^ 0.5;
+			local f = (h * h * h + h * p - q) / (2 * h);
+			if f > -err and f < err then
+				return k - h, k;
+			else
+				local r0, r1 = quadric(1, h, f);
+				local r2, r3 = quadric(1, -h, r / f);
+				if r0 and r2 then
+					return k + r0, k + r1, k + r2, k + r3;
+				elseif r0 then
+					return k + r0, k + r1;
+				elseif r2 then
+					return k + r2, k + r3;
+				else
+					return;
+				end
+			end
+		end
+	end
 end
 
 -- Color
@@ -560,6 +645,9 @@ end
 
 -- Vector
 do 
+	local vec0 = Vector3.new()
+	local dot = vec0.Dot
+	local math = BBOT.math
 	local vector = {}
 	BBOT.vector = vector
 
@@ -577,10 +665,57 @@ do
 	end
 
 	-- msg from cream - this is called pythagorean theorem btw, the guy you found it from doesn't know math...
-	function vector.dist2d ( pos1, pos2 ) -- found this func here https://love2d.org/forums/viewtopic.php?t=1951 ty to whoever did this
+	function vector.dist2d ( pos1, pos2 )
 		local dx = pos1.X - pos2.X
 		local dy = pos1.Y - pos2.Y
 		return math.sqrt ( dx * dx + dy * dy )
+	end
+end
+
+-- Physics
+do
+	local vec0 = Vector3.new()
+	local dot = vec0.Dot
+	local vector = BBOT.vector
+	local math = BBOT.math
+	local physics = {}
+	BBOT.physics = physics
+
+	-- Used to determine the domain of time, of a bullet
+	function physics.timehit(pos_f, v_i, g, pos_i)
+		local delta_d = pos_f - pos_i;
+		local roots = { math.quartic(dot(g, g), 3 * dot(g, v_i), 2 * (dot(g, delta_d) + dot(v_i, v_i)), 2 * dot(delta_d, v_i)) };
+		local min = 0;
+		local max = (1 / 0);
+		for v37 = 1, #roots do
+			local t = roots[v37];
+			local t_max = (delta_d + t * v_i + t * t / 2 * g).magnitude;
+			if min < t and t_max < max then
+				min = t;
+				max = t_max;
+			end;
+		end;
+		return min, max;
+	end;
+
+	-- used to find a unit vector of theta in projectile motion of a 3D space
+	function physics.trajectory(pos_i, g, pos_f, v_i)
+		local delta_d = pos_f - pos_i
+		g = -g
+		local r_1, r_2, r_3, r_4 = math.quartic(dot(g, g) / 4, 0, dot(g, delta_d) - v_i * v_i, 0, dot(delta_d, delta_d))
+		if r_1 and r_1 > 0 then
+			return g * r_1 / 2 + delta_d / r_1, r_1
+		end;
+		if r_2 and r_2 > 0 then
+			return g * r_2 / 2 + delta_d / r_2, r_2
+		end;
+		if r_3 and r_3 > 0 then
+			return g * r_3 / 2 + delta_d / r_3, r_3
+		end;
+		if not r_4 or not (r_4 > 0) then
+			return;
+		end;
+		return g * r_4 / 2 + delta_d / r_4, r_4
 	end
 end
 
@@ -2308,6 +2443,7 @@ do
 	local log = BBOT.log
 	local gui = {
 		registry = {}, -- contains all gui objects
+		active = {}, -- contains only enabled gui objects
 		classes = {}
 	}
 	BBOT.gui = gui
@@ -2464,6 +2600,20 @@ do
 
 			self._absolutepos = self.absolutepos
 			self._absolutesize = self.absolutesize
+
+			if self._enabled ~= wasenabled then
+				local actives_list = gui.active
+				if self._enabled then
+					actives_list[#actives_list+1] = self
+				else
+					for i=1, #actives_list do
+						if actives_list[i] == self then
+							table.remove(actives_list, i)
+							break
+						end
+					end
+				end
+			end
 		end
 
 		function base:PerformDrawings()
@@ -2580,8 +2730,17 @@ do
 			local c = 0
 			for i=1, #reg do
 				local v = reg[i-c]
-				if v.uid == self.uid then
+				if v == self then
 					table.remove(reg, i-c)
+					c = c + 1
+				end
+			end
+			c = 0
+			local actives_list = gui.active
+			for i=1, #actives_list do
+				local v = actives_list[i-c]
+				if v == self then
+					table.remove(actives_list, i-c)
 					c = c + 1
 				end
 			end
@@ -2681,6 +2840,7 @@ do
 			end
 		})
 		self.registry[#self.registry+1] = struct
+		self.active[#self.active+1] = struct
 		if struct.Init then
 			struct:Init()
 		end
@@ -2864,13 +3024,13 @@ do
 		return ishoveringuniversal
 	end
 
-	hook:Add("RenderStepped", "BBOT:GUI.Hovering", function()
+	hook:Add("RenderStep.Input", "BBOT:GUI.Hovering", function()
 		ishoveringuniversal = nil
-		local reg = gui.registry
+		local reg = gui.active
 		local inhover = {}
 		for i=1, #reg do
 			local v = reg[i]
-			if v and v._enabled and not v.__INVALID and v.class ~= "Mouse" and gui:IsHovering(v) then
+			if v and not v.__INVALID and v.class ~= "Mouse" and gui:IsHovering(v) then
 				if v.mouseinputs then
 					inhover[#inhover+1] = v
 				end
@@ -2910,10 +3070,10 @@ do
 	end)
 
 	hook:Add("WheelForward", "BBOT:GUI.Input", function()
-		local reg = gui.registry
+		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and v._enabled and not v.__INVALID then
+			if v and not v.__INVALID then
 				if v.WheelForward then
 					v:WheelForward()
 				end
@@ -2922,10 +3082,10 @@ do
 	end)
 
 	hook:Add("WheelBackward", "BBOT:GUI.Input", function()
-		local reg = gui.registry
+		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and v._enabled and not v.__INVALID then
+			if v and not v.__INVALID then
 				if v.WheelBackward then
 					v:WheelBackward()
 				end
@@ -2934,20 +3094,20 @@ do
 	end)
 
 	hook:Add("Camera.ViewportChanged", "BBOT:GUI.Transform", function()
-		local reg = gui.registry
+		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and v._enabled and not v.__INVALID and not v.parent then
+			if v and not v.__INVALID and not v.parent then
 				v:Calculate()
 			end
 		end
 	end)
 
-	hook:Add("RenderStepped", "BBOT:GUI.Render", function(delta)
-		local reg = gui.registry
+	hook:Add("RenderStep.Input", "BBOT:GUI.Render", function(delta)
+		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and v._enabled and not v.__INVALID then
+			if v and not v.__INVALID then
 				if v.Step then
 					v:Step(delta)
 				end
@@ -2956,10 +3116,10 @@ do
 	end)
 
 	hook:Add("InputBegan", "BBOT:GUI.Input", function(input)
-		local reg = gui.registry
+		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and v._enabled and not v.__INVALID then
+			if v and not v.__INVALID then
 				if v.InputBegan then
 					v:InputBegan(input)
 				end
@@ -2968,10 +3128,10 @@ do
 	end)
 
 	hook:Add("InputEnded", "BBOT:GUI.Input", function(input)
-		local reg = gui.registry
+		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and v._enabled and not v.__INVALID then
+			if v and not v.__INVALID then
 				if v.InputEnded then
 					v:InputEnded(input)
 				end
@@ -8216,11 +8376,20 @@ do
 										tooltip = "Rage aimbot attempts to resolve player offsets and positions, Disable if you are having issues with resolver.",
 									},
 									{
-										type = "Toggle",
-										name = "Zero Velocity",
-										value = false,
+										type = "DropBox",
+										name = "Velocity Resolver",
+										value = 1,
 										unsafe = true,
-										tooltip = "Makes all the characters not have velocity, so the people like pf pwner can cry.",
+										values = { "Off", "Tick", "Ping" },
+										tooltip = "Corrects velocity of players.",
+									},
+									{
+										type = "DropBox",
+										name = "Velocity Modifications",
+										value = 1,
+										unsafe = true,
+										values = { "Off", "Zero", "Tick", "Ping" },
+										tooltip = "Corrects velocity of players.",
 									},
 									{
 										type = "Toggle",
@@ -10904,7 +11073,6 @@ if BBOT.game == "phantom forces" then
 		-- How to access -> BBOT.aux.replication
 		local aux_tables = {
 			["vector"] = {"random", "anglesyx"},
-			["physics"] = {"timehit"},
 			["animation"] = {"player", "reset"},
 			["gamelogic"] = {"controllerstep", "setsprintdisable"},
 			["camera"] = {"setaimsensitivity", "magnify"},
@@ -10927,7 +11095,6 @@ if BBOT.game == "phantom forces" then
 		-- true = aux.bulletcheck, replication = aux.replication.bulletcheck
 		local aux_functions = {
 			["bulletcheck"] = "raycast",
-			["trajectory"] = "physics",
 			["rankcalculator"] = "playerdata",
 
 			-- Not sure where this is supposed to go but ok...
@@ -11761,7 +11928,10 @@ if BBOT.game == "phantom forces" then
 			local msg = chat.buffer[1]
 			if not msg then return end
 			table.remove(chat.buffer, 1)
-			chat:Say(msg)
+			local vkinprogress = BBOT.votekick:IsCalling()
+			if not vkinprogress or vkinprogress > 5 then
+				chat:Say(msg)
+			end
 		end)
 	end
 
@@ -11908,6 +12078,12 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 		end)
+
+		function votekick:IsCalling()
+			if votekick.Called == 3 or votekick.Called == 0 then
+				return votekick.NextCall-tick()
+			end
+		end
 		
 		hook:Add("RenderStep.First", "BBOT:Votekick.AntiVotekick", function()
 			if not config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then return end
@@ -13354,11 +13530,11 @@ if BBOT.game == "phantom forces" then
 		local vector = BBOT.vector
 		local char = BBOT.aux.char
 		local hud = BBOT.aux.hud
-		local physics = BBOT.aux.physics
 		local log = BBOT.log
 		local draw = BBOT.draw
 		local replication = BBOT.aux.replication
 		local extras = BBOT.extras
+		local physics = BBOT.physics
 		local raycast = BBOT.aux.raycast
 		local cam = BBOT.aux.camera
 		local localplayer = BBOT.service:GetService("LocalPlayer")
@@ -13915,12 +14091,6 @@ if BBOT.game == "phantom forces" then
 			end
 		end)
 
-		hook:Add("PostupdateReplication", "BBOT:Aimbot.ZeroVelocity", function(player, controller)
-			if aimbot:GetRageConfig("Settings", "Zero Velocity") then
-				controller.receivedVelocity = Vector3.new()
-			end
-		end)
-
 		local Resolver_NewBullet = {}
 		hook:Add("NewBullet", "BBOT:Aimbot.Resolver", function(data)
 			local firepos, player = data.firepos, data.player
@@ -13937,21 +14107,19 @@ if BBOT.game == "phantom forces" then
 		end)
 
 		local vector_cache = Vector3.new()
+		local height_offset = Vector3.new(0,1.25,0)
 		function aimbot:GetResolvedPosition(player)
 			if not self:GetRageConfig("Settings", "Resolver") then
 				local updater = replication.getupdater(player)
-				local parts = aimbot:GetParts(player)
-				if updater and updater.receivedPosition and parts then
-					local offset = (updater.getpos()-updater.getpos())+Vector3.new(0,1.25,0)
-					if offset.Magnitude > 1 then
-						if offset.Magnitude >= math.huge then
-							return updater.getpos(), true
-						else
-							return offset
-						end
+				if updater and updater.tickVelocity then
+					local vel_resolver = aimbot:GetRageConfig("Settings", "Velocity Resolver")
+					if vel_resolver == "Tick" and updater.tickVelocity then
+						return height_offset+updater.tickVelocity
+					elseif vel_resolver == "Ping" and updater.pingVelocity then
+						return height_offset+updater.pingVelocity
 					end
 				end
-				return vector_cache
+				return height_offset
 			end
 			--[[local bodyparts, rootpart = aimbot:GetParts(player)
 			local resolvedoffset = vector_cache
@@ -13962,23 +14130,31 @@ if BBOT.game == "phantom forces" then
 			end
 			return resolvedoffset]]
 			local updater = replication.getupdater(player)
+			local velocity_addition = vector_cache
+			if updater and updater.tickVelocity then
+				local vel_resolver = aimbot:GetRageConfig("Settings", "Velocity Resolver")
+				if vel_resolver == "Tick" and updater.tickVelocity then
+					velocity_addition = updater.tickVelocity
+				elseif vel_resolver == "Ping" and updater.pingVelocity then
+					velocity_addition = updater.pingVelocity
+				end
+			end
+
 			local parts = aimbot:GetParts(player)
 			if updater and updater.receivedPosition and parts then
-				local offset = (updater.receivedPosition-updater.getpos())+Vector3.new(0,1.25,0)
-				if offset.Magnitude > 1 then
-					if offset.Magnitude >= math.huge then
-						return updater.receivedPosition, true
-					else
-						return offset
-					end
+				local offset = (updater.receivedPosition-updater.getpos())
+				if offset.Magnitude >= math.huge then
+					return updater.receivedPosition + velocity_addition, true
+				else
+					return offset + velocity_addition
 				end
 			end
 
 			if Resolver_NewBullet[player.UserId] then
-				return Resolver_NewBullet[player.UserId]
+				return Resolver_NewBullet[player.UserId] + velocity_addition
 			end
 
-			return vector_cache
+			return vector_cache + velocity_addition
 		end
 
 		function aimbot:GetDamage(data, distance, headshot)
@@ -14043,8 +14219,28 @@ if BBOT.game == "phantom forces" then
 			last_repupdate_position = pos
 		end)
 
+		hook:Add("PreupdateReplication", "BBOT:Aimbot.updateReplication", function(player, controller)
+			controller._receivedPosition = controller.receivedPosition
+			controller._receivedVelocity = controller.receivedVelocity
+			controller._receivedFrameTime = controller.receivedFrameTime
+		end)
+
+		local vec0 = Vector3.new()
 		hook:Add("PostupdateReplication", "BBOT:RageBot.CheckAlive", function(player, controller)
-			controller.__t_received = tick()
+			local t, last_t = tick(), controller.__t_received
+			if controller._receivedPosition and controller._receivedFrameTime and last_t then
+				controller.tickVelocity = (controller.receivedPosition - controller._receivedPosition) * (last_t - t)/2;
+				controller.pingVelocity = (controller.receivedPosition - controller._receivedPosition) * extras:getLatency()/2;
+			end
+			local vel_resolver = aimbot:GetRageConfig("Settings", "Velocity Modifications")
+			if vel_resolver == "Zero" then
+				controller.receivedVelocity = vec0
+			elseif vel_resolver == "Tick" and controller.tickVelocity then
+				controller.receivedVelocity = controller.tickVelocity
+			elseif vel_resolver == "Ping" and controller.pingVelocity then
+				controller.receivedVelocity = controller.pingVelocity
+			end
+			controller.__t_received = t
 		end)
 
 		hook:Add("Postupdatespawn", "BBOT:RageBot.CheckAlive", function(player, controller)
@@ -14372,11 +14568,11 @@ if BBOT.game == "phantom forces" then
 					local original_position = char.rootpart.Position * 1
 					BBOT.misc:MoveTo(target[4], true)
 					self.tp_scanning = true
-					wait(BBOT.extras:getLatency()/4)
+					wait(BBOT.extras:getLatency()/3)
 					BBOT.misc:ForceRepupdate()
 					self:RageStep(gun)
 					BBOT.misc:MoveTo(original_position, true)
-					timer:Simple(0.25,function()
+					timer:Simple(0.5,function()
 						self.tp_scanning = false
 					end)
 					return
@@ -14396,6 +14592,7 @@ if BBOT.game == "phantom forces" then
 
 				if self:GetRageConfig("Aimbot", "Auto Shoot") then
 					aimbot.fire = true
+					network:send("repupdate", char.rootpart.Position, Vector2.new(CFrame.new(char.rootpart.CFrame.p, position-char.rootpart.CFrame.p):ToOrientation()), tick())
 					gun:shoot(true)
 				end
 
