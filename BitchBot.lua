@@ -11587,6 +11587,33 @@ if BBOT.game == "phantom forces" then
 				rawset(aux.network, "receivers", nil)
 			end)
 
+			local function override_Position(controller)
+				if not controller.alive or not controller.receivedPosition then
+					controller.__justspawned = nil
+				elseif controller.__justspawned then
+					controller.receivedPosition = controller.__justspawned
+					controller.__justspawned = nil
+				end
+			end
+
+			local function override_Updater(player, controller)
+				local upd_updateReplication = controller.updateReplication
+				controller._upd_updateReplication = upd_updateReplication
+				function controller.updateReplication(...)
+					hook:CallP("PreupdateReplication", player, controller, ...)
+					return upd_updateReplication(...), override_Position(controller), hook:CallP("PostupdateReplication", player, controller, ...)
+				end
+				local upd_spawn = controller.spawn
+				controller._upd_spawn = upd_spawn
+				function controller.spawn(pos, ...)
+					hook:CallP("Preupdatespawn", player, controller, pos, ...)
+					if typeof(pos) == "Vector3" then
+						controller.__justspawned = pos
+					end
+					return upd_spawn(pos, ...), hook:CallP("Postupdatespawn", player, controller, pos, ...)
+				end
+				hook:CallP("CreateUpdater", player)
+			end
 
 			local updater = aux.replication.getupdater
 			local ups = debug.getupvalues(aux.replication.getupdater)
@@ -11596,38 +11623,14 @@ if BBOT.game == "phantom forces" then
 					for player, v in pairs(v) do
 						if (localplayer ~= player and v.updater) then
 							local controller = v.updater
-							local upd_updateReplication = controller.updateReplication
-							controller._upd_updateReplication = upd_updateReplication
-							function controller.updateReplication(...)
-								hook:CallP("PreupdateReplication", player, controller, ...)
-								return upd_updateReplication(...), hook:CallP("PostupdateReplication", player, controller, ...)
-							end
-							local upd_spawn = controller.spawn
-							controller._upd_spawn = upd_spawn
-							function controller.spawn(...)
-								hook:CallP("Preupdatespawn", player, controller, ...)
-								return upd_spawn(...), hook:CallP("Postupdatespawn", player, controller, ...)
-							end
-							hook:CallP("CreateUpdater", player)
+							override_Updater(player, controller)
 						end
 					end
 				elseif typeof(v) == "function" then
 					local function createupdater(player)
 						local controller = v(player)
 						if (localplayer ~= player) then
-							local upd_updateReplication = controller.updateReplication
-							controller._upd_updateReplication = upd_updateReplication
-							function controller.updateReplication(...)
-								hook:CallP("PreupdateReplication", player, controller, ...)
-								return upd_updateReplication(...), hook:CallP("PostupdateReplication", player, controller, ...)
-							end
-							local upd_spawn = controller.spawn
-							controller._upd_spawn = upd_spawn
-							function controller.spawn(...)
-								hook:CallP("Preupdatespawn", player, controller, ...)
-								return upd_spawn(...), hook:CallP("Postupdatespawn", player, controller, ...)
-							end
-							hook:CallP("CreateUpdater", player)
+							override_Updater(player, controller)
 						end
 						return controller
 					end
@@ -12423,6 +12426,9 @@ if BBOT.game == "phantom forces" then
 		end)
 
 		function votekick:IsCalling()
+			if not config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then return end
+			if not votekick.WasAlive then return end
+			if playerdata.rankcalculator(playerdata:getdata().stats.experience) < 25 then return end
 			if votekick.Called == 3 or votekick.Called == 0 then
 				return votekick.NextCall-tick()
 			end
@@ -13740,6 +13746,7 @@ if BBOT.game == "phantom forces" then
 			l3p.player = nil
 		end)
 
+		local vec0 = Vector3.new()
 		l3p.networking = {
 			["newbullets"] = function(controller)
 				if not char.alive or not controller.alive then return end
@@ -13788,13 +13795,9 @@ if BBOT.game == "phantom forces" then
 				if controller.receivedPosition and controller.receivedFrameTime then
 					delta_position = (pos - controller.receivedPosition) / (timestep - controller.receivedFrameTime);
 				end;
-				controller.receivedFrameTime = timestep;
-				controller.receivedPosition = pos;
-				controller.receivedVelocity = delta_position;
-				controller.receivedDataFlag = true;
-				controller.receivedLookAngles = ang;
 
 				if config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Absolute") then
+					delta_position = vec0
 					local u327 = debug.getupvalue(controller.getpos, 2)
 					u327.t = pos
 					u327.p = pos
@@ -13808,6 +13811,12 @@ if BBOT.game == "phantom forces" then
 					controller.step(3, true)
 				end
 
+				controller.receivedFrameTime = timestep;
+				controller.receivedPosition = pos;
+				controller.receivedVelocity = delta_position;
+				controller.receivedDataFlag = true;
+				controller.receivedLookAngles = ang;
+	
 				if config:GetValue("Main", "Visuals", "Camera Visuals", "First Person Third") then
 					local tick = debug.getupvalue(BBOT.aux.camera.step, 1)
 					BBOT.aux.camera.step(tick)
