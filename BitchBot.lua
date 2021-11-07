@@ -8445,7 +8445,7 @@ do
 										{
 											type = "Toggle",
 											name = "Enabled",
-											value = true,
+											value = false,
 											tooltip = "Enables 2D rendering, disabling this could improve performance. Does not affect Chams."
 										},
 										{
@@ -8531,7 +8531,7 @@ do
 										{
 											type = "Toggle",
 											name = "Chams",
-											value = true,
+											value = false,
 											extra = {
 												{
 													type = "ColorPicker",
@@ -13814,9 +13814,13 @@ if BBOT.game == "phantom forces" then
 				if not char.alive or not controller.alive then return end
 				local blank_vector = Vector3.new()
 				local delta_position = blank_vector
-				if not pos or not ang then
-					pos, ang = controller.receivedPosition, controller.receivedLookAngles
-					if not pos or not ang then return end
+				if not pos then
+					pos = controller.receivedPosition
+					if not pos then return end
+				end
+				if not ang then
+					ang = controller.receivedLookAngles
+					if not ang then return end
 				end
 				if controller.receivedPosition and controller.receivedFrameTime then
 					delta_position = (pos - controller.receivedPosition) / (timestep - controller.receivedFrameTime);
@@ -13854,7 +13858,7 @@ if BBOT.game == "phantom forces" then
 			if not l3p.controller or not l3p.controller.alive then return end
 			if config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Absolute") then
 				local l__angles__1304 = BBOT.aux.camera.angles;
-				l3p.networking["repupdate"](l3p.controller, nil, nil, tick())
+				l3p.networking["repupdate"](l3p.controller, char.rootpart.CFrame.p, nil, tick())
 			end
 			l3p.controller.step(3, true)
 		end)
@@ -14770,7 +14774,7 @@ if BBOT.game == "phantom forces" then
 			function aimbot:GetRageTarget(fov, gun)
 				local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-				local cam_position = char.rootpart.CFrame.p
+				local cam_position = last_repupdate_position or char.rootpart.CFrame.p
 				local team = (localplayer.Team and localplayer.Team.Name or "NA")
 				local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
 				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
