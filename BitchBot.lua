@@ -2311,6 +2311,7 @@ do
 			end
 			local newvalue = config:GetTableValue(newconfig, unpack(natural_path))
 			if newvalue == nil then return end
+			if typeof(newvalue) ~= typeof(config:GetValue(unpack(pathway))) then return end
 			config:SetValue(newvalue, unpack(pathway))
 		end, path) end, debug.traceback, target, path, newconfig)
 	end
@@ -9062,13 +9063,7 @@ do
 											type = "Toggle",
 											name = "Show Keybinds",
 											value = false,
-											extra = {
-												{
-													type = "ColorPicker",
-													name = "Text Color",
-													color = { 127, 72, 163, 255 },
-												},
-											},
+											extra = {},
 										},
 										{
 											type = "Toggle",
@@ -12642,47 +12637,78 @@ if BBOT.game == "phantom forces" then
 		local hook = BBOT.hook
 		local config = BBOT.config
 		local sound = BBOT.aux.sound
+		local cache = {
+			["Headshot Kill"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Headshot Kill") or ""),
+			["Kill"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Kill") or ""),
+			["Headshot"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Headshot") or ""),
+			["Hit"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Hit") or ""),
+			["Fire"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Fire") or ""),
+		}
+
+		hook:Add("OnConfigChanged", "BBOT:Sounds.Cache", function(path, old, new)
+			local final = path[#path]
+			local cacheid = cache[final]
+			if cacheid and config:IsPathwayEqual(path, "Main", "Misc", "Sounds", final) then
+				if isfile(new) then
+					local o = cache[final]
+					cache[final] = getsynasset(new)
+					if not cache[final] then
+						cache[final] = o
+					end
+				else
+					local snd = (new or "")
+					if snd == "" then
+						cache[final] = ""
+					else
+						cache[final] = "rbxassetid://" .. snd
+					end
+				end
+			end
+		end)
 
 		hook:Add("SupressSound", "BBOT:Sounds.Overrides", function(soundname, ...)
 			if soundname == "headshotkill" then
-				local snd = config:GetValue("Main", "Misc", "Sounds", "Headshot Kill")
+				local snd = cache["Headshot Kill"]
 				if snd ~= "" then
-					sound.playid("rbxassetid://" .. snd, config:GetValue("Main", "Misc", "Sounds", "Headshot Kill Volume")/100)
+					sound.playid(snd, config:GetValue("Main", "Misc", "Sounds", "Headshot Kill Volume")/100)
 					return true
 				end
 			end
 			if soundname == "killshot" then
-				local snd = config:GetValue("Main", "Misc", "Sounds", "Kill")
+				local snd = cache["Kill"]
 				if snd ~= "" then
-					sound.playid("rbxassetid://" .. snd, config:GetValue("Main", "Misc", "Sounds", "Kill Volume")/100)
+					sound.playid(snd, config:GetValue("Main", "Misc", "Sounds", "Kill Volume")/100)
 					return true
 				end
 			end
-			if soundname == "hitmarker" and (config:GetValue("Main", "Misc", "Sounds", "Headshot") ~= "" or config:GetValue("Main", "Misc", "Sounds", "Hit") ~= "") then
+			if soundname == "hitmarker" and (cache["Headshot"] ~= "" or cache["Hit"] ~= "") then
 				return true
 			end
 		end)
 
 		hook:Add("WeaponModifyData", "BBOT:Sounds.Override", function(gundata)
-			local snd = config:GetValue("Main", "Misc", "Sounds", "Fire")
+			local snd = cache["Fire"]
 			if snd ~= "" then
-				gundata.firesoundid = "rbxassetid://" .. snd
-				gundata.firevolume = config:GetValue("Main", "Misc", "Sounds", "Fire Volume")/100
+				gundata.firesoundid = snd
 				gundata.firepitch = nil
+			end
+			local vol = config:GetValue("Main", "Misc", "Sounds", "Fire Volume")/100
+			if vol < 1 then
+				gundata.firevolume = vol
 			end
 		end)
 
 		hook:Add("PostNetworkSend", "BBOT:Sounds.Kills", function(netname, Entity, HitPos, Part, bulletID)
 			if netname == "bullethit" then
 				if Part == "Head" then
-					local snd = config:GetValue("Main", "Misc", "Sounds", "Headshot")
+					local snd = cache["Headshot"]
 					if snd ~= "" then
-						sound.playid("rbxassetid://" .. snd, config:GetValue("Main", "Misc", "Sounds", "Headshot Volume")/100)
+						sound.playid(snd, config:GetValue("Main", "Misc", "Sounds", "Headshot Volume")/100)
 					end
 				else
-					local snd = config:GetValue("Main", "Misc", "Sounds", "Hit")
+					local snd = cache["Hit"]
 					if snd ~= "" then
-						sound.playid("rbxassetid://" .. snd, config:GetValue("Main", "Misc", "Sounds", "Hit Volume")/100)
+						sound.playid(snd, config:GetValue("Main", "Misc", "Sounds", "Hit Volume")/100)
 					end
 				end
 			end
@@ -14249,8 +14275,8 @@ if BBOT.game == "phantom forces" then
 				local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
 				
 				local accuracy = math.remap(self:GetLegitConfig("Bullet Redirect", "Accuracy")/100, 0, 1, .3, 0)
-				X += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
-				Y += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))
+				X += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))/100
+				Y += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))/100
 
 				part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
 				self.silent = part
@@ -14744,7 +14770,7 @@ if BBOT.game == "phantom forces" then
 			function aimbot:GetRageTarget(fov, gun)
 				local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-				local cam_position = last_repupdate_position or char.rootpart.CFrame.p
+				local cam_position = char.rootpart.CFrame.p
 				local team = (localplayer.Team and localplayer.Team.Name or "NA")
 				local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
 				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
@@ -15992,11 +16018,15 @@ if BBOT.game == "phantom forces" then
 						if fail then
 							self.healthtext.Visible = false
 						else
-							self.healthtext.Visible = true
-							local offsety = (self.healthbar_enabled and (bounding_box.h * math.remap(math.clamp(health/100, 0, 1),0,1,1,0)) or lefty)
-							self.healthtext.Text = (self.healthbar_enabled and tostring(health) or tostring(health) .. "hp")
-							self.healthtext.Position = Vector2.new(bounding_box.x - self.healthtext.TextBounds.X - (self.healthbar_enabled and 8 or 1), bounding_box.y + offsety - (self.healthbar_enabled and self.healthtext.TextBounds.Y/2 or 0))
-							lefty = lefty + self.healthtext.TextBounds.Y + 2
+							if health >= 100 then
+								self.healthtext.Visible = false
+							else
+								self.healthtext.Visible = true
+								local offsety = (self.healthbar_enabled and (bounding_box.h * math.remap(math.clamp(health/100, 0, 1),0,1,1,0)) or lefty)
+								self.healthtext.Text = (self.healthbar_enabled and tostring(health) or tostring(health) .. "hp")
+								self.healthtext.Position = Vector2.new(bounding_box.x - self.healthtext.TextBounds.X - (self.healthbar_enabled and 8 or 1), bounding_box.y + offsety - (self.healthbar_enabled and self.healthtext.TextBounds.Y/2 or 0))
+								lefty = lefty + self.healthtext.TextBounds.Y + 2
+							end
 						end
 					end
 
@@ -17495,6 +17525,8 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
+			local texture_cache = {}
+
 			function weapons:CreateSkin(skin_databank, config_data, gun_objects, gun_data)
 				skin_databank.objects = gun_objects
 				local textures = {}
@@ -17507,14 +17539,29 @@ if BBOT.game == "phantom forces" then
 						object.UsePartColor = true
 					end
 					local texture = config_data["Texture"]
-					if texture.Enabled.self and object.Transparency < 1 and not object:FindFirstChild("OtherHide") and texture["Asset-Id"] ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
+					if texture.Enabled and object.Transparency < 1 and not object:FindFirstChild("OtherHide") and texture["Asset-Id"] ~= "" and (object:IsA("MeshPart") or object:IsA("UnionOperation")) then
 						for i=0, 5 do
 							local itexture = Instance.new("Texture")
 							itexture.Parent = object
 							itexture.Face = i
 							itexture.Name = "Slot1"
 							itexture.Color3 = color.mul(Color3.fromRGB(unpack(texture["Asset-Id"]["Texture Color"].value)), texture["Color Modulation"])
-							itexture.Texture = "rbxassetid://" .. texture["Asset-Id"].self
+
+							local trueassetid = ""
+							local assetid = texture["Asset-Id"].self
+							if isfile(assetid) then
+								if not texture_cache[assetid] then
+									texture_cache[assetid] = getsynasset(assetid)
+								end
+								trueassetid = texture_cache[assetid]
+								if not trueassetid then
+									trueassetid = ""
+								end
+							else
+								trueassetid = "rbxassetid://" .. assetid
+							end
+
+							itexture.Texture = trueassetid
 							itexture.Transparency = 1-(texture["Asset-Id"]["Texture Color"].value[4]/255)
 							itexture.OffsetStudsU = texture.OffsetStudsU
 							itexture.OffsetStudsV = texture.OffsetStudsV
