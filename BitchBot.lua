@@ -7377,7 +7377,13 @@ do
 		[113491250] = "phantom forces",
 		[1168263273] = "bad business"
 	}
-	BBOT.game = tostring(supported_games[game.GameId] or game.GameId)
+
+	if supported_games[game.GameId] then
+		BBOT.game = tostring(supported_games[game.GameId])
+	else
+		BBOT.universal = true
+		BBOT.game = tostring(game.GameId)
+	end
 
 	local loading
 	function BBOT:SetLoadingText(txt)
@@ -17801,6 +17807,8 @@ if BBOT.game == "phantom forces" then
 			end)
 		end
 	end
+elseif BBOT.universal then
+
 end
 
 -- Init, tell all modules we are ready
