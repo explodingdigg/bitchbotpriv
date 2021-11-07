@@ -2339,11 +2339,11 @@ do
 	function config:SaveBase()
 		local reg = table.deepcopy( self.registry["Main"]["Settings"]["Configs"] )
 		reg = self:ConfigToSaveable(reg)
-		writefile(self.storage_pathway .. "/configs.internal", httpservice:JSONEncode(reg))
+		writefile(self.internal_pathway .. "/configs.json", httpservice:JSONEncode(reg))
 	end
 
 	function config:OpenBase()
-		local path = self.storage_pathway .. "/configs.internal"
+		local path = self.internal_pathway .. "/configs.json"
 		if isfile(path) then
 			local old = table.deepcopy(self.registry["Main"]["Settings"]["Configs"])
 			local newconfig = httpservice:JSONDecode(readfile(path))
@@ -2411,17 +2411,10 @@ do
 
 
 	hook:Add("PreInitialize", "BBOT:config.setup", function()
-		config.storage_pathway = "bitchbot/" .. BBOT.game
+		config.storage_pathway = "bitchbot/" .. BBOT.game .. "/configs"
+		config.internal_pathway = "bitchbot/" .. BBOT.game .. "/data"
 		config.storage_main = "bitchbot"
 		config.storage_extension = ".bb"
-
-		if not isfolder(config.storage_pathway) then
-			makefolder(config.storage_pathway)
-		end
-
-		if not isfolder(config.storage_main) then
-			makefolder(config.storage_main)
-		end
 
 		config:Setup(BBOT.configuration)
 
@@ -7384,6 +7377,24 @@ do
 		BBOT.universal = true
 		BBOT.game = tostring(game.GameId)
 	end
+
+	BBOT.rootpath = "bitchbot"
+
+	-- Folder Generation
+	local function CreateFolder(path)
+		if not isfolder(BBOT.rootpath .. "/" .. BBOT.game .. "/" .. path) then
+			makefolder(BBOT.rootpath .. "/" .. BBOT.game .. "/" .. path)
+		end
+	end
+	if not isfolder(BBOT.rootpath) then
+		makefolder(BBOT.rootpath)
+	end
+	if not isfolder(BBOT.rootpath .. "/" .. BBOT.game) then
+		makefolder(BBOT.rootpath .. "/" .. BBOT.game)
+	end
+	CreateFolder("configs")
+	CreateFolder("data")
+	CreateFolder("scripts")
 
 	local loading
 	function BBOT:SetLoadingText(txt)
@@ -12479,7 +12490,7 @@ if BBOT.game == "phantom forces" then
 		local serverhopper = {}
 		BBOT.serverhopper = serverhopper
 
-		serverhopper.file = "bitchbot/" .. BBOT.game .. "/server-blacklist.json"
+		serverhopper.file = "bitchbot/" .. BBOT.game .. "/data/server-blacklist.json"
 		serverhopper.blacklist = {}
 		serverhopper.UserId = tostring(localplayer.UserId)
 
