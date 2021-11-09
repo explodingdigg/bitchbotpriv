@@ -5151,6 +5151,7 @@ do
 
 	do
 		local GUI = {}
+		local keybind_registry = {}
 
 		function GUI:Init()
 			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
@@ -5167,6 +5168,19 @@ do
 			self.value = false
 			self.toggletype = 1
 			self.config = {}
+
+			keybind_registry[#keybind_registry+1] = self
+		end
+
+		function GUI:PostRemove()
+			local c = 0
+			for i=1, #keybind_registry do
+				local v = keybind_registry[i-c]
+				if v == self then
+					table.remove(keybind_registry, i-c)
+					c=c+1
+				end
+			end
 		end
 
 		function GUI:GetRelatedConfig()
@@ -5216,21 +5230,18 @@ do
 		function GUI:OnValueChanged() end
 
 		hook:Add("OnConfigChanged", "BBOT:Menu.KeyBinds", function(steps)
-			local guis = gui.registry
-			for i=1, #guis do
-				local v = guis[i]
-				if v.class == "KeyBind" and gui:IsValid(v) then
-					local cfg = table.deepcopy(v.config)
-					cfg[#cfg] = nil
-					local parentoption = config:GetRaw(unpack(cfg))
-					if (typeof(parentoption) == "boolean" and not parentoption) or not v.key then
-                        menu:UpdateStatus(cfg[#cfg], nil, false, v.text:GetText())
-					elseif v.toggletype == 4 then
-                        menu:UpdateStatus(cfg[#cfg], nil, true, v.text:GetText())
-					else
-                        local state = menu:GetStatus(cfg[#cfg])
-                        menu:UpdateStatus(cfg[#cfg], (state and state[2] or "Disabled"), true, v.text:GetText())
-                    end
+			for i=1, #keybind_registry do
+				local v = keybind_registry[i]
+				local cfg = table.deepcopy(v.config)
+				cfg[#cfg] = nil
+				local parentoption = config:GetRaw(unpack(cfg))
+				if (typeof(parentoption) == "boolean" and not parentoption) or not v.key then
+					menu:UpdateStatus(cfg[#cfg], nil, false, v.text:GetText())
+				elseif v.toggletype == 4 then
+					menu:UpdateStatus(cfg[#cfg], nil, true, v.text:GetText())
+				else
+					local state = menu:GetStatus(cfg[#cfg])
+					menu:UpdateStatus(cfg[#cfg], (state and state[2] or "Disabled"), true, v.text:GetText())
 				end
 			end
 		end)
@@ -5240,10 +5251,9 @@ do
 			if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetAbsoluteEnabled() then
 				return
 			end
-			local guis = gui.registry
-			for i=1, #guis do
-				local v = guis[i]
-				if gui:IsValid(v) and v.class == "KeyBind" and input and input.KeyCode == v.key then
+			for i=1, #keybind_registry do
+				local v = keybind_registry[i]
+				if input and input.KeyCode == v.key then
 					local last = v.value
 					if input and input.KeyCode == v.key then
 						if v.toggletype == 2 then
@@ -5280,10 +5290,9 @@ do
 			if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetAbsoluteEnabled() then
 				return
 			end
-			local guis = gui.registry
-			for i=1, #guis do
-				local v = guis[i]
-				if gui:IsValid(v) and v.class == "KeyBind" and input and input.KeyCode == v.key then
+			for i=1, #keybind_registry do
+				local v = keybind_registry[i]
+				if input and input.KeyCode == v.key then
 					local last = v.value
 					if input.KeyCode == v.key then
 						if v.toggletype == 1 then
@@ -6159,26 +6168,38 @@ do
 			for i=1, #children do
 				local v = children[i]
 				if not gui:IsValid(v) then c=c+1 continue end
+				local enabled = v:GetEnabled()
 				if not v:GetVisible() then
 					c=c+1
-					v:SetEnabled(false)
+					if enabled then
+						v:SetEnabled(false)
+					end
 					continue
 				end
 				i=i-c
 				local sizeY = v.absolutesize.Y
-				v:SetSize(1, -4-self.Padding*2, 0, sizeY)
 
 				if i <= self.Y_scroll then
-					v:SetPos(0, self.Padding+2, 0, -sizeY-4)
-					v:SetEnabled(false)
+					if enabled then
+						v:SetPos(0, self.Padding+2, 0, -sizeY-4)
+						v:SetEnabled(false)
+					end
 				else
 					if y_axis + sizeY + self.Spacing > max_h then
-						v:SetEnabled(false)
+						if enabled then
+							v:SetEnabled(false)
+						end
 					else
-						v:SetEnabled(true)
+						if not enabled then
+							v:SetEnabled(true)
+						end
 						v:SetPos(0, self.Padding+2, 0, y_axis + self.Spacing)
 					end
 					y_axis = y_axis + sizeY + self.Spacing
+				end
+
+				if enabled then
+					v:SetSize(1, -4-self.Padding*2, 0, sizeY)
 				end
 			end
 
@@ -8409,6 +8430,16 @@ do
 										max = 300,
 										custom = {[0] = "What even is the point?"},
 										suffix = "hp",
+									},
+									{
+										type = "Slider",
+										name = "Max Points",
+										value = 30,
+										min = 1,
+										max = 100,
+										decimal = 0,
+										custom = {[100] = "Are you good?"},
+										suffix = " point(s)",
 									},
 									{
 										type = "Toggle",
@@ -11596,28 +11627,19 @@ if BBOT.game == "phantom forces" then
 				rawset(aux.network, "receivers", nil)
 			end)
 
-			local function override_Position(controller)
-				if not controller.alive or not controller.receivedPosition then
-					controller.__justspawned = nil
-				elseif controller.__justspawned then
-					controller.receivedPosition = controller.__justspawned
-					controller.__justspawned = nil
-				end
-			end
-
 			local function override_Updater(player, controller)
 				local upd_updateReplication = controller.updateReplication
 				controller._upd_updateReplication = upd_updateReplication
 				function controller.updateReplication(...)
 					hook:CallP("PreupdateReplication", player, controller, ...)
-					return upd_updateReplication(...), override_Position(controller), hook:CallP("PostupdateReplication", player, controller, ...)
+					return upd_updateReplication(...), hook:CallP("PostupdateReplication", player, controller, ...)
 				end
 				local upd_spawn = controller.spawn
 				controller._upd_spawn = upd_spawn
 				function controller.spawn(pos, ...)
 					hook:CallP("Preupdatespawn", player, controller, pos, ...)
 					if typeof(pos) == "Vector3" then
-						controller.__justspawned = pos
+						controller.__spawn_position = pos
 					end
 					return upd_spawn(pos, ...), hook:CallP("Postupdatespawn", player, controller, pos, ...)
 				end
@@ -14649,10 +14671,12 @@ if BBOT.game == "phantom forces" then
 				controller.receivedVelocity = controller.pingVelocity
 			end
 			controller.__t_received = t
+			controller._just_spawned = false
 		end)
 
 		hook:Add("Postupdatespawn", "BBOT:RageBot.CheckAlive", function(player, controller)
 			controller.__t_received = tick()
+			controller._just_spawned = true
 		end)
 
 		hook:Add("OnAliveChanged", "BBOT:RageBot.LastPosition", function()
@@ -14667,7 +14691,7 @@ if BBOT.game == "phantom forces" then
 			local hitbox_shift = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
 			local hitbox_shift_points = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
 			local hitbox_shift_distance = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
-			local max_points = 1
+			local max_points = aimbot:GetRageConfig("Settings", "Max Points")
 			local relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Relative Points Only")
 			local cross_relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Cross Relative Points Only")
 			
@@ -14726,7 +14750,7 @@ if BBOT.game == "phantom forces" then
 				hitbox_shift = self:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
 				hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
 				hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
-				max_points = 1
+				max_points = self:GetRageConfig("Settings", "Max Points")
 				relative_only = self:GetRageConfig("Hack vs. Hack", "Relative Points Only")
 				cross_relative_only = self:GetRageConfig("Hack vs. Hack", "Cross Relative Points Only")
 				
@@ -14828,9 +14852,9 @@ if BBOT.game == "phantom forces" then
 					end
 
 					local updater = replication.getupdater(v)
-					--[[if updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick() then
+					if updater._just_spawned or (updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick()) then
 						continue
-					end]]
+					end
 
 					local prioritize
 					if hitscan_priority == "Head" then
@@ -14849,7 +14873,7 @@ if BBOT.game == "phantom forces" then
 						local point, onscreen = camera:WorldToViewportPoint(pos)
 						if onscreen or aimbot_fov >= 180 then
 							--local object_fov = self:GetFOV(part, scan_part)
-							if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
+							if (aimbot_fov >= 180 or not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
 								if wall_scale > 120 then
 									table.insert(organizedPlayers, {v, part, pos, prioritize})
 									inserted_priority = true
@@ -15895,6 +15919,15 @@ if BBOT.game == "phantom forces" then
 					return draw
 				end
 
+				local whitelisted_parts = {
+					["head"] = true,
+					["torso"] = false,
+					["larm"] = false,
+					["rarm"] = false,
+					["lleg"] = true,
+					["rleg"] = true,
+				}
+
 				function player_meta:Render(points)
 					if not self:GetConfig("Enabled") then return end
 					if not self.parts and not points then return end
@@ -15908,7 +15941,7 @@ if BBOT.game == "phantom forces" then
 							offset, absolute = BBOT.aimbot:GetResolvedPosition(self.player)
 						end
 						for k, v in pairs(self.parts) do
-							if k ~= "rootpart" then
+							if whitelisted_parts[k] then
 								local object_bounds_cframe = (CFrame.new(v.Size):ToWorldSpace(CFrame.Angles(v.CFrame:ToOrientation()))).Position
 								local min, max = v.Position - object_bounds_cframe + offset, v.Position + object_bounds_cframe + offset
 								if absolute then
