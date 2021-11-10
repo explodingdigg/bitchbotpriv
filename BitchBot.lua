@@ -5012,6 +5012,7 @@ do
 			self.text:SetTextAlignmentX(Enum.TextXAlignment.Center)
 			self.text:SetTextAlignmentY(Enum.TextYAlignment.Center)
 			self.text:SetPos(.5, 0, .5, -1)
+			self.defaultcolor = Color3.new(1,1,1)
 
 			self.confirmation = false
 			self.confirmcolor = gui:GetColor("Accent")
@@ -5031,6 +5032,11 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
+		end
+
+		function GUI:SetColor(color)
+			self.defaultcolor = color
+			self.text:SetColor(color)
 		end
 
 		function GUI:SetText(txt)
@@ -5053,7 +5059,7 @@ do
 					timer:Simple(1, function()
 						if not gui:IsValid(self) then return end
 						self.text:SetText(self.content)
-						self.text:SetColor(Color3.new(1,1,1))
+						self.text:SetColor(self.defaultcolor)
 						self.confirm = nil
 					end)
 				elseif (not self.confirmation or (self.confirmation and self.confirm)) then
@@ -6643,7 +6649,15 @@ do
 			button:SetSize(1, -X, 0, 16)
 			button:SetText(name)
 			button:SetConfirmation(config.confirm)
-			button.OnClick = config.callback
+			if config.unsafe then
+				button:SetColor(unsafe_color)
+			end
+			button.OnClick = function()
+				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Cheat Settings", "Allow Unsafe Features") then
+					return
+				end
+				config.callback()
+			end
 			button.tooltip = config.tooltip
 			return 16+7
 		end
@@ -9823,6 +9837,15 @@ do
 											}
 										}
 									},
+									{
+										type = "Button",
+										name = "Banlands",
+										confirm = "Are you 100% sure?",
+										unsafe = true,
+										callback = function()
+											BBOT.aux.network:send("logmessage", "Fuck this shit I'm out")
+										end
+									}
 								}},
 								{content = {
 									{
@@ -15707,15 +15730,11 @@ if BBOT.game == "phantom forces" then
 
 					for i=1, #bullettable.bullets do
 						local bullet = bullettable.bullets[i]
+						if not hud:isplayeralive(target[1]) then continue end
 						timer:Simple(1.5, function()
 							enque[bullet[2]] = nil
 						end)
-						timer:Async(function()
-							if not hud:isplayeralive(target[1]) then return end
-							enque[bullet[2]] = nil
-							network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
-							enque[bullet[2]] = target[1]
-						end)
+						network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
 						enque[bullet[2]] = target[1]
 					end
 					return true
