@@ -29,7 +29,7 @@ end
 	digit 3. Major Patch
 	letter 4. Minor Patch
 ]]
-local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.8.7c", __init = true } -- I... um... fuck off ok?
+local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.0.0 [BETA]", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
 while true do
@@ -2339,11 +2339,11 @@ do
 	function config:SaveBase()
 		local reg = table.deepcopy( self.registry["Main"]["Settings"]["Configs"] )
 		reg = self:ConfigToSaveable(reg)
-		writefile(self.storage_pathway .. "/configs.internal", httpservice:JSONEncode(reg))
+		writefile(self.internal_pathway .. "/configs.json", httpservice:JSONEncode(reg))
 	end
 
 	function config:OpenBase()
-		local path = self.storage_pathway .. "/configs.internal"
+		local path = self.internal_pathway .. "/configs.json"
 		if isfile(path) then
 			local old = table.deepcopy(self.registry["Main"]["Settings"]["Configs"])
 			local newconfig = httpservice:JSONDecode(readfile(path))
@@ -2411,17 +2411,10 @@ do
 
 
 	hook:Add("PreInitialize", "BBOT:config.setup", function()
-		config.storage_pathway = "bitchbot/" .. BBOT.game
+		config.storage_pathway = "bitchbot/" .. BBOT.game .. "/configs"
+		config.internal_pathway = "bitchbot/" .. BBOT.game .. "/data"
 		config.storage_main = "bitchbot"
 		config.storage_extension = ".bb"
-
-		if not isfolder(config.storage_pathway) then
-			makefolder(config.storage_pathway)
-		end
-
-		if not isfolder(config.storage_main) then
-			makefolder(config.storage_main)
-		end
 
 		config:Setup(BBOT.configuration)
 
@@ -5158,6 +5151,7 @@ do
 
 	do
 		local GUI = {}
+		local keybind_registry = {}
 
 		function GUI:Init()
 			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
@@ -5174,6 +5168,32 @@ do
 			self.value = false
 			self.toggletype = 1
 			self.config = {}
+			self.name = "KeyBind"
+
+			keybind_registry[#keybind_registry+1] = self
+		end
+
+		function GUI:SetToggleType(type)
+			self.toggletype = type
+		end
+
+		function GUI:SetConfigurationPath(path)
+			self.config = path
+		end
+
+		function GUI:SetAlias(alias)
+			self.name = alias
+		end
+
+		function GUI:PostRemove()
+			local c = 0
+			for i=1, #keybind_registry do
+				local v = keybind_registry[i-c]
+				if v == self then
+					table.remove(keybind_registry, i-c)
+					c=c+1
+				end
+			end
 		end
 
 		function GUI:GetRelatedConfig()
@@ -5223,21 +5243,24 @@ do
 		function GUI:OnValueChanged() end
 
 		hook:Add("OnConfigChanged", "BBOT:Menu.KeyBinds", function(steps)
-			local guis = gui.registry
-			for i=1, #guis do
-				local v = guis[i]
-				if v.class == "KeyBind" and gui:IsValid(v) then
+			for i=1, #keybind_registry do
+				local v = keybind_registry[i]
+				local cfg = table.deepcopy(v.config)
+				cfg[#cfg] = nil
+				local parentoption = config:GetRaw(unpack(cfg))
+				local nick = (v.name ~= "KeyBind" and v.name or nil)
+				if not nick then
 					local cfg = table.deepcopy(v.config)
 					cfg[#cfg] = nil
-					local parentoption = config:GetRaw(unpack(cfg))
-					if (typeof(parentoption) == "boolean" and not parentoption) or not v.key then
-                        menu:UpdateStatus(cfg[#cfg], nil, false, v.text:GetText())
-					elseif v.toggletype == 4 then
-                        menu:UpdateStatus(cfg[#cfg], nil, true, v.text:GetText())
-					else
-                        local state = menu:GetStatus(cfg[#cfg])
-                        menu:UpdateStatus(cfg[#cfg], (state and state[2] or "Disabled"), true, v.text:GetText())
-                    end
+					nick = cfg[#cfg]
+				end
+				if (typeof(parentoption) == "boolean" and not parentoption) or not v.key then
+					menu:UpdateStatus(nick, nil, false, v.text:GetText())
+				elseif v.toggletype == 4 then
+					menu:UpdateStatus(nick, nil, true, v.text:GetText())
+				else
+					local state = menu:GetStatus(cfg[#cfg])
+					menu:UpdateStatus(nick, (state and state[2] or "Disabled"), true, v.text:GetText())
 				end
 			end
 		end)
@@ -5247,10 +5270,9 @@ do
 			if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetAbsoluteEnabled() then
 				return
 			end
-			local guis = gui.registry
-			for i=1, #guis do
-				local v = guis[i]
-				if gui:IsValid(v) and v.class == "KeyBind" and input and input.KeyCode == v.key then
+			for i=1, #keybind_registry do
+				local v = keybind_registry[i]
+				if input and input.KeyCode == v.key then
 					local last = v.value
 					if input and input.KeyCode == v.key then
 						if v.toggletype == 2 then
@@ -5264,12 +5286,16 @@ do
 						v.value = true
 					end
 					if last ~= v.value or v.toggletype == 4 then
-						local cfg = table.deepcopy(v.config)
-                        cfg[#cfg] = nil
+						local nick = (v.name ~= "KeyBind" and v.name or nil)
+						if not nick then
+							local cfg = table.deepcopy(v.config)
+							cfg[#cfg] = nil
+							nick = cfg[#cfg]
+						end
 						if v.toggletype == 4 then
-                        	menu:UpdateStatus(cfg[#cfg], nil, true)
+                        	menu:UpdateStatus(nick, nil, true)
 						else
-                        	menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
+                        	menu:UpdateStatus(nick, (v.value and "Enabled" or "Disabled"), true)
 						end
                         config:GetRaw(unpack(v.config)).toggle = v.value
                         hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
@@ -5287,10 +5313,9 @@ do
 			if not menu.main or userinputservice:GetFocusedTextBox() or menu.main:GetAbsoluteEnabled() then
 				return
 			end
-			local guis = gui.registry
-			for i=1, #guis do
-				local v = guis[i]
-				if gui:IsValid(v) and v.class == "KeyBind" and input and input.KeyCode == v.key then
+			for i=1, #keybind_registry do
+				local v = keybind_registry[i]
+				if input and input.KeyCode == v.key then
 					local last = v.value
 					if input.KeyCode == v.key then
 						if v.toggletype == 1 then
@@ -5300,9 +5325,13 @@ do
 						end
 					end
 					if last ~= v.value then
-						local cfg = table.deepcopy(v.config)
-						cfg[#cfg] = nil
-						menu:UpdateStatus(cfg[#cfg], (v.value and "Enabled" or "Disabled"), true)
+						local nick = (v.name ~= "KeyBind" and v.name or nil)
+						if not nick then
+							local cfg = table.deepcopy(v.config)
+							cfg[#cfg] = nil
+							nick = cfg[#cfg]
+						end
+						menu:UpdateStatus(nick, (v.value and "Enabled" or "Disabled"), true)
 						config:GetRaw(unpack(v.config)).toggle = v.value
 						hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
 					end
@@ -6166,26 +6195,38 @@ do
 			for i=1, #children do
 				local v = children[i]
 				if not gui:IsValid(v) then c=c+1 continue end
+				local enabled = v:GetEnabled()
 				if not v:GetVisible() then
 					c=c+1
-					v:SetEnabled(false)
+					if enabled then
+						v:SetEnabled(false)
+					end
 					continue
 				end
 				i=i-c
 				local sizeY = v.absolutesize.Y
-				v:SetSize(1, -4-self.Padding*2, 0, sizeY)
 
 				if i <= self.Y_scroll then
-					v:SetPos(0, self.Padding+2, 0, -sizeY-4)
-					v:SetEnabled(false)
+					if enabled then
+						v:SetPos(0, self.Padding+2, 0, -sizeY-4)
+						v:SetEnabled(false)
+					end
 				else
 					if y_axis + sizeY + self.Spacing > max_h then
-						v:SetEnabled(false)
+						if enabled then
+							v:SetEnabled(false)
+						end
 					else
-						v:SetEnabled(true)
+						if not enabled then
+							v:SetEnabled(true)
+						end
 						v:SetPos(0, self.Padding+2, 0, y_axis + self.Spacing)
 					end
 					y_axis = y_axis + sizeY + self.Spacing
+				end
+
+				if enabled then
+					v:SetSize(1, -4-self.Padding*2, 0, sizeY)
 				end
 			end
 
@@ -6435,9 +6476,10 @@ do
 			keybind:SetPos(1, X-34, 0, Y)
 			keybind:SetSize(0, 34, 0, 10)
 			keybind.value = false
-			keybind.toggletype = config.toggletype
-			keybind.config = path
 			keybind.tooltip = config.tooltip
+			keybind:SetToggleType(config.toggletype)
+			keybind:SetConfigurationPath(path)
+			keybind:SetAlias(name)
 			keybind:SetValue(_config_module:GetRaw(unpack(path)).value)
 			function keybind:OnValueChanged(new)
 				menu:ConfigSetValue(new, path)
@@ -7377,7 +7419,31 @@ do
 		[113491250] = "phantom forces",
 		[1168263273] = "bad business"
 	}
-	BBOT.game = tostring(supported_games[game.GameId] or game.GameId)
+
+	if supported_games[game.GameId] then
+		BBOT.game = tostring(supported_games[game.GameId])
+	else
+		BBOT.universal = true
+		BBOT.game = tostring(game.GameId)
+	end
+
+	BBOT.rootpath = "bitchbot"
+
+	-- Folder Generation
+	local function CreateFolder(path)
+		if not isfolder(BBOT.rootpath .. "/" .. BBOT.game .. "/" .. path) then
+			makefolder(BBOT.rootpath .. "/" .. BBOT.game .. "/" .. path)
+		end
+	end
+	if not isfolder(BBOT.rootpath) then
+		makefolder(BBOT.rootpath)
+	end
+	if not isfolder(BBOT.rootpath .. "/" .. BBOT.game) then
+		makefolder(BBOT.rootpath .. "/" .. BBOT.game)
+	end
+	CreateFolder("configs")
+	CreateFolder("data")
+	CreateFolder("scripts")
 
 	local loading
 	function BBOT:SetLoadingText(txt)
@@ -8313,6 +8379,14 @@ do
 										unsafe = true,
 										tooltip = "Puts you into the floor kinda..."
 									},
+									{
+										type = "DropBox",
+										name = "Fake Stance",
+										value = 1,
+										unsafe = true,
+										values = {"Off", "Stand", "Crouch", "Prone"},
+										tooltip = "Changes your stance server-side for others."
+									},
 								}},
 								{content = {}},
 							},
@@ -8392,6 +8466,16 @@ do
 										max = 300,
 										custom = {[0] = "What even is the point?"},
 										suffix = "hp",
+									},
+									{
+										type = "Slider",
+										name = "Max Points",
+										value = 30,
+										min = 1,
+										max = 100,
+										decimal = 0,
+										custom = {[100] = "Are you good?"},
+										suffix = " point(s)",
 									},
 									{
 										type = "Toggle",
@@ -9623,9 +9707,17 @@ do
 								{content = {
 									{
 										type = "Toggle",
-										name = "Enabled",
+										name = "Hop On Kick",
 										value = false,
-										tooltip = "This will auto-hop you to your desired servers when kicked."
+										tooltip = "This will auto-hop you to your desired servers when kicked.",
+										extra = {
+											{
+												type = "KeyBind",
+												name = "Force Server Hop",
+												toggletype = 4,
+												tooltip = "This will hop you when you press this."
+											}
+										}
 									},
 									{
 										type = "Slider",
@@ -11581,10 +11673,18 @@ if BBOT.game == "phantom forces" then
 
 			local function override_Position(controller)
 				if not controller.alive or not controller.receivedPosition then
-					controller.__justspawned = nil
-				elseif controller.__justspawned then
-					controller.receivedPosition = controller.__justspawned
-					controller.__justspawned = nil
+					controller.__spawn_position = nil
+				elseif controller.__spawn_position then
+					controller.receivedPosition = controller.__spawn_absolute
+					controller.__spawn_position = nil
+				end
+			end
+
+			local function override_spawn(controller, pos)
+				if typeof(pos) == "Vector3" then
+					controller.__spawn_position = pos
+					controller.__spawn_absolute = controller.getpos()
+					controller.receivedPosition = controller.__spawn_absolute
 				end
 			end
 
@@ -11593,16 +11693,13 @@ if BBOT.game == "phantom forces" then
 				controller._upd_updateReplication = upd_updateReplication
 				function controller.updateReplication(...)
 					hook:CallP("PreupdateReplication", player, controller, ...)
-					return upd_updateReplication(...), override_Position(controller), hook:CallP("PostupdateReplication", player, controller, ...)
+					return upd_updateReplication(...), hook:CallP("PostupdateReplication", player, controller, ...)
 				end
 				local upd_spawn = controller.spawn
 				controller._upd_spawn = upd_spawn
 				function controller.spawn(pos, ...)
 					hook:CallP("Preupdatespawn", player, controller, pos, ...)
-					if typeof(pos) == "Vector3" then
-						controller.__justspawned = pos
-					end
-					return upd_spawn(pos, ...), hook:CallP("Postupdatespawn", player, controller, pos, ...)
+					return upd_spawn(pos, ...), override_spawn(controller, pos), hook:CallP("Postupdatespawn", player, controller, pos, ...)
 				end
 				hook:CallP("CreateUpdater", player)
 			end
@@ -12473,7 +12570,7 @@ if BBOT.game == "phantom forces" then
 		local serverhopper = {}
 		BBOT.serverhopper = serverhopper
 
-		serverhopper.file = "bitchbot/" .. BBOT.game .. "/server-blacklist.json"
+		serverhopper.file = "bitchbot/" .. BBOT.game .. "/data/server-blacklist.json"
 		serverhopper.blacklist = {}
 		serverhopper.UserId = tostring(localplayer.UserId)
 
@@ -12584,8 +12681,14 @@ if BBOT.game == "phantom forces" then
 			if not serverhopper:IsBlacklisted(game.JobId) then
 				serverhopper:AddToBlacklist(game.JobId, 86400)
 			end
-			if not config:GetValue("Main", "Misc", "Server Hopper", "Enabled") then return end
+			if not config:GetValue("Main", "Misc", "Server Hopper", "Hop On Kick") then return end
 			serverhopper:RandomHop()
+		end)
+
+		hook:Add("OnKeyBindChanged", "BBOT:ServerHopper.Hop", function(steps)
+			if config:IsPathwayEqual(steps, "Main", "Misc", "Server Hopper", "Hop On Kick", "Force Server Hop") and config:GetValue("Main", "Misc", "Server Hopper", "Hop On Kick") then
+				serverhopper:RandomHop()
+			end
 		end)
 	end
 
@@ -13288,6 +13391,7 @@ if BBOT.game == "phantom forces" then
 
 		function misc:AutoGrenadeFrozen()
 			if not char.alive then return end
+			if gamelogic.gammo < 1 then return end
 			if not config:GetValue("Main", "Misc", "Exploits", "Auto Grenade Frozen") then return end
 			local t = config:GetValue("Main", "Misc", "Exploits", "Auto Grenade Wait")
 			for player, v in pairs(replication.player_registry) do
@@ -13539,9 +13643,9 @@ if BBOT.game == "phantom forces" then
 			return tick()
 		end
 
-		function misc:ForceRepupdate()
+		function misc:ForceRepupdate(pos, ang)
             local l__angles__1304 = BBOT.aux.camera.angles;
-		    network:send("repupdate", char.rootpart.Position, Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
+		    network:send("repupdate", pos or char.rootpart.Position, ang or Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
 		end
 
         local sending = false
@@ -13606,6 +13710,39 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 		end)
+
+		do
+			local fake_stance = false
+			hook:Add("SuppressNetworkSend", "BBOT:Misc.Stance", function(netname, mode)
+				if netname == "stance" and config:GetValue("Main", "Rage", "Anti Aim", "Fake Stance") ~= "Off" and not fake_stance then
+					return true
+				end
+			end)
+		
+			hook:Add("OnConfigChanged", "BBOT:Misc.Stance", function(steps, old, new)
+				if not char.alive then return end
+				if not config:IsPathwayEqual(steps, "Main", "Rage", "Anti Aim", "Fake Stance") then return end
+				if new ~= "Off" then
+					if char.movementmode ~= "prone" then
+						fake_stance = true
+						network:send("stance", string.lower(new));
+						fake_stance = false
+					end
+				elseif char.movementmode ~= string.lower(new) then
+					network:send("stance", char.movementmode);
+				end
+			end)
+
+			hook:Add("OnAliveChanged", "BBOT:Misc.Stance", function(alive)
+				if not alive then return end
+				local stance = config:GetValue("Main", "Rage", "Anti Aim", "Fake Stance")
+				if stance ~= "Off" then
+					fake_stance = true
+					network:send("stance", string.lower(stance))
+					fake_stance = false
+				end
+			end)
+		end
 
 		local workspace = BBOT.service:GetService("Workspace")
 		local stutterFrames = 0
@@ -13681,7 +13818,7 @@ if BBOT.game == "phantom forces" then
 					end
 
 					if config:GetValue("Main", "Rage", "Anti Aim", "In Floor") then
-						pos = pos + Vector3.new(0,-2,0)
+						pos = pos + Vector3.new(0,-2.25,0)
 					end
 
 					new_angles = new_angles or Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
@@ -14650,7 +14787,7 @@ if BBOT.game == "phantom forces" then
 			local hitbox_shift = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
 			local hitbox_shift_points = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
 			local hitbox_shift_distance = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
-			local max_points = 1
+			local max_points = aimbot:GetRageConfig("Settings", "Max Points")
 			local relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Relative Points Only")
 			local cross_relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Cross Relative Points Only")
 			
@@ -14709,7 +14846,7 @@ if BBOT.game == "phantom forces" then
 				hitbox_shift = self:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
 				hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
 				hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
-				max_points = 1
+				max_points = self:GetRageConfig("Settings", "Max Points")
 				relative_only = self:GetRageConfig("Hack vs. Hack", "Relative Points Only")
 				cross_relative_only = self:GetRageConfig("Hack vs. Hack", "Cross Relative Points Only")
 				
@@ -14771,7 +14908,17 @@ if BBOT.game == "phantom forces" then
 			function aimbot:GetRageTarget(fov, gun)
 				local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
-				local cam_position = last_repupdate_position or char.rootpart.CFrame.p
+				local cam_position
+				do
+					--[[local future = char.rootpart.Position
+					local current = last_repupdate_position
+					if current then
+						cam_position = current
+					else
+						cam_position = future
+					end]]
+					cam_position = char.rootpart.Position
+				end
 				local team = (localplayer.Team and localplayer.Team.Name or "NA")
 				local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
 				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
@@ -14811,9 +14958,9 @@ if BBOT.game == "phantom forces" then
 					end
 
 					local updater = replication.getupdater(v)
-					--[[if updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick() then
+					if (updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick()) then
 						continue
-					end]]
+					end
 
 					local prioritize
 					if hitscan_priority == "Head" then
@@ -14832,7 +14979,7 @@ if BBOT.game == "phantom forces" then
 						local point, onscreen = camera:WorldToViewportPoint(pos)
 						if onscreen or aimbot_fov >= 180 then
 							--local object_fov = self:GetFOV(part, scan_part)
-							if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
+							if (aimbot_fov >= 180 or not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
 								if wall_scale > 120 then
 									table.insert(organizedPlayers, {v, part, pos, prioritize})
 									inserted_priority = true
@@ -14869,7 +15016,7 @@ if BBOT.game == "phantom forces" then
 													local newcf = targetcframe * lookatme * point
 													local pos = newcf.p
 													local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-													if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+													if not raydata or raydata.Instance:IsDescendantOf(main_part) or raydata.Position == pos then
 														table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
 														inserted_priority = true
 														scan_count = scan_count + 1
@@ -14877,7 +15024,7 @@ if BBOT.game == "phantom forces" then
 												end
 											else
 												local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-												if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+												if not raydata or raydata.Instance:IsDescendantOf(main_part) or raydata.Position == pos then
 													table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
 													inserted_priority = true
 													scan_count = scan_count + 1
@@ -14886,7 +15033,7 @@ if BBOT.game == "phantom forces" then
 										end
 									else
 										local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-										if not ((not raydata or not raydata.Instance:IsDescendantOf(main_part)) and (raydata and raydata.Position ~= pos)) then
+										if not raydata or raydata.Instance:IsDescendantOf(main_part) or raydata.Position == pos then
 											table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, false, traceamount})
 											inserted_priority = true
 											scan_count = scan_count + 1
@@ -14912,7 +15059,6 @@ if BBOT.game == "phantom forces" then
 				for i=1, #organizedPlayers do
 					local v = organizedPlayers[i]
 					if v[1] ~= target[1] then continue end
-					if v[6] and (self.tp_scanning or not BBOT.misc:CanMoveTo(v[4])) then continue end
 					minimum_pen[#minimum_pen+1] = v
 				end
 				
@@ -14956,7 +15102,6 @@ if BBOT.game == "phantom forces" then
 					BBOT.misc:MoveTo(target[4], true)
 					self.tp_scanning = true
 					wait(BBOT.extras:getLatency()/3)
-					BBOT.misc:ForceRepupdate()
 					self:RageStep(gun)
 					BBOT.misc:MoveTo(original_position, true)
 					timer:Simple(0.5,function()
@@ -14980,6 +15125,7 @@ if BBOT.game == "phantom forces" then
 				if self:GetRageConfig("Aimbot", "Auto Shoot") then
 					aimbot.fire = true
 					gun:shoot(true)
+					BBOT.misc:ForceRepupdate((char.rootpart.Position)*1, Vector2.new(X, Y))
 				end
 
 				self.silent = part
@@ -15564,8 +15710,12 @@ if BBOT.game == "phantom forces" then
 						timer:Simple(1.5, function()
 							enque[bullet[2]] = nil
 						end)
-						if not hud:isplayeralive(target[1]) then continue end
-						network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
+						timer:Async(function()
+							if not hud:isplayeralive(target[1]) then return end
+							enque[bullet[2]] = nil
+							network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
+							enque[bullet[2]] = target[1]
+						end)
 						enque[bullet[2]] = target[1]
 					end
 					return true
@@ -15878,6 +16028,15 @@ if BBOT.game == "phantom forces" then
 					return draw
 				end
 
+				local whitelisted_parts = {
+					["head"] = true,
+					["torso"] = false,
+					["larm"] = false,
+					["rarm"] = false,
+					["lleg"] = true,
+					["rleg"] = true,
+				}
+
 				function player_meta:Render(points)
 					if not self:GetConfig("Enabled") then return end
 					if not self.parts and not points then return end
@@ -15891,7 +16050,7 @@ if BBOT.game == "phantom forces" then
 							offset, absolute = BBOT.aimbot:GetResolvedPosition(self.player)
 						end
 						for k, v in pairs(self.parts) do
-							if k ~= "rootpart" then
+							if whitelisted_parts[k] then
 								local object_bounds_cframe = (CFrame.new(v.Size):ToWorldSpace(CFrame.Angles(v.CFrame:ToOrientation()))).Position
 								local min, max = v.Position - object_bounds_cframe + offset, v.Position + object_bounds_cframe + offset
 								if absolute then
@@ -17801,6 +17960,8 @@ if BBOT.game == "phantom forces" then
 			end)
 		end
 	end
+elseif BBOT.universal then
+
 end
 
 -- Init, tell all modules we are ready
