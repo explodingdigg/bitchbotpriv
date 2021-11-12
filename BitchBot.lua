@@ -1157,7 +1157,7 @@ do
 	hook:bindEvent(mouse.WheelForward, "WheelForward")
 	hook:bindEvent(mouse.WheelBackward, "WheelBackward")
 
-	hook:bindEvent(runservice.Stepped, "Step")
+	hook:bindEvent(runservice.Stepped, "Stepped")
 	hook:bindEvent(runservice.Heartbeat, "Heartbeat")
 
 	runservice:BindToRenderStep("FW0a9kf0w2of0-First", Enum.RenderPriority.First.Value, function(...)
@@ -1838,8 +1838,11 @@ do
 	config.priority = {}
 
 	function config:SetPriority(pl, level)
-		self.priority[pl.UserId] = tonumber(level)
+		local last = self.priority[pl.UserId]
+		local new = tonumber(level)
+		self.priority[pl.UserId] = new
 		writefile(self.storage_pathway .. "/priorities.json", httpservice:JSONEncode(self.priority))
+		hook:Call("OnPriorityChanged", pl, last, new)
 	end
 
 	do -- key binds
@@ -3442,6 +3445,34 @@ do
 
 	do
 		local GUI = {}
+		function GUI:Init()
+			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
+			self.mouseinputs = false
+		end
+		function GUI:PerformLayout(pos, size)
+			default_panel_borders(self, pos, size)
+		end
+		gui:Register(GUI, "Box")
+	end
+
+	do
+		local GUI = {}
+
+		function GUI:Init()
+			self.mouseinputs = false
+			self.questionmark = self:Cache(draw:TextOutlined("?", 2, 0, 0, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
+		end
+
+		function GUI:PerformLayout(pos, size)
+			pos = pos + Vector2.new(0,36)
+			self.questionmark.Position = pos
+		end
+
+		gui:Register(GUI, "QuestionMark")
+
+		local GUI = {}
 
 		function GUI:Init()
 			if gui.mouse then
@@ -3452,6 +3483,11 @@ do
 			self:SetupMouse()
 			self:SetZIndex(1000000)
 			self.mouseinputs = false -- wat
+
+			self.questionmark = gui:Create("QuestionMark", self)
+			self.questionmark:SetPos(1,12,1,10)
+			self.questionmark:SetSize(0,0,0,0)
+			self.questionmark:SetTransparency(0)
 		end
 
 		function GUI:SetupMouse()
@@ -3539,11 +3575,21 @@ do
 				self.hoveractive = objecthover
 				local tip = menu.tooltip
 				if objecthover and objecthover.tooltip then
-					tip:SetEnabled(true)
-					tip:SetTip(objecthover.absolutepos.X, objecthover.absolutepos.Y + objecthover.absolutesize.Y + 4, objecthover.tooltip)
-					gui:TransparencyTo(tip, 1, 0.2, 0, 0.25)
+					self.questionmark:SetTransparency(1)
+					timer:Create("Cursor.ToolTip.QuestionMark", .5, 1, function()
+						if self.hoveractive ~= objecthover then return end
+						gui:TransparencyTo(self.questionmark, 0, 1, 0, 0.5, function()
+							if self.hoveractive ~= objecthover then return end
+							tip:SetEnabled(true)
+							tip:SetTip(objecthover.absolutepos.X, objecthover.absolutepos.Y + objecthover.absolutesize.Y + 4, objecthover.tooltip)
+							gui:TransparencyTo(tip, 1, 0.5, 0, 0.25)
+						end)
+					end)
 				else
-					gui:TransparencyTo(tip, 0, 0.2, 0, 0.25, function()
+					timer:Remove("Cursor.ToolTip.QuestionMark")
+					self.questionmark:SetTransparency(0)
+					gui:TransparencyTo(self.questionmark, 0, 0, 0, 0.25)
+					gui:TransparencyTo(tip, 0, 0.5, 0, 0.25, function()
 						tip:SetEnabled(false)
 					end)
 				end
@@ -4021,6 +4067,7 @@ do
 			self.editable = true
 			self.highlightable = true
 			self.mouseinputs = true
+			self.placeholder = ""
 
 			self.input_repeater_start = 0
 			self.input_repeater_key = nil
@@ -4043,6 +4090,13 @@ do
 			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
+		function GUI:SetPlaceholder(text)
+			self.placeholder = text
+			if self:GetText() == "" and not self.editing then
+				self.text.Text = self.placeholder
+			end
+		end
+
 		function GUI:SetTextSize(size)
 			self.textsize = size
 			self.text.Size = size
@@ -4052,8 +4106,11 @@ do
 
 		local mouse = BBOT.service:GetService("Mouse")
 		function GUI:ProcessClipping()
-			local text = self:AutoTruncate()
-			self.text.Text = text
+			if self:GetText() == "" and not self.editing then
+				self.text.Text = self.placeholder
+			else
+				self.text.Text = self:AutoTruncate()
+			end
 		end
 
 		function GUI:AutoTruncate()
@@ -4160,6 +4217,7 @@ do
 				self.editing = true
 				self.text.Color = self.texthighlight
 				self.cursor_position = self:DetermineTextCursorPosition(mouse.X - self.absolutepos.X)
+				self.text.Text = self:GetText()
 			elseif self.editing then
 				if input.UserInputType == Enum.UserInputType.MouseButton1 and (not self:IsHovering() or (input.UserInputType == Enum.UserInputType.Keyboard and input.UserInputType == Enum.KeyCode.Return)) then
 					self.editing = nil
@@ -4167,6 +4225,9 @@ do
 					self.cursor_outline.Transparency = 0
 					self.cursor.Transparency = 0
 					self:Cache(self.cursor);self:Cache(self.cursor_outline);
+					if self:GetText() == "" then
+						self.text.Text = self.placeholder
+					end
 				elseif input.UserInputType == Enum.UserInputType.Keyboard then
 					if input.KeyCode == Enum.KeyCode.Left then
 						self.cursor_position -= 1
@@ -4319,8 +4380,8 @@ do
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
 			self.scrollpanel = gui:Create("ScrollPanel", self)
-			self.scrollpanel:SetPadding(5)
-			self.scrollpanel:SetSpacing(4)
+			self.scrollpanel:SetPadding(3)
+			self.scrollpanel:SetSpacing(2)
 			self.scrollpanel:SetSize(1,0,1,0)
 
 			self.options = {}
@@ -4352,7 +4413,6 @@ do
 				local v = self.buttons[i]
 				v:Remove()
 			end
-			local offset = 0
 			self.options = options
 			for i=1, #options do
 				local v = options[i]
@@ -4505,6 +4565,11 @@ do
 			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
+			self.scrollpanel = gui:Create("ScrollPanel", self)
+			self.scrollpanel:SetPadding(3)
+			self.scrollpanel:SetSpacing(2)
+			self.scrollpanel:SetSize(1,0,1,0)
+
 			self.options = {}
 			self.buttons = {}
 			self.Id = 0
@@ -4540,18 +4605,18 @@ do
 				local button = gui:Create("TextButton", self)
 				self.buttons[#self.buttons+1] = button
 				local _, scaley = button.text:GetTextSize(v[1])
-				button:SetPos(0, 5, 0, 4 + (scaley+4) * (i-1))
-				button:SetSize(1, -5, 0, scaley)
-				offset = 4 + (scaley+4) * i
+				button:SetPos(0, 0, 0, 0)
+				button:SetSize(1, 0, 0, scaley)
 				button:SetText(v[1])
 				button:SetTextColor(v[2] and self.selectcolor or Color3.new(1,1,1))
 				function button.OnClick()
 					self.parent:SetOption(i, not v[2])
 					button:SetTextColor(v[2] and self.selectcolor or Color3.new(1,1,1))
 				end
+				self.scrollpanel:Add(button)
 			end
-
-			self:SetSize(1, 0, 0, offset)
+			self:SetSize(1, 0, 0, self.scrollpanel:GetTall(8) + 5)
+			self.scrollpanel:PerformOrganization()
 		end
 
 		function GUI:IsHoverTotal()
@@ -6085,11 +6150,9 @@ do
 
 		function GUI:Scrolled()
 			local canvas_size = self.parent:GetTall()
-			local scroll_position = self.parent:GetTall(self.parent.Y_scroll)
-			local maxLength = canvas_size - self.parent.absolutesize.Y
+			local scroll_position = self.parent:GetTall(self.parent.Y_scroll-1)
 			self.heightRatio = self.parent.absolutesize.Y / canvas_size
 			self.height = math.max(math.ceil(self.heightRatio * self.parent.absolutesize.Y), 20)
-			local position = math.clamp(scroll_position / maxLength, 0, 1) * (self.parent.absolutesize.Y-self.height)
 
 			if self.height/self.parent.absolutesize.Y > 1 then
 				self:SetEnabled(false)
@@ -6098,7 +6161,11 @@ do
 			end
 
 			self:SetSize(0, self.size.X.Offset, self.height/self.parent.absolutesize.Y, -6)
-			self:SetPos(1, -self.size.X.Offset-1, scroll_position/canvas_size, 2)
+			if (scroll_position/canvas_size) + (self.height/self.parent.absolutesize.Y) > 1 then
+				self:SetPos(1, -self.size.X.Offset-1, 1-(self.height/self.parent.absolutesize.Y), 4)
+			else
+				self:SetPos(1, -self.size.X.Offset-1, scroll_position/canvas_size, 4)
+			end
 		end
 
 		gui:Register(GUI, "ScrollBar")
@@ -6195,6 +6262,10 @@ do
 				self.Y_scroll_delta = self.Y_scroll
 			end
 
+			if self.Y_scroll > count then
+				self.Y_scroll = 0
+			end
+
 			y_axis = 0
 			c = 0
 
@@ -6247,22 +6318,15 @@ do
 			--self:InvalidateLayout(true, true)
 		end
 
-		function GUI:Step(delta)
-			self.Y_scroll = math.lerp(delta * 10, self.Y_scroll, self.Y_scroll_delta)
-			if self.Y_scroll ~= self.Y_scroll_delta then
-				self:PerformOrganization()
-			end
-		end
-
 		function GUI:WheelForward()
 			if not gui:IsHovering(self) then return end
-			self.Y_scroll_delta = math.max(0, self.Y_scroll_delta - 1)
+			self.Y_scroll = math.max(0, self.Y_scroll - 1)
 			self:PerformOrganization()
 		end
 
 		function GUI:WheelBackward()
 			if not gui:IsHovering(self) then return end
-			self.Y_scroll_delta = math.min(#self.canvas.children, self.Y_scroll_delta + 1)
+			self.Y_scroll = math.min(#self.canvas.children, self.Y_scroll + 1)
 			self:PerformOrganization()
 		end
 
@@ -6334,6 +6398,14 @@ do
 			self:Calibrate()
 		end
 
+		function GUI:OnClick() end
+
+		function GUI:InputBegan(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+				self:OnClick()
+			end
+		end
+
 		gui:Register(GUI, "ListRow")
 
 		local GUI = {}
@@ -6369,9 +6441,14 @@ do
 			row.controller = self
 			row:SetOptions(...)
 			row:SetSize(1,0,0,20)
+			function row.OnClick(s)
+				self:OnSelected(s)
+			end
 			self.scrollpanel:Add(row)
 			return row
 		end
+
+		function GUI:OnSelected(row) end
 
 		function GUI:PerformOrganization()
 			self.scrollpanel:PerformOrganization()
@@ -6997,7 +7074,7 @@ do
 
 		local alias = gui:Create("Text", frame)
 		frame.alias = alias
-		alias:SetPos(0, 3, 0, 5)
+		alias:SetPos(0, 5, 0, 5)
 		alias:SetText(configuration.name)
 
 		if configuration.name == "Bitch Bot" then
@@ -8243,11 +8320,17 @@ do
 										name = "Hitbox Hitscan Points",
 										values = {
 											{ "Up", true },
+											{ "Static Up", false },
 											{ "Down", true },
+											{ "Static Down", false },
 											{ "Left", false },
+											{ "Static Left", false },
 											{ "Right", false },
+											{ "Static Right", false },
 											{ "Forward", true },
+											{ "Static Forward", false },
 											{ "Backward", true },
+											{ "Static Backward", false },
 											{ "Origin", true },
 										},
 										tooltip = "You do not need to turn these all on, points are rotated relative to the direction of the ragebot",
@@ -8272,11 +8355,17 @@ do
 										name = "FirePos Hitscan Points",
 										values = {
 											{ "Up", true },
+											{ "Static Up", false },
 											{ "Down", true },
+											{ "Static Down", false },
 											{ "Left", false },
+											{ "Static Left", false },
 											{ "Right", false },
+											{ "Static Right", false },
 											{ "Forward", true },
+											{ "Static Forward", false },
 											{ "Backward", true },
+											{ "Static Backward", false },
 											{ "Origin", true },
 										},
 										tooltip = "You do not need to turn these all on, points are rotated relative to the direction of the ragebot",
@@ -8382,14 +8471,18 @@ do
 										type = "Slider",
 										name = "Spin Rate",
 										value = 10,
-										minvalue = -100,
-										maxvalue = 100,
-										stradd = "°/s",
+										min = -100,
+										max = 100,
+										suffix = "°/s",
 									},
 									{
-										type = "Toggle",
+										type = "Slider",
 										name = "In Floor",
-										value = false,
+										value = 0,
+										min = 0,
+										max = 5,
+										suffix = " studs",
+										custom = {[0] = "Disabled"},
 										unsafe = true,
 										tooltip = "Puts you into the floor kinda..."
 									},
@@ -9194,6 +9287,13 @@ do
 											value = false,
 											tooltip = "If a loaded weapon has a skin, it will remove it.",
 										},
+										{
+											type = "Toggle",
+											name = "Absolute Spectator",
+											value = false,
+											extra = {},
+											tooltip = "Makes the spectator use repupdate instead of parts"
+										},
 									},
 								},
 							},
@@ -9844,7 +9944,8 @@ do
 										unsafe = true,
 										callback = function()
 											BBOT.aux.network:send("logmessage", "Fuck this shit I'm out")
-										end
+										end,
+										tooltip = "Yeets you to the banlands private server, (DOING THIS WILL BAN YOUR ACCOUNT)"
 									}
 								}},
 								{content = {
@@ -10632,7 +10733,7 @@ do
 												skinlist:AddColumn("AssetId")
 												skinlist:AddColumn("Case")
 												
-												if not BBOT.weapons or not BBOT.weapons.skindatabase then return container end
+												--[[if not BBOT.weapons or not BBOT.weapons.skindatabase then return container end
 
 												for name, skinId in next, BBOT.weapons.skindatabase do
 													local a, b, c = tostring(name), tostring(skinId.TextureId or "Unknown"), tostring(skinId.Case or "Unknown")
@@ -10657,7 +10758,7 @@ do
 													Refresh_List()
 												end
 
-												Refresh_List()
+												Refresh_List()]]
 												return container
 											end,
 											content = {}
@@ -10678,15 +10779,15 @@ do
 				type = "Tabs",
 				content = { -- by default operation is tabs
 					{ -- Do not assign types in here, as tabs automatically assigns them as "Panel"
-						name = "Players",
+						name = "Priorties And Friends",
 						pos = UDim2.new(0,0,0,0),
 						size = UDim2.new(1,0,1,0),
-						type = "Panel",
+						type = "Container",
 						content = {
 							{
 								name = "Player List", -- No type means auto-set to panel
 								pos = UDim2.new(0,0,0,0),
-								size = UDim2.new(1,0,1,-8),
+								size = UDim2.new(1,0,1,0),
 								type = "Custom",
 								callback = function()
 									local container = gui:Create("Container")
@@ -10694,14 +10795,14 @@ do
 									search:SetTextSize(13)
 									search:SetText("")
 									search:SetSize(1,0,0,16)
+									search:SetPlaceholder("Search Here")
 
 									local playerlist = gui:Create("List", container)
-									playerlist:SetPos(0,0,0,16+4)
-									playerlist:SetSize(1,0,1,-16-4)
+									playerlist:SetPos(0,0,0,16+6)
+									playerlist:SetSize(1,0,1,-16-6-108)
 
 									playerlist:AddColumn("Name")
 									playerlist:AddColumn("Team")
-									playerlist:AddColumn("Resolver")
 									playerlist:AddColumn("Priority")
 
 									local function Refresh_List()
@@ -10721,7 +10822,17 @@ do
 												end
 											end
 											if not checked[v] then
-												local line = playerlist:AddLine(v.Name, v.Team.Name, "Normal", "Neutral")
+												local state = "Neutral"
+												local priority = config.priority[v.UserId]
+												if priority then
+													if priority > 0 then
+														state = "Priority (" .. priority .. ")"
+													elseif priority < 0 then
+														state = "Friendly (" .. (-priority) .. ")"
+													end
+												end
+												local line = playerlist:AddLine(v.Name, v.Team.Name, state)
+												line.team = v.Team.Name
 												line.player = v
 												checked[v] = true
 											end
@@ -10744,13 +10855,320 @@ do
 										Refresh_List()
 									end
 
-									hook:Add("PlayerAdded", "BBOT:PlayerList.Add", function(player)
+									local target = nil
+
+									BBOT.timer:Simple(.1, Refresh_List)
+
+									local playerbox = gui:Create("Box", container)
+									playerbox:SetPos(0,0,1,-100)
+									playerbox:SetSize(1,0,0,100)
+
+									local aline = gui:Create("Container", playerbox)
+									aline.background_border = aline:Cache(BBOT.draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+									function aline:PerformLayout(pos, size)
+										self.background_border.Position = pos
+										self.background_border.Size = size
+									end
+									aline:SetPos(.7,-1,0,2)
+									aline:SetSize(0,2,1,-4)
+
+									local image_container = gui:Create("Box", playerbox)
+									image_container:SetPos(0, 4, 0, 4)
+									image_container:SetSize(0, 100-8, 0, 100-8)
+
+									local player_image = gui:Create("Image", image_container)
+									player_image:SetPos(0, 0, 0, 0)
+									player_image:SetSize(1, 0, 1, 0)
+									player_image:SetImage(BBOT.menu.images[5])
+
+									local player_name = gui:Create("Text", playerbox)
+									player_name:SetPos(0, 104, 0, 2)
+									player_name:SetText("No Player Selected")
+
+									local w, h = player_name:GetTextSize()
+									local player_state = gui:Create("Text", playerbox)
+									player_state:SetPos(0, 104, 0, 2 + (2 + h))
+									player_state:SetText("State: Disconnected")
+
+									local player_rank = gui:Create("Text", playerbox)
+									player_rank:SetPos(0, 104, 0, 2 + (4 + h*2))
+									player_rank:SetText("Rank: N/A")
+
+									local player_kd = gui:Create("Text", playerbox)
+									player_kd:SetPos(0, 104, 0, 2 + (6 + h*3))
+									player_kd:SetText("KD: N/A")
+
+									local options_container = gui:Create("Container", playerbox)
+									options_container:SetPos(.7, 6, 0, 4)
+									options_container:SetSize(.3, -10, 1, -8)
+
+									local Y = 0
+									-- priority
+									local player_priority
+									do
+										local cont = gui:Create("Container", options_container)
+										local text = gui:Create("Text", cont)
+										text:SetPos(0, 0, 0, 0)
+										text:SetTextSize(13)
+										text:SetText("Priority")
+										if config.unsafe then
+											text:SetColor(unsafe_color)
+										end
+										local slider = gui:Create("Slider", cont)
+										player_priority = slider
+										slider.suffix = ""
+										slider.min = -1
+										slider.max = 10
+										slider.decimal = 0
+										slider.custom = {}
+										slider:SetValue(0)
+										local _, tall = text:GetTextScale()
+										slider:SetPos(0, 0, 0, tall+3)
+										slider:SetSize(1, 0, 0, 10)
+										cont:SetPos(0, 0, 0, 0)
+										cont:SetSize(1, 0, 0, tall+2+10+1)
+										function slider:OnValueChanged(new)
+											if not target then return end
+											config:SetPriority(target, new)
+										end
+										Y=Y+tall+2+10+7
+									end
+
+									-- Spectate
+									do
+										local button = gui:Create("Button", options_container)
+										button:SetPos(0, 0, 0, Y)
+										button:SetSize(1, 0, 0, 16)
+										button:SetText("Spectate")
+										button.OnClick = function()
+											local spectator = BBOT.spectator
+											if not target then
+												if spectator:IsSpectating() then
+													spectator:Spectate(nil)
+												end
+												return
+											end
+											if spectator:IsSpectating() == target then
+												spectator:Spectate(nil)
+												return
+											end
+											spectator:Spectate(target)
+										end
+										Y=Y+16+7
+									end
+
+									-- VoteKick
+									do
+										local button = gui:Create("Button", options_container)
+										button:SetPos(0, 0, 0, Y)
+										button:SetSize(1, 0, 0, 16)
+										button:SetText("Votekick")
+										button:SetConfirmation("Are you sure?")
+										button.OnClick = function()
+											if not target then return end
+											votekick:Call(target, "Cheating")
+										end
+										Y=Y+16+7
+									end
+
+									function playerlist:OnSelected(row)
+										target = row.player
+										local selected = target
+										player_name:SetText("Name: " .. target.Name)
+										player_state:SetText("State: In-Lobby")
+
+										--[[local data = BBOT.aux:GetPlayerData(target.Name)
+										local playerrank = playerdata.Rank.Text
+										local kills = playerdata.Kills.Text
+										local deaths = playerdata.Deaths.Text
+
+										player_rank:SetText("Rank: " .. playerrank)
+										player_kd:SetText("KD: " .. kills .. "/" .. deaths)]]
+
+										local uid = target.UserId
+										player_priority:SetValue(config.priority[uid] or 0)
+										BBOT.thread:Create(function()
+											local data = game:HttpGet(string.format(
+												"https://www.roblox.com/headshot-thumbnail/image?userId=%s&width=100&height=100&format=png",
+												uid
+											))
+											if not gui:IsValid(player_image) or target ~= selected then return end
+											player_image:SetImage(data)
+										end)
+									end
+
+									hook:Add("PlayerAdded", "BBOT:PlayerManager.Add", function(player)
 										Refresh_List()
 									end)
 
-									hook:Add("PlayerRemoving", "BBOT:PlayerList.Add", function(player)
+									hook:Add("PlayerRemoving", "BBOT:PlayerManager.Add", function(player)
+										if target == player then
+											target = nil
+											player_state:SetText("State: Disconnected")
+											player_rank:SetText("Rank: N/A")
+										end
 										Refresh_List()
 									end)
+
+									local wasalive, nextcheck = false, 0
+									hook:Add("RenderStep.Last", "BBOT:PlayerManager.Tick", function()
+										if nextcheck > tick() then return end
+										nextcheck = tick() + .05
+										for i, v in next, playerlist.scrollpanel.canvas.children do
+											if v.Team and v.team ~= v.Team.Name then
+												v.team = v.Team.Name
+												v.children[2].text:SetText(v.Team.Name)
+											end
+										end
+
+										if not target then return end
+										local updater = BBOT.aux.replication.getupdater(target)
+										if updater.alive ~= wasalive then
+											wasalive = updater.alive
+											if wasalive then
+												player_state:SetText("State: In-Game")
+											else
+												player_state:SetText("State: In-Lobby")
+											end
+										end
+									end)
+
+									hook:Add("OnPriorityChanged", "BBOT:PlayerManager.Changed", function(player, old_priority, priority)
+										local state = "Neutral"
+										if priority then
+											if priority > 0 then
+												state = "Priority (" .. priority .. ")"
+											elseif priority < 0 then
+												state = "Friendly (" .. (-priority) .. ")"
+											end
+										end
+										for i, v in next, playerlist.scrollpanel.canvas.children do
+											if v.player == player then
+												v.children[3].text:SetText(state)
+												break
+											end
+										end
+									end)
+
+									return container
+								end,
+								content = {},
+							},
+						},
+					},
+					{
+						name = "Bitch Bot Users",
+						pos = UDim2.new(0,0,0,0),
+						size = UDim2.new(1,0,1,0),
+						type = "Container",
+						content = {
+							{
+								name = "Bitch Bot Room", -- No type means auto-set to panel
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(1,0,1,0),
+								type = "Custom",
+								callback = function()
+									local container = gui:Create("Container")
+									local search_users = gui:Create("TextEntry", container)
+									search_users:SetTextSize(13)
+									search_users:SetText("")
+									search_users:SetPos(.75,4,0,0)
+									search_users:SetSize(.25,-4,0,16)
+									search_users:SetPlaceholder("Search Here")
+
+									local userlist = gui:Create("ScrollPanel", container)
+									userlist:SetPos(.75,4,0,16+6)
+									userlist:SetSize(.25,-4,1,-16-6)
+
+									local chatroom_container = gui:Create("Container", container)
+									chatroom_container:SetPos(0,0,0,0)
+									chatroom_container:SetSize(.75,-4,1,0)
+
+									local search_chatroom = gui:Create("TextEntry", chatroom_container)
+									search_chatroom:SetTextSize(13)
+									search_chatroom:SetText("")
+									search_chatroom:SetPos(0,0,0,0)
+									search_chatroom:SetSize(1,0,0,16)
+									search_chatroom:SetPlaceholder("Search Here")
+
+									local chatroom = gui:Create("ScrollPanel", chatroom_container)
+									chatroom:SetPos(0,0,0,16+6)
+									chatroom:SetSize(1,0,1,-16-6-18-6)
+
+									local chatbox = gui:Create("TextEntry", chatroom_container)
+									chatbox:SetTextSize(13)
+									chatbox:SetText("")
+									chatbox:SetPos(0,0,1,-18)
+									chatbox:SetSize(1,0,0,18)
+									chatbox:SetPlaceholder("Type Here")
+
+									local bbotusers = {
+										{"eprosync", "alhIteraa2413", "No"},
+										{"toyko", "Gamerrrz25", "Yes"},
+									}
+
+									local function AddToChat(txt)
+										local panel = gui:Create("Container")
+										panel:SetSize(1, 0, 0, 16)
+										panel.mouseinputs = true
+										chatroom:Add(panel)
+										local username = gui:Create("Text", panel)
+										username:SetText(txt)
+										username:SetTextAlignmentX(Enum.TextXAlignment.Left)
+										username:SetTextAlignmentY(Enum.TextYAlignment.Center)
+										username:SetSize(1, 0, 1, 0)
+										chatroom:PerformOrganization()
+									end
+
+									AddToChat("Client: Connected to websocket #########")
+									AddToChat("Server: Welcome to the chat room")
+
+									local function Refresh_List()
+										local tosearch = search_users:GetText()
+										local checked = {}
+
+										for i=1, #bbotusers do
+											local v = bbotusers[i]
+											local children = userlist.canvas.children
+											for i=1, #children do
+												if children[i].data[1] == v[1] then
+													checked[v[1]] = true
+													break 
+												end
+											end
+											if not checked[v[1]] then
+												local panel = gui:Create("Container")
+												panel:SetSize(1, 0, 0, 16)
+												panel.mouseinputs = true
+												userlist:Add(panel)
+												panel.tooltip = "Account: " .. v[2] .. "\nJoinable: " .. v[3]
+												local username = gui:Create("Text", panel)
+												username:SetText(v[1])
+												username:SetTextAlignmentX(Enum.TextXAlignment.Left)
+												username:SetTextAlignmentY(Enum.TextYAlignment.Center)
+												username:SetSize(1, 0, 1, 0)
+												panel.data = v
+												panel.search = v[1] .. v[2]
+												checked[v[1]] = true
+											end
+										end
+
+										for i, v in next, userlist.canvas.children do
+											if not checked[v.data[1]] then
+												v:Remove()
+											elseif tosearch == "" or string.find(string.lower(v.search), string.lower(tosearch), 1, true) then
+												v:SetVisible(true)
+											else
+												v:SetVisible(false)
+											end
+										end
+
+										userlist:PerformOrganization()
+									end
+
+									function search_users:OnValueChanged()
+										Refresh_List()
+									end
 
 									BBOT.timer:Simple(.1, Refresh_List)
 
@@ -10759,20 +11177,6 @@ do
 								content = {},
 							},
 						},
-					},
-					{ -- Do not assign types in here, as tabs automatically assigns them as "Panel"
-						name = "Priorties And Friends",
-						pos = UDim2.new(0,0,0,0),
-						size = UDim2.new(1,0,1,0),
-						type = "Container",
-						content = {},
-					},
-					{
-						name = "Bitch Bot Users",
-						pos = UDim2.new(0,0,0,0),
-						size = UDim2.new(1,0,1,0),
-						type = "Container",
-						content = {},
 					},
 				}
 			}
@@ -11695,11 +12099,15 @@ if BBOT.game == "phantom forces" then
 			end)
 
 			local function override_Position(controller)
-				if not controller.alive or not controller.receivedPosition then
+				--[[if not controller.alive or not controller.receivedPosition then
 					controller.__spawn_position = nil
 				elseif controller.__spawn_position then
 					controller.receivedPosition = controller.__spawn_absolute
 					controller.__spawn_position = nil
+				end]]
+				if controller.__just_spawned then
+					controller.__just_spawned = false
+					hook:Call("updateReplicationJustSpawned", controller)
 				end
 			end
 
@@ -11707,8 +12115,10 @@ if BBOT.game == "phantom forces" then
 				if typeof(pos) == "Vector3" then
 					controller.__spawn_position = pos
 					controller.__spawn_absolute = controller.getpos()
-					controller.receivedPosition = controller.__spawn_absolute
+					controller.receivedPosition = controller.__spawn_position
+					controller.__t_received = tick()
 				end
+				controller.__just_spawned = true
 			end
 
 			local function override_Updater(player, controller)
@@ -11716,13 +12126,28 @@ if BBOT.game == "phantom forces" then
 				controller._upd_updateReplication = upd_updateReplication
 				function controller.updateReplication(...)
 					hook:CallP("PreupdateReplication", player, controller, ...)
-					return upd_updateReplication(...), hook:CallP("PostupdateReplication", player, controller, ...)
+					return upd_updateReplication(...), override_Position(controller), hook:CallP("PostupdateReplication", player, controller, ...)
 				end
 				local upd_spawn = controller.spawn
 				controller._upd_spawn = upd_spawn
 				function controller.spawn(pos, ...)
 					hook:CallP("Preupdatespawn", player, controller, pos, ...)
+					controller.__stance = "stand"
 					return upd_spawn(pos, ...), override_spawn(controller, pos), hook:CallP("Postupdatespawn", player, controller, pos, ...)
+				end
+				local upd_step = controller.step
+				controller._upd_step = upd_step
+				function controller.step(renderscale, shouldrender, ...)
+					local a, b = hook:CallP("PreupdateStep", player, controller, renderscale, shouldrender, ...)
+					if a ~= nil then renderscale = a end
+					if b ~= nil then shouldrender = b end
+					return upd_step(renderscale, shouldrender, ...), hook:CallP("PostupdateStep", player, controller, renderscale, shouldrender, ...)
+				end
+				local upd_setstance = controller.setstance
+				controller._upd_setstance = upd_setstance
+				function controller.setstance(stance, ...)
+					controller.__stance = stance
+					return upd_setstance(stance, ...)
 				end
 				hook:CallP("CreateUpdater", player)
 			end
@@ -11759,8 +12184,15 @@ if BBOT.game == "phantom forces" then
 					if v.updater and v.updater._upd_updateReplication then
 						v.updater.updateReplication = v.updater._upd_updateReplication
 						v.updater._upd_updateReplication = nil
-						v.updater.spawn = v.updater.spawn or v.updater._upd_spawn
+
+						v.updater.spawn = v.updater._upd_spawn or v.updater.spawn
 						v.updater._upd_spawn = nil
+
+						v.updater.step = v.updater._upd_step or v.updater.step
+						v.updater._upd_step = nil
+
+						v.updater.setstance = v.updater._upd_setstance or v.updater.setstance
+						v.updater._upd_setstance = nil
 					end
 				end
                 aux.replication.player_registry[localplayer] = nil
@@ -11981,6 +12413,26 @@ if BBOT.game == "phantom forces" then
 				debug.setupvalue(unpack(setupvalueundo[i]))
 			end
 		end)
+
+		local teamdata = {}
+		do
+			local pgui = game.Players.LocalPlayer.PlayerGui
+			local board = pgui:WaitForChild("Leaderboard")
+			local main = board:WaitForChild("Main")
+			local global = board:WaitForChild("Global")
+			local ghost = main:WaitForChild("Ghosts")
+			local phantom = main:WaitForChild("Phantoms")
+			local gdataframe = ghost:WaitForChild("DataFrame")
+			local pdataframe = phantom:WaitForChild("DataFrame")
+			local ghostdata = gdataframe:WaitForChild("Data")
+			local phantomdata = pdataframe:WaitForChild("Data")
+			teamdata[1] = phantomdata
+			teamdata[2] = ghostdata
+		end
+	
+		function aux:GetPlayerData(player_name)
+			return teamdata[1]:FindFirstChild(player_name) or teamdata[2]:FindFirstChild(player_name)
+		end
 
 		local dt = tick() - profiling_tick
 		BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
@@ -13486,6 +13938,7 @@ if BBOT.game == "phantom forces" then
 			hook:Add("PreKnifeStep", "BBOT:Misc.Thirdperson", hideweapon)
 			hook:Add("ScreenCull.PreStep", "BBOT:Misc.Thirdperson", function()
 				if not char.alive or not config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person") or not config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person", "KeyBind") then return end
+				if BBOT.spectator and BBOT.spectator:IsSpectating() then return end
 				if config:GetValue("Main", "Visuals", "Camera Visuals", "First Person Third") and BBOT.l3p_player and BBOT.l3p_player.controller then
 					local head = BBOT.l3p_player.controller.gethead()
 					if not head then return end
@@ -13649,9 +14102,17 @@ if BBOT.game == "phantom forces" then
         local last_predicted = nil
 		hook:Add("RageBot.DamagePredictionKilled", "BBOT:AntiGrenadeTP", function(Entity)
             if last_predicted == Entity then return end
-			timer:Simple(BBOT.extras:getLatency(), function() misc:AntiGrenadeStep() end)
+			timer:Async(function()
+				hook:Add("Heartbeat", "BBOT:AntiGrenadeTP", function()
+					hook:Remove("Heartbeat", "BBOT:AntiGrenadeTP")
+					hook:Add("Stepped", "BBOT:AntiGrenadeTP", function()
+						hook:Remove("Stepped", "BBOT:AntiGrenadeTP")
+						misc:AntiGrenadeStep()
+						last_predicted = nil
+					end)
+				end)
+			end)
             last_predicted = Entity
-            timer:Simple(0, function() last_predicted = nil end)
 		end)
 
 		hook:Add("PreBigAward", "BBOT:AntiGrenadeTP", function()
@@ -13840,8 +14301,9 @@ if BBOT.game == "phantom forces" then
 						yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
 					end
 
-					if config:GetValue("Main", "Rage", "Anti Aim", "In Floor") then
-						pos = pos + Vector3.new(0,-2.25,0)
+					local infloor = config:GetValue("Main", "Rage", "Anti Aim", "In Floor")
+					if infloor > 0 then
+						pos = pos + Vector3.new(0,-infloor,0)
 					end
 
 					new_angles = new_angles or Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
@@ -13897,6 +14359,13 @@ if BBOT.game == "phantom forces" then
 					old_char = self.player.Character
 				end
 				self.controller.spawn(char.rootpart.Position)
+				self.controller.setsprint(char.sprinting())
+				local mode = config:GetValue("Main", "Rage", "Anti Aim", "Fake Stance")
+				if mode ~= "Off" then
+					self.controller.setstance(string.lower(mode))
+				else
+					self.controller.setstance(char.movementmode)
+				end
 				if old_char then
 					self.player.Character = old_char
 				end
@@ -14066,6 +14535,126 @@ if BBOT.game == "phantom forces" then
                 end
             end
 		end)
+	end
+
+	-- Spectator
+	do
+		local hook = BBOT.hook
+		local config = BBOT.config
+		local math = BBOT.math
+		local replication = BBOT.aux.replication
+		local menu = BBOT.menu
+		local runservice = BBOT.service:GetService("RunService")
+		local camera = BBOT.service:GetService("CurrentCamera")
+		local spectator = {}
+		BBOT.spectator = spectator
+
+		spectator.spectating = false
+		
+		function spectator:Spectate(player)
+			self.spectating = player
+			if player then
+				menu:UpdateStatus("Spectator", player.Name, true)
+				local updater = replication.getupdater(player)
+				if not updater or not updater.alive then return end
+				if updater.receivedPosition and updater.receivedLookAngles then
+					self.lookangle = updater.receivedLookAngles
+					self.position = updater.receivedPosition
+				end
+			else
+				menu:UpdateStatus("Spectator", nil, false)
+			end
+		end
+
+		function spectator:IsSpectating()
+			return self.spectating
+		end
+
+		local offset_velocity = Vector3.new(0,-10000,0)
+		hook:Add("PostupdateReplication", "BBOT:Spectator.Offset", function(player, controller)
+			if player ~= spectator:IsSpectating() or not config:GetValue("Main", "Visuals", "Extra", "Absolute Spectator") then return end
+			controller.receivedVelocity = offset_velocity
+		end)
+
+		hook:Add("PreupdateStep", "BBOT:Spectator.RenderAll", function(player, controller, renderscale, shouldrender)
+			if spectator:IsSpectating() then
+				return 3, true
+			end
+		end)
+
+		hook:Add("Postupdatespawn", "BBOT:Spectator.Reset", function(player, controller)
+			if spectator:IsSpectating() ~= player then return end
+			if controller.receivedPosition and controller.receivedLookAngles then
+				spectator.lookangle = controller.receivedLookAngles
+				spectator.position = controller.receivedPosition
+			end
+		end)
+
+		do
+			local set
+			hook:Add("PreNewBullet", "BBOT:Spectator.BulletOverride", function(data)
+				if not data.player or spectator:IsSpectating() ~= data.player or not config:GetValue("Main", "Visuals", "Extra", "Absolute Spectator") then return end
+				local updater = replication.getupdater(data.player)
+				if not updater or not updater.alive then return end
+				set = updater.getweaponpos
+				function updater.getweaponpos()
+					return data.firepos
+				end
+			end)
+
+			hook:Add("PostNewBullet", "BBOT:Spectator.BulletOverride", function(data)
+				if not set then return end
+				local updater = replication.getupdater(data.player)
+				if not updater then return end
+				updater.getweaponpos = set
+				set = nil
+			end)
+		end
+
+		local vector_blank = Vector3.new()
+		local stand, crouch, prone = Vector3.new(0,1.5,0), Vector3.new(0,0,0), Vector3.new(0,-1,0)
+		local renderstep_tick = 0
+		hook:Add("RenderStepped", "BBOT:Spectator.renderstep_tick", function(t)
+			renderstep_tick = t
+		end)
+
+		spectator.lookangle = Vector2.new()
+		spectator.position = Vector3.new()
+		function spectator.step()
+			local self = spectator
+			if not self.spectating then return end
+			local target = self.spectating
+			local updater = replication.getupdater(target)
+			if not updater or not updater.alive then return end
+			
+			local absolute = config:GetValue("Main", "Visuals", "Extra", "Absolute Spectator")
+			if absolute then
+				local stance = updater.__stance or "stand"
+				local offset = vector_blank
+				if stance == "stand" then
+					offset = stand
+				elseif stance == "crouch" then
+					offset = crouch
+				else
+					offset = prone
+				end
+				if updater.receivedPosition and updater.receivedLookAngles then
+					self.position = math.lerp(renderstep_tick*10, self.position, updater.receivedPosition+offset)
+					camera.CFrame = CFrame.new(self.position)
+					self.lookangle = math.lerp(renderstep_tick*10, self.lookangle, updater.receivedLookAngles)
+					camera.CFrame *= CFrame.fromOrientation(self.lookangle.X,self.lookangle.Y,0)
+				end
+			else
+				local head = updater.gethead()
+				if not head then return end
+				camera.CFrame = CFrame.new(head.CFrame.Position)
+				local p, y = head.CFrame:ToOrientation()
+				camera.CFrame *= CFrame.fromOrientation(p,y,0)
+				camera.CFrame *= CFrame.new(0,0,-4.5/10)
+			end
+		end
+
+		hook:Add("ScreenCull.PreStep", "BBOT:Spectator.Spectate", spectator.step)
 	end
 
 	-- Aimbot (Conversion In Progress)
@@ -14632,8 +15221,9 @@ if BBOT.game == "phantom forces" then
 				local ran, const = pcall(debug.getconstants, v)
 				if ran and quickhasvalue(const, "firepos") and quickhasvalue(const, "bullets") and quickhasvalue(const, "bulletcolor") and quickhasvalue(const, "penetrationdepth") then
 					receivers[k] = function(data)
-						hook:CallP("NewBullet", data)
+						hook:CallP("PreNewBullet", data)
 						v(data)
+						hook:CallP("PostNewBullet", data)
 					end
 					hook:Add("Unload", "BBOT:NewBullet.Ups." .. tostring(k), function()
 						receivers[k] = v
@@ -14643,7 +15233,7 @@ if BBOT.game == "phantom forces" then
 		end)
 
 		local Resolver_NewBullet = {}
-		hook:Add("NewBullet", "BBOT:Aimbot.Resolver", function(data)
+		hook:Add("PreNewBullet", "BBOT:Aimbot.Resolver", function(data)
 			local firepos, player = data.firepos, data.player
 			local isalive = hud:isplayeralive(player)
 			if isalive then
@@ -14940,7 +15530,11 @@ if BBOT.game == "phantom forces" then
 					else
 						cam_position = future
 					end]]
-					cam_position = char.rootpart.Position
+					if self.tp_scanning then
+						cam_position = self.tp_scanning
+					else
+						cam_position = char.rootpart.Position
+					end
 				end
 				local team = (localplayer.Team and localplayer.Team.Name or "NA")
 				local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
@@ -14981,7 +15575,7 @@ if BBOT.game == "phantom forces" then
 					end
 
 					local updater = replication.getupdater(v)
-					if (updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick()) then
+					if (updater.__just_spawned or (updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick())) then
 						continue
 					end
 
@@ -15015,7 +15609,7 @@ if BBOT.game == "phantom forces" then
 											local fp_name = firepos_points_name[i]
 											local newcf = targetcframe * lookatme * point
 											local cam_position = newcf.p
-											if i > tp_scanning_points and (self.tp_scanning or not BBOT.misc:CanMoveTo(cam_position)) then
+											if i > tp_scanning_points and (self.tp_scanning_cooldown or not BBOT.misc:CanMoveTo(cam_position)) then
 												continue
 											end
 											local u = i
@@ -15072,7 +15666,7 @@ if BBOT.game == "phantom forces" then
 				for i=1, #organizedPlayers do
 					local v = organizedPlayers[i]
 					if players_has[v[1]] then continue end
-					if v[6] and (self.tp_scanning or not BBOT.misc:CanMoveTo(v[4])) then continue end
+					if v[6] and (self.tp_scanning_cooldown or not BBOT.misc:CanMoveTo(v[4])) then continue end
 					players_only[#players_only+1] = {v[1], v[3]}
 					players_has[v[1]] = true
 				end
@@ -15101,6 +15695,24 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
+			hook:Add("SuppressNetworkSend", "BBOT:Aimbot.RageBot.TPScanning", function(netname)
+				if netname == "repupdate" and aimbot.tp_scanning then
+					return true
+				end
+			end)
+
+			--[[hook:Add("Postupdatespawn", "BBOT:Aimbot.RageBot.Calc", function()
+				if config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
+					gamelogic.currentgun.step(0)
+				end
+			end)]]
+
+			hook:Add("updateReplicationJustSpawned", "BBOT:Aimbot.RageBot.Calc", function()
+				if gamelogic.currentgun and gamelogic.currentgun.step and config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
+					gamelogic.currentgun.step(0)
+				end
+			end)
+
 			local runservice = BBOT.service:GetService("RunService")
 			function aimbot:RageStep(gun)
 				if not self:GetRageConfig("Aimbot", "Rage Bot", "KeyBind") then
@@ -15116,19 +15728,46 @@ if BBOT.game == "phantom forces" then
 						return
 					end
 				end
+				if self.no_rage then return end
 
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
 				local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
-				if target and target[6] and self:GetRageConfig("Hack vs. Hack", "TP Scanning") and not self.tp_scanning then
+				if target and target[6] and self:GetRageConfig("Hack vs. Hack", "TP Scanning") and not self.tp_scanning and not self.tp_scanning_cooldown then
 					local original_position = char.rootpart.Position * 1
+					self.tp_scanning_cooldown = true
 					BBOT.misc:MoveTo(target[4], true)
-					self.tp_scanning = true
-					wait(BBOT.extras:getLatency()/3)
-					self:RageStep(gun)
-					BBOT.misc:MoveTo(original_position, true)
-					timer:Simple(0.5,function()
-						self.tp_scanning = false
+					BBOT.misc:ForceRepupdate(target[4])
+					self.tp_scanning = target[4]
+					self.no_rage = true
+					if char.alive then
+						char.rootpart.Anchored = true
+					end
+					hook:Add("Heartbeat", "BBOT:RageBot.TPScan", function()
+						hook:Remove("Heartbeat", "BBOT:RageBot.TPScan")
+						hook:Add("Stepped", "BBOT:RageBot.TPScan", function()
+							hook:Remove("Stepped", "BBOT:RageBot.TPScan")
+							if not char.alive then
+								self.no_rage = false
+								self.tp_scanning = false
+								self.tp_scanning_cooldown = false
+								if char.rootpart then
+									char.rootpart.Anchored = false
+								end
+								return
+							end
+							self.no_rage = false
+							BBOT.misc:MoveTo(target[4], true)
+							if gamelogic.currentgun then
+								gamelogic.currentgun.step(0)
+							end
+							self.tp_scanning = false
+							char.rootpart.Anchored = false
+							BBOT.misc:MoveTo(original_position, true)
+							timer:Simple(0.5,function()
+								self.tp_scanning_cooldown = false
+							end)
+						end)
 					end)
 					return
 				end
@@ -15148,7 +15787,7 @@ if BBOT.game == "phantom forces" then
 				if self:GetRageConfig("Aimbot", "Auto Shoot") then
 					aimbot.fire = true
 					gun:shoot(true)
-					BBOT.misc:ForceRepupdate((char.rootpart.Position)*1, Vector2.new(X, Y))
+					BBOT.misc:ForceRepupdate(self.tp_scanning or char.rootpart.Position, Vector2.new(X, Y))
 				end
 
 				self.silent = part
@@ -15996,6 +16635,8 @@ if BBOT.game == "phantom forces" then
 			local hud = BBOT.aux.hud
 			local aimbot = BBOT.aimbot
 			local color = BBOT.color
+			local spectator = BBOT.spectator
+			local camera_aux = BBOT.aux.camera
 			local updater = replication.getupdater
 			local player_registry = replication.player_registry
 
@@ -16018,6 +16659,9 @@ if BBOT.game == "phantom forces" then
 
 				function player_meta:CanRender()
 					local alive = hud:isplayeralive(self.player)
+					if spectator:IsSpectating() == self.player then
+						alive = false
+					end
 					if alive ~= self.alive then
 						self.alive = alive
 						if self.alive then
@@ -16066,7 +16710,11 @@ if BBOT.game == "phantom forces" then
 						self._points = points
 						local offset, absolute = Vector3.new(), false
 						if self:GetConfig("Flags").Resolved then
-							offset, absolute = BBOT.aimbot:GetResolvedPosition(self.player)
+							if self.player == localplayer and self.controller.receivedPosition then
+								offset, absolute = self.controller.receivedPosition, true
+							else
+								offset, absolute = BBOT.aimbot:GetResolvedPosition(self.player)
+							end
 						end
 						for k, v in pairs(self.parts) do
 							if whitelisted_parts[k] then
@@ -16530,6 +17178,13 @@ if BBOT.game == "phantom forces" then
 					if object then
 						object:Rebuild()
 					end
+				end
+			end)
+
+			hook:Add("OnPriorityChanged", "BBOT:ESP.Players.Changed", function(player, old_priority, priority)
+				local object = esp:Find("PLAYER_" .. player.UserId)
+				if object then
+					object:Rebuild()
 				end
 			end)
 
