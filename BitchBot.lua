@@ -1664,14 +1664,14 @@ do
 	}
 	BBOT.drawpather = drawpather
 
-	function drawpather:Simple(pathway, col, time)
+	function drawpather:Simple(pathway, col, transparency, time)
 		local length = #pathway
 		local render_storage = {}
 		local dark = color.darkness(col, .25)
 		for i=1, length do
-			local darkline = draw:Line(4, 0, 0, 0, 0, dark, 1, true)
+			local darkline = draw:Line(4, 0, 0, 0, 0, dark, transparency, true)
 			darkline.ZIndex = 0
-			local line = draw:Line(2, 0, 0, 0, 0, col, 1, true)
+			local line = draw:Line(2, 0, 0, 0, 0, col, transparency, true)
 			line.ZIndex = 1
 			render_storage[#render_storage+1] = {darkline, line}
 		end
@@ -1679,18 +1679,19 @@ do
 			objects = render_storage,
 			frames = pathway,
 			t0 = tick(),
+			transparency = transparency,
 			duration = time,
 		}
 	end
 
-	function drawpather:SimpleWithEnd(pathway, col, time)
+	function drawpather:SimpleWithEnd(pathway, col, transparency, time)
 		local length = #pathway
 		local render_storage = {}
 		local dark = color.darkness(col, .25)
 		for i=1, length do
-			local darkline = draw:Line(4, 0, 0, 0, 0, dark, 1, true)
+			local darkline = draw:Line(4, 0, 0, 0, 0, dark, transparency, true)
 			darkline.ZIndex = 0
-			local line = draw:Line(2, 0, 0, 0, 0, col, 1, true)
+			local line = draw:Line(2, 0, 0, 0, 0, col, transparency, true)
 			line.ZIndex = 1
 			if i == length then
 				local circledark = draw:Circle(x, y, 8, 1, 20, dark, 1, true)
@@ -1706,6 +1707,7 @@ do
 			objects = render_storage,
 			frames = pathway,
 			t0 = tick(),
+			transparency = transparency,
 			duration = time or 1,
 		}
 	end
@@ -1770,7 +1772,7 @@ do
 				drawpather:unrender(objects)
 				continue
 			end
-			local transparency = math.remap(deltat,0,1,1,0)
+			local transparency = math.remap(deltat,0,1,1,0) * pather.transparency
 
 			-- 3D
 			for k=2, #frames do
@@ -4217,7 +4219,7 @@ do
 				self.editing = true
 				self.text.Color = self.texthighlight
 				self.cursor_position = self:DetermineTextCursorPosition(mouse.X - self.absolutepos.X)
-				self.text.Text = self:GetText()
+				self:ProcessClipping()
 			elseif self.editing then
 				if input.UserInputType == Enum.UserInputType.MouseButton1 and (not self:IsHovering() or (input.UserInputType == Enum.UserInputType.Keyboard and input.UserInputType == Enum.KeyCode.Return)) then
 					self.editing = nil
@@ -12698,12 +12700,9 @@ if BBOT.game == "phantom forces" then
 				"BOO HOO 😢😢😭😭😭 STOP CRYING ",
 				"🤏",
 				"🤏 <-- just to elaborate that i have no care for this situation or you at all, kid (not that you would understand anyways, you're too stupid to understand what i'm saying to begin with)",
-				"y",
-				"b",
 				"before bbot 😭 📢				after bbot 😁😁😜					don't be like the person who doesn't have bbot",
 				"							MADE YOU LOOK ",
 				"							LOOK BRO LOOK LOOK AT ME ",
-				"	A	",
 				"			B		B		O		T	",
 				"																																																																																																																								I HAVE AJAX YALL BETTER WATCH OUT OR YOU'LL DIE, WATCH WHO YOU'RE SHOOTING",
 				"																																																																																																																								WATCH YOUR STEP KID",
@@ -13383,7 +13382,7 @@ if BBOT.game == "phantom forces" then
 						misc:MoveTo(topos, true) -- to move the character
 					end
 					local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
-					BBOT.drawpather:Simple(points_simple, color, 4)
+					BBOT.drawpather:Simple(points_simple, color, color_transparency, 4)
 				end
 				isteleporting = false
 			end
@@ -13457,7 +13456,7 @@ if BBOT.game == "phantom forces" then
 							misc:MoveTo(topos, true) -- to move the character
 						end
 						local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
-						BBOT.drawpather:Simple(points_simple, color, 4)
+						BBOT.drawpather:Simple(points_simple, color, color_transparency, 4)
 					end
 					isteleporting = false
 				end
@@ -13990,7 +13989,7 @@ if BBOT.game == "phantom forces" then
 					end
 				end
 				local col, transparency = config:GetValue("Main", "Misc", "Exploits", "Blink", "Path Color")
-				BBOT.drawpather:Simple(a, col, 4)
+				BBOT.drawpather:Simple(a, col, transparency, 4)
 			end
 			blink_record = {}
 		end
@@ -14490,7 +14489,7 @@ if BBOT.game == "phantom forces" then
 		end)
 
 		hook:Add("SuppressNetworkSend", "BBOT:L3P.StopReplication", function(netname, ...)
-			local args = {...}
+			local args = {...} -- I was going to use this for something else...
 			if netname == "state" and (args[1] == localplayer or args[1] == l3p.player) then return true end
 		end)
 
@@ -18087,7 +18086,8 @@ if BBOT.game == "phantom forces" then
 						for i=1, #frames do
 							pathway[#pathway+1] = frames[i].p0
 						end
-						BBOT.drawpather:SimpleWithEnd(pathway, config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction", "Prediction Color"), blowtime)
+						local a, b = config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction", "Prediction Color")
+						BBOT.drawpather:SimpleWithEnd(pathway, a, b, blowtime)
 					end
 
 					return createnade(...)
@@ -18554,8 +18554,7 @@ if BBOT.game == "phantom forces" then
 					end)
 				end)
 
-				hook:Add("OnConfigChanged", "Skin.Preview", function(steps, old, new)
-					if not config:IsPathwayEqual(steps, "Weapons", "Skins") then return end
+				local function refresh()
 					if not workspace:FindFirstChild("MenuLobby") then return end
 					if not workspace.MenuLobby:FindFirstChild("GunStage") then return end
 					if not workspace.MenuLobby.GunStage:FindFirstChild("GunModel") then return end
@@ -18590,7 +18589,14 @@ if BBOT.game == "phantom forces" then
 					changing = true
 					performchanges(gunmodel)
 					changing = false
+				end
+
+				hook:Add("OnConfigChanged", "Skin.Preview", function(steps, old, new)
+					if not config:IsPathwayEqual(steps, "Weapons", "Skins") then return end
+					refresh()
 				end)
+
+				timer:Async(refresh)
 			end)
 
 			hook:Add("PostLoadKnife", "Skin.Apply", function(gundata, name)
