@@ -679,6 +679,13 @@ do
 		local dy = pos1.Y - pos2.Y
 		return math.sqrt ( dx * dx + dy * dy )
 	end
+
+	-- creates a random point around a sphere
+	function vector.randomspherepoint(radius)
+		local theta = math.random() * 2 * math.pi
+		local phi = math.acos(2 * math.random() - 1)
+		return Vector3.new(radius * math.sin(phi) * math.cos(theta), radius * math.sin(phi) * math.sin(theta), radius * math.cos(phi))
+	end
 end
 
 -- Physics
@@ -4043,11 +4050,12 @@ do
 			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
-			--[[self.gradient = gui:Create("Gradient", self)
-			self.gradient:SetPos(0, 2, 0, 0)
-			self.gradient:SetSize(1, -4, 0, 10)
+			self.gradient = gui:Create("Gradient", self)
+			self.gradient:SetPos(0, 0, 0, 0)
+			self.gradient:SetSize(1, 0, 0, 10)
 			self.gradient:SetZIndex(0)
-			self.gradient:Generate()]]
+			self.gradient:Generate()
+
 			self.whitelist = {}
 			for i=string.byte('A'), string.byte('Z') do
 				self.whitelist[string.char(i)] = true
@@ -4056,7 +4064,9 @@ do
 				self.whitelist[k] = v
 			end
 
-			self.text = self:Cache(draw:TextOutlined("", 2, 3, 3, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0)))
+			local text = draw:TextOutlined("", 2, 3, 3, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0))
+			text.ZIndex = 2
+			self.text = self:Cache(text)
 			self.content = ""
 			self.content_position = 1 -- I like scrolling text
 			self.textsize = 16
@@ -7510,6 +7520,7 @@ do
 
 	local supported_games = {
 		[113491250] = "phantom forces",
+		[1256867479] = "phantom forces",
 		[1168263273] = "bad business"
 	}
 
@@ -8306,33 +8317,21 @@ do
 								}
 							},
 							{
-								name = "Hack vs. Hack",
+								name = {"HVH", "HVH Extras"},
 								pos = UDim2.new(0,0,3.5/10,4),
 								size = UDim2.new(.5,-4,1-(3.5/10),-4),
 								type = "Panel",
-								content = {
-									{
-										type = "Toggle",
-										name = "Hitbox Shifting",
-										value = false,
-										tooltip = "Creates points around an enemy to hit, this will increase the likely hood of getting a kill",
-									},
+								{content = {
 									{
 										type = "ComboBox",
 										name = "Hitbox Hitscan Points",
 										values = {
-											{ "Up", true },
-											{ "Static Up", false },
-											{ "Down", true },
-											{ "Static Down", false },
+											{ "Up", false },
+											{ "Down", false },
 											{ "Left", false },
-											{ "Static Left", false },
 											{ "Right", false },
-											{ "Static Right", false },
-											{ "Forward", true },
-											{ "Static Forward", false },
-											{ "Backward", true },
-											{ "Static Backward", false },
+											{ "Forward", false },
+											{ "Backward", false },
 											{ "Origin", true },
 										},
 										tooltip = "You do not need to turn these all on, points are rotated relative to the direction of the ragebot",
@@ -8347,27 +8346,15 @@ do
 										tooltip = "As of PF update 5.6.2k, I suggest you use 4.1-4.5 shift for the best hit chances",
 									},
 									{
-										type = "Toggle",
-										name = "FirePos Shifting",
-										value = false,
-										tooltip = "Creates points around you to fire from, this will increase the likely hood of getting a kill",
-									},
-									{
 										type = "ComboBox",
 										name = "FirePos Hitscan Points",
 										values = {
-											{ "Up", true },
-											{ "Static Up", false },
-											{ "Down", true },
-											{ "Static Down", false },
+											{ "Up", false },
+											{ "Down", false },
 											{ "Left", false },
-											{ "Static Left", false },
 											{ "Right", false },
-											{ "Static Right", false },
-											{ "Forward", true },
-											{ "Static Forward", false },
-											{ "Backward", true },
-											{ "Static Backward", false },
+											{ "Forward", false },
+											{ "Backward", false },
 											{ "Origin", true },
 										},
 										tooltip = "You do not need to turn these all on, points are rotated relative to the direction of the ragebot",
@@ -8382,45 +8369,37 @@ do
 										tooltip = "As of PF update 5.6.2k, I suggest you use 8.5-9.8 shift for the best hit chances",
 									},
 									{
-										type = "Toggle",
-										name = "Relative Points Only",
-										value = true,
-										tooltip = "Makes the firepos and hitbox points align, so less calculations.",
+										type = "Slider",
+										name = "FirePos Shift Multi-Point",
+										value = 1,
+										min = 1,
+										max = 10,
+										decimal = 0,
+										suffix = "x",
+										tooltip = "Adds multiple of the same points at different distances from the fire position",
 									},
 									{
-										type = "Toggle",
-										name = "Cross Relative Points Only",
-										value = true,
-										tooltip = "Makes the firepos and hitbox points align by cross, so less calculations.",
-									},
-									{
-										type = "Toggle",
-										name = "TP Scanning",
-										value = false,
-										tooltip = "Moves you to a position to kill",
+										type = "ComboBox",
+										name = "TP Scanning Points",
+										values = {
+											{ "Up", false },
+											{ "Down", false },
+											{ "Left", false },
+											{ "Right", false },
+											{ "Forward", false },
+											{ "Backward", false },
+										},
 									},
 									{
 										type = "Slider",
 										name = "TP Scanning Multi-Point",
 										min = 1,
 										max = 8,
-										suffix = " scale",
+										suffix = "x",
 										decimal = 0,
 										value = 1,
 										custom = {},
 										tooltip = "Creates multiple points to teleport towards",
-									},
-									{
-										type = "ComboBox",
-										name = "TP Scanning Points",
-										values = {
-											{ "Up", true },
-											{ "Down", true },
-											{ "Left", false },
-											{ "Right", false },
-											{ "Forward", true },
-											{ "Backward", true },
-										},
 									},
 									{
 										type = "Slider",
@@ -8432,7 +8411,61 @@ do
 										value = 25,
 										custom = {},
 									},
-								}
+								}},
+								{content={
+									{
+										type = "Slider",
+										name = "Hitbox Random Points",
+										min = 0,
+										max = 8,
+										suffix = " point(s)",
+										decimal = 0,
+										value = 0,
+										custom = {
+											[0] = "Off"
+										},
+										tooltip = "Points that are placed randomly",
+									},
+									{
+										type = "ComboBox",
+										name = "Hitbox Static Points",
+										values = {
+											{ "Up", false },
+											{ "Down", false },
+											{ "Left", false },
+											{ "Right", false },
+											{ "Forward", false },
+											{ "Backward", false },
+										},
+										tooltip = "Points that do not rotate towards the target, in otherwords, static points",
+									},
+									{
+										type = "Slider",
+										name = "FirePos Random Points",
+										min = 0,
+										max = 8,
+										suffix = " point(s)",
+										decimal = 0,
+										value = 0,
+										custom = {
+											[0] = "Off"
+										},
+										tooltip = "Points that are placed randomly",
+									},
+									{
+										type = "ComboBox",
+										name = "FirePos Static Points",
+										values = {
+											{ "Up", false },
+											{ "Down", false },
+											{ "Left", false },
+											{ "Right", false },
+											{ "Forward", false },
+											{ "Backward", false },
+										},
+										tooltip = "Points that do not rotate towards the target, in otherwords, static points",
+									},
+								}}
 							},
 							{
 								name = { "Anti Aim", "Fake Lag" },
@@ -8578,13 +8611,26 @@ do
 									},
 									{
 										type = "Slider",
-										name = "Max Points",
-										value = 30,
+										name = "Max Players",
+										value = 2,
 										min = 1,
 										max = 100,
 										decimal = 0,
 										custom = {[100] = "Are you good?"},
-										suffix = " point(s)",
+										suffix = " player(s)",
+										tooltip = "The maximum amount of players to scan for each frame."
+									},
+									{
+										type = "Toggle",
+										name = "Relative Points Only",
+										value = true,
+										tooltip = "Makes the firepos and hitbox points align, so less calculations.",
+									},
+									{
+										type = "Toggle",
+										name = "Cross Relative Points Only",
+										value = true,
+										tooltip = "Makes the firepos and hitbox points align by cross, so less calculations.",
 									},
 									{
 										type = "Toggle",
@@ -8592,14 +8638,6 @@ do
 										value = false,
 										unsafe = true,
 										tooltip = "Rage aimbot attempts to resolve player offsets and positions, Disable if you are having issues with resolver.",
-									},
-									{
-										type = "DropBox",
-										name = "Velocity Resolver",
-										value = 1,
-										unsafe = true,
-										values = { "Off", "Tick", "Ping" },
-										tooltip = "Corrects velocity of players.",
 									},
 									{
 										type = "DropBox",
@@ -8613,7 +8651,6 @@ do
 										type = "Toggle",
 										name = "Priority Only",
 										value = false,
-										unsafe = true,
 										tooltip = "Aimbot only targets prioritized players.",
 									},
 								}},
@@ -15250,7 +15287,7 @@ if BBOT.game == "phantom forces" then
 		local height_offset = Vector3.new(0,1.25,0)
 		function aimbot:GetResolvedPosition(player)
 			if not self:GetRageConfig("Settings", "Resolver") then
-				local updater = replication.getupdater(player)
+				--[[local updater = replication.getupdater(player)
 				if updater and updater.tickVelocity then
 					local vel_resolver = aimbot:GetRageConfig("Settings", "Velocity Resolver")
 					if vel_resolver == "Tick" and updater.tickVelocity then
@@ -15258,7 +15295,7 @@ if BBOT.game == "phantom forces" then
 					elseif vel_resolver == "Ping" and updater.pingVelocity then
 						return height_offset+updater.pingVelocity
 					end
-				end
+				end]]
 				return height_offset
 			end
 			--[[local bodyparts, rootpart = aimbot:GetParts(player)
@@ -15271,14 +15308,14 @@ if BBOT.game == "phantom forces" then
 			return resolvedoffset]]
 			local updater = replication.getupdater(player)
 			local velocity_addition = vector_cache
-			if updater and updater.tickVelocity then
+			--[[if updater and updater.tickVelocity then
 				local vel_resolver = aimbot:GetRageConfig("Settings", "Velocity Resolver")
 				if vel_resolver == "Tick" and updater.tickVelocity then
 					velocity_addition = updater.tickVelocity
 				elseif vel_resolver == "Ping" and updater.pingVelocity then
 					velocity_addition = updater.pingVelocity
 				end
-			end
+			end]]
 
 			local parts = aimbot:GetParts(player)
 			if updater and updater.receivedPosition and parts then
@@ -15396,44 +15433,30 @@ if BBOT.game == "phantom forces" then
 			local hitscan_priority = aimbot:GetRageConfig("Aimbot", "Hitscan Priority")
 			local aimbot_fov = aimbot:GetRageConfig("Aimbot", "Aimbot FOV")
 			
-			local hitbox_shift = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
-			local hitbox_shift_points = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
-			local hitbox_shift_distance = aimbot:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
-			local max_points = aimbot:GetRageConfig("Settings", "Max Points")
-			local relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Relative Points Only")
-			local cross_relative_only = aimbot:GetRageConfig("Hack vs. Hack", "Cross Relative Points Only")
+			local hitbox_shift_points = aimbot:GetRageConfig("HVH", "Hitbox Hitscan Points")
+			local hitbox_shift_distance = aimbot:GetRageConfig("HVH", "Hitbox Shift Distance")
+			local max_players = aimbot:GetRageConfig("Settings", "Max Players")
+			local relative_only = aimbot:GetRageConfig("Settings", "Relative Points Only")
+			local cross_relative_only = aimbot:GetRageConfig("Settings", "Cross Relative Points Only")
 			
 			local hitbox_points, hitbox_points_name = {}, {}
-			if hitbox_shift then
-				if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
-				if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Up" end
-				if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Down" end
-				if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Left" end
-				if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
-				if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
-				if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
-			end
-			
-			local firepos_shift = aimbot:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
-			local firepos_shift_points = aimbot:GetRageConfig("Hack vs. Hack", "FirePos Hitscan Points")
-			local firepos_shift_distance = aimbot:GetRageConfig("Hack vs. Hack", "FirePos Shift Distance")
+			hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin"
+
+			local firepos_shift_points = aimbot:GetRageConfig("HVH", "FirePos Hitscan Points")
+			local firepos_shift_distance = aimbot:GetRageConfig("HVH", "FirePos Shift Distance")
+			local firepos_shift_multi = aimbot:GetRageConfig("HVH", "FirePos Shift Multi-Point")
 			
 			local firepos_points, firepos_points_name = {}, {}
-			if firepos_shift then
-				if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(0,0,0) firepos_points_name[#firepos_points_name+1] = "Origin" end
-				if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Up" end
-				if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Down" end
-				if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
-				if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
-				if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
-				if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
-			end
+			firepos_points[#firepos_points+1] = CFrame.new(0,0,0) firepos_points_name[#firepos_points_name+1] = "Origin"
 			
 			local tp_scanning_points = #firepos_points
-			if aimbot:GetRageConfig("Hack vs. Hack", "TP Scanning") then
-				local points_allowed = aimbot:GetRageConfig("Hack vs. Hack", "TP Scanning Points")
-				local tp_scan_dist = aimbot:GetRageConfig("Hack vs. Hack", "TP Scanning Distance")
-				local tp_scan_multi = aimbot:GetRageConfig("Hack vs. Hack", "TP Scanning Multi-Point")
+			local points_allowed = aimbot:GetRageConfig("HVH", "TP Scanning Points")
+			local tp_scan_dist = aimbot:GetRageConfig("HVH", "TP Scanning Distance")
+			local tp_scan_multi = aimbot:GetRageConfig("HVH", "TP Scanning Multi-Point")
+			--[[if aimbot:GetRageConfig("HVH", "TP Scanning") then
+				local points_allowed = aimbot:GetRageConfig("HVH", "TP Scanning Points")
+				local tp_scan_dist = aimbot:GetRageConfig("HVH", "TP Scanning Distance")
+				local tp_scan_multi = aimbot:GetRageConfig("HVH", "TP Scanning Multi-Point")
 				for i=1, tp_scan_multi do
 					local scan_dist = (tp_scan_dist/tp_scan_multi)*i
 					if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
@@ -15443,10 +15466,13 @@ if BBOT.game == "phantom forces" then
 					if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-scan_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
 					if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,scan_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
 				end
-			end
+			end]]
 			
 			local damage_prediction = aimbot:GetRageConfig("Settings", "Damage Prediction")
 			local damage_prediction_limit = aimbot:GetRageConfig("Settings", "Damage Prediction Limit")
+
+			local hitbox_random = 0
+			local firepos_random = 0
 
 			hook:Add("OnConfigChanged", "BBOT:RageBot.CacheConfig", function(steps)
 				if not config:IsPathwayEqual(steps, "Main", "Rage") then return end
@@ -15455,53 +15481,80 @@ if BBOT.game == "phantom forces" then
 				hitscan_priority = self:GetRageConfig("Aimbot", "Hitscan Priority")
 				aimbot_fov = self:GetRageConfig("Aimbot", "Aimbot FOV")
 				
-				hitbox_shift = self:GetRageConfig("Hack vs. Hack", "Hitbox Shifting")
-				hitbox_shift_points = self:GetRageConfig("Hack vs. Hack", "Hitbox Hitscan Points")
-				hitbox_shift_distance = self:GetRageConfig("Hack vs. Hack", "Hitbox Shift Distance")
-				max_points = self:GetRageConfig("Settings", "Max Points")
-				relative_only = self:GetRageConfig("Hack vs. Hack", "Relative Points Only")
-				cross_relative_only = self:GetRageConfig("Hack vs. Hack", "Cross Relative Points Only")
+				hitbox_shift_points = self:GetRageConfig("HVH", "Hitbox Hitscan Points")
+				hitbox_shift_distance = self:GetRageConfig("HVH", "Hitbox Shift Distance")
+				max_players = self:GetRageConfig("Settings", "Max Players")
+				relative_only = self:GetRageConfig("Settings", "Relative Points Only")
+				cross_relative_only = self:GetRageConfig("Settings", "Cross Relative Points Only")
 				
 				hitbox_points, hitbox_points_name = {}, {}
-				if hitbox_shift then
-					if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
-					if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Up" end
-					if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Down" end
-					if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Left" end
-					if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
-					if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
-					if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
-				end
-				
-				firepos_shift = self:GetRageConfig("Hack vs. Hack", "FirePos Shifting")
-				firepos_shift_points = self:GetRageConfig("Hack vs. Hack", "FirePos Hitscan Points")
-				firepos_shift_distance = self:GetRageConfig("Hack vs. Hack", "FirePos Shift Distance")
+				if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+				if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
+				if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
+				if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Up" end
+				if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Down" end
+				if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Left" end
+				if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
+
+				local hitbox_shift_static_points = self:GetRageConfig("HVH Extras", "Hitbox Static Points")
+				if hitbox_shift_static_points.Forward then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
+				if hitbox_shift_static_points.Backward then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
+				if hitbox_shift_static_points.Up then hitbox_points[#hitbox_points+1] = Vector3.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Up" end
+				if hitbox_shift_static_points.Down then hitbox_points[#hitbox_points+1] = Vector3.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Down" end
+				if hitbox_shift_static_points.Left then hitbox_points[#hitbox_points+1] = Vector3.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Left" end
+				if hitbox_shift_static_points.Right then hitbox_points[#hitbox_points+1] = Vector3.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
+
+				firepos_shift_points = self:GetRageConfig("HVH", "FirePos Hitscan Points")
+				firepos_shift_distance = self:GetRageConfig("HVH", "FirePos Shift Distance")
+				firepos_shift_multi = self:GetRageConfig("HVH", "FirePos Shift Multi-Point")
 				
 				firepos_points, firepos_points_name = {}, {}
-				if firepos_shift then
-					if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(0,0,0) firepos_points_name[#firepos_points_name+1] = "Origin" end
-					if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Up" end
-					if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Down" end
-					if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
-					if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
-					if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
-					if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
+				if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(0,0,0) firepos_points_name[#firepos_points_name+1] = "Origin" end
+				if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
+				if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
+
+				local firepos_shift_static_points = self:GetRageConfig("HVH Extras", "FirePos Static Points")
+				if firepos_shift_static_points.Up then firepos_points[#firepos_points+1] = Vector3.new(0,firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+				if firepos_shift_static_points.Down then firepos_points[#firepos_points+1] = Vector3.new(0,-firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+				if firepos_shift_static_points.Left then firepos_points[#firepos_points+1] = Vector3.new(-firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+				if firepos_shift_static_points.Right then firepos_points[#firepos_points+1] = Vector3.new(firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
+				if firepos_shift_static_points.Forward then firepos_points[#firepos_points+1] = Vector3.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
+				if firepos_shift_static_points.Backward then firepos_points[#firepos_points+1] = Vector3.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
+
+				for i=1, firepos_shift_multi do
+					local scale = (firepos_shift_distance/firepos_shift_multi)*i
+					if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,scale,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+					if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-scale,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+					if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-scale,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+					if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(scale,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
 				end
-				
+
+				hitbox_random = #hitbox_points
+				local hitbox_randompoints = self:GetRageConfig("HVH Extras", "Hitbox Random Points")
+				for i=1, hitbox_randompoints do
+					hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0)
+					hitbox_points_name[#hitbox_points_name+1] = "Random"
+				end
+
+				firepos_random = #firepos_points
+				local firepos_randompoints = self:GetRageConfig("HVH Extras", "FirePos Random Points")
+				for i=1, firepos_randompoints do
+					firepos_points[#firepos_points+1] = CFrame.new(0,0,0)
+					firepos_points_name[#firepos_points_name+1] = "Random"
+				end
+
 				tp_scanning_points = #firepos_points
-				if self:GetRageConfig("Hack vs. Hack", "TP Scanning") then
-					points_allowed = self:GetRageConfig("Hack vs. Hack", "TP Scanning Points")
-					tp_scan_dist = self:GetRageConfig("Hack vs. Hack", "TP Scanning Distance")
-					tp_scan_multi = self:GetRageConfig("Hack vs. Hack", "TP Scanning Multi-Point")
-					for i=1, tp_scan_multi do
-						scan_dist = (tp_scan_dist/tp_scan_multi)*i
-						if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
-						if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
-						if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
-						if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
-						if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-scan_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
-						if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,scan_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
-					end
+				points_allowed = self:GetRageConfig("HVH", "TP Scanning Points")
+				tp_scan_dist = self:GetRageConfig("HVH", "TP Scanning Distance")
+				tp_scan_multi = self:GetRageConfig("HVH", "TP Scanning Multi-Point")
+				for i=1, tp_scan_multi do
+					scan_dist = (tp_scan_dist/tp_scan_multi)*i
+					if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+					if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+					if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+					if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
+					if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-scan_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
+					if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,scan_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
 				end
 				
 				damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
@@ -15517,9 +15570,85 @@ if BBOT.game == "phantom forces" then
 				["Backward"] = "Forward",
 			}
 
+			aimbot.ragebot_next = {}
+			aimbot.ragebot_prioritynext = {}
+
+			hook:Add("OnPriorityChanged", "BBOT:RageBot.Organize", function(player, old, new)
+				if new and new > 0 then
+					local found = false
+					local c = 0
+					for i=1, #aimbot.ragebot_next do
+						local v = aimbot.ragebot_next[i-c]
+						if v == player then
+							table.remove(aimbot.ragebot_next, i-c)
+							c=c+1
+							found = true
+						end
+					end
+					if found then
+						aimbot.ragebot_prioritynext[#aimbot.ragebot_prioritynext+1] = player
+					end
+				else
+					local found = false
+					local c = 0
+					for i=1, #aimbot.ragebot_prioritynext do
+						local v = aimbot.ragebot_prioritynext[i-c]
+						if v == player then
+							table.remove(aimbot.ragebot_prioritynext, i-c)
+							c=c+1
+							found = true
+						end
+					end
+					if found then
+						aimbot.ragebot_next[#aimbot.ragebot_next+1] = player
+					end
+				end
+			end)
+
+			hook:Add("PostInitialize", "BBOT:RageBot.Organize", function()
+				hook:Add("PlayerAdded", "BBOT:RageBot.Organize", function(player)
+					local inpriority = config.priority[player.UserId]
+					if inpriority and inpriority > 0 then
+						aimbot.ragebot_prioritynext[#aimbot.ragebot_prioritynext+1] = player
+					else
+						aimbot.ragebot_next[#aimbot.ragebot_next+1] = player
+					end
+				end)
+	
+				hook:Add("PlayerRemoving", "BBOT:RageBot.Organize", function(player)
+					local c = 0
+					for i=1, #aimbot.ragebot_prioritynext do
+						local v = aimbot.ragebot_prioritynext[i-c]
+						if v == player then
+							table.remove(aimbot.ragebot_prioritynext, i-c)
+							c=c+1
+						end
+					end
+					c = 0
+					for i=1, #aimbot.ragebot_next do
+						local v = aimbot.ragebot_next[i-c]
+						if v == player then
+							table.remove(aimbot.ragebot_next, i-c)
+							c=c+1
+						end
+					end
+				end)
+
+				local p = players:GetPlayers()
+				for i=1, #p do
+					local v = p[i]
+					local priority = config.priority[v.UserId] or 0
+					if priority > 0 then
+						aimbot.ragebot_prioritynext[#aimbot.ragebot_prioritynext+1] = v
+					elseif priority == 0 then
+						aimbot.ragebot_next[#aimbot.ragebot_next+1] = v
+					end
+				end
+			end)
+
+			local blank_vector = Vector3.new()
 			function aimbot:GetRageTarget(fov, gun)
 				local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
-				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 				local cam_position
 				do
 					--[[local future = char.rootpart.Position
@@ -15543,11 +15672,8 @@ if BBOT.game == "phantom forces" then
 				local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
 				local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
 				local priority_only = self:GetRageConfig("Settings", "Priority Only")
-
-				local scan_count = 0
-				local organizedPlayers = {}
 				local plys = {}
-				local p = players:GetPlayers()
+				--[[local p = players:GetPlayers()
 				for i=1, #p do
 					local v = p[i]
 					local priority = config.priority[v.UserId] or 0
@@ -15556,28 +15682,58 @@ if BBOT.game == "phantom forces" then
 					elseif priority == 0 and not priority_only then
 						plys[#plys+1] = v
 					end
+				end]]
+
+				local target_priority_found = {}
+				do
+					local count, c = 0, 0
+					local len = #self.ragebot_prioritynext
+					for i=1, len do
+						local v = self.ragebot_prioritynext[i-c]
+						if not v.Team or v.Team == localplayer.Team then continue end
+						if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
+						local updater = replication.getupdater(v)
+						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick())) then continue end
+						plys[#plys+1] = v
+						table.remove(self.ragebot_prioritynext, i-c)
+						c=c+1
+						self.ragebot_prioritynext[#self.ragebot_prioritynext+1] = v
+						target_priority_found[v] = i-c
+						count = count + 1
+						if count >= max_players then
+							break
+						end
+					end
 				end
 
+				local target_found = {}
+				if not priority_only then
+					local count, c = 0, 0
+					local len = #self.ragebot_next
+					for i=1, len do
+						local v = self.ragebot_next[i-c]
+						if not v.Team or v.Team == localplayer.Team then continue end
+						if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
+						local updater = replication.getupdater(v)
+						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick())) then continue end
+						plys[#plys+1] = v
+						table.remove(self.ragebot_next, i-c)
+						c=c+1
+						self.ragebot_next[#self.ragebot_next+1] = v
+						target_found[v] = i
+						count = count + 1
+						if count >= max_players then
+							break
+						end
+					end
+				end
+
+				local organizedPlayers = {}
 				for i=1, #plys do
 					local v = plys[i]
-					if v == localplayer then
-						continue
-					end
-					if max_points ~= 0 and scan_count > max_points then break end
-				
-					if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
+					local updater = replication.getupdater(v)
 					local parts = self:GetParts(v)
 					if not parts then continue end
-				
-					if v.Team and v.Team == localplayer.Team then
-						continue
-					end
-
-					local updater = replication.getupdater(v)
-					if (updater.__just_spawned or (updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick())) then
-						continue
-					end
-
 					local prioritize
 					if hitscan_priority == "Head" then
 						prioritize = updater.gethead()
@@ -15598,22 +15754,27 @@ if BBOT.game == "phantom forces" then
 							if (aimbot_fov >= 180 or not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
 								if wall_scale > 120 then
 									table.insert(organizedPlayers, {v, part, pos, prioritize})
-									inserted_priority = true
 								else
-									if firepos_shift then
-										local lookatme = CFrame.new(Vector3.new(), pos-cam_position)
+									do
+										local lookatme = CFrame.new(blank_vector, pos-cam_position)
 										local targetcframe = CFrame.new(cam_position)
 										for i=1, #firepos_points do
-											local point = firepos_points[i]
 											local fp_name = firepos_points_name[i]
-											local newcf = targetcframe * lookatme * point
+											local newcf
+											if fp_name == "Random" then
+												newcf = targetcframe * CFrame.new(vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance)))
+											elseif typeof(firepos_points[i]) == "Vector3" then
+												newcf = targetcframe + firepos_points[i]
+											else
+												newcf = targetcframe * lookatme * firepos_points[i]
+											end
 											local cam_position = newcf.p
 											if i > tp_scanning_points and (self.tp_scanning_cooldown or not BBOT.misc:CanMoveTo(cam_position)) then
 												continue
 											end
 											local u = i
-											if hitbox_shift then
-												local lookatme = CFrame.new(Vector3.new(), cam_position-pos)
+											do
+												local lookatme = CFrame.new(blank_vector, cam_position-pos)
 												local targetcframe = CFrame.new(pos)
 												for i=1, #hitbox_points do
 													local hb_name = hitbox_points_name[i]
@@ -15628,31 +15789,21 @@ if BBOT.game == "phantom forces" then
 															continue
 														end
 													end
-													local point = hitbox_points[i]
-													local newcf = targetcframe * lookatme * point
+													local newcf
+													if hb_name == "Random" then
+														newcf = targetcframe * CFrame.new(vector.randomspherepoint(math.random(-hitbox_shift_distance, hitbox_shift_distance)))
+													elseif typeof(hitbox_points[i]) == "Vector3" then
+														newcf = targetcframe + hitbox_points[i]
+													else
+														newcf = targetcframe * lookatme * hitbox_points[i]
+													end
 													local pos = newcf.p
 													local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
 													if not raydata or raydata.Instance:IsDescendantOf(main_part) or raydata.Position == pos then
 														table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
-														inserted_priority = true
-														scan_count = scan_count + 1
 													end
 												end
-											else
-												local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-												if not raydata or raydata.Instance:IsDescendantOf(main_part) or raydata.Position == pos then
-													table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
-													inserted_priority = true
-													scan_count = scan_count + 1
-												end
 											end
-										end
-									else
-										local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-										if not raydata or raydata.Instance:IsDescendantOf(main_part) or raydata.Position == pos then
-											table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, false, traceamount})
-											inserted_priority = true
-											scan_count = scan_count + 1
 										end
 									end
 								end
@@ -15682,6 +15833,30 @@ if BBOT.game == "phantom forces" then
 					return a[7] < b[7]
 				end)
 
+				if minimum_pen[1] and minimum_pen[1][6] then
+					if target_priority_found[minimum_pen[1][1]] then
+						local ragebot_prioritynext = self.ragebot_prioritynext
+						for i=1, #ragebot_prioritynext do
+							local v = ragebot_prioritynext[i]
+							if v ~= minimum_pen[1][1] then continue end
+							table.remove(ragebot_prioritynext, i)
+							table.insert(ragebot_prioritynext, 1, v)
+							break
+						end
+					end
+	
+					if target_found[minimum_pen[1][1]] then
+						local ragebot_next = self.ragebot_next
+						for i=1, #ragebot_next do
+							local v = ragebot_next[i]
+							if v ~= minimum_pen[1][1] then continue end
+							table.remove(ragebot_next, i)
+							table.insert(ragebot_next, 1, v)
+							break
+						end
+					end
+				end
+
 				return minimum_pen[1]
 			end
 		end
@@ -15706,7 +15881,7 @@ if BBOT.game == "phantom forces" then
 				end
 			end)]]
 
-			hook:Add("updateReplicationJustSpawned", "BBOT:Aimbot.RageBot.Calc", function()
+			hook:Add("Postupdatespawn", "BBOT:Aimbot.RageBot.Calc", function()
 				if gamelogic.currentgun and gamelogic.currentgun.step and config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
 					gamelogic.currentgun.step(0)
 				end
@@ -15732,7 +15907,7 @@ if BBOT.game == "phantom forces" then
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
 				local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
-				if target and target[6] and self:GetRageConfig("Hack vs. Hack", "TP Scanning") and not self.tp_scanning and not self.tp_scanning_cooldown then
+				if target and target[6] and not self.tp_scanning and not self.tp_scanning_cooldown then
 					local original_position = char.rootpart.Position * 1
 					self.tp_scanning_cooldown = true
 					BBOT.misc:MoveTo(target[4], true)
