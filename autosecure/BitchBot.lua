@@ -14292,6 +14292,14 @@ if BBOT.game == "phantom forces" then
 					network:send("repupdate", pos, ang, tick)
 					ran = true
 				end]]
+
+				if not BBOT.aimbot.in_ragebot and not BBOT.aimbot.tp_scanning then
+					local infloor = config:GetValue("Main", "Rage", "Anti Aim", "In Floor")
+					if infloor > 0 then
+						pos = pos + Vector3.new(0,-infloor,0)
+					end
+				end
+
 				if config:GetValue("Main", "Rage", "Anti Aim", "Enabled") then
 					--args[2] = ragebot:AntiNade(args[2])
 					stutterFrames += 1
@@ -14335,11 +14343,6 @@ if BBOT.game == "phantom forces" then
 						yaw = 16478887
 					elseif yawChoice == "Stutter Spin" then
 						yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
-					end
-
-					local infloor = config:GetValue("Main", "Rage", "Anti Aim", "In Floor")
-					if infloor > 0 then
-						pos = pos + Vector3.new(0,-infloor,0)
 					end
 
 					new_angles = new_angles or Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
@@ -15902,18 +15905,18 @@ if BBOT.game == "phantom forces" then
 						return
 					end
 				end
-				if self.no_rage then return end
+				if self.tp_scanning then return end
+				self.in_ragebot = true
 
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
 				local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
 				if target and target[6] and not self.tp_scanning and not self.tp_scanning_cooldown then
-					local original_position = char.rootpart.Position * 1
-					self.tp_scanning_cooldown = true
+					local original_position = char.rootpart.Position
 					BBOT.misc:MoveTo(target[4], true)
 					BBOT.misc:ForceRepupdate(target[4])
+					self.tp_scanning_cooldown = true
 					self.tp_scanning = target[4]
-					self.no_rage = true
 					if char.alive then
 						char.rootpart.Anchored = true
 					end
@@ -15930,12 +15933,10 @@ if BBOT.game == "phantom forces" then
 								end
 								return
 							end
-							self.no_rage = false
-							BBOT.misc:MoveTo(target[4], true)
+							self.tp_scanning = false
 							if gamelogic.currentgun then
 								gamelogic.currentgun.step(0)
 							end
-							self.tp_scanning = false
 							char.rootpart.Anchored = false
 							BBOT.misc:MoveTo(original_position, true)
 							timer:Simple(0.5,function()
@@ -15947,24 +15948,25 @@ if BBOT.game == "phantom forces" then
 				end
 
 				self:RageChanged(target)
-				if not target then return end
-				self.rage_target = target
-				local position = target[3]
-				local part_pos = part.Position
+				if target then
+					self.rage_target = target
+					local position = target[3]
+					local part_pos = part.Position
 
-				local dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
-				local magnitude = (position-part_pos).Magnitude
+					local dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
+					local magnitude = (position-part_pos).Magnitude
 
-				local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
-				part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
+					local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
+					part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
 
-				if self:GetRageConfig("Aimbot", "Auto Shoot") then
-					aimbot.fire = true
-					gun:shoot(true)
-					BBOT.misc:ForceRepupdate(self.tp_scanning or char.rootpart.Position, Vector2.new(X, Y))
+					if self:GetRageConfig("Aimbot", "Auto Shoot") then
+						self.fire = true
+						gun:shoot(true)
+						BBOT.misc:ForceRepupdate(self.tp_scanning or char.rootpart.Position, -Vector2.new(X, Y))
+					end
+
+					self.silent = part
 				end
-
-				self.silent = part
 			end
 		end
 
@@ -16112,7 +16114,7 @@ if BBOT.game == "phantom forces" then
 				end
 			
 				local mycurgun = gamelogic.currentgun
-				if mycurgun and mycurgun.data and mycurgun.data.bulletspeed then
+				if enabled and mycurgun and mycurgun.data and mycurgun.data.bulletspeed then
 					aimbot:SetCurrentType(mycurgun)
 					local _fov = aimbot:GetLegitConfig("Aim Assist", "Aimbot FOV")
 					local _dzfov = aimbot:GetLegitConfig("Aim Assist", "Deadzone FOV")
@@ -16505,6 +16507,10 @@ if BBOT.game == "phantom forces" then
 			if aimbot.fire then
 				aimbot.fire = nil
 				gun:shoot(false)
+			end
+
+			if aimbot.in_ragebot then
+				aimbot.in_ragebot = false
 			end
 		end)
 
