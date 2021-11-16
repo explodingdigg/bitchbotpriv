@@ -8504,19 +8504,22 @@ do
 									},
 									{
 										type = "Slider",
-										name = "Spin Rate",
-										value = 10,
-										min = -100,
-										max = 100,
-										suffix = "°/s",
-									},
-									{
-										type = "Slider",
 										name = "In Floor",
 										value = 0,
 										min = 0,
 										max = 5,
 										suffix = " studs",
+										custom = {[0] = "Disabled"},
+										unsafe = true,
+										tooltip = "Puts you into the floor kinda..."
+									},
+									{
+										type = "Slider",
+										name = "In Floor Swap",
+										value = 100,
+										min = 0,
+										max = 500,
+										suffix = "%",
 										custom = {[0] = "Disabled"},
 										unsafe = true,
 										tooltip = "Puts you into the floor kinda..."
@@ -10215,8 +10218,8 @@ do
 									{
 										type = "Slider",
 										name = "Tick Division Scale",
-										min = 0.1,
-										max = 12,
+										min = -8,
+										max = 8,
 										suffix = "^10 studs/s",
 										decimal = 1,
 										value = 3,
@@ -10291,10 +10294,30 @@ do
 									},
 									{
 										type = "Toggle",
-										name = "Repupdate Spammer",
+										name = "Floor TP",
 										value = false,
 										unsafe = true,
-										tooltip = "Sends repupdate per frame, just so you can move faster :)",
+										tooltip = "Spawns you into the floor, so you can get out of the map.",
+									},
+									{
+										type = "Toggle",
+										name = "Disable Collisions",
+										value = false,
+										unsafe = true,
+										tooltip = "Useful for Floor TP",
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2,
+											},
+										}
+									},
+									{
+										type = "Toggle",
+										name = "Spawn Delay",
+										value = false,
+										unsafe = true,
+										tooltip = "Delays your spawn in so you have a chance to load up.",
 									},
 									{
 										type = "Toggle",
@@ -12157,6 +12180,7 @@ if BBOT.game == "phantom forces" then
 					controller.receivedPosition = controller.__spawn_position
 					controller.__t_received = tick()
 				end
+				controller.__spawn_time = tick()
 				controller.__just_spawned = true
 			end
 
@@ -14168,15 +14192,6 @@ if BBOT.game == "phantom forces" then
 		    network:send("repupdate", pos or char.rootpart.Position, ang or Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
 		end
 
-        local sending = false
-        hook:Add("RenderStepped", "BBOT:InternalRepupdate", function()
-            if not char.alive or misc.inblink or not config:GetValue("Main", "Misc", "Exploits", "Repupdate Spammer") then return end
-            sending = true
-            local l__angles__1304 = BBOT.aux.camera.angles;
-		    misc:ForceRepupdate()
-            sending = false
-        end)
-
 		hook:Add("SuppressNetworkSend", "BBOT:Blink", function(networkname, pos, ang, timestamp)
 			if networkname == "repupdate" then
 				absolute_pos = pos
@@ -14195,7 +14210,7 @@ if BBOT.game == "phantom forces" then
 							misc:SendBlinkRecord()
 							last_pos = pos
 							--last_ang = ang
-							network:send(networkname, last_pos, last_ang, timestamp)
+							network:send(networkname, last_pos, ang, timestamp)
 							last_send = tick()
 							misc.inblink = false
 						else
@@ -14264,13 +14279,103 @@ if BBOT.game == "phantom forces" then
 			end)
 		end
 
+		--Disable Collisions
+		hook:Add("OnKeyBindChanged", "NoCollisionsChanged", function(steps, old, new)
+			if not config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Disable Collisions", "KeyBind") then return end
+			if not config:GetValue("Main", "Misc", "Exploits", "Disable Collisions") then return end
+			if not char.alive then return end
+			local v1057 = localplayer:GetDescendants()
+			for v1058 = 1, #v1057 do
+				local object = v1057[v1058]
+				if object:IsA("BasePart") then
+					object.CanCollide = (new == true and false or true)
+				end
+			end
+			local v1057 = localplayer.Character:GetDescendants()
+			for v1058 = 1, #v1057 do
+				local object = v1057[v1058]
+				if object:IsA("BasePart") then
+					object.CanCollide = (new == true and false or true)
+				end
+			end
+		end)
+		hook:Add("OnConfigChanged", "NoCollisionsChanged", function(steps, old, new)
+			if not config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Disable Collisions") then return end
+			if not config:GetValue("Main", "Misc", "Exploits", "Disable Collisions", "KeyBind") then return end
+			if not char.alive then return end
+			local v1057 = localplayer:GetDescendants()
+			for v1058 = 1, #v1057 do
+				local object = v1057[v1058]
+				if object:IsA("BasePart") then
+					object.CanCollide = (new == true and false or true)
+				end
+			end
+			local v1057 = localplayer.Character:GetDescendants()
+			for v1058 = 1, #v1057 do
+				local object = v1057[v1058]
+				if object:IsA("BasePart") then
+					object.CanCollide = (new == true and false or true)
+				end
+			end
+		end)
+	
+		hook:Add("PostLoadCharacter", "NoCollisions", function(char, pos)
+			if not config:GetValue("Main", "Misc", "Exploits", "Disable Collisions") or not config:GetValue("Main", "Misc", "Exploits", "Disable Collisions", "KeyBind") then return end
+			local v1057 = localplayer:GetDescendants()
+			for v1058 = 1, #v1057 do
+				local object = v1057[v1058]
+				if object:IsA("BasePart") then
+					object.CanCollide = false
+				end
+			end
+			local v1057 = localplayer.Character:GetDescendants()
+			for v1058 = 1, #v1057 do
+				local object = v1057[v1058]
+				if object:IsA("BasePart") then
+					object.CanCollide = false
+				end
+			end
+		end)
+	
+		hook:Add("Stepped", "CollisionOverride", function()
+			if not config:GetValue("Main", "Misc", "Exploits", "Disable Collisions") or not config:GetValue("Main", "Misc", "Exploits", "Disable Collisions", "KeyBind") then return end
+			if not char.alive then return end
+			local v1057 = localplayer:GetDescendants()
+			for v1058 = 1, #v1057 do
+				local object = v1057[v1058]
+				if object:IsA("BasePart") then
+					object.CanCollide = false
+				end
+			end
+			local v1057 = localplayer.Character:GetDescendants()
+			for v1058 = 1, #v1057 do
+				local object = v1057[v1058]
+				if object:IsA("BasePart") then
+					object.CanCollide = false
+				end
+			end
+		end)
+
 		local workspace = BBOT.service:GetService("Workspace")
 		local stutterFrames = 0
-		hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, tick, ...)
+		local last_alive = false
+		hook:Add("OnAliveChanged", "BBOT:RepUpdate", function(alive)
+			if not alive then
+				last_alive = false
+			end
+		end)
+
+		local swapped, nextswap = false, 0
+		hook:Add("RageBot.DamagePredictionKilled", "BBOT:FloorSwap", function(Entity)
+			swapped = false
+			nextswap = tick() + BBOT.extras:getLatency() * config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")/100
+		end)
+		hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, timestamp, ...)
+
 			if networkname == "repupdate" then
 				local ran = false
 				if config:GetValue("Main", "Misc", "Exploits", "Tick Division Manipulation") then
-					tick = tick/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale"))
+					timestamp = timestamp/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale"))
 					ran = true
 				end
 
@@ -14285,17 +14390,31 @@ if BBOT.game == "phantom forces" then
 					ran = true
 				end
 
+				if not last_alive then
+					last_alive = true
+
+					if config:GetValue("Main", "Misc", "Exploits", "Floor TP") then
+						local p = pos - Vector3.new(0,6,0)
+						pos = p
+						char.rootpart.CFrame = CFrame.new(p, char.rootpart.CFrame.LookVector)
+					end
+				end
+
 				--[[if config:GetValue("Main", "Misc", "Exploits", "Spawn Offset") and changed > 0 then
 					changed = changed - 1
 					pos=pos+Vector3.new(0,-1e6,0)
-					tick=2
-					network:send("repupdate", pos, ang, tick)
+					timestamp=2
+					network:send("repupdate", pos, ang, timestamp)
 					ran = true
 				end]]
 
 				if not BBOT.aimbot.in_ragebot and not BBOT.aimbot.tp_scanning then
 					local infloor = config:GetValue("Main", "Rage", "Anti Aim", "In Floor")
-					if infloor > 0 then
+					local infloorswap = config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")
+					if infloorswap > 0 and not swapped and nextswap < tick() then
+						swapped = true
+					end
+					if infloor > 0 and (not infloorswap or swapped) then
 						pos = pos + Vector3.new(0,-infloor,0)
 					end
 				end
@@ -14346,10 +14465,10 @@ if BBOT.game == "phantom forces" then
 					end
 
 					new_angles = new_angles or Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
-					return {networkname, pos, new_angles, tick}
+					return {networkname, pos, new_angles, timestamp}
 				end
 				if ran then
-					return {networkname, pos, ang, tick}
+					return {networkname, pos, ang, timestamp}
 				end
 			end
 		end)
@@ -14732,15 +14851,13 @@ if BBOT.game == "phantom forces" then
 				return not instance.CanCollide or instance.Transparency == 1
 			end
 
-			
-
 			local workspace = BBOT.service:GetService("Workspace")
+			local v4 = RaycastParams.new();
+			v4.IgnoreWater = true;
 			function aimbot:fullcast(p7, p8, p9, p10, p11)
 				local v3=nil;
-				local v4 = RaycastParams.new();
-				v4.FilterDescendantsInstances = p9;
-				v4.IgnoreWater = true;
 				local calls = 0;
+				v4.FilterDescendantsInstances = p9;
 				while calls < 2000 do
 					v3 = workspace:Raycast(p7, p8, v4);
 					if not v3 or not p10(v3) then
@@ -14755,7 +14872,7 @@ if BBOT.game == "phantom forces" then
 
 			local camera = BBOT.service:GetService("CurrentCamera")
 			function aimbot:raycastbullet(vec, dir, extra, cb)
-				return aimbot:fullcast(vec, dir, {camera, workspace.Terrain, localplayer.Character, workspace.Ignore, BBOT.l3p_player:GetCharacter(), extra}, cb or raycastbullet)
+				return aimbot:fullcast(vec, dir, {camera, workspace.Terrain, localplayer.Character, workspace.Ignore, workspace.Players, extra}, cb or raycastbullet)
 			end
 		end
 
@@ -15212,12 +15329,12 @@ if BBOT.game == "phantom forces" then
 
 		local dot = Vector3.new().Dot
 		local rcaster = BBOT.aux.raycast
-		function aimbot:raycastbullet_rage(start, dir, extra, depth, main, raytracepenetration)
+		function aimbot:raycastbullet_rage(start, dir, depth, raytracepenetration)
 			local trace_amount = 0
 			local function bulletcb(p1)
 				local instance = p1.Instance
 				if instance.Name == "Window" then return true end
-				if instance:IsDescendantOf(main) then return false end
+				if instance.Name == "killbullet" then return false end
 				local cancollide = not instance.CanCollide or instance.Transparency == 1
 				if raytracepenetration and depth and not cancollide then
 					local position = p1.Position
@@ -15228,9 +15345,6 @@ if BBOT.game == "phantom forces" then
 						local l__Position__22 = v21.Position;
 						local l__Normal__23 = v21.Normal;
 						local v24 = dot(dirunit, l__Position__22 - position);
-						if instance.Name == "killbullet" then
-							return false
-						end
 						if v24 < depth then
 							depth = depth - v24
 							trace_amount = trace_amount + v24
@@ -15243,7 +15357,7 @@ if BBOT.game == "phantom forces" then
 					return cancollide
 				end
 			end
-			return self:raycastbullet(start,dir,extra,bulletcb), trace_amount
+			return self:raycastbullet(start,dir,nil,bulletcb), trace_amount
 		end
 
 		hook:Add("Initialize", "FindnewBullet", function()
@@ -15500,12 +15614,12 @@ if BBOT.game == "phantom forces" then
 				if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
 
 				local hitbox_shift_static_points = self:GetRageConfig("HVH Extras", "Hitbox Static Points")
-				if hitbox_shift_static_points.Forward then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
-				if hitbox_shift_static_points.Backward then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
-				if hitbox_shift_static_points.Up then hitbox_points[#hitbox_points+1] = Vector3.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Up" end
-				if hitbox_shift_static_points.Down then hitbox_points[#hitbox_points+1] = Vector3.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Down" end
-				if hitbox_shift_static_points.Left then hitbox_points[#hitbox_points+1] = Vector3.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Left" end
-				if hitbox_shift_static_points.Right then hitbox_points[#hitbox_points+1] = Vector3.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
+				if hitbox_shift_static_points.Forward then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Any" end
+				if hitbox_shift_static_points.Backward then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Any" end
+				if hitbox_shift_static_points.Up then hitbox_points[#hitbox_points+1] = Vector3.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Any" end
+				if hitbox_shift_static_points.Down then hitbox_points[#hitbox_points+1] = Vector3.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Any" end
+				if hitbox_shift_static_points.Left then hitbox_points[#hitbox_points+1] = Vector3.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Any" end
+				if hitbox_shift_static_points.Right then hitbox_points[#hitbox_points+1] = Vector3.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Any" end
 
 				firepos_shift_points = self:GetRageConfig("HVH", "FirePos Hitscan Points")
 				firepos_shift_distance = self:GetRageConfig("HVH", "FirePos Shift Distance")
@@ -15517,12 +15631,12 @@ if BBOT.game == "phantom forces" then
 				if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
 
 				local firepos_shift_static_points = self:GetRageConfig("HVH Extras", "FirePos Static Points")
-				if firepos_shift_static_points.Up then firepos_points[#firepos_points+1] = Vector3.new(0,firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Up" end
-				if firepos_shift_static_points.Down then firepos_points[#firepos_points+1] = Vector3.new(0,-firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Down" end
-				if firepos_shift_static_points.Left then firepos_points[#firepos_points+1] = Vector3.new(-firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
-				if firepos_shift_static_points.Right then firepos_points[#firepos_points+1] = Vector3.new(firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
-				if firepos_shift_static_points.Forward then firepos_points[#firepos_points+1] = Vector3.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
-				if firepos_shift_static_points.Backward then firepos_points[#firepos_points+1] = Vector3.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
+				if firepos_shift_static_points.Up then firepos_points[#firepos_points+1] = Vector3.new(0,firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Any" end
+				if firepos_shift_static_points.Down then firepos_points[#firepos_points+1] = Vector3.new(0,-firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Any" end
+				if firepos_shift_static_points.Left then firepos_points[#firepos_points+1] = Vector3.new(-firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Any" end
+				if firepos_shift_static_points.Right then firepos_points[#firepos_points+1] = Vector3.new(firepos_shift_distance,0,0) firepos_points_name[#firepos_points_name+1] = "Any" end
+				if firepos_shift_static_points.Forward then firepos_points[#firepos_points+1] = Vector3.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Any" end
+				if firepos_shift_static_points.Backward then firepos_points[#firepos_points+1] = Vector3.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Any" end
 
 				for i=1, firepos_shift_multi do
 					local scale = (firepos_shift_distance/firepos_shift_multi)*i
@@ -15649,6 +15763,11 @@ if BBOT.game == "phantom forces" then
 				end
 			end)
 
+			local renderstep_tick = 0
+			hook:Add("RenderStepped", "BBOT:Spectator.renderstep_tick", function(t)
+				renderstep_tick = t
+			end)
+
 			local blank_vector = Vector3.new()
 			function aimbot:GetRageTarget(fov, gun)
 				local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
@@ -15667,8 +15786,6 @@ if BBOT.game == "phantom forces" then
 						cam_position = char.rootpart.Position
 					end
 				end
-				local team = (localplayer.Team and localplayer.Team.Name or "NA")
-				local playerteamdata = workspace["Players"][(team == "Ghosts" and "Bright orange" or "Bright blue")]
 				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
 				local penetration_depth = gun.data.penetrationdepth * wall_scale/100
 
@@ -15686,6 +15803,8 @@ if BBOT.game == "phantom forces" then
 						plys[#plys+1] = v
 					end
 				end]]
+				local latency = extras:getLatency()
+
 
 				local target_priority_found = {}
 				do
@@ -15696,7 +15815,8 @@ if BBOT.game == "phantom forces" then
 						if not v.Team or v.Team == localplayer.Team then continue end
 						if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
 						local updater = replication.getupdater(v)
-						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick())) then continue end
+						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
+						if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
 						plys[#plys+1] = v
 						table.remove(self.ragebot_prioritynext, i-c)
 						c=c+1
@@ -15718,7 +15838,8 @@ if BBOT.game == "phantom forces" then
 						if not v.Team or v.Team == localplayer.Team then continue end
 						if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
 						local updater = replication.getupdater(v)
-						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (extras:getLatency()*2)+.25 < tick())) then continue end
+						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
+						if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
 						plys[#plys+1] = v
 						table.remove(self.ragebot_next, i-c)
 						c=c+1
@@ -15731,80 +15852,87 @@ if BBOT.game == "phantom forces" then
 					end
 				end
 
+				--.75
+				local vecdown = Vector3.new(0,1.55,0)
+
 				local organizedPlayers = {}
 				for i=1, #plys do
 					local v = plys[i]
 					local updater = replication.getupdater(v)
 					local parts = self:GetParts(v)
 					if not parts then continue end
-					local prioritize
+					local part
 					if hitscan_priority == "Head" then
-						prioritize = updater.gethead()
+						part = updater.gethead()
 					elseif hitscan_priority == "Body" then
-						prioritize = replication.getbodyparts(v).torso
+						part = replication.getbodyparts(v).torso
 					end
 					local main_part = updater.gethead().Parent
 					local resolver_offset, isabsolute = self:GetResolvedPosition(v)
 					local abspos = updater.getpos()
-					local inserted_priority
-					local tp_scanned = false
-					if prioritize then
-						local part = prioritize
+					if part then
 						local pos = (isabsolute and resolver_offset or abspos + resolver_offset)
-						local point, onscreen = camera:WorldToViewportPoint(pos)
-						if onscreen or aimbot_fov >= 180 then
 							--local object_fov = self:GetFOV(part, scan_part)
-							if (aimbot_fov >= 180 or not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
-								if wall_scale > 120 then
-									table.insert(organizedPlayers, {v, part, pos, prioritize})
-								else
-									do
-										local lookatme = CFrame.new(blank_vector, pos-cam_position)
-										local targetcframe = CFrame.new(cam_position)
-										for i=1, #firepos_points do
-											local fp_name = firepos_points_name[i]
-											local newcf
-											if fp_name == "Random" then
-												newcf = targetcframe * CFrame.new(vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance)))
-											elseif typeof(firepos_points[i]) == "Vector3" then
-												newcf = targetcframe + firepos_points[i]
-											else
-												newcf = targetcframe * lookatme * firepos_points[i]
+						if (aimbot_fov >= 180 or not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
+							if wall_scale > 120 then
+								table.insert(organizedPlayers, {v, part, pos, prioritize})
+							else
+								do
+									local lookatme = CFrame.new(blank_vector, pos-cam_position)
+									local targetcframe = CFrame.new(cam_position)
+									for i=1, #firepos_points do
+										local fp_name = firepos_points_name[i]
+										local newcf
+										if fp_name == "Random" then
+											local offset = vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance))
+											newcf = targetcframe + offset
+											if offset.Y < -8.5 then
+												newcf = targetcframe + offset + vecdown
 											end
-											local cam_position = newcf.p
-											if i > tp_scanning_points and (self.tp_scanning_cooldown or not BBOT.misc:CanMoveTo(cam_position)) then
-												continue
+										elseif typeof(firepos_points[i]) == "Vector3" then
+											newcf = targetcframe + firepos_points[i]
+											if firepos_points[i].Y < -8.5 then
+												newcf = targetcframe + firepos_points[i] + vecdown
 											end
-											local u = i
-											do
-												local lookatme = CFrame.new(blank_vector, cam_position-pos)
-												local targetcframe = CFrame.new(pos)
-												for i=1, #hitbox_points do
-													local hb_name = hitbox_points_name[i]
-													if (relative_only or cross_relative_only) and fp_name ~= "Any" then
-														if relative_only and fp_name ~= hb_name then
-															if cross_relative_only and cross_relatives[fp_name] ~= hb_name then
-																continue
-															elseif not cross_relative_only then
-																continue
-															end
-														elseif not relative_only and cross_relative_only and cross_relatives[fp_name] ~= hb_name then
+										else
+											newcf = targetcframe * lookatme * firepos_points[i]
+											if newcf.p.Y < targetcframe.p.Y and math.abs(newcf.p.Y - targetcframe.p.Y) > 8.5 then
+												newcf = targetcframe * lookatme * CFrame.new(firepos_points[i].p + vecdown)
+											end
+										end
+										local cam_position = newcf.p
+										if i > tp_scanning_points and (self.tp_scanning_cooldown or not BBOT.misc:CanMoveTo(cam_position)) then
+											continue
+										end
+										local u = i
+										do
+											local lookatme = CFrame.new(blank_vector, cam_position-pos)
+											local targetcframe = CFrame.new(pos)
+											for i=1, #hitbox_points do
+												local hb_name = hitbox_points_name[i]
+												if (relative_only or cross_relative_only) and fp_name ~= "Any" and hb_name ~= "Any" then
+													if relative_only and fp_name ~= hb_name then
+														if cross_relative_only and cross_relatives[fp_name] ~= hb_name then
+															continue
+														elseif not cross_relative_only then
 															continue
 														end
+													elseif not relative_only and cross_relative_only and cross_relatives[fp_name] ~= hb_name then
+														continue
 													end
-													local newcf
-													if hb_name == "Random" then
-														newcf = targetcframe * CFrame.new(vector.randomspherepoint(math.random(-hitbox_shift_distance, hitbox_shift_distance)))
-													elseif typeof(hitbox_points[i]) == "Vector3" then
-														newcf = targetcframe + hitbox_points[i]
-													else
-														newcf = targetcframe * lookatme * hitbox_points[i]
-													end
-													local pos = newcf.p
-													local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,playerteamdata,penetration_depth,main_part,auto_wall)
-													if not raydata or raydata.Instance:IsDescendantOf(main_part) or raydata.Position == pos then
-														table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
-													end
+												end
+												local newcf
+												if hb_name == "Random" then
+													newcf = targetcframe * CFrame.new(vector.randomspherepoint(math.random(-hitbox_shift_distance, hitbox_shift_distance)))
+												elseif typeof(hitbox_points[i]) == "Vector3" then
+													newcf = targetcframe + hitbox_points[i]
+												else
+													newcf = targetcframe * lookatme * hitbox_points[i]
+												end
+												local pos = newcf.p
+												local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,penetration_depth,auto_wall)
+												if not raydata or raydata.Position == pos then
+													table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
 												end
 											end
 										end
@@ -16896,6 +17024,8 @@ if BBOT.game == "phantom forces" then
 								offset, absolute = BBOT.aimbot:GetResolvedPosition(self.player)
 							end
 						end
+						self.offset = offset
+						self.absolute = absolute
 						for k, v in pairs(self.parts) do
 							if whitelisted_parts[k] then
 								local object_bounds_cframe = (CFrame.new(v.Size):ToWorldSpace(CFrame.Angles(v.CFrame:ToOrientation()))).Position
@@ -17059,6 +17189,29 @@ if BBOT.game == "phantom forces" then
 							righty = righty + self.frozen.TextBounds.Y + 2
 						end
 					end
+
+					if self.resolved and self.resolved_enabled then
+						if fail or not self.offset then
+							self.resolved.Visible = false
+							self.resolved_background.Visible = false
+						else
+							local pos
+							if self.absolute then
+								pos = camera:WorldToViewportPoint(self.offset)
+							elseif self.controller.getpos() then
+								pos = camera:WorldToViewportPoint(self.controller.getpos() + self.offset)
+							end
+							if pos then
+								self.resolved.Visible = true
+								self.resolved_background.Visible = true
+								self.resolved.Position = Vector2.new(pos.X, pos.Y)
+								self.resolved_background.Position = Vector2.new(pos.X, pos.Y)
+							else
+								self.resolved.Visible = false
+								self.resolved_background.Visible = false
+							end
+						end
+					end
 				end
 
 				function player_meta:GetConfig(...)
@@ -17092,6 +17245,9 @@ if BBOT.game == "phantom forces" then
 					
 					self.distance = self:Cache(draw:TextOutlined("0 studs", 2, 0, 0, 13, false, color, black, color_transparency, false))
 					self.frozen = self:Cache(draw:TextOutlined("FROZEN", 2, 0, 0, 13, false, color, black, color_transparency, false))
+
+					self.resolved_background = self:Cache(draw:Circle(0, 0, 4, 1, 10, { 0, 0, 0, 255 }, 1, false))
+					self.resolved = self:Cache(draw:Circle(0, 0, 3, 1, 10, { 255, 255, 255, 255 }, 1, false))
 				end
 
 				function player_meta:GetColor(...)
@@ -17168,6 +17324,14 @@ if BBOT.game == "phantom forces" then
 					self.frozen.Color = color
 					self.frozen.Transparency = color_transparency
 					self:Cache(self.frozen)
+
+					color, color_transparency = self:GetColor("Box", "Color Box")
+					self.resolved_enabled = (esp_enabled and flags.Resolved or false)
+					self.resolved.Visible = self.resolved_enabled
+					self.resolved_background.Visible = self.resolved_enabled
+					self.resolved.Color = color
+					self.resolved.Transparency = color_transparency
+					self:Cache(self.resolved)
 
 					self:RemoveInstances()
 
