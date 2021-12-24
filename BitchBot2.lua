@@ -7626,7 +7626,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				client.sound = garbage
 			elseif rawget(garbage, "controller") then
 				client.input = garbage
-			elseif rawget(garbage, "checkkillzone") then
+			elseif rawget(garbage, "raycastwhitelist") then
 				client.roundsystem = garbage
 			elseif rawget(garbage, "new") and rawget(garbage, "step") and rawget(garbage, "reset") then
 				client.particle = garbage
@@ -8086,9 +8086,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 		DeepRestoreTableFunctions = nil
 	end
 
-	local charcontainer = game.ReplicatedStorage.Character.BodyWIP
-	local ghostchar = charcontainer.Ghost
-	local phantomchar = charcontainer.Phantoms
 
 	ragebot.repupdates = {}
 
@@ -10197,58 +10194,58 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 	do
 		local tween = game:service("TweenService")
 
-		client.closecast = require(game.ReplicatedFirst.SharedModules.Utilities.Geometry.CloseCast)
+		-- client.closecast = require(game.ReplicatedFirst.SharedModules.Utilities.Geometry.CloseCast)
 		local partnames = { "head", "torso", "lleg", "rleg", "larm", "rarm" }
 		local partexpansionarray = { 0.75, 1.5, 1.5, 1.5, 1.5, 1.5 }
 
 		local nv = Vector3.new()
 		local dot = nv.Dot
 
-		local bodyarrayinfo = getupvalue(client.replication.thickcastplayers, 7)
-		local chartable = getupvalue(client.replication.getallparts, 1)
-		client.chartable = chartable
+		-- local bodyarrayinfo = getupvalue(client.replication.thickcastplayers, 7)
+		-- local chartable = getupvalue(client.replication.getallparts, 1)
+		-- client.chartable = chartable
 
-		function client.thickcastplayers(origin, direction) -- i might attempt to use this on bulletcheck later
-			local castresults = nil
-			for player, bodyparts in next, chartable do
-				local delta = bodyparts.torso.Position - origin
-				local directiondot = dot(direction, direction)
-				local diff = dot(direction, delta)
-				if diff > 0 and diff < directiondot and directiondot * dot(delta, delta) - diff * diff < directiondot * 6 * 6
-				then
-					for i = 1, #partnames do
-						local maxdist = 0.0425 -- regular on pc with controller is just this
-						--[[if lol then
-							if i == 1 then
-								maxexpansion = lol / 2
-							else
-								maxexpansion = lol
-							end
-						elseif partexpansionarray then
-							maxexpansion = partexpansionarray[i]
-						end]]
-						maxdist = partexpansionarray[i]
-						local curbodypart = bodyparts[partnames[i]]
-						local pos, what, hitpos, dist = closecast.closeCastPart(curbodypart, origin, direction)
-						if pos and dist < maxdist then
-							if not castresults then
-								castresults = {}
-							end
-							castresults[#castresults + 1] = {
-								bodyarrayinfo[curbodypart],
-								curbodypart,
-								hitpos,
-								(what - hitpos).unit,
-								what,
-								dist, 
-							}
-							break
-						end
-					end
-				end
-			end
-			return castresults
-		end
+		-- function client.thickcastplayers(origin, direction) -- i might attempt to use this on bulletcheck later
+		-- 	local castresults = nil
+		-- 	for player, bodyparts in next, chartable do
+		-- 		local delta = bodyparts.torso.Position - origin
+		-- 		local directiondot = dot(direction, direction)
+		-- 		local diff = dot(direction, delta)
+		-- 		if diff > 0 and diff < directiondot and directiondot * dot(delta, delta) - diff * diff < directiondot * 6 * 6
+		-- 		then
+		-- 			for i = 1, #partnames do
+		-- 				local maxdist = 0.0425 -- regular on pc with controller is just this
+		-- 				--[[if lol then
+		-- 					if i == 1 then
+		-- 						maxexpansion = lol / 2
+		-- 					else
+		-- 						maxexpansion = lol
+		-- 					end
+		-- 				elseif partexpansionarray then
+		-- 					maxexpansion = partexpansionarray[i]
+		-- 				end]]
+		-- 				maxdist = partexpansionarray[i]
+		-- 				local curbodypart = bodyparts[partnames[i]]
+		-- 				local pos, what, hitpos, dist = closecast.closeCastPart(curbodypart, origin, direction)
+		-- 				if pos and dist < maxdist then
+		-- 					if not castresults then
+		-- 						castresults = {}
+		-- 					end
+		-- 					castresults[#castresults + 1] = {
+		-- 						bodyarrayinfo[curbodypart],
+		-- 						curbodypart,
+		-- 						hitpos,
+		-- 						(what - hitpos).unit,
+		-- 						what,
+		-- 						dist, 
+		-- 					}
+		-- 					break
+		-- 				end
+		-- 			end
+		-- 		end
+		-- 	end
+		-- 	return castresults
+		-- end
 		--keybind connection shit
 		client.char.ondied:connect(function()
 			if misc then
@@ -11978,6 +11975,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 
 			local newpart = client.particle.new
+			setreadonly(client.particle, false)
 			client.particle.new = function(P)
 				local new_speed
 				-- if menu:GetVal("Misc", "Weapon Modifications", "Edit Bullet Speed") then
@@ -12007,7 +12005,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 			end
 
 			--ADS Fov hook
-			local lastsaturtation = game.Lighting.MapSaturation.TintColor
+			-- local lastsaturtation = game.Lighting.MapSaturation.TintColor
 			client.lastPlayerPositions = {}
 			local function renderVisuals(dt)
 				local _new, _last = menu:GetVal("Misc", "Extra", "Disable 3D Rendering")
@@ -12059,17 +12057,17 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				end
 
 				--
-				if menu.options["Visuals"]["World"]["Custom Saturation"][1] then
-					game.Lighting.MapSaturation.TintColor = RGB(
-						menu.options["Visuals"]["World"]["Custom Saturation"][5][1][1],
-						menu.options["Visuals"]["World"]["Custom Saturation"][5][1][2],
-						menu.options["Visuals"]["World"]["Custom Saturation"][5][1][3]
-					)
-					game.Lighting.MapSaturation.Saturation = menu.options["Visuals"]["World"]["Saturation Density"][1] / 50
-				else
-					game.Lighting.MapSaturation.TintColor = lastsaturtation
-					game.Lighting.MapSaturation.Saturation = -0.25
-				end--]]
+				-- if menu.options["Visuals"]["World"]["Custom Saturation"][1] then
+				-- 	game.Lighting.MapSaturation.TintColor = RGB(
+				-- 		menu.options["Visuals"]["World"]["Custom Saturation"][5][1][1],
+				-- 		menu.options["Visuals"]["World"]["Custom Saturation"][5][1][2],
+				-- 		menu.options["Visuals"]["World"]["Custom Saturation"][5][1][3]
+				-- 	)
+				-- 	game.Lighting.MapSaturation.Saturation = menu.options["Visuals"]["World"]["Saturation Density"][1] / 50
+				-- else
+				-- 	game.Lighting.MapSaturation.TintColor = lastsaturtation
+				-- 	game.Lighting.MapSaturation.Saturation = -0.25
+				-- end--]]
 				--debug.profileend("renderVisuals World")
 
 				--debug.profilebegin("renderVisuals Player ESP Reset")
@@ -13331,7 +13329,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 				--debug.profilebegin("renderVisuals No Scope")
 				do -- no scope pasted from v1 lol
 					local gui = LOCAL_PLAYER.PlayerGui
-					local frame = gui.MainGui.ScopeFrame
+					local frame = gui.NonScaled.ScopeFrame
 					if menu:GetVal("Visuals", "Camera Visuals", "No Scope Border") and frame then
 						local sightRear = frame:FindFirstChild("SightRear")
 						if sightRear then
@@ -13619,7 +13617,7 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 					if menu.open then
 						setconstant(
 							client.cam.step,
-							11,
+							14,
 							menu:GetVal("Visuals", "Camera Visuals", "No Camera Bob") and 0 or 0.5
 						)
 					end
@@ -15044,25 +15042,6 @@ elseif menu.game == "pf" then --SECTION PF BEGIN
 										maxvalue = 24,
 										decimal = 0.1,
 										stradd = "hr",
-									},
-									{
-										type = TOGGLE,
-										name = "Custom Saturation",
-										value = false,
-										extra = {
-											type = COLORPICKER,
-											name = "Saturation Tint",
-											color = { 255, 255, 255 },
-										},
-										tooltip = "Adds custom saturation the image of the game.",
-									},
-									{
-										type = SLIDER,
-										name = "Saturation Density",
-										value = 0,
-										minvalue = 0,
-										maxvalue = 100,
-										stradd = "%",
 									},
 								},
 							},
