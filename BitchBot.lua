@@ -29,7 +29,7 @@ end
 	digit 3. Major Patch
 	letter 4. Minor Patch
 ]]
-local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.0.0 [BETA]", __init = true } -- I... um... fuck off ok?
+local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.1.16a [in-dev]", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
 while true do
@@ -48,11 +48,7 @@ do
 	-- fallback on synapse x v2.9.1
 	-- note: this is disabled due to problems with synapse's second console being all fucky wucky
 	local _rconsoleprint = rconsoleprint
-	local rconsoleprint = function() end
-	--[[if BBOT.username == "dev" then
-		rconsoleclear()
-		rconsoleprint = _rconsoleprint
-	end]]
+	--local rconsoleprint = function() end
 
 	log.async_registery = {}
 	local printingvaluetypes = {
@@ -111,8 +107,8 @@ do
 	end
 
 	function log.printdebug(...)
-		if BBOT.username ~= "dev" then return end
-		scheduler[#scheduler+1] = {4, {...}}
+		--[[if BBOT.username ~= "dev" then return end
+		scheduler[#scheduler+1] = {4, {...}}]]
 	end
 
 	function log.printerror(...)
@@ -486,8 +482,8 @@ do
 
 	function math.average(t)
 		local sum = 0
-		for _, v in pairs(t) do -- Get the sum of all numbers in t
-			sum = sum + v
+		for i=1, #t do -- Get the sum of all numbers in t
+			sum = sum + t[i]
 		end
 		return sum / #t
 	end
@@ -517,7 +513,9 @@ do
 	end
 
 	local err = 1.0E-10;
-
+	local _1_3 = 1/3;
+	local _sqrt_3 = math.sqrt(3);
+	
 	-- ax + b (real roots)
 	function math.linear(a, b) -- do I even need this?
 		return -b / a;
@@ -544,21 +542,21 @@ do
 		local s = r ^ 0.5 + q;
 		if s > -err and s < err then
 			if q < 0 then
-				return k + (-2 * q) ^ 0.3333333333333333;
+				return k + (-2 * q) ^ _1_3;
 			else
-				return k - (2 * q) ^ 0.3333333333333333;
+				return k - (2 * q) ^ _1_3;
 			end
 		elseif r < 0 then
 			local m = (-p) ^ 0.5
 			local d = math.atan2((-r) ^ 0.5, q) / 3;
 			local u = m * math.cos(d);
 			local v = m * math.sin(d);
-			return k - 2 * u, k + u - 1.7320508075688772 * v, k + u + 1.7320508075688772 * v;
+			return k - 2 * u, k + u - _sqrt_3 * v, k + u + _sqrt_3 * v;
 		elseif s < 0 then
-			local m = -(-s) ^ 0.3333333333333333;
+			local m = -(-s) ^ _1_3;
 			return k + p / m - m;
 		else
-			local m = s ^ 0.3333333333333333;
+			local m = s ^ _1_3;
 			return k + p / m - m;
 		end
 	end
@@ -697,7 +695,8 @@ do
 	local physics = {}
 	BBOT.physics = physics
 
-	-- Used to determine the domain of time, of a bullet
+	-- Used to determine the time of the bullet hitting, more like an assumption to be honest since you
+	-- have a range which is basically max > t > min
 	function physics.timehit(pos_f, v_i, g, pos_i)
 		local delta_d = pos_f - pos_i;
 		local roots = { math.quartic(dot(g, g), 3 * dot(g, v_i), 2 * (dot(g, delta_d) + dot(v_i, v_i)), 2 * dot(delta_d, v_i)) };
@@ -718,6 +717,7 @@ do
 	function physics.trajectory(pos_i, g, pos_f, v_i)
 		local delta_d = pos_f - pos_i
 		g = -g
+		-- btw dot of itself is basically vector^2
 		local r_1, r_2, r_3, r_4 = math.quartic(dot(g, g) / 4, 0, dot(g, delta_d) - v_i * v_i, 0, dot(delta_d, delta_d))
 		if r_1 and r_1 > 0 then
 			return g * r_1 / 2 + delta_d / r_1, r_1
@@ -853,10 +853,14 @@ do
 	end
 
 	local localplayer = service:GetService("Players").LocalPlayer
+	BBOT.account = localplayer.Name
+	BBOT.accountId = tostring(localplayer.UserId)
 	service:AddToServices("LocalPlayer", localplayer)
 	service:AddToServices("CurrentCamera", service:GetService("Workspace").CurrentCamera)
 	service:AddToServices("PlayerGui", localplayer:FindFirstChild("PlayerGui") or localplayer:WaitForChild("PlayerGui"))
 	service:AddToServices("Mouse", localplayer:GetMouse())
+
+	rconsolename("Bitch Bot - Instance: " .. BBOT.account)
 end
 
 -- Threading
@@ -1130,6 +1134,7 @@ do
 	-- If you find that you need to make another connection, do add it here with a hook
 	-- You never know if your gonna need to reuse it either way...
 	local hook = BBOT.hook
+	local localplayer = BBOT.service:GetService("LocalPlayer")
 	local runservice = BBOT.service:GetService("RunService")
 	local userinputservice = BBOT.service:GetService("UserInputService")
 	local mouse = BBOT.service:GetService("Mouse")
@@ -1187,6 +1192,12 @@ do
 	local players = BBOT.service:GetService("Players")
 	hook:bindEvent(players.PlayerAdded, "PlayerAdded")
 	hook:bindEvent(players.PlayerRemoving, "PlayerRemoving")
+	hook:bindEvent(localplayer.Idled, "LocalPlayer.Idled")
+
+	BBOT.renderstepped_rate = 0
+	hook:Add("RenderStepped", "BBOT:Internal.Framerate", function(rate)
+		BBOT.renderstepped_rate = rate
+	end)
 end
 
 -- Loops
@@ -1214,11 +1225,13 @@ do
 		if loops[name] ~= nil then return end
 
 		log(LOG_DEBUG, 'Creating loop "' .. name .. '"')
-		local isuserdata = (type(wait) == "userdata")
+		if not waitt then waitt = 1 end
+		local isuserdata = (type(waitt) == "userdata")
 
 		loops[name] = {
 			running = false,
 			destroy = false,
+			varargs = {...},
 			Loop = coroutine.create(function(...)
 				local loop_data = loops[name]
 				while true do
@@ -1231,7 +1244,11 @@ do
 						end
 					end
 					if loop_data.destroy then break end
-					if isuserdata then waitt:wait() else task.wait(waitt) end
+					if isuserdata then
+						waitt:wait()
+					else
+						task.wait(waitt)
+					end
 				end
 			end)
 		}
@@ -1247,7 +1264,7 @@ do
 		log(LOG_DEBUG, 'running loop "' .. name .. '"')
 
 		loops[name].running = true
-		local succ, out = coroutine.resume(loops[name].Loop)
+		local succ, out = coroutine.resume(loops[name].Loop, unpack(loops[name].varargs))
 		if not succ then
 			log(LOG_ERROR, "Error in loop service - " .. tostring(name) .. " ERROR: " .. tostring(out))
 		end
@@ -1445,6 +1462,183 @@ do
 	end)
 end
 
+-- Asset
+do
+	local hook = BBOT.hook
+	local string = BBOT.string
+	local asset = {
+		registry = {}
+	}
+	BBOT.asset = asset
+
+	function asset:Initialize()
+		self.game = BBOT.game
+		self.path = "bitchbot/"..self.game
+	end
+
+	function asset:Register(class, extensions)
+		if not self.registry[class] then
+			local invert = {}
+			for i=1, #extensions do
+				invert[extensions[i]] = true
+			end
+			self.registry[class] = {
+				__extensions = invert
+			}
+		end
+		local path = self.path .. "/" .. class
+		if not isfolder(path) then
+			makefolder(path)
+		end
+	end
+
+	function asset:Get(class, path)
+		if not self.registry[class] then return end
+		local reg = self.registry[class]
+		local extension = string.match(path, "^.+(%..+)$")
+		if not reg.__extensions[extension] then return false end
+		if not reg[path] then
+			if isfile(self.path .. "/" .. class .. "/" .. path) then
+				reg[path] = getsynasset(self.path .. "/" .. class .. "/" .. path)
+			else
+				return false
+			end
+		end
+		return reg[path]
+	end
+
+	function asset:IsFolder(class, path)
+		return isfolder(self.path .. "/" .. class .. "/" .. path)
+	end
+
+	function asset:IsFile(class, path)
+		return isfile(self.path .. "/" .. class .. "/" .. path)
+	end
+
+	function asset:GetRaw(class, path)
+		if not self.registry[class] then return end
+		local reg = self.registry[class]
+		local extensions = reg.__extensions
+		local extension = string.match(path, "^.+(%..+)$")
+		if not reg.__extensions[extension] then return false end
+		if isfile(self.path .. "/" .. class .. "/" .. path) then
+			return readfile(self.path .. "/" .. class .. "/" .. path)
+		end
+	end
+
+	function asset:ListFiles(class, path)
+		if not self.registry[class] then return end
+		local reg = self.registry[class]
+		local extensions = reg.__extensions
+
+		local files = {}
+		local list = listfiles(self.path .. "/" .. class .. (path and "/" .. path or ""))
+		for i=1, #list do
+			local file = list[i]
+			local filename = string.Explode("\\", file)
+			filename = filename[#filename]
+			local extension = string.match(filename, "^.+(%..+)$")
+			if extensions[extension] then
+				files[#files+1] = (path and path .. "/" or "") .. filename
+			end
+		end
+		return files
+	end
+
+	hook:Add("Startup", "BBOT:Asset.Initialize", function()
+		asset:Initialize()
+		asset:Register("textures", {".png", ".jpg"})
+		asset:Register("images", {".png", ".jpg"})
+		asset:Register("sounds", {".wav", ".mp3"})
+	end)
+end
+
+-- Statistics
+-- A system for recording informations about whatever the fuck we want
+-- WARNING: This is a file system based approach, this is slower than MySQL!
+-- Requirements to add MySQL compat is in the works
+do
+	local hook = BBOT.hook
+	local service = BBOT.service
+	local httpservice = service:GetService("HttpService")
+	local loop = BBOT.loop
+	local log = BBOT.log
+	local statistics = {
+		registry = {}
+	}
+	BBOT.statistics = statistics
+
+	function statistics:Read()
+		if isfile(self.path) then
+			self.registry = httpservice:JSONDecode(readfile(self.path))
+		else
+			writefile(self.path, "[]")
+		end
+	end
+
+	function statistics:Write()
+		writefile(self.path, httpservice:JSONEncode(self.registry))
+	end
+
+	function statistics:Initialize()
+		self.game = BBOT.game
+		self.session = BBOT.account
+		self.path = "bitchbot/"..self.game.."/data/"..self.session.."/statistics.json"
+		if not isfolder("bitchbot/"..self.game.."/data/"..self.session) then
+			makefolder("bitchbot/"..self.game.."/data/"..self.session)
+		end
+
+		self:Read()
+	end
+
+	function statistics:Create(Id, default)
+		if self.registry[Id] then
+			local data = self.registry[Id]
+			if typeof(data) ~= typeof(default) then
+				self.registry[Id] = default
+			elseif typeof(default) == "table" then
+				for k, v in pairs(default) do
+					if data[k] == nil then
+						data[k] = v
+					end
+				end
+				for k, v in pairs(data) do
+					if default[k] == nil then
+						data[k] = nil
+					end
+				end
+			end
+		else
+			self.registry[Id] = (default ~= nil and default or {})
+		end
+		self.modified = true
+	end
+
+	function statistics:Get(Id)
+		return self.registry[Id] or {}
+	end
+
+	function statistics:Set(Id, new)
+		self.modified = true
+		if new == nil then return end
+		self.registry[Id] = new
+	end
+
+	function statistics:Save()
+		self.modified = false
+		writefile(self.path, httpservice:JSONEncode(self.registry))
+	end
+
+	loop:Run("Statistics.Save", function(statistics)
+		if not statistics.modified then return end
+		statistics:Save()
+	end, 0.1, statistics)
+
+	hook:Add("Startup", "BBOT:Statistics.Initialize", function()
+		statistics:Initialize()
+	end)
+end
+
 -- Extras
 do
 	local hook = BBOT.hook
@@ -1562,6 +1756,7 @@ do
 
 	local placeholderImage = "iVBORw0KGgoAAAANSUhEUgAAAJYAAACWCAYAAAA8AXHiAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAJOgAACToAYJjBRwAADAPSURBVHhe7Z0HeFRV+sZDCyEJCQRICJA6k4plddddXf/KLrgurg1EXcXdZV0bVlCqDRQVAQstNKVJ0QVcAelIDz0UaSGBQChJII10Orz/9ztzJ5kk00lC2vs833NTZs69c85vvvOdc8/5rgvqVa9KUD1Y9aoU1YNVr0pRPVj1qhTVg1WvSlE9WPWqFNWDZUaFubk4sf8g9q5egw2zv8eKid/g5y9GY9HIr7FkzASsmjwVWxcsxMFNsUhPPqG9q16mqrNgpRxJwtKxEzFhQD+8fV8nPOzqiXtdXPBMx2gM/HMnjHm6B/7bsxfWvPk24t4fggOEKjFmMo5OnoKjM2ZiPy1u5iys/m425nw5FuMHD8Lc0ePx/Vdj8MOnIzC93yDsWb5KO1vdU50Ba93MOfj6tVfRw8sP0QToWdpnLk0wr4k3dvkG4Pzv7wVuuwvwaosrnn4436w1Cpq1Qp57a+TymOvmg5ymLXHOlcb35DRqjtwGHshzcaM1Rl7zNii6615cffFVXKV3w4qVSN2zGz9O+w7zYyZh8aRv8MPQYSjKy9euqHar1oKVknAEE/v2RTf3VriTEA12aYiFbq2Q7BcMhEYDQZG4FBCOwvZ65LXTI9svBFn+ocji72LZ9liHsBJjGVm+wchq2R5ZhDPL1RvZLk2Rw/MW/t+fceWjT4E9e7Bl7TosmDgF80d9ja3z/6ddbe1TrQIrKzUVY3u/hD8QpB60mU1a4GRbghQSjStB4cgPDMO5gDBkdtAjM0AsDFkClTloKsI06LJ8g5Dl3RaZDT0JmwsK/tgJ1whXXkoK5o2biAXsPncvX6l9itqhWgHWopgYPNTAHX9lo81hV5VPcBASicLA8BKQpIEFpDJmgEtnHozKMCNonr7I4vXmEvDrY8cjMy0NcyQ+o2e7dvWq9slqrmosWNevX8eInj0Rxcb5xMWVXVwQEByBAvFEbMAMwmQOJHNW5XAZTTxaW3bBjOky+TkK7+sCbNyIJf9biFlDPsHp+MPap615qnFgFZ7LwcAuD+IO8U5uLRkrRTBWki6HMLXXKaDEQ8nPcjQHkjkTuLL9bwJcRhNP1oaerJEXchp6ADETsWfHTswcNhzxGzZpn77mqMaAdfXSZfTv1Bl3Eajl7EakqytgzJROD5XBhjF0d6WtxsFlNHpP6SolHrv23hAc3r8fUwa8h1P7D2q1Uf1VI8D6rNuTuI2VvFgDSuKS9A46BZUCS0Big5QFS8wpuG5Gt2jWeE3e/ioWwyfDsW1jLL7+9wu4cvGiVjPVV9UarFXTp6kYanITbwVUXmAJUBkmVhlw3ZSYy5JJN9m8LT1YQ2DpUsybMRsz3x6g1VL1VLUE60J+Ph7z9MHzhKooKBzntS6vLFCmVrs9V4llNvZCQbsQXE5Oxif/7IWk7XFarVUvVTuwZg8dio4EKtanA71URAk0dlhdgSvbP1SNIvHG21i/ZRNGP/Mvrfaqj6oVWE/4+OFlqTDp9gQUdnvmALJmFQ6XTAlUR7ike/Rui9wmzXHt1Em81+0JZJ86rdXkzVe1ACtx53YVSy1r0RYIjUC6xFIaIObgsWWVBpfRyjbyzbR2/DzyZRw+AtPHjMfqWbO0Wr25uulgxbz4sroFk0WYCmhnBSrjUQPEHDy2zCZcclTQ8NguFBltg5DpF4hs30DktglAXusOKPBph0K/IBS2D0Eh4ZL7ioX+wSjk//Nb+COvZTvk+HDU5tMeWa06GGbU24ZUPXzivZr64PKdf8C+LZsx7C+PaLV783RTwXpJF6kCdEMspcOZDqE4y6PyWJUEl3grgUgBRHAuEaprt98DdHoYebQDd3TC6oi78EPI7YgJvxXjwm/HpPDfYcpt92Lq7f+Habf8EdPCf4u5tNW3/R8O3PNXFHR9Cuj6JC7d8wAKI+9APsE759UWma0InF9wlYEmYOe4NMaF48fRt+tDWi3fHN00sLq4NsOXjbwIVTjOBBiAEjMLl5N8Qlc6YQnizCJF7oSFAHc1xUJBGhmSDTe89dj2B/+jBGv9MaEIUOwbuFiHD9+DJe067SmQlpCYiKWz/sRcz/6DIsHD8XCp3phwe33Ialzd+DRZ3H+zvuQR7iyvH2R1YYesQogU4H9gX3o0/kBnM/LM1xsFavKwbpYUKhuxyz28sfVYEKlgWRqFQGXCvw5LM9r3R6IvgM5dz+AWcFReM27HQY+0g2zR41CekaGdlUVr8TkZPz01VisfHMQfv79A8h7/J+49Cd6RX6OrOaEjF2sOSgqxNg1qrhrzDi898TfcfrAIe2qqk5VClZ+RqZaZLeTLrswKByprIA0QnDWxGNZg8ueLjG9fSiH40G4yuP5uztjakAEerq2wEcv/geJe/dpV1L12hobi9UffoLl9/0NF3o8j6I/dMY5bz8Vm1WKF5O4y8UD6P0Gvnh7IBI2btaupGpUZWDlpp1FJKE6JF4kUEeo9IQqDKm0NAWT855LdXcEKadtgPJOcZF3oZdLE7zZ9a/YF1u1FWqPNv+yBuv7DEJ8lydxhfFZjnSVHAhUBmBZbj7Ak89iwmcjcHDdOu0KKl9VAlZ+RpaC6gg/aA7hSCVEacpK4DqjYHLcc0mXl9s2EOh4J5YFd0QXnmd037e1M1dvZV+7grWfjMKuLj1w9bHncE4A44CiogHLcm8DPNYDEz75HAmbquaLVulgXSwoUt3fIX96lEB2f5qHMoDlPFziubLp/RB2K1YFdcQfeY7pn36qnbVm6TJtw9cx2P/Xp3H5b08jq0VbQ6BvBhJnTcH1VE+MeLMfTh+s/Jir0sGSQH0HY6q8YqiMdgNw8f/XaIlRd6ITy//ixZe0s9VsFdE2fjQcpx/5B4rueQCZHq0q1HupbvHVNzHob91xIb/AcNJKUqWC1dnVTY3+Cjj6MwTqZa08XCk0w/SDebhyO4TgetRv8KZLMzyrj1ArSWubzuTmIPZfr+LS31/GOZkqac0A3wwozlhWAwb0Y8fjtc5dtLNVjioNrJd0UWqe6jKhSgkkMDTH4BKYSuASqEBvtSkgUq3N2rZsqXam2qtdi5ci+fF/c3TbBRmyEcMMKA6bcSri0EG83rmzdqaKV6WAFfPSy/g3L/56SBROM7hOITCpDsJl6BYNYGUIVAS1j0tTPBPAuKoOKTU7E5u/mojzX3ylFv2ZhcVR0+DKPxSPoZ0e1M5UsapwsI7s3I67edFXQjriZIdwnCIgKU7CJZ4rl79nBUeqJcmzPvxQO0vdkKwUHf0GR7izZiHTpZF5SG7Acl1csWvrZvzyw/faGStOFQ6WrFJIC4wgFAJVOE6qY3m40szCJVAZABP4LrCcbX4hqsyUGrxjxRkJVF+/3geYPZtQNVBexhwcN2Jyb/Ha7+/Fl+8MRt6Zs9qZK0YVClYPH18s8m6HLAJhAKoErtOEyl64Utn1XQsOw1wPX7Xy4eole+7c1R4pT/V6X3oqgcqlUqAymqyKwKiv8NajFbsiosLAmj1kqFqkdyU4il1gWDFUjsKVwt8REoYxDPy7enprpdcdXb5wAWPefEeDqnI8VSlj+bJZI3//fox67EntKm5cFQKWrFG/hRdXFBpt8FQqtipvtuBK6aAHGE+NbOiFHm38tNLrjgSqsW/102KqKoDKaO30KGjWEgsWL8Kpvfu1q7kxVQhYj3u2xLrWATgTFI4TgQTIAlhiluCSe4fXCNWYxt54oo5CNa5P/6qHSjNJZIK3B6LvI49qV3RjumGwVk6fpqYWLoZE4wS9zkmCZQuuEzRTuASs8yHhmMOYqqunl1Zy3ZFANb7vAA2qyo2pLJrWJWbu3ImpAwdrV+a8bhgs6QIzgiMIk14BI2DZA5fRc8k8Vw7B2tgmUAXqdU2Xzp9HzDsDge9ujqcyNUnjdEnXEcN7v6VdnfO6oZYc3u1JjHdtgcygCCTTWyU7CJe8VmbYJdiXKYW6NvoTqCb0G1SxUMm9xRtIzSS5IxC7Ee8+eGNLm50GS3Ip/IYwnNdFI4mxVTIBEq9lDi5LwbzYeXahUk5KfIJWct3QpaLzmNj/XQ2qiun+strqkK+PVGvtzf3fXstzaYIfZs5E5nHn86s6DdaAP3XBvOZ+SGU3eJxgHXMQLvFS1wjVc6zUOUOGaqXWDV0qKsKkge9VMFShuKKLwjx3d1zrPRhZ7j5mX2ePZbFdMXos3u3WQ7tix+UUWJJKSOKhi/poHGN8JGCVhyvMIlwSX2UHRmC2py96BYdppdYNXSRUkwd9QKi+Q7pLQ2SyXm50aYxAdTk0Ej81aYwzPMeUzg8Df+luWPZs5vU2jaDnsn1/otc6te+A4cIdlFNgDeryIH4k1adNoCoPl07FXSrOKgPXaYKVGhChttLXJSmoBn9YDFUW66PUhlhzjWzDjFAtJFRJ53LVec5dvYLlv+uMQtazs8lN5IY3Rn6B97o/pcp0VA63rKx/+i2BKNJH4WiQHkkc2TkGl6ELfJhlxK1crpVa+3WxsBBT3hsCzCwNVbnd1mYa2ZIZoVpkApVRP8+chdwnnkeWLBY08157LNelEeZMmODUfUSHwRrZ81lMd2uF08HhBCtM2bEO9sOVzhHkfO+2eCnyVq3E2i/Z8vbtBx9pUDUoB1UJXGxQO+Eqhsq1CY5ll4bKqNH3Pgh0edTpZc5ZHr7AnO/xIUf/jsphsG6lp8nRRSKJnieJUIk5AldRSFSd6gIVVB9+TKhmmvVUZU3BZSOroBGqxVagEqXl5mDNXZ2RK6NEZ7pEvqeQg4CR/R3PxeVQCy+OicEQl6ZI0xm8VSm4+LMluE4QrmTCdS44Ep+4eGBi79e0Emu3LhQUYOqQYcAM+6AymjXPZS9URo3u9SLQvZdhe5mZ8mxaE28UzP8Rk/oP1Eq0Tw6B9UiDZtjbLgRJHMkl0AQmI1iW4BKw5CgjwTTGZLKsuC5IQTX0UwXVWX7mDDMAWTKVUdAMXAaoIvCznVAZNS3styhkec4E8tKN4tEe+OCZ57TS7JPdrZyVkoaurKD8sCgkEpAjjsDFv2XzW/aeiyvmjRiplVh7daEgH9M+/oxQzVBQGbPaSEIScyCZs7JwGT3Vz00dg0o0acBgXO/+L+e8lpp6aIBFY8Ygec9erUTbshusca+8jG+btsSJkHAkEigByxpcSSZwJdPSGLTfXge8lSwhmjZsuAZVg5JUSZo5A1expxKoyoz+7NWEkNtRRFCc8lrNJYj/L4Y4EMTb3dLyZCyBJpHQCFimcMnPpnAVx18aXOnBERjZwBPTBg7SSqudupCXjxmffF7OU5U1h+Bqp8clDpaWNnUtN6XgiL5+mXHto885NWkqOb8uRd6Oob1f10qzLbvASkk8giekovSRiA/WI8FBuAr10bV+JKig+nSEguoMP2s6P7+lpG9i9sAlUF1knS9lTJV07sbSEclDVKbrbke+jxP3Edkd5nHQtmz0GBzetMVQoA3Z1dqT+/bFRNcWOM5uMJ4AiR22E65TtPkebTC0W3ettNqn84Rq5vBRbDkDVBmsA2OyEmfhUp6KUC1TUDnvqUw14qlngD8/4lQKJdUdzpyNYc+yDDtkF1g93H2wq12wAuewZvbAdTRQj3y6cXkS19EdO7XSapcksdmsz7/QoGpQDFVx0hIn4DJ6qoqESrR17Trs/v1fkOPd1iw81kxGh9cf7oYPuz2tlWZddoH1e4KRHR6NeI4GjWDZgku6wWPiuVixEp/VRp3PzcXskV8SqumlPFVZcwQuI1TLZUqhAqEyaljYbbgUEq0W9ZkDyKKxOyxwaYwxQ4bCnqQGNlt8/cw56Mdv4qnQcBwgKAomE7MGVwoD98nsQie8XvsmRIsI1ZxRX9uEymj2wGWEakUlQSX67PkXgAefcOo2T25THxwaOx4Lh9ND25BNsMa+/iq+a+aDI4yvDhGWg7RycBG4snDJXFcOK0mC/tO1bBGfgurL0cA0+6AymjW4MuhBLjBsWFnB3V9ZHdq7F6uj70a+E3Naklce4ybig7/bjrNsgvV3Lz9s9w9S3aCAZQ2uBLpyU7hSg8Pxu1rWDRbl5KoHihugKh9T2TLJ61UWrgx/HS6ERmClmlKo/GS0HwRG4CLP6+iclpqFf+QJvP+Q7YGYzVaXSc2MsCjsD9bhoANwJYeE4X9evhjWw/lViNVNhYTqh9HjcN3O7s+SmXquYqjcbmyeyhEN7c4A/L6HDKnCy8Bjy867NMPQ99/VSrIsq2ClHknCM6zAFH049hOq/UF2wEVLIGApjMk+dHHFknExWmk1W0XncvDDmPG4PnUa0lgnZ/kZnc0/L6ZyqWpQrXJrWmVQib4bNQrJv++CnDYBZuGxaBLAN/bCj/3fxZEd1h8OZRWsZWPZnxKO46Fh9Fh6HKDZBRf/f47xwkNsgMK8fK20mitZij1v3ARcmzpVQSWTnypdpUDiJFzp7IbO6yOwmlAdq4Luz1SZWVmYwZFhoROTpTnubZA4YhTmvm89849VsCYN6Idv3FqoLu4Au0IBy1640kIiVJrImq7Cc+cwf/xEBVUqP88ZAUozZ+ESqIp0EfhFQVV1nspU/RgvXeZ1OBxnebXF9bEx+PiVl7WSzMtqy/e//09Y3ao9QQrDrwTJXrgkcN/YpgNeruGrRAWqBTGTCdW3CioByZhd0Fm4jFCtaVb1nspUA267G7jjXnUf0BxAliyTo0kMfA/97/2zVpJ5WQWru0crNW3wK4PUvTRTuFTXaAYuASuJgfssdx/E9HlTK6nmqYBQ/ThxSjmojGDJ0VG4iqFSMdXNg0o09LXeuPbHvzh8e0dyauGBv2HAX6zneLAK1n3i+jki3MuK+5Vey164ToaE4zMXd/z4+QitpJqlguxs/DjpG1xloH7apQHBKUmwawqXI57L1FPdbKhE0z4ahvhb7kGugyND6TovE8Z+ct/RiqyC9TjBSmZl7JGuUEFlHi7TbvEgX3Oa73mN7927eq1WUs1RQRahmjwVV7/9llA1RFpgOCR15dmAELNwydEWXNUNKtHWZSuwJCAKBfRA5gCyaBwZnqfT+Ki/9Yc0WATr/IWLKpFaEofDewiMNbhMYy7xWGf0UWrGPTtNtk/WHAlUP30zjVB9Q6gk5WVJot1UJ+EyQrW2GkElSjt9GhP8g1Hk6K0dglXUyAuj+/VFfmaWVlp5WQTr9NFjeJeVG894aa+ARdtrAtceHmVuyxxcGQRLEvvXJEn399O303BFeaoGhMqYbLcELoPnKkkRbgsuI1TrbnKgbknvt/LHZYKVZQ4gS8YvTKGrD777z0s4ttfyUmWLrX9o6w58zgo+EKLHbkJjDi7xXKZwGbvFrLDoGrUMWXmqqTPoqaaW6v7S6KGchqu9DoUClTuhyq5+UIle8vDBVXaFDoFFK2jmg4WvvI49K1ZrJZWXxdbfvmQ5xjVyxT7CtJvgWILL4LlMvBZfm8oKrSn3CAuysrBo6kx6KlOoDKkrDUCVThFuD1wCVYE+Auurqacy6p8uzQAntuHnN2uFVa+/jQ1zftBKKi+Lrb9hwU/4poEb9mkea5cDcB0LDcP9NQCsAsYIi2Z8h8vs/k4SqlTZ9MEYogQsJ+BqF6Kg2lDNoRL1dGkOhEQ5DpZbK2wY8C5WMR61JIutv2bWD5jRxAO7Q8KLoZLjHitwydSDgJXIuOyBag6WBJ6S3+DyN9/iBLt8WYmhcqEKNBbhkq7RFC6BqQQuBZUuHBuk+6vmUImeaegF6G91GKw8grXpvSFYNmaCVlJ5WQHre8xo7IE9IRHYSYiM3aFNuBj0Ho8yPDewukqgWvrdbFwkVMfpqVIYE0nKyuJEuwKNnXAZn/ljhGpjDYFK9KSLJxB2G8FybDWpeKyNAz/A8rFOgLVh/k+Y3tgduwlMHL/NdsMllf6bO6vtcmQF1ey5CqpjhOpUYAQkKW8K4XAWrjQ2TH4Ng0rUzcUVCI12IsZqjV/6DMDqb6ZrJZWXxdbfyuD9mwZNCRGhYiXaC9de6RLuuEutk69ukmdSL5vzPS5O+YZQNVJQFWcYJCCOwWWIuVLbsWvQRSLW3Y1Q3Zwbys7qEWmj4EiHwSrwaIOfe72ITd/P00oqL4utf2DrdsQ0bIRdDGh3EJod7C5swiVg8bUnWemdGzTRSqoeEqhWzP0vLpmBqjRcutJwlQNLTHveT7tg5IVGYJN7sxoHlehRAYtfDjXd4ABchR6tMbvHs9i3xvKdFYtgnTyShFE88W4G4jsIzY4gPXYSmhK4Qi16rhOMN3q0aKmVdPOloOK367yCytD9lYXKAJYc7YMrld1fXmg4Yj1qJlSif3DQgg56w1Z+gcYeuPj6IrfWGNfzaZzcf1ArqbwsglV44QKGCFi6MGwnOObhKu+5dtOOtg3C64GByDh5Sivt5imPUK3873xcIFRJhOpkkPYAqQ6loTIHV+knZ5hCxe6Pnkq6v+M1FKqM1DT0dWmMqxpY9sIlr7nMGGvI44+i0MpntwiW6C2CtZfxw9ZQvRW4TD0XPRYt3rcDht9xO3YvXamVdHOUl5GBVfN+pKeagqPs/hRUgZIITgPIFlz0WmWf+SNQ5YYypqKnqqlQiXat/AXDmzRXmyoUVHbCJf+/5t4aL3ax/nRWq2C9QLAO6gWscItwxSm4TD1XGPb7B+L7e/+MuUM/1kqqeuWlZ2D1gv8VQ3UiRI9kgUagchKu06xUgWpzDe7+jPr+s88xu7kfCgiWcbNsMVz88liCSza6QheN7u15tCKrYL3q5Y+ksHBsYZy1jXBtM4FruxW4fmVQu+WxJ/Bl71e0kqpWAtWaH39C0eQpSGT3d1weyUJvY0hZ6Rhc6pk/EnOxImWf5BaPmjf6M6ev33oDG1oFIk+CdxOwiuFqT7AEsLJgtQkCejyDh92sP/PIKlhv3Hs/UsIYS7BBthIu8VymcMlI0Rxccf4ByHj5FfRs20ErqeqkoPrfQhTRUxmhUlkFBSRWmDNwneS395x4bdX91Zx5Kmv6d3i0+nznynisUnCZ8VrnfINw9sGH8frd92glmZdVsL7o9w72dQhELLuRrfRQ4rUMcIUqj7XdAly7AkNxLPoWPMtGrUoJVGt/WozCyZORoEFlTP6mEu2awqWBZQuuE+1Ywez+ttXwmKqsVMpO/S1qb6M5sMQUXGUS7eb7hWDjb+7GmLf7aCWZl1WwFnw1Hiu8WxGmMGymx9piAtd2wiXzWwLXdg2unYRrl4JLj/2eLTHs6SdxjqOPqlDe2XSsXfQzCghVPIfRxwiL6VMzzMJFcErBVQYsgSqbo7/aBlVBbi66C1iBEQZ4rJj835jFWQL3C77BGN8+GEvIhjVZBet4QiImNWiEbQIV4ZJYqzRcOnosA1w72Fcb4YojWHtb+WHpv1/AfAaJlS0F1eKlKJg0GYcJVRKvwZgi3CxcAg0rzBpcBk9FqDxrF1SiJWNj8LmLGy7x89oCS0zBxW5RwALteUKZknBUK828rIIl6s9CtgtU4rXMwlXiueTWjxGunb7tkfHxMPS5/z6tpMqRQLXuZ0JFT3VQg8o08ZstuCRNeNln/pxozwpl97ddoMqpHTGVqT56sgdWe/oycC8PkSVTABIuBNmXp9/mK95q2R5HwsOxISTUClz0XGXh4vHYb36LV+7ppJVU8colVOuXLCNUkxRUkhHniEBFkGzBpR6FJ3CxGzd9WlkyocrURWBHLQrUy0oe43dBYJHUSVZirLJ2jnbCNxA9vGw/WtkmWB/3fgXHORLcwKB8E4/m4ZLpiNJwxYVEIK6JF74bPAiJsVu10ipOuenp2ECo8gjVASNUPLfKdOMIXOz6jHAdN4WqFnoqkaSUelI8Dgc2GQRLzF648ll/C9188PXrr2qlWZZNsJZOm4XlzVtiU1AENnJ0aA2uUp6LDbWjVTucmTgFQ56quMfui8RTbVy2ArmTJmE/R38JhErSggtYjsJl7BaPd2Al68Kxo3kzJNdSTyWKeeM1zGjSEgX88stOIpXxxg645CFSV1hXg/klXjdzrlaaZdnuLKnPSPgmwrOJ8cvGEPs91/Z2wUju1AVv//VvWkk3rtyzZ7Fp+UpCNRH7+CEPEyqVPknMSbiSWGkZukjEMaaqzVCJ7mZbysI+yR8vMBnNFlzyP4RE40474iuRXa96x9sfCeERWE+INrEhNjJgtwoX4RO4drDRt7m4Yum4sdi1cKlWmvMSqGJXrkaOCVTGJCQOwcVvqylUZ/Xstpu713qoEnfEGbpB9j5GkEzNGlwqvvILRjd3H60067ILrOFvvIljDN4FrA3iuRyAa2ubdiiMmYhBXR/WSnNOAtXmlb8oqPYSqoMmUNmCS2AqC5ck3ZUc9ALVrlre/Rk1pFt3LPZorW7jWExZSbjKQiUjwkIObGY2boFJfftqpVmXXWAdjU/EnEaNsF66QoKzgY1qhCvWFC424pZgk5iLMCrP5e6N8UM+Bq5d00p0TALVllVrkD1pgoLqEM8vO65lS38psORIgOyBK5GVeJbdX12BShQl3iok0rBT2wJYYmXhkr/J+2R3e0qi9fkro+wCSzSQQfIuvQEqgWujCVybrcHFmGurZyucW7wEwx97XCvNfuWcOYutv6xD9sSJ2MUPtp8DiEMEw5iAxGG4aEdYUWn6SOypQ1DJ42a+buCB86wbtUvbAbiyafn8mzwH3F7Z/cqPX3gBp3R6rGYXp7yWDbjkpnVxtxgUjAMRt2Dky7aHqabKOXMG29YKVBMUVAdYpspwE6hTQFmFi5VhDi7xVGns/hRUtXRKwZxuYf0VcKSeKUBpZi9c0g3ObeqDsTaSrZnKbrBOnTyNOQ0b4Bc2zhp6obJwbSgDl9y0NoUr1s0duRs2Yuw/e2klWpdAtWPdBmRNmIjt9Jb7WVbJbmv74Cr7zJ/DrMgUQrVXRn91CKr/jhih8sHKdEG6TKuUgctW/nnZ1PpXgpnlwH1f+30b1b+ZDw6FR2ING3ltObgksLcM17agUPzasSPG9x2slWZZ0v3tWL8RmRMmYAeh+pWxncoTEWy6ld8xuOJZgakCFUd/J+oQVCLxVnL7xtRb2QuXrHE/7heErg3dtdLsk0NgTRs9FvHt22M1G2odwXEUro1unriyZxdGPP6EVmJ55aadxc4NmxRU2wjVXpZr3LMocJXKbkM7aAdch1g5p8Mi8Ktn3YNqQu/X8LmLBy6x/lSm5jJQGc0cXDKBeolAfkJvtyjG8uZUc3IILNFw0r9RT6gIiyW4JObaYg4u/n+LpxfWrlqFM2ZGF9L9xW3ajPQJMYSqgYLKuPPHEbhUjKXZQVbYKXqqfTJPVcegEqmRoNy+MYHIkpmDS+a8VBkOyuF3DHnyGaSFh2EVwbENFwP5MnBtbtUWGV9/hS97Pq+VaJBAtSt2C9JjYrCFH2QXX1t2z6KA5QhcpaGq+WnBHdWLkbdikaxrZ9CuAnU7zAiXeKtCequ5bi0x8rmeWon2y2Gw8i9fwVQ2/C8cHa7RESxH4eL/1/L92SdPYOFno1SZCqrNhIrdX6xLI7WXsWRzhv1wmcZc+1lBJ/WRCqoTdRCquJXLDTudZd6qTMBuyxSEErQHR6qVEHY97quMHPdx1LudH8SZyAisptdao9MruNYSnHX8vRguBtyb2MBm4SIAu2+5DbGr1uDotu34dUcczrD728SYSlZFWN0QawdcAtUJeqr9dRQqkXRfchvGUsBuzQSsXHq55Z6+GNjlQa1Ex+QUWKkZmfiBF76KDbmWXqsELh4Jj024+LdNzX2QOmY0fj0QT6gmYAOhknuLxvXzlvYsytEYb5mDa29AqILqQB2Gqhfr5QfPNijisWyiXXtMPBxCo3AX27gwJ0cr1TE5BZbo3U5dcDY6EqtCbMAVRLj493JwEaJ1Lo1xYuRIrG/QSEFVdltZ+d3W1uH6NUCH4/pwQuVR50Z/Rs0ZMhT/kO4rNMKQt4uexxG4xFvl8T2LCWb/P3XRSnVcToN1rugCvuMH+IUgCVil4dLZCRePvu2xTRfB2Mu+PYuW4NrNyhOoDnq542QdhSo1PkHlfr3GL6kxF6rKhyrQ2AlXOmGUCVHZxXP10mWtZMflNFiiD/7WHRmR4Vipea0SuBig2wMXf99KYAQw4xLn4j2L/JD2wrWLlZZEOA961V1PdfXiJUQShjR2Y5mEQ/KhOgqXeKsLrM9JTbzxWfcbW5x5Q2CJRvDDbAsLx5pynqs8XHLrxyxc9FCGWz+GzRnGPYvG9fPm4BKwxOL4GoHqUB32VCLJR7a5dQDyOXgxZBl0Dq5CguXMvFVZ3XAJMyZNQXJbXyxlYxvBKgvXeofhoudiRQhc1jzXLlbe0TCBygMnc+suVF09vTHXozUus56KMzc7CJcK2IMj1NauVdMtJ621VzeOJtW3jR9OdYxW0w/m4JKb1hvKwSXzXqXhKlkoWNpzme5Z3EWoBK4drLRExlTxdRyqJ1j3Yxq1wDVCURYqe+EyBuyxPgF4zLNi8ppVCFipWTn4nqSv09FDmYBlGy6Z9zLAJcF86VWoBriKN2eYwGWE6rC3J07V4e6vO6Ea2VBSakciRVIssY7MpQgvC5e5Z/7IZGg02/BCfoFW+o2pQsASfTVgMC++PZYGle4SbcFl2JyhswKXyc4fVsBWVsphfSQSvD3qNFRdPb0wprEXgQhXqZaMSeEk5ZIjcKkuMCQCrxAqmaqoKFUYWKI+7Tvg7C3RpUaJxXCxmzTGXObhMlkoaAYu6Ra3CFT0igJVXQ3UZfQngfpcD1/V/aUQFkOi3RK4JOmu2YcbaF2lKVwSrC/39kd3H9ubUB1RhYKVfx0Yxw+9KyKy1PyWAkuOGlzmPZfsWbTkucIQGxKCQ/RUiXXYU6UeOqymFGJbB+IC68yQvtI0i7MBLsn2bM/TyjJpWQRLyqxoVXiJ6zZvxg7PpsUz8pbgEs8lYNnjuTazG4yPjMZRf1/UrAfVVZykm5JJy9OEJjeQUBV7JyNckntewCqBy+C5LMMFXaTyfkd27tDOUnGqeFSpT557HplBHbAkKNQGXIab1gou/m5tQ6zAlX9bNPbffz+cu3tVc9WLn/05AnAlNJLdl8RRhEZ5K1OzH640ggXWt0wtxLxk/zp2R1QpYIn6RnREflQEg3lbcJl4LoFLPFdomT2LrFjZ+bOOrvtYGCvLqxnily7TzlR7JUtfJLPLHE8/XGeAbd/DDQQuw8MNSsNl8FLira6zPr9q5IUXdVHamSpelQaWqH/Lljh7azSWl5k8dRYuuf0TSw8mt4AK/dtgd6f7kXn5ina22qWXIm/Fw4QqLSAC2fJYFkJ0mmA4+uQMU7gEqgv0/j97+aGzazPtTJWjSgXrPE3yPhzr2NH8SLEYLjmah8vcnkUZKa4L1CEpnBXn7orNb7+DC4ZT1nhN7P2q8lLzm7ell4omTOGGNJbqKN2gvXCV91x5fP3ONoGGxXuVrEo/w6lzuZjED5LQMcohuAyrUM3DpdbP8zWbxYMFhyJLp8N+j2ZY9VnNfGq+aN6IESo4/9TFA+eDo5BBL3WSwJimrlSZBgmI/XAZPJeMEHMY8B/yD1WToBcLCrWzVp4qH10q4XQqZvIDHYy2MMel498IjcBVfs+ijW1l/D2WcZzMc+XrQ7DR1RX/7TcIRdq5q7tkh7IA9Z6LK84GRSAnOFIlgLOUxdlg9sOVSrBy6N2PtNeraQV5/EtVqErAEh08fgqz+cHioy15LoHL4LnWOQGXJCGJZUXv5N8LwvRYzXNNe+ppbIrdpl1B9VHi9p34qFt31eWNdGmOdHphAeoUgRKPpFJWCkAW4FIpwvk6W3DJPJd0f4f8gxVUsrWuqlRlYInEc8lGjKRbOloI6AmXAou/OwHXdsK1na/bzAqXG9fpYXT/3t4Y1cwdn7/SG4cPJmhXUvU6FZ+ACa+/pp7j2IM2z7MNCnXRSOdoTxLqSi7UZA0qo1mDS8zao/BSO+hRyFBih2+wAjg/I0u7kqpRlYIlOpmdg6/4QdNuibYwFWEdLsNNa0tw6QmX3nBvkbaNFb6NlR3P9+bSiy1s2gRv89wDuvfA/NHjkJdXeWviC/PysGRcDIb16KEevC6ZWia7tsBxaXAO808Hl2QUlOMJSVkZVDqLs7Nwyf3Cq/SAi738cQfPWxUxVVlVOVgiuX/+kY8P8qMj8LMFuAxdojW4GMjbgEtMUlbuZMNtZ4XvlliDr8/Q67DCq5V6ulk3Wq+IWzC6z1uYx+B/7+q1yDpj//x+dtoZ7F21BguGj0BMnzfxcsStqjEfokm+hIXNfZHG8+fqIg0w8TokL5cx8ZsRLslL7wxchhGjwGToFgUs2QjxZSMvdHF1066y6nVTwDLq/ahbURASgBUEwXQFanm4TLaV2QGXWj9fDFfJQkHZnLGLDRdH20OT/Yen9ZHqAU6rfPwwpYkXBhMImeWWh6ULILJTpZP2uzznWp7OLx5I1pbL3yUR/2u04S7umOXmg1jfDkgPZRDOctN4Lcd5TZKX6ygBlzRKxXm6zMClHstiBi57HssicMmM+/WQSDWj/iJBvpm6qWCJRvV8AYe93LE1LKJcUG+Ey6E9i6ZwBWvr58vAVWr9PP8nto9/P8jXHOFrkkPpXdgwGWFRSNGz0VlmAl97hA1+gtCk6aOQRcukSe7SVF0E4QxHEl8nqSklCUkCy0xU5Rl+L5dRsALhkmmJrEBeF01yWFXWbRpHdNPBEq3btAmLWCGnOkaV6xpLw1WyIkLBxb87D5f5PYuylWwvvYuYPJXfNMONMnanahs/yztAO0STFJXGfBHqyPeZpk8ywnXUDFzmsjgb4AqzCZfBU4XjSkgUFnu3U3NUR3Zu12r15qpagCXKuHoNXwYEoiA0AKsIhuky5xK4eDSFi43gCFyObiszJiOxlj7pAM00CYktuMp7LvMpwm3BJV7qLH+WydSXCFSPCl5PdaOqNmAZNeWdd7GzkQsSoyKxhJWqZuatwCWz80a4BCoFF383biszBPQl28qcgcvSVn5bcCUw7rEHrqMcxVmFS01FmIBFu0Qvtc4n0HCTemjFrfysKFU7sERJGdmY7B+A/KD2WEegJLi3BddG/n2Tqefi77LcRuCSe4s3ApcCzAxc1tInGeGy23Mx3rIIFwE1zHOFIzsoAllBkfg3gXrcs2WFrVGvaFVLsIyaP34CfmEFZkSFYxnhKp2EpPyeRYGrVLcoUBEiQ5dYsvNHxVxqGsIIl2Hnj224BCpTuHQq1rIKF99nzCpoBEtMcqOWhcvSkzMErjPipThQGO/aUnmpldOna7VUPVWtwRLJqoUZTz6D+MYNkRQepvYvrhKoOAoTuBzfs+jYhlibnovdtV1wifHnUnDxb9Y8lxxl7uuSPhoLPP3UqoTh3Sr28TGVpWoPllEn84vwY9eHkOzWBIkEbBkbVxLtSrdobVuZEa7SmzMs7Vm0F64ynssGXOpnvs8cXDIlYc5zpfJzXNR3xE/N/dQUQv9OnW8ol0JVq8aAZVRCWjqWPPIYjjZuhORwPVaxcZYHGZ6aYQkuFdSXg0u2lZX2XKYbYq3BJV7rV763IuBSXST/JhOox3lMpyfOCY3EdLdW+C2BGtTlQadTCd1M1TiwjDp98TJW9PoPdjZsgGxdMAHSYQUbVu4zigczxFyO7Vk0B1ecKVz8vyW41EjRDFxGsMzBlcjXHuXxBK8rXx+Ffe1CMMTFVWU5Htmzp1OZ9KqLaixYRl2i/TJ6HNaEhCKjpReS9YSJjSxJ4daz8TfIcppQk4WCpeCS6YjScEm8ZRUumrNwqYlU/k+6vxM8R7bcTuJ7prr5qDzqDzd0x+KYGMMHq+Gq8WCZ6sDxE9j4Rh+sb9kC59r44LgulCNABvts7LU8ytP4N9MELpnnMgsXuySbcPG11uAydosClRzFU8ltoRSeLyc8GnHtgjHRtYVa8fBH2rhXXkZWStU8lL2qVKvAMtXu/YcQO2AgNnXsiMMcUZ4L7oAjISHYRc+2gY2/ng2+MVBnCOwFNA0umYowhUugMlqpmEvg0qwYLgGKr0ugyc3nNF0EssOisdM/GLPcfdDPpYG6qd3DvRUm9+2LlMQj2tXWPtVasEwlz6Bf991cbOvTFxtvvRWb2biZfq2RGRzI+CYY8ewuxTPt4FFyQ8hW/q0cmclSm60B9GQB9HyBNB7jCOMe/l9m5PfTDvH/R4IiVNx0kh5pZ9sAzGjmg/cZK/2d55Flx3/38sOY117F+plzDBdUB1QnwDKnOHq0NTGTsaH/QKx59HGsiorCksauWEcQ4tya4XALbxxv3Qopbf1wpn07pHVoh1Pt/ZHg54u4lj5Y08wD3zdogi/5+rdoMhPe07MN+tzXCZP6v4NlYycg9UiSdra6pzoLljWlFRRif3wiYjdswYqflmDR3AX437TZ+GnaHCz9YQHWLFqKuNhtSDpyFPnnL2rvqpep6sGqV6WoHqx6VYrqwapXpagerHpViurBqlelqB6selWCgP8H0vxXZO18UWEAAAAASUVORK5CYII="
 	placeholderImage = syn.crypt.base64.decode(placeholderImage)
+	draw.placeholderImage = placeholderImage
 
 	function draw:Image(imagedata, x, y, w, h, transparency, visible)
 		if visible == nil then visible = true end
@@ -1835,6 +2030,7 @@ do
 	local timer = BBOT.timer
 	local userinputservice = BBOT.service:GetService("UserInputService")
 	local httpservice = BBOT.service:GetService("HttpService")
+	local localplayer = BBOT.service:GetService("LocalPlayer")
 	local config = {
 		registry = {}, -- storage of the current configuration
 		enums = {}
@@ -1847,11 +2043,27 @@ do
 	config.priority = {}
 
 	function config:SetPriority(pl, level)
-		local last = self.priority[pl.UserId]
+		local last = config:GetPriority(pl)
 		local new = tonumber(level)
 		self.priority[pl.UserId] = new
 		writefile(self.storage_pathway .. "/priorities.json", httpservice:JSONEncode(self.priority))
-		hook:Call("OnPriorityChanged", pl, last, new)
+		hook:Call("OnPriorityChanged", pl, last, config:GetPriority(pl))
+	end
+
+	function config:GetPriority(pl)
+		if not pl then return end
+		if pl == localplayer then return 0 end
+		local level, reason = 0, nil
+		if self.priority[pl.UserId] then
+			level = self.priority[pl.UserId]
+			if level == nil then level = 0 end
+			if level ~= 0 then
+				return level, reason
+			end
+		end
+		level, reason = hook:Call("GetPriority", pl)
+		if level == nil then level = 0 end
+		return level, reason
 	end
 
 	do -- key binds
@@ -2233,12 +2445,24 @@ do
 		local c=0
 		for i=1, #list do
 			local v = list[i-c]
-			if v:match("^.+(%..+)$") ~= ".bb" then
+			if string.match(v, "^.+(%..+)$") ~= ".bb" then
 				table.remove(list, i-c)
 				c=c+1
 				continue
 			end
-			local file = v:match("^.+/(.+)$"):match("(.+)%..+")
+			local check1 = string.match(v, "^.+\\(.+)$")
+			if not check1 then
+				table.remove(list, i-c)
+				c=c+1
+				continue
+			end
+			local check2 = string.match(check1, "(.+)%..+")
+			if not check2 then
+				table.remove(list, i-c)
+				c=c+1
+				continue
+			end
+			local file = check2
 			if string.find(file, "\\") then
 				file = string.Explode("\\", file)[2]
 			end
@@ -2342,9 +2566,9 @@ do
 				self.registry = old
 				return
 			end
-			self.Opening = nil
 			self.registry["Main"]["Settings"]["Configs"] = configsection
 			hook:Call("OnConfigOpened", file)
+			self.Opening = nil
 		end
 	end
 
@@ -2412,11 +2636,18 @@ do
 
 	hook:Add("OnConfigChanged", "BBOT:config.unsafefeatures", function(steps, old, new)
 		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Allow Unsafe Features") and not new then
+			local opening = false
+			if config.Opening then
+				opening = true
+			end
 			timer:Async(function()
+				local last = config.Opening
+				config.Opening = opening
 				for i=1, #config.unsafe_paths do
 					local path = string.Explode(".", config.unsafe_paths[i])
 					config:SetValue(config:BaseGetNormal(unpack(path)), unpack(path))
 				end
+				config.Opening = last
 			end)
 		end
 	end)
@@ -2488,8 +2719,6 @@ do
 		gui.base = base
 
 		function base:Init()
-			self.background_outline = self:Cache(draw:BoxOutline(0, 0, 0, 0, 6, Color3.fromRGB(21, 21, 21)))
-			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.fromRGB(34, 34, 34)))
 			self:Calculate()
 		end
 	
@@ -2520,10 +2749,6 @@ do
 		end
 	
 		function base:PerformLayout(pos, size)
-			self.background_outline.Position = pos
-			self.background.Position = pos
-			self.background_outline.Size = size
-			self.background.Size = size
 		end
 
 		function base:Center()
@@ -2872,7 +3097,7 @@ do
 	end
 
 	do
-		local a = draw:TextOutlined("", 2, 0, 0, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0), 1, false)
+		local a = draw:TextOutlined("", 2, 5, 5, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0), 1, false)
 		function gui:GetTextSize(content, font, size)
 			a.Text = content
 			a.Font = font
@@ -3420,6 +3645,7 @@ do
 	local gui = BBOT.gui
 	local color = BBOT.color
 	local math = BBOT.math
+	local asset = BBOT.asset
 	local table = BBOT.table
 	local timer = BBOT.timer
 	local thread = BBOT.thread
@@ -3577,6 +3803,10 @@ do
 					self:SetTransparency(0)
 				end
 				self.ishoverobject = ishoverobj
+
+				if not ishoverobj then
+					userinputservice.MouseIconEnabled = true
+				end
 			end
 
 			local objecthover = gui.hovering
@@ -3982,7 +4212,9 @@ do
 			local pos = self:GetLocalTranslation()
 			local size = self.parent.absolutesize
 			local text = self.content
-			if x + pos.X + self.offset.X - 4 >= size.X then
+			if self.wraptext then
+				self.text.Text = table.concat(string.WrapText(self.content, self.text.Font, self.text.Size, size.X - pos.X - 6), "\n")
+			elseif x + pos.X + self.offset.X - 4 >= size.X then
 				text = ""
 				for i=1, #self.content do
 					local v = string.sub(self.content, i, i)
@@ -3993,8 +4225,15 @@ do
 					end
 					text = pretext 
 				end
+				self.text.Text = text
+			else
+				self.text.Text = text
 			end
-			self.text.Text = text
+		end
+
+		function GUI:Wrapping(bool)
+			self.wraptext = bool
+			self:InvalidateLayout()
 		end
 
 		function GUI:GetTextSize(text)
@@ -4072,8 +4311,12 @@ do
 			self.textsize = 16
 			self.font = 2
 
-			self.cursor_outline = self:Cache(draw:BoxOutline(0, 0, 1, self.textsize, 4, gui:GetColor("Border")))
-			self.cursor = self:Cache(draw:BoxOutline(0, 0, 1, self.textsize, 0, Color3.fromRGB(127, 72, 163), 0))
+			self.cursor_outline = draw:BoxOutline(0, 0, 1, self.textsize, 4, gui:GetColor("Border"))
+			self.cursor_outline.ZIndex = 2
+			self.cursor_outline = self:Cache(self.cursor_outline)
+			self.cursor = draw:BoxOutline(0, 0, 1, self.textsize, 0, Color3.fromRGB(127, 72, 163), 0)
+			self.cursor.ZIndex = 2
+			self.cursor = self:Cache(self.cursor)
 			self.cursor_position = 1
 
 			self.editable = true
@@ -4760,7 +5003,10 @@ do
 		end
 
 		function GUI:SetImage(img)
-			self.image.Data = img
+			if typeof(img) ~= "string" then
+				img = draw.placeholderImage
+			end
+			self.image.Data = img or draw.placeholderImage
 			self:InvalidateLayout()
 		end
 
@@ -5127,8 +5373,10 @@ do
 
 		function GUI:OnClick() end
 
+		function GUI:CanClick() return true end
+
 		function GUI:InputBegan(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() and self:CanClick() then
 				if self.confirmation and not self.confirm then
 					self.confirm = true
 					self.text:SetText(self.confirmation)
@@ -6741,6 +6989,12 @@ do
 			if config.unsafe then
 				button:SetColor(unsafe_color)
 			end
+			button.CanClick = function()
+				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Cheat Settings", "Allow Unsafe Features") then
+					return false
+				end
+				return true
+			end
 			button.OnClick = function()
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Cheat Settings", "Allow Unsafe Features") then
 					return
@@ -6749,6 +7003,14 @@ do
 			end
 			button.tooltip = config.tooltip
 			return 16+7
+		elseif type == "Message" then
+			local text = gui:Create("Text", container)
+			text:SetPos(0, 0, 0, Y)
+			text:SetTextSize(13)
+			text:SetText(name)
+			text:Wrapping(true)
+			local w, h = text:GetTextSize()
+			return h+4
 		end
 		return 0
 	end
@@ -6889,8 +7151,10 @@ do
 			local img = config:GetValue("Main", "Settings", "Cheat Settings", "Custom Logo")
 			if img ~= "Bitch Bot" and img ~= "" then
 				image:SetImage(menu.images[5])
-				if #img > 4 then
-					thread:Create(function(img, image)
+				thread:Create(function(img, image)
+					if asset:IsFile("images", img) then
+						image:SetImage(asset:GetRaw("images", img))
+					elseif #img > 4 then
 						local img = game:HttpGet("https://i.imgur.com/" .. img .. ".png")
 						if img then
 							image:SetImage(img)
@@ -6898,8 +7162,8 @@ do
 							image:SetImage(menu.images[8])
 							BBOT.notification:Create("An error occured trying to get the menu logo!")
 						end
-					end, img, image)
-				end
+					end
+				end, img, image)
 			else
 				image:SetImage(self.images[7])
 			end
@@ -7213,6 +7477,7 @@ do
 	end)
 
 	function menu:ProcessInfoBar(text)
+		text = string.Replace(text, "{account}", BBOT.account)
 		text = string.Replace(text, "{username}", BBOT.username)
 		text = string.Replace(text, "{date}", os.date("%b. %d, %Y"))
 		text = string.Replace(text, "{version}", BBOT.version)
@@ -7263,8 +7528,10 @@ do
 					client_info:SetPos(0, 8, .5, 1)
 				else
 					image:SetImage(menu.images[5])
-					if #new > 4 then
-						thread:Create(function(img, image)
+					thread:Create(function(img, image)
+						if asset:IsFile("images", img) then
+							image:SetImage(asset:GetRaw("images", img))
+						elseif #img > 4 then
 							local img = game:HttpGet("https://i.imgur.com/" .. img .. ".png")
 							if img then
 								image:SetImage(img)
@@ -7272,8 +7539,8 @@ do
 								image:SetImage(menu.images[8])
 								BBOT.notification:Create("An error occured trying to get the menu logo!")
 							end
-						end, new, image)
-					end
+						end
+					end, new, image)
 				end
 			end
 			local sizex = client_info:GetTextSize()
@@ -7284,6 +7551,82 @@ do
 	local sizex = client_info:GetTextSize()
 	infobar:SetPos(0, 52, 0, 10)
 	gui:SizeTo(infobar, UDim2.new(0, 20 + sizex + 8, 0, 20), 0.775, 0, 0.25)
+end
+
+-- Scripts
+do
+	local asset = BBOT.asset
+	local log = BBOT.log
+	local hook = BBOT.hook
+	local scripts = {
+		registry = {},
+	}
+	BBOT.scripts = scripts
+
+	hook:Add("PreInitialize", "BBOT:Scripts.Initialize", function()
+		asset:Register("scripts", {".lua"}) -- creates scripts folder and wl files
+	end)
+
+	hook:Add("PostInitialize", "BBOT:Scripts.Initialize", function()
+		scripts.pre_run = [[local _={...};local BBOT=_[1];local script_name=_[2];]]
+
+		local libraries = {}
+		for k, v in pairs(BBOT) do
+			if typeof(v) == "table" and not string.match(k, "%s") then
+				scripts.pre_run = scripts.pre_run .. "local " .. k .. "=BBOT." .. k .. ";"
+			end
+		end
+
+		local all = scripts:GetAll()
+		for i=1, #all do
+			scripts:Run(all[i])
+		end
+	end)
+
+	-- get's a script from with-in bitchbot/[gamehere]/scripts/*
+	function scripts:Get(name)
+		if asset:IsFile("scripts", name) then
+			return asset:GetRaw("scripts", name)
+		end
+	end
+
+	function scripts:GetAll(path)
+		return asset:ListFiles("scripts", path)
+	end
+
+	-- runs it? duh?
+	function scripts:Run(name)
+		if asset:IsFile("scripts", name) then
+			if self.registry[name] then
+				log(LOG_WARN, "Script \"" .. name .. "\" is already running! Attempting unload...")
+				hook:CallP(name .. ".Unload")
+				log(LOG_NORMAL, "Re-running script -> " .. name)
+			else
+				log(LOG_NORMAL, "Running script -> " .. name)
+			end
+			local script = asset:GetRaw("scripts", name)
+			local func, err = loadstring(self.pre_run .. script)
+			if not func then
+				log(LOG_ERROR, "An error occured executing script \"" .. name .. "\",\n" .. (err or "Unknown Error!"))
+				return
+			end
+			setfenv(func, getfenv())
+			local ran, err = xpcall(func, debug.traceback, BBOT, name) -- i forgot what to do here
+			if not ran then
+				hook:CallP(name .. ".Unload")
+				log(LOG_ERROR, "An error occured running script \"" .. name .. "\",\n" .. (err or "Unknown Error!"))
+				return
+			end
+			self.registry[name] = func
+		end
+	end
+
+	function scripts:Unload(name)
+		if self.registry[name] then
+			hook:CallP(name .. ".Unload")
+			self.registry[name] = nil
+		end
+	end
 end
 
 -- Notifications, nice... but some aspects of it still bugs me... (Done)
@@ -7521,6 +7864,7 @@ do
 	local supported_games = {
 		[113491250] = "phantom forces",
 		[1256867479] = "phantom forces",
+		[115272207] = "phantom forces",
 		[1168263273] = "bad business"
 	}
 
@@ -7634,18 +7978,18 @@ do
 					if chatgame then
 						local version = chatgame:FindFirstChild("Version")
 						if version and not string.find(version.Text, "loading", 1, true) then
-							wait(5)
+							wait(1)
 							break
 						end
 					end
 				end;
 				waited = waited + 1
-				if waited > 7 then
+				if waited > 15 then
 					BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
-				elseif waited > 5 then
+				elseif waited > 8 then
 					BBOT:SetLoadingStatus("What the hell is taking so long?")
 				end
-				wait(5)
+				wait(1)
 			end;
 		else
 			local waited = 0
@@ -7660,7 +8004,7 @@ do
 				elseif waited > 5 then
 					BBOT:SetLoadingStatus("What the hell is taking so long?")
 				end
-				wait(5)
+				wait(1)
 			end;
 		end
 	end
@@ -7970,6 +8314,12 @@ do
 						name = "Use Barrel",
 						value = false,
 						tooltip = "Instead of calculating the FOV from the camera, it uses the weapon barrel's direction."
+					},
+					{
+						type = "Toggle",
+						name = "Lock Target",
+						value = true,
+						tooltip = "Doesn't swap targets when you are targeting someone."
 					},
 					{
 						type = "Slider",
@@ -8518,11 +8868,10 @@ do
 										name = "In Floor Swap",
 										value = 100,
 										min = 0,
-										max = 500,
+										max = 1000,
 										suffix = "%",
-										custom = {[0] = "Disabled"},
+										custom = {[0] = "Disabled", [1000] = "Crazy"},
 										unsafe = true,
-										tooltip = "Puts you into the floor kinda..."
 									},
 									{
 										type = "DropBox",
@@ -8656,6 +9005,12 @@ do
 										value = false,
 										tooltip = "Aimbot only targets prioritized players.",
 									},
+									{
+										type = "Toggle",
+										name = "Priority Last",
+										value = false,
+										tooltip = "Aimbot automatically prioritized the last player who killed you.",
+									},
 								}},
 							}
 						},
@@ -8756,7 +9111,7 @@ do
 										{
 											type = "ComboBox",
 											name = "Flags",
-											values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Frozen", true }, { "Resolved", false }, { "Backtrack", false },  },
+											values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Frozen", true }, { "Visible Only", false }, { "Resolved", false }, { "Backtrack", false },  },
 										},
 										{
 											type = "Toggle",
@@ -9285,6 +9640,18 @@ do
 											min = -50,
 											max = 50,
 										},
+										{
+											type = "Toggle",
+											name = "FreeCam",
+											value = false,
+											extra = {
+												{
+													type = "KeyBind",
+													key = nil,
+													toggletype = 2,
+												},
+											},
+										},
 									},
 								},
 								{
@@ -9803,7 +10170,7 @@ do
 										type = "DropBox",
 										name = "Presets",
 										value = 1,
-										values = {"Bitch Bot", "Chinese Propaganda", "Youtube Title", "Emojis", "Deluxe", "t0nymode", "Douchbag", "Custom"},
+										values = {"Bitch Bot", "Chinese Propaganda", "Youtube Title", "Emojis", "Deluxe", "t0nymode", "Douchbag", "ni shi zhong guo ren ma?", "Custom"},
 									},
 									{
 										type = "Slider",
@@ -9818,10 +10185,23 @@ do
 										},
 									},
 									{
-										type = "Toggle",
+										type = "Slider",
 										name = "Newline Mixer",
-										value = true,
+										min = 4,
+										max = 50,
+										suffix = " sets",
+										decimal = 0,
+										value = 5,
+										custom = {
+											[4] = "Disabled",
+										},
 										tooltip = "Instead of showing each line, it mixes lines together.",
+									},
+									{
+										type = "Toggle",
+										name = "Newline Mixer Spaces",
+										value = false,
+										tooltip = "Adds spaces in-between newline based chat spams",
 									},
 									{
 										type = "Toggle",
@@ -9934,6 +10314,7 @@ do
 										type = "Toggle",
 										name = "Anti Votekick",
 										value = false,
+										unsafe = true,
 										tooltip = "WARNING: This requires 2 or more rank 25 accounts to work! You can do 1 rank 25 but it would only delay a votekick by ~90-120 seconds",
 									},
 									{
@@ -9954,6 +10335,24 @@ do
 										},
 										tooltip = "Delays votekick once at a certain amount of kills."
 									},
+									{
+										type = "Toggle",
+										name = "Auto Hop",
+										value = false,
+										tooltip = "Server hops you just before they get a chance to place a votekick.",
+										extra = {}
+									},
+									{
+										type = "Slider",
+										name = "Hop Trigger Time",
+										min = 5,
+										max = 40,
+										suffix = "s",
+										decimal = 0,
+										value = 12,
+										custom = {},
+										tooltip = "The time at which a hop should be triggered"
+									},
 								}},
 							},
 							{
@@ -9964,9 +10363,36 @@ do
 								{content = {
 									{
 										type = "Toggle",
-										name = "Auto Death",
+										name = "Auto Nade Spam",
 										value = false,
-										tooltip = "Lowers your total KD so that you don't get flagged for bans."
+										unsafe = true,
+										tooltip = "Spams grenades regardless."
+									},
+									{
+										type = "Toggle",
+										name = "Auto Death On Nades",
+										value = false,
+										unsafe = true,
+										tooltip = "Resets yourself when nades are depleted."
+									},
+									{
+										type = "Toggle",
+										name = "Disable 3D Rendering",
+										value = false,
+										extra = {},
+									},
+									{
+										type = "Slider",
+										name = "FPS Limiter",
+										min = 5,
+										max = 300,
+										suffix = " fps",
+										decimal = 0,
+										value = 144,
+										custom = {
+											[5] = "Slide Show",
+											[300] = "Unlimited"
+										},
 									},
 									{
 										type = "Toggle",
@@ -9980,6 +10406,50 @@ do
 										}
 									},
 									{
+										type = "Toggle",
+										name = "Spawn On Alive",
+										value = false,
+										unsafe = true,
+										tooltip = "Auto Spawn only spawns when enemies are present."
+									},
+									{
+										type = "Toggle",
+										name = "Streamer Mode",
+										value = false,
+										tooltip = "Hides critical information to prevent moderators from identifying your server."
+									},
+									{
+										type = "Toggle",
+										name = "Auto Friend Accounts",
+										value = true,
+										tooltip = "Automatically friends accounts that you have used."
+									},
+									{
+										type = "Toggle",
+										name = "Friends Votes No",
+										value = false,
+										tooltip = "Automatically votes no on votekicks on friends."
+									},
+									{
+										type = "Toggle",
+										name = "Assist Votekicks",
+										value = false,
+										tooltip = "Assists friend's votekicks by voting yes."
+									},
+									{
+										type = "Toggle",
+										name = "Reset On Enemy Spawn",
+										value = false,
+										unsafe = true,
+										tooltip = "Resets when an enemy spawns in, useful for botting."
+									},
+									{
+										type = "Toggle",
+										name = "Anti AFK",
+										value = false,
+										unsafe = true,
+									},
+									{
 										type = "Button",
 										name = "Banlands",
 										confirm = "Are you 100% sure?",
@@ -9988,7 +10458,7 @@ do
 											BBOT.aux.network:send("logmessage", "Fuck this shit I'm out")
 										end,
 										tooltip = "Yeets you to the banlands private server, (DOING THIS WILL BAN YOUR ACCOUNT)"
-									}
+									},
 								}},
 								{content = {
 									{
@@ -10001,7 +10471,7 @@ do
 										type = "Slider",
 										name = "Hit Volume",
 										min = 0,
-										max = 100,
+										max = 300,
 										suffix = "%",
 										decimal = 1,
 										value = 100,
@@ -10017,7 +10487,7 @@ do
 										type = "Slider",
 										name = "Headshot Volume",
 										min = 0,
-										max = 100,
+										max = 300,
 										suffix = "%",
 										decimal = 1,
 										value = 100,
@@ -10033,7 +10503,7 @@ do
 										type = "Slider",
 										name = "Kill Volume",
 										min = 0,
-										max = 100,
+										max = 300,
 										suffix = "%",
 										decimal = 1,
 										value = 100,
@@ -10049,7 +10519,7 @@ do
 										type = "Slider",
 										name = "Headshot Kill Volume",
 										min = 0,
-										max = 100,
+										max = 300,
 										suffix = "%",
 										decimal = 1,
 										value = 100,
@@ -10065,7 +10535,7 @@ do
 										type = "Slider",
 										name = "Fire Volume",
 										min = 0,
-										max = 100,
+										max = 300,
 										suffix = "%",
 										decimal = 1,
 										value = 100,
@@ -10084,13 +10554,19 @@ do
 										name = "Spaz Attack",
 										value = false,
 										unsafe = true,
-										tooltip = "Literally makes you look like your having a stroke."
+										tooltip = "Literally makes you look like your having a stroke.",
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2,
+											},
+										}
 									},
 									{
 										type = "Slider",
 										name = "Spaz Attack Intensity",
 										min = 0.1,
-										max = 6,
+										max = 20,
 										suffix = "",
 										decimal = 1,
 										value = 3,
@@ -10237,22 +10713,20 @@ do
 									},
 									{
 										type = "Toggle",
-										name = "Auto Grenade Frozen",
+										name = "Auto Nade Frozen",
 										value = false,
 										unsafe = true,
 										tooltip = "Automatically teleports a grenade to people frozen, useful against semi-god users.",
 									},
 									{
 										type = "Slider",
-										name = "Auto Grenade Wait",
-										min = 0,
+										name = "Auto Nade Wait",
+										min = 1,
 										max = 12,
 										suffix = "s",
 										decimal = 1,
 										value = 6,
-										custom = {
-											[0] = "Full Send It Bro",
-										},
+										custom = {},
 										tooltip = "Time till auto nade should send",
 									},
 									{
@@ -10272,6 +10746,12 @@ do
 												color = { 127, 72, 163, 150 },
 											}
 										}
+									},
+									{
+										type = "Toggle",
+										name = "Blink On Fire",
+										value = false,
+										tooltip = "Forces an update when you fire your gun, perfect for being a dick.",
 									},
 									{
 										type = "Toggle",
@@ -10312,14 +10792,7 @@ do
 											},
 										}
 									},
-									{
-										type = "Toggle",
-										name = "Spawn Delay",
-										value = false,
-										unsafe = true,
-										tooltip = "Delays your spawn in so you have a chance to load up.",
-									},
-									{
+									--[[{
 										type = "Toggle",
 										name = "Anti Grenade TP",
 										value = false,
@@ -10347,7 +10820,7 @@ do
 										decimal = 1,
 										value = 25,
 										custom = {},
-									},
+									},]]
 								}},
 							},
 						},
@@ -10413,7 +10886,7 @@ do
 										name = "Custom Logo",
 										value = "Bitch Bot",
 										extra = {},
-										tooltip = "To put a custom logo, you need an imgur image Id, like this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part! Changing this to a blank box will remove the logo."
+										tooltip = "Use can use either a file, or an imgur image Id, for the imgur image Id you will need this -> https://i.imgur.com/g2k0at.png, only input the 'g2k0at' part! Changing this to a blank box will remove the logo."
 									},
 									{
 										type = "Toggle",
@@ -10435,7 +10908,7 @@ do
 							{
 								name = "Menus",
 								pos = UDim2.new(.5,4,0,0),
-								size = UDim2.new(.5,-4,5/10,-4),
+								size = UDim2.new(.5,-4,3/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -10526,6 +10999,26 @@ do
 										extra = {},
 									},
 								}
+							},
+							{
+								name = "Credits",
+								pos = UDim2.new(.5,4,1-(4.5/10),4),
+								size = UDim2.new(.5,-4,4.5/10,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "Message",
+										name = "bitch\n- infrastructure\n- production builds\n- distribution\n- tells wholecream how he fucked something up",
+									},
+									{
+										type = "Message",
+										name = "nata\n- minor additions and changes",
+									},
+									{
+										type = "Message",
+										name = "wholecream\n- beta branch developer\n- created this entire fucking thing from scratch... Yes, that includes the UI...\n- Workaholic, literally.",
+									},
+								}
 							}
 						},
 					},
@@ -10545,38 +11038,9 @@ do
 						type = "Container",
 						content = {
 							{
-								name = "Ballistics",
-								pos = UDim2.new(0,0,0,0),
-								size = UDim2.new(.5,-4,2/10,-4),
-								type = "Panel",
-								content = {
-									{
-										type = "ComboBox",
-										name = "Fire Modes",
-										values = {
-											{ "Semi-Auto", false },
-											{ "Burst-2", false },
-											{ "Burst-3", false },
-											{ "Full-Auto", false },
-										},
-										unsafe = true,
-									},
-									{
-										type = "Slider",
-										name = "Firerate",
-										min = 0,
-										max = 2000,
-										suffix = "%",
-										decimal = 1,
-										value = 100,
-										unsafe = true,
-									},
-								}
-							},
-							{
 								name = "Accuracy",
-								pos = UDim2.new(0,0,2/10,4),
-								size = UDim2.new(.5,-4,4/10,-4),
+								pos = UDim2.new(0,0,0,0),
+								size = UDim2.new(.5,-4,5/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -10633,8 +11097,8 @@ do
 							},
 							{
 								name = "Handling",
-								pos = UDim2.new(0,0,6/10,8),
-								size = UDim2.new(.5,-4,4/10,-8),
+								pos = UDim2.new(0,0,5/10,4),
+								size = UDim2.new(.5,-4,5/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -10647,6 +11111,16 @@ do
 										value = 100,
 										unsafe = true,
 										tooltip = "This does affect the spread of your guns by the ways..."
+									},
+									{
+										type = "Slider",
+										name = "Hip Spread",
+										min = 0,
+										max = 100,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
 									},
 									{
 										type = "Slider",
@@ -10682,9 +11156,59 @@ do
 								}
 							},
 							{
-								name = "Movement",
+								name = "Ballistics",
 								pos = UDim2.new(.5,4,0,0),
-								size = UDim2.new(.5,-4,.5,-4),
+								size = UDim2.new(.5,-4,1/3,-4),
+								type = "Panel",
+								content = {
+									{
+										type = "ComboBox",
+										name = "Fire Modes",
+										values = {
+											{ "Semi-Auto", false },
+											{ "Burst-2", false },
+											{ "Burst-3", false },
+											{ "Burst-4", false },
+											{ "Burst-5", false },
+											{ "Full-Auto", false },
+										},
+										unsafe = true,
+									},
+									{
+										type = "Toggle",
+										name = "Burst-Lock",
+										value = false,
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "Firerate",
+										min = 0,
+										max = 2000,
+										suffix = "%",
+										decimal = 1,
+										value = 100,
+										unsafe = true,
+									},
+									{
+										type = "Slider",
+										name = "Burst Cap",
+										min = 0,
+										max = 2000,
+										suffix = " RPM",
+										decimal = 0,
+										value = 0,
+										custom = {
+											[0] = "Disabled"
+										},
+										unsafe = true,
+									},
+								}
+							},
+							{
+								name = "Movement",
+								pos = UDim2.new(.5,4,1/3,4),
+								size = UDim2.new(.5,-4,4/10,-4),
 								type = "Panel",
 								content = {
 									{
@@ -10692,6 +11216,11 @@ do
 										name = "Weapon Style",
 										value = 1,
 										values = {"Off", "Rambo", "Doom", "Quake III", "Half-Life"}
+									},
+									{
+										type = "Toggle",
+										name = "OG Bob",
+										value = false,
 									},
 									{
 										type = "Slider",
@@ -10724,8 +11253,8 @@ do
 							},
 							{
 								name = "Animations",
-								pos = UDim2.new(.5,4,.5,4),
-								size = UDim2.new(.5,-4,.5,-4),
+								pos = UDim2.new(.5,4,1/3 + 4/10,8),
+								size = UDim2.new(.5,-4,1-(1/3 + 4/10),-8),
 								type = "Panel",
 								content = {
 									{
@@ -10885,9 +11414,11 @@ do
 											end
 											if not checked[v] then
 												local state = "Neutral"
-												local priority = config.priority[v.UserId]
+												local priority, extra = config:GetPriority(v)
 												if priority then
-													if priority > 0 then
+													if extra then
+														state = extra .. " (" .. priority .. ")"
+													elseif priority > 0 then
 														state = "Priority (" .. priority .. ")"
 													elseif priority < 0 then
 														state = "Friendly (" .. (-priority) .. ")"
@@ -11098,7 +11629,10 @@ do
 									hook:Add("OnPriorityChanged", "BBOT:PlayerManager.Changed", function(player, old_priority, priority)
 										local state = "Neutral"
 										if priority then
-											if priority > 0 then
+											local priority, extra = config:GetPriority(player)
+											if extra then
+												state = extra .. " (" .. priority .. ")"
+											elseif priority > 0 then
 												state = "Priority (" .. priority .. ")"
 											elseif priority < 0 then
 												state = "Friendly (" .. (-priority) .. ")"
@@ -11363,7 +11897,7 @@ do
 						name = "Barrel Comp X",
 						value = 100,
 						min = 0,
-						max = 1000,
+						max = 200,
 						suffix = "%",
 						decimal = 1,
 						custom = { [0] = "Off" },
@@ -11373,7 +11907,7 @@ do
 						name = "Barrel Comp Y",
 						value = 100,
 						min = 0,
-						max = 1000,
+						max = 200,
 						suffix = "%",
 						decimal = 1,
 						custom = { [0] = "Off" },
@@ -11968,6 +12502,8 @@ do
 			},
 		}
 	end
+
+	hook:Call("Startup")
 end
 
 if BBOT.game == "phantom forces" then
@@ -12039,7 +12575,16 @@ if BBOT.game == "phantom forces" then
 					if not failed then
 						if core_aux[k] ~= result then
 							if core_aux[k] ~= nil then
-								return k
+								BBOT.log(LOG_WARN, 'Warning: Auxillary overload for "' .. k .. '"')
+								if k ~= "roundsystem" then
+									for kk, vv in pairs(core_aux[k]) do
+										if vv ~= result[kk] then
+											return k
+										end
+									end
+								end
+								core_aux[k] = result
+								BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. k .. '"')
 							else
 								core_aux[k] = result
 								BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. k .. '"')
@@ -12049,8 +12594,17 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
+			function self._CheckFunction(result)
+				local name = debug.getinfo(result).name
+				if aux_functions[name] then
+					local path = aux_functions[name]
+					BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"' .. (path ~= true and " sorted into " .. path or ""))
+					core_aux_sub[name] = result
+				end
+			end
+
 			BBOT.log(LOG_DEBUG, "Scanning...")
-			local reg = getgc(true)
+			local reg = debug.getregistry()
 			for _=1, #reg do
 				local v = reg[_]
 				if(typeof(v) == 'table')then
@@ -12063,19 +12617,50 @@ if BBOT.game == "phantom forces" then
 					for i=1, #ups do
 						local v = ups[i]
 						if typeof(v) == "table" then
+							for k, v in pairs(v) do
+								if typeof(v) == "table" then
+									local succ, ax = pcall(self._CheckTable, v)
+									if succ and ax ~= nil then
+										return "Duplicate auxillary \"" .. ax .. "\""
+									end
+								elseif typeof(v) == "function" then
+									local ups = debug.getupvalues(v)
+									for i=1, #ups do
+										local v = ups[i]
+										if typeof(v) == "table" then
+											local succ, ax = pcall(self._CheckTable, v)
+											if succ and ax ~= nil then
+												return "Duplicate auxillary \"" .. ax .. "\""
+											end
+										end
+									end
+								end
+							end
 							local succ, ax = pcall(self._CheckTable, v)
 							if succ and ax ~= nil then
 								return "Duplicate auxillary \"" .. ax .. "\""
 							end
+						elseif typeof(v) == "function" then
+							local ups = debug.getupvalues(v)
+							for i=1, #ups do
+								local v = ups[i]
+								if typeof(v) == "table" then
+									local succ, ax = pcall(self._CheckTable, v)
+									if succ and ax ~= nil then
+										return "Duplicate auxillary \"" .. ax .. "\""
+									end
+								end
+							end
 						end
 					end
+				end
+			end
 
-					local name = debug.getinfo(v).name
-					if aux_functions[name] then
-						local path = aux_functions[name]
-						BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"' .. (path ~= true and " sorted into " .. path or ""))
-						core_aux_sub[name] = v
-					end
+			reg = getgc()
+			for i=1, #reg do
+				local v = reg[i]
+				if typeof(v) == 'function' then
+					self._CheckFunction(v)
 				end
 			end
 
@@ -12108,8 +12693,8 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
-			for k, v in next, core_aux_sub do
-				if not aux_functions[k] then
+			for k, v in next, aux_functions do
+				if not core_aux_sub[k] then
 					return "Couldn't find auxillary \"" .. k ..  "\""
 				end
 			end
@@ -12185,6 +12770,10 @@ if BBOT.game == "phantom forces" then
 			end
 
 			local function override_Updater(player, controller)
+				if player == localplayer then
+					hook:CallP("CreateUpdater", player)
+					return
+				end
 				local upd_updateReplication = controller.updateReplication
 				controller._upd_updateReplication = upd_updateReplication
 				function controller.updateReplication(...)
@@ -12304,12 +12893,18 @@ if BBOT.game == "phantom forces" then
 				local override = _hook:CallP("PreNetworkSend", ...)
 				if override then
 					if _BB.username == "dev" then
-						--_BB.log(LOG_DEBUG, unpack(override))
+						local first = {...}
+						if first[1] ~= "ping" then
+							_BB.log(LOG_DEBUG, unpack(override))
+						end
 					end
 					return _send(self, unpack(override)), _hook:CallP("PostNetworkSend", unpack(override))
 				end
 				if _BB.username == "dev" then
-					--_BB.log(LOG_DEBUG, ...)
+					local first = {...}
+					if first[1] ~= "ping" then
+						_BB.log(LOG_DEBUG, ...)
+					end
 				end
 				return _send(self, ...), _hook:CallP("PostNetworkSend", ...)
 			end
@@ -12360,7 +12955,7 @@ if BBOT.game == "phantom forces" then
 			local function newplay(...)
 				if supressing then return oplay(...) end
 				supressing = true
-				if hook:Call("SupressSound", ...) then
+				if hook:Call("SuppressSound", ...) then
 					supressing = false
 					return
 				end
@@ -12371,7 +12966,7 @@ if BBOT.game == "phantom forces" then
 			local function newplayid(...)
 				if supressing then return oplayid(...) end
 				supressing = true
-				if hook:Call("SupressSoundId", ...) then
+				if hook:Call("SuppressSoundId", ...) then
 					supressing = false
 					return
 				end
@@ -12815,6 +13410,34 @@ if BBOT.game == "phantom forces" then
 				"I know you love it when I spread you open with my remington 870 😚",
 				"I'm gonna make you spill your rounds all over me 😚",
 				"Take my wood kitten, you will enjoy my delicious log",
+			},
+			["ni shi zhong guo ren ma?"] = {
+				"诶",
+				"比",
+				"西",
+				"迪",
+				"伊",
+				"艾",
+				"弗",
+				"吉",
+				"艾",
+				"尺",
+				"艾",
+				"杰",
+				"开",
+				"艾",
+				"勒",
+				"艾",
+				"马",
+				"艾",
+				"娜",
+				"哦",
+				"屁",
+				"吉",
+				"吾",
+				"艾",
+				"儿",
+				"艾"
 			}
 		}
 
@@ -12846,11 +13469,13 @@ if BBOT.game == "phantom forces" then
 			if #self.buffer > 40 then return end
 			if not ignore_delay and self.spammer_delay > tick() then return end
 			local msg
-			if config:GetValue("Main", "Misc", "Chat Spam", "Newline Mixer") then
+			local mixer = config:GetValue("Main", "Misc", "Chat Spam", "Newline Mixer")
+			if mixer > 4 then
+				local allow_spaces = config:GetValue("Main", "Misc", "Chat Spam", "Newline Mixer Spaces")
 				local words = self.spammer_lines
 				local message = ""
-				for i = 1, math.random(10,25) do
-					message = message .. " " .. words[math.random(#words)]
+				for i = 1, mixer do
+					message = message .. (allow_spaces and " " or "") .. words[math.random(#words)]
 				end
 				msg = message
 			else
@@ -12878,6 +13503,10 @@ if BBOT.game == "phantom forces" then
 				chat.spammer_startdelay = tick() + config:GetValue("Main", "Misc", "Chat Spam", "Start Delay")
 				chat.spammer_alive = true
 			end
+		end)
+
+		hook:Add("OnConfigOpened", "BBOT:Chat.Spam", function()
+			chat.spammer_alive = false
 		end)
 
 		--[[
@@ -12914,6 +13543,7 @@ if BBOT.game == "phantom forces" then
 		local math = BBOT.math
 		local notification = BBOT.notification
 		local table = BBOT.table
+		local statistics = BBOT.statistics
 		local hud = BBOT.aux.hud
 		local playerdata = BBOT.aux.playerdata
 		local char = BBOT.aux.char
@@ -12923,6 +13553,12 @@ if BBOT.game == "phantom forces" then
 		votekick.CallDelay = 90
 		votekick.NextCall = 0
 		votekick.Called = 3
+
+		statistics:Create("votekick", {
+			calls = 0,
+			kicks = 0,
+			kicked = {}
+		})
 
 		hook:Add("PreInitialize", "BBOT:Votekick.Load", function()
 			local receivers = BBOT.aux.network.receivers
@@ -12965,6 +13601,7 @@ if BBOT.game == "phantom forces" then
 			end)
 			if config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then
 				timer:Simple(delay+2, function()
+					votekick.called_user = nil
 					votekick:RandomCall()
 				end)
 			end
@@ -12980,18 +13617,33 @@ if BBOT.game == "phantom forces" then
 				votekick.NextCall = tick() + votekick.CallDelay + delay
 			elseif votekick.Called == 2 or votekick.Called == 0 then
 				votekick.Called = 3
+				votekick.called_user = nil
 				votekick.NextCall = tick() + votekick.CallDelay + delay
 			end
 		end)
 		
 		hook:Add("Console", "BBOT:Votekick.AntiVotekick", function(msg)
-			if string.find(msg, "The last votekick was initiated by you", 1, true) then
+			if string.find(msg, "has been kicked out", 1, true) then
+				if votekick.called_user then
+					local data = statistics:Get("votekick")
+					data.kicks = data.kicks + 1
+					if data.kicked[votekick.called_user] then
+						data.kicked[votekick.called_user] = data.kicked[votekick.called_user] + 1
+					else
+						data.kicked[votekick.called_user] = 1
+					end
+					statistics:Set("votekick")
+				end
+				votekick.called_user = nil
+			elseif string.find(msg, "The last votekick was initiated by you", 1, true) then
 				if votekick.NextCall <= tick() then
 					votekick.Called = 2
+					votekick.called_user = nil
 					BBOT.menu:UpdateStatus("Anti-Votekick", "!!! Kickable !!! (Unknown duration)")
 				end
 			elseif string.find(msg, "seconds before initiating a votekick", 1, true) then
 				votekick.Called = 0
+				votekick.called_user = nil
 				votekick.NextCall = tick() + (tonumber(string.match(msg, "%d+")) or 0)-(.5+BBOT.extras:getLatency())
 			end
 		end)
@@ -13004,7 +13656,7 @@ if BBOT.game == "phantom forces" then
 		function votekick:GetTargets()
 			local targetables = {}
 			for i, v in pairs(players:GetPlayers()) do
-				local inpriority = config.priority[v.UserId]
+				local inpriority = config:GetPriority(v)
 				if (not inpriority or inpriority >= 0) and v ~= localplayer then
 					targetables[#targetables+1] = v
 				end
@@ -13020,6 +13672,10 @@ if BBOT.game == "phantom forces" then
 		
 		function votekick:Call(target, reason)
 			BBOT.chat:Say("/votekick:"..target..":"..reason)
+			local data = statistics:Get("votekick")
+			data.calls = data.calls + 1
+			statistics:Set("votekick")
+			self.called_user = target
 			if self.Called ~= 2 and self.NextCall <= tick() then
 				self.Called = 1
 				self.NextCall = 0
@@ -13057,7 +13713,12 @@ if BBOT.game == "phantom forces" then
 				return votekick.NextCall-tick()
 			end
 		end
-		
+
+		hook:Add("OnConfigOpened", "BBOT:Votekick.AntiVotekick", function()
+			votekick.WasAlive = false
+		end)
+
+		local hop_called = 0
 		hook:Add("RenderStep.First", "BBOT:Votekick.AntiVotekick", function()
 			if not config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then return end
 			if char.alive == true then
@@ -13066,7 +13727,12 @@ if BBOT.game == "phantom forces" then
 			if not votekick.WasAlive then return end
 			if playerdata.rankcalculator(playerdata:getdata().stats.experience) < 25 then return end
 			if votekick.Called == 3 or votekick.Called == 0 then
-				BBOT.menu:UpdateStatus("Anti-Votekick", "Calling in " .. math.round(votekick.NextCall-tick()) .. "s")
+				local t = votekick.NextCall-tick()
+				if t < 0 then
+					BBOT.menu:UpdateStatus("Anti-Votekick", "Waiting for server...")
+				else
+					BBOT.menu:UpdateStatus("Anti-Votekick", "Calling in " .. math.round(votekick.NextCall-tick()) .. "s")
+				end
 			elseif votekick.Called == 2 then
 				local t = votekick.NextCall-tick()
 				local amount = ""
@@ -13077,6 +13743,11 @@ if BBOT.game == "phantom forces" then
 					BBOT.menu:UpdateStatus("Anti-Votekick", "Kickable" .. amount)
 				else
 					BBOT.menu:UpdateStatus("Anti-Votekick", "Kickable in " .. math.round(t) .. "s" .. (t < 15 and amount or ""))
+				end
+
+				if hop_called < tick() and config:GetValue("Main", "Misc", "Votekick", "Auto Hop") and config:GetValue("Main", "Misc", "Votekick", "Hop Trigger Time") > t then
+					BBOT.serverhopper:RandomHop()
+					hop_called = tick() + 1
 				end
 			end
 			if votekick:CanCall() then
@@ -13099,11 +13770,17 @@ if BBOT.game == "phantom forces" then
 		local log = BBOT.log
 		local timer = BBOT.timer
 		local notification = BBOT.notification
+		local statistics = BBOT.statistics
 		local TeleportService = game:GetService("TeleportService")
 		local localplayer = BBOT.service:GetService("LocalPlayer")
 		local httpservice = BBOT.service:GetService("HttpService")
 		local serverhopper = {}
 		BBOT.serverhopper = serverhopper
+
+		statistics:Create("serverhopper", {
+			redirects = 0,
+			interacted = {}
+		})
 
 		serverhopper.file = "bitchbot/" .. BBOT.game .. "/data/server-blacklist.json"
 		serverhopper.blacklist = {}
@@ -13163,12 +13840,34 @@ if BBOT.game == "phantom forces" then
 					table.sort(data, function(a, b) return a.playing < b.playing end)
 				end
 				for _, s in pairs(data) do
-					if not serverhopper:IsBlacklisted(s.id) and s.id ~= game.JobId then
+					local id = s.id
+					if not serverhopper:IsBlacklisted(id) and id ~= game.JobId then
 						if s.playing < s.maxPlayers-1 then
 							--syn.queue_on_teleport(<string> code)
-							log(LOG_NORMAL, "Hopping to server Id: " .. s.id .. "; Players: " .. s.playing .. "/" .. s.maxPlayers .. "; " .. s.ping .. " ms")
-							notification:Create("Hopping to server Id '" .. s.id .. "' -> Players: " .. s.playing .. "/" .. s.maxPlayers)
-							timer:Simple(1, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id) end)
+							log(LOG_NORMAL, "Hopping to server Id: " .. id .. "; Players: " .. s.playing .. "/" .. s.maxPlayers .. "; " .. s.ping .. " ms")
+							notification:Create("Hopping to new server -> Players: " .. s.playing .. "/" .. s.maxPlayers)
+							timer:Simple(1, function()
+								local data = statistics:Get("serverhopper")
+								data.redirects = data.redirects + 1
+								if data.interacted[id] then
+									data.interacted[id] = data.interacted[id] + 1
+								else
+									data.interacted[id] = 1
+								end
+								statistics:Save()
+								TeleportService:TeleportToPlaceInstance(game.PlaceId, id)
+								local connection
+								connection = TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
+									connection:Disconnect()
+									data.redirects = data.redirects - 1
+									if data.interacted[id] then
+										data.interacted[id] = data.interacted[id] - 1
+									else
+										data.interacted[id] = 0
+									end
+									statistics:Save()
+								end)
+							end)
 							return
 						end
 					end
@@ -13178,6 +13877,7 @@ if BBOT.game == "phantom forces" then
 		end
 
 		function serverhopper:AddToBlacklist(id, removaltime)
+			self.blacklist = httpservice:JSONDecode(readfile(serverhopper.file)) or self.blacklist
 			local plbllist = self.blacklist[self.UserId]
 			if not plbllist then
 				plbllist = {}
@@ -13196,7 +13896,26 @@ if BBOT.game == "phantom forces" then
 				notification:Create("This server Id (" .. id .. ") is blacklisted! Where you votekicked from here?")
 				return
 			end
+			local data = statistics:Get("serverhopper")
+			data.redirects = data.redirects + 1
+			if data.interacted[id] then
+				data.interacted[id] = data.interacted[id] + 1
+			else
+				data.interacted[id] = 1
+			end
+			statistics:Save()
 			TeleportService:TeleportToPlaceInstance(game.PlaceId, id)
+			local connection
+			connection = TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
+				connection:Disconnect()
+				data.redirects = data.redirects - 1
+				if data.interacted[id] then
+					data.interacted[id] = data.interacted[id] - 1
+				else
+					data.interacted[id] = 0
+				end
+				statistics:Save()
+			end)
 		end
 
 		BBOT.chat:AddCommand("hop", function(id)
@@ -13207,17 +13926,31 @@ if BBOT.game == "phantom forces" then
 			serverhopper:Hop(id)
 		end, "Hops to a server instance.")
 
+		BBOT.chat:AddCommand("blacklist", function(id)
+			if not id or id == "" then
+				return
+			end
+			serverhopper:AddToBlacklist(id, 86400)
+		end, "Adds a server instance to the blacklist.")
+
 		BBOT.chat:AddCommand("rejoin", function()
 			BBOT.serverhopper:Hop(game.JobId)
 		end, "Rejoin the current server instance.")
 
+		local autohop = nil
 		hook:Add("InternalMessage", "BBOT:ServerHopper.HopOnKick", function(message)
 			if not string.find(message, "Server Kick Message:", 1, true) or not string.find(message, "votekicked", 1, true) then return end
 			if not serverhopper:IsBlacklisted(game.JobId) then
 				serverhopper:AddToBlacklist(game.JobId, 86400)
 			end
 			if not config:GetValue("Main", "Misc", "Server Hopper", "Hop On Kick") then return end
+			autohop = 0
+		end)
+
+		hook:Add("RenderStepped", "BBOT:ServerHopper.HopOnKick", function()
+			if not autohop or autohop > tick() then return end
 			serverhopper:RandomHop()
+			autohop = tick() + 3
 		end)
 
 		hook:Add("OnKeyBindChanged", "BBOT:ServerHopper.Hop", function(steps)
@@ -13272,6 +14005,9 @@ if BBOT.game == "phantom forces" then
 		local hook = BBOT.hook
 		local config = BBOT.config
 		local sound = BBOT.aux.sound
+		local table = BBOT.table
+		local string = BBOT.string
+		local asset = BBOT.asset
 		local cache = {
 			["Headshot Kill"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Headshot Kill") or ""),
 			["Kill"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Kill") or ""),
@@ -13284,16 +14020,22 @@ if BBOT.game == "phantom forces" then
 			local final = path[#path]
 			local cacheid = cache[final]
 			if cacheid and config:IsPathwayEqual(path, "Main", "Misc", "Sounds", final) then
-				if isfile(new) then
+				if new ~= "" and asset:IsFolder("sounds", new) then
 					local o = cache[final]
-					cache[final] = getsynasset(new)
-					if not cache[final] then
-						cache[final] = o
+					local files = {}
+					local list = asset:ListFiles("sounds", new)
+					for i=1, #list do
+						files[#files+1] = asset:Get("sounds", list[i])
 					end
+					cache[final] = table.fyshuffle(files)
+				elseif asset:IsFile("sounds", new) then
+					cache[final] = asset:Get("sounds", new)
 				else
 					local snd = (new or "")
 					if snd == "" then
 						cache[final] = ""
+					elseif snd:match("%a") then
+						cache[final] = snd
 					else
 						cache[final] = "rbxassetid://" .. snd
 					end
@@ -13301,20 +14043,35 @@ if BBOT.game == "phantom forces" then
 			end
 		end)
 
-		hook:Add("SupressSound", "BBOT:Sounds.Overrides", function(soundname, ...)
-			if soundname == "headshotkill" then
-				local snd = cache["Headshot Kill"]
-				if snd ~= "" then
-					sound.playid(snd, config:GetValue("Main", "Misc", "Sounds", "Headshot Kill Volume")/100)
-					return true
+		local position = 0
+		local function play_sound(name, ...)
+			if name == "" then return end
+			local soundid = cache[name]
+			if soundid == "" then return end
+			if typeof(soundid) == "table" then
+				position = position + 1
+				local ssound = soundid[position]
+				if not ssound then
+					soundid = table.fyshuffle( soundid )
+					position = 1
+					ssound = soundid[1]
+					cache[name] = soundid
 				end
+				sound.playid(ssound, ...)
+			elseif string.find(soundid, "rbxasset", 1, true) then
+				sound.playid(soundid, ...)
+			else
+				sound.play(soundid, ...)
+			end
+			return true
+		end
+
+		hook:Add("SuppressSound", "BBOT:Sounds.Overrides", function(soundname, ...)
+			if soundname == "headshotkill" then
+				return play_sound("Headshot Kill", config:GetValue("Main", "Misc", "Sounds", "Headshot Kill Volume")/100)
 			end
 			if soundname == "killshot" then
-				local snd = cache["Kill"]
-				if snd ~= "" then
-					sound.playid(snd, config:GetValue("Main", "Misc", "Sounds", "Kill Volume")/100)
-					return true
-				end
+				return play_sound("Kill", config:GetValue("Main", "Misc", "Sounds", "Kill Volume")/100)
 			end
 			if soundname == "hitmarker" and (cache["Headshot"] ~= "" or cache["Hit"] ~= "") then
 				return true
@@ -13336,15 +14093,9 @@ if BBOT.game == "phantom forces" then
 		hook:Add("PostNetworkSend", "BBOT:Sounds.Kills", function(netname, Entity, HitPos, Part, bulletID)
 			if netname == "bullethit" then
 				if Part == "Head" then
-					local snd = cache["Headshot"]
-					if snd ~= "" then
-						sound.playid(snd, config:GetValue("Main", "Misc", "Sounds", "Headshot Volume")/100)
-					end
+					play_sound("Headshot", config:GetValue("Main", "Misc", "Sounds", "Headshot Volume")/100)
 				else
-					local snd = cache["Hit"]
-					if snd ~= "" then
-						sound.playid(snd, config:GetValue("Main", "Misc", "Sounds", "Hit Volume")/100)
-					end
+					play_sound("Hit", config:GetValue("Main", "Misc", "Sounds", "Hit Volume")/100)
 				end
 			end
 		end)
@@ -13366,6 +14117,8 @@ if BBOT.game == "phantom forces" then
 		local roundsystem = BBOT.aux.roundsystem
 		local network = BBOT.aux.network
 		local char = BBOT.aux.char
+		local loop = BBOT.loop
+		local string = BBOT.string
 		local table = BBOT.table
 		local vector = BBOT.vector
 		local hud = BBOT.aux.hud
@@ -13377,18 +14130,150 @@ if BBOT.game == "phantom forces" then
 
 		local CACHED_VEC3 = Vector3.new()
 
-		local wasalive = false
-		hook:Add("OnAliveChanged", "BBOT:AutoDeath", function()
-			wasalive = true
+		local virtualuser = BBOT.service:GetService("VirtualUser")
+		hook:Add("LocalPlayer.Idled", "BBOT:Misc.AntiAFK", function()
+			if config:GetValue("Main", "Misc", "Extra", "Anti AFK") then
+				virtualuser:CaptureController()
+				virtualuser:ClickButton2(Vector2.new())
+			end
 		end)
 
+		local wasalive = false
+		local last_alive = 0
+		hook:Add("OnAliveChanged", "BBOT:AutoDeath", function()
+			wasalive = true
+			last_alive = tick()
+		end)
+
+		local game_version
+
+		local streamermode_old = hud.streamermode
+		hook:Add("Unload", "BBOT:StreamerMode", function()
+			hud.streamermode = streamermode_old
+		end)
+
+		function hud.streamermode()
+			return streamermode_old() or config:GetValue("Main", "Misc", "Extra", "Streamer Mode")
+		end
+
+		hook:Add("OnConfigChanged", "BBOT:StreamerMode", function(steps, old, new)
+			if not config:IsPathwayEqual(steps, "Main", "Misc", "Extra", "Streamer Mode") then return end
+			local chatgame = localplayer.PlayerGui:FindFirstChild("ChatGame")
+			if chatgame then
+				local version = chatgame:FindFirstChild("Version")
+				if new then
+					if not game_version then
+						game_version = version.Text
+					end
+					version.Text = "Streamer-Mode"
+				elseif game_version then
+					version.Text = game_version
+				end
+			end
+		end)
+
+		do
+			local function findplayer(name)
+				local target = nil
+				for k, v in pairs(_players:GetPlayers()) do
+					if string.find(v.Name, name, 1, true) then
+						target = v
+						break
+					end
+				end
+				return target
+			end
+
+			local httpservice = BBOT.service:GetService("HttpService")
+			local path = "bitchbot/"..BBOT.game.."/data/accounts.json"
+			local accounts, accounts_invert = {}, {}
+			if isfile(path) then
+				accounts = httpservice:JSONDecode(readfile(path))
+			end
+			
+			accounts[BBOT.accountId] = BBOT.account or true
+			for k, v in pairs(accounts) do accounts_invert[v] = k end
+			writefile(path, httpservice:JSONEncode(accounts))
+
+			loop:Run("BBOT:AutoFriendAccounts", function()
+				if not isfile(path) then return end
+				accounts = httpservice:JSONDecode(readfile(path))
+				for k, v in pairs(accounts) do accounts_invert[v] = k end
+			end, 5)
+
+			hook:Add("GetPriority", "BBOT:AutoFriendAccounts", function(player)
+				if not config:GetValue("Main", "Misc", "Extra", "Auto Friend Accounts") then return end
+				if accounts[tostring(player.UserId)] then
+					return -1, "Bot/Account"
+				end
+			end)
+
+			hook:Add("Votekick.Start", "BBOT:AutoVoteNoOnFriends", function(target, delay, votesrequired)
+				if target ~= localplayer.Name and config:GetPriority(findplayer(target)) < 0 and config:GetValue("Main", "Misc", "Extra", "Friends Votes No") then
+					timer:Simple(.5, function() hud:vote("no") end)
+				end
+			end)
+
+			hook:Add("Console", "BBOT:AutoVoteYesOnEnemy", function(message)
+				if string.find(message, "has initiated a votekick on", 1, true) then
+					local name = string.Explode(" ", message)
+					name = name[1]
+					if config:GetPriority(findplayer(name)) < 0 and config:GetValue("Main", "Misc", "Extra", "Assist Votekicks") then
+						timer:Simple(math.random(2,15)/10, function() hud:vote("yes") end)
+					end
+				end
+			end)
+		end
+
+		local runservice = BBOT.service:GetService("RunService")
+		local rendering3d_last = false
+		hook:Add("Heartbeat", "BBOT:3DRendering", function()
+			local rendering = config:GetValue("Main", "Misc", "Extra", "Disable 3D Rendering")
+			if rendering ~= rendering3d_last then
+				runservice:Set3dRenderingEnabled(not rendering)
+				rendering3d_last = rendering
+			end
+		end)
+
+		setfpscap(144)
+		hook:Add("OnConfigChanged", "BBOT:FPSCap", function(steps, old, new)
+			if config:IsPathwayEqual(steps, "Main", "Misc", "Extra", "FPS Limiter") then
+				if new == 300 then
+					new = 1000
+				end
+				setfpscap(new)
+			end
+		end)
+
+		local function checkaliveenemies()
+			for player, controller in pairs(replication.player_registry) do
+				if controller.updater and player ~= localplayer and player.Team ~= localplayer.Team and controller.updater.alive then
+					if config:GetPriority(player) >= 0 then
+						return true
+					end
+				end
+			end
+		end
+
 		hook:Add("RenderStepped", "BBOT:AutoDeath", function()
-			if config:GetValue("Main", "Misc", "Extra", "Auto Spawn") and config:GetValue("Main", "Misc", "Extra", "Auto Spawn", "KeyBind") and not gamemenu.isdeployed() then
-				gamemenu:deploy()
-			elseif config:GetValue("Main", "Misc", "Extra", "Auto Death") and wasalive then
+			if wasalive and config:GetValue("Main", "Misc", "Extra", "Auto Death On Nades") and gamelogic.gammo < 1 and last_alive + .25 < tick() then
 				hook:Call("AutoDeath")
 				wasalive = false
-				timer:Simple(1,function() network:send("forcereset") end)
+				network:send("forcereset")
+			elseif config:GetValue("Main", "Misc", "Extra", "Auto Spawn") and config:GetValue("Main", "Misc", "Extra", "Auto Spawn", "KeyBind") and not gamemenu.isdeployed() then
+				local onalive = config:GetValue("Main", "Misc", "Extra", "Spawn On Alive")
+				if not onalive or (onalive and checkaliveenemies()) then
+					gamemenu:deploy()
+					hook:Call("Spawn")
+				end
+			end
+		end)
+
+		hook:Add("Preupdatespawn", "BBOT:AutoDeath", function(player)
+			if wasalive and player.Team ~= localplayer.Team and config:GetValue("Main", "Misc", "Extra", "Reset On Enemy Spawn") and config:GetPriority(player) >= 0 then
+				hook:Call("AutoDeath")
+				wasalive = false
+				network:send("forcereset")
 			end
 		end)
 		
@@ -13921,29 +14806,45 @@ if BBOT.game == "phantom forces" then
 		hook:Add("LocalKilled", "BBOT:RevengeGrenade", function(player)
 			if player == localplayer then return end
 			if not config:GetValue("Main", "Misc", "Exploits", "Revenge Grenade") then return end
-			misc:GrenadeTP(replication.getupdater(player).getpos())
+			local controller = replication.getupdater(player)
+			misc:GrenadeTP(controller.receivedPosition or controller.getpos())
 		end)
 
 		function misc:AutoGrenadeFrozen()
 			if not char.alive then return end
 			if gamelogic.gammo < 1 then return end
-			if not config:GetValue("Main", "Misc", "Exploits", "Auto Grenade Frozen") then return end
-			local t = config:GetValue("Main", "Misc", "Exploits", "Auto Grenade Wait")
+			local autonade = config:GetValue("Main", "Misc", "Extra", "Auto Nade Spam")
+			if not autonade and not config:GetValue("Main", "Misc", "Exploits", "Auto Nade Frozen") then return end
+			local t = config:GetValue("Main", "Misc", "Exploits", "Auto Nade Wait")
 			for player, v in pairs(replication.player_registry) do
 				if player ~= localplayer and player.Team and localplayer.Team and player.Team.Name ~= localplayer.Team.Name then
+					local priority = config:GetPriority(player)
+					if priority and priority < 0 then continue end
 					local controller = v.updater
-					if controller.alive and ((controller.__t_received and controller.__t_received + t < tick()) or t == 0) then
-						misc:GrenadeTP(controller.getpos())
+					if controller.alive and (autonade or (controller.__t_received and controller.__t_received + t < tick())) then
+						misc:GrenadeTP(controller.receivedPosition or controller.getpos())
 					end
 				end
 			end
 		end
+
+		hook:Add("Postupdatespawn", "BBOT:Misc.AutoGrandeFrozen", function()
+			misc:AutoGrenadeFrozen()
+		end)
+
+		hook:Add("OnAliveChanged", "BBOT:Misc.AutoGrandeFrozen", function()
+			misc:AutoGrenadeFrozen()
+		end)
 
 		timer:Create("BBOT:Misc.AutoGrenadeFrozen", 1, 0, function()
 			misc:AutoGrenadeFrozen()
 		end)
 
 		hook:Add("AutoDeath", "BBOT:Misc.AutoGrenadeFrozen", function()
+			misc:AutoGrenadeFrozen()
+		end)
+
+		hook:Add("Spawn", "BBOT:Misc.AutoGrenadeFrozen", function()
 			misc:AutoGrenadeFrozen()
 		end)
 
@@ -14024,6 +14925,7 @@ if BBOT.game == "phantom forces" then
 
 		local last_pos, last_ang, last_send, should_start = Vector3.new(), Vector2.new(), tick(), 0
 		local absolute_pos = nil
+		local break_blink = false
 		local blink_record = {}
 
 		function misc:BlinkPosition()
@@ -14031,26 +14933,29 @@ if BBOT.game == "phantom forces" then
 		end
 
 		function misc:SendBlinkRecord()
-			if #blink_record > 0 and last_pos and (absolute_pos-last_pos).Magnitude > 9 then
+			if #blink_record > 0 then
+				break_blink = true
+				if #blink_record == 1 then
+					network:send("repupdate", blink_record[1][1], blink_record[1][2], blink_record[1][3])
+					break_blink = false
+					blink_record = {}
+					return
+				end
 				local a = {}
 				local finaltime = blink_record[#blink_record]
 				local firsttime = blink_record[1]
-				if firsttime == finaltime then
-					for i=1, #blink_record do
-						network:send("repupdate", blink_record[i][1], blink_record[i][2], blink_record[i][3])
-						a[#a+1]=blink_record[i][1]
-					end
-				else
-					local timediff = finaltime[3]-firsttime[3]
-					local first = firsttime[3]
-					local len = #blink_record
-					for i=1, len do
-						network:send("repupdate", blink_record[i][1], blink_record[i][2], ((timediff/len)*i)+first)
-						a[#a+1]=blink_record[i][1]
-					end
+				local timediff = finaltime[3]-firsttime[3]
+				local first = firsttime[3]
+				local len = #blink_record
+				for i=1, len do
+					network:send("repupdate", blink_record[i][1], blink_record[i][2], ((timediff/len)*i)+first)
+					a[#a+1]=blink_record[i][1]
 				end
+				break_blink = false
 				local col, transparency = config:GetValue("Main", "Misc", "Exploits", "Blink", "Path Color")
-				BBOT.drawpather:Simple(a, col, transparency, 4)
+				if transparency > 0 then
+					BBOT.drawpather:Simple(a, col, transparency, 4)
+				end
 			end
 			blink_record = {}
 		end
@@ -14062,18 +14967,6 @@ if BBOT.game == "phantom forces" then
 			last_pos = nil
 			last_ang = nil
 		end
-
-		hook:Add("OnConfigChanged", "BBOT:Blink", function(steps)
-			if config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Blink", true) then
-				misc:UnBlink()
-			end
-		end)
-
-		hook:Add("OnKeyBindChanged", "BBOT:Blink", function(steps)
-			if config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Blink", "KeyBind") then
-				misc:UnBlink()
-			end
-		end)
 
 		hook:Add("OnAliveChanged", "BBOT:Blink", function()
 			blink_record = {}
@@ -14087,16 +14980,18 @@ if BBOT.game == "phantom forces" then
 			changed = 4
 		end)
 
+		local _tick, _last_ang, _last_pos = tick(), Vector2.new(), nil
+		local _last_alive = false
+	
 		function misc:CanMoveTo(position)
-			local current_position = char.rootpart.Position
-			local occupied = BBOT.aimbot:raycastbullet(current_position, position-current_position)
+			local lastpos = _last_pos or char.rootpart.Position
+			local occupied = BBOT.aimbot:raycastbullet(lastpos, position-lastpos)
 			if occupied then return false else return true end
 		end
 
-		local _tick, _last_ang = tick(), Vector2.new()
 		function misc:MoveTo(position, move_char)
-			if not char.alive then return end
-			local current_position = char.rootpart.Position
+			if not _last_alive then return end
+			local current_position = _last_pos or char.rootpart.Position
 			if not misc:CanMoveTo(position) then return end
 
 			local diff = (position-current_position)
@@ -14116,10 +15011,24 @@ if BBOT.game == "phantom forces" then
 			end
 		end
 
+		function misc:MoveCharTo(position)
+			if not _last_alive then return end
+			local current_position = _last_pos or char.rootpart.Position
+			if not misc:CanMoveTo(position) then return end
+			local diff = (position-current_position)
+			char.rootpart.CFrame = CFrame.new(current_position + diff, char.rootpart.CFrame.LookVector)
+		end
+
+		hook:Add("OnAliveChanged", "BBOT:Misc.MoveTo", function(alive)
+			_last_alive = alive
+			_last_pos = nil
+		end)
+		
 		hook:Add("PostNetworkSend", "BBOT:Misc.MoveTo", function(netname, pos, ang, t)
 			if netname ~= "repupdate" then return end
 			_tick = t
 			_last_ang = ang
+			_last_pos = pos
 		end)
 
 		function misc:AntiGrenadeStep()
@@ -14196,40 +15105,49 @@ if BBOT.game == "phantom forces" then
 			if networkname == "repupdate" then
 				absolute_pos = pos
 				if config:GetValue("Main", "Misc", "Exploits", "Blink") and config:GetValue("Main", "Misc", "Exploits", "Blink", "KeyBind") then
+					if BBOT.aimbot.tp_scanning then
+						misc.inblink = false
+						last_send = tick()
+						last_pos = pos
+						last_ang = ang
+						return
+					end
 					local allowmove = config:GetValue("Main", "Misc", "Exploits", "Blink Allow Movement")
-					if last_pos == pos or allowmove then
-						if not last_pos then
-							misc.inblink = false
-							last_pos = pos
-							last_ang = ang
-							return
-						end
-						local t = config:GetValue("Main", "Misc", "Exploits", "Blink Keep Alive")
-						if last_send + t < tick() and t > 0 then
-							BBOT.menu:UpdateStatus("Blink", "Buffering...")
-							misc:SendBlinkRecord()
-							last_pos = pos
-							--last_ang = ang
-							network:send(networkname, last_pos, ang, timestamp)
-							last_send = tick()
-							misc.inblink = false
-						else
-							BBOT.menu:UpdateStatus("Blink", "Active"
-							.. (t > 0 and " [" .. math.abs(math.round(last_send+t-tick(),1)) .. "s]" or "")
-							.. (allowmove and " [" .. math.round((pos-last_pos).Magnitude, 1) .. " studs]" or ""))
-							misc.inblink = true
-							if not blink_record[1] or blink_record[#blink_record][1] ~= pos then
-								local last = blink_record[#blink_record]
-								if last then
-									local lasttime = last[3]
-									if lasttime and timestamp < lasttime then
-										last[3] = timestamp
-									end
-								end
-								blink_record[#blink_record+1] = {pos, ang, timestamp}
+					if (last_pos == pos or allowmove) then
+						if not break_blink then
+							if not last_pos then
+								misc.inblink = false
+								last_pos = pos
+								last_ang = ang
+								return
 							end
+							local t = config:GetValue("Main", "Misc", "Exploits", "Blink Keep Alive")
+							if last_send + t < tick() and t > 0 then
+								BBOT.menu:UpdateStatus("Blink", "Buffering...")
+								misc:SendBlinkRecord()
+								last_pos = pos
+								--last_ang = ang
+								network:send(networkname, last_pos, ang, timestamp)
+								last_send = tick()
+								misc.inblink = false
+							else
+								BBOT.menu:UpdateStatus("Blink", "Active"
+								.. (t > 0 and " [" .. math.abs(math.round(last_send+t-tick(),1)) .. "s]" or "")
+								.. (allowmove and " [" .. math.round((pos-last_pos).Magnitude, 1) .. " studs]" or ""))
+								misc.inblink = true
+								if not blink_record[1] or blink_record[#blink_record][1] ~= pos then
+									local last = blink_record[#blink_record]
+									if last then
+										local lasttime = last[3]
+										if lasttime and timestamp < lasttime then
+											last[3] = timestamp
+										end
+									end
+									blink_record[#blink_record+1] = {pos, ang, timestamp}
+								end
+							end
+							return true
 						end
-						return true
 					else
 						BBOT.menu:UpdateStatus("Blink", "Stand Still")
 						misc.inblink = false
@@ -14237,11 +15155,39 @@ if BBOT.game == "phantom forces" then
 						last_pos = pos
 						last_ang = ang
 					end
+				elseif #blink_record > 0 then
+					misc:UnBlink()
+					last_pos = pos
+					last_ang = ang
 				else
 					last_send = tick()
 					misc.inblink = false
 					last_pos = pos
 					last_ang = ang
+				end
+			end
+		end)
+
+		hook:Add("Aimbot.NewBullets", "BBOT:Blink.OnFire", function()
+			if misc.inblink and config:GetValue("Main", "Misc", "Exploits", "Blink On Fire") then
+				BBOT.menu:UpdateStatus("Blink", "Buffering...")
+				misc:SendBlinkRecord()
+				last_pos = nil
+				--last_ang = ang
+				last_send = tick()
+				misc.inblink = false
+			end
+		end)
+
+		hook:Add("PreNetworkSend", "BBOT:Blink.OnFire", function(netname)
+			if netname == "newbullets" then
+				if misc.inblink and config:GetValue("Main", "Misc", "Exploits", "Blink On Fire") then
+					BBOT.menu:UpdateStatus("Blink", "Buffering...")
+					misc:SendBlinkRecord()
+					last_pos = nil
+					--last_ang = ang
+					last_send = tick()
+					misc.inblink = false
 				end
 			end
 		end)
@@ -14368,8 +15314,30 @@ if BBOT.game == "phantom forces" then
 		local swapped, nextswap = false, 0
 		hook:Add("RageBot.DamagePredictionKilled", "BBOT:FloorSwap", function(Entity)
 			swapped = false
-			nextswap = tick() + BBOT.extras:getLatency() * config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")/100
+			nextswap = tick() + BBOT.extras:getLatency() * (config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")/100)
 		end)
+
+		hook:Add("PreNetworkSend", "BBOT:FloorSwap", function(netname)
+			if netname ~= "newbullets" then return end
+			swapped = false
+			nextswap = tick() + BBOT.extras:getLatency() * (config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")/100)
+		end)
+
+		hook:Add("PostNetworkSend", "BBOT:FloorSwap", function(netname)
+			if netname ~= "newbullets" then return end
+			if config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap") == 0 then
+				swapped = true
+				misc:ForceRepupdate()
+			end
+		end)
+
+		hook:Add("OnKeyBindChanged", "BBOT:SpazAttack", function(steps, old, new)
+			if config:IsPathwayEqual("Main", "Misc", "Exploits", "Spaz Attack", "KeyBind") and new then return end
+			if not char.alive then return end
+			misc:MoveTo(char.rootpart.Position)
+		end)
+
+		local in_spaz = false
 		hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, timestamp, ...)
 
 			if networkname == "repupdate" then
@@ -14379,93 +15347,108 @@ if BBOT.game == "phantom forces" then
 					ran = true
 				end
 
-				if config:GetValue("Main", "Misc", "Exploits", "Spaz Attack") then
-					local intensity = config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
-					local offset = Vector3.new(math.random(-1000,1000)/1000, math.random(-1000,1000)/1000, math.random(-1000,1000)/1000)*config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
-					local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(pos, offset), BBOT.aux.roundsystem.raycastwhitelist)
-					if part then
-						offset = offset - (position-pos).Unit
-					end
-					pos = pos + offset
-					ran = true
-				end
-
-				if not last_alive then
-					last_alive = true
-
-					if config:GetValue("Main", "Misc", "Exploits", "Floor TP") then
-						local p = pos - Vector3.new(0,6,0)
-						pos = p
-						char.rootpart.CFrame = CFrame.new(p, char.rootpart.CFrame.LookVector)
-					end
-				end
-
-				--[[if config:GetValue("Main", "Misc", "Exploits", "Spawn Offset") and changed > 0 then
-					changed = changed - 1
-					pos=pos+Vector3.new(0,-1e6,0)
-					timestamp=2
-					network:send("repupdate", pos, ang, timestamp)
-					ran = true
-				end]]
-
 				if not BBOT.aimbot.in_ragebot and not BBOT.aimbot.tp_scanning then
-					local infloor = config:GetValue("Main", "Rage", "Anti Aim", "In Floor")
-					local infloorswap = config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")
-					if infloorswap > 0 and not swapped and nextswap < tick() then
-						swapped = true
-					end
-					if infloor > 0 and (not infloorswap or swapped) then
-						pos = pos + Vector3.new(0,-infloor,0)
-					end
-				end
-
-				if config:GetValue("Main", "Rage", "Anti Aim", "Enabled") then
-					--args[2] = ragebot:AntiNade(args[2])
-					stutterFrames += 1
-					local pitch = ang.x
-					local yaw = ang.y
-					local pitchChoice = config:GetValue("Main", "Rage", "Anti Aim", "Pitch")
-					local yawChoice = config:GetValue("Main", "Rage", "Anti Aim", "Yaw")
-					local spinRate = config:GetValue("Main", "Rage", "Anti Aim", "Spin Rate")
-					---"off,down,up,roll,upside down,random"
-					--"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch",
-					local new_angles
-					if pitchChoice == "Up" then
-						pitch = -4
-					elseif pitchChoice == "Zero" then
-						pitch = 0
-					elseif pitchChoice == "Down" then
-						pitch = 4.7
-					elseif pitchChoice == "Upside Down" then
-						pitch = -math.pi
-					elseif pitchChoice == "Roll Forward" then
-						pitch = (tick() * spinRate) % 6.28
-					elseif pitchChoice == "Roll Backward" then
-						pitch = (-tick() * spinRate) % 6.28
-					elseif pitchChoice == "Random" then
-						pitch = math.random(-99999,99999)/99999
-						pitch = pitch*1.47262156
-					elseif pitchChoice == "Bob" then
-						pitch = math.sin((tick() % 6.28) * spinRate)
-					elseif pitchChoice == "Glitch" then
-						pitch = 2 ^ 127 + 1
+					if config:GetValue("Main", "Misc", "Exploits", "Spaz Attack") and config:GetValue("Main", "Misc", "Exploits", "Spaz Attack", "KeyBind") and not in_spaz then
+						local intensity = config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
+						local offset = Vector3.new(math.random(-1000,1000)/1000, math.random(-1000,1000)/1000, math.random(-1000,1000)/1000)*config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
+						local results = BBOT.aimbot:raycastbullet(pos, offset)
+						if results then
+							offset = offset - (offset.Unit * 2)
+						end
+						pos = pos + offset
+						in_spaz = true
+						misc:MoveTo(pos - (offset.Unit/100))
+						in_spaz = false
+						timestamp = tick()
+						if config:GetValue("Main", "Misc", "Exploits", "Tick Division Manipulation") then
+							timestamp = timestamp/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale"))
+							ran = true
+						end
+						ran = true
 					end
 
-					--"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"
-					if yawChoice == "Backward" then
-						yaw += math.pi
-					elseif yawChoice == "Spin" then
-						yaw = (tick() * spinRate) % 360
-					elseif yawChoice == "Random" then
-						yaw = math.random(-99999,99999)
-					elseif yawChoice == "Glitch Spin" then
-						yaw = 16478887
-					elseif yawChoice == "Stutter Spin" then
-						yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+					if not last_alive then
+						last_alive = true
+
+						if config:GetValue("Main", "Misc", "Exploits", "Floor TP") then
+							local p = pos - Vector3.new(0,6,0)
+							pos = p
+							char.rootpart.CFrame = CFrame.new(p, char.rootpart.CFrame.LookVector)
+						end
 					end
 
-					new_angles = new_angles or Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
-					return {networkname, pos, new_angles, timestamp}
+					--[[if config:GetValue("Main", "Misc", "Exploits", "Spawn Offset") and changed > 0 then
+						changed = changed - 1
+						pos=pos+Vector3.new(0,-1e6,0)
+						timestamp=2
+						network:send("repupdate", pos, ang, timestamp)
+						ran = true
+					end]]
+
+					if not BBOT.aimbot.in_ragebot and not BBOT.aimbot.tp_scanning then
+						local infloor = config:GetValue("Main", "Rage", "Anti Aim", "In Floor")
+						local infloorswap = config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")
+						if infloorswap == 1000 then
+							if swapped then swapped = false else swapped = true end
+						elseif infloorswap > 0 and not swapped and nextswap < tick() then
+							swapped = true
+						end
+						if infloor > 0 and swapped then
+							pos = pos + Vector3.new(0,-infloor,0)
+						end
+						if infloorswap == 0 then
+							swapped = true
+						end
+					end
+
+					if config:GetValue("Main", "Rage", "Anti Aim", "Enabled") then
+						--args[2] = ragebot:AntiNade(args[2])
+						stutterFrames += 1
+						local pitch = ang.x
+						local yaw = ang.y
+						local pitchChoice = config:GetValue("Main", "Rage", "Anti Aim", "Pitch")
+						local yawChoice = config:GetValue("Main", "Rage", "Anti Aim", "Yaw")
+						local spinRate = config:GetValue("Main", "Rage", "Anti Aim", "Spin Rate")
+						---"off,down,up,roll,upside down,random"
+						--"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch",
+						local new_angles
+						if pitchChoice == "Up" then
+							pitch = -4
+						elseif pitchChoice == "Zero" then
+							pitch = 0
+						elseif pitchChoice == "Down" then
+							pitch = 4.7
+						elseif pitchChoice == "Upside Down" then
+							pitch = -math.pi
+						elseif pitchChoice == "Roll Forward" then
+							pitch = (tick() * spinRate) % 6.28
+						elseif pitchChoice == "Roll Backward" then
+							pitch = (-tick() * spinRate) % 6.28
+						elseif pitchChoice == "Random" then
+							pitch = math.random(-99999,99999)/99999
+							pitch = pitch*1.47262156
+						elseif pitchChoice == "Bob" then
+							pitch = math.sin((tick() % 6.28) * spinRate)
+						elseif pitchChoice == "Glitch" then
+							pitch = 2 ^ 127 + 1
+						end
+
+						--"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"
+						if yawChoice == "Backward" then
+							yaw += math.pi
+						elseif yawChoice == "Spin" then
+							yaw = (tick() * spinRate) % 360
+						elseif yawChoice == "Random" then
+							yaw = math.random(-99999,99999)
+						elseif yawChoice == "Glitch Spin" then
+							yaw = 16478887
+						elseif yawChoice == "Stutter Spin" then
+							yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+						end
+
+						new_angles = new_angles or Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
+						return {networkname, pos, new_angles, timestamp}
+					end
 				end
 				if ran then
 					return {networkname, pos, ang, timestamp}
@@ -14574,8 +15557,12 @@ if BBOT.game == "phantom forces" then
 				if not char.alive then return end
 				controller._weapon_slot = slot
 				local gun = gamelogic.currentgun.name
-				local data = game:service("ReplicatedStorage").GunModules[gun]
-				local external = game:service("ReplicatedStorage").ExternalModels[gun]
+				local data = game:service("ReplicatedStorage").GunModules:FindFirstChild(gun)
+				if not data then
+					gun = "AK12"
+					data = game:service("ReplicatedStorage").GunModules:FindFirstChild(gun)
+				end
+				local external = game:service("ReplicatedStorage").ExternalModels:FindFirstChild(gun)
 				if not data or not external then return end
 				local gundata, gunmodel = require(data), external:Clone()
 				if gundata.type ~= "KNIFE" then
@@ -14610,26 +15597,32 @@ if BBOT.game == "phantom forces" then
 					delta_position = (pos - controller.receivedPosition) / (timestep - controller.receivedFrameTime);
 				end;
 
-				if config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Absolute") then
-					delta_position = vec0
-					local u327 = debug.getupvalue(controller.getpos, 2)
-					u327.t = pos
-					u327.p = pos
-					local u330 = debug.getupvalue(controller.step, 6)
-					u330._p0 = pos
-					u330._p1 = pos
-					--[[local u317 = debug.getupvalue(controller.step, 2)
-					if u317 then
-						u317.Position = pos
-					end]]
-					controller.step(3, true)
-				end
-
 				controller.receivedFrameTime = timestep;
 				controller.receivedPosition = pos;
 				controller.receivedVelocity = delta_position;
 				controller.receivedDataFlag = true;
 				controller.receivedLookAngles = ang;
+
+				if config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Absolute") then
+					delta_position = vec0
+					controller.receivedVelocity = delta_position
+					local u315 = debug.getupvalue(controller.getpos, 2)
+					u315.t = pos
+					u315.p = pos
+					u315.v = vec0
+					local u319 = debug.getupvalue(controller.step, 5)
+					u319.t = pos
+					u319.p = pos
+					u319.v = pos
+					local u320 = debug.getupvalue(controller.step, 6)
+					u320._p0 = vec0
+					u320._p1 = vec0
+					u320._a0 = vec0
+					u320._j0 = vec0
+					u320._v0 = vec0
+					u320._t0 = tick()
+					controller.step(3, true)
+				end
 	
 				if config:GetValue("Main", "Visuals", "Camera Visuals", "First Person Third") then
 					local tick = debug.getupvalue(BBOT.aux.camera.step, 1)
@@ -14771,10 +15764,6 @@ if BBOT.game == "phantom forces" then
 
 		local vector_blank = Vector3.new()
 		local stand, crouch, prone = Vector3.new(0,1.5,0), Vector3.new(0,0,0), Vector3.new(0,-1,0)
-		local renderstep_tick = 0
-		hook:Add("RenderStepped", "BBOT:Spectator.renderstep_tick", function(t)
-			renderstep_tick = t
-		end)
 
 		spectator.lookangle = Vector2.new()
 		spectator.position = Vector3.new()
@@ -14797,6 +15786,7 @@ if BBOT.game == "phantom forces" then
 					offset = prone
 				end
 				if updater.receivedPosition and updater.receivedLookAngles then
+					local renderstep_tick = BBOT.renderstepped_rate
 					self.position = math.lerp(renderstep_tick*10, self.position, updater.receivedPosition+offset)
 					camera.CFrame = CFrame.new(self.position)
 					self.lookangle = math.lerp(renderstep_tick*10, self.lookangle, updater.receivedLookAngles)
@@ -14877,8 +15867,11 @@ if BBOT.game == "phantom forces" then
 		end
 
 		function aimbot:VelocityPrediction(startpos, endpos, vel, speed) -- Kinematics is fun
-			vel = vel or Vector3.new()
-			return endpos + (vel * ((endpos-startpos).Magnitude/speed))
+			if not vel then
+				vel = Vector3.new()
+			end
+			local t = (endpos-startpos).Magnitude/speed
+			return endpos + (vel * t)
 		end
 
 		aimbot.bullet_gravity = Vector3.new(0, -196.2, 0) -- Todo: get the velocity from the game public settings
@@ -14888,7 +15881,7 @@ if BBOT.game == "phantom forces" then
 			if a then
 				return a
 			else
-				return (finalpos-startpos).Unit
+				return (finalpos-startpos)
 			end
 		end
 
@@ -14896,7 +15889,7 @@ if BBOT.game == "phantom forces" then
 			local stopon = self:GetLegitConfig("Ballistics", "Disable Barrel Comp While")
 			if stopon["Scoping In"] then
 				local sight = BBOT.weapons.GetToggledSight(gun)
-				if sight and (sight.sightspring.p > 0.1 and sight.sightspring.p < 0.9) then
+				if sight and sight.sightspring and (sight.sightspring.p > 0.1 and sight.sightspring.p < 0.9) then
 					return false
 				end
 			end
@@ -14911,7 +15904,7 @@ if BBOT.game == "phantom forces" then
 		function aimbot:BarrelPrediction(target, dir, gun)
 			local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 			if part then
-				return (dir - part.CFrame.LookVector) - (dir - (target - part.CFrame.Position).Unit)
+				return ((dir - part.CFrame.LookVector) * math.pi) - (dir - (target - part.CFrame.Position).Unit)
 			end
 		end
 
@@ -14921,6 +15914,9 @@ if BBOT.game == "phantom forces" then
 		end
 
 		local types = {
+			-- Weapon Based
+			["E SHOTGUN"] = "Smg",
+
 			-- Type Based
 			["PISTOL"] = "Pistol",
 			["REVOLVER"] = "Pistol",
@@ -14963,6 +15959,11 @@ if BBOT.game == "phantom forces" then
 		end
 
 		function aimbot:SetCurrentType(gun)
+			if gun.name and types[gun.name] then
+				self.gun_type = gun.name
+				return
+			end
+
 			if not gun.___class or not types[gun.___class] then
 				self.gun_type = gun.type
 				return
@@ -14985,7 +15986,7 @@ if BBOT.game == "phantom forces" then
 
 		local function Move_Mouse(delta)
 			local coef = cam.sensitivitymult * math.atan(
-				math.tan(cam.basefov * (math.pi / 180) / 2) / 2.72 ^ cam.magspring.p
+				math.tan(cam.basefov * (math.pi / 180) / 2) / 2.718281828459045 ^ cam.magspring.p
 			) / (32 * math.pi)
 			local x = cam.angles.x - coef * delta.y
 			x = x > cam.maxangle and cam.maxangle or x < cam.minangle and cam.minangle or x
@@ -15002,7 +16003,7 @@ if BBOT.game == "phantom forces" then
 			return math.deg(ang.Magnitude)
 		end
 
-		function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority, scan_part, multi)
+		function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority, scan_part, multi, sticky)
 			local mousePos = Vector3.new(mouse.x, mouse.y, 0)
 			local cam_position = camera.CFrame.p
 			local team = (localplayer.Team and localplayer.Team.Name or "NA")
@@ -15038,10 +16039,10 @@ if BBOT.game == "phantom forces" then
 					local point, onscreen = camera:WorldToViewportPoint(pos)
 					if onscreen then
 						--local object_fov = self:GetFOV(part, scan_part)
-						if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) and (not dzFov or vector.dist2d(dzFov.Position, point) > dzFov.Radius) then
+						if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
 							local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
 							if not ((not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos)) then
-								table.insert(organizedPlayers, {v, part, point, prioritize})
+								table.insert(organizedPlayers, {v, part, point, prioritize, (dzFov and vector.dist2d(dzFov.Position, point) < dzFov.Radius)})
 								inserted_priority = true
 							end
 						end
@@ -15056,11 +16057,27 @@ if BBOT.game == "phantom forces" then
 						local point, onscreen = camera:WorldToViewportPoint(pos)
 						if not onscreen then continue end
 						--local object_fov = self:GetFOV(part, scan_part)
-						if (fov and vector.dist2d(fov.Position, point) > fov.Radius) or (dzFov and vector.dist2d(dzFov.Position, point) < dzFov.Radius) then continue end
+						if (fov and vector.dist2d(fov.Position, point) > fov.Radius) then continue end
 						local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
 						if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
-						table.insert(organizedPlayers, {v, part, point, name})
+						table.insert(organizedPlayers, {v, part, point, name, (dzFov and vector.dist2d(dzFov.Position, point) < dzFov.Radius)})
 					end
+				end
+			end
+
+			if sticky then
+				local founds = {}
+				for i=1, #organizedPlayers do
+					local v = organizedPlayers[i]
+					if sticky[1] == v[1] then
+						founds[#founds+1] = v
+					end
+				end
+				if #founds > 0 then
+					table.sort(founds, function(a, b)
+						return (a[3] - mousePos).Magnitude < (b[3] - mousePos).Magnitude
+					end)
+					return (multi and founds or founds[1])
 				end
 			end
 			
@@ -15081,23 +16098,30 @@ if BBOT.game == "phantom forces" then
 						return
 					end
 					aimbot:SetCurrentType(gamelogic.currentgun)
-					if (last_target == nil and aimbot.mouse_target) or (aimbot.mouse_target == nil and last_target) or (aimbot.mouse_target and last_target and aimbot.mouse_target[1] ~= last_target[1]) then
-						last_target = aimbot.mouse_target
-						smoothing_incrimental = aimbot:GetLegitConfig("Aim Assist", "Start Smoothing")
-					elseif aimbot.mouse_target then
-						smoothing_incrimental = math.approach( smoothing_incrimental, aimbot:GetLegitConfig("Aim Assist", "End Smoothing"), aimbot:GetLegitConfig("Aim Assist", "Smoothing Increment") * delta )
-					end
+					smoothing_incrimental = math.approach( smoothing_incrimental, aimbot:GetLegitConfig("Aim Assist", "End Smoothing"), aimbot:GetLegitConfig("Aim Assist", "Smoothing Increment") * delta )
+				end)
+
+				hook:Add("MouseBot.Changed", "BBOT:Aimbot.Assist.CalcSmoothing", function()
+					smoothing_incrimental = aimbot:GetLegitConfig("Aim Assist", "Start Smoothing")
 				end)
 			end
 
 			function aimbot:MouseStep(gun)
-				self.mouse_target = nil
-				if not self:GetLegitConfig("Aim Assist", "Enabled") then return end
+				if not self:GetLegitConfig("Aim Assist", "Enabled") then
+					self.mouse_target = nil
+					return
+				end
 				local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
 				if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
-					if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
+					if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then
+						self.mouse_target = nil
+						return
+					end
 				elseif aimkey == "Dynamic Always" then
-					if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+					if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+						self.mouse_target = nil
+						return
+					end
 				end
 
 				local hitscan_priority = self:GetLegitConfig("Aim Assist", "Hitscan Priority")
@@ -15105,12 +16129,13 @@ if BBOT.game == "phantom forces" then
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 				local barrel_calc = self:GetLegitConfig("Aim Assist", "Use Barrel")
 
-				local target = self:GetLegitTarget(aimbot.fov_circle_last, aimbot.dzfov_circle_last, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
+				local previous_target = (self:GetLegitConfig("Aim Assist", "Lock Target") and self.mouse_target or nil)
+				local target = self:GetLegitTarget(aimbot.fov_circle_last, aimbot.dzfov_circle_last, hitscan_points, hitscan_priority, (barrel_calc and part or nil), nil, previous_target)
 				if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
 					hook:Call("MouseBot.Changed", (target and unpack(target) or nil))
 				end
-				if not target then return end
 				self.mouse_target = target
+				if not target or target[5] then return end
 				local position = target[2].Position
 				local cam_position = camera.CFrame.p
 
@@ -15134,7 +16159,7 @@ if BBOT.game == "phantom forces" then
 				if onscreen then
 					local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
 					local smoothing = smoothing_incrimental * 5 + 10
-					local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, ((pos.Y-36) - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
+					local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - 36 - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
 					Move_Mouse(inc)
 				end
 			end
@@ -15160,7 +16185,7 @@ if BBOT.game == "phantom forces" then
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
 				local target = self:GetLegitTarget(aimbot.sfov_circle_last, nil, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
-				if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
+				if (target == nil and self.redirection_target) or (self.redirection_target == nil and target) or (target and self.redirection_target and target[1] ~= self.redirection_target[1]) then
 					hook:Call("RedirectionBot.Changed", (target and unpack(target) or nil))
 				end
 				if not target then return end
@@ -15184,6 +16209,7 @@ if BBOT.game == "phantom forces" then
 				X += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))/100
 				Y += ((math.pi/2) * (math.random(-accuracy*1000, accuracy*1000)/1000))/100
 
+				self.silent_data = {part.Position, part.Orientation}
 				part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
 				self.silent = part
 			end
@@ -15280,9 +16306,9 @@ if BBOT.game == "phantom forces" then
 						end
 
 						local radi = (target[4] == "Body" and 700 or 450)*(char.unaimedfov/camera.FieldOfView)/magnitude
-						if gun.type == "SHOTGUN" then
+						if gun.data.hipchoke and gun.data.hipchoke > 0 then
 							local o = radi
-							local mul = gun.data.crosssize * gun.data.aimchoke --(gun.data.aimchoke * p367 + gun.data.hipchoke * (1 - p367))
+							local mul = gun.data.crosssize * gun.data.hipchoke --(gun.data.aimchoke * p367 + gun.data.hipchoke * (1 - p367))
 							radi = (2.25 * (math.pi^2) * mul)
 							radi = radi * (char.unaimedfov/camera.FieldOfView)/magnitude
 							if magnitude < gun.data.range0 then
@@ -15724,7 +16750,7 @@ if BBOT.game == "phantom forces" then
 
 			hook:Add("PostInitialize", "BBOT:RageBot.Organize", function()
 				hook:Add("PlayerAdded", "BBOT:RageBot.Organize", function(player)
-					local inpriority = config.priority[player.UserId]
+					local inpriority = config:GetPriority(v)
 					if inpriority and inpriority > 0 then
 						aimbot.ragebot_prioritynext[#aimbot.ragebot_prioritynext+1] = player
 					else
@@ -15754,7 +16780,7 @@ if BBOT.game == "phantom forces" then
 				local p = players:GetPlayers()
 				for i=1, #p do
 					local v = p[i]
-					local priority = config.priority[v.UserId] or 0
+					local priority = config:GetPriority(v) or 0
 					if priority > 0 then
 						aimbot.ragebot_prioritynext[#aimbot.ragebot_prioritynext+1] = v
 					elseif priority == 0 then
@@ -15763,9 +16789,42 @@ if BBOT.game == "phantom forces" then
 				end
 			end)
 
-			local renderstep_tick = 0
-			hook:Add("RenderStepped", "BBOT:Spectator.renderstep_tick", function(t)
-				renderstep_tick = t
+			local last_prioritized = nil
+			hook:Add("OnConfigChanged", "BBOT:Aimbot.PriorityAuto", function(steps, old, new)
+				if not config:IsPathwayEqual(steps, "Main", "Rage", "Settings", "Priority Last") then return end
+				for i, v in pairs(players:GetPlayers()) do
+					if v == last_prioritized then
+						hook:Call("OnPriorityChanged", last_prioritized, 10, config:GetPriority(last_prioritized))
+						break
+					end
+				end
+				last_prioritized = nil
+			end)
+
+			hook:Add("LocalKilled", "BBOT:Aimbot.PriorityLast", function(player)
+				if not aimbot:GetRageConfig("Settings", "Priority Last") then return end
+				if not player then return end
+				local old, lastpriority = last_prioritized, config:GetPriority(player)
+				last_prioritized = player
+				hook:Call("OnPriorityChanged", player, lastpriority, 10)
+				for i, v in pairs(players:GetPlayers()) do
+					if v == old then
+						hook:Call("OnPriorityChanged", old, 10, config:GetPriority(old))
+						break
+					end
+				end
+			end)
+
+			hook:Add("GetPriority", "BBOT:Aimbot.PriorityAuto", function(player)
+				if not aimbot:GetRageConfig("Settings", "Priority Last") then return end
+				if player == last_prioritized then
+					return 10, "Auto"
+				end
+			end)
+
+			local check = {}
+			hook:Add("RenderStep.Last", "BBOT:Aimbot.Cache", function()
+				check = {}
 			end)
 
 			local blank_vector = Vector3.new()
@@ -15786,6 +16845,7 @@ if BBOT.game == "phantom forces" then
 						cam_position = char.rootpart.Position
 					end
 				end
+				local specific = self.calc_target
 				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
 				local penetration_depth = gun.data.penetrationdepth * wall_scale/100
 
@@ -15805,49 +16865,82 @@ if BBOT.game == "phantom forces" then
 				end]]
 				local latency = extras:getLatency()
 
-
 				local target_priority_found = {}
-				do
-					local count, c = 0, 0
+				local target_found = {}
+				if specific then
+					local reg, index
 					local len = #self.ragebot_prioritynext
 					for i=1, len do
-						local v = self.ragebot_prioritynext[i-c]
-						if not v.Team or v.Team == localplayer.Team then continue end
-						if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
-						local updater = replication.getupdater(v)
-						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
-						if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
-						plys[#plys+1] = v
-						table.remove(self.ragebot_prioritynext, i-c)
-						c=c+1
-						self.ragebot_prioritynext[#self.ragebot_prioritynext+1] = v
-						target_priority_found[v] = i-c
-						count = count + 1
-						if count >= max_players then
+						local v = self.ragebot_prioritynext[i]
+						if v == specific then
+							reg = target_priority_found
+							index = i
 							break
 						end
 					end
-				end
 
-				local target_found = {}
-				if not priority_only then
-					local count, c = 0, 0
 					local len = #self.ragebot_next
 					for i=1, len do
-						local v = self.ragebot_next[i-c]
-						if not v.Team or v.Team == localplayer.Team then continue end
-						if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
-						local updater = replication.getupdater(v)
-						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
-						if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
-						plys[#plys+1] = v
-						table.remove(self.ragebot_next, i-c)
-						c=c+1
-						self.ragebot_next[#self.ragebot_next+1] = v
-						target_found[v] = i
-						count = count + 1
-						if count >= max_players then
+						local v = self.ragebot_next[i]
+						if v == specific then
+							reg = target_found
+							index = i
 							break
+						end
+					end
+					
+					if reg then
+						local v = specific
+						if not v.Team or v.Team == localplayer.Team then return end
+						if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then return end
+						local updater = replication.getupdater(v)
+						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then return end
+						if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then return end
+						plys[#plys+1] = v
+						reg[v] = index
+					end
+				else
+					do
+						local count, c = 0, 0
+						local len = #self.ragebot_prioritynext
+						for i=1, len do
+							local v = self.ragebot_prioritynext[i-c]
+							if check[v] or not v.Team or v.Team == localplayer.Team then continue end
+							if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
+							local updater = replication.getupdater(v)
+							if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
+							if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
+							plys[#plys+1] = v
+							table.remove(self.ragebot_prioritynext, i-c)
+							c=c+1
+							self.ragebot_prioritynext[#self.ragebot_prioritynext+1] = v
+							target_priority_found[v] = i-c
+							count = count + 1
+							if count >= max_players then
+								break
+							end
+						end
+					end
+
+					if not priority_only then
+						local count, c = 0, 0
+						local len = #self.ragebot_next
+						for i=1, len do
+							local v = self.ragebot_next[i-c]
+							if check[v] or not v.Team or v.Team == localplayer.Team then continue end
+							if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
+							local updater = replication.getupdater(v)
+							if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
+							if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
+							plys[#plys+1] = v
+							table.remove(self.ragebot_next, i-c)
+							c=c+1
+							self.ragebot_next[#self.ragebot_next+1] = v
+							target_found[v] = i
+							count = count + 1
+							if count >= max_players then
+								break
+							end
 						end
 					end
 				end
@@ -15870,6 +16963,7 @@ if BBOT.game == "phantom forces" then
 					local main_part = updater.gethead().Parent
 					local resolver_offset, isabsolute = self:GetResolvedPosition(v)
 					local abspos = updater.getpos()
+					local tp_hit = false
 					if part then
 						local pos = (isabsolute and resolver_offset or abspos + resolver_offset)
 							--local object_fov = self:GetFOV(part, scan_part)
@@ -15877,12 +16971,12 @@ if BBOT.game == "phantom forces" then
 							if wall_scale > 120 then
 								table.insert(organizedPlayers, {v, part, pos, prioritize})
 							else
-								do
-									local lookatme = CFrame.new(blank_vector, pos-cam_position)
-									local targetcframe = CFrame.new(cam_position)
-									for i=1, #firepos_points do
-										local fp_name = firepos_points_name[i]
-										local newcf
+								local lookatme = CFrame.new(blank_vector, pos-cam_position)
+								local targetcframe = CFrame.new(cam_position)
+								for i=1, #firepos_points do
+									local fp_name = firepos_points_name[i]
+									local newcf
+									if not (i > tp_scanning_points) then
 										if fp_name == "Random" then
 											local offset = vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance))
 											newcf = targetcframe + offset
@@ -15900,40 +16994,48 @@ if BBOT.game == "phantom forces" then
 												newcf = targetcframe * lookatme * CFrame.new(firepos_points[i].p + vecdown)
 											end
 										end
-										local cam_position = newcf.p
-										if i > tp_scanning_points and (self.tp_scanning_cooldown or not BBOT.misc:CanMoveTo(cam_position)) then
+									else
+										if tp_hit then
 											continue
 										end
-										local u = i
-										do
-											local lookatme = CFrame.new(blank_vector, cam_position-pos)
-											local targetcframe = CFrame.new(pos)
-											for i=1, #hitbox_points do
-												local hb_name = hitbox_points_name[i]
-												if (relative_only or cross_relative_only) and fp_name ~= "Any" and hb_name ~= "Any" then
-													if relative_only and fp_name ~= hb_name then
-														if cross_relative_only and cross_relatives[fp_name] ~= hb_name then
-															continue
-														elseif not cross_relative_only then
-															continue
-														end
-													elseif not relative_only and cross_relative_only and cross_relatives[fp_name] ~= hb_name then
+										newcf = targetcframe * lookatme * firepos_points[i]
+									end
+									local cam_position = newcf.p
+									if i > tp_scanning_points and (self.tp_scanning_cooldown or not BBOT.misc:CanMoveTo(cam_position)) then
+										continue
+									end
+									local u = i
+									do
+										local lookatme = CFrame.new(blank_vector, cam_position-pos)
+										local targetcframe = CFrame.new(pos)
+										for i=1, #hitbox_points do
+											local hb_name = hitbox_points_name[i]
+											if (relative_only or cross_relative_only) and fp_name ~= "Any" and hb_name ~= "Any" then
+												if relative_only and fp_name ~= hb_name then
+													if cross_relative_only and cross_relatives[fp_name] ~= hb_name then
+														continue
+													elseif not cross_relative_only then
 														continue
 													end
+												elseif not relative_only and cross_relative_only and cross_relatives[fp_name] ~= hb_name then
+													continue
 												end
-												local newcf
-												if hb_name == "Random" then
-													newcf = targetcframe * CFrame.new(vector.randomspherepoint(math.random(-hitbox_shift_distance, hitbox_shift_distance)))
-												elseif typeof(hitbox_points[i]) == "Vector3" then
-													newcf = targetcframe + hitbox_points[i]
-												else
-													newcf = targetcframe * lookatme * hitbox_points[i]
+											end
+											local newcf
+											if hb_name == "Random" then
+												newcf = targetcframe * CFrame.new(vector.randomspherepoint(math.random(-hitbox_shift_distance, hitbox_shift_distance)))
+											elseif typeof(hitbox_points[i]) == "Vector3" then
+												newcf = targetcframe + hitbox_points[i]
+											else
+												newcf = targetcframe * lookatme * hitbox_points[i]
+											end
+											local pos = newcf.p
+											local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,penetration_depth,auto_wall)
+											if not raydata or raydata.Position == pos then
+												if not (u > tp_scanning_points) then
+													tp_hit = true
 												end
-												local pos = newcf.p
-												local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,penetration_depth,auto_wall)
-												if not raydata or raydata.Position == pos then
-													table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
-												end
+												table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
 											end
 										end
 									end
@@ -15943,19 +17045,14 @@ if BBOT.game == "phantom forces" then
 					end
 				end
 
-				local players_only, players_has = {}, {}
-				for i=1, #organizedPlayers do
-					local v = organizedPlayers[i]
-					if players_has[v[1]] then continue end
-					if v[6] and (self.tp_scanning_cooldown or not BBOT.misc:CanMoveTo(v[4])) then continue end
-					players_only[#players_only+1] = {v[1], v[3]}
-					players_has[v[1]] = true
-				end
+				local len_organizedPlayers = #organizedPlayers
+				if len_organizedPlayers < 1 then return end
 
-				local target = players_only[1]
+				local target = organizedPlayers[1]
 				local minimum_pen = {}
 				for i=1, #organizedPlayers do
 					local v = organizedPlayers[i]
+					check[v[1]] = true
 					if v[1] ~= target[1] then continue end
 					minimum_pen[#minimum_pen+1] = v
 				end
@@ -15999,22 +17096,26 @@ if BBOT.game == "phantom forces" then
 					hook:Call("RageBot.Changed", (target and unpack(target) or nil))
 				end
 			end
-
+			
 			hook:Add("SuppressNetworkSend", "BBOT:Aimbot.RageBot.TPScanning", function(netname)
-				if netname == "repupdate" and aimbot.tp_scanning then
+				if netname == "repupdate" and aimbot.tp_scanning_blockrep then
 					return true
 				end
 			end)
 
-			--[[hook:Add("Postupdatespawn", "BBOT:Aimbot.RageBot.Calc", function()
-				if config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
+			--[[hook:Add("PostupdateReplication", "BBOT:Aimbot.Find", function(player)
+				if gamelogic.currentgun and gamelogic.currentgun.step and config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
+					aimbot.calc_target = player
 					gamelogic.currentgun.step(0)
+					aimbot.calc_target = nil
 				end
 			end)]]
 
-			hook:Add("Postupdatespawn", "BBOT:Aimbot.RageBot.Calc", function()
-				if gamelogic.currentgun and gamelogic.currentgun.step and config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
-					gamelogic.currentgun.step(0)
+			hook:Add("Postupdatespawn", "BBOT:Aimbot.RageBot.Calc", function(player)
+				if char.alive and player ~= localplayer and gamelogic.currentgun and gamelogic.currentgun.firestep and config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
+					aimbot.calc_target = player
+					gamelogic.currentgun.firestep(0)
+					aimbot.calc_target = nil
 				end
 			end)
 
@@ -16025,7 +17126,7 @@ if BBOT.game == "phantom forces" then
 					self.rage_target = nil
 					return
 				end
-				if BBOT.misc.inblink then
+				if BBOT.misc.inblink and not config:GetValue("Main", "Misc", "Exploits", "Blink On Fire") then
 					local a, b = BBOT.misc:BlinkPosition()
 					if a and b and (a-b).Magnitude > 9 then
 						self:RageChanged(nil)
@@ -16033,7 +17134,7 @@ if BBOT.game == "phantom forces" then
 						return
 					end
 				end
-				if self.tp_scanning then return end
+				if self.tp_ignore then return end
 				self.in_ragebot = true
 
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
@@ -16041,38 +17142,54 @@ if BBOT.game == "phantom forces" then
 				local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
 				if target and target[6] and not self.tp_scanning and not self.tp_scanning_cooldown then
 					local original_position = char.rootpart.Position
-					BBOT.misc:MoveTo(target[4], true)
-					BBOT.misc:ForceRepupdate(target[4])
+					local target_pos = target[4]
+					BBOT.misc:UnBlink()
+					self.tp_scanning = target_pos
+					self.tp_ignore = true
+					BBOT.misc:MoveCharTo(target_pos)
+					self.tp_scanning_blockrep = true
 					self.tp_scanning_cooldown = true
-					self.tp_scanning = target[4]
-					if char.alive then
-						char.rootpart.Anchored = true
-					end
+					char.rootpart.Anchored = true
+					local heartbeat_ticks = 1
 					hook:Add("Heartbeat", "BBOT:RageBot.TPScan", function()
+						if heartbeat_ticks > 0 then
+							heartbeat_ticks = heartbeat_ticks - 1
+							return
+						end
 						hook:Remove("Heartbeat", "BBOT:RageBot.TPScan")
 						hook:Add("Stepped", "BBOT:RageBot.TPScan", function()
 							hook:Remove("Stepped", "BBOT:RageBot.TPScan")
 							if not char.alive then
-								self.no_rage = false
 								self.tp_scanning = false
 								self.tp_scanning_cooldown = false
+								self.tp_ignore = false
+								self.tp_scanning_blockrep = false
 								if char.rootpart then
 									char.rootpart.Anchored = false
 								end
 								return
 							end
-							self.tp_scanning = false
-							if gamelogic.currentgun then
-								gamelogic.currentgun.step(0)
+							self.tp_ignore = false
+							self.tp_scanning_blockrep = false
+							BBOT.misc:MoveTo(target_pos, true)
+							if gamelogic.currentgun and gamelogic.currentgun.firestep then
+								gamelogic.currentgun.firestep(0)
 							end
-							char.rootpart.Anchored = false
+							if char.rootpart then
+								char.rootpart.Anchored = false
+							end
 							BBOT.misc:MoveTo(original_position, true)
+							self.tp_scanning = false
 							timer:Simple(0.5,function()
 								self.tp_scanning_cooldown = false
 							end)
 						end)
 					end)
 					return
+				end
+
+				if self.__test then
+					BBOT.log(LOG_ERROR, "TEAB", target)
 				end
 
 				self:RageChanged(target)
@@ -16084,13 +17201,16 @@ if BBOT.game == "phantom forces" then
 					local dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
 					local magnitude = (position-part_pos).Magnitude
 
+					self.silent_data = {part.Position, part.Orientation}
+
 					local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
 					part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
+					part.Position = target[4]
 
 					if self:GetRageConfig("Aimbot", "Auto Shoot") then
 						self.fire = true
 						gun:shoot(true)
-						BBOT.misc:ForceRepupdate(self.tp_scanning or char.rootpart.Position, -Vector2.new(X, Y))
+						BBOT.misc:MoveTo(self.tp_scanning or char.rootpart.Position)
 					end
 
 					self.silent = part
@@ -16628,7 +17748,13 @@ if BBOT.game == "phantom forces" then
 		-- If the aimbot stuff before is persistant, use this to restore
 		hook:Add("PostFireStep", "BBOT:Aimbot.Calculate", function(gun)
 			if aimbot.silent and aimbot.silent.Parent then
-				aimbot.silent.Orientation = aimbot.silent.Parent.Trigger.Orientation
+				if aimbot.silent_data then
+					aimbot.silent.Position = aimbot.silent_data[1]
+					aimbot.silent.Orientation = aimbot.silent_data[2]
+				else
+					aimbot.silent.Orientation = aimbot.silent.Parent.Trigger.Orientation
+				end
+				aimbot.silent_data = false
 				aimbot.silent = false
 			end
 
@@ -16658,6 +17784,7 @@ if BBOT.game == "phantom forces" then
 			if networkname == "newbullets" then
 				if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
 				if aimbot.rage_target then -- who are we targeting today?
+					hook:Call("Aimbot.NewBullets")
 					local target = aimbot.rage_target
 					local timescale = 0
 					local campos = camera.CFrame.p
@@ -16715,8 +17842,7 @@ if BBOT.game == "phantom forces" then
 				if v == localplayer then
 					continue
 				end
-			
-				if config.priority[v.UserId] then continue end
+
 				local parts = self:GetParts(v)
 				if not parts then continue end
 			
@@ -16786,6 +17912,7 @@ if BBOT.game == "phantom forces" then
 		local math = BBOT.math
 		local string = BBOT.string
 		local service = BBOT.service
+		local loop = BBOT.loop
 		local esp = {
 			registry = {}
 		}
@@ -16890,7 +18017,8 @@ if BBOT.game == "phantom forces" then
 		end
 
 		local errors = 0
-		hook:Add("RenderStepped", "BBOT:ESP.Render", function()
+		local runservice = BBOT.service:GetService("RunService")
+		loop:Run("BBOT:ESP.Render", function()
 			if errors > 20 then return end
 			local controllers = esp.registry
 			local istablemissalined = false
@@ -16928,7 +18056,7 @@ if BBOT.game == "phantom forces" then
 					controllers[i] = sorted[i]
 				end
 			end
-		end)
+		end, runservice.RenderStepped)
 
 		hook:Add("OnConfigChanged", "BBOT:ESP.Reload", function(steps, old, new)
 			if config:IsPathwayEqual(steps, "Main", "Visuals") then
@@ -16936,7 +18064,8 @@ if BBOT.game == "phantom forces" then
 			end
 		end)
 
-		do -- players
+		-- players
+		do
 			local workspace = BBOT.service:GetService("Workspace")
 			local players = BBOT.service:GetService("Players")
 			local replication = BBOT.aux.replication
@@ -17008,16 +18137,28 @@ if BBOT.game == "phantom forces" then
 					["rleg"] = true,
 				}
 
+				local visible_only_parts = {
+					"head",
+					--"torso",
+					--"larm",
+					--"rarm",
+					"lleg",
+					"rleg"
+				}
+
 				function player_meta:Render(points)
 					if not self:GetConfig("Enabled") then return end
 					if not self.parts and not points then return end
+
+					local flags = self:GetConfig("Flags")
+					local visible_only = flags["Visible Only"]
 
 					local points = points
 					if not points then
 						points = {}
 						self._points = points
 						local offset, absolute = Vector3.new(), false
-						if self:GetConfig("Flags").Resolved then
+						if flags.Resolved then
 							if self.player == localplayer and self.controller.receivedPosition then
 								offset, absolute = self.controller.receivedPosition, true
 							else
@@ -17061,6 +18202,35 @@ if BBOT.game == "phantom forces" then
 						fail = true
 					else
 						fail = false
+					end
+
+					if visible_only and self.alive then
+						local visible = false
+						for i=1, #visible_only_parts do
+							local part_name = visible_only_parts[i]
+							local part = self.parts[part_name]
+							if not part then continue end
+							if not BBOT.aimbot:raycastbullet(camera.CFrame.p, part.CFrame.p-camera.CFrame.p) then
+								visible = true
+								break
+							end
+						end
+						if self.visible ~= visible then
+							self.visible = visible
+							self.visible_time = tick()
+						end
+
+						local fraction = math.timefraction(self.visible_time, self.visible_time+.1, tick())
+						if not self.visible then
+							fraction = math.remap(fraction, 0, 1, 1, 0)
+						end
+
+						for i=1, #self.draw_cache do
+							local v = self.draw_cache[i]
+							if v[1].Visible then
+								v[1].Transparency = v[2]*fraction
+							end
+						end
 					end
 
 					local bounding_box = {x=0,y=0,w=0,h=0}
@@ -17252,11 +18422,12 @@ if BBOT.game == "phantom forces" then
 
 				function player_meta:GetColor(...)
 					local color, color_transparency = self:GetConfig(...)
+					local priority = config:GetPriority(self.player)
 					if config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target") and aimbot.rage_target and aimbot.rage_target[1] == self.player then
 						color = config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Target", "Aimbot Target")
-					elseif config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Friends") and config.priority[self.player.UserId] and config.priority[self.player.UserId] < 0 then
+					elseif config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Friends") and priority and priority < 0 then
 						color = config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Friends", "Friended Players")
-					elseif config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Priority") and config.priority[self.player.UserId] and config.priority[self.player.UserId] > 0 then
+					elseif config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Priority") and priority and priority > 0 then
 						color = config:GetValue("Main", "Visuals", "ESP Settings", "Highlight Priority", "Priority Players")
 					end
 					return color, color_transparency
@@ -17332,6 +18503,15 @@ if BBOT.game == "phantom forces" then
 					self.resolved.Color = color
 					self.resolved.Transparency = color_transparency
 					self:Cache(self.resolved)
+
+					if flags["Visible Only"] then
+						for i=1, #self.draw_cache do
+							local v = self.draw_cache[i]
+							if v[1].Visible then
+								v[1].Transparency = 1
+							end
+						end
+					end
 
 					self:RemoveInstances()
 
@@ -17430,7 +18610,7 @@ if BBOT.game == "phantom forces" then
 					if self.alive or not self.timedestroyed or not self.begin_fading then return end
 					local fadetime = config:GetValue("Main", "Visuals", "ESP Settings", "ESP Fade Time")
 					local fraction = math.timefraction(self.timedestroyed, self.timedestroyed+fadetime, tick())
-					
+
 					if fraction > 1 then
 						for i=1, #self.draw_cache do
 							local v = self.draw_cache[i]
@@ -17442,10 +18622,9 @@ if BBOT.game == "phantom forces" then
 						self:RemoveInstances()
 					else
 						fraction = math.remap(fraction, 0, 1, 1, 0)
-
 						for i=1, #self.draw_cache do
 							local v = self.draw_cache[i]
-							if v[1].Visible then
+							if v[1].Visible and v[1].Transparency > 0 then
 								v[1].Transparency = v[2]*fraction
 							end
 						end
@@ -17562,6 +18741,7 @@ if BBOT.game == "phantom forces" then
 			end)
 		end
 
+		-- grenades
 		do
 			local workspace = service:GetService("Workspace")
 
@@ -17821,6 +19001,16 @@ if BBOT.game == "phantom forces" then
 			end)
 		end
 
+		-- dogtags
+		do
+
+		end
+
+		-- flags
+		do
+
+		end
+
 		-- Will make examples...
 	end
 
@@ -17928,9 +19118,61 @@ if BBOT.game == "phantom forces" then
 			debug.setupvalue(related_func, index, newcclosure(newfunc))
 		end
 
+		local u41 = CFrame.new
+		local u11 = math.pi;
+		local u21 = u11 * 2;
+		local u13 = math.sin;
+		local u61 = math.cos;
+		local cframe = BBOT.aux.cframe
+
+		-- u174(0.7 - 0.3 * l__p__958, 1 - 0.8 * l__p__958)
+		-- l__p__958 = aimspring.p
+		local slidespring_lerp = 0
+		local function gunbob_old(p272, p273)
+			local v714 = nil;
+			local v715 = nil;
+			-- what is dis?
+			-- a way of not relying on springs for procedural velocity animations :)
+			local char_multi = math.clamp(math.remap(char.speed, -5, 13, 0, 1)^3,0,1)
+			
+			-- just some base multipliers
+			local v716 = 0.7 * char_multi -- the Y offset movement
+			local v717 = 1 * char_multi -- angular movement
+			v714 = char.distance * u21 * 3 / 4;
+			v715 = -char.velocity;
+			local v718 = char.speed * (1 - char.slidespring.p * 0.9) -- make sliding not look stupid lol
+
+			-- the mmmmm formula
+			local swap = char.slidespring.p
+			local cf_pos_x = math.remap(swap, 1, 0, v718, (5 * v718 - 56))
+			local cf_ang_xy = math.remap(swap, 1, 0, 1, v718 / 20 * u21)
+			local cf_ang_z = math.remap(swap, 1, 0, 1, (5 * v718 - 56) / 20 * u21)
+			local cf_ang = math.remap(swap, 1, 0, v718 / 20 * u21, 1)
+
+			return u41(v717 * u61(v714 / 8 - 1) * cf_pos_x / 196, 1.25 * v716 * u13(v714 / 4) * v718 / 512, 0)
+			* cframe.fromaxisangle(
+				Vector3.new(
+					(v717 * u13(v714 / 4 - 1) / 256 + v717 * (u13(v714 / 64) - v717 * v715.z / 4) / 512) * cf_ang_xy,
+					(v717 * u61(v714 / 128) / 128 - v717 * u61(v714 / 8) / 256) * cf_ang_xy,
+					v717 * u13(v714 / 8) / 128 * cf_ang_z + v717 * v715.x / 1024
+				) * cf_ang
+			);
+		end;
+
 		local function DetourGunBob(related_func, index, gunmovement)
 			local newfunc = function(...)
-				local cf = gunmovement(...)
+				local cf
+				if config:GetValue("Weapons", "Stats Changer", "Movement", "OG Bob") then
+					local ran, _cf = pcall(gunbob_old, ...)
+					if not ran then
+						BBOT.log(LOG_ERROR, _cf)
+						cf = gunmovement(...)
+					end
+					cf = _cf
+				else
+					cf = gunmovement(...)
+				end
+
 				local mul = config:GetValue("Weapons", "Stats Changer", "Movement", "Bob Scale")/100 -- bob factor config here
 				if mul == 0 then
 					return CFrame.new()
@@ -18117,12 +19359,14 @@ if BBOT.game == "phantom forces" then
 				if typeof(v) == "function" then
 					local ran, consts = pcall(debug.getconstants, v)
 					if ran and table.quicksearch(consts, "onfire") and table.quicksearch(consts, "pullout") and table.quicksearch(consts, "straightpull") and table.quicksearch(consts, "zoom") and table.quicksearch(consts, "zoompullout") then
-						debug.setupvalue(oldstep, k, function(...)
+						local function replacement(...)
 							hook:CallP("PreFireStep", gundata)
 							local a, b, c, d = v(...)
 							hook:CallP("PostFireStep", gundata)
 							return a, b, c, d
-						end)
+						end
+						debug.setupvalue(oldstep, k, replacement)
+						gundata.firestep = replacement
 					end
 				end
 			end
@@ -18505,6 +19749,14 @@ if BBOT.game == "phantom forces" then
 			modifications.modelkickdamper = modifications.modelkickdamper * mkd;]]
 		end)
 
+		hook:Add("WeaponModifyData", "ModifyWeapon.Burst", function(modifications)
+			modifications.burstlock = modifications.burstlock or config:GetValue("Weapons", "Stats Changer", "Ballistics", "Burst-Lock");
+			local cap = config:GetValue("Weapons", "Stats Changer", "Ballistics", "Burst Cap")
+			if cap > 0 then
+				modifications.firecap = cap;
+			end
+		end)
+
 		hook:Add("WeaponModifyData", "ModifyWeapon.FireModes", function(modifications)
 			local firemodes = table.deepcopy(modifications.firemodes)
 			local firerates = (typeof(modifications.firerate) == "table" and table.deepcopy(modifications.firerate) or nil)
@@ -18520,6 +19772,14 @@ if BBOT.game == "phantom forces" then
 			local burst3 = firerates_addition["Burst-3"] and 3 or nil
 			if burst3 and not table.quicksearch(firemodes, burst3) then
 				table.insert(firemodes, 1, burst3)
+			end
+			local burst4 = firerates_addition["Burst-4"] and 4 or nil
+			if burst4 and not table.quicksearch(firemodes, burst4) then
+				table.insert(firemodes, 1, burst4)
+			end
+			local burst5 = firerates_addition["Burst-5"] and 5 or nil
+			if burst5 and not table.quicksearch(firemodes, burst5) then
+				table.insert(firemodes, 1, burst5)
 			end
 			local auto = firerates_addition["Full-Auto"] and true or nil
 			if auto and not table.quicksearch(firemodes, auto) then
@@ -18592,10 +19852,11 @@ if BBOT.game == "phantom forces" then
 			end
 		end)
 
-		hook:Add("ApplyGunModifications", "ModifyWeapon.Speeds", function(modifications)
-			modifications.aimspeed = modifications.aimspeed * config:GetValue("Weapons", "Stats Changer", "Handling", "Aiming Speed")
-			modifications.equipspeed = modifications.equipspeed * config:GetValue("Weapons", "Stats Changer", "Handling", "Equip Speed")
-			modifications.sprintspeed = modifications.sprintspeed * config:GetValue("Weapons", "Stats Changer", "Handling", "Ready Speed")
+		hook:Add("WeaponModifyData", "ModifyWeapon.Speeds", function(modifications)
+			modifications.hipfirespread = modifications.hipfirespread * (config:GetValue("Weapons", "Stats Changer", "Handling", "Hip Spread")/100)
+			modifications.aimspeed = modifications.aimspeed * (config:GetValue("Weapons", "Stats Changer", "Handling", "Aiming Speed")/100)
+			modifications.equipspeed = modifications.equipspeed * (config:GetValue("Weapons", "Stats Changer", "Handling", "Equip Speed")/100)
+			modifications.sprintspeed = modifications.sprintspeed * (config:GetValue("Weapons", "Stats Changer", "Handling", "Ready Speed")/100)
 		end)
 
 		-- Skins
@@ -18704,8 +19965,7 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
-			local texture_cache = {}
-
+			local asset = BBOT.asset
 			function weapons:CreateSkin(skin_databank, config_data, gun_objects, gun_data)
 				skin_databank.objects = gun_objects
 				local textures = {}
@@ -18728,14 +19988,8 @@ if BBOT.game == "phantom forces" then
 
 							local trueassetid = ""
 							local assetid = texture["Asset-Id"].self
-							if isfile(assetid) then
-								if not texture_cache[assetid] then
-									texture_cache[assetid] = getsynasset(assetid)
-								end
-								trueassetid = texture_cache[assetid]
-								if not trueassetid then
-									trueassetid = ""
-								end
+							if asset:IsFile("textures", assetid) then
+								trueassetid = asset:Get("textures", assetid)
 							else
 								trueassetid = "rbxassetid://" .. assetid
 							end
@@ -18984,6 +20238,36 @@ if BBOT.game == "phantom forces" then
 				gundata._skinlast = delta
 			end)
 		end
+	end
+
+	-- Logging
+	-- Cause why not
+	do
+		local statistics = BBOT.statistics
+		local hook = BBOT.hook
+	
+		statistics:Create("stats", {
+			kills = 0,
+			deaths = 0,
+			killed = {},
+		})
+
+		hook:Add("PreBigAward", "BBOT:Statistics.Kills", function(type, entity, gunname, earnings)
+			local name = tostring(entity.Name)
+			local stats = statistics:Get("stats")
+			stats.kills = stats.kills + 1
+			if not stats.killed[name] then
+				stats.killed[name] = 0
+			end
+			stats.killed[name] = stats.killed[name] + 1
+			statistics:Set("stats")
+		end)
+
+		hook:Add("LocalKilled", "BBOT:Statistics.Deaths", function(player)
+			local stats = statistics:Get("stats")
+			stats.deaths = stats.deaths + 1
+			statistics:Set("stats")
+		end)
 	end
 elseif BBOT.universal then
 
