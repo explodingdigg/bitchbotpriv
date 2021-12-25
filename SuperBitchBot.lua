@@ -1426,7 +1426,7 @@ end
 
 -- Draw-Dyn - A sub-library to the drawing dynamic library with it's own referencing system
 -- Similar to drawing depreciated for them OG people.
--- Note: this uses some of Bitch Bot's libraries, try to compensate by making your own!
+-- Note: this uses one of my modules called "hook/events", make your own to compensate
 -- WholeCream
 do
 	local hook = BBOT.hook
@@ -7676,6 +7676,64 @@ do
 		end
 	end
 
+	function menu:Create(configuration)
+		local frame = gui:Create("Panel", main)
+		frame.Id = configuration.Id
+		if configuration.pos then
+			frame:SetPos(configuration.pos)
+		end
+		if configuration.size then
+			frame:SetSize(configuration.size)
+		end
+		if configuration.center then
+			frame:Center()
+		end
+		frame.autofocus = true
+		frame:SetDraggable(true)
+
+		local alias = gui:Create("Text", frame)
+		frame.alias = alias
+		alias:SetPos(0, 5, 0, 3)
+		alias:SetText(configuration.name)
+		alias:SetFontManager("Menu.Title")
+
+		if configuration.name == "Bitch Bot" then
+			alias:SetText(config:GetValue("Main", "Settings", "Cheat Settings", "Custom Menu Name"))
+			hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info.Main", function(steps, old, new)
+				if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Name") then
+					alias:SetText(new)
+				end
+			end)
+		end
+
+		local tabs = gui:Create("Tabs", frame)
+		tabs:SetPos(0, 10, 0, 10+15)
+		tabs:SetSize(1, -20, 1, -20-15)
+
+		local path = {frame.Id}
+
+		self:HandleGeneration(function(config, panel)
+			tabs:Add(config.name, config.icon, panel)
+		end, path, configuration.content)
+
+		if configuration.name ~= "Bitch Bot" then
+			if not config:GetValue("Main", "Settings", "Menus", configuration.name) then
+				frame:SetEnabled(false)
+			end
+
+			hook:Add("OnConfigChanged", "BBOT:Menu.SubToggle." .. configuration.name, function(steps, old, new)
+				if gui:IsValid(frame) and config:IsPathwayEqual(steps, "Main", "Settings", "Menus", configuration.name) then
+					gui:OpacityTo(frame, (new and 1 or 0), 0.2, 0, 0.25, function()
+						if not new then frame:SetEnabled(false) end
+					end)
+					if new then frame:SetEnabled(true) end
+				end
+			end)
+		end
+
+		return frame
+	end
+
 	menu.logo_cache = {}
 	function menu:Initialize()
 		self.tooltip = gui:Create("ToolTip")
@@ -7884,7 +7942,6 @@ do
 		end)
 	end
 
-
 	hook:Add("OnConfigChanged", "BBOT:Menu.Background", function(steps, old, new)
 		if config:IsPathwayEqual(steps, "Main","Settings","Cheat Settings","Background") then
 			if config:GetValue("Main","Settings","Cheat Settings","Background") then
@@ -7903,64 +7960,6 @@ do
 	main:SetZIndex(-1)
 	main:SetOpacity(1)
 	main:SetSize(1,0,1,0)
-
-	function menu:Create(configuration)
-		local frame = gui:Create("Panel", main)
-		frame.Id = configuration.Id
-		if configuration.pos then
-			frame:SetPos(configuration.pos)
-		end
-		if configuration.size then
-			frame:SetSize(configuration.size)
-		end
-		if configuration.center then
-			frame:Center()
-		end
-		frame.autofocus = true
-		frame:SetDraggable(true)
-
-		local alias = gui:Create("Text", frame)
-		frame.alias = alias
-		alias:SetPos(0, 5, 0, 3)
-		alias:SetText(configuration.name)
-		alias:SetFontManager("Menu.Title")
-
-		if configuration.name == "Bitch Bot" then
-			alias:SetText(config:GetValue("Main", "Settings", "Cheat Settings", "Custom Menu Name"))
-			hook:Add("OnConfigChanged", "BBOT:Menu.Client-Info.Main", function(steps, old, new)
-				if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Menu Name") then
-					alias:SetText(new)
-				end
-			end)
-		end
-
-		local tabs = gui:Create("Tabs", frame)
-		tabs:SetPos(0, 10, 0, 10+15)
-		tabs:SetSize(1, -20, 1, -20-15)
-
-		local path = {frame.Id}
-
-		self:HandleGeneration(function(config, panel)
-			tabs:Add(config.name, config.icon, panel)
-		end, path, configuration.content)
-
-		if configuration.name ~= "Bitch Bot" then
-			if not config:GetValue("Main", "Settings", "Menus", configuration.name) then
-				frame:SetEnabled(false)
-			end
-
-			hook:Add("OnConfigChanged", "BBOT:Menu.SubToggle." .. configuration.name, function(steps, old, new)
-				if gui:IsValid(frame) and config:IsPathwayEqual(steps, "Main", "Settings", "Menus", configuration.name) then
-					gui:OpacityTo(frame, (new and 1 or 0), 0.2, 0, 0.25, function()
-						if not new then frame:SetEnabled(false) end
-					end)
-					if new then frame:SetEnabled(true) end
-				end
-			end)
-		end
-
-		return frame
-	end
 
 	hook:Add("InputBegan", "BBOT:Menu.Toggle", function(input)
 		if input.UserInputType == Enum.UserInputType.Keyboard then
