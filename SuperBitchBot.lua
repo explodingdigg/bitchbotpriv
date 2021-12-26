@@ -2865,7 +2865,7 @@ end
 -- GUI
 do
 	-- WholeCream's Drawing Library to GUI Library
-	-- Extremely versatile and object oriented!
+	-- Extremely versatile and immediate!
 	local hook = BBOT.hook
 	local draw = BBOT.draw
 	local math = BBOT.math
