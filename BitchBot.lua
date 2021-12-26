@@ -369,7 +369,7 @@ do
 		return new_tbl
 	end
 
-	function table.fyshuffle( tInput )
+	function table.fyshuffle( tInput ) -- oh thats cool, fisher-yates shuffle (i think its called)
 		local tReturn = {}
 		for i = #tInput, 1, -1 do
 			local j = math.random(i)
@@ -460,7 +460,7 @@ do
 	local math = BBOT.table.deepcopy(math)
 	BBOT.math = math
 
-	function math.lerp(delta, from, to) -- wtf why were these globals thats so exploitable!
+	function math.lerp(delta, from, to) -- wtf why were these globals thats so exploitable! -- p.s. json from 2021 these stupid comments are all still here lmao
 		if (delta > 1) then
 			return to
 		end
@@ -478,6 +478,16 @@ do
 	function math.round( num, idp ) -- ty gmod again
 		local mult = 10 ^ ( idp or 0 )
 		return math.floor( num * mult + 0.5 ) / mult
+	end
+
+	-- floor to nearest multiple of x
+	function math.multfloor( num, x )
+		return num - (num % x)
+	end
+
+	-- ceil to nearest multiple of x
+	function math.multceil( num, x )
+		return num + (num % x)
 	end
 
 	function math.average(t)
@@ -516,8 +526,10 @@ do
 	local _1_3 = 1/3;
 	local _sqrt_3 = math.sqrt(3);
 	
+
+
 	-- ax + b (real roots)
-	function math.linear(a, b) -- do I even need this?
+	function math.linear(a, b) -- do I even need this? -- yea probably lol
 		return -b / a;
 	end
 	
@@ -8815,6 +8827,12 @@ do
 										},
 										tooltip = "Points that do not rotate towards the target, in otherwords, static points",
 									},
+									{
+										type = "Toggle",
+										name = "Scan for Collaterals",
+										tooltip = "Sends hit packets for other enemies within 5 studs of the position you hit a target at.",
+										value = false
+									},
 								}}
 							},
 							{
@@ -10649,6 +10667,18 @@ do
 											}
 										},
 									},
+									{
+										type = "Toggle",
+										name = "Noclip",
+										value = false,
+										unsafe = true,
+										extra = {
+											{
+												type = "KeyBind",
+												toggletype = 2 -- what
+											}
+										}
+									},
 									--[[{
 										type = "Toggle",
 										name = "Invisibility",
@@ -10672,32 +10702,30 @@ do
 												toggletype = 2,
 											}
 										}
-									},
-									{
-										type = "Toggle",
-										name = "Server Crasher",
-										value = false,
-										tooltip = "Dear god...",
-										extra = {
-											{
-												type = "KeyBind",
-												toggletype = 2,
-											}
-										}
-									},
-									{
-										type = "Slider",
-										name = "Server Crasher Intensity",
-										min = 1,
-										max = 16,
-										suffix = "",
-										decimal = 0,
-										value = 4,
-										custom = {
-											[15] = "Literally Unplayable",
-											[16] = "Insta-Crash",
-										},
 									},]]
+									{
+										type = "Button",
+										name = "Crash Server",
+										value = false,
+										confirm = "DDoS the Server?",
+										tooltip = "Forces the server to send ~3 MB of data back to the client repeatedly. A message will be sent to the console menu when the bloat request completes, meaning that the server will imminently crash; this may take a while depending on internet connection speed.",
+										callback = function()
+											-- yes, the method is very stupid.
+											-- raspi$$code$$
+											BBOT.log(LOG_NORMAL, "Sending bloat request, this may take a while!")
+											thread:Create(function() -- theres probably a better way in this new hack to create thread?
+												BBOT.aux.pfremotefunc:InvokeServer("updatesettings", {table.create(3e6, "a")}) -- fetch so we know when it has went thru
+												BBOT.log(LOG_WARN, "Bloat request has completed. Why did you do this anyway?")
+												local service = BBOT.service:GetService("GuiService")
+												while service:GetErrorCode() ~= Enum.ConnectionError.DisconnectTimeout do -- eh idk
+													-- ugh this is stupid looking
+													coroutine.resume(coroutine.create(BBOT.aux.pfremotefunc.InvokeServer), BBOT.aux.pfremotefunc, "loadplayerdata", {}) -- hahahahah 🚶‍♀️🚶‍♀️🧨
+													task.wait(2)
+												end
+												BBOT.log(LOG_WARN, "Server beamage is official: you were disconnected for timeout")
+											end)
+										end
+									},
 									{
 										type = "Toggle",
 										name = "Tick Division Manipulation",
@@ -12532,7 +12560,10 @@ if BBOT.game == "phantom forces" then
 		local hook = BBOT.hook
 		local timer = BBOT.timer
 		local localplayer = BBOT.service:GetService("LocalPlayer")
-		local aux = {}
+		local remotefunc = BBOT.service:GetService("ReplicatedStorage").RemoteFunction -- for fetching shit
+		local aux = {
+			pfremotefunc = remotefunc
+		}
 		BBOT.aux = aux
 
 		-- This is my automated way of fetching and finding shared modules pf uses
@@ -12619,7 +12650,7 @@ if BBOT.game == "phantom forces" then
 
 			BBOT.log(LOG_DEBUG, "Scanning...")
 			local reg = debug.getregistry()
-			for _=1, #reg do
+			for _ = #reg, 1, -1 do -- minor optimization
 				local v = reg[_]
 				if(typeof(v) == 'table')then
 					local ax = self._CheckTable(v)
@@ -12671,7 +12702,7 @@ if BBOT.game == "phantom forces" then
 			end
 
 			reg = getgc()
-			for i=1, #reg do
+			for i = #reg, 1, -1 do -- minor optimization
 				local v = reg[i]
 				if typeof(v) == 'function' then
 					self._CheckFunction(v)
@@ -12733,8 +12764,11 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
-			for _=1, #reg do
-				local v = reg[_]
+			for _=#reg, 1 do -- yet another minor optimization
+				if rawget(aux.network, "receivers") then
+					break
+				end
+				local v = reg[_] -- honestly shouldnt this be put somewhere else? shouldn't this just be checked during the other aux stuff above?
 				if typeof(v) == "function" then
 					local dbg = debug.getinfo(v)
 					if string.find(dbg.short_src, "network", 1, true) then
@@ -12744,6 +12778,7 @@ if BBOT.game == "phantom forces" then
 							if typeof(vv) == "table" then
 								if #vv > 10 then
 									rawset(aux.network, "receivers", vv)
+									break -- break out
 								end
 							end
 						end
@@ -14376,6 +14411,74 @@ if BBOT.game == "phantom forces" then
 				isteleporting = false
 			end
 
+			function misc:IsPointInsidePart(part, point)
+			    local r = part.CFrame:PointToObjectSpace(point)
+			    local s = part.Size
+			    return math.abs(r.x) <= s.x/2 and math.abs(r.y) <= s.y/2 and math.abs(r.z) <= s.z/2
+			end
+
+			local mapRaycastParams = RaycastParams.new()
+			mapRaycastParams.FilterType = Enum.RaycastFilterType.Whitelist
+			mapRaycastParams.FilterDescendantsInstances = roundsystem.raycastwhitelist
+			mapRaycastParams.IgnoreWater = true
+
+			-- direction must be unit
+			-- literally only works sometimes but idfk
+			function misc:GetNoclipSequence(origin, direction, stepDistance, maxSteps)
+				local origin = origin or char.rootpart.Position
+				local unit = direction
+				local dir = unit * stepDistance
+
+				local headheight = char.headheight
+				-- for correcting stance bullshiz
+				local headheightVec = Vector3.new(0, headheight)
+				local correctedOrigin = origin + headheightVec
+				local sequence = {correctedOrigin}
+
+				local pass = true
+
+				for _ = 1, maxSteps do
+					local cast = workspace:Raycast(sequence[#sequence], dir, mapRaycastParams)
+					if cast then
+						local partHit = cast.Instance
+						if partHit.ClassName == "Part" and partHit.Shape == Enum.PartType.Block and not partHit:FindFirstChildWhichIsA("Mesh") then
+							-- might need to add a congruency check
+							if misc:IsPointInsidePart(partHit, cast.Position) then
+								sequence[#sequence + 1] = cast.Position
+							else
+								-- point is probably just before the surface
+								pass = false
+								break
+							end
+						else
+							-- cant pass through stupid slanted crazy looking ass parts
+							-- because roblox can solve those better and that function above
+							-- which tells if a point is inside of a part or not won't work on it 
+							-- as intended if it has a custom mesh (duh..)
+							pass = false
+							break
+						end
+					else
+						sequence[#sequence + 1] = correctedOrigin + dir
+					end
+				end
+
+				-- verify sequence isnt actually intersecting anything for some reason?? (roblo$$$raycasting$$)
+				-- no, i shouldn't do this, but for some reason creams pathfinding shit isnt
+				-- uber slow either??? even though it verifies paths like this
+
+				for i = 1, #sequence - 1 do
+					local current, next = sequence[i], sequence[i + 1]
+					local diff = next - current
+					if workspace:Raycast(current, diff, mapRaycastParams) then
+						pass = false
+						break
+					end
+				end
+
+				return sequence, pass
+			end
+
 			local mouse = BBOT.service:GetService("Mouse")
 
 			hook:Add("OnKeyBindChanged", "BBOT.Misc.ClickTP", function(steps, old, new)
@@ -14388,6 +14491,52 @@ if BBOT.game == "phantom forces" then
 					elseif range ~= 0 then
 						local pos = camera.CFrame.p + camera.CFrame.lookVector * range
 						misc:MoveTo(pos - (camera.CFrame.lookVector * .5) + Vector3.new(0,3,0), true)
+					end
+				end
+			end)
+
+			hook:Add("OnKeyBindChanged", "BBOT.Misc.NoclipTest", function(steps, old, new)
+				if char.alive and config:GetValue("Main", "Misc", "Exploits", "Noclip")
+				and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Noclip", "KeyBind") then
+					-- (origin, direction, stepDistance, maxSteps)
+					local directions = {
+						-Vector3.xAxis,
+						Vector3.xAxis,
+						Vector3.zAxis,
+						-Vector3.zAxis
+					}
+
+					local noclipSequence
+					local rootPos = char.rootpart.Position
+
+					for j = 1, #directions do
+						local tempSequence, canNoclip = misc:GetNoclipSequence(rootPos, directions[j], 100, 16)
+
+						if canNoclip then
+							noclipSequence = tempSequence
+							break
+						end
+					end
+
+					if not noclipSequence then
+						notification:Create("Noclip check failure")
+						return
+					else
+						local camAngles = Vector2.new(BBOT.aux.camera.angles.x, BBOT.aux.camera.angles.y)
+						if #noclipSequence > 2 then
+							local headheight = char.headheight
+							local headheightVec = Vector3.new(0, headheight)
+							BBOT.aux.network:send("repupdate", rootPos, camAngles, tick())
+							for i = 2, #noclipSequence do
+								local pos = noclipSequence[i] - headheightVec
+								misc:MoveTo(pos, false)
+							end
+
+							char.rootpart.Position = noclipSequence[#noclipSequence] - headheightVec
+							notification:Create("Noclip (probably) success")
+						else
+							notification:Create("Not enough points in noclip sequence")
+						end
 					end
 				end
 			end)
@@ -14775,12 +14924,12 @@ if BBOT.game == "phantom forces" then
 
 		hook:Add("RenderStepped", "BBOT:Misc.Calculate", function(delta)
 			misc:UpdateBeams()
-			if config:GetValue("Main", "Misc", "Exploits", "Server Crasher") and config:GetValue("Main", "Misc", "Exploits", "Server Crasher", "KeyBind") then
+			--[[if config:GetValue("Main", "Misc", "Exploits", "Server Crasher") and config:GetValue("Main", "Misc", "Exploits", "Server Crasher", "KeyBind") then
 				for i = 1, config:GetValue("Main", "Misc", "Exploits", "Server Crasher Intensity") ^ 2 do
 					network:send("changeatt", "Primary", "MP5K", { Underbarrel = "Flashlight",  Other = "Flashlight",  Ammo = "",  Barrel = "",  Optics = "" })
 					network:send("changeatt", "Primary", "MP5K", { Underbarrel = "",  Other = "",  Ammo = "",  Barrel = "",  Optics = ""  })
 				end
-			end
+			end]]
 			misc:BypassSpeedCheck()
 			if not char.alive then
 				misc.humanoid = nil
@@ -14981,7 +15130,7 @@ if BBOT.game == "phantom forces" then
 
 			local diff = (position-current_position)
 
-			if diff.Magnitude > 8 then
+			if diff:Dot(diff) > 64 then
 				local timescale = math.round(diff.Magnitude/8)+1
 				local tdiff = diff/timescale
 				for i=1, timescale do
@@ -16577,7 +16726,7 @@ if BBOT.game == "phantom forces" then
 			controller._receivedFrameTime = controller.receivedFrameTime
 		end)
 
-		local vec0 = Vector3.new()
+		local vec0 = Vector3.zero
 		hook:Add("PostupdateReplication", "BBOT:RageBot.CheckAlive", function(player, controller)
 			local t, last_t = tick(), controller.__t_received
 			if controller._receivedPosition and controller._receivedFrameTime and last_t then
@@ -17818,7 +17967,7 @@ if BBOT.game == "phantom forces" then
 				if aimbot.rage_target then -- who are we targeting today?
 					hook:Call("Aimbot.NewBullets")
 					local target = aimbot.rage_target
-					local timescale = 0
+					--local timescale = 0
 					local campos = camera.CFrame.p
 					local dir = target[3]-campos
 					local firepos = bullettable.firepos
@@ -17826,6 +17975,7 @@ if BBOT.game == "phantom forces" then
 					local t = dir.Magnitude/gundata.bulletspeed
 					local targetpos = target[3]
 					bullettable.firepos = target[4]--campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
+					-- what the fuck is this??         ^^^^^^ wtf is this ??? gymnastics??? 🤸‍♂️🤸‍♂️ this isnt gymnastics class buddy
 
 					for i=1, #bullettable.bullets do
 						local bullet = bullettable.bullets[i]
@@ -17841,6 +17991,7 @@ if BBOT.game == "phantom forces" then
 							enque[bullet[2]] = nil
 						end)
 						network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
+						-- TODO: i want to implement Scan for Collaterals but i am fucking lost in this new paradigm
 						enque[bullet[2]] = target[1]
 					end
 					return true
