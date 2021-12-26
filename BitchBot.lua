@@ -1043,6 +1043,7 @@ do
 		table.insert(connections, con)
 		return con
 	end
+
 	--[[
 	function original_func = hook:bindFunction(function func, string name, any extra)
 	- Automatically hooks a function and adds it to the hook registry
@@ -13975,7 +13976,7 @@ if BBOT.game == "phantom forces" then
 		function lighting.step()
 			if not game.Lighting then return end
 			if config:GetValue("Main", "Visuals", "World", "Force Time") then
-				game.Lighting.ClockTime = config:GetValue("Main", "Visuals", "World", "Custom Time")
+				--game.Lighting.ClockTime = config:GetValue("Main", "Visuals", "World", "Custom Time")
 			end
 
 			if config:GetValue("Main", "Visuals", "World", "Ambience") then
