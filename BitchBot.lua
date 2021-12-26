@@ -1549,7 +1549,7 @@ do
 		asset:Initialize()
 		asset:Register("textures", {".png", ".jpg"})
 		asset:Register("images", {".png", ".jpg"})
-		asset:Register("sounds", {".wav", ".mp3"})
+		asset:Register("sounds", {".wav", ".mp3", ".ogg"})
 	end)
 end
 
