@@ -3393,7 +3393,7 @@ do
 		local inhover = {}
 		for i=1, #reg do
 			local v = reg[i]
-			if v.class ~= "Mouse" and gui:IsHovering(v) then
+			if v and v.class ~= "Mouse" and gui:IsHovering(v) then
 				if v.mouseinputs then
 					inhover[#inhover+1] = v
 				end
@@ -3436,7 +3436,7 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v.WheelForward then
+			if v and v.WheelForward then
 				v:WheelForward()
 			end
 		end
@@ -3446,7 +3446,7 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v.WheelBackward then
+			if v and v.WheelBackward then
 				v:WheelBackward()
 			end
 		end
@@ -3456,7 +3456,7 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if not v.parent then
+			if v and not v.parent then
 				v:Calculate()
 			end
 		end
@@ -3466,7 +3466,7 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v.Step then
+			if v and v.Step then
 				v:Step(delta)
 			end
 		end
@@ -4262,6 +4262,7 @@ do
 			self.textalignmentx = Enum.TextXAlignment.Left
 			self.textalignmenty = Enum.TextYAlignment.Top
 			self.offset = Vector2.new(0, 0)
+			self:SetSize(0,1,0,1)
 		end
 
 		function GUI:SetTextAlignmentX(align)
@@ -4657,6 +4658,8 @@ do
 					self:ProcessClipping()
 				end
 			end
+			local w, h = self:GetTextSize(self.content)
+			self.text.Position = Vector2.new(self.absolutepos.X+3,self.absolutepos.Y - (h/2) + (self.absolutesize.Y/2))
 		end
 
 		function GUI:InputEnded(input)
