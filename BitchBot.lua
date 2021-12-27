@@ -4266,17 +4266,20 @@ do
 
 		function GUI:SetTextAlignmentX(align)
 			self.textalignmentx = align
+			self:GetOffsets()
 			self:PerformTextLayout()
 		end
 
 		function GUI:SetTextAlignmentY(align)
 			self.textalignmenty = align
+			self:GetOffsets()
 			self:PerformTextLayout()
 		end
 
 		function GUI:SetFont(font)
 			self.text.Font = font
 			self.font = font
+			self:GetOffsets()
 			self:PerformTextLayout()
 		end
 
@@ -4298,6 +4301,7 @@ do
 		function GUI:SetTextSize(size)
 			self.text.Size = size
 			self.textsize = size
+			self:GetOffsets()
 			self:PerformTextLayout()
 		end
 
@@ -4317,6 +4321,7 @@ do
 				offset_y = -h
 			end
 			self.offset = Vector2.new(offset_x, offset_y)
+			self.text.Position = self.absolutepos + self.offset
 		end
 
 		function GUI:PerformTextLayout()
@@ -4359,6 +4364,7 @@ do
 
 		function GUI:Wrapping(bool)
 			self.wraptext = bool
+			self:GetOffsets()
 			self:PerformTextLayout()
 		end
 
