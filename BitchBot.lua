@@ -17275,7 +17275,7 @@ if BBOT.game == "phantom forces" then
 					if hitscan_priority == "Head" then
 						part = updater.gethead()
 					elseif hitscan_priority == "Body" then
-						part = replication.getbodyparts(v).torso
+						part = parts.torso
 					end
 					local main_part = updater.gethead().Parent
 					local resolver_offset, isabsolute = self:GetResolvedPosition(v)
