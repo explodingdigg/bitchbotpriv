@@ -2846,27 +2846,19 @@ do
 			return Vector2.new(X, Y), Vector2.new(W, H)
 		end
 
-		-- Forces a calculation of PerformLayout, if true is not passed, it only calculate if position or size has changed
-		function base:InvalidateLayout(force)
-			local ppos = (self.parent and self.parent.absolutepos or Vector2.new())
-			local pos, size = self:GetLocalTranslation()
-			local a = pos + ppos
-			if force or (self.absolutepos ~= a or self.absolutesize ~= size) then
-				self.absolutepos = a
-				self.absolutesize = size
-				self:PerformLayout(a, size)
-				return true
-			end
+		-- Forces a calculation of PerformLayout, put in positionshift or sizeshift to let em know if there was a change
+		function base:InvalidateLayout(positionshift, sizeshift)
+			self:PerformLayout(self.absolutepos, self.absolutesize, positionshift, sizeshift)
 		end
 
 		-- Recursively does layout recaluclations, same purpose of InvalidateLayout just recursive
-		function base:InvalidateAllLayouts(force)
-			self:InvalidateLayout(force)
+		function base:InvalidateAllLayouts(positionshift, sizeshift)
+			self:InvalidateLayout(positionshift, sizeshift)
 			local children = self.children
 			for i=1, #children do
 				local v = children[i]
 				if gui:IsValid(v) then
-					v:InvalidateAllLayouts(force)
+					v:InvalidateAllLayouts(positionshift, sizeshift)
 				end
 			end
 		end
@@ -2897,12 +2889,28 @@ do
 				self._zindex = self.zindex + (self.focused and 10000 or 0)
 			end
 
-			local _layoutinvalidated
-			if self._enabled and gui:IsValid(self) then
-				_layoutinvalidated = self:InvalidateLayout()
+			local positionshift, sizeshift = false, false
+			do
+				local ppos = (self.parent and self.parent.absolutepos or Vector2.new())
+				local pos, size = self:GetLocalTranslation()
+				local a = pos + ppos
+				if self.absolutepos ~= a then
+					self.absolutepos = a
+					positionshift = true
+				end
+				if self.absolutesize ~= size then
+					self.absolutesize = size
+					sizeshift = true
+				end
 			end
 
-			local changed = last_trans ~= self._transparency or last_zind ~= self.zindex or last_vis ~= self._visible or wasenabled ~= self._enabled or _layoutinvalidated
+			local changed = last_trans ~= self._transparency or last_zind ~= self.zindex or last_vis ~= self._visible or wasenabled ~= self._enabled or positionshift or sizeshift
+			local _layoutinvalidated
+			if self._enabled and changed then
+				_layoutinvalidated = self:InvalidateLayout(positionshift, sizeshift)
+			end
+
+			changed = changed or _layoutinvalidated
 			if changed then
 				self:PerformDrawings()
 			end
@@ -4268,18 +4276,18 @@ do
 
 		function GUI:SetTextAlignmentX(align)
 			self.textalignmentx = align
-			self:InvalidateLayout()
+			self:PerformTextLayout()
 		end
 
 		function GUI:SetTextAlignmentY(align)
 			self.textalignmenty = align
-			self:InvalidateLayout()
+			self:PerformTextLayout()
 		end
 
 		function GUI:SetFont(font)
 			self.text.Font = font
 			self.font = font
-			self:InvalidateLayout()
+			self:PerformTextLayout()
 		end
 
 		function GUI:GetText()
@@ -4294,13 +4302,13 @@ do
 			self.text.Text = txt
 			self.content = txt
 			self:GetOffsets()
-			self:InvalidateLayout()
+			self:PerformTextLayout()
 		end
 
 		function GUI:SetTextSize(size)
 			self.text.Size = size
 			self.textsize = size
-			self:InvalidateLayout()
+			self:PerformTextLayout()
 		end
 
 		function GUI:GetOffsets()
@@ -4321,8 +4329,7 @@ do
 			self.offset = Vector2.new(offset_x, offset_y)
 		end
 
-		function GUI:PerformLayout(pos, size)
-			self.text.Position = pos + self.offset
+		function GUI:PerformTextLayout()
 			local x = self:GetTextSize(self.content)
 			local pos = self:GetLocalTranslation()
 			local size = self.parent.absolutesize
@@ -4338,7 +4345,7 @@ do
 					if prex + pos.X + self.offset.X - 4 > size.X then
 						break 
 					end
-					text = pretext 
+					text = pretext
 				end
 				self.text.Text = text
 			else
@@ -4346,9 +4353,22 @@ do
 			end
 		end
 
+		function GUI:PerformLayout(pos, size, posshift, sizeshift)
+			self.text.Position = pos + self.offset
+			if not sizeshift then return end
+			self:PerformTextLayout()
+		end
+
+		function GUI:Step()
+			if not self.textsetup then
+				self:PerformTextLayout()
+				self.textsetup = true
+			end
+		end
+
 		function GUI:Wrapping(bool)
 			self.wraptext = bool
-			self:InvalidateLayout()
+			self:PerformTextLayout()
 		end
 
 		function GUI:GetTextSize(text)
@@ -12867,7 +12887,7 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
-			for _=#reg, 1 do -- yet another minor optimization
+			for _=1, #reg do -- yet another minor optimization
 				if rawget(aux.network, "receivers") then
 					break
 				end
