@@ -958,9 +958,7 @@ do
 		hooks[name] = nil
 		self._registry_qa[name] = {}
 	end
-	function hook:AsyncCall(name, ...) -- Need async? no problem
-		coroutine.resume(coroutine.create(hook.Call), hook, name, ...)
-	end
+
 	function hook:Call(name, ...) -- Calls an array of hooks, and returns anything if needed
 		if not self.registry[name] then return end
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
@@ -1044,6 +1042,60 @@ do
 			end
 		end
 	end
+
+	-- Uses parallelization to make things run smoother
+	-- Do note returns may not be possible in this as it's basically multitasking
+	-- Obviously for now this is xpcall even though it's still in-line with the current thread
+	function hook:AsyncCall(name, ...)
+		if not self.registry[name] then return end
+		local tbl, tbln = self._registry_qa[name], self.registry[name]
+
+		if tbln[name] then
+			local func = tbln[name]
+			local ran, a, b, c, d, e, f = xpcall(func, debug.traceback, ...)
+			if not ran then
+				log(LOG_ERROR, "Hook Error - ", name, " - ", name)
+				log(LOG_ERROR, a)
+				log(LOG_WARN, "Removing to prevent cascade!")
+				for l=1, #tbl do
+					local v = tbl[l]
+					if v[1] == name then
+						table.remove(tbl, l); tbln[name] = nil
+						break
+					end
+				end
+			elseif a ~= nil then
+				return a, b, c, d, e, f
+			end
+		end
+
+		local _c = 0
+		for l=1, #tbl do
+			local k = l-_c
+			local v = tbl[k]
+			if v[1] ~= name then
+				local _name, func = v[1], v[2]
+				if not func then 
+					table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
+				else
+					if not _name then 
+						table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
+					else
+						local ran, a, b, c, d, e, f = xpcall(func, debug.traceback, ...)
+						if not ran then
+							log(LOG_ERROR, "Hook Error - ", name, " - ", _name)
+							log(LOG_ERROR, a)
+							log(LOG_WARN, "Removing to prevent cascade!")
+							table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
+						elseif a ~= nil then
+							return a, b, c, d, e, f
+						end
+					end
+				end
+			end
+		end
+	end
+
 	function hook:GetTable() -- Need the table of hooks or no?
 		return self.registry
 	end
@@ -1130,13 +1182,14 @@ do
 		end)
 		return t[2]
 	end
+
 	hook:Add("Unload", "Unload", function() -- Reloading the cheat? no problem.
 		for i=1, #connections do
 			connections[i]:Disconnect()
 		end
 		hook.killed = true
-		--[[self.registry = {}
-		self._registry_qa = {}]]
+		self.registry = {}
+		self._registry_qa = {}
 	end)
 end
 
@@ -2730,10 +2783,12 @@ do
 		local base = {}
 		gui.base = base
 
+		-- this is usually overwritten, called when the panel is created
 		function base:Init()
 			self:Calculate()
 		end
-	
+
+		-- set's the position of the panel, you can put a UDim2 or just raw values for this
 		function base:SetPos(xs, xo, ys, yo)
 			if typeof(xs) == "UDim2" then
 				self.pos = xs
@@ -2742,7 +2797,8 @@ do
 			end
 			self:Calculate()
 		end
-	
+
+		-- set's the size of the panel, you can put a UDim2 or just raw values for this
 		function base:SetSize(ws, wo, hs, ho)
 			if typeof(ws) == "UDim2" then
 				self.size = ws
@@ -2752,21 +2808,26 @@ do
 			self:Calculate()
 		end
 
+		-- size constraints forces the panel to restrict it's size depending on it's length or width
 		function base:SetSizeConstraint(type)
 			self.sizeconstraint = type
 		end
-	
+
+		-- returns a Vector2 of it's position local to it's parent
 		function base:GetPos()
 			return self.pos
 		end
-	
+
+		-- PerformLayout is called when the panel changes it's position or size, use this for drawing objects
 		function base:PerformLayout(pos, size)
 		end
 
+		-- Centers the panel to's parent
 		function base:Center()
 			self:SetPos(.5, -self.absolutesize.X/2, .5, -self.absolutesize.Y/2)
 		end
-	
+
+		-- Get's the absolute position and size in screen space
 		local camera = BBOT.service:GetService("CurrentCamera")
 		function base:GetLocalTranslation()
 			local psize = (self.parent and self.parent.absolutesize or camera.ViewportSize)
@@ -2785,28 +2846,32 @@ do
 			return Vector2.new(X, Y), Vector2.new(W, H)
 		end
 
-		function base:InvalidateLayout(recursive, force)
+		-- Forces a calculation of PerformLayout, if true is not passed, it only calculate if position or size has changed
+		function base:InvalidateLayout(force)
 			local ppos = (self.parent and self.parent.absolutepos or Vector2.new())
 			local pos, size = self:GetLocalTranslation()
 			local a = pos + ppos
-			local set
-			if not recursive or force or (self.absolutepos ~= a or self.absolutesize ~= size) then
+			if force or (self.absolutepos ~= a or self.absolutesize ~= size) then
 				self.absolutepos = a
 				self.absolutesize = size
 				self:PerformLayout(a, size)
-				if recursive then set = true end
+				return true
 			end
-			if set then
-				local children = self.children
-				for i=1, #children do
-					local v = children[i]
-					if gui:IsValid(v) and (force or v._enabled) then
-						v:InvalidateLayout(true, true)
-					end
+		end
+
+		-- Recursively does layout recaluclations, same purpose of InvalidateLayout just recursive
+		function base:InvalidateAllLayouts(force)
+			self:InvalidateLayout(force)
+			local children = self.children
+			for i=1, #children do
+				local v = children[i]
+				if gui:IsValid(v) then
+					v:InvalidateAllLayouts(force)
 				end
 			end
 		end
 
+		-- Calculate is responsible for everything the panel needs to do, try not to override this ok?
 		function base:Calculate()
 			if self.__INVALID then return end
 			local last_trans, last_zind, last_vis = self._transparency, self._zindex, self._visible
@@ -2832,15 +2897,18 @@ do
 				self._zindex = self.zindex + (self.focused and 10000 or 0)
 			end
 
+			local _layoutinvalidated
 			if self._enabled and gui:IsValid(self) then
-				self:InvalidateLayout()
+				_layoutinvalidated = self:InvalidateLayout()
 			end
 
-			if last_trans ~= self._transparency or last_zind ~= self.zindex or last_vis ~= self._visible or wasenabled ~= self._enabled then
+			local changed = last_trans ~= self._transparency or last_zind ~= self.zindex or last_vis ~= self._visible or wasenabled ~= self._enabled or _layoutinvalidated
+			if changed then
 				self:PerformDrawings()
 			end
 
-			if self._enabled or wasenabled then
+			-- Partly why this is expensive is recursion, we need to do this to make sure all sub panels inherit properties
+			if (self._enabled or wasenabled) and changed then
 				local children = self.children
 				for i=1, #children do
 					local v = children[i]
@@ -2868,6 +2936,7 @@ do
 			end
 		end
 
+		-- This calculate all of the drawing object's behavior
 		function base:PerformDrawings()
 			local cache = self.objects
 			for i=1, #cache do
@@ -2885,6 +2954,7 @@ do
 			end
 		end
 
+		-- Set's what the parented panel should be, putting nil will remove the parent
 		function base:SetParent(object)
 			if not object and self.parent then
 				local parent_children = self.parent.children
@@ -2915,7 +2985,9 @@ do
 			end
 		end
 
+		-- Get's every single child and sub children of a panel to a numerical table
 		function base:RecursiveToNumeric(children, destination)
+			destination = destination or {}
 			for i=1, #children do
 				local v = children[i]
 				if v.children and #v.children > 0 then
@@ -2925,18 +2997,20 @@ do
 			end
 		end
 
+		-- I do not need to explain this
 		function base:IsHovering()
 			return self.ishovering == true
 		end
 
+		-- Called when a mouse enters the panel's bounds
 		function base:OnMouseEnter() end
+		-- Called when a mouse leaves the panel's bounds
 		function base:OnMouseExit() end
 
+		-- Called the same way as "RenderStepped"
 		function base:Step() end
-		function base:PreRemove() end
-		function base:PostRemove() end
-		function base:PreDestroy() end
-		function base:PostDestroy() end
+
+		-- Use this to cache a drawing object into the panel, since the panel pretty much handles it all
 		function base:Cache(object, transparency, zindex, visible)
 			local objects = self.objects
 			local exists = false
@@ -2959,6 +3033,10 @@ do
 			end
 			return object
 		end
+
+		-- Calling Destroy will remove all drawing objects associated with the panel
+		function base:PreDestroy() end
+		function base:PostDestroy() end
 		function base:Destroy()
 			self:PreDestroy()
 			local objects = self.objects
@@ -2973,6 +3051,10 @@ do
 			end
 			self:PostDestroy()
 		end
+
+		-- Calling Remove will destory the panel and all drawing object associated
+		function base:PreRemove() end
+		function base:PostRemove() end
 		function base:Remove()
 			self.__INVALID = true
 			self:SetParent(nil)
@@ -3005,6 +3087,9 @@ do
 			end
 			self:PostRemove()
 		end
+
+		-- !!!!Absolute returns what the panel's total whatever is from it's parent!!!! --
+
 		function base:GetAbsoluteTransparency()
 			return self._transparency
 		end
@@ -3015,6 +3100,7 @@ do
 			self.transparency = t
 			self:Calculate()
 		end
+
 		function base:GetAbsoluteZIndex() -- the true zindex of the rendering objects
 			return self._zindex
 		end
@@ -3025,6 +3111,7 @@ do
 			self.zindex = index -- This controls both mouse inputs and rendering
 			self:Calculate() -- Re-calculate ZIndex for drawings in cache
 		end
+
 		function base:GetAbsoluteEnabled()
 			return self._enabled
 		end
@@ -3035,6 +3122,7 @@ do
 			self.enabled = bool
 			self:Calculate()
 		end
+
 		function base:GetAbsoluteVisible()
 			return self._visible
 		end
@@ -3045,12 +3133,16 @@ do
 			self.visible = bool
 			self:Calculate()
 		end
+
+		-- Focus is used to force the panel's ZIndex to be higher than others
+		-- This is hover pretty shittily done
 		function base:SetFocused(focus)
 			self.focused = focus
 			self:Calculate()
 		end
 	end
 
+	-- Use register to add a new panel class for creation, similar to like how base is done
 	function gui:Register(tbl, class, base)
 		base = (base and self.classes[base] or self.base)
 		if not base then base = self.base end
@@ -3059,6 +3151,7 @@ do
 		self.classes[class] = tbl
 	end
 
+	-- Create just makes the panel... Of course from the ones you have registered
 	local uid = 0
 	function gui:Create(class, parent)
 		local struct = {
@@ -3102,14 +3195,17 @@ do
 		return struct
 	end
 
+	-- Use this to check if a panel has been destroyed
 	function gui:IsValid(object)
 		if object and not object.__INVALID then
 			return true
 		end
 	end
 
+	-- This is so fucking bad but I kinda had no other way
 	do
 		local a = draw:TextOutlined("", 2, 5, 5, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0), 1, false)
+		-- Get's the text bounds based on font and size
 		function gui:GetTextSize(content, font, size)
 			a.Text = content
 			a.Font = font
@@ -3121,6 +3217,7 @@ do
 
 	local ScheduledObjects = {}
 
+	-- Checks if the panel is in a scheduled animation system
 	function gui:IsInAnimation(object)
 		for i=1, #ScheduledObjects do
 			local v = ScheduledObjects[i]
@@ -3173,6 +3270,7 @@ do
 			data.object:SetSize(data.origin + UDim2.new(XDim.Scale * fraction, XDim.Offset * fraction, YDim.Scale * fraction, YDim.Offset * fraction))
 		end
 
+		-- Sizes a GUI object to a certain UDim2 size
 		function gui:SizeTo(object, size, length, delay, ease, callback)
 			for i=1, #ScheduledObjects do
 				local v = ScheduledObjects[i]
@@ -3204,7 +3302,8 @@ do
 			local diff = data.target - data.origin
 			data.object:SetTransparency(data.origin + (diff * fraction))
 		end
-
+		
+		-- Animates transparency to a certain value
 		function gui:TransparencyTo(object, transparency, length, delay, ease, callback)
 			for i=1, #ScheduledObjects do
 				local v = ScheduledObjects[i]
@@ -3266,12 +3365,14 @@ do
 		end
 	end)
 
+	-- Checks if the panel is being hovered over
 	function gui:IsHovering(object)
 		if not object._enabled then return end
 		return mouse.X > object.absolutepos.X and mouse.X < object.absolutepos.X + object.absolutesize.X and mouse.Y > object.absolutepos.Y - 36 and mouse.Y < object.absolutepos.Y + object.absolutesize.Y - 36
 	end
 
 	local ishoveringuniversal
+	-- Check is the mouse is hovering any panel
 	function gui:IsHoveringAnObject()
 		return ishoveringuniversal
 	end
@@ -5259,7 +5360,7 @@ do
 				self.tablist.borderless = bool
 			end
 
-			self.tablist:InvalidateLayout(true, true)
+			self.tablist:InvalidateAllLayouts(true)
 		end
 
 		function GUI:GetActive()
@@ -5285,7 +5386,7 @@ do
 			end
 			new[1]:SetActive(true)
 			new[2]:SetEnabled(true)
-			new[2]:InvalidateLayout(true, true)
+			new[2]:InvalidateAllLayouts(true)
 			gui:TransparencyTo(new[2], 1, 0.2, 0, 0.25)
 			self.activeId = num
 		end
@@ -5636,18 +5737,18 @@ do
 							nick = cfg[#cfg]
 						end
 						if v.toggletype == 4 then
-                        	menu:UpdateStatus(nick, nil, true)
+							menu:UpdateStatus(nick, nil, true)
 						else
-                        	menu:UpdateStatus(nick, (v.value and "Enabled" or "Disabled"), true)
+							menu:UpdateStatus(nick, (v.value and "Enabled" or "Disabled"), true)
 						end
-                        config:GetRaw(unpack(v.config)).toggle = v.value
-                        hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
+						config:GetRaw(unpack(v.config)).toggle = v.value
+						hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
 						if v.toggletype == 4 then
 							v.value = false
 						end
-                        config:GetRaw(unpack(v.config)).toggle = v.value
-                    end
-                end
+						config:GetRaw(unpack(v.config)).toggle = v.value
+					end
+				end
 			end
 		end)
 
@@ -6587,7 +6688,7 @@ do
 				self.canvas:SetSize(1,0,1,0)
 			end
 
-			--self:InvalidateLayout(true, true)
+			--self:InvalidateAllLayouts(true)
 		end
 
 		function GUI:WheelForward()
@@ -6869,7 +6970,7 @@ do
 			end
 			local w = toggle.text:GetTextSize()
 			toggle:SetSize(0, 14 + w, 0, 8)
-			toggle:InvalidateLayout(true)
+			toggle:InvalidateAllLayouts(true)
 			toggle:SetValue(_config_module:GetValue(unpack(path)))
 			toggle.tooltip = config.tooltip
 			function toggle:OnValueChanged(new)
@@ -12896,7 +12997,7 @@ if BBOT.game == "phantom forces" then
 						v.updater._upd_setstance = nil
 					end
 				end
-                aux.replication.player_registry[localplayer] = nil
+				aux.replication.player_registry[localplayer] = nil
 				rawset(aux.replication, "player_registry", nil)
 				rawset(aux.replication, "_updater", nil)
 			end)
@@ -14412,9 +14513,9 @@ if BBOT.game == "phantom forces" then
 			end
 
 			function misc:IsPointInsidePart(part, point)
-			    local r = part.CFrame:PointToObjectSpace(point)
-			    local s = part.Size
-			    return math.abs(r.x) <= s.x/2 and math.abs(r.y) <= s.y/2 and math.abs(r.z) <= s.z/2
+				local r = part.CFrame:PointToObjectSpace(point)
+				local s = part.Size
+				return math.abs(r.x) <= s.x/2 and math.abs(r.y) <= s.y/2 and math.abs(r.z) <= s.z/2
 			end
 
 			local mapRaycastParams = RaycastParams.new()
@@ -14601,27 +14702,27 @@ if BBOT.game == "phantom forces" then
 			end)
 		end
 
-        local next_teleport = 0
-        hook:Add("OnAliveChanged", "BBOT:Misc.AutoTeleport", function(alive)
-            if alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["On Spawn"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind") then
-                next_teleport = tick() + 1
-                misc:TeleportToClosest()
-            end
-        end)
+		local next_teleport = 0
+		hook:Add("OnAliveChanged", "BBOT:Misc.AutoTeleport", function(alive)
+			if alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["On Spawn"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind") then
+				next_teleport = tick() + 1
+				misc:TeleportToClosest()
+			end
+		end)
 
-        hook:Add("Postupdatespawn", "BBOT:Misc.AutoTeleport", function()
-            if char.alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["On Enemy Spawn"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind") then
-                next_teleport = tick() + 1
-                misc:TeleportToClosest()
-            end
-        end)
+		hook:Add("Postupdatespawn", "BBOT:Misc.AutoTeleport", function()
+			if char.alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["On Enemy Spawn"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind") then
+				next_teleport = tick() + 1
+				misc:TeleportToClosest()
+			end
+		end)
 
-        hook:Add("RenderStep.Last", "BBOT:Misc.AutoTeleport", function()
-            if char.alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["Enemies Alive"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind")  and next_teleport < tick() then
-                next_teleport = tick() + 1
-                misc:TeleportToClosest()
-            end
-        end)
+		hook:Add("RenderStep.Last", "BBOT:Misc.AutoTeleport", function()
+			if char.alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["Enemies Alive"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind")  and next_teleport < tick() then
+				next_teleport = tick() + 1
+				misc:TeleportToClosest()
+			end
+		end)
 
 		hook:Add("OnConfigChanged", "BBOT:Misc.Fly", function(steps, old, new)
 			if config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly") and not config:IsPathwayEqual(steps, "Main", "Misc", "Movement", "Fly", "KeyBind") then
@@ -15202,9 +15303,9 @@ if BBOT.game == "phantom forces" then
 			end
 		end
 
-        local last_predicted = nil
+		local last_predicted = nil
 		hook:Add("RageBot.DamagePredictionKilled", "BBOT:AntiGrenadeTP", function(Entity)
-            if last_predicted == Entity then return end
+			if last_predicted == Entity then return end
 			timer:Async(function()
 				hook:Add("Heartbeat", "BBOT:AntiGrenadeTP", function()
 					hook:Remove("Heartbeat", "BBOT:AntiGrenadeTP")
@@ -15215,7 +15316,7 @@ if BBOT.game == "phantom forces" then
 					end)
 				end)
 			end)
-            last_predicted = Entity
+			last_predicted = Entity
 		end)
 
 		hook:Add("PreBigAward", "BBOT:AntiGrenadeTP", function()
@@ -15231,8 +15332,8 @@ if BBOT.game == "phantom forces" then
 		end
 
 		function misc:ForceRepupdate(pos, ang)
-            local l__angles__1304 = BBOT.aux.camera.angles;
-		    network:send("repupdate", pos or char.rootpart.Position, ang or Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
+			local l__angles__1304 = BBOT.aux.camera.angles;
+			network:send("repupdate", pos or char.rootpart.Position, ang or Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
 		end
 
 		hook:Add("SuppressNetworkSend", "BBOT:Blink", function(networkname, pos, ang, timestamp)
@@ -15597,7 +15698,7 @@ if BBOT.game == "phantom forces" then
 		local hook = BBOT.hook
 		local config = BBOT.config
 		local timer = BBOT.timer
-        local camera = BBOT.aux.camera
+		local camera = BBOT.aux.camera
 		local char = BBOT.aux.char
 		local replication = BBOT.aux.replication
 		local gamelogic = BBOT.aux.gamelogic
@@ -15803,7 +15904,7 @@ if BBOT.game == "phantom forces" then
 		end)
 
 		hook:Add("OnConfigChanged", "BBOT:L3P.Enable", function(steps, old, new)
-            if config:IsPathwayEqual(steps, "Main", "Visuals", "Local", "Enabled") then
+			if config:IsPathwayEqual(steps, "Main", "Visuals", "Local", "Enabled") then
 				if not l3p.controller then return end
 				if new then
 					BBOT.esp:CreatePlayer(l3p.player, l3p.controller)
@@ -15811,14 +15912,14 @@ if BBOT.game == "phantom forces" then
 					BBOT.esp:Remove("PLAYER_"..l3p.player.UserId)
 				end
 			elseif config:IsPathwayEqual(steps, "Main", "Visuals", "Camera Visuals", "Third Person", true) then
-                if new then
-                    timer:Async(function()
-                        l3p:Enabled(new and config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person", "KeyBind"))
-                    end)
-                else
-                    l3p:Enabled(false)
-                end
-            end
+				if new then
+					timer:Async(function()
+						l3p:Enabled(new and config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person", "KeyBind"))
+					end)
+				else
+					l3p:Enabled(false)
+				end
+			end
 		end)
 
 
@@ -16678,14 +16779,14 @@ if BBOT.game == "phantom forces" then
 					if not aimbot.predictedDamageDealt[Entity] then
 						aimbot.predictedDamageDealt[Entity] = 0
 					end
-                    local limit = aimbot:GetRageConfig("Settings", "Damage Prediction Limit")
+					local limit = aimbot:GetRageConfig("Settings", "Damage Prediction Limit")
 					if aimbot.predictedDamageDealt[Entity] < limit then
-                        aimbot.predictedDamageDealt[Entity] += damageDealt
-                        if aimbot.predictedDamageDealt[Entity] >= limit then
-                            hook:Call("RageBot.DamagePredictionKilled", Entity)
-                        end
-					    aimbot.predictedDamageDealtRemovals[Entity] = tick() + extras:getLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
-                    end
+						aimbot.predictedDamageDealt[Entity] += damageDealt
+						if aimbot.predictedDamageDealt[Entity] >= limit then
+							hook:Call("RageBot.DamagePredictionKilled", Entity)
+						end
+						aimbot.predictedDamageDealtRemovals[Entity] = tick() + extras:getLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
+					end
 				end
 				syn.set_thread_identity(curthread)
 			elseif netname == "newbullets" and gamelogic.currentgun and gamelogic.currentgun.data then
