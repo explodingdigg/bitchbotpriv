@@ -17161,12 +17161,12 @@ if BBOT.game == "phantom forces" then
 				local specific = self.calc_target
 				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
 				local penetration_depth = gun.data.penetrationdepth * wall_scale/100
-
+			
 				local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
 				local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
 				local priority_only = self:GetRageConfig("Settings", "Priority Only")
 				local latency = extras:getLatency()
-
+			
 				local plys = {} -- the table of players we are going to scan for
 				local target_priority_found = {} -- the players we found from the priority list array
 				local target_found = {} -- the players we found from the normal list array
@@ -17181,7 +17181,7 @@ if BBOT.game == "phantom forces" then
 							break
 						end
 					end
-
+			
 					local len = #self.ragebot_next
 					for i=1, len do
 						local v = self.ragebot_next[i]
@@ -17226,7 +17226,7 @@ if BBOT.game == "phantom forces" then
 							end
 						end
 					end
-
+			
 					if not priority_only then
 						local count, c = 0, 0
 						local len = #self.ragebot_next
@@ -17249,12 +17249,12 @@ if BBOT.game == "phantom forces" then
 						end
 					end
 				end
-
+			
 				--.75
 				local vecdown = Vector3.new(0,1.55,0)
-				local organizedPlayers = {}
+				local targeted = {}
 				for i=1, #plys do -- here we calculate if they are hittable using the points the config has setup for us
-					-- players we find is hittable we insert into organizedPlayers
+					-- players we find is hittable we insert into targeted
 					-- here's the structure
 					--[[
 						{
@@ -17266,7 +17266,7 @@ if BBOT.game == "phantom forces" then
 							traceamount -- the length of the penetration we had to go through
 						}
 					]]
-
+			
 					local v = plys[i]
 					local updater = replication.getupdater(v)
 					local parts = self:GetParts(v)
@@ -17285,7 +17285,7 @@ if BBOT.game == "phantom forces" then
 						local pos = (isabsolute and resolver_offset or abspos + resolver_offset)
 						if (aimbot_fov >= 180 or not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
 							if wall_scale > 120 then
-								table.insert(organizedPlayers, {v, part, pos, cam_position, false, 0})
+								table.insert(targeted, {v, part, pos, cam_position, false, 0})
 							else
 								local lookatme = CFrame.new(blank_vector, pos-cam_position)
 								local targetcframe = CFrame.new(cam_position)
@@ -17361,7 +17361,7 @@ if BBOT.game == "phantom forces" then
 													tp_hit = true
 												end
 												-- ey we hit, let's add it to the list
-												table.insert(organizedPlayers, {v, part, pos, cam_position, (u > tp_scanning_points), traceamount})
+												table.insert(targeted, {v, part, pos, cam_position, (u > tp_scanning_points), traceamount})
 											end
 										end
 									end
@@ -17370,52 +17370,36 @@ if BBOT.game == "phantom forces" then
 						end
 					end
 				end
-
-				local len_organizedPlayers = #organizedPlayers
-				if len_organizedPlayers < 1 then return end
-
-				-- next here we get the first player we hit, and then add all of his hittable points to a table
-				-- yea I know I think this is bad idea
-				local target = organizedPlayers[1]
-				local minimum_pen = {}
-				for i=1, #organizedPlayers do
-					local v = organizedPlayers[i]
-					check[v[1]] = true
-					if v[1] ~= target[1] then continue end
-					minimum_pen[#minimum_pen+1] = v
-				end
-				
-				-- We then sort for the smallest penetration needed to make a hit
-				table.sort(minimum_pen, function(a, b)
-					return a[6] < b[6]
-				end)
-
+			
+				local len_targeted = #targeted
+				if len_targeted < 1 then return end
+			
 				-- If we are TP scanning, we need to move then delay and fire, so this solves that by shifting the array back to the original
-				if minimum_pen[1] and minimum_pen[1][5] then
-					if target_priority_found[minimum_pen[1][1]] then
+				if targeted[1] and targeted[1][5] then
+					if target_priority_found[targeted[1][1]] then
 						local ragebot_prioritynext = self.ragebot_prioritynext
 						for i=1, #ragebot_prioritynext do
 							local v = ragebot_prioritynext[i]
-							if v ~= minimum_pen[1][1] then continue end
+							if v ~= targeted[1][1] then continue end
 							table.remove(ragebot_prioritynext, i)
 							table.insert(ragebot_prioritynext, 1, v)
 							break
 						end
 					end
-	
-					if target_found[minimum_pen[1][1]] then
+			
+					if target_found[targeted[1][1]] then
 						local ragebot_next = self.ragebot_next
 						for i=1, #ragebot_next do
 							local v = ragebot_next[i]
-							if v ~= minimum_pen[1][1] then continue end
+							if v ~= targeted[1][1] then continue end
 							table.remove(ragebot_next, i)
 							table.insert(ragebot_next, 1, v)
 							break
 						end
 					end
 				end
-
-				return minimum_pen[1]
+			
+				return targeted[1]
 			end
 		end
 
