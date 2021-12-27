@@ -4352,14 +4352,22 @@ do
 
 		function GUI:PerformLayout(pos, size, posshift, sizeshift)
 			self.text.Position = pos + self.offset
-			if not sizeshift then return end
-			self:PerformTextLayout()
 		end
 
 		function GUI:Step()
 			if not self.textsetup and self.offset then
 				self:PerformTextLayout()
 				self.textsetup = true
+			end
+			-- kinda gey ngl
+			if self.parent then
+				if not self._parent_size then
+					self._parent_size = self.parent.absolutesize
+				end
+				if self._parent_size ~= self.parent.absolutesize then
+					self._parent_size = self.parent.absolutesize
+					self:PerformTextLayout()
+				end
 			end
 		end
 
@@ -17831,12 +17839,15 @@ if BBOT.game == "phantom forces" then
 
 			local lastrot = 0
 			function aimbot:CrosshairStep(delta, gun)
+				local enabled = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled")
 				local positionoverride, ondascreen
 				if gun then
 					local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 					if part then
-						for k, v in pairs(crosshair_objects) do
-							v.Visible = false
+						if enabled then
+							for k, v in pairs(crosshair_objects) do
+								v.Visible = false
+							end
 						end
 						ondascreen = false
 
@@ -17861,8 +17872,10 @@ if BBOT.game == "phantom forces" then
 							end
 						end
 						if positionoverride then
-							for k, v in pairs(crosshair_objects) do
-								v.Visible = true
+							if enabled then
+								for k, v in pairs(crosshair_objects) do
+									v.Visible = true
+								end
 							end
 							ondascreen = true
 						end
@@ -17870,7 +17883,7 @@ if BBOT.game == "phantom forces" then
 				end
 
 				hook:Call("PreCalculateCrosshair", (positionoverride and positionoverride or (camera.ViewportSize/2)), ondascreen)
-				if not config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Enabled") then return end
+				if not enabled then return end
 
 				local setup = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Setup")
 				local gap = config:GetValue("Main", "Visuals", "Crosshair", "Basic", "Gap")
