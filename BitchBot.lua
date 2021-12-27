@@ -17473,14 +17473,16 @@ if BBOT.game == "phantom forces" then
 				if target and target[5] and not self.tp_scanning and not self.tp_scanning_cooldown then
 					local original_position = char.rootpart.Position
 					local target_pos = target[4]
-					BBOT.misc:UnBlink()
+					BBOT.misc:UnBlink() -- obivously don't want to fake lagging during this
 					self.tp_scanning = target_pos
 					self.tp_ignore = true
-					BBOT.misc:MoveCharTo(target_pos)
+					-- we move this so that server-side our humanoid root part will appear in the exact position as the repupdate
+					BBOT.misc:MoveCharTo(target_pos) -- move our humanoid root part (not repupdate)
 					self.tp_scanning_blockrep = true
 					self.tp_scanning_cooldown = true
 					char.rootpart.Anchored = true
 					local heartbeat_ticks = 1
+					-- here we let roblox's part replication tell the server we moved
 					hook:Add("Heartbeat", "BBOT:RageBot.TPScan", function()
 						if heartbeat_ticks > 0 then
 							heartbeat_ticks = heartbeat_ticks - 1
@@ -17501,16 +17503,19 @@ if BBOT.game == "phantom forces" then
 							end
 							self.tp_ignore = false
 							self.tp_scanning_blockrep = false
+							-- now that our humanoid is exactly where we want it, we force repupdate to move
 							BBOT.misc:MoveTo(target_pos, true)
+							-- then fire our bullet
 							if gamelogic.currentgun and gamelogic.currentgun.firestep then
 								gamelogic.currentgun.firestep(0)
 							end
 							if char.rootpart then
 								char.rootpart.Anchored = false
 							end
+							-- then return our repupdate and our humanoid to where we were
 							BBOT.misc:MoveTo(original_position, true)
 							self.tp_scanning = false
-							timer:Simple(0.5,function()
+							timer:Simple(0.5,function() -- delay to make things... not... chaotic
 								self.tp_scanning_cooldown = false
 							end)
 						end)
