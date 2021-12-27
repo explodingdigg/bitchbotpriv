@@ -17165,22 +17165,12 @@ if BBOT.game == "phantom forces" then
 				local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
 				local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
 				local priority_only = self:GetRageConfig("Settings", "Priority Only")
-				local plys = {}
-				--[[local p = players:GetPlayers()
-				for i=1, #p do
-					local v = p[i]
-					local priority = config.priority[v.UserId] or 0
-					if priority > 0 then
-						table.insert(plys, 1, v)
-					elseif priority == 0 and not priority_only then
-						plys[#plys+1] = v
-					end
-				end]]
 				local latency = extras:getLatency()
 
-				local target_priority_found = {}
-				local target_found = {}
-				if specific then
+				local plys = {} -- the table of players we are going to scan for
+				local target_priority_found = {} -- the players we found from the priority list array
+				local target_found = {} -- the players we found from the normal list array
+				if specific then -- scanning for 1 player, like when they spawn
 					local reg, index
 					local len = #self.ragebot_prioritynext
 					for i=1, len do
@@ -17212,7 +17202,9 @@ if BBOT.game == "phantom forces" then
 						plys[#plys+1] = v
 						reg[v] = index
 					end
-				else
+				else -- here we determine who should be added to table "plys"
+					-- think of this as a regulator to scan a certain number of players per frame
+					-- default it's 1 player per frame
 					do
 						local count, c = 0, 0
 						local len = #self.ragebot_prioritynext
@@ -17260,9 +17252,21 @@ if BBOT.game == "phantom forces" then
 
 				--.75
 				local vecdown = Vector3.new(0,1.55,0)
-
 				local organizedPlayers = {}
-				for i=1, #plys do
+				for i=1, #plys do -- here we calculate if they are hittable using the points the config has setup for us
+					-- players we find is hittable we insert into organizedPlayers
+					-- here's the structure
+					--[[
+						{
+							v, -- the player
+							part, -- the part we are hitting
+							pos, -- the position we are hitting
+							cam_position, -- the firing position
+							(u > tp_scanning_points), -- are we TP scanning to them?
+							traceamount -- the length of the penetration we had to go through
+						}
+					]]
+
 					local v = plys[i]
 					local updater = replication.getupdater(v)
 					local parts = self:GetParts(v)
@@ -17279,10 +17283,9 @@ if BBOT.game == "phantom forces" then
 					local tp_hit = false
 					if part then
 						local pos = (isabsolute and resolver_offset or abspos + resolver_offset)
-							--local object_fov = self:GetFOV(part, scan_part)
 						if (aimbot_fov >= 180 or not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
 							if wall_scale > 120 then
-								table.insert(organizedPlayers, {v, part, pos, prioritize})
+								table.insert(organizedPlayers, {v, part, pos, cam_position, false, 0})
 							else
 								local lookatme = CFrame.new(blank_vector, pos-cam_position)
 								local targetcframe = CFrame.new(cam_position)
@@ -17290,6 +17293,9 @@ if BBOT.game == "phantom forces" then
 									local fp_name = firepos_points_name[i]
 									local newcf
 									if not (i > tp_scanning_points) then
+										-- this is the point selection thingy
+										-- if point is a vector3 it's a static offset
+										-- while a cframe is a relative offset
 										if fp_name == "Random" then
 											local offset = vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance))
 											newcf = targetcframe + offset
@@ -17308,6 +17314,7 @@ if BBOT.game == "phantom forces" then
 											end
 										end
 									else
+										-- this is for TP scanning points also relative btw
 										if tp_hit then
 											continue
 										end
@@ -17323,6 +17330,8 @@ if BBOT.game == "phantom forces" then
 										local targetcframe = CFrame.new(pos)
 										for i=1, #hitbox_points do
 											local hb_name = hitbox_points_name[i]
+											-- relative only goes like this, only points with an UP and UP can hit
+											-- cross relative is UP and DOWN can hit
 											if (relative_only or cross_relative_only) and fp_name ~= "Any" and hb_name ~= "Any" then
 												if relative_only and fp_name ~= hb_name then
 													if cross_relative_only and cross_relatives[fp_name] ~= hb_name then
@@ -17334,6 +17343,9 @@ if BBOT.game == "phantom forces" then
 													continue
 												end
 											end
+											-- this is the point selection thingy
+											-- if point is a vector3 it's a static offset
+											-- while a cframe is a relative offset
 											local newcf
 											if hb_name == "Random" then
 												newcf = targetcframe * CFrame.new(vector.randomspherepoint(math.random(-hitbox_shift_distance, hitbox_shift_distance)))
@@ -17348,7 +17360,8 @@ if BBOT.game == "phantom forces" then
 												if not (u > tp_scanning_points) then
 													tp_hit = true
 												end
-												table.insert(organizedPlayers, {v, part, pos, cam_position, prioritize, (u > tp_scanning_points), traceamount})
+												-- ey we hit, let's add it to the list
+												table.insert(organizedPlayers, {v, part, pos, cam_position, (u > tp_scanning_points), traceamount})
 											end
 										end
 									end
@@ -17361,6 +17374,8 @@ if BBOT.game == "phantom forces" then
 				local len_organizedPlayers = #organizedPlayers
 				if len_organizedPlayers < 1 then return end
 
+				-- next here we get the first player we hit, and then add all of his hittable points to a table
+				-- yea I know I think this is bad idea
 				local target = organizedPlayers[1]
 				local minimum_pen = {}
 				for i=1, #organizedPlayers do
@@ -17370,11 +17385,13 @@ if BBOT.game == "phantom forces" then
 					minimum_pen[#minimum_pen+1] = v
 				end
 				
+				-- We then sort for the smallest penetration needed to make a hit
 				table.sort(minimum_pen, function(a, b)
-					return a[7] < b[7]
+					return a[6] < b[6]
 				end)
 
-				if minimum_pen[1] and minimum_pen[1][6] then
+				-- If we are TP scanning, we need to move then delay and fire, so this solves that by shifting the array back to the original
+				if minimum_pen[1] and minimum_pen[1][5] then
 					if target_priority_found[minimum_pen[1][1]] then
 						local ragebot_prioritynext = self.ragebot_prioritynext
 						for i=1, #ragebot_prioritynext do
@@ -17453,7 +17470,7 @@ if BBOT.game == "phantom forces" then
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
 				local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
-				if target and target[6] and not self.tp_scanning and not self.tp_scanning_cooldown then
+				if target and target[5] and not self.tp_scanning and not self.tp_scanning_cooldown then
 					local original_position = char.rootpart.Position
 					local target_pos = target[4]
 					BBOT.misc:UnBlink()
