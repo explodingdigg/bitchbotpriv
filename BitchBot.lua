@@ -3217,9 +3217,9 @@ do
 		local a = draw:TextOutlined("", 2, 5, 5, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0), 1, false)
 		-- Get's the text bounds based on font and size
 		function gui:GetTextSize(content, font, size)
-			a.Text = content
-			a.Font = font
-			a.Size = size
+			a.Text = content or ""
+			a.Font = font or 2
+			a.Size = size or 13
 			local bounds = a.TextBounds
 			return bounds
 		end
@@ -3393,7 +3393,7 @@ do
 		local inhover = {}
 		for i=1, #reg do
 			local v = reg[i]
-			if v and not v.__INVALID and v.class ~= "Mouse" and gui:IsHovering(v) then
+			if v.class ~= "Mouse" and gui:IsHovering(v) then
 				if v.mouseinputs then
 					inhover[#inhover+1] = v
 				end
@@ -3436,10 +3436,8 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and not v.__INVALID then
-				if v.WheelForward then
-					v:WheelForward()
-				end
+			if v.WheelForward then
+				v:WheelForward()
 			end
 		end
 	end)
@@ -3448,10 +3446,8 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and not v.__INVALID then
-				if v.WheelBackward then
-					v:WheelBackward()
-				end
+			if v.WheelBackward then
+				v:WheelBackward()
 			end
 		end
 	end)
@@ -3460,7 +3456,7 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and not v.__INVALID and not v.parent then
+			if not v.parent then
 				v:Calculate()
 			end
 		end
@@ -3470,10 +3466,8 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and not v.__INVALID then
-				if v.Step then
-					v:Step(delta)
-				end
+			if v.Step then
+				v:Step(delta)
 			end
 		end
 	end)
@@ -3482,10 +3476,8 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and not v.__INVALID then
-				if v.InputBegan then
-					v:InputBegan(input)
-				end
+			if v and v.InputBegan then
+				v:InputBegan(input)
 			end
 		end
 	end)
@@ -3494,10 +3486,8 @@ do
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
-			if v and not v.__INVALID then
-				if v.InputEnded then
-					v:InputEnded(input)
-				end
+			if v and v.InputEnded then
+				v:InputEnded(input)
 			end
 		end
 	end)
@@ -4330,16 +4320,17 @@ do
 		end
 
 		function GUI:PerformTextLayout()
-			local x = self:GetTextSize(self.content)
+			local _text = self.content or ""
+			local text = self.content or ""
+			local x = self:GetTextSize(_text)
 			local pos = self:GetLocalTranslation()
 			local size = self.parent.absolutesize
-			local text = self.content
 			if self.wraptext then
-				self.text.Text = table.concat(string.WrapText(self.content, self.text.Font, self.text.Size, size.X - pos.X - 6), "\n")
+				self.text.Text = table.concat(string.WrapText(_text, self.text.Font, self.text.Size, size.X - pos.X - 6), "\n")
 			elseif x + pos.X + self.offset.X - 4 >= size.X then
 				text = ""
-				for i=1, #self.content do
-					local v = string.sub(self.content, i, i)
+				for i=1, #_text do
+					local v = string.sub(_text, i, i)
 					local pretext = text .. v
 					local prex = self:GetTextSize(pretext)
 					if prex + pos.X + self.offset.X - 4 > size.X then
@@ -4360,7 +4351,7 @@ do
 		end
 
 		function GUI:Step()
-			if not self.textsetup then
+			if not self.textsetup and self.offset then
 				self:PerformTextLayout()
 				self.textsetup = true
 			end
@@ -10830,6 +10821,7 @@ do
 										type = "Button",
 										name = "Crash Server",
 										value = false,
+										unsafe = true,
 										confirm = "DDoS the Server?",
 										tooltip = "Forces the server to send ~3 MB of data back to the client repeatedly. A message will be sent to the console menu when the bloat request completes, meaning that the server will imminently crash; this may take a while depending on internet connection speed.",
 										callback = function()
