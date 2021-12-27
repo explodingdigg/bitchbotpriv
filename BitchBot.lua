@@ -2988,6 +2988,7 @@ do
 		-- Get's every single child and sub children of a panel to a numerical table
 		function base:RecursiveToNumeric(children, destination)
 			destination = destination or {}
+			children = children or self.children
 			for i=1, #children do
 				local v = children[i]
 				if v.children and #v.children > 0 then
@@ -2995,6 +2996,7 @@ do
 				end
 				destination[#destination+1] = v
 			end
+			return destination
 		end
 
 		-- I do not need to explain this
