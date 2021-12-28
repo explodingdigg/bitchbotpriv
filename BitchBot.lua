@@ -1100,6 +1100,7 @@ do
 		return self.registry
 	end
 	local connections = {}
+	hook.connections = connections
 	function hook:bindEvent(event, name) -- Creates a hook instance for a roblox signal, only use this for permanent binds NOT temporary!
 		local con = event:Connect(function(...)
 			self:CallP(name, ...)
@@ -1182,15 +1183,6 @@ do
 		end)
 		return t[2]
 	end
-
-	hook:Add("Unload", "Unload", function() -- Reloading the cheat? no problem.
-		for i=1, #connections do
-			connections[i]:Disconnect()
-		end
-		hook.killed = true
-		self.registry = {}
-		self._registry_qa = {}
-	end)
 end
 
 -- Hook additions
@@ -1203,14 +1195,25 @@ do
 	local runservice = BBOT.service:GetService("RunService")
 	local userinputservice = BBOT.service:GetService("UserInputService")
 	local mouse = BBOT.service:GetService("Mouse")
-	hook:Add("Unload", "BBOT:Hooks.Services", function()
+	hook:Add("Unload", "Unload", function() -- Reloading the cheat? no problem.
 		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-First")
 		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Input")
 		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Camera")
 		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Character")
 		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Last")
 		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-R")
+		local connections = hook.connections
+		for i=1, #connections do
+			connections[i]:Disconnect()
+		end
+		hook.killed = true
+		coroutine.wrap(function()
+			task.wait(1)
+			self.registry = {}
+			self._registry_qa = {}
+		end)
 	end)
+
 
 	hook:bindEvent(userinputservice.InputBegan, "InputBegan")
 	hook:bindEvent(userinputservice.InputEnded, "InputEnded")
@@ -3217,6 +3220,7 @@ do
 		local a = draw:TextOutlined("", 2, 5, 5, 13, false, Color3.fromRGB(255,255,255), Color3.fromRGB(0,0,0), 1, false)
 		-- Get's the text bounds based on font and size
 		function gui:GetTextSize(content, font, size)
+			if not draw:IsValid(a) then return Vector2.new() end
 			a.Text = content or ""
 			a.Font = font or 2
 			a.Size = size or 13
@@ -4662,8 +4666,10 @@ do
 					self:ProcessClipping()
 				end
 			end
-			local w, h = self:GetTextSize(self.content)
-			self.text.Position = Vector2.new(self.absolutepos.X+3,self.absolutepos.Y - (h/2) + (self.absolutesize.Y/2))
+			if draw:IsValid(self.text) then
+				local w, h = self:GetTextSize(self.content)
+				self.text.Position = Vector2.new(self.absolutepos.X+3,self.absolutepos.Y - (h/2) + (self.absolutesize.Y/2))
+			end
 		end
 
 		function GUI:InputEnded(input)
@@ -10613,6 +10619,13 @@ do
 										unsafe = true,
 									},
 									{
+										type = "Toggle",
+										name = "Simple Characters",
+										value = false,
+										unsafe = true,
+										tooltip = "Disables higher-end character rendering."
+									},
+									{
 										type = "Button",
 										name = "Banlands",
 										confirm = "Are you 100% sure?",
@@ -14363,6 +14376,12 @@ if BBOT.game == "phantom forces" then
 				elseif game_version then
 					version.Text = game_version
 				end
+			end
+		end)
+
+		hook:Add("PreupdateStep", "BBOT:Misc.DeRenderAll", function(player, controller, renderscale, shouldrender)
+			if config:GetValue("Main", "Misc", "Extra", "Simple Characters") then
+				return 0, false
 			end
 		end)
 
