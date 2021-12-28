@@ -3916,10 +3916,6 @@ do
 					self:SetTransparency(0)
 				end
 				self.ishoverobject = ishoverobj
-
-				if not ishoverobj then
-					userinputservice.MouseIconEnabled = true
-				end
 			end
 
 			local objecthover = gui.hovering
@@ -7649,10 +7645,14 @@ do
 			end
 		end
 		if config:IsPathwayEqual(steps, "Main", "Settings", "Cheat Settings", "Custom Watermark") then
-			if new == "Bitch Bot" then
+			if new == "" then
+				infobar:SetTransparency(0)
+			elseif new == "Bitch Bot" then
+				infobar:SetTransparency(1)
 				menu:ProcessInfoBar("Bitch Bot | {username} | {date} | version {version}")
 				client_info.barinfo = "Bitch Bot | {username} | {date} | version {version}"
 			else
+				infobar:SetTransparency(1)
 				menu:ProcessInfoBar(new)
 				client_info.barinfo = new
 			end
