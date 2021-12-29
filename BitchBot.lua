@@ -32,15 +32,11 @@ end
 local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.1.16a [in-dev]", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
---[[while true do
+while true do
 	if game:IsLoaded() then
 		break
 	end;
 	wait(.25)
-end]]
-
-if not game:IsLoaded() then
-	game.Loaded:Wait()
 end
 
 -- This should always start before hand, this module is responsible for debugging
@@ -616,141 +612,6 @@ do
 	end
 end
 
--- Color
-do
-	local math = BBOT.math
-	local color = {}
-	BBOT.color = color
-
-	function color.range(value, ranges) -- ty tony for dis function u a homie
-		if value <= ranges[1].start then
-			return ranges[1].color
-		end
-		if value >= ranges[#ranges].start then
-			return ranges[#ranges].color
-		end
-
-		local selected = #ranges
-		for i = 1, #ranges - 1 do
-			if value < ranges[i + 1].start then
-				selected = i
-				break
-			end
-		end
-		local minColor = ranges[selected]
-		local maxColor = ranges[selected + 1]
-		local lerpValue = (value - minColor.start) / (maxColor.start - minColor.start)
-		return Color3.new(
-			math.lerp(lerpValue, minColor.color.r, maxColor.color.r),
-			math.lerp(lerpValue, minColor.color.g, maxColor.color.g),
-			math.lerp(lerpValue, minColor.color.b, maxColor.color.b)
-		)
-	end
-
-	-- I also wish we could just add this to the Color3 metatable...
-	function color.mul(col, mult)
-		return Color3.new(col.R * mult, col.G * mult, col.B * mult)
-	end
-
-	function color.add(col, num)
-		return Color3.new(col.R + num, col.G + num, col.B + num)
-	end
-
-	function color.darkness(col, scale)
-		local h, s, v = Color3.toHSV(col)
-		return Color3.fromHSV(h, s, v*scale)
-	end
-
-	function color.tohex(col)
-		return string.format("#%02X%02X%02X", col.r * 255, col.g * 255, col.b * 255)
-	end
-end
-
--- Vector
-do 
-	local vec0 = Vector3.new()
-	local dot = vec0.Dot
-	local math = BBOT.math
-	local vector = {}
-	BBOT.vector = vector
-
-	-- I also wish we could just add this to the Vector3 metatable...
-	function vector.rotate(Vec, Rads)
-		local vec = Vec.Unit
-		--x2 = cos β x1 − sin β y1
-		--y2 = sin β x1 + cos β y1
-		local sin = math.sin(Rads)
-		local cos = math.cos(Rads)
-		local x = (cos * vec.x) - (sin * vec.y)
-		local y = (sin * vec.x) + (cos * vec.y)
-
-		return Vector2.new(x, y).Unit * Vec.Magnitude
-	end
-
-	-- msg from cream - this is called pythagorean theorem btw, the guy you found it from doesn't know math...
-	function vector.dist2d ( pos1, pos2 )
-		local dx = pos1.X - pos2.X
-		local dy = pos1.Y - pos2.Y
-		return math.sqrt ( dx * dx + dy * dy )
-	end
-
-	-- creates a random point around a sphere
-	function vector.randomspherepoint(radius)
-		local theta = math.random() * 2 * math.pi
-		local phi = math.acos(2 * math.random() - 1)
-		return Vector3.new(radius * math.sin(phi) * math.cos(theta), radius * math.sin(phi) * math.sin(theta), radius * math.cos(phi))
-	end
-end
-
--- Physics
-do
-	local vec0 = Vector3.new()
-	local dot = vec0.Dot
-	local vector = BBOT.vector
-	local math = BBOT.math
-	local physics = {}
-	BBOT.physics = physics
-
-	-- Used to determine the time of the bullet hitting, more like an assumption to be honest since you
-	-- have a range which is basically max > t > min
-	function physics.timehit(pos_f, v_i, g, pos_i)
-		local delta_d = pos_f - pos_i;
-		local roots = { math.quartic(dot(g, g), 3 * dot(g, v_i), 2 * (dot(g, delta_d) + dot(v_i, v_i)), 2 * dot(delta_d, v_i)) };
-		local min = 0;
-		local max = (1 / 0);
-		for v37 = 1, #roots do
-			local t = roots[v37];
-			local t_max = (delta_d + t * v_i + t * t / 2 * g).magnitude;
-			if min < t and t_max < max then
-				min = t;
-				max = t_max;
-			end;
-		end;
-		return min, max;
-	end;
-
-	-- used to find a unit vector of theta in projectile motion of a 3D space
-	function physics.trajectory(pos_i, g, pos_f, v_i)
-		local delta_d = pos_f - pos_i
-		g = -g
-		-- btw dot of itself is basically vector^2
-		local r_1, r_2, r_3, r_4 = math.quartic(dot(g, g) / 4, 0, dot(g, delta_d) - v_i * v_i, 0, dot(delta_d, delta_d))
-		if r_1 and r_1 > 0 then
-			return g * r_1 / 2 + delta_d / r_1, r_1
-		end;
-		if r_2 and r_2 > 0 then
-			return g * r_2 / 2 + delta_d / r_2, r_2
-		end;
-		if r_3 and r_3 > 0 then
-			return g * r_3 / 2 + delta_d / r_3, r_3
-		end;
-		if not r_4 or not (r_4 > 0) then
-			return;
-		end;
-		return g * r_4 / 2 + delta_d / r_4, r_4
-	end
-end
-
 -- String
 do
 	local math = BBOT.math
@@ -847,6 +708,166 @@ do
 		end
 
 		return ret_proccessed
+	end
+end
+
+-- Color
+do
+	local math = BBOT.math
+	local table = BBOT.table
+	local string = BBOT.string
+	local color = {}
+	BBOT.color = color
+
+	function color.range(value, ranges) -- ty tony for dis function u a homie
+		if value <= ranges[1].start then
+			return ranges[1].color
+		end
+		if value >= ranges[#ranges].start then
+			return ranges[#ranges].color
+		end
+
+		local selected = #ranges
+		for i = 1, #ranges - 1 do
+			if value < ranges[i + 1].start then
+				selected = i
+				break
+			end
+		end
+		local minColor = ranges[selected]
+		local maxColor = ranges[selected + 1]
+		local lerpValue = (value - minColor.start) / (maxColor.start - minColor.start)
+		return Color3.new(
+			math.lerp(lerpValue, minColor.color.r, maxColor.color.r),
+			math.lerp(lerpValue, minColor.color.g, maxColor.color.g),
+			math.lerp(lerpValue, minColor.color.b, maxColor.color.b)
+		)
+	end
+
+	-- I also wish we could just add this to the Color3 metatable...
+	function color.mul(col, mult)
+		return Color3.new(col.R * mult, col.G * mult, col.B * mult)
+	end
+
+	function color.add(col, num)
+		return Color3.new(col.R + num, col.G + num, col.B + num)
+	end
+
+	function color.darkness(col, scale)
+		local h, s, v = Color3.toHSV(col)
+		return Color3.fromHSV(h, s, v*scale)
+	end
+
+	function color.tostring(col, trans)
+		return math.round(col.r*255) .. ", " .. math.round(col.g*255) .. ", " .. math.round(col.b*255) .. ", " .. math.round((trans or 1)*255)
+	end
+
+	function color.fromstring(str)
+		local color_table = string.Explode(",", str)
+		local r, g, b, a = tonumber(color_table[1]), tonumber(color_table[2]), tonumber(color_table[3]), (tonumber(color_table[4]) or 255)/255
+		if not r or not g or not b then
+			return false
+		end
+		r = math.clamp(r, 0, 255)
+		g = math.clamp(g, 0, 255)
+		b = math.clamp(b, 0, 255)
+		a = math.clamp(a, 0, 255)
+		return Color3.fromRGB(r, g, b), a
+	end
+
+	function color.tohex(col)
+		return string.format("#%02X%02X%02X", col.r * 255, col.g * 255, col.b * 255)
+	end
+
+	function color.fromhex(hex)
+		local r, g, b = string.match(hex, "^#?(%w%w)(%w%w)(%w%w)$")
+		if not r or not g or not b then return false end
+		return Color3.fromRGB(tonumber(r, 16), tonumber(g, 16), tonumber(b, 16))
+	end
+end
+
+-- Vector
+do 
+	local vec0 = Vector3.new()
+	local dot = vec0.Dot
+	local math = BBOT.math
+	local vector = {}
+	BBOT.vector = vector
+
+	-- I also wish we could just add this to the Vector3 metatable...
+	function vector.rotate(Vec, Rads)
+		local vec = Vec.Unit
+		--x2 = cos β x1 − sin β y1
+		--y2 = sin β x1 + cos β y1
+		local sin = math.sin(Rads)
+		local cos = math.cos(Rads)
+		local x = (cos * vec.x) - (sin * vec.y)
+		local y = (sin * vec.x) + (cos * vec.y)
+
+		return Vector2.new(x, y).Unit * Vec.Magnitude
+	end
+
+	-- msg from cream - this is called pythagorean theorem btw, the guy you found it from doesn't know math...
+	function vector.dist2d ( pos1, pos2 )
+		local dx = pos1.X - pos2.X
+		local dy = pos1.Y - pos2.Y
+		return math.sqrt ( dx * dx + dy * dy )
+	end
+
+	-- creates a random point around a sphere
+	function vector.randomspherepoint(radius)
+		local theta = math.random() * 2 * math.pi
+		local phi = math.acos(2 * math.random() - 1)
+		return Vector3.new(radius * math.sin(phi) * math.cos(theta), radius * math.sin(phi) * math.sin(theta), radius * math.cos(phi))
+	end
+end
+
+-- Physics
+do
+	local vec0 = Vector3.new()
+	local dot = vec0.Dot
+	local vector = BBOT.vector
+	local math = BBOT.math
+	local physics = {}
+	BBOT.physics = physics
+
+	-- Used to determine the time of the bullet hitting, more like an assumption to be honest since you
+	-- have a range which is basically max > t > min
+	function physics.timehit(pos_f, v_i, g, pos_i)
+		local delta_d = pos_f - pos_i;
+		local roots = { math.quartic(dot(g, g), 3 * dot(g, v_i), 2 * (dot(g, delta_d) + dot(v_i, v_i)), 2 * dot(delta_d, v_i)) };
+		local min = 0;
+		local max = (1 / 0);
+		for v37 = 1, #roots do
+			local t = roots[v37];
+			local t_max = (delta_d + t * v_i + t * t / 2 * g).magnitude;
+			if min < t and t_max < max then
+				min = t;
+				max = t_max;
+			end;
+		end;
+		return min, max;
+	end;
+
+	-- used to find a unit vector of theta in projectile motion of a 3D space
+	function physics.trajectory(pos_i, g, pos_f, v_i)
+		local delta_d = pos_f - pos_i
+		g = -g
+		-- btw dot of itself is basically vector^2
+		local r_1, r_2, r_3, r_4 = math.quartic(dot(g, g) / 4, 0, dot(g, delta_d) - v_i * v_i, 0, dot(delta_d, delta_d))
+		if r_1 and r_1 > 0 then
+			return g * r_1 / 2 + delta_d / r_1, r_1
+		end;
+		if r_2 and r_2 > 0 then
+			return g * r_2 / 2 + delta_d / r_2, r_2
+		end;
+		if r_3 and r_3 > 0 then
+			return g * r_3 / 2 + delta_d / r_3, r_3
+		end;
+		if not r_4 or not (r_4 > 0) then
+			return;
+		end;
+		return g * r_4 / 2 + delta_d / r_4, r_4
 	end
 end
 
@@ -5285,10 +5306,12 @@ do
 		function GUI:SetBorderless(bool)
 			self.borderless = bool
 			if bool then
-				self.background_border.Visible = false
+				self.background_border.Transparency = 0
 				self:Cache(self.background_border)
-				self.background_outline.Visible = false
+				self.background_outline.Transparency = 0
 				self:Cache(self.background_outline)
+				self.background.Transparency = 0
+				self:Cache(self.background)
 				self.darken:SetTransparency(0)
 				if self.activated then
 					if self.icon then
@@ -5303,10 +5326,10 @@ do
 						self.text:SetTransparency(.5)
 					end
 				end
-				local bg = gui:GetColor("Background")
-				local d = 1.25
-				self.background.Color = Color3.new(bg.r/d, bg.g/d, bg.b/d)
-				self.gradient:SetColor(Color3.fromRGB(50/d,50/d,50/d), Color3.fromRGB(35/d,35/d,35/d))
+				if self.gradient then
+					self.gradient:Remove()
+					self.gradient = nil
+				end
 			else
 				if self.icon then
 					self.icon:SetTransparency(1)
@@ -5318,8 +5341,13 @@ do
 				else
 					self.darken:SetTransparency(.25)
 				end
-				self.background.Color = gui:GetColor("Background")
-				self.gradient:SetColor(Color3.fromRGB(50,50,50), Color3.fromRGB(35,35,35))
+				if not self.gradient then
+					self.gradient = gui:Create("Gradient", self)
+					self.gradient:SetPos(0, 0, 0, 0)
+					self.gradient:SetSize(1, 0, 0, 20)
+					self.gradient:SetZIndex(0)
+					self.gradient:Generate()
+				end
 			end
 		end
 
@@ -5346,7 +5374,7 @@ do
 			end
 			self.icon:PreserveDimensions(true)
 			self.icon:ScaleToFit(true)
-			self.icon:SetScale(0.8)
+			self.icon:SetScale(0.75)
 			self.icon:SetIcon(icon)
 			self.icon_perfered = self.icon.image.Size
 		end
@@ -5454,6 +5482,16 @@ do
 
 		function GUI:SetInnerBorderless(bool)
 			self.innerborderless = bool
+			if bool and not self.gradient then
+				self.gradient = gui:Create("Gradient", self)
+				self.gradient:SetPos(0, 0, 0, 0)
+				self.gradient:SetSize(1, 0, 0, 20)
+				self.gradient:SetZIndex(0)
+				self.gradient:Generate()
+			elseif self.gradient then
+				self.gradient:Remove()
+				self.gradient = nil
+			end
 		end
 
 		function GUI:SetBorderless(bool)
@@ -6531,7 +6569,7 @@ do
 				s.tslider:SetColor(color, transparency)
 				s:OnChanged(color, transparency)
 				s.hexbox:SetText(_color.tohex(color))
-				s.rgbabox:SetText(math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+				s.rgbabox:SetText(_color.tostring(color, transparency))
 				s.colorpreview:SetColor(color, transparency)
 			end
 			function self.hslider:OnValueChanged(color, transparency)
@@ -6539,7 +6577,7 @@ do
 				s.tslider:SetColor(color, transparency)
 				s:OnChanged(color, transparency)
 				s.hexbox:SetText(_color.tohex(color))
-				s.rgbabox:SetText(math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+				s.rgbabox:SetText(_color.tostring(color, transparency))
 				s.colorpreview:SetColor(color, transparency)
 			end
 			function self.tslider:OnValueChanged(color, transparency)
@@ -6547,7 +6585,27 @@ do
 				s.hslider:SetColor(color, transparency)
 				s:OnChanged(color, transparency)
 				s.hexbox:SetText(_color.tohex(color))
-				s.rgbabox:SetText(math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+				s.rgbabox:SetText(_color.tostring(color, transparency))
+				s.colorpreview:SetColor(color, transparency)
+			end
+			function self.hexbox:OnValueChanged(hex)
+				local color = _color.fromhex(hex)
+				local transparency = s.tslider.t
+				if not color then return end
+				s.pallet:SetColor(color, transparency)
+				s.hslider:SetColor(color, transparency)
+				s:OnChanged(color, transparency)
+				s.rgbabox:SetText(_color.tostring(color, transparency))
+				s.colorpreview:SetColor(color, transparency)
+			end
+			function self.rgbabox:OnValueChanged(textcolor)
+				local color, transparency = _color.fromstring(textcolor)
+				if not color then return end
+				s.pallet:SetColor(color, transparency)
+				s.hslider:SetColor(color, transparency)
+				s.tslider:SetColor(color, transparency)
+				s:OnChanged(color, transparency)
+				s.hexbox:SetText(_color.tohex(color))
 				s.colorpreview:SetColor(color, transparency)
 			end
 
@@ -6575,7 +6633,7 @@ do
 			self.hslider:SetColor(color, transparency)
 			self.tslider:SetColor(color, transparency)
 			self.hexbox:SetText(_color.tohex(color))
-			self.rgbabox:SetText(math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+			self.rgbabox:SetText(_color.tostring(color, transparency))
 			self.colorpreview:SetColor(color, transparency)
 		end
 
@@ -11896,11 +11954,11 @@ do
 										local uid = target.UserId
 										local level = config.priority[uid] or 0
 										if level == 0 then
-											player_priority:SetValue(1)
+											player_priority:SetValue("None")
 										elseif level == -1 then
-											player_priority:SetValue(2)
+											player_priority:SetValue("Friendly")
 										elseif level == 1 then
-											player_priority:SetValue(3)
+											player_priority:SetValue("Priority")
 										end
 										BBOT.thread:Create(function()
 											local data = game:HttpGet(string.format(
@@ -13044,7 +13102,7 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
-			for _ = #reg, 1, -1 do -- yet another minor optimization
+			for _=1, #reg do -- yet another minor optimization
 				if rawget(aux.network, "receivers") then
 					break
 				end
