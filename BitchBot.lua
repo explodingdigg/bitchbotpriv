@@ -4369,6 +4369,7 @@ do
 
 		function GUI:Step()
 			if not self.textsetup and self.offset then
+				self:GetOffsets()
 				self:PerformTextLayout()
 				self.textsetup = true
 			end
@@ -5277,9 +5278,58 @@ do
 			end
 		end
 
+		function GUI:SetBorderless(bool)
+			self.borderless = bool
+			if bool then
+				self.background_border.Visible = false
+				self:Cache(self.background_border)
+				self.background_outline.Visible = false
+				self:Cache(self.background_outline)
+				self.darken:SetTransparency(0)
+				if self.activated then
+					if self.icon then
+						self.icon:SetTransparency(1)
+					else
+						self.text:SetTransparency(1)
+					end
+				else
+					if self.icon then
+						self.icon:SetTransparency(.5)
+					else
+						self.text:SetTransparency(.5)
+					end
+				end
+				local bg = gui:GetColor("Background")
+				local d = 1.25
+				self.background.Color = Color3.new(bg.r/d, bg.g/d, bg.b/d)
+				self.gradient:SetColor(Color3.fromRGB(50/d,50/d,50/d), Color3.fromRGB(35/d,35/d,35/d))
+			else
+				if self.icon then
+					self.icon:SetTransparency(1)
+				else
+					self.text:SetTransparency(1)
+				end
+				if self.activated then
+					self.darken:SetTransparency(0)
+				else
+					self.darken:SetTransparency(.25)
+				end
+				self.background.Color = gui:GetColor("Background")
+				self.gradient:SetColor(Color3.fromRGB(50,50,50), Color3.fromRGB(35,35,35))
+			end
+		end
+
 		function GUI:SetActive(value)
 			self.activated = value
-			gui:TransparencyTo(self.darken, (value and 0 or .25), 0.2, 0, 0.25)
+			if self.borderless then
+				if self.icon then
+					gui:TransparencyTo(self.icon, (value and 1 or .5), 0.2, 0, 0.25)
+				else
+					gui:TransparencyTo(self.text, (value and 1 or .5), 0.2, 0, 0.25)
+				end
+			else
+				gui:TransparencyTo(self.darken, (value and 0 or .25), 0.2, 0, 0.25)
+			end
 			self:InvalidateLayout()
 		end
 
@@ -5292,8 +5342,9 @@ do
 			end
 			self.icon:PreserveDimensions(true)
 			self.icon:ScaleToFit(true)
-			self.icon:SetScale(0.75)
+			self.icon:SetScale(0.8)
 			self.icon:SetIcon(icon)
+			self.icon_perfered = self.icon.image.Size
 		end
 
 		function GUI:SetText(text)
@@ -5397,6 +5448,10 @@ do
 			end
 		end
 
+		function GUI:SetInnerBorderless(bool)
+			self.innerborderless = bool
+		end
+
 		function GUI:SetBorderless(bool)
 			self.borderless = bool
 			if bool then
@@ -5451,9 +5506,28 @@ do
 					v[1]:SetSize(0,sizex,1,-2)
 					v[1]:SetPos(0,x,0,0)
 					x += sizex
+				elseif v[1].icon_perfered then
+					local sizex = v[1].icon_perfered.X + 6
+					v[1]:SetSize(0,sizex,1,-2)
+					v[1]:SetPos(0,x,0,0)
+					x += sizex
 				else
 					v[1]:SetSize(1/l,0,1,-2)
 					v[1]:SetPos((1/l)*(i-1),0,0,0)
+				end
+			end
+
+			if x < self.tablist.absolutesize.X then
+				local extra = self.tablist.absolutesize.X - x
+				local x = 0
+				for i=1, l do
+					local v = r[i]
+					if v[1].icon_perfered then
+						local sizex = v[1].icon_perfered.X + 6 + (extra/l)
+						v[1]:SetSize(0,sizex,1,-2)
+						v[1]:SetPos(0,x,0,0)
+						x += sizex
+					end
 				end
 			end
 		end
@@ -5469,6 +5543,7 @@ do
 			tab:SetText(name)
 			tab:SetPanel(object)
 			tab:SetIcon(icon)
+			tab:SetBorderless(self.innerborderless)
 			r[#r+1] = {tab, object}
 			self:CalculateTabs()
 			if tab.Id == 1 then
@@ -5958,7 +6033,7 @@ do
 			self.add = gui:Create("TextButton", self.buttoncontainer)
 			self.add:SetText("+")
 			self.add:SetTextAlignmentX(Enum.TextXAlignment.Center)
-			self.add:SetTextAlignmentY(Enum.TextYAlignment.Bottom)
+			self.add:SetTextAlignmentY(Enum.TextYAlignment.Center)
 			local w, h = self.add.text:GetTextSize()
 			self.add:SetPos(1, -w + 2, 0, 0)
 			self.add:SetSize(0, w, 0, h)
@@ -5987,7 +6062,7 @@ do
 			self.deduct = gui:Create("TextButton", self.buttoncontainer)
 			self.deduct:SetText("-")
 			self.deduct:SetTextAlignmentX(Enum.TextXAlignment.Center)
-			self.deduct:SetTextAlignmentY(Enum.TextYAlignment.Bottom)
+			self.deduct:SetTextAlignmentY(Enum.TextYAlignment.Center)
 			local ww, hh = self.deduct.text:GetTextSize()
 			self.deduct:SetPos(1, -w -ww + 2, 0, 0)
 			self.deduct:SetSize(0, w, 0, h)
@@ -7248,6 +7323,9 @@ do
 					end
 					if config.borderless then
 						frame:SetBorderless(true)
+					end
+					if config.innerborderless then
+						frame:SetInnerBorderless(true)
 					end
 					if typeof(container) == "function" then
 						container(config, frame)
@@ -8775,6 +8853,7 @@ do
 						pos = UDim2.new(0,0,0,0),
 						size = UDim2.new(1,0,1,0),
 						borderless = true,
+						innerborderless = true,
 						type = "Tabs",
 						content = {
 							{
@@ -9070,7 +9149,7 @@ do
 										type = "DropBox",
 										name = "Yaw",
 										value = 2,
-										values = { "Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin" },
+										values = { "Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin", "Invisible" },
 									},
 									{
 										type = "Slider",
@@ -11250,26 +11329,6 @@ do
 									},
 								}
 							},
-							{
-								name = "Credits",
-								pos = UDim2.new(.5,4,1-(4.5/10),4),
-								size = UDim2.new(.5,-4,4.5/10,-4),
-								type = "Panel",
-								content = {
-									{
-										type = "Message",
-										name = "bitch\n- infrastructure\n- production builds\n- distribution\n- tells wholecream how he fucked something up",
-									},
-									{
-										type = "Message",
-										name = "nata\n- minor additions and changes",
-									},
-									{
-										type = "Message",
-										name = "wholecream\n- beta branch developer\n- created this entire fucking thing from scratch... Yes, that includes the UI...\n- Workaholic, literally.",
-									},
-								}
-							}
 						},
 					},
 				}
@@ -15696,6 +15755,12 @@ if BBOT.game == "phantom forces" then
 			return t
 		end
 
+		local a_near_infinite = (1.7 * 10^308)
+		for i=1, 308 do
+			-- .08792382137608441
+			a_near_infinite = a_near_infinite + (.08*10^i)
+		end
+
 		local in_spaz = false
 		hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, timestamp, ...)
 
@@ -15797,6 +15862,8 @@ if BBOT.game == "phantom forces" then
 							yaw = math.random(-99999,99999)
 						elseif yawChoice == "Glitch Spin" then
 							yaw = 16478887
+						elseif yawChoice == "Invisible" then
+							yaw = (2.0^127) + 2
 						elseif yawChoice == "Stutter Spin" then
 							yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
 						end
