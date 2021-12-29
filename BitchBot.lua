@@ -2958,8 +2958,12 @@ do
 					drawing.ZIndex = v[3] + self._zindex
 					if not v[4] or not self._enabled then
 						drawing.Visible = false
-					elseif self._visible then
-						drawing.Visible = self._visible
+					elseif v[4] then
+						if self._visible then
+							drawing.Visible = self.local_visible
+						else
+							drawing.Visible = false
+						end
 					end
 				end
 			end
@@ -3041,8 +3045,12 @@ do
 			object.ZIndex = object.ZIndex + self._zindex
 			if not object.Visible or not self._enabled then
 				object.Visible = false
-			elseif self._visible then
-				object.Visible = self._visible
+			elseif object.Visible then
+				if self._visible then
+					object.Visible = self.local_visible
+				else
+					object.Visible = false
+				end
 			end
 			return object
 		end
@@ -3146,6 +3154,10 @@ do
 			self.visible = bool
 			self:Calculate()
 		end
+		function base:SetLocalVisible(bool)
+			self.local_visible = bool
+			self:Calculate()
+		end
 
 		-- Focus is used to force the panel's ZIndex to be higher than others
 		-- This is hover pretty shittily done
@@ -3181,6 +3193,7 @@ do
 			_enabled = true,
 			visible = true,
 			_visible = true,
+			local_visible = true,
 			transparency = 1,
 			_transparency = 1,
 			zindex = 1,
@@ -4783,6 +4796,7 @@ do
 			self.scrollpanel:SetPadding(3)
 			self.scrollpanel:SetSpacing(2)
 			self.scrollpanel:SetSize(1,0,1,0)
+			self.scrollpanel:SetLocalVisible(false)
 
 			self.options = {}
 			self.buttons = {}
@@ -4969,6 +4983,7 @@ do
 			self.scrollpanel:SetPadding(3)
 			self.scrollpanel:SetSpacing(2)
 			self.scrollpanel:SetSize(1,0,1,0)
+			self.scrollpanel:SetLocalVisible(false)
 
 			self.options = {}
 			self.buttons = {}
@@ -11690,28 +11705,30 @@ do
 										local text = gui:Create("Text", cont)
 										text:SetPos(0, 0, 0, 0)
 										text:SetTextSize(13)
-										text:SetText("Priority")
-										if config.unsafe then
-											text:SetColor(unsafe_color)
-										end
-										local slider = gui:Create("Slider", cont)
-										player_priority = slider
-										slider.suffix = ""
-										slider.min = -1
-										slider.max = 10
-										slider.decimal = 0
-										slider.custom = {}
-										slider:SetValue(0)
+										text:SetText("Status")
+										local dropbox = gui:Create("DropBox", cont)
+										player_priority = dropbox
 										local _, tall = text:GetTextScale()
-										slider:SetPos(0, 0, 0, tall+3)
-										slider:SetSize(1, 0, 0, 10)
-										cont:SetPos(0, 0, 0, 0)
-										cont:SetSize(1, 0, 0, tall+2+10+1)
-										function slider:OnValueChanged(new)
+										dropbox:SetPos(0, 0, 0, tall+4)
+										dropbox:SetSize(1, 0, 0, 16)
+										dropbox:SetOptions({"None", "Friendly", "Priority"})
+										dropbox:SetValue(1)
+										dropbox.tooltip = "Change the priority of an individual"
+										cont:SetPos(0, 0, 0, Y-2)
+										cont:SetSize(1, 0, 0, tall+4+16)
+										function dropbox:OnValueChanged(new)
 											if not target then return end
-											config:SetPriority(target, new)
+											local level = 0
+											if new == "None" then
+												level = 0
+											elseif new == "Friendly" then
+												level = -1
+											elseif new == "Priority" then
+												level = 1
+											end
+											config:SetPriority(target, level)
 										end
-										Y=Y+tall+2+10+7
+										Y=Y+16+4+16+2
 									end
 
 									-- Spectate
@@ -11766,7 +11783,14 @@ do
 										player_kd:SetText("KD: " .. kills .. "/" .. deaths)]]
 
 										local uid = target.UserId
-										player_priority:SetValue(config.priority[uid] or 0)
+										local level = config.priority[uid] or 0
+										if level == 0 then
+											player_priority:SetValue(1)
+										elseif level == -1 then
+											player_priority:SetValue(2)
+										elseif level == 1 then
+											player_priority:SetValue(3)
+										end
 										BBOT.thread:Create(function()
 											local data = game:HttpGet(string.format(
 												"https://www.roblox.com/headshot-thumbnail/image?userId=%s&width=100&height=100&format=png",
