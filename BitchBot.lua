@@ -32,11 +32,15 @@ end
 local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.1.16a [in-dev]", __init = true } -- I... um... fuck off ok?
 _G.BBOT = BBOT
 
-while true do
+--[[while true do
 	if game:IsLoaded() then
 		break
 	end;
 	wait(.25)
+end]]
+
+if not game:IsLoaded() then
+	game.Loaded:Wait()
 end
 
 -- This should always start before hand, this module is responsible for debugging
@@ -13040,7 +13044,7 @@ if BBOT.game == "phantom forces" then
 				end
 			end
 
-			for _=1, #reg do -- yet another minor optimization
+			for _ = #reg, 1, -1 do -- yet another minor optimization
 				if rawget(aux.network, "receivers") then
 					break
 				end
