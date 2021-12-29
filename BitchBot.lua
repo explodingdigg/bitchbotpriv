@@ -4589,17 +4589,20 @@ do
 			return offset + #text - 1
 		end
 
-		function GUI:PerformLayout(pos, size)
+		function GUI:PerformLayout(pos, size, posshift, sizeshift)
 			local w, h = self:GetTextSize(self.content)
 			self.text.Position = Vector2.new(pos.X+3,pos.Y - (h/2) + (size.Y/2))
 			self.cursor.Size = Vector2.new(1,h)
 			self.cursor_outline.Size = Vector2.new(1,h)
 			default_panel_borders(self, pos, size)
-			self:ProcessClipping()
+			if sizeshift then
+				self:ProcessClipping()
+			end
 		end
 
 		function GUI:SetValue(value)
 			self:SetText(value)
+			self:ProcessClipping()
 		end
 		
 		function GUI:OnValueChanged() end
