@@ -48,7 +48,7 @@ do
 	-- fallback on synapse x v2.9.1
 	-- note: this is disabled due to problems with synapse's second console being all fucky wucky
 	local _rconsoleprint = rconsoleprint
-	--local rconsoleprint = function() end
+	local rconsoleprint = function() end
 
 	log.async_registery = {}
 	local printingvaluetypes = {
@@ -872,7 +872,7 @@ do
 	service:AddToServices("PlayerGui", localplayer:FindFirstChild("PlayerGui") or localplayer:WaitForChild("PlayerGui"))
 	service:AddToServices("Mouse", localplayer:GetMouse())
 
-	rconsolename("Bitch Bot - Instance: " .. BBOT.account)
+	--rconsolename("Bitch Bot - Instance: " .. BBOT.account)
 end
 
 -- Threading
@@ -2835,10 +2835,10 @@ do
 		function base:GetLocalTranslation()
 			local psize = (self.parent and self.parent.absolutesize or camera.ViewportSize)
 
-			local X = self.pos.X.Offset + (self.pos.X.Scale * psize.X)
-			local Y = self.pos.Y.Offset + (self.pos.Y.Scale * psize.Y)
-			local W = self.size.X.Offset + (self.size.X.Scale * psize.X)
-			local H = self.size.Y.Offset + (self.size.Y.Scale * psize.Y)
+			local X = math.round(self.pos.X.Offset + (self.pos.X.Scale * psize.X))
+			local Y = math.round(self.pos.Y.Offset + (self.pos.Y.Scale * psize.Y))
+			local W = math.round(self.size.X.Offset + (self.size.X.Scale * psize.X))
+			local H = math.round(self.size.Y.Offset + (self.size.Y.Scale * psize.Y))
 
 			if self.sizeconstraint == "Y" and W > H then
 				W = H
@@ -4444,7 +4444,7 @@ do
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 
 			self.gradient = gui:Create("Gradient", self)
-			self.gradient:SetPos(0, 0, 0, 0)
+			self.gradient:SetPos(0, 0, 0, -1)
 			self.gradient:SetSize(1, 0, 0, 10)
 			self.gradient:SetZIndex(0)
 			self.gradient:Generate()
@@ -4585,6 +4585,9 @@ do
 			end
 		end
 
+		function GUI:GetOffsets() end
+		function GUI:PerformTextLayout() end
+
 		local inputservice = BBOT.service:GetService("UserInputService")
 		function GUI:ProcessInput(text, keycode)
 			local cursorpos = self.cursor_position
@@ -4678,10 +4681,6 @@ do
 					end
 					self:ProcessClipping()
 				end
-			end
-			if draw:IsValid(self.text) then
-				local w, h = self:GetTextSize(self.content)
-				self.text.Position = Vector2.new(self.absolutepos.X+3,self.absolutepos.Y - (h/2) + (self.absolutesize.Y/2))
 			end
 		end
 
@@ -5194,6 +5193,7 @@ do
 		function GUI:PerformLayout(pos, size)
 			if self.image and draw:IsValid(self.image) then
 				if self.preservedim then
+					local newsize
 					if self.scaletofit then
 						local scalex, scaley = 1, 1
 						if self.image_dimensions.X < size.X then
@@ -5208,13 +5208,15 @@ do
 						if scaley > scalex then
 							scaley = scalex
 						end
-						self.image.Size = self.image_dimensions * self.image_scale * Vector2.new(scalex, scaley)
+						newsize = self.image_dimensions * self.image_scale * Vector2.new(scalex, scaley)
 					else
-						self.image.Size = self.image_dimensions * self.image_scale
+						newsize = self.image_dimensions * self.image_scale
 					end
-					self.image.Position = pos - (self.image.Size/2) + size/2
+					local newpos = pos - (self.image.Size/2) + size/2
+					self.image.Position = Vector2.new(math.round(newpos.X), math.round(newpos.Y))
+					self.image.Size = Vector2.new(math.round(newsize.X), math.round(newsize.Y)) 
 				else
-					self.image.Position = pos
+					self.image.Position = Vector2.new(math.round(pos.X), math.round(pos.Y))
 					self.image.Size = size * self.image_scale
 				end
 			end
@@ -6118,8 +6120,8 @@ do
 		local GUI = {}
 
 		function GUI:Init()
-			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 			
 			--(imagedata, x, y, w, h, transparency, visible)
@@ -6145,7 +6147,7 @@ do
 			self.s = s
 			self.v = v
 			self.t = transparency
-			self.cursor_position = Vector2.new(self.s, 1-self.v) * self.absolutesize
+			self.cursor_position = Vector2.new(math.round(self.s * self.absolutesize.X), math.round((1-self.v) * self.absolutesize.Y))
 			self:MoveCursor()
 		end
 
@@ -6170,7 +6172,7 @@ do
 			local ASY = self.absolutesize.Y
 			local newX = math.clamp(X, APX, APX + ASX )
 			local newY = math.clamp(Y, APY, APY + ASY )
-			local new_position = Vector2.new(newX-APX, newY-APY)
+			local new_position = Vector2.new(math.round(newX-APX), math.round(newY-APY))
 			self.cursor_position = new_position
 			self:MoveCursor()
 
@@ -6209,8 +6211,8 @@ do
 		local GUI = {}
 
 		function GUI:Init()
-			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
 			
 			--(imagedata, x, y, w, h, transparency, visible)
@@ -6234,7 +6236,7 @@ do
 			self.s = s
 			self.v = v
 			self.t = transparency
-			self.cursor_position = Vector2.new(0, 1-self.h) * self.absolutesize
+			self.cursor_position = Vector2.new(0, math.round((1-self.h) * self.absolutesize.Y))
 			self:MoveCursor()
 		end
 
@@ -6256,7 +6258,7 @@ do
 			local APY = self.absolutepos.Y
 			local ASY = self.absolutesize.Y
 			local newY = math.clamp(Y, APY, APY + ASY )
-			self.cursor_position = Vector2.new(0, newY-APY)
+			self.cursor_position = Vector2.new(0, math.round(newY-APY))
 			self:MoveCursor()
 
 			-- calculate new color
@@ -6292,8 +6294,8 @@ do
 		local GUI = {}
 
 		function GUI:Init()
-			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
-			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
+			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, Color3.new(1,1,1)))
 			
 			--(imagedata, x, y, w, h, transparency, visible)
@@ -6317,7 +6319,7 @@ do
 			self.s = s
 			self.v = v
 			self.t = transparency
-			self.cursor_position = Vector2.new(0, 1-transparency) * self.absolutesize
+			self.cursor_position = Vector2.new(0, math.round((1-transparency) * self.absolutesize.Y))
 			self:MoveCursor()
 		end
 
@@ -6339,7 +6341,7 @@ do
 			local APY = self.absolutepos.Y
 			local ASY = self.absolutesize.Y
 			local newY = math.clamp(Y, APY, APY + ASY )
-			self.cursor_position = Vector2.new(0, newY-APY)
+			self.cursor_position = Vector2.new(0, math.round(newY-APY))
 			self:MoveCursor()
 
 			-- calculate new color
@@ -6375,6 +6377,30 @@ do
 		local GUI = {}
 
 		function GUI:Init()
+			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline-Light")))
+			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
+			self.transparency_background = self:Cache(draw:Image(BBOT.menu.images[5], 0, 0, 0, 0, 1, true))
+			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
+		end
+
+		function GUI:SetColor(col, transparency)
+			self.background.Color = col
+			self.background.Transparency = transparency
+			self:Cache(self.background, transparency, 0, true)
+		end
+
+		function GUI:PerformLayout(pos, size, shiftpos, shiftsize)
+			default_panel_borders(self, pos, size)
+			self.transparency_background.Position = pos
+			self.transparency_background.Size = size
+		end
+
+		gui:Register(GUI, "ColorPreview")
+
+		local GUI = {}
+		local _color = color
+
+		function GUI:Init()
 			self.background_border = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Border")))
 			self.background_outline = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Outline")))
 			self.background = self:Cache(draw:Box(0, 0, 0, 0, 0, gui:GetColor("Background")))
@@ -6392,36 +6418,58 @@ do
 
 			self.pallet = gui:Create("ColorPallet", self)
 			self.pallet:SetPos(0, 6, 0, 21)
-			self.pallet:SetSize(1, -6, 1, -21-6)
-			self.pallet:SetSizeConstraint("Y")
+			self.pallet:SetSize(1, -14-22*2, 1, -21-6-22)
+			--self.pallet:SetSizeConstraint("Y")
 
 			self.hslider = gui:Create("ColorSlider", self)
-			self.hslider:SetPos(1, -21-16-6, 0, 21)
-			self.hslider:SetSize(0, 15, 1, -21-6)
+			self.hslider:SetPos(1, -22-17-6, 0, 21)
+			self.hslider:SetSize(0, 16, 1, -21-6-22)
 
 			self.tslider = gui:Create("AlphaSlider", self)
-			self.tslider:SetPos(1, -21, 0, 21)
-			self.tslider:SetSize(0, 15, 1, -21-6)
+			self.tslider:SetPos(1, -22, 0, 21)
+			self.tslider:SetSize(0, 16, 1, -21-6-22)
+
+			self.hexbox = gui:Create("TextEntry", self)
+			self.hexbox:SetText(color.tohex(Color3.new(1,1,1)))
+			self.hexbox:SetPos(0, 6, 1, -22)
+			self.hexbox:SetSize(0,60,0,16)
+			self.hexbox:SetTextSize(13)
+
+			self.rgbabox = gui:Create("TextEntry", self)
+			self.rgbabox:SetText("")
+			self.rgbabox:SetPos(0, 6+66, 1, -22)
+			self.rgbabox:SetSize(1,-13-22-66,0,16)
+			self.rgbabox:SetTextSize(13)
+
+			self.colorpreview = gui:Create("ColorPreview", self)
+			self.colorpreview.tooltip = "This is the preview of the chosen color"
+			self.colorpreview:SetPos(1, -22, 1, -22)
+			self.colorpreview:SetSize(0, 16, 0, 16)
 
 			local s = self
-			local _color = color
 			function self.pallet:OnValueChanged(color, transparency)
 				s.hslider:SetColor(color, transparency)
 				s.tslider:SetColor(color, transparency)
 				s:OnChanged(color, transparency)
-				title:SetText(s.title_content .. " - " .. math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+				s.hexbox:SetText(_color.tohex(color))
+				s.rgbabox:SetText(math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+				s.colorpreview:SetColor(color, transparency)
 			end
 			function self.hslider:OnValueChanged(color, transparency)
 				s.pallet:SetColor(color, transparency)
 				s.tslider:SetColor(color, transparency)
 				s:OnChanged(color, transparency)
-				title:SetText(s.title_content .. " - " .. math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+				s.hexbox:SetText(_color.tohex(color))
+				s.rgbabox:SetText(math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+				s.colorpreview:SetColor(color, transparency)
 			end
 			function self.tslider:OnValueChanged(color, transparency)
 				s.pallet:SetColor(color, transparency)
 				s.hslider:SetColor(color, transparency)
 				s:OnChanged(color, transparency)
-				title:SetText(s.title_content .. " - " .. math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+				s.hexbox:SetText(_color.tohex(color))
+				s.rgbabox:SetText(math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+				s.colorpreview:SetColor(color, transparency)
 			end
 
 			self:SetTransparency(0)
@@ -6447,7 +6495,9 @@ do
 			self.pallet:SetColor(color, transparency)
 			self.hslider:SetColor(color, transparency)
 			self.tslider:SetColor(color, transparency)
-			self.title:SetText(self.title_content .. " - " .. math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+			self.hexbox:SetText(_color.tohex(color))
+			self.rgbabox:SetText(math.round(color.r*255) .. ", " .. math.round(color.g*255) .. ", " .. math.round(color.b*255) .. ", " .. math.round(transparency*255))
+			self.colorpreview:SetColor(color, transparency)
 		end
 
 		function GUI:OnChanged() end
@@ -10888,7 +10938,7 @@ do
 									},
 									{
 										type = "Toggle",
-										name = "Tick Division Manipulation",
+										name = "Tick Manipulation",
 										value = false,
 										unsafe = true,
 										tooltip = "Makes your velocity go 10^n m/s, god why raspi you fucking idiot",
@@ -10896,14 +10946,12 @@ do
 									{
 										type = "Slider",
 										name = "Tick Division Scale",
-										min = -8,
+										min = 0,
 										max = 8,
 										suffix = "^10 studs/s",
 										decimal = 1,
 										value = 3,
-										custom = {
-											[12] = "Fucking Insane",
-										},
+										custom = {},
 										tooltip = "Each value here is tick/10^n, so velocity go *wait what the fuck*",
 									},
 									{
@@ -15398,13 +15446,6 @@ if BBOT.game == "phantom forces" then
 			misc:AntiGrenadeStep()
 		end)
 
-		function misc:GetTickDivisionScale()
-			if config:GetValue("Main", "Misc", "Exploits", "Tick Division Manipulation") then
-				return tick()/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale"))
-			end
-			return tick()
-		end
-
 		function misc:ForceRepupdate(pos, ang)
 			local l__angles__1304 = BBOT.aux.camera.angles;
 			network:send("repupdate", pos or char.rootpart.Position, ang or Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
@@ -15646,13 +15687,22 @@ if BBOT.game == "phantom forces" then
 			misc:MoveTo(char.rootpart.Position)
 		end)
 
+		misc.tick_base_offset = 0
+		function misc:GetTickManipulationScale(t)
+			t = t or tick()
+			if config:GetValue("Main", "Misc", "Exploits", "Tick Manipulation") then
+				return (t/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale")))
+			end
+			return t
+		end
+
 		local in_spaz = false
 		hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, timestamp, ...)
 
 			if networkname == "repupdate" then
 				local ran = false
-				if config:GetValue("Main", "Misc", "Exploits", "Tick Division Manipulation") then
-					timestamp = timestamp/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale"))
+				if config:GetValue("Main", "Misc", "Exploits", "Tick Manipulation") then
+					timestamp = misc:GetTickManipulationScale(timestamp)
 					ran = true
 				end
 
@@ -15668,11 +15718,7 @@ if BBOT.game == "phantom forces" then
 						in_spaz = true
 						misc:MoveTo(pos - (offset.Unit/100))
 						in_spaz = false
-						timestamp = tick()
-						if config:GetValue("Main", "Misc", "Exploits", "Tick Division Manipulation") then
-							timestamp = timestamp/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale"))
-							ran = true
-						end
+						timestamp = misc:GetTickManipulationScale()
 						ran = true
 					end
 
@@ -15759,12 +15805,12 @@ if BBOT.game == "phantom forces" then
 						return {networkname, pos, new_angles, timestamp}
 					end
 				end
+
 				if ran then
 					return {networkname, pos, ang, timestamp}
 				end
 			end
 		end)
-
 	end
 
 	-- L3P player
@@ -15776,6 +15822,7 @@ if BBOT.game == "phantom forces" then
 		local char = BBOT.aux.char
 		local replication = BBOT.aux.replication
 		local gamelogic = BBOT.aux.gamelogic
+		local loop = BBOT.loop
 		local localplayer = BBOT.service:GetService("LocalPlayer")
 		local l3p = {}
 		BBOT.l3p_player = l3p
@@ -15786,6 +15833,12 @@ if BBOT.game == "phantom forces" then
 			self.controller = replication._updater(localplayer)
 			self.player = localplayer
 			debug.setupvalue(replication._updater, 1, localplayer_check)
+
+			local lookangle_spring = debug.getupvalues(self.controller.getlookangles, 1)[1]
+			local _update = lookangle_spring.update
+			function lookangle_spring:update(...)
+				_update(self, ...)
+			end
 
 			if config:GetValue("Main", "Visuals", "Local", "Enabled") then
 				BBOT.esp:CreatePlayer(self.player, self.controller)
@@ -15805,7 +15858,7 @@ if BBOT.game == "phantom forces" then
 					self.networking["equip"](l3p.controller, -1)
 				end
 				local old_char
-				if self.player == localplayer then -- Come on PF this is pathetic
+				if self.player == localplayer then
 					old_char = self.player.Character
 				end
 				self.controller.spawn(char.rootpart.Position)
@@ -15999,6 +16052,7 @@ if BBOT.game == "phantom forces" then
 
 		do
 			local camera = BBOT.service:GetService("CurrentCamera")
+			-- P.S this is broken, find a replacement to hide weapons on thirdperson
 			--[[local function hideweapon()
 				if not char.alive then return end
 				if not config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person") or not config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person", "KeyBind") then
@@ -16143,9 +16197,9 @@ if BBOT.game == "phantom forces" then
 				end
 				if updater.receivedPosition and updater.receivedLookAngles then
 					local renderstep_tick = BBOT.renderstepped_rate
-					self.position = math.lerp(renderstep_tick*10, self.position, updater.receivedPosition+offset)
+					self.position = math.lerp(renderstep_tick*25, self.position, updater.receivedPosition+offset)
 					camera.CFrame = CFrame.new(self.position)
-					self.lookangle = math.lerp(renderstep_tick*10, self.lookangle, updater.receivedLookAngles)
+					self.lookangle = math.lerp(renderstep_tick*25, self.lookangle, updater.receivedLookAngles)
 					camera.CFrame *= CFrame.fromOrientation(self.lookangle.X,self.lookangle.Y,0)
 				end
 			else
@@ -18168,7 +18222,7 @@ if BBOT.game == "phantom forces" then
 						bullet[1] = aimbot:DropPrediction(bullettable.firepos, targetpos, gundata.bulletspeed).Unit * bullet[1].Magnitude
 					end
 
-					network:send(networkname, bullettable, BBOT.misc:GetTickDivisionScale())
+					network:send(networkname, bullettable, BBOT.misc:GetTickManipulationScale())
 
 					for i=1, #bullettable.bullets do
 						local bullet = bullettable.bullets[i]
