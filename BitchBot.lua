@@ -11471,6 +11471,12 @@ do
 										value = 100,
 										unsafe = true,
 									},
+									{
+										type = "Toggle",
+										name = "No Scope Sway",
+										value = false,
+										unsafe = true,
+									}
 								}
 							},
 							{
@@ -13349,7 +13355,7 @@ if BBOT.game == "phantom forces" then
 			local function newplay(...)
 				if supressing then return oplay(...) end
 				supressing = true
-				if hook:Call("SuppressSound", ...) then
+				if hook:CallP("SuppressSound", ...) then
 					supressing = false
 					return
 				end
@@ -13360,7 +13366,7 @@ if BBOT.game == "phantom forces" then
 			local function newplayid(...)
 				if supressing then return oplayid(...) end
 				supressing = true
-				if hook:Call("SuppressSoundId", ...) then
+				if hook:CallP("SuppressSoundId", ...) then
 					supressing = false
 					return
 				end
@@ -16241,6 +16247,7 @@ if BBOT.game == "phantom forces" then
 		local math = BBOT.math
 		local replication = BBOT.aux.replication
 		local menu = BBOT.menu
+		local aux_camera = BBOT.aux.camera
 		local runservice = BBOT.service:GetService("RunService")
 		local camera = BBOT.service:GetService("CurrentCamera")
 		local spectator = {}
@@ -16345,7 +16352,11 @@ if BBOT.game == "phantom forces" then
 				local p, y = head.CFrame:ToOrientation()
 				camera.CFrame *= CFrame.fromOrientation(p,y,0)
 				camera.CFrame *= CFrame.new(0,0,-4.5/10)
+				self.position = camera.CFrame.p
+				self.lookangle = Vector2.new(p,y)
 			end
+			aux_camera.basecframe = camera.CFrame
+			aux_camera.cframe = camera.CFrame
 		end
 
 		hook:Add("ScreenCull.PreStep", "BBOT:Spectator.Spectate", spectator.step)
@@ -20293,6 +20304,10 @@ if BBOT.game == "phantom forces" then
 
 			if modifications.aimchoke then
 				modifications.aimchoke = modifications.aimchoke * achoke
+			end
+
+			if config:GetValue("Weapons", "Stats Changer", "Accuracy", "No Scope Sway") then
+				modifications.swayamp = 0
 			end
 	
 			--[[local cks = config:GetValue("Weapons", "Stat Modifications", "Recoil", "CamKickSpeed")
