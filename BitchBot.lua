@@ -531,6 +531,13 @@ do
 	local _sqrt_3 = math.sqrt(3);
 	
 
+	function math.isdirtyfloat(f)
+		local nan = true --assumes its a nan
+		if f == f then --nan has a property of not being equal to anything including itself
+		    nan = f == 1/0 or f == -1/0 -- not nan, check infinity
+		end
+		return nan
+	end
 
 	-- ax + b (real roots)
 	function math.linear(a, b) -- do I even need this? -- yea probably lol
@@ -1385,6 +1392,22 @@ do
 	function loop:GetTable()
 		return self.registry
 	end
+	-- dont ask why i did this
+	function loop.Wrapback(a, i, amt)
+		-- a = the array being passed into the iterator
+		-- i = current index to start at, if not specified it will be 1
+		-- amt = the amount of times to return shit
+		i = i and i-1 or 1
+		local j = 0
+		local s = #a
+		return function()
+		    while j < amt do
+		        i = i % s + 1
+		        j = j + 1
+		        return i, a[i]
+		    end
+		end
+	end
 end
 
 -- Timers
@@ -1646,7 +1669,7 @@ do
 		asset:Initialize()
 		asset:Register("textures", {".png", ".jpg"})
 		asset:Register("images", {".png", ".jpg"})
-		asset:Register("sounds", {".wav", ".mp3"})
+		asset:Register("sounds", {".wav", ".mp3", ".ogg"})
 	end)
 end
 
@@ -14200,28 +14223,29 @@ if BBOT.game == "phantom forces" then
 		serverhopper.UserId = tostring(localplayer.UserId)
 
 		hook:Add("PostInitialize", "BBOT:ServerHopper.Load", function()
-			if isfile(serverhopper.file) then
-				serverhopper.blacklist = httpservice:JSONDecode(readfile(serverhopper.file))
-				local otime = os.time()
-				for _, userblacklist in pairs(serverhopper.blacklist) do
-					for k, v in pairs(userblacklist) do
-						if otime > v then
-							userblacklist[k] = nil
-							log(LOG_NORMAL, "Removed server-hop blacklist " .. k)
-						end
+			if not isfile(serverhopper.file) then
+				writefile(serverhopper.file, "{}")
+			end
+			serverhopper.blacklist = httpservice:JSONDecode(readfile(serverhopper.file))
+			local otime = os.time()
+			for _, userblacklist in pairs(serverhopper.blacklist) do
+				for k, v in pairs(userblacklist) do
+					if otime > v then
+						userblacklist[k] = nil
+						log(LOG_NORMAL, "Removed server-hop blacklist " .. k)
 					end
 				end
-				writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
-				local plbllist = serverhopper.blacklist[serverhopper.UserId]
-				if plbllist then
-					local c = 0
-					for k, v in pairs(plbllist) do
-						c = c + 1
-					end
-					--BBOT.chat:Message("You have been votekicked from " .. c .. " server(s)!")
-					log(LOG_NORMAL, "You have been votekicked from " .. c .. " server(s)!")
-					notification:Create("You have been votekicked from " .. c .. " server(s)!")
+			end
+			writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+			local plbllist = serverhopper.blacklist[serverhopper.UserId]
+			if plbllist then
+				local c = 0
+				for k, v in pairs(plbllist) do
+					c = c + 1
 				end
+				--BBOT.chat:Message("You have been votekicked from " .. c .. " server(s)!")
+				log(LOG_NORMAL, "You have been votekicked from " .. c .. " server(s)!")
+				notification:Create("You have been votekicked from " .. c .. " server(s)!")
 			end
 		end)
 
@@ -16391,35 +16415,37 @@ if BBOT.game == "phantom forces" then
 		local aimbot = {}
 		BBOT.aimbot = aimbot
 		
+		local function bulletFilter(p)
+			if p.Name == "Window" then return true end
+			return not p.CanCollide or p.Transparency == 1
+		end
+
+		local function collisionFilter(p)
+			if p.Name:lower() == "killwall" then return end
+			if not p.CanCollide then return true end
+			if p.Name ~= "Window" then return end
+			return true
+		end
+
 		do
-			local function raycastbullet(p1)
-				local instance = p1.Instance
-				if instance.Name == "Window" then return true end
-				return not instance.CanCollide or instance.Transparency == 1
+			local workspace = BBOT.service:GetService("Workspace")
+			local params = RaycastParams.new()
+			params.IgnoreWater = true
+			function aimbot:fullcast(origin, direction, ignoreList, filterFunction)
+				local raycastHit = nil
+				params.FilterDescendantsInstances = ignoreList
+				for calls = 1, 2000 do
+					raycastHit = workspace:Raycast(origin, direction, params)
+					if not raycastHit or not filterFunction(raycastHit.Instance) then
+						return raycastHit
+					end
+					ignoreList[#ignoreList + 1] = raycastHit.Instance
+					params.FilterDescendantsInstances = ignoreList
+				end
 			end
 
-			local workspace = BBOT.service:GetService("Workspace")
-			local v4 = RaycastParams.new();
-			v4.IgnoreWater = true;
-			function aimbot:fullcast(p7, p8, p9, p10, p11)
-				local v3=nil;
-				local calls = 0;
-				v4.FilterDescendantsInstances = p9;
-				while calls < 2000 do
-					v3 = workspace:Raycast(p7, p8, v4);
-					if not v3 or not p10(v3) then
-						break;
-					end;
-					table.insert(p9, v3.Instance);
-					v4.FilterDescendantsInstances = p9;
-					calls = calls + 1
-				end;
-				return v3;
-			end;
-
-			local camera = BBOT.service:GetService("CurrentCamera")
-			function aimbot:raycastbullet(vec, dir, extra, cb)
-				return aimbot:fullcast(vec, dir, {camera, workspace.Terrain, localplayer.Character, workspace.Ignore, workspace.Players, extra}, cb or raycastbullet)
+			function aimbot:raycastbullet(vec, dir, extraIgnore, filterFunction)
+				return aimbot:fullcast(vec, dir, {workspace.Ignore, workspace.Players, extraIgnore}, filterFunction or bulletFilter)
 			end
 		end
 
@@ -16911,36 +16937,47 @@ if BBOT.game == "phantom forces" then
 		end
 
 		local dot = Vector3.new().Dot
-		local rcaster = BBOT.aux.raycast
-		function aimbot:raycastbullet_rage(start, dir, depth, raytracepenetration)
-			local trace_amount = 0
-			local function bulletcb(p1)
-				local instance = p1.Instance
-				if instance.Name == "Window" then return true end
-				if instance.Name == "killbullet" then return false end
-				local cancollide = not instance.CanCollide or instance.Transparency == 1
-				if raytracepenetration and depth and not cancollide then
-					local position = p1.Position
-					local instance = p1.Instance
-					local dirunit = dir.Unit
-					local v21 = rcaster.raycastSingleExit(position, instance.Size.magnitude * dirunit, instance);
-					if v21 then
-						local l__Position__22 = v21.Position;
-						local l__Normal__23 = v21.Normal;
-						local v24 = dot(dirunit, l__Position__22 - position);
-						if v24 < depth then
-							depth = depth - v24
-							trace_amount = trace_amount + v24
-							return true
-						else
-							return false
-						end
-					end
-				else
-					return cancollide
-				end
-			end
-			return self:raycastbullet(start,dir,nil,bulletcb), trace_amount
+		function aimbot:raycastbullet_rage(origin, initialVelocity, time, acceleration, penetration, step)
+			if math.isdirtyfloat(time) or time > 2 then
+		        return
+		    end
+		    local ignoreList = {workspace.Players, workspace.Ignore}
+		    local reachesTarget = true
+		    local passed = 0
+		    local step = step or (1 / 30)
+		    local bulletPosition = origin
+		    local bulletVelocity = initialVelocity
+		    local penetrationPower = penetration
+		    while passed < time do
+		        local dt = math.min(step, time - passed)
+		        local stepVelocity = dt * bulletVelocity + 0.5 * acceleration * dt * dt
+		        local cast0 = raycast.raycast(bulletPosition, stepVelocity, ignoreList, bulletFilter, true)
+		        if cast0 then
+		            local unit = stepVelocity.Unit
+		            local enter = cast0.Position
+		            local hit = cast0.Instance
+
+		            local cast1 = raycast.raycastSingleExit(enter, hit.Size.magnitude*unit, hit)
+		            if cast1 then
+		                local dist = dot(unit, cast1.Position - enter)
+		                penetrationPower = penetrationPower - dist
+		                if penetrationPower < 0 then
+		                    reachesTarget = false
+		                    break
+		                end
+		            end
+		            local trueDt = dot(stepVelocity, enter - bulletPosition) / dot(stepVelocity, stepVelocity) * dt
+		            bulletPosition = enter + 0.01 * unit
+		            bulletVelocity = bulletVelocity + trueDt * acceleration
+		            passed = passed + trueDt
+		            ignoreList[#ignoreList + 1] = hit
+		        else
+		            bulletPosition = bulletPosition + stepVelocity
+		            bulletVelocity = bulletVelocity + dt * acceleration
+		            passed = passed + dt
+		        end
+		    end
+		    return reachesTarget
 		end
 
 		hook:Add("Initialize", "FindnewBullet", function()
@@ -17117,7 +17154,9 @@ if BBOT.game == "phantom forces" then
 			elseif vel_resolver == "Ping" and controller.pingVelocity then
 				controller.receivedVelocity = controller.pingVelocity
 			end
-			controller.__t_received = t
+			if controller.receivedDataFlag then
+				controller.__t_received = t
+			end
 		end)
 
 		hook:Add("Postupdatespawn", "BBOT:RageBot.CheckAlive", function(player, controller)
@@ -17188,13 +17227,13 @@ if BBOT.game == "phantom forces" then
 				cross_relative_only = self:GetRageConfig("Settings", "Cross Relative Points Only")
 				
 				hitbox_points, hitbox_points_name = {}, {}
-				if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
-				if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
-				if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = CFrame.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
-				if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = CFrame.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Up" end
-				if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = CFrame.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Down" end
-				if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = CFrame.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Left" end
-				if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = CFrame.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
+				if hitbox_shift_points.Origin then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,0) hitbox_points_name[#hitbox_points_name+1] = "Origin" end
+				if hitbox_shift_points.Forward then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Forward" end
+				if hitbox_shift_points.Backward then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Backward" end
+				if hitbox_shift_points.Up then hitbox_points[#hitbox_points+1] = Vector3.new(0,hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Up" end
+				if hitbox_shift_points.Down then hitbox_points[#hitbox_points+1] = Vector3.new(0,-hitbox_shift_distance,0) hitbox_points_name[#hitbox_points_name+1] = "Down" end
+				if hitbox_shift_points.Left then hitbox_points[#hitbox_points+1] = Vector3.new(-hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Left" end
+				if hitbox_shift_points.Right then hitbox_points[#hitbox_points+1] = Vector3.new(hitbox_shift_distance,0,0) hitbox_points_name[#hitbox_points_name+1] = "Right" end
 
 				local hitbox_shift_static_points = self:GetRageConfig("HVH Extras", "Hitbox Static Points")
 				if hitbox_shift_static_points.Forward then hitbox_points[#hitbox_points+1] = Vector3.new(0,0,-hitbox_shift_distance) hitbox_points_name[#hitbox_points_name+1] = "Any" end
@@ -17209,9 +17248,9 @@ if BBOT.game == "phantom forces" then
 				firepos_shift_multi = self:GetRageConfig("HVH", "FirePos Shift Multi-Point")
 				
 				firepos_points, firepos_points_name = {}, {}
-				if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = CFrame.new(0,0,0) firepos_points_name[#firepos_points_name+1] = "Origin" end
-				if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
-				if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
+				if firepos_shift_points.Origin then firepos_points[#firepos_points+1] = Vector3.new(0,0,0) firepos_points_name[#firepos_points_name+1] = "Origin" end
+				if firepos_shift_points.Forward then firepos_points[#firepos_points+1] = Vector3.new(0,0,-firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Forward" end
+				if firepos_shift_points.Backward then firepos_points[#firepos_points+1] = Vector3.new(0,0,firepos_shift_distance) firepos_points_name[#firepos_points_name+1] = "Backward" end
 
 				local firepos_shift_static_points = self:GetRageConfig("HVH Extras", "FirePos Static Points")
 				if firepos_shift_static_points.Up then firepos_points[#firepos_points+1] = Vector3.new(0,firepos_shift_distance,0) firepos_points_name[#firepos_points_name+1] = "Any" end
@@ -17223,23 +17262,23 @@ if BBOT.game == "phantom forces" then
 
 				for i=1, firepos_shift_multi do
 					local scale = (firepos_shift_distance/firepos_shift_multi)*i
-					if firepos_shift_points.Up then firepos_points[#firepos_points+1] = CFrame.new(0,scale,0) firepos_points_name[#firepos_points_name+1] = "Up" end
-					if firepos_shift_points.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-scale,0) firepos_points_name[#firepos_points_name+1] = "Down" end
-					if firepos_shift_points.Left then firepos_points[#firepos_points+1] = CFrame.new(-scale,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
-					if firepos_shift_points.Right then firepos_points[#firepos_points+1] = CFrame.new(scale,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
+					if firepos_shift_points.Up then firepos_points[#firepos_points+1] = Vector3.new(0,scale,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+					if firepos_shift_points.Down then firepos_points[#firepos_points+1] = Vector3.new(0,-scale,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+					if firepos_shift_points.Left then firepos_points[#firepos_points+1] = Vector3.new(-scale,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+					if firepos_shift_points.Right then firepos_points[#firepos_points+1] = Vector3.new(scale,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
 				end
 
 				hitbox_random = #hitbox_points
 				local hitbox_randompoints = self:GetRageConfig("HVH Extras", "Hitbox Random Points")
 				for i=1, hitbox_randompoints do
-					hitbox_points[#hitbox_points+1] = CFrame.new(0,0,0)
+					hitbox_points[#hitbox_points+1] = Vector3.new(0,0,0)
 					hitbox_points_name[#hitbox_points_name+1] = "Random"
 				end
 
 				firepos_random = #firepos_points
 				local firepos_randompoints = self:GetRageConfig("HVH Extras", "FirePos Random Points")
 				for i=1, firepos_randompoints do
-					firepos_points[#firepos_points+1] = CFrame.new(0,0,0)
+					firepos_points[#firepos_points+1] = Vector3.new(0,0,0)
 					firepos_points_name[#firepos_points_name+1] = "Random"
 				end
 
@@ -17249,12 +17288,12 @@ if BBOT.game == "phantom forces" then
 				tp_scan_multi = self:GetRageConfig("HVH", "TP Scanning Multi-Point")
 				for i=1, tp_scan_multi do
 					scan_dist = (tp_scan_dist/tp_scan_multi)*i
-					if points_allowed.Up then firepos_points[#firepos_points+1] = CFrame.new(0,scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
-					if points_allowed.Down then firepos_points[#firepos_points+1] = CFrame.new(0,-scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
-					if points_allowed.Left then firepos_points[#firepos_points+1] = CFrame.new(-scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
-					if points_allowed.Right then firepos_points[#firepos_points+1] = CFrame.new(scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
-					if points_allowed.Forward then firepos_points[#firepos_points+1] = CFrame.new(0,0,-scan_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
-					if points_allowed.Backward then firepos_points[#firepos_points+1] = CFrame.new(0,0,scan_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
+					if points_allowed.Up then firepos_points[#firepos_points+1] = Vector3.new(0,scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Up" end
+					if points_allowed.Down then firepos_points[#firepos_points+1] = Vector3.new(0,-scan_dist,0) firepos_points_name[#firepos_points_name+1] = "Down" end
+					if points_allowed.Left then firepos_points[#firepos_points+1] = Vector3.new(-scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Left" end
+					if points_allowed.Right then firepos_points[#firepos_points+1] = Vector3.new(scan_dist,0,0) firepos_points_name[#firepos_points_name+1] = "Right" end
+					if points_allowed.Forward then firepos_points[#firepos_points+1] = Vector3.new(0,0,-scan_dist) firepos_points_name[#firepos_points_name+1] = "Forward" end
+					if points_allowed.Backward then firepos_points[#firepos_points+1] = Vector3.new(0,0,scan_dist) firepos_points_name[#firepos_points_name+1] = "Backward" end
 				end
 				
 				damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
@@ -17269,82 +17308,6 @@ if BBOT.game == "phantom forces" then
 				["Forward"] = "Backward",
 				["Backward"] = "Forward",
 			}
-
-			aimbot.ragebot_next = {}
-			aimbot.ragebot_prioritynext = {}
-
-			hook:Add("OnPriorityChanged", "BBOT:RageBot.Organize", function(player, old, new)
-				if new and new > 0 then
-					local found = false
-					local c = 0
-					for i=1, #aimbot.ragebot_next do
-						local v = aimbot.ragebot_next[i-c]
-						if v == player then
-							table.remove(aimbot.ragebot_next, i-c)
-							c=c+1
-							found = true
-						end
-					end
-					if found then
-						aimbot.ragebot_prioritynext[#aimbot.ragebot_prioritynext+1] = player
-					end
-				else
-					local found = false
-					local c = 0
-					for i=1, #aimbot.ragebot_prioritynext do
-						local v = aimbot.ragebot_prioritynext[i-c]
-						if v == player then
-							table.remove(aimbot.ragebot_prioritynext, i-c)
-							c=c+1
-							found = true
-						end
-					end
-					if found and (not new or new == 0) then
-						aimbot.ragebot_next[#aimbot.ragebot_next+1] = player
-					end
-				end
-			end)
-
-			hook:Add("PostInitialize", "BBOT:RageBot.Organize", function()
-				hook:Add("PlayerAdded", "BBOT:RageBot.Organize", function(player)
-					local inpriority = config:GetPriority(v)
-					if inpriority and inpriority > 0 then
-						aimbot.ragebot_prioritynext[#aimbot.ragebot_prioritynext+1] = player
-					else
-						aimbot.ragebot_next[#aimbot.ragebot_next+1] = player
-					end
-				end)
-	
-				hook:Add("PlayerRemoving", "BBOT:RageBot.Organize", function(player)
-					local c = 0
-					for i=1, #aimbot.ragebot_prioritynext do
-						local v = aimbot.ragebot_prioritynext[i-c]
-						if v == player then
-							table.remove(aimbot.ragebot_prioritynext, i-c)
-							c=c+1
-						end
-					end
-					c = 0
-					for i=1, #aimbot.ragebot_next do
-						local v = aimbot.ragebot_next[i-c]
-						if v == player then
-							table.remove(aimbot.ragebot_next, i-c)
-							c=c+1
-						end
-					end
-				end)
-
-				local p = players:GetPlayers()
-				for i=1, #p do
-					local v = p[i]
-					local priority = config:GetPriority(v) or 0
-					if priority > 0 then
-						aimbot.ragebot_prioritynext[#aimbot.ragebot_prioritynext+1] = v
-					elseif priority == 0 then
-						aimbot.ragebot_next[#aimbot.ragebot_next+1] = v
-					end
-				end
-			end)
 
 			local last_prioritized = nil
 			hook:Add("OnConfigChanged", "BBOT:Aimbot.PriorityAuto", function(steps, old, new)
@@ -17379,12 +17342,33 @@ if BBOT.game == "phantom forces" then
 				end
 			end)
 
-			local check = {}
-			hook:Add("RenderStep.Last", "BBOT:Aimbot.Cache", function()
-				check = {}
-			end)
-
 			local blank_vector = Vector3.new()
+			local phantoms = game.Teams.Phantoms
+			local ghosts = game.Teams.Ghosts
+			local wrapback = BBOT.loop.Wrapback
+			local charsByPlayer = getupvalue(BBOT.aux.replication.getallparts, 1)
+
+			function aimbot.RageHvHTargetSortPredicate(a, b)
+				if a.priority_importance or b.priority_importance then
+					return b.priority_importance > a.priority_importance
+				end
+				local aPos = a.position
+				local bPos = b.position
+
+				local aDtPos = aPos - char.rootpart.Position
+				local bDtPos = bPos - char.rootpart.Position
+				-- lastKilledBy == a.player and 1/0 or
+				local aScore = aDtPos.y + (dot(aDtPos, aDtPos) ^ 0.6)
+				local bScore = bDtPos.y + (dot(bDtPos, bDtPos) ^ 0.6)
+				-- prefer highest player in the sky, but also the closest
+
+				return bScore > aScore
+			end
+
+			local target_scan_index = 1 -- scan index
+			local hitscan_index = 1 -- fire position multipoint index
+			local hitbox_index = 0 -- hitbox shift index
+			-- this is already becoming a large mess
 			function aimbot:GetRageTarget(fov, gun)
 				local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
 				local cam_position
@@ -17402,117 +17386,110 @@ if BBOT.game == "phantom forces" then
 						cam_position = char.rootpart.Position
 					end
 				end
-				local specific = self.calc_target
-				local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
-				local penetration_depth = gun.data.penetrationdepth * wall_scale/100
+				--local specific = self.calc_target
+				local penetration_depth = gun.data.penetrationdepth
 			
 				local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
 				local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
 				local priority_only = self:GetRageConfig("Settings", "Priority Only")
 				local latency = extras:getLatency()
 			
-				local plys = {} -- the table of players we are going to scan for
-				local target_priority_found = {} -- the players we found from the priority list array
-				local target_found = {} -- the players we found from the normal list array
-				if specific then -- scanning for 1 player, like when they spawn
-					local reg, index
-					local len = #self.ragebot_prioritynext
-					for i=1, len do
-						local v = self.ragebot_prioritynext[i]
-						if v == specific then
-							reg = target_priority_found
-							index = i
-							break
-						end
-					end
-			
-					local len = #self.ragebot_next
-					for i=1, len do
-						local v = self.ragebot_next[i]
-						if v == specific then
-							reg = target_found
-							index = i
-							break
-						end
-					end
-					
-					if reg then
-						local v = specific
-						if not v.Team or v.Team == localplayer.Team then return end
-						if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then return end
-						local updater = replication.getupdater(v)
-						if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then return end
-						if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then return end
-						plys[#plys+1] = v
-						reg[v] = index
-					end
-				else -- here we determine who should be added to table "plys"
-					-- think of this as a regulator to scan a certain number of players per frame
-					-- default it's 1 player per frame
-					do
-						local count, c = 0, 0
-						local len = #self.ragebot_prioritynext
-						for i=1, len do
-							local v = self.ragebot_prioritynext[i-c]
-							if check[v] or not v.Team or v.Team == localplayer.Team then continue end
-							if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
-							local updater = replication.getupdater(v)
-							if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
-							if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
-							plys[#plys+1] = v
-							table.remove(self.ragebot_prioritynext, i-c)
-							c=c+1
-							self.ragebot_prioritynext[#self.ragebot_prioritynext+1] = v
-							target_priority_found[v] = i-c
-							count = count + 1
-							if count >= max_players then
-								break
-							end
-						end
-					end
-			
-					if not priority_only then
-						local count, c = 0, 0
-						local len = #self.ragebot_next
-						for i=1, len do
-							local v = self.ragebot_next[i-c]
-							if check[v] or not v.Team or v.Team == localplayer.Team then continue end
-							if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
-							local updater = replication.getupdater(v)
-							if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
-							if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
-							plys[#plys+1] = v
-							table.remove(self.ragebot_next, i-c)
-							c=c+1
-							self.ragebot_next[#self.ragebot_next+1] = v
-							target_found[v] = i
-							count = count + 1
-							if count >= max_players then
-								break
-							end
-						end
+				local valid_targets = {} -- the table of players we are going to scan for
+				--local target_priority_found = {} -- the players we found from the priority list array
+				--local target_found = {} -- the players we found from the normal list array
+
+				local now = tick()
+				do
+					local pList = (localplayer.Team == phantoms and ghosts or phantoms):GetPlayers()
+
+					for i = 1, #pList do
+						local guy = pList[i]
+						local updater = replication.getupdater(guy)
+						if damage_prediction and self.predictedDamageDealt[guy] and self.predictedDamageDealt[guy] > damage_prediction_limit then continue end
+						if not updater or not updater.alive or (updater.__t_received and (now - updater.__t_received > 1)) then continue end
+
+						local priority_value = config:GetPriority(guy)
+						valid_targets[#valid_targets + 1] = {
+							player = guy,
+							updater = updater,
+							position = updater.receivedPosition or updater.__spawn_position or charsByPlayer[guy].torso.Position,
+							priority_importance = priority_value and 50000 * priority_value or nil
+						}
 					end
 				end
-			
-				--.75
-				local vecdown = Vector3.new(0,1.55,0)
-				local targeted = {}
-				for i=1, #plys do -- here we calculate if they are hittable using the points the config has setup for us
-					-- players we find is hittable we insert into targeted
-					-- here's the structure
+
+
+				if #valid_targets == 0 then
+					return
+				end
+
+				table.sort(valid_targets, aimbot.RageHvHTargetSortPredicate)
+
+				for i, target in wrapback(valid_targets, target_scan_index, max_players) do -- here we calculate if they are hittable using the points the config has setup for us
+					-- hit target data structure
 					--[[
 						{
 							v, -- the player
 							part, -- the part we are hitting
 							pos, -- the position we are hitting
 							cam_position, -- the firing position
+							launch_velocity, -- the bullet velocity, or velocity at launch
 							(u > tp_scanning_points), -- are we TP scanning to them?
-							traceamount -- the length of the penetration we had to go through
 						}
 					]]
-			
-					local v = plys[i]
-					local updater = replication.getupdater(v)
+
+					target_scan_index += 1
+
+					local updater = target.updater
+					local hitbox_sent = hitscan_priority -- server doesnt care
+
+					local hitbox_pos = target.position
+
+					for j, choice in wrapback(firepos_points, hitscan_index, 2) do
+						-- {v, part, pos, cam_position, false, 0}
+						hitscan_index += 1
+						local fire_position = cam_position
+						local fp_name = firepos_points_name[j]
+						local shifted_hitbox_pos = hitbox_pos
+						local do_tp_scan = j > tp_scanning_points -- im crying
+						if not do_tp_scan then
+							local offset
+							if fp_name == "Random" then
+								offset = vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance))
+							else
+								offset = choice
+							end
+
+							fire_position += offset
+						else
+							if do_tp_scan and not self.tp_scanning_cooldown then
+								local cast = raycast.raycast(fire_position, choice, {workspace.Players, workspace.Ignore}, collisionFilter)
+								fire_position = cast and cast.Position - 0.1 * choice.Unit or fire_position + choice
+							end
+						end
+
+						do
+							-- one hitbox shift each frame lol
+							hitbox_index = hitbox_index % #hitbox_points + 1
+							local shift_vec = hitbox_points[hitbox_index]
+							if shift_vec == "Random" then
+								shift_vec = vector.randomspherepoint(math.random(-hitbox_shift_distance, hitbox_shift_distance))
+							end
+
+							shifted_hitbox_pos += shift_vec
+							-- (i - 1) % #arr + 1
+						end
+
+						local launch_velocity, travel_time = physics.trajectory(fire_position, self.bullet_gravity, shifted_hitbox_pos, gun.data.bulletspeed)
+						-- origin, initialVelocity, time, acceleration, penetration, step
+						local reaches_target = self:raycastbullet_rage(fire_position, launch_velocity, travel_time, self.bullet_gravity, penetration_depth)
+						if reaches_target then
+							-- ey we hit
+							return {target.player, hitbox_sent, shifted_hitbox_pos, fire_position, launch_velocity, do_tp_scan}
+						end
+					end
+
+					--[[local updater = replication.getupdater(v)
 					local parts = self:GetParts(v)
 					if not parts then continue end
 					local part
@@ -17599,8 +17576,8 @@ if BBOT.game == "phantom forces" then
 												newcf = targetcframe * lookatme * hitbox_points[i]
 											end
 											local pos = newcf.p
-											local raydata, traceamount = self:raycastbullet_rage(cam_position,pos-cam_position,penetration_depth,auto_wall)
-											if not raydata or raydata.Position == pos then
+											local reaches_target = self:raycastbullet_rage(cam_position, pos-cam_position, penetration_depth,auto_wall)
+											if reaches_target then
 												if not (u > tp_scanning_points) then
 													tp_hit = true
 												end
@@ -17612,38 +17589,8 @@ if BBOT.game == "phantom forces" then
 								end
 							end
 						end
-					end
+					end]]
 				end
-			
-				local len_targeted = #targeted
-				if len_targeted < 1 then return end
-			
-				-- If we are TP scanning, we need to move then delay and fire, so this solves that by shifting the array back to the original
-				if targeted[1] and targeted[1][5] then
-					if target_priority_found[targeted[1][1]] then
-						local ragebot_prioritynext = self.ragebot_prioritynext
-						for i=1, #ragebot_prioritynext do
-							local v = ragebot_prioritynext[i]
-							if v ~= targeted[1][1] then continue end
-							table.remove(ragebot_prioritynext, i)
-							table.insert(ragebot_prioritynext, 1, v)
-							break
-						end
-					end
-			
-					if target_found[targeted[1][1]] then
-						local ragebot_next = self.ragebot_next
-						for i=1, #ragebot_next do
-							local v = ragebot_next[i]
-							if v ~= targeted[1][1] then continue end
-							table.remove(ragebot_next, i)
-							table.insert(ragebot_next, 1, v)
-							break
-						end
-					end
-				end
-			
-				return targeted[1]
 			end
 		end
 
@@ -17698,7 +17645,7 @@ if BBOT.game == "phantom forces" then
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
 				local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
-				if target and target[5] and not self.tp_scanning and not self.tp_scanning_cooldown then
+				if target and target[6] and not self.tp_scanning and not self.tp_scanning_cooldown then
 					local original_position = char.rootpart.Position
 					local target_pos = target[4]
 					BBOT.misc:UnBlink() -- obivously don't want to fake lagging during this
@@ -17758,25 +17705,12 @@ if BBOT.game == "phantom forces" then
 				self:RageChanged(target)
 				if target then
 					self.rage_target = target
-					local position = target[3]
-					local part_pos = part.Position
-
-					local dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
-					local magnitude = (position-part_pos).Magnitude
-
-					self.silent_data = {part.Position, part.Orientation}
-
-					local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
-					part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
-					part.Position = target[4]
 
 					if self:GetRageConfig("Aimbot", "Auto Shoot") then
 						self.fire = true
 						gun:shoot(true)
 						BBOT.misc:MoveTo(self.tp_scanning or char.rootpart.Position)
 					end
-
-					self.silent = part
 				end
 			end
 		end
@@ -18355,18 +18289,12 @@ if BBOT.game == "phantom forces" then
 					hook:Call("Aimbot.NewBullets")
 					local target = aimbot.rage_target
 					--local timescale = 0
-					local campos = camera.CFrame.p
-					local dir = target[3]-campos
-					local firepos = bullettable.firepos
-					local gundata = gamelogic.currentgun.data
-					local t = dir.Magnitude/gundata.bulletspeed
 					local targetpos = target[3]
-					bullettable.firepos = target[4]--campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
-					-- what the fuck is this??         ^^^^^^ wtf is this ??? gymnastics??? 🤸‍♂️🤸‍♂️ this isnt gymnastics class buddy
+					bullettable.firepos = target[4]
 
 					for i=1, #bullettable.bullets do
 						local bullet = bullettable.bullets[i]
-						bullet[1] = aimbot:DropPrediction(bullettable.firepos, targetpos, gundata.bulletspeed).Unit * bullet[1].Magnitude
+						bullet[1] = target[5]
 					end
 
 					network:send(networkname, bullettable, BBOT.misc:GetTickManipulationScale())
@@ -18377,7 +18305,7 @@ if BBOT.game == "phantom forces" then
 						timer:Simple(1.5, function()
 							enque[bullet[2]] = nil
 						end)
-						network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
+						network:send("bullethit", target[1], targetpos, target[2], bullet[2])
 						-- TODO: i want to implement Scan for Collaterals but i am fucking lost in this new paradigm
 						enque[bullet[2]] = target[1]
 					end
