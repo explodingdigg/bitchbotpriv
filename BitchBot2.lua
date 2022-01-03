@@ -232,15 +232,15 @@ Draw:RegisterFont("smallest", syn.crypt.base64.decode(font64["smallest_pixel"]),
 	Bold = false,
 	PixelSize = 10,
 })
-Draw:RegisterFont("small", syn.crypt.base64.decode(font64["ProggyTinySZ"]), 16, {
+Draw:RegisterFont("small", syn.crypt.base64.decode(font64["ProggyTinySZ"]), 10, {
 	Scale = false,
 	Bold = false,
-	PixelSize = 16,
+	PixelSize = 10,
 })
-Draw:RegisterFont("norm", syn.crypt.base64.decode(font64["ProggyCleanSZ"]), 16, {
+Draw:RegisterFont("norm", syn.crypt.base64.decode(font64["ProggyCleanSZ"]), 13, {
 	Scale = false,
 	Bold = false,
-	PixelSize = 16,
+	PixelSize = 13,
 })
 
 font64 = nil
@@ -371,11 +371,15 @@ function Draw:Gradient(visible, pos, size, direction, color1, transparency1, col
     return temptable
 end
 
+--[[
+
+]]
+
 function Draw:Image(visible, imgdata, pos, centered, size, color, transparency, tablename)
 
 	local temptable = ImageDynamic.new()
     temptable.Visible = visible
-    temptable.Data = imgdata
+    temptable.Image = ImageRef.new(imgdata)
 	temptable.Color = color
 	temptable.Opacity = transparency/255
     temptable.Position = pos
@@ -414,9 +418,9 @@ local MenuImages = {
 	["SNIPER"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAXCAYAAAD9VOo7AAADIklEQVR4nO3ZS2hdVRSA4e/mYa310VajlapYRQRtFScOfEFFcCIojhw4kIoVrQhSHSmIUwURHPmYqAOhA3HgQBQFURR0YBRRaw0+20SDL6y9sU27HKx9yU1Nbm5ubu4j6Q+bs/c+Z+29DuuctdZZpxIReph78DyOYA/u7K46y89AtxVYgH3lOFzXX9EMdXCvYTyJU8r4CMZxFH/jOZxWrvu1XDNWJ1/fP7vI/1FkLsc2bC3tDBwz+4Hbgc/bdjfLRKWDLmstDjU4/wPW42R8UeZOxaWlvx8Tpb8VU/gdF6LSxP7X4sPFKNwNeskgy01fGKTXY8iqo5MxZBovmYkh09LlrEcVj+Jl6aK2lGtOxyWlP44Dpf89vsIdZuLGFeW4DRvK+p28v7bQSZc1H7fLwAwP4HzsRMjAXM+ADNjP4kc8VebH8NGya9oBumGQs3CXfAtGcLN8E2ocw6fzyA7hyuPmpvC1zNbgHxyuO/+X/xu2Z+mGQZ7GQ53etF/ohI89D7fgGvl0b+zAnt3kM7zaqvB8b8ganItN0q2MlHGtv0m6lYcbrD2IR/AETmpVwT7kE1zdqvBcBhmWQfPeBWRDZjVfznFui8yYrmtVsT7mkExSWopbQ3gFF+McmcGc2aRsBbtx93HzO/CMmcxptVGVHqbainAlIl7HrS1ufhgXybLGCF5osNZv0uBLjVsTeF9+a9yEP+Xb2gtMyZT9jZZXiIhdsTTei4j7I2KiwTVjEXFBRGyOiD0R8VhEbIyIDXXtxYj4ron93owIEbEmIh6PiEoZr4g2hI+X+FTcUNp8jGE7firjD/AOLiv9GuN4V7q8ZvhXJgwrigEzFdTl4FuzjQF7sVkaoEZFftDVl9hXJZWIqAWgZkrYi2EfbsTPc5y7TVZ/p8t4EKO4Dw8usO4ormqHgr1ILe2tyv8Q7eIbaYz9i5S7Xn7jNOIoXmtFqX6gEhHrcLBF+arMt9fVze2Vxjgwp8QJGjKk8XfH27JwN4lfSpssbVwacq0sFu4u6203Oz6cYBHUXNZbss40KaujB+U/h11m/PxCDMp/EaPtVnI18R9vKf2ssOnBPwAAAABJRU5ErkJggg==", 100, 23},
 }
 local MenuSettingsImages = {
-	["SAVE"] = {"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", 100, 100},
-	["LUA"] = {"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", 100, 100},
-	["PLAYERS"] = {"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", 100, 100},
+	["SAVE"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMUSURBVGhD7ZrNitRAFIXTCQ2OiqLiz0YREVy5EXUrCG7FEV34BOJ7uNI3cOfWrW5UBFeCgqvBJxhXA4qC2jRtd3tO5d6ykqkkVbHTpNv54FC3Ur8n9dNhmGRdGEiazOdziZITk8lkQ+ICw+FwezAYzCTbKaPRaCPLspOSLYB5fEdCkTnmZCdPI2ehd1AdR6R650yn0xuz2WyuKvEbegrtk+o5eDCAPkJNHIfsKnYJjNz0GCiA8sdSPUklPQ9dYoByJlWwfoo62i6Ihj53IfWHJlMDttQdCa0Ru2VQKFFOaRIsjF4R9sl+tC83JuUyoXEc1D0koTUSSqtthQH1BXAL85Ebk11laZryEDNfiVuuRmyPTueFWOADHdRssRBJG6UQo7yqLJO0DjtBNVK4UtG5zwTRgdiOA4VKzcSqCUwzfxFqpI+EGLEsy4i7vL6YqUpx40b6siJRb9/Hsoy4E62Lq8oaUSO2Ea80VUdox27qUwh2+6kR78o0mHH3dZMIx6DYaTn1SdvZW9SVYAOvgVWkz0a4KsEs2ohd6gUQ1deijUS9xUWyd0b6xv9pBPf3GQmXwWlJgzCHExO8iuQ94zL88XF+GLehZ1DsX1Jib7Oj0F3osPPjV0DmtAOdQpx/yzcZIR1+slRSZYKUjTRuLTYom+AAPil1ZTHo2D4Jdv4aRG0Vp6MCVZOuqr8AUvRtBly7W6uzV7Ys1m5F2p3GGjo8F15arwgnWie3zjIwo+CmuYLkA+NFgn63YOSzZEO4AJ3LwyC+ov9jEpsBL0OtcP/0X9Z4PL4nQwSB7h7lvQbzRZruXb+dgDd8QMJo9q7fLsDB/SVhNL3aWqD1C+3VivwLa3dG+rK1WqNGtqCXebiaqJExdBt6ZXIriHtGRtAm9NrkVozyYaeZW9Abk+s/PyW1X78mxQ+SuYaR34/kOXSd+TpQV6K/8NOdz/Hh+DDLspjt+gCK+dB8grHuMygYUWgIHET4ArpmHnrwmfBBYx3wFtpE39+YUSNMCPP2Pw7EzEWTKcIGMbMLcxzOD+gTX3ieXRuS5A+l9l54jQJiowAAAABJRU5ErkJggg==", 50, 50},
+	["LUA"] = {"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", 50, 50},
+	["PLAYERS"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAUISURBVGhD1Zrbq1RVHIDPWGpmYUWFoVHg0eyCBan1lEUZQf0BhembEARdH+shSonqpYcuB7u8ZaaCFVRGUGoRZWlQ0U0OJVQgqWXpwfJy+r49a/aZcfZ95pyZ88HHnr1mr99aa+89a6+19tQGusDo6Khx5uEyvBavwEvwfDwTZQT34178Dnfhdhyu1WqjbHsDldd5+Dj+gFUx7xNorBB9ArAwXIxb8Dh2C2O9iUswlDZOUMAcfA1P4Hhh7PU4JxTbPQiqd+NBnCgsyzJDLTqEQNPxJTyJvcCyp4fqVIMAs/BDo/WYj3BWqFYiqd1vyPg+Xhcl9J4vcDld9aH6bitTwrYFGuGl3IL90ghZgvZqibdZW0M40M1zeJMf+owb8flQx2w4yJ6i31kZqhvT8hvhAPvub/DcKKF/+Quv4vfyW3236daiEW6exn5vhJyDz4Q6R8RXhMTFbD7HxA6gDzmJ13NV7M3qlQ4te6SxX5JjeACPR3vlOILeJgV+vW1Y10ebr4oNceRZdgDomOhVXICn4SLcjEU4gg/hBTgDb8VvsSzWeTA0I2qIQ/GyvIstV5D9afixX+Zwb8gSQ9og/h19W441jQA1rDKfuCMKcAqkr65/ncpRvCgc3gLpG6MjyvEj1jyjzuwuiyKVw9leEn+EbRre1P6ukkiLmcUCHLQhTk+rcHPYnkpaeoOpOHZfBzirp7O5ob5XmmUGeMHrUwHnC/FJ4LPejiOYx06Mby8+T8WnsOpUYcjfxzZiVb0q/+J7+DN6ey5Hz3gR9uE7+A86hlqEVRdDdtgQK3FpfX/S8osN8YycVd+ftBy2ISf4UOWJ3k+0PtAmMzbEFcDJzogNqfIQ6jf22xDXYrNwVLsZH8BN6PB5vPHJ75qBU+5hE3LY68PoRczCB2Z0NNspmHd8pziqdmTcKPM8dDyVxZBX5MsoRzobmbxEH9h6NR5El4nGi3X4bFOZB9lsiHbS2WVDdtQ/p+KgMobAR9mswN1RQnfZiveHE9aMryey2O6l81mSNYwfxotDhhjSXND2u27xGZ4dwseQdjX+6QEp/IT1y8cH309kYSFO+Fsgzdnh1x7QIZ/g7BA2hrQLMe/3sTYcHmVwdpY31X0Lp4UsMaTNxqrrw452fc+SdCVm4lbMwjrPD1miTOpyZBYWug7bRrekuWL/GB7GojitfRiT4jmsfxnzeBtDrgAJvinKe4GT2hghfSEO4T5Mi+X9biXHzmQTpPubfRLz5ibGXxqytaxruVmPd/khAw+0O1xN7+JyThvEmsHG+cWVaEfhwrOrgntwJ/lcAmqDfJ4gFwnvQ3vULN7AO4lV32uGQPZERd9KfYotXXMnEMt3MZuwyCzRqzo3ZE2GA1ZGhxbjAN6DbZ1AUcjrrXQLllnJWRWyp8NBWuSH1sAz+BWuwMITNI51uLMUX8djWJRXMEQZI+EGiwrxnvYp61y6DL+jwxfXAVzV/xUPcR//R0yfQzNxIbrS4vz+GnT1pCj+weA24jm6aCGxIULBvnr7AH1TVAVPm4sTznechdoBeAtWvQ0zX71lYmNwG/Ya65D5MjQXAviw877sFZZ9RqhOZxBIV2HW4K3bWJZlhlp0EYLORXuZvBFAJxh7A2Y/JzqFAtRu00Fk2XcqWRjLsZOxQ2kTgIXhfFyDzgmqYt61aKwQvTyp3W8ZqIBxHAQ2/nh2OWb98ex7bPzxbA9daoeXYGDgfzzGUqtvJH8WAAAAAElFTkSuQmCC", 50, 50},
 }
 
 --!SECTION Drawing shit end
@@ -436,8 +440,8 @@ local Menu = { --ANCHOR Menu table
 	connections = {},
 	clrs = {
 		norm = {},
+		mid = {},
 		dark = {},
-		gradients = {},
 	},
 	TabbedIn = true,
 	
@@ -552,6 +556,44 @@ function Menu:SetElement(element, value)
 
 		element.drawn[1].Size = Vec2((element.hitbox.w - 4) * ( (value - element.minvalue) / (element.maxvalue - element.minvalue) ), 8)
 
+	end
+end
+
+function Menu:SetColor(r, g, b)
+	self.mc = {r, g, b}
+	for k, v in ipairs(self.clrs.norm) do
+		v.Color = RGB(unpack(self.mc))
+	end
+	for k, v in ipairs(self.clrs.mid) do
+		v.Color = RGB(addunpack(self.mc, - 20))
+	end
+	for k, v in ipairs(self.clrs.dark) do
+		v.Color = RGB(addunpack(self.mc, - 40))
+	end
+
+	for window_name, window_val in pairs(Menu.windows) do
+		for tab_name, tab_val in pairs(window_val.values) do
+			for group_name, group_val in pairs(tab_val) do
+				for element_name, element_val in pairs(group_val) do
+					if element_val.type == TOGGLE then
+						if element_val.value then 
+							local drawn = element_val.drawn[1]
+							drawn.ColorUpperLeft = RGB(unpack(Menu.mc))
+							drawn.ColorUpperRight = RGB(unpack(Menu.mc))
+							drawn.ColorBottomLeft = RGB(addunpack(Menu.mc, -40))
+							drawn.ColorBottomRight = RGB(addunpack(Menu.mc, -40))
+						end
+					elseif element_val.type == SLIDER then
+						local drawn = element_val.drawn[1]
+						drawn.ColorUpperLeft = RGB(unpack(Menu.mc))
+						drawn.ColorUpperRight = RGB(unpack(Menu.mc))
+						drawn.ColorBottomLeft = RGB(addunpack(Menu.mc, -40))
+						drawn.ColorBottomRight = RGB(addunpack(Menu.mc, -40))
+					end
+				end
+			end
+
+		end
 	end
 end
 
@@ -1014,6 +1056,24 @@ function Menu:Create(menuname, menuprops, menutable)
 		return { bar = selected, barpos = selected_pos, click_pos = click_pos, nametext = nametext }
 	end
 
+	function mDraw:ScrollMore(direction, x, y, width, tab) -- 2 is down 1 is up
+		local drawins = {}
+
+		table.insert(drawins, mDraw:Gradient(true, Vec2(x, y), Vec2(width, 10), RGB(35, 35, 35), direction == 1 and 255 or 0, RGB(35, 35, 35), direction == 1 and 0 or 255, tab))
+
+		if direction == 1 then
+			table.insert(drawins, mDraw:FilledRect(true, Vec2(x + width - 7, y + 5), Vec2(5, 1), RGB(addunpack(Menu.mc, - 40)), 255, tab))
+			table.insert(drawins, mDraw:FilledRect(true, Vec2(x + width - 6, y + 4), Vec2(3, 1), RGB(addunpack(Menu.mc, -20)), 255, tab))
+			table.insert(drawins, mDraw:FilledRect(true, Vec2(x + width - 5, y + 3), Vec2(1, 1), RGB(addunpack(Menu.mc, 0)), 255, tab))
+		else
+			table.insert(drawins, mDraw:FilledRect(true, Vec2(x + width - 7, y + 3), Vec2(5, 1), RGB(addunpack(Menu.mc, - 40)), 255, tab))
+			table.insert(drawins, mDraw:FilledRect(true, Vec2(x + width - 6, y + 4), Vec2(3, 1), RGB(addunpack(Menu.mc, -20)), 255, tab))
+			table.insert(drawins, mDraw:FilledRect(true, Vec2(x + width - 5, y + 5), Vec2(1, 1), RGB(addunpack(Menu.mc, 0)), 255, tab))
+		end
+
+		return drawins
+	end
+
 	function mDraw:ImageLayout(images, imageorder, resize, even_spacing, x, y, width, tab)
 
 		local smallness = 1
@@ -1074,7 +1134,6 @@ function Menu:Create(menuname, menuprops, menutable)
 		mDraw:OutlinedRect(true, Vec2(x + 1, y + 1), Vec2(10, 10), RGB(0, 0, 0), 255, tab)
 
 		local temptable = {}
-
 		table.insert(temptable, mDraw:Gradient(true, Vec2(x + 2, y + 2), Vec2(8, 8), value and RGB(unpack(Menu.mc)) or RGB(50, 50, 50), 255, value and RGB(addunpack(Menu.mc, - 40)) or RGB(30, 30, 30), 255, tab))
 
 		table.insert(temptable, mDraw:Text(true, name, "norm", Vec2(x + 16, y), false, unsafe and RGB(245, 239, 120) or RGB(255, 255, 255), 255, true, tab))
@@ -1087,10 +1146,7 @@ function Menu:Create(menuname, menuprops, menutable)
 		mDraw:Gradient(true, Vec2(x + 2, y + 14), Vec2(length - 4, 8), RGB(50, 50, 50), 255, RGB(30, 30, 30), 255, tab)
 
 		local temptable = {}
-		local slida = mDraw:Gradient(true, Vec2(x + 2, y + 14), Vec2((length - 4) * ((value - minvalue) / (maxvalue - minvalue)), 8), RGB(unpack(Menu.mc)), 255, RGB(addunpack(Menu.mc, -40)), 255, tab)
-		table.insert(temptable, slida)
-		table.insert(Menu.clrs.gradients, slida)
-
+		table.insert(temptable, mDraw:Gradient(true, Vec2(x + 2, y + 14), Vec2((length - 4) * ((value - minvalue) / (maxvalue - minvalue)), 8), RGB(unpack(Menu.mc)), 255, RGB(addunpack(Menu.mc, -40)), 255, tab))
 
 		mDraw:OutlinedRect(true, Vec2(x, y + 12), Vec2(length, 12), RGB(30, 30, 30), 255, tab)
 		mDraw:OutlinedRect(true, Vec2(x + 1, y + 13), Vec2(length - 2, 10), RGB(0, 0, 0), 255, tab)
@@ -1259,6 +1315,9 @@ function Menu:Create(menuname, menuprops, menutable)
 					active = true,
 					visible = group_box.visible == nil and true or group_box.visible,
 					
+					scrolling = group_box.dontscroll and not group_box.dontscroll or {
+						scrolled = 0,
+					},
 					drawn = {},
 					group_drawn = {},
 					scrolled = 0,
@@ -1267,6 +1326,12 @@ function Menu:Create(menuname, menuprops, menutable)
 
 				logtotable = curmenu.hitboxes[tab_num].content[group_box.name].group_drawn
 				mDraw:CoolBox(group_box.noname and " " or group_box.replacename or group_box.name, group_box.relval.x, group_box.relval.y, group_box.relval.w, group_box.relval.h, drawtab)
+
+				if not group_box.dontscroll then -- TODO FINISH SCROLLING SHIT
+		
+					curmenu.hitboxes[tab_num].content[group_box.name].scrolltop = mDraw:ScrollMore(1, group_box.relval.x + 2, group_box.relval.y + 18, group_box.relval.w - 4, drawtab)
+					curmenu.hitboxes[tab_num].content[group_box.name].scrollbottom = mDraw:ScrollMore(2, group_box.relval.x + 2, group_box.relval.y + group_box.relval.h - 12, group_box.relval.w - 4, drawtab)
+				end
 				logtotable = nil
 			end
 			
@@ -1329,7 +1394,7 @@ function Menu:Create(menuname, menuprops, menutable)
 						}
 		
 						y_add += 30
-					elseif element.type == IMAGE_LAYOUT then
+					elseif element.type == IMAGE_LAYOUT then -- youre not supposed to use this with other elements in the same group
 						mDraw.zindex = 10 -- this is so bad
 						curgroup_value[element.name] = {
 							type = element.type,
@@ -1338,7 +1403,7 @@ function Menu:Create(menuname, menuprops, menutable)
 							hitboxes = mDraw:ImageLayout(element.images, element.order, element.resize, element.even_spacing, group_box.relval.x + 8, group_box.relval.y + y_add + (element.y_offset or 0), group_box.relval.w - 16, drawtab),
 							event = element.event
 						}
-						y_add += 30
+						y_add += 10
 						mDraw.zindex = group_num + 1
 					end
 				end
@@ -1485,6 +1550,7 @@ local Main = Menu:Create("main", {
 				noname = true,
 				pos = 3,
 				size = 54,
+				dontscroll = true,
 				content = {
 					{
 						type = IMAGE_LAYOUT,
@@ -1695,13 +1761,14 @@ local Main = Menu:Create("main", {
 				noname = true,
 				pos = 3,
 				size = 54,
+				dontscroll = true,
 				content = {
 					{
 						type = IMAGE_LAYOUT,
 						name = "Settings Group",
 						images = MenuSettingsImages,
 						order = {"SAVE", "PLAYERS", "LUA"},
-						resize = 0.4,
+						resize = 0.8,
 						even_spacing = true,
 						y_offset = -7,
 						event = function(group)
@@ -1905,6 +1972,6 @@ Menu.fadestart = tick()
 
 print("done making menus")
 
--- a message to bitch.
--- Do try to see my config system on the main branch on how it works.
--- You will need to understand it either way if we are gonna brige this menu.
+-- wait(5)
+
+-- Menu:SetColor(93, 255, 157)
