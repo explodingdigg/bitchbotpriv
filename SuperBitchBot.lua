@@ -2802,13 +2802,6 @@ end
 
 -- Configs
 do
-	-- To do, add a config verification system
-	-- To do, menu shouldn't be tied together wirh config
-		-- Configs should have it's own dedicated handle
-	-- To do, I don't want to have to do this, but I might make an entirely new config system
-		-- Cause why not... and also right now things are just all over the place...
-	-- To do, make a parser for configs
-
 	local hook = BBOT.hook
 	local table = BBOT.table
 	local string = BBOT.string
@@ -3466,7 +3459,7 @@ end
 -- GUI
 do
 	-- WholeCream's Drawing Library to GUI Library
-	-- Extremely versatile and object oriented!
+	-- Extremely versatile and immediate!
 	local hook = BBOT.hook
 	local draw = BBOT.draw
 	local math = BBOT.math
