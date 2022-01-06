@@ -17063,7 +17063,6 @@ if not BBOT.Debug.menu then
 			end)
 		end
 
-
 		-- L3P player
 		do
 			local hook = BBOT.hook
@@ -17085,6 +17084,8 @@ if not BBOT.Debug.menu then
 				self.player = localplayer
 				debug.setupvalue(replication._updater, 1, localplayer_check)
 
+				-- MAJOR NOTE: this is here because synapse 2.0 was being a dick with environments
+				-- Synapse 3.0 has this fixed
 				local lookangle_spring = debug.getupvalues(self.controller.getlookangles, 1)[1]
 				local _update = lookangle_spring.update
 				function lookangle_spring:update(...)
@@ -17299,7 +17300,6 @@ if not BBOT.Debug.menu then
 					end
 				end
 			end)
-
 
 			do
 				local camera = BBOT.service:GetService("CurrentCamera")
