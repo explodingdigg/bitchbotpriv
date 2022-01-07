@@ -587,24 +587,6 @@ do
 	local table = BBOT.table
 	local debug = table.deepcopy(debug)
 	BBOT.debug = debug
-	
-	do
-		local _debug_getupvalues = debug.getupvalues
-		
-		function debug.getupvalues(fn)
-			if not islclosure(fn) then return {} end
-			return _debug_getupvalues(fn)
-		end
-	end
-
-	do
-		local _debug_getupvalue = debug.getupvalue
-		
-		function debug.getupvalue(fn)
-			if not islclosure(fn) then return nil end
-			return _debug_getupvalue(fn)
-		end
-	end
 end
 
 -- String
@@ -1157,26 +1139,32 @@ do
 	]]
 
 	hook.bindings = {}
-	function hook:bindFunction(func, name, extra)
+	function hook:bindFunction(func, name, metafunction, extra)
 		local t = {self, func, name, extra}
 		t[2] = hookfunction(func, function(...)
 			if t[1].killed then return t[2](...) end
 			local extra_add = {}
-			if t[4] ~= nil then
-				extra_add[1] = t[4]
+			if t[5] ~= nil then
+				extra_add[1] = t[5]
 			end
 			local vararg = {...}
 			for i=1, #vararg do
 				extra_add[#extra_add+1] = vararg[i]
 			end
+			if t[4] then
+				table.remove(extra_add, 1)
+			end
 			t[1]:CallP("Pre" .. t[3], unpack(extra_add))
 			local args = {t[2](...)}
-			if t[4] ~= nil then
-				table.insert(args, 1, t[4])
+			if t[5] ~= nil then
+				table.insert(args, 1, t[5])
 			end
-			--[[for i=1, #vararg do
+			for i=1, #vararg do
 				args[#args+1] = vararg[i]
-			end]]
+			end
+			if t[4] then
+				table.remove(args, 1)
+			end
 			t[1]:CallP("Post" .. t[3], unpack(args))
 			return unpack(args)
 		end)
@@ -1184,36 +1172,48 @@ do
 		return t[2]
 	end
 
-	function hook:bindFunctionOverride(func, name, extra)
-		local t = {self, func, name, extra, false}
+	function hook:bindFunctionOverride(func, name, metafunction, extra)
+		local t = {self, func, name, metafunction, extra, false}
 		t[2] = hookfunction(func, function(...)
-			if t[1].killed then return t[2](...) end
+			local hook = t[1]
+			if hook.killed then return t[2](...) end
 			local extra_add = {}
-			if t[4] ~= nil then
-				extra_add[1] = t[4]
+			if t[5] ~= nil then
+				extra_add[1] = t[5]
 			end
 			local vararg = {...}
 			for i=1, #vararg do
 				extra_add[#extra_add+1] = vararg[i]
 			end
-			if not t[5] then
-				t[5] = true
-				local s = t[1]:CallP("Suppress" .. t[3], unpack(extra_add))
-				t[5] = false
+			local self_meta
+			if t[4] then
+				self_meta = vararg[1]
+				table.remove(extra_add, 1)
+			end
+			if not t[6] then
+				t[6] = true
+				local s = hook:CallP("Suppress" .. t[3], unpack(extra_add))
+				t[6] = false
 				if s then return end
 			end
-			local override = {t[1]:CallP("Pre" .. t[3], unpack(extra_add))}
+			local override = {hook:CallP("Pre" .. t[3], unpack(extra_add))}
 			if override[1] == nil then
 				override = vararg
+			elseif self_meta ~= nil then
+				table.insert(override, 1, self_meta)
 			end
 			local args = {t[2](unpack(override))}
-			for i=1, #override do
-				table.insert(args, 1, override[i])
+			local len = #override
+			for i=1, len do
+				table.insert(args, 1, override[len-i+1])
 			end
-			if t[4] ~= nil then
-				table.insert(args, 1, t[4])
+			if self_meta ~= nil then
+				table.remove(args, 1)
 			end
-			t[1]:CallP("Post" .. t[3], unpack(args))
+			if t[5] ~= nil then
+				table.insert(args, 1, t[5])
+			end
+			hook:CallP("Post" .. t[3], unpack(args))
 			return unpack(args)
 		end)
 		self.bindings[#self.bindings+1] = t[2]
@@ -1632,6 +1632,10 @@ do
 		return isfile(self.path .. "/" .. class .. "/" .. path)
 	end
 
+	function asset:GetExtension(path)
+		return string.match(path, "^.+(%..+)$")
+	end
+
 	function asset:GetRaw(class, path)
 		if not self.registry[class] then return end
 		local reg = self.registry[class]
@@ -1730,7 +1734,7 @@ do
 
 			local c = 0
 			for i=1, #autoexec do
-				local k = i-cam
+				local k = i-c
 				local name = autoexec[k]
 				if not asset:IsFile("scripts", name) then
 					table.remove(autoexec, k)
@@ -1779,7 +1783,16 @@ do
 	end
 
 	function scripts:GetAll(path)
-		return asset:ListFiles("scripts", path)
+		local files = asset:ListFiles("scripts", path)
+		local c = 0
+		for i=1, #files do
+			local v = files[i-c]
+			if asset:GetExtension(v) ~= ".lua" then
+				table.remove(files, i-c)
+				c=c+1
+			end
+		end
+		return files
 	end
 
 	-- runs it? duh?
@@ -13890,7 +13903,7 @@ do
 										local state = scripts:GetState(script)
 										if state ~= "Running" then
 											scripts:Run(script)
-										elseif state == "Running" then
+										else
 											scripts:Unload(script)
 										end
 									end
@@ -13912,6 +13925,18 @@ do
 											scripts:RemoveFromAutoExec(script)
 										else
 											scripts:AddToAutoExec(script, 1)
+										end
+										
+										local autoexecon = scripts:IsAutoExec(script)
+										if autoexecon then
+											autoexec_button:SetText("Remove AutoExec")
+										else
+											autoexec_button:SetText("Add AutoExec")
+										end
+
+										for i, v in next, lualist.scrollpanel.canvas.children do
+											local autoexecstate = scripts:IsAutoExec(v.path)
+											v.children[3].text:SetText(autoexecstate and "ID " .. autoexecstate or "No")
 										end
 									end
 								end
@@ -14006,7 +14031,9 @@ if not BBOT.Debug.menu then
 			local timer = BBOT.timer
 			local localplayer = BBOT.service:GetService("LocalPlayer")
 			local remotefunc = BBOT.service:GetService("ReplicatedStorage").RemoteFunction -- for fetching shit
+			local remoteevent = BBOT.service:GetService("ReplicatedStorage").RemoteEvent
 			local aux = {
+				pfremoteevent = remoteevent,
 				pfremotefunc = remotefunc
 			}
 			BBOT.aux = aux
@@ -14212,13 +14239,32 @@ if not BBOT.Debug.menu then
 					end
 				end
 
-				local onclientevent_connections = getconnections(aux.pfremotefunc.OnClientEvent)
-				for i=1, #onclientevent_connections do
-					local v = onclientevent_connections[i]
+				for i=1, #reg do
+					local v = reg[i]
+					if typeof(v) == "function" then
+						local dbg = debug.getinfo(v)
+						if string.find(dbg.short_src, "network", 1, true) then
+							local consts = debug.getconstants(v)
+							if table.quicksearch(consts, "warn") and table.quicksearch(consts, "Tried to call a unregistered network event %s") then
+								local ups = debug.getupvalues(v)
+								if typeof(ups[1]) == "table" then
+									rawset(aux.network, "receivers", ups[1])
+								end
+								hook:bindFunctionOverride(v, "NetworkReceive")
+							end
+						end
+					end
+				end
+
+				--[[local onclientevent_connections = getconnections(aux.pfremoteevent.OnClientEvent)
+				for k, v in pairs(onclientevent_connections) do
+					print(1, v)
 					if not isluaconnection(v) then continue end
+					print(2, v)
 					local func = getconnectionfunction(v)
 					if not func then continue end
 					local dbg = debug.getinfo(func)
+					print(dbg.short_src)
 					if string.find(dbg.short_src, "network", 1, true) then
 						hook:bindFunctionOverride(func, "NetworkReceive")
 						local ups = debug.getupvalues(func)
@@ -14232,7 +14278,7 @@ if not BBOT.Debug.menu then
 							end
 						end
 					end
-				end
+				end]]
 
 				if not aux.network.receivers then
 					return "Couldn't find auxillary \"network.receivers\""
@@ -14387,21 +14433,9 @@ if not BBOT.Debug.menu then
 						end
 						_aux.network_supressing = false
 					end
-					local override = _hook:CallP("PreNetworkSend", ...)
-					if override then
-						if _BB.Debug.internal then
-							local first = {...}
-							if first[1] ~= "ping" then
-								_BB.log(LOG_DEBUG, unpack(override))
-							end
-						end
+					local override = {_hook:CallP("PreNetworkSend", ...)}
+					if override[1] ~= nil then
 						return _send(self, unpack(override)), _hook:CallP("PostNetworkSend", unpack(override))
-					end
-					if _BB.Debug.internal then
-						local first = {...}
-						if first[1] ~= "ping" then
-							_BB.log(LOG_DEBUG, ...)
-						end
 					end
 					return _send(self, ...), _hook:CallP("PostNetworkSend", ...)
 				end
@@ -14516,7 +14550,7 @@ if not BBOT.Debug.menu then
 				end
 			end)
 
-			hook:bindFunctionOverride(aux.network.send, "NetworkSend")
+			hook:bindFunctionOverride(aux.network.send, "NetworkSend", true)
 			hook:bindFunction(aux.char.updatecharacter, "LoadCharacter")
 			hook:bindFunction(aux.ScreenCull.step, "ScreenCullStep")
 			hook:bindFunction(aux.char.step, "CharacterStep")
@@ -14547,18 +14581,6 @@ if not BBOT.Debug.menu then
 				end
 			end)]]
 
-			hook:Add("PreNetworkReceive", "BBOT:Aux.Network", function(netname, ...)
-				if netname == "newbullets" then
-					hook:Call("PreNewBullets", ...)
-				end
-			end)
-
-			hook:Add("PostNetworkReceive", "BBOT:Aux.Network", function(netname, ...)
-				if netname == "newbullets" then
-					hook:Call("PostNewBullets", ...)
-				end
-			end)
-
 			local dt = tick() - profiling_tick
 			BBOT.log(LOG_NORMAL, "Took " .. math.round(dt, 2) .. "s to load auxillary")
 			BBOT:SetLoadingStatus(nil, 50)
@@ -14576,13 +14598,28 @@ if not BBOT.Debug.menu then
 			local chat = {}
 			BBOT.chat = chat
 
-			hook:Add("PostNetworkReceive", "BBOT:Chat.Network", function(netname, ...)
-				if netname == "chat" then
-					hook:CallP("Chatted", ...)
-				elseif netname == "console" then
-					hook:CallP("Console", ...)
+			do
+				local chat_netindex, console_netindex
+
+				local receivers = network.receivers
+				for netindex, callback in pairs(receivers) do
+					local const = debug.getconstants(callback)
+					if table.quicksearch(const, "Tag") and table.quicksearch(const, "rbxassetid://") then
+						chat_netindex = netindex
+					elseif table.quicksearch(const, "[Console]: ") and table.quicksearch(const, "Tag") then
+						console_netindex = netindex
+					end
 				end
-			end)
+
+				hook:Add("PostNetworkReceive", "BBOT:Chat.Network", function(netname, ...)
+					if netname == chat_netindex then
+						hook:CallP("Chatted", ...)
+					elseif netname == console_netindex then
+						hook:CallP("Console", ...)
+					end
+				end)
+			end
+
 
 			-- This is now useless :D
 			--[[hook:Add("Initialize", "BBOT:ChatDetour", function()
@@ -15036,41 +15073,28 @@ if not BBOT.Debug.menu then
 				kicked = {}
 			})
 
-			hook:Add("PostNetworkReceive", "BBOT:Votekick.Network", function(netname, ...)
-				if netname == "startvotekick" then
-					hook:Call("Votekick.Start", ...)
-				end
-			end)
-
-			function votekick:GetVotes()
-				return debug.getupvalue(BBOT.aux.network.receivers["startvotekick"], 9)
-			end
-
-			-- good bye :DDDD
-			--[[hook:Add("PreInitialize", "BBOT:Votekick.Load", function()
+			do
+				local startvotekick_netindex
 				local receivers = BBOT.aux.network.receivers
-				for k, v in pairs(receivers) do
-					local consts = debug.getconstants(v)
-					local has = false
-					for kk, vv in pairs(consts) do
+				for netindex, callback in pairs(receivers) do
+					local consts = debug.getconstants(callback)
+					for i=1, #consts do
+						local vv = consts[i]
 						if typeof(vv) == "string" and string.find(vv, "Votekick", 1, true) then
-							local function callvotekick(target, delay, votesrequired, ...)
-								timer:Async(function() hook:Call("Votekick.Start", target, delay, votesrequired) end)
-								return v(target, delay, votesrequired, ...)
-							end
-							rawset(receivers, k, callvotekick)
-							hook:Add("Unload", "UndoVotekickDetour-"..k, function()
-								rawset(receivers, k, v)
-							end)
-				
+							startvotekick_netindex = netindex
 							function votekick:GetVotes()
-								return debug.getupvalue(v, 9)
+								return debug.getupvalue(callback, 9)
 							end
-							break
 						end
 					end
 				end
-			end)]]
+
+				hook:Add("PostNetworkReceive", "BBOT:Votekick.Network", function(netname, ...)
+					if netname == startvotekick_netindex then
+						hook:CallP("Votekick.Start", ...)
+					end
+				end)
+			end
 			
 			local invote = false
 			hook:Add("Votekick.Start", "Votekick.Start", function(target, delay, votesrequired)
@@ -16487,28 +16511,23 @@ if not BBOT.Debug.menu then
 				misc:AutoGrenadeFrozen()
 			end)
 
-			--[[hook:Add("Initialize", "BBOT:LocalKilled", function()
-				local receivers = network.receivers
+			do
+				local killed_netindex
 
-				for k, v in pairs(receivers) do
-					local const = debug.getconstants(v)
+				local receivers = network.receivers
+				for netindex, callback in pairs(receivers) do
+					local const = debug.getconstants(callback)
 					if table.quicksearch(const, "setfixedcam") and table.quicksearch(const, "setspectate") and table.quicksearch(const, "isplayeralive") and table.quicksearch(const, "Killer") then
-						receivers[k] = function(player, name, p210, p211, p212, p213, p214)
-							hook:CallP("LocalKilled", player, name, p210, p211, p212, p213, p214)
-							return v(player, name, p210, p211, p212, p213, p214)
-						end
-						hook:Add("Unload", "Killed_Dtawdw." .. tostring(k), function()
-							receivers[k] = v
-						end)
+						killed_netindex = netindex
 					end
 				end
-			end)]]
 
-			hook:Add("PostNetworkReceive", "BBOT:LocalKilled.Network", function(netname, ...)
-				if netname == "killed" then
-					hook:Call("LocalKilled", ...)
-				end
-			end)
+				hook:Add("PostNetworkReceive", "BBOT:LocalKilled.Network", function(netname, ...)
+					if netname == killed_netindex then
+						hook:CallP("LocalKilled", ...)
+					end
+				end)
+			end
 
 			local last_pos, last_ang, last_send, should_start = Vector3.new(), Vector2.new(), tick(), 0
 			local absolute_pos = nil
@@ -17556,6 +17575,26 @@ if not BBOT.Debug.menu then
 			local aimbot = {}
 			BBOT.aimbot = aimbot
 			
+			do
+				local table = BBOT.table
+				local receivers = network.receivers
+				for netindex, callback in next, receivers do
+					local const = debug.getconstants(callback)
+					if table.quicksearch(const, "firepos") and table.quicksearch(const, "bullets") and table.quicksearch(const, "bulletcolor") and table.quicksearch(const, "penetrationdepth") then
+						hook:Add("PreNetworkReceive", "BBOT:NewBullets.Network", function(netname, ...)
+							if netname == netindex then
+								hook:Call("PreNewBullets", ...)
+							end
+						end)
+						hook:Add("PostNetworkReceive", "BBOT:NewBullets.Network", function(netname, ...)
+							if netname == netindex then
+								hook:Call("PostNewBullets", ...)
+							end
+						end)
+					end
+				end
+			end
+
 			do
 				local function raycastbullet(p1)
 					local instance = p1.Instance
