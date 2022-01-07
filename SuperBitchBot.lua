@@ -1257,8 +1257,8 @@ do
 		-- wait and kill entire hook library
 		coroutine.wrap(function()
 			task.wait(1)
-			self.registry = {}
-			self._registry_qa = {}
+			hook.registry = {}
+			hook._registry_qa = {}
 		end)()
 	end)
 
@@ -1711,7 +1711,7 @@ do
 	BBOT.scripts = scripts
 
 	hook:Add("PreInitialize", "BBOT:Scripts.Initialize", function()
-		asset:Register("scripts", {".lua"}) -- creates scripts folder and wl files
+		asset:Register("scripts", {".json", ".lua"}) -- creates scripts folder and wl files
 	end)
 
 	hook:Add("PostInitialize", "BBOT:Scripts.Initialize", function()
