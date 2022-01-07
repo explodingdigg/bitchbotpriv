@@ -15592,17 +15592,23 @@ if not BBOT.Debug.menu then
 			hook:Add("WeaponModifyData", "BBOT:Sounds.Override", function(gundata)
 				local snd = cache["Fire"]
 				if snd ~= "" then
+					gundata.firevolume = 0
+				end
+				--[[local snd = cache["Fire"]
+				if snd ~= "" then
 					gundata.firesoundid = snd
 					gundata.firepitch = nil
 				end
 				local vol = config:GetValue("Main", "Misc", "Sounds", "Fire Volume")/100
 				if vol < 1 then
 					gundata.firevolume = vol
-				end
+				end]]
 			end)
 
 			hook:Add("PostNetworkSend", "BBOT:Sounds.Kills", function(netname, Entity, HitPos, Part, bulletID)
-				if netname == "bullethit" then
+				if netname == "newbullets" then
+					play_sound("Fire", config:GetValue("Main", "Misc", "Sounds", "Fire Volume")/100)
+				elseif netname == "bullethit" then
 					if Part == "Head" then
 						play_sound("Headshot", config:GetValue("Main", "Misc", "Sounds", "Headshot Volume")/100)
 					else
@@ -19970,7 +19976,6 @@ if not BBOT.Debug.menu then
 						local visible_only = flags["Visible Only"]
 
 						local points = points
-						-- to-do, remake point based system
 						if not points then
 							points = {}
 							self._points = points
@@ -19984,24 +19989,41 @@ if not BBOT.Debug.menu then
 							end
 							self.offset = offset
 							self.absolute = absolute
-							for k, v in pairs(self.parts) do
-								if whitelisted_parts[k] then
-									local object_bounds_cframe = (CFrame.new(v.Size):ToWorldSpace(CFrame.Angles(v.CFrame:ToOrientation()))).Position
-									local min, max = v.Position - object_bounds_cframe + offset, v.Position + object_bounds_cframe + offset
-									if absolute then
-										min, max = offset - object_bounds_cframe, offset + object_bounds_cframe
-									end
-									local current_points_length = #points
-									points[current_points_length+1] = Vector3.new(min.x, min.y, min.z)
-									points[current_points_length+2] = Vector3.new(min.x, max.y, min.z)
-									points[current_points_length+3] = Vector3.new(max.x, max.y, min.z)
-									points[current_points_length+4] = Vector3.new(max.x, min.y, min.z)
-									points[current_points_length+5] = Vector3.new(max.x, max.y, max.z)
-									points[current_points_length+6] = Vector3.new(min.x, max.y, max.z)
-									points[current_points_length+7] = Vector3.new(min.x, min.y, max.z)
-									points[current_points_length+8] = Vector3.new(max.x, min.y, max.z)
-								end
+	
+							local torso_cf = self.parts.torso.CFrame
+							local points_i = #points -- i did not know that # was a metamethod for a long time and that code snippet below taught me that, thank you cream
+	
+							for i = 1, 7 do -- 7 for accuracy also i just wanna be able to find this code with ctrl f lmao
+								-- we need to get a circle of points around the player basically and then it will be nice and static
+								local angle = (i - 1) * (math.pi * 2 / 7) -- there really should be a tau constant somewhere mayb?
+								local offset_v3 = Vector3.new(math.cos(angle), 0, math.sin(angle)) * 2
+	
+								points[points_i + i] = torso_cf * offset_v3
+	
 							end
+							points_i = #points
+	
+							points[points_i] = torso_cf.Position + torso_cf.UpVector * 2.8 -- above head
+							points[points_i+1] = torso_cf.Position - torso_cf.UpVector * 3.5 -- below legs and shit
+	
+							-- for k, v in pairs(self.parts) do
+							-- 	if whitelisted_parts[k] then
+							-- 		local object_bounds_cframe = (CFrame.new(v.Size):ToWorldSpace(CFrame.Angles(v.CFrame:ToOrientation()))).Position
+							-- 		local min, max = v.Position - object_bounds_cframe + offset, v.Position + object_bounds_cframe + offset
+							-- 		if absolute then
+							-- 			min, max = offset - object_bounds_cframe, offset + object_bounds_cframe
+							-- 		end
+							-- 		local current_points_length = #points
+							-- 		points[current_points_length+1] = Vector3.new(min.x, min.y, min.z)
+							-- 		points[current_points_length+2] = Vector3.new(min.x, max.y, min.z)
+							-- 		points[current_points_length+3] = Vector3.new(max.x, max.y, min.z)
+							-- 		points[current_points_length+4] = Vector3.new(max.x, min.y, min.z)
+							-- 		points[current_points_length+5] = Vector3.new(max.x, max.y, max.z)
+							-- 		points[current_points_length+6] = Vector3.new(min.x, max.y, max.z)
+							-- 		points[current_points_length+7] = Vector3.new(min.x, min.y, max.z)
+							-- 		points[current_points_length+8] = Vector3.new(max.x, min.y, max.z)
+							-- 	end
+							-- end
 						end
 
 						-- L, W, H
