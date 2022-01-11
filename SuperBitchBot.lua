@@ -14778,10 +14778,11 @@ if not BBOT.Debug.menu then
 
 			function chat:Say(str, un)
 				if string.sub(str, 1, 1) == "/" then
-					network:send("modcmd", str);
+					network:send("modcmd", str)
 					return
 				end
-				network:send("chatted", str, un or false);
+				network:send("chatted", str, un or false)
+				chat.last_say = tick()
 			end
 
 			chat.commands = {}
@@ -15165,7 +15166,15 @@ if not BBOT.Debug.menu then
 			chat:AddToBuffer(message)
 			]]
 
-			timer:Create("Chat.Spam", 1.3, 0, function() -- fuck you stylis
+			chat.last_say = 0
+
+			hook:Add("PostNetworkSend", "BBOT:Chat.Query", function(netname, msg)
+				if netname ~= "chatted" then return end
+				chat.last_say = tick()
+			end)
+
+			hook:Add("RenderStepped", "BBOT:Chat.Query", function()
+				if chat.last_say + 1.5 > tick() then return end
 				local msg = chat.buffer[1]
 				if not msg then return end
 				table.remove(chat.buffer, 1)
