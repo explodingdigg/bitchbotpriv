@@ -1014,7 +1014,7 @@ do
 			local ret = {xpcall(func, debug.traceback, ...)}
 			if not ret[1] then
 				log(LOG_ERROR, "Hook Error - ", name, " - ", name)
-				log(LOG_ERROR, a)
+				log(LOG_ERROR, ret[2])
 				log(LOG_WARN, "Removing to prevent cascade!")
 				for l=1, #tbl do
 					local v = tbl[l]
@@ -1044,7 +1044,7 @@ do
 						local ret = {xpcall(func, debug.traceback, ...)}
 						if not ret[1] then
 							log(LOG_ERROR, "Hook Error - ", name, " - ", _name)
-							log(LOG_ERROR, a)
+							log(LOG_ERROR, ret[2])
 							log(LOG_WARN, "Removing to prevent cascade!")
 							table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
 						elseif ret[2] then
@@ -1265,6 +1265,31 @@ do
 
 	hook:bindEvent(userinputservice.InputBegan, "InputBegan")
 	hook:bindEvent(userinputservice.InputEnded, "InputEnded")
+
+	local isholdingmouse1, isholdingmouse2 = false, false
+	hook:Add("InputBegan", "InputBegan", function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			isholdingmouse1 = true
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+			isholdingmouse2 = true
+		end
+	end)
+
+	hook:Add("InputEnded", "InputEnded", function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			isholdingmouse1 = false
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+			isholdingmouse2 = false
+		end
+	end)
+
+	function hook:IsMouse1Down()
+		return isholdingmouse1
+	end
+
+	function hook:IsMouse2Down()
+		return isholdingmouse2
+	end
 
 	local lastMousePos = Vector2.new()
 	hook:Add("RenderStep.First", "Mouse.Move", function()
@@ -1588,11 +1613,13 @@ do
 	}
 	BBOT.asset = asset
 
+	-- THIS IS INTERNAL, DO NOT CALL THIS!
 	function asset:Initialize()
 		self.game = BBOT.game
 		self.path = "bitchbot/"..self.game
 	end
 
+	-- registers a folder with an extensions whitelist
 	function asset:Register(class, extensions)
 		if not self.registry[class] then
 			local invert = {}
@@ -1609,7 +1636,8 @@ do
 		end
 	end
 
-	function asset:Get(class, path)
+	-- get's the file in the form of a synapse asset Id
+	function asset:GetAsset(class, path)
 		if not self.registry[class] then return end
 		local reg = self.registry[class]
 		local extension = string.match(path, "^.+(%..+)$")
@@ -1624,19 +1652,31 @@ do
 		return reg[path]
 	end
 
-	function asset:IsFolder(class, path)
-		return isfolder(self.path .. "/" .. class .. "/" .. path)
+	-- get's the file name from a direct path
+	function asset:GetFileName(path)
+		path = string.match(path, "([^/]+)$")
+		if path then
+			return string.match(path, "(.+)%..+")
+		end
 	end
 
-	function asset:IsFile(class, path)
-		return isfile(self.path .. "/" .. class .. "/" .. path)
-	end
-
+	-- get's the extension of a file path
 	function asset:GetExtension(path)
 		return string.match(path, "^.+(%..+)$")
 	end
 
-	function asset:GetRaw(class, path)
+	-- is this a folder?
+	function asset:IsFolder(class, path)
+		return isfolder(self.path .. "/" .. class .. "/" .. path)
+	end
+
+	-- is this a file?
+	function asset:IsFile(class, path)
+		return isfile(self.path .. "/" .. class .. "/" .. path)
+	end
+
+	-- get's the raw data of a file
+	function asset:Get(class, path)
 		if not self.registry[class] then return end
 		local reg = self.registry[class]
 		local extensions = reg.__extensions
@@ -1647,12 +1687,14 @@ do
 		end
 	end
 
+	-- get's and converts a file to a table from j son format
 	function asset:GetJSON(class, path)
-		local data = asset:GetRaw(class, path)
+		local data = asset:Get(class, path)
 		if not data then return end
 		return httpservice:JSONDecode(data)
 	end
 
+	-- writes a data to a file
 	function asset:Write(class, path, data)
 		if not self.registry[class] then return end
 		local reg = self.registry[class]
@@ -1664,11 +1706,13 @@ do
 		writefile(self.path .. "/" .. class .. "/" .. path, data)
 	end
 
+	-- writes a table as a j son to a file
 	function asset:WriteJSON(class, path, data)
 		data = httpservice:JSONEncode(data)
 		return asset:Write(class, path, data)
 	end
 
+	-- lists all files in an asset's folder/sub-folder
 	function asset:ListFiles(class, path)
 		if not self.registry[class] then return end
 		local reg = self.registry[class]
@@ -1687,13 +1731,6 @@ do
 			end
 		end
 		return files
-	end
-
-	function asset:GetFileName(path)
-		path = string.match(path, "([^/]+)$")
-		if path then
-			return string.match(path, "(.+)%..+")
-		end
 	end
 
 	hook:Add("PreStartup", "BBOT:Asset.Initialize", function()
@@ -1778,7 +1815,7 @@ do
 	-- get's a script from with-in bitchbot/[gamehere]/scripts/*
 	function scripts:Get(name)
 		if asset:IsFile("scripts", name) then
-			return asset:GetRaw("scripts", name)
+			return asset:Get("scripts", name)
 		end
 	end
 
@@ -1805,7 +1842,7 @@ do
 			else
 				log(LOG_NORMAL, "Running script -> " .. name)
 			end
-			local script = asset:GetRaw("scripts", name)
+			local script = asset:Get("scripts", name)
 			local func, err = loadstring(self.pre_run .. script)
 			if not func then
 				local msg = "An error occured executing script \"" .. name .. "\",\n" .. (err or "Unknown Error!")
@@ -2519,7 +2556,7 @@ do
 
 		function meta:Init()
 			self.t0 = tick()
-			self.outlined = true
+			self.outlined = false
 			self.size = 2
 			self.endsize = 6
 		end
@@ -3314,6 +3351,15 @@ do
 						newvalue = newvalue.V
 					elseif value.type == "ComboBox" and newvalue.T == "ComboBox" and #newvalue.V == #value.value then
 						newvalue = newvalue.V
+						for i=1, #value.value do
+							if typeof(value.value[i]) ~= typeof(newvalue[i]) then
+								newvalue = nil
+								break
+							elseif value.value[i][1] ~= newvalue[i][1] then
+								newvalue = nil
+								break
+							end
+						end
 					elseif value.type == "DropBox" then
 						if not table.quicksearch(value.list, newvalue) then
 							newvalue = value.value
@@ -3387,7 +3433,7 @@ do
 	end
 
 	hook:Add("OnConfigChanged", "BBOT:config.autosave", function(steps)
-		if config.Opening then return end
+		if config.Opening or config.Busy then return end
 		config:SaveBase()
 		if config:GetValue("Main", "Settings", "Saves", "Configs", "Auto Save Config") and not config:IsPathwayEqual(steps, "Main", "Settings", "Saves", "Configs") then
 			local file = config:GetValue("Main", "Settings", "Saves", "Configs", "Autosave File")
@@ -3427,19 +3473,12 @@ do
 
 	hook:Add("OnConfigChanged", "BBOT:config.unsafefeatures", function(steps, old, new)
 		if config:IsPathwayEqual(steps, "Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") and not new then
-			local opening = false
-			if config.Opening then
-				opening = true
+			config.Busy = true
+			for i=1, #config.unsafe_paths do
+				local path = string.Explode(".", config.unsafe_paths[i])
+				config:SetValue(config:BaseGetNormal(unpack(path)), unpack(path))
 			end
-			timer:Async(function()
-				local last = config.Opening
-				config.Opening = opening
-				for i=1, #config.unsafe_paths do
-					local path = string.Explode(".", config.unsafe_paths[i])
-					config:SetValue(config:BaseGetNormal(unpack(path)), unpack(path))
-				end
-				config.Opening = last
-			end)
+			config.Busy = false
 		end
 	end)
 
@@ -4316,11 +4355,17 @@ do
 
 	-- { Bold = true, Italics = true }
     function font:Register(font_name, font_data, font_arguments)
+		if not font:CanRegister(font_name, font_data) then return end
         local font_object = Font.Register(font_data, font_arguments or {})
         log(LOG_NORMAL, "Created font '" .. font_name .. "'")
         self.registry[font_name] = font_object
         return font_object
     end
+
+	function font:CanRegister(font_name, font_data)
+		if self.registry[font_name] then return false end
+		return true
+	end
 
     function font:Create(category, font, size)
         local reg = self.registry[font]
@@ -4445,14 +4490,23 @@ do
         font.registry[font_name] = font_object
     end
 
-	hook:Add("Startup", "BBOT:Font.Setup", function()
-		asset:Register("fonts", {".ttf", ".otf"})
+	function font:RegisterAssets()
+		local registered = false
 		local list = asset:ListFiles("fonts", "")
 		for i=1, #list do
-			local fontdata = asset:GetRaw("fonts", list[i])
+			local fontdata = asset:Get("fonts", list[i])
 			local name = asset:GetFileName(list[i])
-			font:Register(name, fontdata)
+			if font:CanRegister(name, fontdata) then
+				font:Register(name, fontdata)
+				registered = true
+			end
 		end
+		return registered
+	end
+
+	hook:Add("Startup", "BBOT:Font.Setup", function()
+		asset:Register("fonts", {".ttf", ".otf"})
+		font:RegisterAssets()
 	end)
 end
 
@@ -6121,6 +6175,13 @@ do
 
 		function GUI:SetOptions(options)
 			self.options = options
+			if self.Id == 0 then return end
+			for i=1, #self.options do
+				if self.options[i] == self.option then
+					self:SetOption(i)
+					break
+				end
+			end
 		end
 
 		function GUI:PerformLayout(pos, size)
@@ -6129,15 +6190,16 @@ do
 			default_panel_borders(self, pos, size)
 		end
 
-		function GUI:OnValueChanged(i)
-			
-		end
+		function GUI:OnValueChanged(i) end
+		function GUI:OnOpen() end
+		function GUI:OnClose() end
 
 		function GUI:Open()
 			if self.selection then
 				self.selection:Remove()
 				self.selection = nil
 			end
+			self:OnOpen()
 			local box = gui:Create("DropBoxSelection", self)
 			self.selection = box
 			box:SetPos(0,0,1,2)
@@ -6153,6 +6215,7 @@ do
 				self.selection = nil
 			end
 			self.open = false
+			self:OnClose()
 		end
 
 		function GUI:InputBegan(input)
@@ -6316,12 +6379,15 @@ do
 		end
 
 		function GUI:OnValueChanged() end
+		function GUI:OnOpen() end
+		function GUI:OnClose() end
 
 		function GUI:Open()
 			if self.selection then
 				self.selection:Remove()
 				self.selection = nil
 			end
+			self:OnOpen()
 			local box = gui:Create("ComboBoxSelection", self)
 			self.selection = box
 			box:SetPos(0,0,1,2)
@@ -6336,6 +6402,7 @@ do
 				self.selection = nil
 			end
 			self.open = false
+			self:OnClose()
 		end
 
 		function GUI:InputBegan(input)
@@ -8212,6 +8279,7 @@ do
 
 			local background = draw:Clone(border)
 			background.Color = gui:GetColor("Background")
+			background.ZIndex = 1
 
 			self.background_border = self:Cache(border)
 			self.background_nocolor = self:Cache(nocolor)
@@ -8232,8 +8300,8 @@ do
 
 		function GUI:SetColor(col, transparency)
 			self.background.Color = col
-			self.background_outline.Color = color.darkness(col, .75)
 			self:Cache(self.background_outline, transparency, 1, 0, true)
+			self.background_outline.Color = color.darkness(col, .75)
 			self:PerformDrawings()
 			self.color_transparency = transparency
 		end
@@ -8416,6 +8484,7 @@ do
 			picker:SetTitle(name)
 			picker:SetValue(_config_module:GetRaw(unpack(path)).value)
 			picker.tooltip = config.tooltip
+			picker.path = path
 			function picker:OnValueChanged(new)
 				menu:ConfigSetValue(new, path)
 			end
@@ -8431,6 +8500,7 @@ do
 			keybind:SetConfigurationPath(path)
 			keybind:SetAlias(name)
 			keybind:SetValue(_config_module:GetRaw(unpack(path)).value)
+			keybind.path = path
 			function keybind:OnValueChanged(new)
 				menu:ConfigSetValue(new, path)
 			end
@@ -8478,6 +8548,7 @@ do
 			toggle:InvalidateLayout(true)
 			toggle:SetValue(_config_module:GetValue(unpack(path)))
 			toggle.tooltip = config.tooltip
+			toggle.path = path
 			function toggle:OnValueChanged(new)
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					toggle:SetValue(_config_module:GetValue(unpack(path)))
@@ -8511,6 +8582,7 @@ do
 			slider.tooltip = config.tooltip
 			cont:SetPos(0, 0, 0, Y-2)
 			cont:SetSize(1, 0, 0, tall+2+10+1)
+			slider.path = path
 			function slider:OnValueChanged(new)
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					slider:SetValue(_config_module:GetValue(unpack(path)))
@@ -8539,6 +8611,7 @@ do
 			textentry.tooltip = config.tooltip
 			cont:SetPos(0, 0, 0, Y-2)
 			cont:SetSize(1, 0, 0, tall+4+16)
+			textentry.path = path
 			function textentry:OnValueChanged(new)
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					textentry:SetValue(_config_module:GetValue(unpack(path)))
@@ -8567,12 +8640,19 @@ do
 			dropbox.tooltip = config.tooltip
 			cont:SetPos(0, 0, 0, Y-2)
 			cont:SetSize(1, 0, 0, tall+4+16)
+			dropbox.path = path
 			function dropbox:OnValueChanged(new)
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					dropbox:SetValue(_config_module:GetValue(unpack(path)))
 					return
 				end
 				menu:ConfigSetValue(new, path)
+			end
+			if config.onopen then
+				dropbox.OnOpen = config.onopen
+			end
+			if config.onclose then
+				dropbox.OnClose = config.onclose
 			end
 			self.config_pathways[uid] = dropbox
 			return 16+4+16+2
@@ -8594,12 +8674,19 @@ do
 			dropbox.tooltip = config.tooltip
 			cont:SetPos(0, 0, 0, Y-2)
 			cont:SetSize(1, 0, 0, tall+4+16)
+			dropbox.path = path
 			function dropbox:OnValueChanged(new)
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					dropbox:SetValue(_config_module:GetRaw(unpack(path)).value)
 					return
 				end
 				menu:ConfigSetValue(new, path)
+			end
+			if config.onopen then
+				dropbox.OnOpen = config.onopen
+			end
+			if config.onclose then
+				dropbox.OnClose = config.onclose
 			end
 			self.config_pathways[uid] = dropbox
 			return 16+4+16+2
@@ -8610,6 +8697,7 @@ do
 			button:SetText(name)
 			button:SetConfirmation(config.confirm)
 			button.text:SetFontManager("Menu.BodyMedium")
+			button.path = path
 			if config.unsafe then
 				button:SetColor(unsafe_color)
 			end
@@ -8619,11 +8707,11 @@ do
 				end
 				return true
 			end
-			button.OnClick = function()
+			button.OnClick = function(s)
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					return
 				end
-				config.callback()
+				config.callback(s)
 			end
 			button.tooltip = config.tooltip
 			return 16+7
@@ -8811,7 +8899,7 @@ do
 				image:SetImage(menu.images[5])
 				if #img > 4 then
 					if asset:IsFile("images", img) then
-						local data = asset:GetRaw("images", img)
+						local data = asset:Get("images", img)
 						image:SetImage(ImageRef.new(data))
 					else
 						thread:Create(function(img, image)
@@ -9210,7 +9298,7 @@ do
 					image:SetImage(menu.images[5])
 					if #new > 4 then
 						if asset:IsFile("images", new) then
-							local data = asset:GetRaw("images", new)
+							local data = asset:Get("images", new)
 							image:SetImage(ImageRef.new(data))
 						else
 							thread:Create(function(img, image)
@@ -9963,18 +10051,24 @@ do
 						tooltip = "Doesn't swap targets when you are targeting someone."
 					},
 					{
+						type = "Toggle",
+						name = "Enable On Move",
+						value = false,
+						tooltip = "Aim assistance only activates when moving your mouse."
+					},
+					{
 						type = "Slider",
 						name = "Start Smoothing",
 						value = 20,
 						min = 0,
-						max = 100,
+						max = 200,
 						suffix = "%",
 					},
 					{
 						type = "Slider",
 						name = "End Smoothing",
 						min = 0,
-						max = 100,
+						max = 200,
 						suffix = "%",
 						value = 20
 					},
@@ -9982,7 +10076,7 @@ do
 						type = "Slider",
 						name = "Smoothing Increment",
 						min = 0,
-						max = 100,
+						max = 200,
 						suffix = "%/s",
 						value = 20
 					},
@@ -10519,16 +10613,6 @@ do
 										tooltip = "Puts you into the floor kinda..."
 									},
 									{
-										type = "Slider",
-										name = "In Floor Swap",
-										value = 100,
-										min = 0,
-										max = 1000,
-										suffix = "%",
-										custom = {[0] = "Disabled", [1000] = "Crazy"},
-										unsafe = true,
-									},
-									{
 										type = "DropBox",
 										name = "Fake Stance",
 										value = 1,
@@ -10766,7 +10850,7 @@ do
 										{
 											type = "ComboBox",
 											name = "Flags",
-											values = { { "Use Large Text", false }, { "Level", true }, { "Distance", true }, { "Frozen", true }, { "Visible Only", false }, { "Resolved", false }, { "Backtrack", false },  },
+											values = { { "Level", false }, { "Distance", false }, { "Frozen", true }, { "Visible Only", false }, { "Priority Only", false }, { "Resolved", false }, { "Backtrack", false },  },
 										},
 										{
 											type = "Toggle",
@@ -11075,6 +11159,13 @@ do
 										name = "ESP Text Font",
 										value = font_index,
 										values = font:GetFonts(),
+										onopen = function(dropbox)
+											font:RegisterAssets()
+											local fonts = font:GetFonts()
+											local cfgdata = config:GetRaw(unpack(dropbox.path))
+											cfgdata.values = fonts
+											dropbox:SetOptions(fonts)
+										end
 									},
 									{
 										type = "Slider",
@@ -11340,6 +11431,12 @@ do
 										},
 										{
 											type = "Toggle",
+											name = "KillCam Timer",
+											value = false,
+											tooltip = "Shows a timer when killcams stop spectating.",
+										},
+										{
+											type = "Toggle",
 											name = "Spectator Bullets",
 											value = true,
 											extra = {
@@ -11485,6 +11582,18 @@ do
 										},
 										{
 											type = "Toggle",
+											name = "Aim Assist Line",
+											value = true,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 127, 72, 163, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
 											name = "Aim Assist Deadzone",
 											value = true,
 											extra = {
@@ -11499,6 +11608,18 @@ do
 											type = "Toggle",
 											name = "Bullet Redirect",
 											value = false,
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Color",
+													color = { 163, 72, 127, 255 },
+												},
+											},
+										},
+										{
+											type = "Toggle",
+											name = "Bullet Redirect Line",
+											value = true,
 											extra = {
 												{
 													type = "ColorPicker",
@@ -12442,12 +12563,6 @@ do
 										name = "Blink On Fire",
 										value = false,
 										tooltip = "Forces an update when you fire your gun, perfect for being a dick.",
-									},
-									{
-										type = "Toggle",
-										name = "Blink Allow Movement",
-										value = false,
-										tooltip = "Won't check if you are standling still, it will just activate immediately",
 									},
 									{
 										type = "Slider",
@@ -13450,6 +13565,13 @@ do
 								name = "Title Font",
 								value = font_index,
 								values = font:GetFonts(),
+								onopen = function(dropbox)
+									font:RegisterAssets()
+									local fonts = font:GetFonts()
+									local cfgdata = config:GetRaw(unpack(dropbox.path))
+									cfgdata.values = fonts
+									dropbox:SetOptions(fonts)
+								end,
 								extra = {},
 							},
 							{
@@ -13457,6 +13579,13 @@ do
 								name = "Body Font",
 								value = font_index,
 								values = font:GetFonts(),
+								onopen = function(dropbox)
+									font:RegisterAssets()
+									local fonts = font:GetFonts()
+									local cfgdata = config:GetRaw(unpack(dropbox.path))
+									cfgdata.values = fonts
+									dropbox:SetOptions(fonts)
+								end,
 								extra = {},
 							},
 						}
@@ -15536,11 +15665,11 @@ if not BBOT.Debug.menu then
 						local files = {}
 						local list = asset:ListFiles("sounds", new)
 						for i=1, #list do
-							files[#files+1] = asset:Get("sounds", list[i])
+							files[#files+1] = asset:GetAsset("sounds", list[i])
 						end
 						cache[final] = table.fyshuffle(files)
 					elseif asset:IsFile("sounds", new) then
-						cache[final] = asset:Get("sounds", new)
+						cache[final] = asset:GetAsset("sounds", new)
 					else
 						local snd = (new or "")
 						if snd == "" then
@@ -15571,8 +15700,6 @@ if not BBOT.Debug.menu then
 					sound.playid(ssound, ...)
 				elseif string.find(soundid, "rbxasset", 1, true) then
 					sound.playid(soundid, ...)
-				else
-					sound.play(soundid, ...)
 				end
 				return true
 			end
@@ -15607,7 +15734,10 @@ if not BBOT.Debug.menu then
 
 			hook:Add("PostNetworkSend", "BBOT:Sounds.Kills", function(netname, Entity, HitPos, Part, bulletID)
 				if netname == "newbullets" then
-					play_sound("Fire", config:GetValue("Main", "Misc", "Sounds", "Fire Volume")/100)
+					local gun = BBOT.aux.gamelogic.currentgun
+					if gun and gun.data and gun.data.barrel then
+						play_sound("Fire", config:GetValue("Main", "Misc", "Sounds", "Fire Volume")/100, nil, gun.data.barrel)
+					end
 				elseif netname == "bullethit" then
 					if Part == "Head" then
 						play_sound("Headshot", config:GetValue("Main", "Misc", "Sounds", "Headshot Volume")/100)
@@ -15615,6 +15745,390 @@ if not BBOT.Debug.menu then
 						play_sound("Hit", config:GetValue("Main", "Misc", "Sounds", "Hit Volume")/100)
 					end
 				end
+			end)
+		end
+
+
+		-- Replication
+		do
+			local localplayer = BBOT.service:GetService("LocalPlayer")
+			local config = BBOT.config
+			local network = BBOT.aux.network
+			local char = BBOT.aux.char
+			local roundsystem = BBOT.aux.roundsystem
+			local drawpather = BBOT.drawpather
+			local hook = BBOT.hook
+			local repupdate = {}
+			BBOT.repupdate = repupdate
+
+			-- this is the raycasting for replication, kinda like the server-side version
+			-- function -> repupdate:Raycast(origin, offset)
+			do
+				local rcastparam = RaycastParams.new();
+				rcastparam.IgnoreWater = true;
+
+				-- this is the raycasting for replication, kinda like the server-side version
+				function repupdate:Raycast(origin, offset, extra, callback)
+					local whitelist = {workspace.Terrain, localplayer.Character, workspace.Ignore, workspace.Players, extra}
+					local results
+					local calls = 0
+					rcastparam.FilterDescendantsInstances = whitelist;
+					while calls < 2000 do
+						results = workspace:Raycast(origin, offset, rcastparam)
+						if not results then break end
+						local instance = results.Instance
+						if instance.Name ~= "Window" and instance.CanCollide and instance.Transparency ~= 1 then
+							break
+						end
+						if callback and not callback(results) then break end
+						table.insert(whitelist, results.Instance)
+						rcastparam.FilterDescendantsInstances = whitelist
+						calls = calls + 1
+					end;
+					return results
+				end
+			end
+
+			-- current position of our replication server-side
+			function repupdate:GetPosition()
+				return self.position or char.rootpart.Position
+			end
+
+			-- can we move to this position?
+			function repupdate:CanMoveTo(position)
+				local lastpos = self:GetPosition()
+				local stanceoffset = self:GetStanceOffset()
+				local occupied = self:Raycast(lastpos+stanceoffset, position-lastpos+stanceoffset)
+				if occupied then return false else return true end
+			end
+
+			-- if we cannot move to a position, find the minimum that we can travel (this is like a TP scanning thing)
+			function repupdate:FindMinimumMoveTo(position)
+				local lastpos = self:GetPosition()
+				local stanceoffset = self:GetStanceOffset()
+				local offset = position-lastpos
+				local results = self:Raycast(lastpos+stanceoffset, offset+stanceoffset)
+				if results then
+					return true, results.Position - (offset.Unit * 0.1), offset.Unit
+				end
+				return false, position
+			end
+
+			-- moves the player to a position, basially teleport
+			function repupdate:MoveTo(position, move_char)
+				if not char.alive then return end
+				local current_position = self:GetPosition()
+				if not self:CanMoveTo(position) then return end
+
+				local diff = (position-current_position)
+
+				if diff.Magnitude > 8 then
+					local timescale = math.round(diff.Magnitude/8)+1
+					local tdiff = diff/timescale
+					for i=1, timescale do
+						network:send("repupdate", current_position + (tdiff*i), repupdate.angle or Vector2.new(), tick())
+					end
+				else
+					network:send("repupdate", current_position + diff, repupdate.angle or Vector2.new(), tick())
+				end
+
+				if move_char then
+					char.rootpart.CFrame = CFrame.new(current_position + diff, char.rootpart.CFrame.LookVector)
+				end
+			end
+
+			-- this only moves the character (roblox) and not repupdate
+			function repupdate:MoveCharTo(position)
+				if not char.alive then return end
+				local current_position = self:GetPosition()
+				if not self:CanMoveTo(position) then return end
+				local diff = (position-current_position)
+				char.rootpart.CFrame = CFrame.new(current_position + diff, char.rootpart.CFrame.LookVector)
+			end
+
+			-- forces the replication system to update regardless
+			function repupdate:Force(pos, ang)
+				local l__angles__1304 = BBOT.aux.camera.angles;
+				network:send("repupdate", pos or char.rootpart.Position, ang or Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
+			end
+
+			-- get's the tick or manipulates the input tick [t] to repupdate's tick
+			function repupdate:Tick(t)
+				t = t or tick()
+				if config:GetValue("Main", "Misc", "Exploits", "Tick Manipulation") then
+					return (t/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale")))
+				end
+				return t
+			end
+
+			-- stances
+			do
+				local fake_stance = false
+				hook:Add("SuppressNetworkSend", "BBOT:RepUpdate.Stance", function(netname, mode)
+					if netname == "stance" and config:GetValue("Main", "Rage", "Anti Aim", "Fake Stance") ~= "Off" and not fake_stance then
+						return true
+					end
+				end)
+			
+				hook:Add("OnConfigChanged", "BBOT:RepUpdate.Stance", function(steps, old, new)
+					if not char.alive then return end
+					if not config:IsPathwayEqual(steps, "Main", "Rage", "Anti Aim", "Fake Stance") then return end
+					if new ~= "Off" then
+						if char.movementmode ~= "prone" then
+							fake_stance = true
+							network:send("stance", string.lower(new));
+							fake_stance = false
+						end
+					elseif char.movementmode ~= string.lower(new) then
+						network:send("stance", char.movementmode);
+					end
+				end)
+
+				hook:Add("OnAliveChanged", "BBOT:RepUpdate.Stance", function(alive)
+					if not alive then return end
+					local stance = config:GetValue("Main", "Rage", "Anti Aim", "Fake Stance")
+					if stance ~= "Off" then
+						fake_stance = true
+						network:send("stance", string.lower(stance))
+						fake_stance = false
+					end
+				end)
+
+				function repupdate:GetStance()
+					local stance = config:GetValue("Main", "Rage", "Anti Aim", "Fake Stance")
+					if stance ~= "Off" then
+						return string.lower(stance)
+					end
+					return char.movementmode
+				end
+
+				local vec0 = Vector3.new(0,0,0)
+				local stand = Vector3.new(0,1.5,0)
+				local crouch = Vector3.new(0,0,0)
+				local prone = Vector3.new(0,-1.5,0)
+				function repupdate:GetStanceOffset()
+					local stance = self:GetStance()
+					if stance == "stand" then
+						return stand
+					elseif stance == "crouch" then
+						return crouch
+					elseif stance == "prone" then
+						return prone
+					end
+					return vec0
+				end
+			end
+
+			-- blink (internal, we recommend scripts to not touch these)
+			repupdate.blink_record = {}
+			repupdate.blink_sending = false
+			repupdate.blink_ignore = false
+			repupdate.blink_active = false
+			repupdate.blink_last = 0
+
+			function repupdate:BlinkUpdate()
+				self.blink_sending = true
+				local blink_record = self.blink_record
+				if #blink_record > 0 then
+					if #blink_record == 1 then
+						network:send("repupdate", blink_record[1][1], blink_record[1][2], blink_record[1][3])
+						self.blink_record = {}
+						self.blink_sending = false
+						self.blink_active = false
+						return
+					end
+					local a = {}
+					local len = #blink_record
+					for i=1, len do
+						network:send("repupdate", blink_record[i][1], blink_record[i][2], blink_record[i][3])
+						a[#a+1]=blink_record[i][1]
+					end
+					local col, transparency = config:GetValue("Main", "Misc", "Exploits", "Blink", "Path Color")
+					if transparency > 0 then
+						drawpather:Simple(a, col, transparency, 4)
+					end
+				end
+				self.blink_record = {}
+				self.blink_sending = false
+				self.blink_active = false
+			end
+
+			hook:Add("Aimbot.NewBullets", "BBOT:RepUpdate.Blink.OnFire", function()
+				if repupdate.blink_active and config:GetValue("Main", "Misc", "Exploits", "Blink On Fire") then
+					BBOT.menu:UpdateStatus("Blink", "Buffering...")
+					repupdate:BlinkUpdate()
+				end
+			end)
+
+			hook:Add("PreNetworkSend", "BBOT:RepUpdate.Blink.OnFire", function(netname)
+				if netname == "newbullets" then
+					if repupdate.blink_active and config:GetValue("Main", "Misc", "Exploits", "Blink On Fire") then
+						BBOT.menu:UpdateStatus("Blink", "Buffering...")
+						repupdate:BlinkUpdate()
+					end
+				end
+			end)
+
+			-- spaz attack
+			hook:Add("OnKeyBindChanged", "BBOT:RepUpdate.SpazAttack", function(steps, old, new)
+				if not config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Spaz Attack", "KeyBind") then return end
+				if new then return end
+				if not char.alive then return end
+				repupdate:MoveTo(char.rootpart.Position)
+			end)
+
+			-- calculations
+			hook:Add("SuppressNetworkSend", "BBOT:RepUpdate.Calculate", function(netname, pos, ang, time)
+				if netname ~= "repupdate" then return end
+				if not repupdate.alive then
+					repupdate.blink_active = false
+					repupdate.blink_last = tick()
+					return
+				end
+
+				if config:GetValue("Main", "Misc", "Exploits", "Blink") and config:GetValue("Main", "Misc", "Exploits", "Blink", "KeyBind") then
+					if BBOT.aimbot.tp_scanning then
+						if repupdate.blink_active then
+							repupdate:BlinkUpdate()
+							repupdate.blink_active = false
+						end
+						return
+					end
+
+					if not repupdate.blink_ignore and not repupdate.blink_sending then
+						local t = config:GetValue("Main", "Misc", "Exploits", "Blink Keep Alive")
+						if repupdate.blink_record[1] and repupdate.blink_last + t < tick() and t > 0 then
+							BBOT.menu:UpdateStatus("Blink", "Buffering...")
+							repupdate:BlinkUpdate()
+							repupdate.blink_sending = true
+							network:send(netname, pos, ang, time)
+							repupdate.blink_sending = false
+							repupdate.blink_last = tick()
+							repupdate.blink_active = false
+						else
+							BBOT.menu:UpdateStatus("Blink", "Active"
+							.. (t > 0 and " [" .. math.abs(math.round(repupdate.blink_last+t-tick(),1)) .. "s]" or "")
+							.. (allowmove and " [" .. math.round((pos-repupdate:GetPosition()).Magnitude, 1) .. " studs]" or ""))
+							repupdate.blink_active = true
+							local blink_record = repupdate.blink_record
+							blink_record[#blink_record+1] = {pos, ang, time}
+						end
+						return true
+					end
+				elseif #repupdate.blink_record > 0 then
+					repupdate:BlinkUpdate()
+					repupdate.blink_last = tick()
+					repupdate.blink_active = false
+				else
+					repupdate.blink_last = tick()
+					repupdate.blink_active = false
+				end
+			end)
+
+			repupdate.spaz_active = false
+			repupdate.antiaim_stutterframes = 0
+			hook:Add("PreNetworkSend", "BBOT:RepUpdate.Calculate", function(netname, pos, ang, time)
+				if netname ~= "repupdate" then return end
+				local modified = false
+				if config:GetValue("Main", "Misc", "Exploits", "Tick Manipulation") then
+					time = repupdate:Tick(time)
+					modified = true
+				end
+
+				if not BBOT.aimbot.in_ragebot and not BBOT.aimbot.tp_scanning then
+					if config:GetValue("Main", "Misc", "Exploits", "Spaz Attack") and config:GetValue("Main", "Misc", "Exploits", "Spaz Attack", "KeyBind") and not repupdate.spaz_active then
+						local intensity = config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
+						local offset = Vector3.new(math.random(-1000,1000)/1000, math.random(-1000,1000)/1000, math.random(-1000,1000)/1000)*config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
+						local results = BBOT.aimbot:raycastbullet(pos, offset)
+						if results then
+							offset = offset - (offset.Unit * 2)
+						end
+						pos = pos + offset
+						repupdate.spaz_active = true
+						repupdate:MoveTo(pos - (offset.Unit/100))
+						repupdate.spaz_active = false
+						time = repupdate:Tick()
+						modified = true
+					end
+
+					local infloor = config:GetValue("Main", "Rage", "Anti Aim", "In Floor")
+					if infloor > 0 then
+						pos = pos + Vector3.new(0,-infloor,0)
+						modified = true
+					end
+				end
+				
+				if config:GetValue("Main", "Rage", "Anti Aim", "Enabled") then
+					repupdate.antiaim_stutterframes += 1
+					local pitch = ang.x
+					local yaw = ang.y
+					local pitchChoice = config:GetValue("Main", "Rage", "Anti Aim", "Pitch")
+					local yawChoice = config:GetValue("Main", "Rage", "Anti Aim", "Yaw")
+					local spinRate = config:GetValue("Main", "Rage", "Anti Aim", "Spin Rate")
+
+					---"off,down,up,roll,upside down,random"
+					--"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch",
+					local new_angles
+					if pitchChoice == "Up" then
+						pitch = -4
+					elseif pitchChoice == "Zero" then
+						pitch = 0
+					elseif pitchChoice == "Down" then
+						pitch = 4.7
+					elseif pitchChoice == "Upside Down" then
+						pitch = -math.pi
+					elseif pitchChoice == "Roll Forward" then
+						pitch = (tick() * spinRate) % 6.28
+					elseif pitchChoice == "Roll Backward" then
+						pitch = (-tick() * spinRate) % 6.28
+					elseif pitchChoice == "Random" then
+						pitch = math.random(-99999,99999)/99999
+						pitch = pitch*1.47262156
+					elseif pitchChoice == "Bob" then
+						pitch = math.sin((tick() % 6.28) * spinRate)
+					elseif pitchChoice == "Glitch" then
+						pitch = 2 ^ 127 + 1
+					end
+
+					--"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"
+					if yawChoice == "Backward" then
+						yaw += math.pi
+					elseif yawChoice == "Spin" then
+						yaw = (tick() * spinRate) % 360
+					elseif yawChoice == "Random" then
+						yaw = math.random(-99999,99999)
+					elseif yawChoice == "Glitch Spin" then
+						yaw = 16478887
+					elseif yawChoice == "Invisible" then
+						yaw = (2.0^127) + 2
+					elseif yawChoice == "Stutter Spin" then
+						yaw = repupdate.antiaim_stutterframes % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
+					end
+
+					ang = Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
+					modified = true
+				end
+
+				if modified then
+					return netname, pos, ang, time
+				end
+			end)
+
+			hook:Add("OnAliveChanged", "BBOT:RepUpdate.Alive", function(alive)
+				if not alive then
+					repupdate.position = nil
+					repupdate.angle = nil
+					repupdate.time = nil
+					repupdate.alive = false
+				end
+			end)
+
+			hook:Add("PostNetworkSend", "BBOT:RepUpdate.Calculate", function(netname, pos, ang, time)
+				if netname ~= "repupdate" then return end
+				repupdate.position = pos
+				repupdate.angle = ang
+				repupdate.time = time
+				repupdate.alive = true
 			end)
 		end
 
@@ -15643,10 +16157,33 @@ if not BBOT.Debug.menu then
 			local replication = BBOT.aux.replication
 			local gamelogic = BBOT.aux.gamelogic
 			local gamemenu = BBOT.aux.menu
+			local repupdate = BBOT.repupdate
 			local misc = {}
 			BBOT.misc = misc
 
 			local CACHED_VEC3 = Vector3.new()
+
+			do
+				hook:Add("OnConfigChanged", "BBOT:Misc.KillCamTimer", function(steps, old, new)
+					if not config:IsPathwayEqual(steps, "Main", "Visuals", "Extra", "KillCam Timer") then return end
+					BBOT.menu:UpdateStatus("Kill Cam", "None", new)
+				end)
+
+				local kill_time, kill_name = 0, ""
+				hook:Add("PreBigAward", "BBOT:Misc.KillCamTimer", function(type, entity, gunname, earnings)
+					kill_time = tick() + 5
+					kill_name = entity.Name
+				end)
+
+				hook:Add("RenderStepped", "BBOT:Misc.KillCamTimer", function()
+					if not config:GetValue("Main", "Visuals", "Extra", "KillCam Timer") then return end
+					if kill_time > tick() then
+						BBOT.menu:UpdateStatus("Kill Cam", kill_name .. " [" .. math.round(kill_time-tick(), 1) .. "]")
+					else
+						BBOT.menu:UpdateStatus("Kill Cam", "None")
+					end
+				end)
+			end
 
 			do
 				-- Removes camera bob lul
@@ -15885,7 +16422,7 @@ if not BBOT.Debug.menu then
 							if not char.alive then return end
 							local topos = point.Position + up
 							points_simple[#points_simple+1] = topos
-							misc:MoveTo(topos, true) -- to move the character
+							repupdate:MoveTo(topos, true) -- to move the character
 						end
 						local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
 						BBOT.drawpather:Simple(points_simple, color, color_transparency, 4)
@@ -15970,10 +16507,10 @@ if not BBOT.Debug.menu then
 						local range = config:GetValue("Main", "Misc", "Exploits", "Click TP Range")
 						local tp = BBOT.aimbot:raycastbullet(camera.CFrame.p, camera.CFrame.lookVector * (range == 0 and 2000 or range))
 						if tp then
-							misc:MoveTo(tp.Position - (camera.CFrame.lookVector * .5) + Vector3.new(0,3,0), true)
+							repupdate:MoveTo(tp.Position - (camera.CFrame.lookVector * .5) + Vector3.new(0,3,0), true)
 						elseif range ~= 0 then
 							local pos = camera.CFrame.p + camera.CFrame.lookVector * range
-							misc:MoveTo(pos - (camera.CFrame.lookVector * .5) + Vector3.new(0,3,0), true)
+							repupdate:MoveTo(pos - (camera.CFrame.lookVector * .5) + Vector3.new(0,3,0), true)
 						end
 					end
 				end)
@@ -16012,7 +16549,7 @@ if not BBOT.Debug.menu then
 								BBOT.aux.network:send("repupdate", rootPos, camAngles, tick())
 								for i = 2, #noclipSequence do
 									local pos = noclipSequence[i] - headheightVec
-									misc:MoveTo(pos, false)
+									repupdate:MoveTo(pos, false)
 								end
 
 								char.rootpart.Position = noclipSequence[#noclipSequence] - headheightVec
@@ -16074,7 +16611,7 @@ if not BBOT.Debug.menu then
 								if not char.alive then return end
 								local topos = point.Position + up
 								points_simple[#points_simple+1] = topos
-								misc:MoveTo(topos, true) -- to move the character
+								repupdate:MoveTo(topos, true) -- to move the character
 							end
 							local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
 							BBOT.drawpather:Simple(points_simple, color, color_transparency, 4)
@@ -16328,15 +16865,17 @@ if not BBOT.Debug.menu then
 				end
 			end
 
-			local oldjump = char.jump
-			function char:jump(height)
-				height = config:GetValue("Main", "Misc", "Tweaks", "Jump Power") and (height * config:GetValue("Main", "Misc", "Tweaks", "Jump Power Percentage") / 100) or height
-				return oldjump(self, height)
-			end
+			do
+				local oldjump = char.jump
+				function char:jump(height)
+					height = config:GetValue("Main", "Misc", "Tweaks", "Jump Power") and (height * config:GetValue("Main", "Misc", "Tweaks", "Jump Power Percentage") / 100) or height
+					return oldjump(self, height)
+				end
 
-			hook:Add("Unload", "BBOT:Misc.JumpPower", function()
-				char.jump = oldjump
-			end)
+				hook:Add("Unload", "BBOT:Misc.JumpPower", function()
+					char.jump = oldjump
+				end)
+			end
 
 			misc.beams = {}
 			local debris = BBOT.service:GetService("Debris")
@@ -16517,7 +17056,7 @@ if not BBOT.Debug.menu then
 				misc:AutoGrenadeFrozen()
 			end)
 
-			do
+			do -- note: move this to aux?
 				local killed_netindex
 
 				local receivers = network.receivers
@@ -16531,313 +17070,6 @@ if not BBOT.Debug.menu then
 				hook:Add("PostNetworkReceive", "BBOT:LocalKilled.Network", function(netname, ...)
 					if netname == killed_netindex then
 						hook:CallP("LocalKilled", ...)
-					end
-				end)
-			end
-
-			local last_pos, last_ang, last_send, should_start = Vector3.new(), Vector2.new(), tick(), 0
-			local absolute_pos = nil
-			local blink_record = {}
-
-			function misc:BlinkPosition()
-				return absolute_pos, last_pos
-			end
-
-			function misc:SendBlinkRecord()
-				if #blink_record > 0 then
-					break_blink = true
-					if #blink_record == 1 then
-						network:send("repupdate", blink_record[1][1], blink_record[1][2], blink_record[1][3])
-						break_blink = false
-						blink_record = {}
-						return
-					end
-					local a = {}
-					local finaltime = blink_record[#blink_record]
-					local firsttime = blink_record[1]
-					local timediff = finaltime[3]-firsttime[3]
-					local first = firsttime[3]
-					local len = #blink_record
-					for i=1, len do
-						network:send("repupdate", blink_record[i][1], blink_record[i][2], ((timediff/len)*i)+first)
-						a[#a+1]=blink_record[i][1]
-					end
-					break_blink = false
-					local col, transparency = config:GetValue("Main", "Misc", "Exploits", "Blink", "Path Color")
-					if transparency > 0 then
-						BBOT.drawpather:Simple(a, col, transparency, 4)
-					end
-				end
-				blink_record = {}
-			end
-
-			function misc:UnBlink()
-				misc.inblink = false
-				misc:SendBlinkRecord()
-				last_send = tick()
-				last_pos = nil
-				last_ang = nil
-				break_blink = true
-				misc:ForceRepupdate()
-				break_blink = false
-			end
-
-			hook:Add("OnAliveChanged", "BBOT:Blink", function()
-				blink_record = {}
-				last_send = tick()
-				last_pos = nil
-				last_ang = nil
-			end)
-
-			local changed = 0
-			hook:Add("OnAliveChanged", "BBOT:RepUpdate", function(alive)
-				changed = 4
-			end)
-
-			local _tick, _last_ang, _last_pos = tick(), Vector2.new(), nil
-			local _last_alive = false
-
-			function misc:CanMoveTo(position)
-				local lastpos = _last_pos or char.rootpart.Position
-				local occupied = BBOT.aimbot:raycastbullet(lastpos, position-lastpos)
-				if occupied then return false else return true end
-			end
-
-			function misc:FindMinimumMoveTo(position)
-				local lastpos = _last_pos or char.rootpart.Position
-				local offset = position-lastpos
-				local results = BBOT.aimbot:raycastbullet(lastpos, offset)
-				if results then
-					return true, results.Position - (offset.Unit * 0.1), offset.Unit
-				end
-				return false, position
-			end
-
-			function misc:MoveTo(position, move_char)
-				if not _last_alive then return end
-				local current_position = _last_pos or char.rootpart.Position
-				if not misc:CanMoveTo(position) then return end
-
-				local diff = (position-current_position)
-
-				if diff:Dot(diff) > 64 then
-					local timescale = math.round(diff.Magnitude/8)+1
-					local tdiff = diff/timescale
-					for i=1, timescale do
-						network:send("repupdate", current_position + (tdiff*i), _last_ang, tick())
-					end
-				else
-					network:send("repupdate", current_position + diff, _last_ang, tick())
-				end
-
-				if move_char then
-					char.rootpart.CFrame = CFrame.new(current_position + diff, char.rootpart.CFrame.LookVector)
-				end
-			end
-
-			function misc:MoveCharTo(position)
-				if not _last_alive then return end
-				local current_position = _last_pos or char.rootpart.Position
-				if not misc:CanMoveTo(position) then return end
-				local diff = (position-current_position)
-				char.rootpart.CFrame = CFrame.new(current_position + diff, char.rootpart.CFrame.LookVector)
-			end
-
-			hook:Add("OnAliveChanged", "BBOT:Misc.MoveTo", function(alive)
-				_last_alive = alive
-				_last_pos = nil
-			end)
-
-			hook:Add("PostNetworkSend", "BBOT:Misc.MoveTo", function(netname, pos, ang, t)
-				if netname ~= "repupdate" then return end
-				_tick = t
-				_last_ang = ang
-				_last_pos = pos
-			end)
-
-			function misc:AntiGrenadeStep()
-				if not char.alive then return end
-				if config:GetValue("Main", "Misc", "Exploits", "Anti Grenade TP") then
-					local points_allowed = config:GetValue("Main", "Misc", "Exploits", "Anti Grenade TP Points")
-					local grenade_move_dist = config:GetValue("Main", "Misc", "Exploits", "Anti Grenade TP Distance")
-					local grenade_move_points = {}
-					if points_allowed.Up then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,grenade_move_dist,0) end
-					if points_allowed.Down then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,-grenade_move_dist,0) end
-					if points_allowed.Left then grenade_move_points[#grenade_move_points+1] = Vector3.new(-grenade_move_dist,0,0) end
-					if points_allowed.Right then grenade_move_points[#grenade_move_points+1] = Vector3.new(grenade_move_dist,0,0) end
-					if points_allowed.Forward then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,0,-grenade_move_dist) end
-					if points_allowed.Backward then grenade_move_points[#grenade_move_points+1] = Vector3.new(0,0,grenade_move_dist) end
-
-					local generation = {}
-					local start = char.rootpart.Position
-					for i=1, #grenade_move_points do
-						local point = grenade_move_points[i]
-						local offset = (point*grenade_move_dist)
-						local final = start + offset
-						local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-							Ray.new(start, offset),
-							BBOT.aux.roundsystem.raycastwhitelist
-						) 
-						if part then
-							final = position - (position - start).Unit
-						end
-						generation[#generation+1] = {final, (final-start).Magnitude}
-					end
-
-					table.sort(generation, function(a, b)
-						return a[2] > b[2]
-					end)
-
-					misc:MoveTo(generation[1][1], true)
-				end
-			end
-
-			local last_predicted = nil
-			hook:Add("RageBot.DamagePredictionKilled", "BBOT:AntiGrenadeTP", function(Entity)
-				if last_predicted == Entity then return end
-				timer:Async(function()
-					hook:Add("Heartbeat", "BBOT:AntiGrenadeTP", function()
-						hook:Remove("Heartbeat", "BBOT:AntiGrenadeTP")
-						hook:Add("Stepped", "BBOT:AntiGrenadeTP", function()
-							hook:Remove("Stepped", "BBOT:AntiGrenadeTP")
-							misc:AntiGrenadeStep()
-							last_predicted = nil
-						end)
-					end)
-				end)
-				last_predicted = Entity
-			end)
-
-			hook:Add("PreBigAward", "BBOT:AntiGrenadeTP", function()
-				if config:GetValue("Main", "Rage", "Settings", "Damage Prediction") then return end
-				misc:AntiGrenadeStep()
-			end)
-
-			function misc:ForceRepupdate(pos, ang)
-				local l__angles__1304 = BBOT.aux.camera.angles;
-				network:send("repupdate", pos or char.rootpart.Position, ang or Vector2.new(l__angles__1304.x, l__angles__1304.y), tick())
-			end
-
-			hook:Add("SuppressNetworkSend", "BBOT:Blink", function(networkname, pos, ang, timestamp)
-				if networkname == "repupdate" then
-					absolute_pos = pos
-					if config:GetValue("Main", "Misc", "Exploits", "Blink") and config:GetValue("Main", "Misc", "Exploits", "Blink", "KeyBind") then
-						if BBOT.aimbot.tp_scanning then
-							misc.inblink = false
-							last_send = tick()
-							last_pos = pos
-							last_ang = ang
-							return
-						end
-						local allowmove = config:GetValue("Main", "Misc", "Exploits", "Blink Allow Movement")
-						if (last_pos == pos or allowmove) then
-							if not break_blink then
-								if not last_pos then
-									misc.inblink = false
-									last_pos = pos
-									last_ang = ang
-									return
-								end
-								local t = config:GetValue("Main", "Misc", "Exploits", "Blink Keep Alive")
-								if last_send + t < tick() and t > 0 then
-									BBOT.menu:UpdateStatus("Blink", "Buffering...")
-									misc:SendBlinkRecord()
-									last_pos = pos
-									--last_ang = ang
-									network:send(networkname, last_pos, ang, timestamp)
-									last_send = tick()
-									misc.inblink = false
-								else
-									BBOT.menu:UpdateStatus("Blink", "Active"
-									.. (t > 0 and " [" .. math.abs(math.round(last_send+t-tick(),1)) .. "s]" or "")
-									.. (allowmove and " [" .. math.round((pos-last_pos).Magnitude, 1) .. " studs]" or ""))
-									misc.inblink = true
-									if not blink_record[1] or blink_record[#blink_record][1] ~= pos then
-										local last = blink_record[#blink_record]
-										if last then
-											local lasttime = last[3]
-											if lasttime and timestamp < lasttime then
-												last[3] = timestamp
-											end
-										end
-										blink_record[#blink_record+1] = {pos, ang, timestamp}
-									end
-								end
-								return true
-							end
-						else
-							BBOT.menu:UpdateStatus("Blink", "Stand Still")
-							misc.inblink = false
-							last_send = tick()
-							last_pos = pos
-							last_ang = ang
-						end
-					elseif #blink_record > 0 then
-						misc:UnBlink()
-						last_pos = pos
-						last_ang = ang
-					else
-						last_send = tick()
-						misc.inblink = false
-						last_pos = pos
-						last_ang = ang
-					end
-				end
-			end)
-
-			hook:Add("Aimbot.NewBullets", "BBOT:Blink.OnFire", function()
-				if misc.inblink and config:GetValue("Main", "Misc", "Exploits", "Blink On Fire") then
-					BBOT.menu:UpdateStatus("Blink", "Buffering...")
-					misc:SendBlinkRecord()
-					last_pos = nil
-					--last_ang = ang
-					last_send = tick()
-					misc.inblink = false
-				end
-			end)
-
-			hook:Add("PreNetworkSend", "BBOT:Blink.OnFire", function(netname)
-				if netname == "newbullets" then
-					if misc.inblink and config:GetValue("Main", "Misc", "Exploits", "Blink On Fire") then
-						BBOT.menu:UpdateStatus("Blink", "Buffering...")
-						misc:SendBlinkRecord()
-						last_pos = nil
-						--last_ang = ang
-						last_send = tick()
-						misc.inblink = false
-					end
-				end
-			end)
-
-			do
-				local fake_stance = false
-				hook:Add("SuppressNetworkSend", "BBOT:Misc.Stance", function(netname, mode)
-					if netname == "stance" and config:GetValue("Main", "Rage", "Anti Aim", "Fake Stance") ~= "Off" and not fake_stance then
-						return true
-					end
-				end)
-			
-				hook:Add("OnConfigChanged", "BBOT:Misc.Stance", function(steps, old, new)
-					if not char.alive then return end
-					if not config:IsPathwayEqual(steps, "Main", "Rage", "Anti Aim", "Fake Stance") then return end
-					if new ~= "Off" then
-						if char.movementmode ~= "prone" then
-							fake_stance = true
-							network:send("stance", string.lower(new));
-							fake_stance = false
-						end
-					elseif char.movementmode ~= string.lower(new) then
-						network:send("stance", char.movementmode);
-					end
-				end)
-
-				hook:Add("OnAliveChanged", "BBOT:Misc.Stance", function(alive)
-					if not alive then return end
-					local stance = config:GetValue("Main", "Rage", "Anti Aim", "Fake Stance")
-					if stance ~= "Off" then
-						fake_stance = true
-						network:send("stance", string.lower(stance))
-						fake_stance = false
 					end
 				end)
 			end
@@ -16915,174 +17147,6 @@ if not BBOT.Debug.menu then
 					local object = v1057[v1058]
 					if object:IsA("BasePart") then
 						object.CanCollide = false
-					end
-				end
-			end)
-
-			local workspace = BBOT.service:GetService("Workspace")
-			local stutterFrames = 0
-			local last_alive = false
-			hook:Add("OnAliveChanged", "BBOT:RepUpdate", function(alive)
-				if not alive then
-					last_alive = false
-				end
-			end)
-
-			local swapped, nextswap = false, 0
-			hook:Add("RageBot.DamagePredictionKilled", "BBOT:FloorSwap", function(Entity)
-				swapped = false
-				nextswap = tick() + BBOT.extras:getLatency() * (config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")/100)
-			end)
-
-			hook:Add("PreNetworkSend", "BBOT:FloorSwap", function(netname)
-				if netname ~= "newbullets" then return end
-				swapped = false
-				nextswap = tick() + BBOT.extras:getLatency() * (config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")/100)
-			end)
-
-			hook:Add("PostNetworkSend", "BBOT:FloorSwap", function(netname)
-				if netname ~= "newbullets" then return end
-				if config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap") == 0 then
-					swapped = true
-					misc:ForceRepupdate()
-				end
-			end)
-
-			hook:Add("OnKeyBindChanged", "BBOT:SpazAttack", function(steps, old, new)
-				if config:IsPathwayEqual("Main", "Misc", "Exploits", "Spaz Attack", "KeyBind") and new then return end
-				if not char.alive then return end
-				misc:MoveTo(char.rootpart.Position)
-			end)
-
-			misc.tick_base_offset = 0
-			function misc:GetTickManipulationScale(t)
-				t = t or tick()
-				if config:GetValue("Main", "Misc", "Exploits", "Tick Manipulation") then
-					return (t/(10^config:GetValue("Main", "Misc", "Exploits", "Tick Division Scale")))
-				end
-				return t
-			end
-
-			local a_near_infinite = (1.7 * 10^308)
-			for i=1, 308 do
-				-- .08792382137608441
-				a_near_infinite = a_near_infinite + (.08*10^i)
-			end
-
-			local in_spaz = false
-			hook:Add("PreNetworkSend", "BBOT:RepUpdate", function(networkname, pos, ang, timestamp, ...)
-
-				if networkname == "repupdate" then
-					local ran = false
-					if config:GetValue("Main", "Misc", "Exploits", "Tick Manipulation") then
-						timestamp = misc:GetTickManipulationScale(timestamp)
-						ran = true
-					end
-
-					if not BBOT.aimbot.in_ragebot and not BBOT.aimbot.tp_scanning then
-						if config:GetValue("Main", "Misc", "Exploits", "Spaz Attack") and config:GetValue("Main", "Misc", "Exploits", "Spaz Attack", "KeyBind") and not in_spaz then
-							local intensity = config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
-							local offset = Vector3.new(math.random(-1000,1000)/1000, math.random(-1000,1000)/1000, math.random(-1000,1000)/1000)*config:GetValue("Main", "Misc", "Exploits", "Spaz Attack Intensity")
-							local results = BBOT.aimbot:raycastbullet(pos, offset)
-							if results then
-								offset = offset - (offset.Unit * 2)
-							end
-							pos = pos + offset
-							in_spaz = true
-							misc:MoveTo(pos - (offset.Unit/100))
-							in_spaz = false
-							timestamp = misc:GetTickManipulationScale()
-							ran = true
-						end
-
-						if not last_alive then
-							last_alive = true
-
-							if config:GetValue("Main", "Misc", "Exploits", "Floor TP") then
-								local p = pos - Vector3.new(0,6,0)
-								pos = p
-								char.rootpart.CFrame = CFrame.new(p, char.rootpart.CFrame.LookVector)
-							end
-						end
-
-						--[[if config:GetValue("Main", "Misc", "Exploits", "Spawn Offset") and changed > 0 then
-							changed = changed - 1
-							pos=pos+Vector3.new(0,-1e6,0)
-							timestamp=2
-							network:send("repupdate", pos, ang, timestamp)
-							ran = true
-						end]]
-
-						if not BBOT.aimbot.in_ragebot and not BBOT.aimbot.tp_scanning then
-							local infloor = config:GetValue("Main", "Rage", "Anti Aim", "In Floor")
-							local infloorswap = config:GetValue("Main", "Rage", "Anti Aim", "In Floor Swap")
-							if infloorswap == 1000 then
-								if swapped then swapped = false else swapped = true end
-							elseif infloorswap > 0 and not swapped and nextswap < tick() then
-								swapped = true
-							end
-							if infloor > 0 and swapped then
-								pos = pos + Vector3.new(0,-infloor,0)
-							end
-							if infloorswap == 0 then
-								swapped = true
-							end
-						end
-
-						if config:GetValue("Main", "Rage", "Anti Aim", "Enabled") then
-							--args[2] = ragebot:AntiNade(args[2])
-							stutterFrames += 1
-							local pitch = ang.x
-							local yaw = ang.y
-							local pitchChoice = config:GetValue("Main", "Rage", "Anti Aim", "Pitch")
-							local yawChoice = config:GetValue("Main", "Rage", "Anti Aim", "Yaw")
-							local spinRate = config:GetValue("Main", "Rage", "Anti Aim", "Spin Rate")
-							---"off,down,up,roll,upside down,random"
-							--"Off", "Up", "Zero", "Down", "Upside Down", "Roll Forward", "Roll Backward", "Random", "Bob", "Glitch",
-							local new_angles
-							if pitchChoice == "Up" then
-								pitch = -4
-							elseif pitchChoice == "Zero" then
-								pitch = 0
-							elseif pitchChoice == "Down" then
-								pitch = 4.7
-							elseif pitchChoice == "Upside Down" then
-								pitch = -math.pi
-							elseif pitchChoice == "Roll Forward" then
-								pitch = (tick() * spinRate) % 6.28
-							elseif pitchChoice == "Roll Backward" then
-								pitch = (-tick() * spinRate) % 6.28
-							elseif pitchChoice == "Random" then
-								pitch = math.random(-99999,99999)/99999
-								pitch = pitch*1.47262156
-							elseif pitchChoice == "Bob" then
-								pitch = math.sin((tick() % 6.28) * spinRate)
-							elseif pitchChoice == "Glitch" then
-								pitch = 2 ^ 127 + 1
-							end
-
-							--"Forward", "Backward", "Spin", "Random", "Glitch Spin", "Stutter Spin"
-							if yawChoice == "Backward" then
-								yaw += math.pi
-							elseif yawChoice == "Spin" then
-								yaw = (tick() * spinRate) % 360
-							elseif yawChoice == "Random" then
-								yaw = math.random(-99999,99999)
-							elseif yawChoice == "Glitch Spin" then
-								yaw = 16478887
-							elseif yawChoice == "Invisible" then
-								yaw = (2.0^127) + 2
-							elseif yawChoice == "Stutter Spin" then
-								yaw = stutterFrames % (6 * (spinRate / 4)) >= ((6 * (spinRate / 4)) / 2) and 2 or -2
-							end
-
-							new_angles = new_angles or Vector2.new(math.clamp(pitch, -1.47262156, 1.47262156), yaw)
-							return networkname, pos, new_angles, timestamp
-						end
-					end
-
-					if ran then
-						return networkname, pos, ang, timestamp
 					end
 				end
 			end)
@@ -17447,7 +17511,6 @@ if not BBOT.Debug.menu then
 					function updater.getweaponpos()
 						return data.firepos
 					end
-
 					local duration = config:GetValue("Main", "Visuals", "Extra", "Spectator Bullet Duration")
 					local hit_color, hit_opacity = config:GetValue("Main", "Visuals", "Extra", "Spectator Bullets", "Hit Color")
 					local bullet_color, bullet_opacity = config:GetValue("Main", "Visuals", "Extra", "Spectator Bullets", "Trace Color")
@@ -17464,7 +17527,6 @@ if not BBOT.Debug.menu then
 						if config:GetValue("Main", "Visuals", "Extra", "Spectator Bullets") then
 							local pather = drawpather:Create()
 							pather:SetColor(bullet_color, bullet_opacity)
-							pather:SetOutlined(true)
 							pather:SetSize(1)
 							pather:SetEndSize(3)
 							pather:ShowEnd(true)
@@ -17571,6 +17633,7 @@ if not BBOT.Debug.menu then
 			local physics = BBOT.physics
 			local raycast = BBOT.aux.raycast
 			local roundsystem = BBOT.aux.roundsystem
+			local repupdate = BBOT.repupdate
 			local cam = BBOT.aux.camera
 			local localplayer = BBOT.service:GetService("LocalPlayer")
 			local userinputservice = BBOT.service:GetService("UserInputService")
@@ -17793,13 +17856,6 @@ if not BBOT.Debug.menu then
 				cam.angles = newangles
 			end
 
-			function aimbot:GetFOV(Part, originPart)
-				originPart = originPart or workspace.Camera
-				local directional = CFrame.new(originPart.CFrame.Position, Part.Position)
-				local ang = Vector3.new(directional:ToOrientation()) - Vector3.new(originPart.CFrame:ToOrientation())
-				return math.deg(ang.Magnitude)
-			end
-
 			function aimbot:GetLegitTarget(fov, dzFov, hitscan_points, hitscan_priority, scan_part, multi, sticky)
 				local mousePos = Vector3.new(mouse.x, mouse.y, 0)
 				local cam_position = camera.CFrame.p
@@ -17834,7 +17890,6 @@ if not BBOT.Debug.menu then
 						local pos = prioritize.Position
 						local point, onscreen = camera:WorldToViewportPoint(pos)
 						if onscreen then
-							--local object_fov = self:GetFOV(part, scan_part)
 							if (not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
 								local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
 								if not ((not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos)) then
@@ -17852,7 +17907,6 @@ if not BBOT.Debug.menu then
 							local pos = part.Position
 							local point, onscreen = camera:WorldToViewportPoint(pos)
 							if not onscreen then continue end
-							--local object_fov = self:GetFOV(part, scan_part)
 							if (fov and vector.dist2d(fov.Position, point) > fov.Radius) then continue end
 							local raydata = self:raycastbullet(cam_position,pos-cam_position,playerteamdata)
 							if (not raydata or not raydata.Instance:IsDescendantOf(updater.gethead().Parent)) and (raydata and raydata.Position ~= pos) then continue end
@@ -17902,19 +17956,76 @@ if not BBOT.Debug.menu then
 					end)
 				end
 
+				do
+					local target_line = draw:Create("Line", "2V", "3D")
+					target_line.Color = Color3.fromRGB(127, 72, 163)
+					target_line.Thickness = 2
+					target_line.ZIndex = 3
+					target_line.Offset1 = Vector2.new()
+					target_line.Point2 = Vector3.new()
+					target_line.Visible = false
+					target_line.Outlined = true
+					target_line.OutlineColor = Color3.new(0,0,0)
+					target_line.OutlineThickness = 1
+
+					hook:Add("OnConfigChanged", "BBOT:Aimbot.MouseStep.Line", function(steps, old, new)
+						if config:IsPathwayEqual(steps, "Main", "Visuals", "FOV", "Aim Assist Line", true) and not new then
+							target_line.Visible = false
+						elseif config:IsPathwayEqual(steps, "Main", "Visuals", "FOV", "Aim Assist Line", "Color") then
+							local color, opacity = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Line", "Color")
+							target_line.Color = color
+							target_line.Opacity = opacity
+							target_line.OutlineOpacity = opacity
+						end
+					end)
+
+					hook:Add("PreCalculateCrosshair", "BBOT:Aimbot.MouseStep.Line", function(screenpos, onscreen)
+						if not config:GetValue("Main", "Visuals", "FOV", "Aim Assist Line") then return end
+						local pos = Vector2.new(screenpos.X, screenpos.Y)
+						local barrel_calc = aimbot:GetLegitConfig("Aim Assist", "Use Barrel")
+						if not barrel_calc then
+							pos = camera.ViewportSize/2
+						end
+						if char.alive and aimbot.mouse_target and aimbot.mouse_target[2] then
+							target_line.Offset1 = pos
+							target_line.Point2 = aimbot.mouse_target[2].Position
+							target_line.Visible = true
+						else
+							target_line.Visible = false
+						end
+					end)
+				end
+
+				function aimbot:MouseChanged(target)
+					if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
+						hook:Call("MouseBot.Changed", (target and unpack(target) or nil))
+					end
+				end
+
 				function aimbot:MouseStep(gun)
 					if not self:GetLegitConfig("Aim Assist", "Enabled") then
+						self:MouseChanged()
 						self.mouse_target = nil
 						return
 					end
 					local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
 					if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
 						if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then
+							self:MouseChanged()
 							self.mouse_target = nil
 							return
 						end
 					elseif aimkey == "Dynamic Always" then
 						if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+							self:MouseChanged()
+							self.mouse_target = nil
+							return
+						end
+					end
+					if self:GetLegitConfig("Aim Assist", "Enable On Move") then
+						local mouse_delta = userinputservice:GetMouseDelta()
+						if mouse_delta.Magnitude == 0 then
+							self:MouseChanged()
 							self.mouse_target = nil
 							return
 						end
@@ -17927,9 +18038,7 @@ if not BBOT.Debug.menu then
 
 					local previous_target = (self:GetLegitConfig("Aim Assist", "Lock Target") and self.mouse_target or nil)
 					local target = self:GetLegitTarget(aimbot.fov_circle_last, aimbot.dzfov_circle_last, hitscan_points, hitscan_priority, (barrel_calc and part or nil), nil, previous_target)
-					if (target == nil and self.mouse_target) or (self.mouse_target == nil and target) or (target and self.mouse_target and target[1] ~= self.mouse_target[1]) then
-						hook:Call("MouseBot.Changed", (target and unpack(target) or nil))
-					end
+					self:MouseChanged(target)
 					self.mouse_target = target
 					if not target or target[5] then return end
 					local position = target[2].Position
@@ -17954,7 +18063,7 @@ if not BBOT.Debug.menu then
 					local pos, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
 					if onscreen then
 						local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
-						local smoothing = smoothing_incrimental * 5 + 10
+						local smoothing = smoothing_incrimental * 5 + 5
 						local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - (36*2) - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
 						Move_Mouse(inc)
 					end
@@ -17962,14 +18071,69 @@ if not BBOT.Debug.menu then
 			end
 
 			do
+				do
+					local target_line = draw:Create("Line", "2V", "3D")
+					target_line.Color = Color3.fromRGB(163, 72, 127)
+					target_line.Thickness = 2
+					target_line.ZIndex = 3
+					target_line.Offset1 = Vector2.new()
+					target_line.Point2 = Vector3.new()
+					target_line.Visible = false
+					target_line.Outlined = true
+					target_line.OutlineColor = Color3.new(0,0,0)
+					target_line.OutlineThickness = 1
+
+					hook:Add("OnConfigChanged", "BBOT:Aimbot.RedirectionStep.Line", function(steps, old, new)
+						if config:IsPathwayEqual(steps, "Main", "Visuals", "FOV", "Bullet Redirect Line", true) and not new then
+							target_line.Visible = false
+						elseif config:IsPathwayEqual(steps, "Main", "Visuals", "FOV", "Bullet Redirect Line", "Color") then
+							local color, opacity = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect Line", "Color")
+							target_line.Color = color
+							target_line.Opacity = opacity
+							target_line.OutlineOpacity = opacity
+						end
+					end)
+
+					hook:Add("PreCalculateCrosshair", "BBOT:Aimbot.RedirectionStep.Line", function(screenpos, onscreen)
+						if not config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect Line") then return end
+						local pos = Vector2.new(screenpos.X, screenpos.Y)
+						local barrel_calc = aimbot:GetLegitConfig("Bullet Redirect", "Use Barrel")
+						if not barrel_calc then
+							pos = camera.ViewportSize/2
+						end
+						if char.alive and aimbot.redirection_target and aimbot.redirection_target[2] then
+							target_line.Offset1 = pos
+							target_line.Point2 = aimbot.redirection_target[2].Position
+							target_line.Visible = true
+						else
+							target_line.Visible = false
+						end
+					end)
+				end
+
+				function aimbot:RedirectionChanged(target)
+					if (target == nil and self.redirection_target) or (self.redirection_target == nil and target) or (target and self.redirection_target and target[1] ~= self.redirection_target[1]) then
+						hook:Call("RedirectionBot.Changed", (target and unpack(target) or nil))
+					end
+				end
+
 				function aimbot:RedirectionStep(gun)
 					self.redirection_target = nil
-					if not self:GetLegitConfig("Bullet Redirect", "Enabled") then return end
+					if not self:GetLegitConfig("Bullet Redirect", "Enabled") then
+						self:RedirectionChanged()
+						return
+					end
 					local aimkey = self:GetLegitConfig("Aim Assist", "Aimbot Key")
 					if aimkey == "Mouse 1" or aimkey == "Mouse 2" then
-						if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then return end
+						if not userinputservice:IsMouseButtonPressed((aimkey == "Mouse 1" and Enum.UserInputType.MouseButton1 or Enum.UserInputType.MouseButton2)) then
+							self:RedirectionChanged()
+							return
+						end
 					elseif aimkey == "Dynamic Always" then
-						if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+						if not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not userinputservice:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+							self:RedirectionChanged()
+							return
+						end
 					end
 					if math.random(0, 100) > self:GetLegitConfig("Bullet Redirect", "Hit Chance") then
 						return
@@ -17981,9 +18145,7 @@ if not BBOT.Debug.menu then
 					local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 
 					local target = self:GetLegitTarget(aimbot.sfov_circle_last, nil, hitscan_points, hitscan_priority, (barrel_calc and part or nil))
-					if (target == nil and self.redirection_target) or (self.redirection_target == nil and target) or (target and self.redirection_target and target[1] ~= self.redirection_target[1]) then
-						hook:Call("RedirectionBot.Changed", (target and unpack(target) or nil))
-					end
+					self:RedirectionChanged(target)
 					if not target then return end
 					self.redirection_target = target
 					local position = target[2].Position
@@ -18730,7 +18892,7 @@ if not BBOT.Debug.menu then
 					end
 				
 					--.75
-					local vecdown = Vector3.new(0,1.55,0)
+					local stanceoffset = repupdate:GetStanceOffset()
 					local targeted = {}
 					for i=1, #plys do -- here we calculate if they are hittable using the points the config has setup for us
 						-- players we find is hittable we insert into targeted
@@ -18777,20 +18939,11 @@ if not BBOT.Debug.menu then
 											-- while a cframe is a relative offset
 											if fp_name == "Random" then
 												local offset = vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance))
-												newcf = targetcframe + offset
-												if offset.Y < -8.5 then
-													newcf = targetcframe + offset + vecdown
-												end
+												newcf = targetcframe + offset + stanceoffset
 											elseif typeof(firepos_points[i]) == "Vector3" then
-												newcf = targetcframe + firepos_points[i]
-												if firepos_points[i].Y < -8.5 then
-													newcf = targetcframe + firepos_points[i] + vecdown
-												end
+												newcf = targetcframe + firepos_points[i] + stanceoffset
 											else
-												newcf = targetcframe * lookatme * firepos_points[i]
-												if newcf.p.Y < targetcframe.p.Y and math.abs(newcf.p.Y - targetcframe.p.Y) > 8.5 then
-													newcf = targetcframe * lookatme * CFrame.new(firepos_points[i].p + vecdown)
-												end
+												newcf = targetcframe * lookatme * firepos_points[i] + stanceoffset
 											end
 										else
 											-- this is for TP scanning points also relative btw
@@ -18805,8 +18958,8 @@ if not BBOT.Debug.menu then
 											if self.tp_scanning_cooldown then
 												continue
 											end
-											local new, position, dir = BBOT.misc:FindMinimumMoveTo(cam_position)
-											if not BBOT.misc:CanMoveTo(position) then continue end
+											local new, position, dir = repupdate:FindMinimumMoveTo(cam_position)
+											if not repupdate:CanMoveTo(position) then continue end
 											if new and tp_scan_shift then
 												tp_scanning_shift_dir = dir
 											end
@@ -18918,12 +19071,12 @@ if not BBOT.Debug.menu then
 					if target and target[5] and not self.tp_scanning then
 						local original_position = char.rootpart.Position
 						local target_pos = target[4]
-						BBOT.misc:UnBlink() -- obivously don't want to fake lagging during this
+						repupdate:BlinkUpdate() -- obivously don't want to fake lagging during this
 						self.tp_scanning = target_pos
 						self.tp_ignore = true
 						self.tp_scanning_cooldown = true
 						-- we move this so that server-side our humanoid root part will appear in the exact position as the repupdate
-						BBOT.misc:MoveCharTo(target_pos) -- move our humanoid root part (not repupdate)
+						repupdate:MoveCharTo(target_pos) -- move our humanoid root part (not repupdate)
 						self.tp_scanning_blockrep = true
 						char.rootpart.Anchored = true
 						local heartbeat_ticks = 1
@@ -18949,7 +19102,7 @@ if not BBOT.Debug.menu then
 								self.tp_ignore = false
 								self.tp_scanning_blockrep = false
 								-- now that our humanoid is exactly where we want it, we force repupdate to move
-								BBOT.misc:MoveTo(target_pos, true)
+								repupdate:MoveTo(target_pos, true)
 								-- then fire our bullet
 								self.tp_target = target
 								if gamelogic.currentgun and gamelogic.currentgun.firestep then
@@ -18960,7 +19113,7 @@ if not BBOT.Debug.menu then
 									char.rootpart.Anchored = false
 								end
 								-- then return our repupdate and our humanoid to where we were
-								BBOT.misc:MoveTo(original_position, true)
+								repupdate:MoveTo(original_position, true)
 								self.tp_scanning = false
 
 								timer:Simple(.1, function()
@@ -18990,7 +19143,7 @@ if not BBOT.Debug.menu then
 							self.fire = true
 							gun:shoot(true)
 							if not self.tp_scanning then
-								BBOT.misc:MoveTo(char.rootpart.Position)
+								repupdate:Force()
 							end
 						end
 
@@ -19533,7 +19686,6 @@ if not BBOT.Debug.menu then
 
 			-- Do aimbot stuff here
 			hook:Add("PreFireStep", "BBOT:Aimbot.Calculate", function(gun)
-				aimbot:CrosshairStep(tick()-t, gun)
 				aimbot:RageChanged(nil)
 				aimbot.rage_target = nil
 				if config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
@@ -19541,7 +19693,6 @@ if not BBOT.Debug.menu then
 				else
 					aimbot:LegitStep(gun)
 				end
-				t = tick()
 			end)
 
 			-- If the aimbot stuff before is persistant, use this to restore
@@ -19558,13 +19709,23 @@ if not BBOT.Debug.menu then
 				end
 
 				if aimbot.fire then
+					if gun.getfiremode then
+						local mode, rate = gun:getfiremode()
+						if mode == true and not hook:IsMouse1Down() then
+							gun:shoot(false)
+						end
+					else
+						gun:shoot(false)
+					end
 					aimbot.fire = nil
-					gun:shoot(false)
 				end
 
 				if aimbot.in_ragebot then
 					aimbot.in_ragebot = false
 				end
+
+				aimbot:CrosshairStep(tick()-t, gun)
+				t = tick()
 			end)
 
 			local enque = {}
@@ -19603,7 +19764,7 @@ if not BBOT.Debug.menu then
 							bullet[1] = aimbot:DropPrediction(bullettable.firepos, targetpos, gundata.bulletspeed).Unit * bullet[1].Magnitude
 						end
 
-						network:send(networkname, bullettable, BBOT.misc:GetTickManipulationScale())
+						network:send(networkname, bullettable, repupdate:Tick())
 
 						for i=1, #bullettable.bullets do
 							local bullet = bullettable.bullets[i]
@@ -20362,9 +20523,25 @@ if not BBOT.Debug.menu then
 						self.begin_fading = false
 						local parts = replication.getbodyparts(self.player)
 						if not parts then return end
+
+						local flags = self:GetConfig("Flags")
+						local canrender = true
+						if flags["Priority Only"] and config:GetPriority(self.player) <= 0 then
+							canrender = false
+						end
+
 						self.model = parts.head.Parent
 						self.parts = parts
-						local esp_enabled = self:GetConfig("Enabled")
+						local esp_enabled
+						if spectator:IsSpectating() then
+							if self:GetConfig("Enabled") then
+								esp_enabled = true
+							else
+								esp_enabled = false
+							end
+						else
+							esp_enabled = self:GetConfig("Enabled") and canrender
+						end
 						
 						local color, color_transparency = self:GetColor("Name", "Color")
 						self.name_enabled = (esp_enabled and self:GetConfig("Name") or false)
@@ -20409,8 +20586,6 @@ if not BBOT.Debug.menu then
 						self.healthtext.Opacity = color_transparency
 						self.healthtext.OutlineOpacity = color_transparency
 						self:Cache(self.healthtext)
-
-						local flags = self:GetConfig("Flags")
 
 						self.distance_enabled = (esp_enabled and flags.Distance or false)
 						self.distance.Visible = self.distance_enabled
@@ -21141,15 +21316,16 @@ if not BBOT.Debug.menu then
 				for k, v in pairs(receivers) do
 					local const = debug.getconstants(v)
 					if table.quicksearch(const, "Trigger") and table.quicksearch(const, "Indicator") and table.quicksearch(const, "Ticking") then
-						hook:Add("Unload", "BBOT:GrenadeThrown-"..tostring(k), function()
-							rawset(receivers, k, v)
-						end)
-						rawset(receivers, k, function(player, grenadename, animtable, ...)
-							local thingy = workspace.Ignore.Misc.DescendantAdded:Connect(function(descendant)
+						local thingy
+						hook:Add("PreNetworkReceive", "BBOT:Weapons.Grenades", function(netindex, player, grenadename, animtable)
+							if netindex ~= k then return end
+							thingy = workspace.Ignore.Misc.DescendantAdded:Connect(function(descendant)
 								if descendant.Name ~= "Trigger" then return end
 								timer:Async(function() hook:Call("GrenadeCreated", descendant, player, grenadename, animtable) end)
 							end)
-							v(player, grenadename, animtable, ...)
+						end)
+						hook:Add("PostNetworkReceive", "BBOT:Weapons.Grenades", function(netindex, player, grenadename, animtable)
+							if netindex ~= k then return end
 							thingy:Disconnect()
 						end)
 					end
@@ -21862,7 +22038,7 @@ if not BBOT.Debug.menu then
 								local trueassetid = ""
 								local assetid = texture["Asset-Id"].self
 								if asset:IsFile("textures", assetid) then
-									trueassetid = asset:Get("textures", assetid)
+									trueassetid = asset:GetAsset("textures", assetid)
 								else
 									trueassetid = "rbxassetid://" .. assetid
 								end
