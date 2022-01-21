@@ -972,6 +972,7 @@ do
 		coroutine.resume(coroutine.create(hook.Call), hook, name, ...)
 	end
 	function hook:Call(name, ...) -- Calls an array of hooks, and returns anything if needed
+		if self.killed then return end
 		if not self.registry[name] then return end
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
 	
@@ -1006,6 +1007,7 @@ do
 	end
 
 	function hook:CallP(name, ...) -- Same as @hook:Call, put with error isolation
+		if self.killed then return end
 		if not self.registry[name] then return end
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
 	
@@ -1061,6 +1063,7 @@ do
 	-- Do note returns may not be possible in this as it's basically multitasking
 	-- Obviously for now this is xpcall even though it's still in-line with the current thread
 	function hook:AsyncCall(name, ...)
+		if self.killed then return end
 		if not self.registry[name] then return end
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
 
@@ -1123,7 +1126,7 @@ do
 		return con
 	end
 	--[[
-	function original_func = hook:bindFunction(function func, string name, any extra)
+	function original_func = hook:BindFunction(function func, string name, any extra [vararg])
 	- Automatically hooks a function and adds it to the hook registry
 	- hooks called: Pre[name], Post[name]
 		- Pre: ran before the function, use this for pre stuff
@@ -1139,13 +1142,14 @@ do
 	]]
 
 	hook.bindings = {}
-	function hook:bindFunction(func, name, metafunction, extra)
-		local t = {self, func, name, extra}
+	function hook:BindFunction(func, name, metafunction, ...)
+		local t = {self, func, name, metafunction, {...}}
 		t[2] = hookfunction(func, function(...)
 			if t[1].killed then return t[2](...) end
 			local extra_add = {}
-			if t[5] ~= nil then
-				extra_add[1] = t[5]
+			local extra_len = #t[5]
+			for i=1, extra_len do
+				extra_add[i] = t[5][i]
 			end
 			local vararg = {...}
 			for i=1, #vararg do
@@ -1159,6 +1163,9 @@ do
 			if t[5] ~= nil then
 				table.insert(args, 1, t[5])
 			end
+			for i=1, extra_len do
+				table.insert(args, 1, t[5][extra_len-i+1])
+			end
 			for i=1, #vararg do
 				args[#args+1] = vararg[i]
 			end
@@ -1168,18 +1175,19 @@ do
 			t[1]:CallP("Post" .. t[3], unpack(args))
 			return unpack(args)
 		end)
-		self.bindings[#self.bindings+1] = t[2]
+		self.bindings[#self.bindings+1] = {name, func}
 		return t[2]
 	end
 
-	function hook:bindFunctionOverride(func, name, metafunction, extra)
-		local t = {self, func, name, metafunction, extra, false}
+	function hook:BindFunctionOverride(func, name, metafunction, ...)
+		local t = {self, func, name, metafunction, false, {...}}
 		t[2] = hookfunction(func, function(...)
 			local hook = t[1]
 			if hook.killed then return t[2](...) end
 			local extra_add = {}
-			if t[5] ~= nil then
-				extra_add[1] = t[5]
+			local extra_len = #t[6]
+			for i=1, extra_len do
+				extra_add[i] = t[6][i]
 			end
 			local vararg = {...}
 			for i=1, #vararg do
@@ -1190,10 +1198,10 @@ do
 				self_meta = vararg[1]
 				table.remove(extra_add, 1)
 			end
-			if not t[6] then
-				t[6] = true
+			if not t[5] then
+				t[5] = true
 				local s = hook:CallP("Suppress" .. t[3], unpack(extra_add))
-				t[6] = false
+				t[5] = false
 				if s then return end
 			end
 			local override = {hook:CallP("Pre" .. t[3], unpack(extra_add))}
@@ -1210,14 +1218,27 @@ do
 			if self_meta ~= nil then
 				table.remove(args, 1)
 			end
-			if t[5] ~= nil then
-				table.insert(args, 1, t[5])
+			for i=1, extra_len do
+				table.insert(args, 1, t[6][extra_len-i+1])
 			end
 			hook:CallP("Post" .. t[3], unpack(args))
 			return unpack(args)
 		end)
-		self.bindings[#self.bindings+1] = t[2]
+		self.bindings[#self.bindings+1] = {name, func}
 		return t[2]
+	end
+
+	function hook:UnBindFunction(name)
+		local bindings = self.bindings
+		local c = 0
+		for i=1, #bindings do
+			local data = bindings[i-c]
+			if data[1] == name then
+				restorefunction(data[2])
+				table.remove(bindings, i-c)
+				c=c+1
+			end
+		end
 	end
 end
 
@@ -1244,12 +1265,14 @@ do
 		for i=1, #connections do
 			connections[i]:Disconnect()
 		end
+		hook.connections = {}
 		
 		-- restore all hookfunction connections
 		local bindings = hook.bindings
 		for i=1, #bindings do
 			restorefunction(bindings[i])
 		end
+		hook.bindings = {}
 
 		-- assign a killed action to coroutine wrappers
 		hook.killed = true
@@ -2659,8 +2682,7 @@ do
 			end
 
 			if self.object_end then
-				self.object_end:Destroy()
-				self.object_end = nil
+				self.object_end.Visible = false
 			end
 
 			self.rendered = {}
@@ -2686,7 +2708,7 @@ do
 				end
 			elseif rendered_len > frame_len then
 				local c = 0
-				for i=frame_len+1, rendered_len do
+				for i=frame_len, rendered_len do
 					if rendered[i-c] then
 						if draw:IsValid(rendered[i-c]) then
 							rendered[i-c]:Destroy()
@@ -2700,16 +2722,18 @@ do
 			self:ShowEnd(self.showend)
 
 			local last_frame = frames[1]
-			for i=2, #frames do
-				local current_frame = frames[i]
-				local object = rendered[i-1]
-				object.Point1 = last_frame
-				object.Point2 = current_frame
-				last_frame = current_frame
-			end
+			if last_frame then
+				for i=2, #frames do
+					local current_frame = frames[i]
+					local object = rendered[i-1]
+					object.Point1 = last_frame
+					object.Point2 = current_frame
+					last_frame = current_frame
+				end
 
-			if self.object_end then
-				self.object_end.Point = last_frame
+				if self.object_end then
+					self.object_end.Point = last_frame
+				end
 			end
 
 			self:ValidateCache()
@@ -2733,7 +2757,6 @@ do
 				circle.OutlineColor = self.color_dark
 				circle.OutlineThickness = 2
 				circle.ZIndex = 1
-				circle.Visible = false
 				self.object_end = self:Cache(circle)
 			elseif self.object_end then
 				self.object_end:Destroy()
@@ -2883,6 +2906,21 @@ do
 		if level == nil then level = 0 end
 		return level, reason
 	end
+
+	hook:Add("PlayerAdded", "BBOT:Configs.SetupPriority", function(pl)
+		local priority = config:GetPriority(pl)
+		if priority == 0 then return end
+		hook:Call("OnPriorityChanged", pl, 0, priority)
+	end)
+
+	hook:Add("PostInitialize", "BBOT:Configs.SetupPriority", function()
+		local players = BBOT.service:GetService("Players")
+		for k, pl in next, players:GetPlayers() do
+			local priority = config:GetPriority(pl)
+			if priority == 0 then return end
+			hook:Call("OnPriorityChanged", pl, 0, priority)
+		end
+	end)
 
 	do -- key binds
 		local enums = Enum.KeyCode:GetEnumItems()
@@ -3527,11 +3565,28 @@ do
 
 		local dbgtext = draw:Create("Text", "2V")
         gui.drawing_debugger_text = dbgtext
-		dbg.XAlignment = XAlignment.Right
-		dbg.YAlignment = YAlignment.Bottom
-		dbg.Color = Color3.new(1,1,1)
-		dbg.Visible = false
-		dbg.ZIndex = 2000000
+		dbgtext.Color = Color3.fromRGB(255,255,255)
+		dbgtext.Outlined = true
+		dbgtext.XAlignment = XAlignment.Right
+		dbgtext.YAlignment = YAlignment.Bottom
+		dbgtext.OutlineColor = Color3.fromRGB(0,0,0)
+		dbgtext.OutlineThickness = 2
+		dbgtext.Visible = false
+		dbgtext.ZIndex = 2000000
+
+		local mouse = draw:CreatePoint("Mouse")
+		local dbgtext = draw:Create("Text", "Offset")
+        gui.drawing_debugger_actives = dbgtext
+		dbgtext.Color = Color3.fromRGB(255,255,255)
+		dbgtext.Outlined = true
+		dbgtext.XAlignment = XAlignment.Right
+		dbgtext.YAlignment = YAlignment.Bottom
+		dbgtext.OutlineColor = Color3.fromRGB(0,0,0)
+		dbgtext.OutlineThickness = 2
+		dbgtext.Visible = true
+		dbgtext.ZIndex = 2000000
+		dbgtext.Offset = Vector2.new(10, 10)
+		dbgtext.point.Point = mouse.point
 	end
 
 	gui.colors = {
@@ -3653,6 +3708,7 @@ do
 		-- Calculate is responsible for everything the panel needs to do, try not to override this ok?
 		function base:Calculate()
 			if self.__INVALID then return end
+			local t = tick()
 			local last_opacity, last_zind, last_vis = self._opacity, self._zindex, self._visible
 			local wasenabled = self._enabled
 
@@ -3692,14 +3748,28 @@ do
 			end
 
 			local changed = last_opacity ~= self._opacity or last_zind ~= self.zindex or last_vis ~= self._visible or wasenabled ~= self._enabled or positionshift or sizeshift
-			local _layoutinvalidated
 			if self._enabled and changed then
-				_layoutinvalidated = self:InvalidateLayout(positionshift, sizeshift)
+				self:InvalidateLayout(positionshift, sizeshift)
 			end
-
-			changed = changed or _layoutinvalidated
+			
 			if changed then
 				self:PerformDrawings()
+			end
+
+			if self.OnVisibleChanged and last_vis ~= self._visible then
+				self:OnVisibleChanged(self._visible)
+			end
+
+			if self.OnZIndexChanged and last_zind ~= self.zindex then
+				self:OnZIndexChanged(self.zindex)
+			end
+
+			if self.OnOpacityChanged and last_opacity ~= self._opacity then
+				self:OnOpacityChanged(self._opacity)
+			end
+
+			if self.OnEnabledChanged and wasenabled ~= self._enabled then
+				self:OnEnabledChanged(self._enabled)
 			end
 
 			-- Partly why this is expensive is recursion, we need to do this to make sure all sub panels inherit properties
@@ -3709,6 +3779,9 @@ do
 					local v = children[i]
 					if v.Calculate then
 						v:Calculate()
+					end
+					if v.ParentPerformLayout and self._enabled and changed then
+						v:ParentPerformLayout(self.absolutepos, self.absolutesize, positionshift, sizeshift)
 					end
 				end
 			end
@@ -3729,6 +3802,7 @@ do
 					end
 				end
 			end
+			self._profile_calculate = tick() - t
 		end
 
 		-- This calculate all of the drawing object's behavior
@@ -3791,8 +3865,8 @@ do
 			children = children or self.children
 			for i=1, #children do
 				local v = children[i]
-				if v.children and #v.children > 0 then
-					self:RecursiveToNumeric(children, destination)
+				if v ~= self then
+					v:RecursiveToNumeric(v.children, destination)
 				end
 				destination[#destination+1] = v
 			end
@@ -4225,20 +4299,39 @@ do
 		local result = inhover[1]
 
 		if gui.drawing_debugger then
+			local reg = gui.active
+			local inhover = {}
+			for i=1, #reg do
+				local v = reg[i]
+				if v and not v.__INVALID and v.class ~= "Mouse" and v.class ~= "Container" and gui:IsHovering(v) then
+					inhover[#inhover+1] = v
+				end
+			end
+			
+			table.sort(inhover, function(a, b) return a._zindex > b._zindex end)
+
+			local result = inhover[1]
+
 			if result then
 				gui.drawing_debugger.Visible = true
 				gui.drawing_debugger.Offset = result.absolutepos
 				gui.drawing_debugger.Size = result.absolutesize
 
+				gui.drawing_debugger_text.Offset = result.absolutepos + Vector2.new(0, result.absolutesize.Y)
 				gui.drawing_debugger_text.Visible = true
 				local dbgmsg = tostring(result) .. "\n" ..
-				UDToString(result.pos) .. " - " .. V2ToString(result.absolutepos) .. "\n" ..
-				UDToString(result.size) .. " - " .. V2ToString(result.absolutesize)
+				"Position: " .. UDToString(result.pos) .. " - " .. V2ToString(result.absolutepos) .. "\n" ..
+				"Size: " .. UDToString(result.size) .. " - " .. V2ToString(result.absolutesize) .. "\n" ..
+				"Children: " .. #result.children .. " (" .. #result:RecursiveToNumeric() .. ")\n" ..
+				"Calculate: " .. math.round((result._profile_calculate or 0) * 1000, 4) .. " ms\n" ..
+				"Step: " .. math.round((result._step_profile or 0) * 1000, 4) .. " ms"
 
 				gui.drawing_debugger_text.Text = dbgmsg
+				gui.drawing_debugger_actives.Visible = false
 			else
 				gui.drawing_debugger.Visible = false
 				gui.drawing_debugger_text.Visible = false
+				gui.drawing_debugger_actives.Visible = true
 			end
 		end
 
@@ -4294,14 +4387,30 @@ do
 	end)
 
 	hook:Add("RenderStep.Input", "BBOT:GUI.Render", function(delta)
+		
+		local tt = tick()
+		local mouse_reg = 0
 		local reg = gui.active
 		for i=1, #reg do
 			local v = reg[i]
 			if v and not v.__INVALID then
 				if v.Step then
+					local t = tick()
 					v:Step(delta)
+					v._step_profile = tick() - t
+				end
+				if v.mouseinputs then
+					mouse_reg = mouse_reg + 1
 				end
 			end
+		end
+		tt = tick() - tt
+	
+		if gui.drawing_debugger_actives then
+			gui.drawing_debugger_actives.Text = "IGUI Debugger\nObjects: " .. #gui.registry ..
+			"\nActive: " .. #gui.active ..
+			"\nInput: " .. mouse_reg ..
+			"\nStep: " .. math.round(tt * 1000, 4) .. " ms"
 		end
 	end)
 
@@ -4537,8 +4646,8 @@ do
 				["SMG"] = {"iVBORw0KGgoAAAANSUhEUgAAAE0AAAAeCAYAAABpE5PpAAADmklEQVR4nO3ZS4iVZRgH8N+Mk6FRNpXlQrPLBEVN2WUhJSUkXSgs6EZBSG0KWrQJIlu00YKgRSuJdrbKkDYVU9pNi2rRZVBrkyGWKQ4U5oxMXs7T4v2mvnPmO9+cc2bOnDnhH154r8/zfM/7fu9zeXsiQpdhJUaxuw20v8At6EVdxfS2gXE7sRAP4vZOCtHTZSdtOfZhf1afaTR00vrawLiduB4V9OOrrO/vmjl9mJdrV3CiZs589OTap3Ayow/v4v56QnSb0hZifa79Aha1gc+KssFuU9oqDOOPrH2yTXwuljbjSNFgN91pZ0pWM7/Rb0n320CuzNTJW4Uviwa66aRdZbK8b2JnTd9iXC4p8IpcfQDnN8Fv0P9AaYMFfbsK+kay8nXBWL/qUzmAtTi3QX5ISltTLuucwZ017T9xU4u0JhS7Ax9iE45hSW7OZfUW92Fbi4w7jX4zJ/sxHFCttLqOf7dFBHMCs3mn7cH4NNZfivNy7VEcnpZE/2Gx5APWYgkWqHaED/dEF/kcs4zfcIHk6gzjWilJsLmbrOdsY2mu3iudth4Mnj5pzeO70yetGJ/hI5wj+XB5gzk+V5RWwafYLBkM0q+wFs+oNgBleAnvZ/UBvCIZkGaxWopvHygcjc5iLCLWR8SyiFCnnB0ROxqg9UnB2sGIqLQo29Z6MnXaT3scL+PXkjlH8aySpGCG9wr6dmFryZrAB3gHQ1PQ/xed/D1/l5J9jWDP1FMmJRon8BAextsFYztxT679OW7N6nPyjeCsJuY+p9rBLMK9Uhy9omBsixRj1mKspj2aq89JpS2SLvoyzMPr2NgAvTukWPSNOuP7CvoOlNCb8o3gR8ly5bFSSZ68Diqa24hNOIRvCsZuxAbcVbL+IB6T7qUFWd91UuZ1f25eb0avFttLaNdV2oRzOyKFCnksxZUlRIswJJn5pyVzPb/Bdb9IL0Hj0m94M66eYs1fuA0/4KcaWYewTopNz5BckRdr1lek2HIk13c3lmX1vfi4iHE7090X4kk8hUtmmPZx6QLfLm3MUZM36Ah+xkWqQ6IJfI8bWuJe4h/NVOmNiDURsSUiTrToM+VRiYh1OfqDLdJ5NVr8ptlQWr4sj4iNEXGoxQ+NiHi+huajLdAYymTpCqVNlPkR8UhEHGziQ4cjYnUBrQ1N0NgbEfdNV/5OObfHJWfzCSlfVYRT+FYKnLcpfkSBaxrgNyYZqNdMLxEK/gEIMckYAgwqoQAAAABJRU5ErkJggg==", 77, 30},
 				["SNIPER"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAXCAYAAAD9VOo7AAADIklEQVR4nO3ZS2hdVRSA4e/mYa310VajlapYRQRtFScOfEFFcCIojhw4kIoVrQhSHSmIUwURHPmYqAOhA3HgQBQFURR0YBRRaw0+20SDL6y9sU27HKx9yU1Nbm5ubu4j6Q+bs/c+Z+29DuuctdZZpxIReph78DyOYA/u7K46y89AtxVYgH3lOFzXX9EMdXCvYTyJU8r4CMZxFH/jOZxWrvu1XDNWJ1/fP7vI/1FkLsc2bC3tDBwz+4Hbgc/bdjfLRKWDLmstDjU4/wPW42R8UeZOxaWlvx8Tpb8VU/gdF6LSxP7X4sPFKNwNeskgy01fGKTXY8iqo5MxZBovmYkh09LlrEcVj+Jl6aK2lGtOxyWlP44Dpf89vsIdZuLGFeW4DRvK+p28v7bQSZc1H7fLwAwP4HzsRMjAXM+ADNjP4kc8VebH8NGya9oBumGQs3CXfAtGcLN8E2ocw6fzyA7hyuPmpvC1zNbgHxyuO/+X/xu2Z+mGQZ7GQ53etF/ohI89D7fgGvl0b+zAnt3kM7zaqvB8b8ganItN0q2MlHGtv0m6lYcbrD2IR/AETmpVwT7kE1zdqvBcBhmWQfPeBWRDZjVfznFui8yYrmtVsT7mkExSWopbQ3gFF+McmcGc2aRsBbtx93HzO/CMmcxptVGVHqbainAlIl7HrS1ufhgXybLGCF5osNZv0uBLjVsTeF9+a9yEP+Xb2gtMyZT9jZZXiIhdsTTei4j7I2KiwTVjEXFBRGyOiD0R8VhEbIyIDXXtxYj4ron93owIEbEmIh6PiEoZr4g2hI+X+FTcUNp8jGE7firjD/AOLiv9GuN4V7q8ZvhXJgwrigEzFdTl4FuzjQF7sVkaoEZFftDVl9hXJZWIqAWgZkrYi2EfbsTPc5y7TVZ/p8t4EKO4Dw8usO4ormqHgr1ILe2tyv8Q7eIbaYz9i5S7Xn7jNOIoXmtFqX6gEhHrcLBF+arMt9fVze2Vxjgwp8QJGjKk8XfH27JwN4lfSpssbVwacq0sFu4u6203Oz6cYBHUXNZbss40KaujB+U/h11m/PxCDMp/EaPtVnI18R9vKf2ssOnBPwAAAABJRU5ErkJggg==", 100, 23},
 				["SAVE"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMUSURBVGhD7ZrNitRAFIXTCQ2OiqLiz0YREVy5EXUrCG7FEV34BOJ7uNI3cOfWrW5UBFeCgqvBJxhXA4qC2jRtd3tO5d6ykqkkVbHTpNv54FC3Ur8n9dNhmGRdGEiazOdziZITk8lkQ+ICw+FwezAYzCTbKaPRaCPLspOSLYB5fEdCkTnmZCdPI2ehd1AdR6R650yn0xuz2WyuKvEbegrtk+o5eDCAPkJNHIfsKnYJjNz0GCiA8sdSPUklPQ9dYoByJlWwfoo62i6Ihj53IfWHJlMDttQdCa0Ru2VQKFFOaRIsjF4R9sl+tC83JuUyoXEc1D0koTUSSqtthQH1BXAL85Ebk11laZryEDNfiVuuRmyPTueFWOADHdRssRBJG6UQo7yqLJO0DjtBNVK4UtG5zwTRgdiOA4VKzcSqCUwzfxFqpI+EGLEsy4i7vL6YqUpx40b6siJRb9/Hsoy4E62Lq8oaUSO2Ea80VUdox27qUwh2+6kR78o0mHH3dZMIx6DYaTn1SdvZW9SVYAOvgVWkz0a4KsEs2ohd6gUQ1deijUS9xUWyd0b6xv9pBPf3GQmXwWlJgzCHExO8iuQ94zL88XF+GLehZ1DsX1Jib7Oj0F3osPPjV0DmtAOdQpx/yzcZIR1+slRSZYKUjTRuLTYom+AAPil1ZTHo2D4Jdv4aRG0Vp6MCVZOuqr8AUvRtBly7W6uzV7Ys1m5F2p3GGjo8F15arwgnWie3zjIwo+CmuYLkA+NFgn63YOSzZEO4AJ3LwyC+ov9jEpsBL0OtcP/0X9Z4PL4nQwSB7h7lvQbzRZruXb+dgDd8QMJo9q7fLsDB/SVhNL3aWqD1C+3VivwLa3dG+rK1WqNGtqCXebiaqJExdBt6ZXIriHtGRtAm9NrkVozyYaeZW9Abk+s/PyW1X78mxQ+SuYaR34/kOXSd+TpQV6K/8NOdz/Hh+DDLspjt+gCK+dB8grHuMygYUWgIHET4ArpmHnrwmfBBYx3wFtpE39+YUSNMCPP2Pw7EzEWTKcIGMbMLcxzOD+gTX3ieXRuS5A+l9l54jQJiowAAAABJRU5ErkJggg==", 50, 50},
-				["LUA"] = {"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", 50, 50},
-				["PLAYERS"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAUISURBVGhD1Zrbq1RVHIDPWGpmYUWFoVHg0eyCBan1lEUZQf0BhembEARdH+shSonqpYcuB7u8ZaaCFVRGUGoRZWlQ0U0OJVQgqWXpwfJy+r49a/aZcfZ95pyZ88HHnr1mr99aa+89a6+19tQGusDo6Khx5uEyvBavwEvwfDwTZQT34178Dnfhdhyu1WqjbHsDldd5+Dj+gFUx7xNorBB9ArAwXIxb8Dh2C2O9iUswlDZOUMAcfA1P4Hhh7PU4JxTbPQiqd+NBnCgsyzJDLTqEQNPxJTyJvcCyp4fqVIMAs/BDo/WYj3BWqFYiqd1vyPg+Xhcl9J4vcDld9aH6bitTwrYFGuGl3IL90ghZgvZqibdZW0M40M1zeJMf+owb8flQx2w4yJ6i31kZqhvT8hvhAPvub/DcKKF/+Quv4vfyW3236daiEW6exn5vhJyDz4Q6R8RXhMTFbD7HxA6gDzmJ13NV7M3qlQ4te6SxX5JjeACPR3vlOILeJgV+vW1Y10ebr4oNceRZdgDomOhVXICn4SLcjEU4gg/hBTgDb8VvsSzWeTA0I2qIQ/GyvIstV5D9afixX+Zwb8gSQ9og/h19W441jQA1rDKfuCMKcAqkr65/ncpRvCgc3gLpG6MjyvEj1jyjzuwuiyKVw9leEn+EbRre1P6ukkiLmcUCHLQhTk+rcHPYnkpaeoOpOHZfBzirp7O5ob5XmmUGeMHrUwHnC/FJ4LPejiOYx06Mby8+T8WnsOpUYcjfxzZiVb0q/+J7+DN6ey5Hz3gR9uE7+A86hlqEVRdDdtgQK3FpfX/S8osN8YycVd+ftBy2ISf4UOWJ3k+0PtAmMzbEFcDJzogNqfIQ6jf22xDXYrNwVLsZH8BN6PB5vPHJ75qBU+5hE3LY68PoRczCB2Z0NNspmHd8pziqdmTcKPM8dDyVxZBX5MsoRzobmbxEH9h6NR5El4nGi3X4bFOZB9lsiHbS2WVDdtQ/p+KgMobAR9mswN1RQnfZiveHE9aMryey2O6l81mSNYwfxotDhhjSXND2u27xGZ4dwseQdjX+6QEp/IT1y8cH309kYSFO+Fsgzdnh1x7QIZ/g7BA2hrQLMe/3sTYcHmVwdpY31X0Lp4UsMaTNxqrrw452fc+SdCVm4lbMwjrPD1miTOpyZBYWug7bRrekuWL/GB7GojitfRiT4jmsfxnzeBtDrgAJvinKe4GT2hghfSEO4T5Mi+X9biXHzmQTpPubfRLz5ibGXxqytaxruVmPd/khAw+0O1xN7+JyThvEmsHG+cWVaEfhwrOrgntwJ/lcAmqDfJ4gFwnvQ3vULN7AO4lV32uGQPZERd9KfYotXXMnEMt3MZuwyCzRqzo3ZE2GA1ZGhxbjAN6DbZ1AUcjrrXQLllnJWRWyp8NBWuSH1sAz+BWuwMITNI51uLMUX8djWJRXMEQZI+EGiwrxnvYp61y6DL+jwxfXAVzV/xUPcR//R0yfQzNxIbrS4vz+GnT1pCj+weA24jm6aCGxIULBvnr7AH1TVAVPm4sTznechdoBeAtWvQ0zX71lYmNwG/Ya65D5MjQXAviw877sFZZ9RqhOZxBIV2HW4K3bWJZlhlp0EYLORXuZvBFAJxh7A2Y/JzqFAtRu00Fk2XcqWRjLsZOxQ2kTgIXhfFyDzgmqYt61aKwQvTyp3W8ZqIBxHAQ2/nh2OWb98ex7bPzxbA9daoeXYGDgfzzGUqtvJH8WAAAAAElFTkSuQmCC", 50, 50},
+				["LUA"] = {"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", 50, 69},
+				["PLAYERS"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAS+SURBVGhD7ZpbiFVVGMdnRk3TpCxLLEXzWlpWair1YJkkqEgYpQ0oeAETexCMHjIfJggfRXqRHowgCIOIBG8gmGAUIoxiUYhMBeUlZbzgdXQcf/+1vz3WeM7Z69tntkxwfvBj7bXc37rsy1prn7GuRo0eQEdHRz32VWpF3U5hbVBhH1yO+/AS3rJUeZX3sVNzozqsrmLaoIKx2IyVOIxjLcQNsWOwuDYIHIknVEsEOm+khUajGIuNwd8GAXpOv1e0g/0Y/VzrXCy0DTUyO4T5mW1VZMK5ryUhbkq20WBpV96y1IsnrlvbKDeQZy31MsnSGPK2UTKu3ED6W+ql3VI9Og04HVfh+7gUx9g/i8/xWnLoYoCl2dDgbvTyKw61+EY8rsIuaH3QCz7FzpuJl9HDbsVGwcnrk5hoLuBo1F3YooIMruMSa2txKIlnfehkDJw8HK+GsDjWWtzHSTaKGzjL4raHkmzUp+GKiYaADSE0m7N4P47HNhU4OIbanswIuWw2WPfiIagXfhHCK6OXVudvSrJu5qMWxz9CrjzqS7nJqTIEqoH3UFe9FGcwLFCkR0OJn00Wvy3J3oXaVh8qruhRyz2VPEAyF6fhQ9iKB3FnfX39FWvkHD6IXr6ljoXUoSl/Hr6Ij6DqS9u4RFqRkgOh0kEkb6Ou9jjUQEqd24FraEjT9RmOB4dSH18Tv4j4Tzh+Jyn6D2pDAzmGe1Hna5DlobLeqKn3IsayzmIPJFk3TRa/K8lmor6pj70Vdxf8wyD07kbFdxb/QZJ1MxU1c50LuXjUVz05d6BAn5Z5r+g1HIK6EP+owEFYpUnfTLJu1Oe+YRCCzMZQnJ9PrZ4FeDOUZHMKR6DuxhEV5GRjOohhqKtaDer8HKtPL66+tyuhfdhEO7/ai6i+D9MCswzv3J58aBc7jwobmFG2cfwMfoaaplM0+7TgR/gc5/3C+UM4fgFvYV7U92Va8A5w8HIo8qNt+xZsomNaHDVFj8BRqO22ZhblNX1rej6J6vR5/I2Ys6S6K/qO0cIY9l45+EGVtGIeFPe6aiF9GJuwBWPR43gQ9XOPpn3tnD/EdvTSqk7kCTyPk20Qb6DuRjXo56CnrL53Q4mPdgV60cfRAmt0Nea5EKXQHdb2RPVuDiUO8gzkS2tsDsZOtbGcxKGozwLPY+oeiDquL0E19KcKCuAru1Arkmwc3oHssUb0g0JR6FEdhwMwes/n/VDZaWmjpUWgPi1mar5Muj+UROAdiGYXrQ36LimSlyxttjQT70C0oD2G/UKuONIfGE5YmokGshK/Qa22WVzHarczMaQXqs3Scmjb8yM2dn718cjojylTcQZOx+fxSbwPU7Td6IXaMxVJC++IZkftA7cmRQF1/C88hPtwB+eFvpT81E2hIg1Cf5N4HLXB24GP4r0ayASOdVG1+dQAfqf83xvRTioOpBRUrrt0TwZix1F4X/YeS20gPY08A9GUeCU5LAy92C7cL7vghdfX36uo7/RXULNLtXdX65j2ctpd7+Jl7/yjUQy5BtIVBqbfl/THG32yPo2acZ5A7QIGYjpIfeZexdP4N+rXw5/xJ2ym81kLYFm6ZSCVYJAaRPo/F9rorBa1GjX+H9TV3QbNg/HZu3wRkgAAAABJRU5ErkJggg==", 50, 50},
 
 				-- WEAPONS
 				["1858 CARBINE"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAJCAYAAABwgn/fAAABHUlEQVR4nNXUTyuEURQG8N/LSEiSv7GzseMjkI/B3sqSvY/hYxBJsZCVwUIRamRnMyl/R2ia1+K+Y2YxmsHL5Knbvfd07j3Pec7pRHEcSwkjGMVSla0dByhW2frQg1sU8JZC7IkoxURacY1BRImtiEwN3wfcIMYmnn8avFaQr6IFk5jDkIrCbVjAPHI4w4lQiWPcpRD7A9UV6cAAhpO9v+pePndiJSE1jRlMoVdQN48dvGAVu3hKk/BniOI4XsQyur75Rw6H2BKUvhd6/9UfJUFIJMI5xht8k8cG9oRe30/2Arrx+As86yIjtEShjt8p1pOVRSmxtwvKl9GUJAgVGcOlyqQp4UIgnMU2rppDr3FkMIs1Yd5ncSS0yr/CO58sURmvjH21AAAAAElFTkSuQmCC", 50, 9},
@@ -4769,8 +4878,8 @@ do
 				["SMG"] = {"iVBORw0KGgoAAAANSUhEUgAAAE0AAAAeCAYAAABpE5PpAAADmklEQVR4nO3ZS4iVZRgH8N+Mk6FRNpXlQrPLBEVN2WUhJSUkXSgs6EZBSG0KWrQJIlu00YKgRSuJdrbKkDYVU9pNi2rRZVBrkyGWKQ4U5oxMXs7T4v2mvnPmO9+cc2bOnDnhH154r8/zfM/7fu9zeXsiQpdhJUaxuw20v8At6EVdxfS2gXE7sRAP4vZOCtHTZSdtOfZhf1afaTR00vrawLiduB4V9OOrrO/vmjl9mJdrV3CiZs589OTap3Ayow/v4v56QnSb0hZifa79Aha1gc+KssFuU9oqDOOPrH2yTXwuljbjSNFgN91pZ0pWM7/Rb0n320CuzNTJW4Uviwa66aRdZbK8b2JnTd9iXC4p8IpcfQDnN8Fv0P9AaYMFfbsK+kay8nXBWL/qUzmAtTi3QX5ISltTLuucwZ017T9xU4u0JhS7Ax9iE45hSW7OZfUW92Fbi4w7jX4zJ/sxHFCttLqOf7dFBHMCs3mn7cH4NNZfivNy7VEcnpZE/2Gx5APWYgkWqHaED/dEF/kcs4zfcIHk6gzjWilJsLmbrOdsY2mu3iudth4Mnj5pzeO70yetGJ/hI5wj+XB5gzk+V5RWwafYLBkM0q+wFs+oNgBleAnvZ/UBvCIZkGaxWopvHygcjc5iLCLWR8SyiFCnnB0ROxqg9UnB2sGIqLQo29Z6MnXaT3scL+PXkjlH8aySpGCG9wr6dmFryZrAB3gHQ1PQ/xed/D1/l5J9jWDP1FMmJRon8BAextsFYztxT679OW7N6nPyjeCsJuY+p9rBLMK9Uhy9omBsixRj1mKspj2aq89JpS2SLvoyzMPr2NgAvTukWPSNOuP7CvoOlNCb8o3gR8ly5bFSSZ68Diqa24hNOIRvCsZuxAbcVbL+IB6T7qUFWd91UuZ1f25eb0avFttLaNdV2oRzOyKFCnksxZUlRIswJJn5pyVzPb/Bdb9IL0Hj0m94M66eYs1fuA0/4KcaWYewTopNz5BckRdr1lek2HIk13c3lmX1vfi4iHE7090X4kk8hUtmmPZx6QLfLm3MUZM36Ah+xkWqQ6IJfI8bWuJe4h/NVOmNiDURsSUiTrToM+VRiYh1OfqDLdJ5NVr8ptlQWr4sj4iNEXGoxQ+NiHi+huajLdAYymTpCqVNlPkR8UhEHGziQ4cjYnUBrQ1N0NgbEfdNV/5OObfHJWfzCSlfVYRT+FYKnLcpfkSBaxrgNyYZqNdMLxEK/gEIMckYAgwqoQAAAABJRU5ErkJggg==", 77, 30},
 				["SNIPER"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAXCAYAAAD9VOo7AAADIklEQVR4nO3ZS2hdVRSA4e/mYa310VajlapYRQRtFScOfEFFcCIojhw4kIoVrQhSHSmIUwURHPmYqAOhA3HgQBQFURR0YBRRaw0+20SDL6y9sU27HKx9yU1Nbm5ubu4j6Q+bs/c+Z+29DuuctdZZpxIReph78DyOYA/u7K46y89AtxVYgH3lOFzXX9EMdXCvYTyJU8r4CMZxFH/jOZxWrvu1XDNWJ1/fP7vI/1FkLsc2bC3tDBwz+4Hbgc/bdjfLRKWDLmstDjU4/wPW42R8UeZOxaWlvx8Tpb8VU/gdF6LSxP7X4sPFKNwNeskgy01fGKTXY8iqo5MxZBovmYkh09LlrEcVj+Jl6aK2lGtOxyWlP44Dpf89vsIdZuLGFeW4DRvK+p28v7bQSZc1H7fLwAwP4HzsRMjAXM+ADNjP4kc8VebH8NGya9oBumGQs3CXfAtGcLN8E2ocw6fzyA7hyuPmpvC1zNbgHxyuO/+X/xu2Z+mGQZ7GQ53etF/ohI89D7fgGvl0b+zAnt3kM7zaqvB8b8ganItN0q2MlHGtv0m6lYcbrD2IR/AETmpVwT7kE1zdqvBcBhmWQfPeBWRDZjVfznFui8yYrmtVsT7mkExSWopbQ3gFF+McmcGc2aRsBbtx93HzO/CMmcxptVGVHqbainAlIl7HrS1ufhgXybLGCF5osNZv0uBLjVsTeF9+a9yEP+Xb2gtMyZT9jZZXiIhdsTTei4j7I2KiwTVjEXFBRGyOiD0R8VhEbIyIDXXtxYj4ron93owIEbEmIh6PiEoZr4g2hI+X+FTcUNp8jGE7firjD/AOLiv9GuN4V7q8ZvhXJgwrigEzFdTl4FuzjQF7sVkaoEZFftDVl9hXJZWIqAWgZkrYi2EfbsTPc5y7TVZ/p8t4EKO4Dw8usO4ormqHgr1ILe2tyv8Q7eIbaYz9i5S7Xn7jNOIoXmtFqX6gEhHrcLBF+arMt9fVze2Vxjgwp8QJGjKk8XfH27JwN4lfSpssbVwacq0sFu4u6203Oz6cYBHUXNZbss40KaujB+U/h11m/PxCDMp/EaPtVnI18R9vKf2ssOnBPwAAAABJRU5ErkJggg==", 100, 23},
 				["SAVE"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMUSURBVGhD7ZrNitRAFIXTCQ2OiqLiz0YREVy5EXUrCG7FEV34BOJ7uNI3cOfWrW5UBFeCgqvBJxhXA4qC2jRtd3tO5d6ykqkkVbHTpNv54FC3Ur8n9dNhmGRdGEiazOdziZITk8lkQ+ICw+FwezAYzCTbKaPRaCPLspOSLYB5fEdCkTnmZCdPI2ehd1AdR6R650yn0xuz2WyuKvEbegrtk+o5eDCAPkJNHIfsKnYJjNz0GCiA8sdSPUklPQ9dYoByJlWwfoo62i6Ihj53IfWHJlMDttQdCa0Ru2VQKFFOaRIsjF4R9sl+tC83JuUyoXEc1D0koTUSSqtthQH1BXAL85Ebk11laZryEDNfiVuuRmyPTueFWOADHdRssRBJG6UQo7yqLJO0DjtBNVK4UtG5zwTRgdiOA4VKzcSqCUwzfxFqpI+EGLEsy4i7vL6YqUpx40b6siJRb9/Hsoy4E62Lq8oaUSO2Ea80VUdox27qUwh2+6kR78o0mHH3dZMIx6DYaTn1SdvZW9SVYAOvgVWkz0a4KsEs2ohd6gUQ1deijUS9xUWyd0b6xv9pBPf3GQmXwWlJgzCHExO8iuQ94zL88XF+GLehZ1DsX1Jib7Oj0F3osPPjV0DmtAOdQpx/yzcZIR1+slRSZYKUjTRuLTYom+AAPil1ZTHo2D4Jdv4aRG0Vp6MCVZOuqr8AUvRtBly7W6uzV7Ys1m5F2p3GGjo8F15arwgnWie3zjIwo+CmuYLkA+NFgn63YOSzZEO4AJ3LwyC+ov9jEpsBL0OtcP/0X9Z4PL4nQwSB7h7lvQbzRZruXb+dgDd8QMJo9q7fLsDB/SVhNL3aWqD1C+3VivwLa3dG+rK1WqNGtqCXebiaqJExdBt6ZXIriHtGRtAm9NrkVozyYaeZW9Abk+s/PyW1X78mxQ+SuYaR34/kOXSd+TpQV6K/8NOdz/Hh+DDLspjt+gCK+dB8grHuMygYUWgIHET4ArpmHnrwmfBBYx3wFtpE39+YUSNMCPP2Pw7EzEWTKcIGMbMLcxzOD+gTX3ieXRuS5A+l9l54jQJiowAAAABJRU5ErkJggg==", 50, 50},
-				["LUA"] = {"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", 50, 50},
-				["PLAYERS"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAUISURBVGhD1Zrbq1RVHIDPWGpmYUWFoVHg0eyCBan1lEUZQf0BhembEARdH+shSonqpYcuB7u8ZaaCFVRGUGoRZWlQ0U0OJVQgqWXpwfJy+r49a/aZcfZ95pyZ88HHnr1mr99aa+89a6+19tQGusDo6Khx5uEyvBavwEvwfDwTZQT34178Dnfhdhyu1WqjbHsDldd5+Dj+gFUx7xNorBB9ArAwXIxb8Dh2C2O9iUswlDZOUMAcfA1P4Hhh7PU4JxTbPQiqd+NBnCgsyzJDLTqEQNPxJTyJvcCyp4fqVIMAs/BDo/WYj3BWqFYiqd1vyPg+Xhcl9J4vcDld9aH6bitTwrYFGuGl3IL90ghZgvZqibdZW0M40M1zeJMf+owb8flQx2w4yJ6i31kZqhvT8hvhAPvub/DcKKF/+Quv4vfyW3236daiEW6exn5vhJyDz4Q6R8RXhMTFbD7HxA6gDzmJ13NV7M3qlQ4te6SxX5JjeACPR3vlOILeJgV+vW1Y10ebr4oNceRZdgDomOhVXICn4SLcjEU4gg/hBTgDb8VvsSzWeTA0I2qIQ/GyvIstV5D9afixX+Zwb8gSQ9og/h19W441jQA1rDKfuCMKcAqkr65/ncpRvCgc3gLpG6MjyvEj1jyjzuwuiyKVw9leEn+EbRre1P6ukkiLmcUCHLQhTk+rcHPYnkpaeoOpOHZfBzirp7O5ob5XmmUGeMHrUwHnC/FJ4LPejiOYx06Mby8+T8WnsOpUYcjfxzZiVb0q/+J7+DN6ey5Hz3gR9uE7+A86hlqEVRdDdtgQK3FpfX/S8osN8YycVd+ftBy2ISf4UOWJ3k+0PtAmMzbEFcDJzogNqfIQ6jf22xDXYrNwVLsZH8BN6PB5vPHJ75qBU+5hE3LY68PoRczCB2Z0NNspmHd8pziqdmTcKPM8dDyVxZBX5MsoRzobmbxEH9h6NR5El4nGi3X4bFOZB9lsiHbS2WVDdtQ/p+KgMobAR9mswN1RQnfZiveHE9aMryey2O6l81mSNYwfxotDhhjSXND2u27xGZ4dwseQdjX+6QEp/IT1y8cH309kYSFO+Fsgzdnh1x7QIZ/g7BA2hrQLMe/3sTYcHmVwdpY31X0Lp4UsMaTNxqrrw452fc+SdCVm4lbMwjrPD1miTOpyZBYWug7bRrekuWL/GB7GojitfRiT4jmsfxnzeBtDrgAJvinKe4GT2hghfSEO4T5Mi+X9biXHzmQTpPubfRLz5ibGXxqytaxruVmPd/khAw+0O1xN7+JyThvEmsHG+cWVaEfhwrOrgntwJ/lcAmqDfJ4gFwnvQ3vULN7AO4lV32uGQPZERd9KfYotXXMnEMt3MZuwyCzRqzo3ZE2GA1ZGhxbjAN6DbZ1AUcjrrXQLllnJWRWyp8NBWuSH1sAz+BWuwMITNI51uLMUX8djWJRXMEQZI+EGiwrxnvYp61y6DL+jwxfXAVzV/xUPcR//R0yfQzNxIbrS4vz+GnT1pCj+weA24jm6aCGxIULBvnr7AH1TVAVPm4sTznechdoBeAtWvQ0zX71lYmNwG/Ya65D5MjQXAviw877sFZZ9RqhOZxBIV2HW4K3bWJZlhlp0EYLORXuZvBFAJxh7A2Y/JzqFAtRu00Fk2XcqWRjLsZOxQ2kTgIXhfFyDzgmqYt61aKwQvTyp3W8ZqIBxHAQ2/nh2OWb98ex7bPzxbA9daoeXYGDgfzzGUqtvJH8WAAAAAElFTkSuQmCC", 50, 50},
+				["LUA"] = {"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", 50, 69},
+				["PLAYERS"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAS+SURBVGhD7ZpbiFVVGMdnRk3TpCxLLEXzWlpWair1YJkkqEgYpQ0oeAETexCMHjIfJggfRXqRHowgCIOIBG8gmGAUIoxiUYhMBeUlZbzgdXQcf/+1vz3WeM7Z69tntkxwfvBj7bXc37rsy1prn7GuRo0eQEdHRz32VWpF3U5hbVBhH1yO+/AS3rJUeZX3sVNzozqsrmLaoIKx2IyVOIxjLcQNsWOwuDYIHIknVEsEOm+khUajGIuNwd8GAXpOv1e0g/0Y/VzrXCy0DTUyO4T5mW1VZMK5ryUhbkq20WBpV96y1IsnrlvbKDeQZy31MsnSGPK2UTKu3ED6W+ql3VI9Og04HVfh+7gUx9g/i8/xWnLoYoCl2dDgbvTyKw61+EY8rsIuaH3QCz7FzpuJl9HDbsVGwcnrk5hoLuBo1F3YooIMruMSa2txKIlnfehkDJw8HK+GsDjWWtzHSTaKGzjL4raHkmzUp+GKiYaADSE0m7N4P47HNhU4OIbanswIuWw2WPfiIagXfhHCK6OXVudvSrJu5qMWxz9CrjzqS7nJqTIEqoH3UFe9FGcwLFCkR0OJn00Wvy3J3oXaVh8qruhRyz2VPEAyF6fhQ9iKB3FnfX39FWvkHD6IXr6ljoXUoSl/Hr6Ij6DqS9u4RFqRkgOh0kEkb6Ou9jjUQEqd24FraEjT9RmOB4dSH18Tv4j4Tzh+Jyn6D2pDAzmGe1Hna5DlobLeqKn3IsayzmIPJFk3TRa/K8lmor6pj70Vdxf8wyD07kbFdxb/QZJ1MxU1c50LuXjUVz05d6BAn5Z5r+g1HIK6EP+owEFYpUnfTLJu1Oe+YRCCzMZQnJ9PrZ4FeDOUZHMKR6DuxhEV5GRjOohhqKtaDer8HKtPL66+tyuhfdhEO7/ai6i+D9MCswzv3J58aBc7jwobmFG2cfwMfoaaplM0+7TgR/gc5/3C+UM4fgFvYV7U92Va8A5w8HIo8qNt+xZsomNaHDVFj8BRqO22ZhblNX1rej6J6vR5/I2Ys6S6K/qO0cIY9l45+EGVtGIeFPe6aiF9GJuwBWPR43gQ9XOPpn3tnD/EdvTSqk7kCTyPk20Qb6DuRjXo56CnrL53Q4mPdgV60cfRAmt0Nea5EKXQHdb2RPVuDiUO8gzkS2tsDsZOtbGcxKGozwLPY+oeiDquL0E19KcKCuAru1Arkmwc3oHssUb0g0JR6FEdhwMwes/n/VDZaWmjpUWgPi1mar5Muj+UROAdiGYXrQ36LimSlyxttjQT70C0oD2G/UKuONIfGE5YmokGshK/Qa22WVzHarczMaQXqs3Scmjb8yM2dn718cjojylTcQZOx+fxSbwPU7Td6IXaMxVJC++IZkftA7cmRQF1/C88hPtwB+eFvpT81E2hIg1Cf5N4HLXB24GP4r0ayASOdVG1+dQAfqf83xvRTioOpBRUrrt0TwZix1F4X/YeS20gPY08A9GUeCU5LAy92C7cL7vghdfX36uo7/RXULNLtXdX65j2ctpd7+Jl7/yjUQy5BtIVBqbfl/THG32yPo2acZ5A7QIGYjpIfeZexdP4N+rXw5/xJ2ym81kLYFm6ZSCVYJAaRPo/F9rorBa1GjX+H9TV3QbNg/HZu3wRkgAAAABJRU5ErkJggg==", 50, 50},
 			}
 		end
 
@@ -5269,34 +5378,34 @@ do
 
 		function GUI:SetXAlignment(align)
 			self.text.XAlignment = align
-			self:InvalidateLayout()
+			self:ProcessClipping()
 		end
 
 		function GUI:SetYAlignment(align)
 			self.text.YAlignment = align
-			self:InvalidateLayout()
+			self:ProcessClipping()
 		end
 
 		function GUI:SetFont(font)
 			if self.fontmanager then return end
 			self.text.Font = font
 			self.font = font
-			self:InvalidateLayout()
+			self:ProcessClipping()
 		end
 
 		function GUI:SetTextSize(size)
 			if self.fontmanager then return end
 			self.text.Size = size + 1
 			self.textsize = size
-			self:InvalidateLayout()
+			self:ProcessClipping()
 		end
 
 		function GUI:OnFontChanged(old, new)
-			self:InvalidateLayout()
+			self:ProcessClipping()
 		end
 
 		function GUI:OnFontSizeChanged(old, new)
-			self:InvalidateLayout()
+			self:ProcessClipping()
 		end
 
 		function GUI:SetFontManager(manager)
@@ -5307,7 +5416,7 @@ do
 				font:AddToManager(self, manager)
 			end
 			self.fontmanager = manager
-			self:InvalidateLayout()
+			self:ProcessClipping()
 		end
 
 		function GUI:GetText()
@@ -5321,7 +5430,7 @@ do
 		function GUI:SetText(txt)
 			self.text.Text = txt
 			self.content = txt
-			self:InvalidateLayout()
+			self:ProcessClipping()
 		end
 
 		function GUI:GetOffsets()
@@ -5342,21 +5451,30 @@ do
 			self.offset = Vector2.new(offset_x, offset_y)
 		end
 
-		function GUI:PerformLayout(pos, size)
+		function GUI:OnEnabledChanged()
+			self:ProcessClipping()
+		end
+
+		function GUI:PerformLayout(pos, size, poschanged, sizechanged)
 			self.text.Offset = pos
+			if not sizechanged then return end
+			self:ProcessClipping()
+		end
+
+		function GUI:ProcessClipping()
 			local text = self.content
 			if self.parent and self.clipping then
 				self:GetOffsets()
 				local x = self:GetTextSize(self.content)
 				local localpos = self:GetLocalTranslation()
-				local size = self.parent.absolutesize
-				if x + localpos.X + self.offset.X - 4 >= size.X then
+				local psize = self.parent.absolutesize
+				if x + localpos.X + self.offset.X - 4 >= psize.X then
 					text = ""
 					for i=1, #self.content do
 						local v = string.sub(self.content, i, i)
 						local pretext = text .. v
 						local prex = self:GetTextSize(pretext .. " ")
-						if prex + localpos.X + self.offset.X - 4 > size.X then
+						if prex + localpos.X + self.offset.X - 4 > psize.X then
 							break 
 						end
 						text = pretext
@@ -5364,6 +5482,11 @@ do
 				end
 			end
 			self.text.Text = text
+		end
+
+		function GUI:ParentPerformLayout(ppos, psize, poschanged, sizechanged)
+			if not sizechanged then return end
+			self:ProcessClipping()
 		end
 
 		function GUI:GetTextSize(text)
@@ -5816,7 +5939,7 @@ do
 			return offset + #text - 1
 		end
 
-		function GUI:PerformLayout(pos, size)
+		function GUI:PerformLayout(pos, size, poschanged, sizechanged)
 			self.gradient.Offset = pos
 			self.gradient.Size = Vector2.new(size.X, 10)
 			local w, h = self:GetTextSize(self.content)
@@ -5824,7 +5947,9 @@ do
 			self.cursor.Size = Vector2.new(1,size.Y-4)
 			self.cursor_outline.Size = Vector2.new(3,size.Y-2)
 			default_panel_borders(self, pos, size)
-			self:ProcessClipping()
+			if sizechanged then
+				self:ProcessClipping()
+			end
 		end
 
 		function GUI:SetValue(value)
@@ -6967,10 +7092,12 @@ do
 			self.button = gui:Create("Button", self)
 			self.button:SetSizeConstraint("Y")
 			self.button:SetSize(1,0,1,0)
-			function self.button:PerformLayout(pos, size)
+			function self.button:PerformLayout(pos, size, poschanged, sizechanged)
 				default_panel_borders(self, pos, size)
 				self.gradient.Offset = pos
 				self.gradient.Size = Vector2.new(size.X, 8)
+				if not sizechanged then return end
+				self.parent.text:SetPos(0, self.absolutesize.X + 7, .5, -1)
 			end
 			self.button:SetMouseInputs(false)
 
@@ -7019,8 +7146,7 @@ do
 			self.text:SetColor(col)
 		end
 		
-		function GUI:PerformLayout(pos, size)
-			self.text:SetPos(0, self.button.absolutesize.X + 7, .5, -1)
+		function GUI:PerformLayout(pos, size, poschanged, sizechanged)
 		end
 
 		function GUI:OnClick()
@@ -10704,20 +10830,18 @@ do
 									},
 									{
 										type = "Slider",
-										name = "Damage Prediction Time",
-										value = 200,
-										min = 100,
-										max = 500,
-										suffix = "%",
-									},
-									{
-										type = "Slider",
 										name = "Damage Prediction Limit",
 										value = 100,
 										min = 0,
 										max = 300,
 										custom = {[0] = "What even is the point?"},
 										suffix = "hp",
+									},
+									{
+										type = "Toggle",
+										name = "Damage Prediction Spare",
+										value = true,
+										tooltip = "Hits them just enough to not kill them."
 									},
 									{
 										type = "Slider",
@@ -11362,6 +11486,13 @@ do
 										},
 										{
 											type = "Toggle",
+											name = "No Scope Border",
+											value = false,
+											extra = {},
+											tooltip = "Disables scope borders.",
+										},
+										{
+											type = "Toggle",
 											name = "Third Person",
 											value = false,
 											extra = {
@@ -11981,6 +12112,49 @@ do
 										value = false,
 										unsafe = true
 									},
+									{
+										type = "Toggle",
+										name = "Impact Grenades",
+										value = false,
+										unsafe = true
+									},
+									{
+										type = "Slider",
+										name = "Impact Grenade Time",
+										value = 0,
+										min = 0,
+										max = 2,
+										suffix = "s",
+										tooltip = "Adds a little bit more time before an exploding"
+									},
+									{
+										type = "Toggle",
+										name = "Safety Grenades",
+										value = false,
+										unsafe = true
+									},
+									{
+										type = "Toggle",
+										name = "Insta Throw Grenades",
+										value = false,
+										unsafe = true
+									},
+									{
+										type = "Toggle",
+										name = "Grenade Distance Speed",
+										value = false,
+										unsafe = true,
+										tooltip = "Modifies the speed based on distance"
+									},
+									{
+										type = "Slider",
+										name = "Grenade Speed",
+										value = 100,
+										min = 0,
+										max = 600,
+										unsafe = true,
+										suffix = "%",
+									},
 								}},
 								{content = {
 									{
@@ -12117,6 +12291,7 @@ do
 										type = "Button",
 										name = "Rejoin",
 										confirm = "Are you sure?",
+										unsafe = true,
 										callback = function()
 											BBOT.serverhopper:Hop(game.JobId)
 										end
@@ -12125,6 +12300,7 @@ do
 										type = "Button",
 										name = "Hop",
 										confirm = "Are you sure?",
+										unsafe = true,
 										callback = function()
 											BBOT.serverhopper:RandomHop()
 										end
@@ -14436,7 +14612,7 @@ if not BBOT.Debug.menu then
 								if typeof(ups[1]) == "table" then
 									rawset(aux.network, "receivers", ups[1])
 								end
-								hook:bindFunctionOverride(v, "NetworkReceive")
+								hook:BindFunctionOverride(v, "NetworkReceive")
 							end
 						end
 					end
@@ -14452,7 +14628,7 @@ if not BBOT.Debug.menu then
 					local dbg = debug.getinfo(func)
 					print(dbg.short_src)
 					if string.find(dbg.short_src, "network", 1, true) then
-						hook:bindFunctionOverride(func, "NetworkReceive")
+						hook:BindFunctionOverride(func, "NetworkReceive")
 						local ups = debug.getupvalues(func)
 						for k=1, #ups do
 							local vv = ups[k]
@@ -14680,7 +14856,7 @@ if not BBOT.Debug.menu then
 				if typeof(v) == "function" then
 					local name = debug.getinfo(v).name
 					if name == "loadplayer" then
-						hook:bindFunction(v, "LoadPlayer")
+						hook:BindFunction(v, "LoadPlayer")
 					end
 				end
 			end
@@ -14703,7 +14879,7 @@ if not BBOT.Debug.menu then
 						local run, consts = pcall(debug.getconstants, a)
 						if run then
 							if table.quicksearch(consts, "killshot") and table.quicksearch(consts, "kill") then
-								hook:bindFunction(receivers[k], "BigAward")
+								hook:BindFunction(receivers[k], "BigAward")
 							end
 						end
 					end
@@ -14718,7 +14894,7 @@ if not BBOT.Debug.menu then
 				end
 			end)
 
-			--hook:bindFunctionOverride(aux.network.send, "NetworkSend")
+			--hook:BindFunctionOverride(aux.network.send, "NetworkSend")
 			hook:Add("PostNetworkSend", "BBOT:Aux.FrameworkLogging", function(net, ...)
 				if net == "logmessage" or net == "debug" then
 					local args = {...}
@@ -14736,11 +14912,11 @@ if not BBOT.Debug.menu then
 				end
 			end)
 
-			hook:bindFunctionOverride(aux.network.send, "NetworkSend", true)
-			hook:bindFunction(aux.char.updatecharacter, "LoadCharacter")
-			hook:bindFunction(aux.ScreenCull.step, "ScreenCullStep")
-			hook:bindFunction(aux.char.step, "CharacterStep")
-			hook:bindFunction(aux.camera.step, "CameraStep")
+			hook:BindFunctionOverride(aux.network.send, "NetworkSend", true)
+			hook:BindFunction(aux.char.updatecharacter, "LoadCharacter")
+			hook:BindFunction(aux.ScreenCull.step, "ScreenCullStep")
+			hook:BindFunction(aux.char.step, "CharacterStep")
+			hook:BindFunction(aux.camera.step, "CameraStep")
 
 			--[[hook:Add("Initialize", "FindnewBullet", function()
 				local receivers = network.receivers
@@ -15628,6 +15804,10 @@ if not BBOT.Debug.menu then
 			end
 
 			BBOT.chat:AddCommand("hop", function(id)
+				if not config:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
+					notification:Create("Cannot hop servers due to unsafe features being disabled!\n[Note: This feature is detected!]")
+					return
+				end
 				if not id or id == "" then
 					serverhopper:RandomHop()
 					return
@@ -15643,6 +15823,10 @@ if not BBOT.Debug.menu then
 			end, "Adds a server instance to the blacklist.")
 
 			BBOT.chat:AddCommand("rejoin", function()
+				if not config:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
+					notification:Create("Cannot hop servers due to unsafe features being disabled!\n[Note: This feature is detected!]")
+					return
+				end
 				BBOT.serverhopper:Hop(game.JobId)
 			end, "Rejoin the current server instance.")
 
@@ -15816,7 +16000,6 @@ if not BBOT.Debug.menu then
 				end
 			end)
 		end
-
 
 		-- Replication
 		do
@@ -18505,7 +18688,8 @@ if not BBOT.Debug.menu then
 			end
 
 			aimbot.predictedDamageDealt = {}
-			aimbot.predictedDamageDealtRemovals = {}
+			aimbot.predictedLastHealth = {}
+			aimbot.predictedDamageUpdate = {}
 			aimbot.BulletQuery = {}
 			hook:Add("PostNetworkSend", "BBOT:RageBot.DamagePrediction", function(netname, ...)
 				if netname == "bullethit" then
@@ -18517,15 +18701,13 @@ if not BBOT.Debug.menu then
 						local bullet_data = aimbot.BulletQuery[bulletID]
 						local damageDealt = aimbot:GetDamage(bullet_data[1], (HitPos-bullet_data[2]).Magnitude, Part == "Head")
 						if not aimbot.predictedDamageDealt[Entity] then
-							aimbot.predictedDamageDealt[Entity] = 0
+							aimbot.predictedDamageDealt[Entity] = (100-hud:getplayerhealth(Entity))
 						end
 						local limit = aimbot:GetRageConfig("Settings", "Damage Prediction Limit")
-						if aimbot.predictedDamageDealt[Entity] < limit then
-							aimbot.predictedDamageDealt[Entity] += damageDealt
-							if aimbot.predictedDamageDealt[Entity] >= limit then
-								hook:Call("RageBot.DamagePredictionKilled", Entity)
-							end
-							aimbot.predictedDamageDealtRemovals[Entity] = tick() + extras:getLatency() * aimbot:GetRageConfig("Settings", "Damage Prediction Time") / 100
+						aimbot.predictedDamageDealt[Entity] += damageDealt
+						aimbot.predictedDamageUpdate[Entity] = tick() + (extras:getLatency() * 5)
+						if aimbot.predictedDamageDealt[Entity] >= limit then
+							hook:Call("RageBot.DamagePredictionKilled", Entity)
 						end
 					end
 					syn.set_thread_identity(curthread)
@@ -18546,11 +18728,64 @@ if not BBOT.Debug.menu then
 				end
 			end)
 
+			hook:Add("OnConfigChanged", "BBOT:RageBot.DamagePredictionReset", function(steps, old, new)
+				if config:IsPathwayEqual(steps, "Main", "Rage", "Settings", "Damage Prediction Limit") then
+					for k, v in next, players:GetPlayers() do
+						aimbot.predictedDamageDealt[v] = (100-hud:getplayerhealth(v))
+						aimbot.predictedLastHealth[v] = hud:getplayerhealth(v)
+					end
+				end
+			end)
+
+			hook:Add("OnAliveChanged", "BBOT:RageBot.DamagePredictionReset", function()
+				for k, v in next, players:GetPlayers() do
+					aimbot.predictedDamageDealt[v] = (100-hud:getplayerhealth(v))
+					aimbot.predictedLastHealth[v] = hud:getplayerhealth(v)
+				end
+			end)
+
+			hook:Add("Postupdatespawn", "BBOT:RageBot.DamagePredictionReset", function(player, controller)
+				aimbot.predictedLastHealth[player] = 100
+				aimbot.predictedDamageDealt[player] = 0
+				aimbot.predictedDamageUpdate[player] = tick() + (extras:getLatency() * 5)
+			end)
+
+			hook:Add("PlayerAdded", "BBOT:RageBot.DamagePredictionReset", function(player, controller)
+				aimbot.predictedLastHealth[player] = 100
+				aimbot.predictedDamageDealt[player] = 0
+				aimbot.predictedDamageUpdate[player] = tick() + (extras:getLatency() * 5)
+			end)
+
+			hook:Add("PlayerRemoving", "BBOT:RageBot.DamagePredictionReset", function(player, controller)
+				aimbot.predictedLastHealth[player] = nil
+				aimbot.predictedDamageDealt[player] = nil
+				aimbot.predictedDamageUpdate[player] = nil
+			end)
+
+			local dmg_last = 0
+
 			hook:Add("RenderStepped", "BBOT:RageBot.DamagePrediction", function()
-				for index, time in next, aimbot.predictedDamageDealtRemovals do
-					if time and (tick() > time) then
-						aimbot.predictedDamageDealt[index] = 0
-						aimbot.predictedDamageDealtRemovals[index] = nil
+				for index, time in next, aimbot.predictedDamageUpdate do
+					if time < tick() then
+						aimbot.predictedDamageDealt[index] = (100-hud:getplayerhealth(index))
+						aimbot.predictedLastHealth[index] = hud:getplayerhealth(index)
+						aimbot.predictedDamageUpdate[index] = nil
+					end
+				end
+
+				for index, time in next, aimbot.predictedDamageDealt do
+					local hpnew = hud:getplayerhealth(index)
+					if not aimbot.predictedLastHealth[index] then
+						aimbot.predictedLastHealth[index] = hpnew
+					end
+					if hpnew > aimbot.predictedLastHealth[index] then
+						aimbot.predictedLastHealth[index] = hpnew
+						if not aimbot.predictedDamageUpdate[index] then
+							aimbot.predictedDamageUpdate[index] = tick() + (extras:getLatency() * 5)
+						end
+					elseif hpnew < aimbot.predictedLastHealth[index] then
+						aimbot.predictedLastHealth[index] = hpnew
+						aimbot.predictedDamageUpdate[index] = tick() + (extras:getLatency() * 5)
 					end
 				end
 			end)
@@ -18782,10 +19017,10 @@ if not BBOT.Debug.menu then
 
 				hook:Add("PostInitialize", "BBOT:RageBot.Organize", function()
 					hook:Add("PlayerAdded", "BBOT:RageBot.Organize", function(player)
-						local inpriority = config:GetPriority(v)
-						if inpriority and inpriority > 0 then
+						local inpriority = config:GetPriority(player)
+						if inpriority > 0 then
 							aimbot.ragebot_prioritynext[#aimbot.ragebot_prioritynext+1] = player
-						else
+						elseif inpriority == 0 then
 							aimbot.ragebot_next[#aimbot.ragebot_next+1] = player
 						end
 					end)
@@ -18886,6 +19121,7 @@ if not BBOT.Debug.menu then
 				
 					local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
 					local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
+					local damage_spare = self:GetRageConfig("Settings", "Damage Prediction Spare")
 					local priority_only = self:GetRageConfig("Settings", "Priority Only")
 					local latency = extras:getLatency()
 				
@@ -19080,6 +19316,10 @@ if not BBOT.Debug.menu then
 												local pos = newcf.p
 												local raydata = self:raycastbullet_rage(aim_position,pos-aim_position,penetration_depth,auto_wall)
 												if not raydata or raydata.Position == pos then
+													
+													local damageDealt = self:GetDamage(gun.data, (pos-cam_position).Magnitude, hitscan_priority == "Head")
+													if damage_prediction and damage_spare and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] + damageDealt > damage_prediction_limit then continue end
+
 													if not (u > tp_scanning_points) then
 														tp_hit = true
 													end
@@ -20484,6 +20724,11 @@ if not BBOT.Debug.menu then
 										y = 0
 									end
 
+									if Vector2.new(x, y) ~= Vector2.new(x, y) then
+										x = 0
+										y = 0
+									end
+
 									self.resolved.Offset = Vector2.new(x, y)
 									self.resolved_background.Offset = Vector2.new(x, y)
 								else
@@ -21868,19 +22113,22 @@ if not BBOT.Debug.menu then
 							local v775 = u193 - v774;
 							local v776 = -u146(v769, gravity);
 							local v777 = -1.2 * u146(v769, u193);
+							local v778 = 0;
 							if v776 < 0 then
-								local v778 = 0;
+								v778 = 0;
 							else
 								v778 = v776;
 							end;
+							local v779 = 0;
 							if v777 < 0 then
-								local v779 = 0;
+								v779 = 0;
 							else
 								v779 = v777;
 							end;
 							local v780 = 1 - 0.08 * (10 * v778 * timedelta + v779) / v775.magnitude;
+							local v781 = 0;
 							if v780 < 0 then
-								local v781 = 0;
+								v781 = 0;
 							else
 								v781 = v780;
 							end;
@@ -21985,12 +22233,9 @@ if not BBOT.Debug.menu then
 					if typeof(mainpart) ~= "Instance" then
 						mainpart = nil
 					end
-
-					local _pull = grenadehandler.pull
-					local ups = debug.getupvalues(_pull)
-
-					local blowuptimeindex = #ups
-					local throwinhandindex = #ups-2
+		
+					local pull = grenadehandler.pull
+					local ups = debug.getupvalues(pull)
 					local grenadedataindex
 					local grenadedata
 					for k, v in pairs(ups) do
@@ -21999,38 +22244,95 @@ if not BBOT.Debug.menu then
 								grenadedata = v
 								grenadedata = table.deepcopy(grenadedata)
 								grenadedataindex = k
-								debug.setupvalue(_pull, k, grenadedata)
+								debug.setupvalue(pull, k, grenadedata)
 							end
 						end
 					end
 
-					local showpath = true
-					local created = false
-					local function _createnade(...)
-						created = true
-						hook:CallP("LocalThrowGrenade", mainpart, grenadedata, debug.getupvalue(_pull, blowuptimeindex) - tick())
-						return createnade(...)
+					grenadedata.createnade = createnade
+
+					hook:CallP("MakeGrenade", grenadedata, grenadehandler)
+
+					hook:BindFunction(createnade, "ThrowGrenade", false, mainpart, grenadedata, grenadehandler)
+					hook:BindFunction(grenadehandler.step, "GrenadeStep", false, mainpart, grenadedata, grenadehandler)
+				end)
+
+				hook:Add("MakeGrenade", "MakeGrenade", function(grenadedata, grenadehandler)
+					if config:GetValue("Main", "Misc", "Tweaks", "Insta Throw Grenades") then
+						grenadedata.animations = table.deepcopy(grenadedata.animations)
+						for i, v in next, grenadedata.animations do
+							if string.find(string.lower(i), "pull") then
+								grenadedata.animations[i].timescale = 0.001
+							end
+						end
 					end
 
-					debug.setupvalue(grenadehandler.throw, createnadeid, newcclosure(_createnade))
+					local speed = config:GetValue("Main", "Misc", "Tweaks", "Grenade Speed")
 
-					local pathway
-					function grenadehandler.pull(...)
-						_pull(...)
-						local step = grenadehandler.step
-						function grenadehandler.step()
-							step()
-							hook:CallP("GrenadeStep", created, mainpart, grenadedata, debug.getupvalue(_pull, blowuptimeindex) - tick())
+					grenadedata._throwspeed = grenadedata.throwspeed
+					local ups = debug.getupvalues(grenadedata.createnade)
+					for k, v in pairs(ups) do
+						if typeof(v) == "number" then
+							if v == grenadedata.throwspeed then
+								grenadedata._throwspeedindex = k
+							end
 						end
+					end
+
+					if speed ~= 100 then
+						grenadedata.throwspeed = grenadedata.throwspeed * (speed/100)
+						debug.setupvalue(grenadedata.createnade, grenadedata._throwspeedindex, grenadedata.throwspeed)
 					end
 				end)
 
-				hook:Add("LocalThrowGrenade", "BBOT:Weapons.Grenades.ShowPath", function(mainpart, grenadedata, blowtime)
+				hook:Add("PreThrowGrenade", "PreThrowGrenade", function()
+					hook:UnBindFunction("GrenadeStep")
+				end)
+
+				hook:Add("PostThrowGrenade", "PostThrowGrenade", function()
+					timer:Async(function()
+						hook:UnBindFunction("ThrowGrenade")
+					end)
+				end)
+
+				hook:Add("PreThrowGrenade", "BBOT:Weapons.Grenades.ShowPath", function(mainpart, grenadedata, grenadehandler)
+					local pull = grenadehandler.pull
+					local ups = debug.getupvalues(pull)
+					local blowuptimeindex = #ups
+					local blowtime = debug.getupvalue(pull, blowuptimeindex)-tick()
+
+					local speed = config:GetValue("Main", "Misc", "Tweaks", "Grenade Speed")
+					if config:GetValue("Main", "Misc", "Tweaks", "Grenade Distance Speed") then
+						local raycastdata = BBOT.aimbot:raycastbullet(camera.CFrame.p, camera.CFrame.LookVector * 2000)
+						if raycastdata then
+							local newspeed = (raycastdata.Position-camera.CFrame.p).Magnitude * (speed/100) * 2
+							debug.setupvalue(grenadedata.createnade, grenadedata._throwspeedindex, newspeed)
+							grenadedata.throwspeed = newspeed
+						else
+							local newspeed = 2000 * (speed/100)
+							debug.setupvalue(grenadedata.createnade, grenadedata._throwspeedindex, newspeed)
+							grenadedata.throwspeed = newspeed
+						end
+					end
+
 					pather:Clear()
+					local frames = CalculateGrenadePathway(mainpart, grenadedata, blowtime).frames
+					if config:GetValue("Main", "Misc", "Tweaks", "Impact Grenades") then
+						for i=1, #frames do
+							local v = frames[i]
+							if v.hit then
+								blowtime = v.timedelta
+								blowtime = math.clamp(blowtime + config:GetValue("Main", "Misc", "Tweaks", "Impact Grenade Time"), 0, 5)
+								debug.setupvalue(pull, blowuptimeindex, blowtime+tick())
+								break
+							end
+						end
+					end
 					if config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction") then
-						local frames = CalculateGrenadePathway(mainpart, grenadedata, blowtime).frames
 						local pathway = {}
 						for i=1, #frames do
+							if not frames[i].p0 or frames[i].timedelta > blowtime then break end
+							if i%2 == 0 then continue end
 							pathway[#pathway+1] = frames[i].p0
 						end
 						local a, b = config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction", "Prediction Color")
@@ -22038,11 +22340,53 @@ if not BBOT.Debug.menu then
 					end
 				end)
 
-				hook:Add("GrenadeStep", "BBOT:Weapons.Grenades.ShowPath", function(thrown, mainpart, grenadedata, blowtime)
-					if config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction") and mainpart and not thrown then
-						local frames = CalculateGrenadePathway(mainpart, grenadedata, blowtime).frames
+				hook:Add("PostGrenadeStep", "BBOT:Weapons.Grenades.ShowPath", function(mainpart, grenadedata, grenadehandler)
+					if not mainpart then return end
+					local pull = grenadehandler.pull
+					local ups = debug.getupvalues(pull)
+					local blowuptimeindex = #ups
+					local blowtime = debug.getupvalue(pull, blowuptimeindex)-tick()
+
+					local speed = config:GetValue("Main", "Misc", "Tweaks", "Grenade Speed")
+					if config:GetValue("Main", "Misc", "Tweaks", "Grenade Distance Speed") then
+						local raycastdata = BBOT.aimbot:raycastbullet(camera.CFrame.p, camera.CFrame.LookVector * 2000)
+						if raycastdata then
+							local newspeed = (raycastdata.Position-camera.CFrame.p).Magnitude * (speed/100) * 2
+							debug.setupvalue(grenadedata.createnade, grenadedata._throwspeedindex, newspeed)
+							grenadedata.throwspeed = newspeed
+						else
+							local newspeed = 2000 * (speed/100)
+							debug.setupvalue(grenadedata.createnade, grenadedata._throwspeedindex, newspeed)
+							grenadedata.throwspeed = newspeed
+						end
+					end
+
+                    if config:GetValue("Main", "Misc", "Tweaks", "Safety Grenades") then
+						local throwinhandindex = #ups-2
+                        debug.setupvalue(pull, throwinhandindex, tick() + 10)
+                    end
+
+					local impact = config:GetValue("Main", "Misc", "Tweaks", "Impact Grenades")
+					if impact then
+						blowtime = (grenadedata.fusetime or 5)
+						debug.setupvalue(pull, blowuptimeindex, blowtime+tick())
+					end
+					local frames = CalculateGrenadePathway(mainpart, grenadedata, blowtime).frames
+					if impact then
+						for i=1, #frames do
+							local v = frames[i]
+							if v.hit then
+								blowtime = v.timedelta
+								blowtime = math.clamp(blowtime + config:GetValue("Main", "Misc", "Tweaks", "Impact Grenade Time"), 0, 5)
+								break
+							end
+						end
+					end
+					if config:GetValue("Main", "Visuals", "Grenades", "Grenade Prediction") then
 						local pathway = {}
 						for i=1, #frames do
+							if not frames[i].p0 or frames[i].timedelta > blowtime then break end
+							if i%2 == 0 then continue end
 							pathway[#pathway+1] = frames[i].p0
 						end
 						pather:Update(pathway)
@@ -22216,6 +22560,67 @@ if not BBOT.Debug.menu then
 				modifications.equipspeed = modifications.equipspeed * (config:GetValue("Weapons", "Stats Changer", "Handling", "Equip Speed")/100)
 				modifications.sprintspeed = modifications.sprintspeed * (config:GetValue("Weapons", "Stats Changer", "Handling", "Ready Speed")/100)
 			end)
+
+			do -- no scope pasted from v1 lol -- yes... omg
+				local localplayer = BBOT.service:GetService("LocalPlayer")
+				local gui = localplayer.PlayerGui
+				local frame = gui.NonScaled.ScopeFrame
+				--[[hook:Add("OnConfigChanged", "BBOT:Misc.NoScopeBorders", function(steps, old, new)
+					if config:IsPathwayEqual(steps, "Main", "Visuals", "Camera Visuals", "No Scope Border") then return end
+					if not frame then return end
+					local sightRear = frame:FindFirstChild("SightRear")
+					if not sightRear then return end
+					if new then
+						local children = sightRear:GetChildren()
+						for i = 1, #children do
+							local thing = children[i]
+							if thing.ClassName == "Frame" then
+								thing.Visible = false
+							end
+						end
+						frame.SightFront.Visible = false
+						sightRear.ImageTransparency = 1
+					else
+						local children = sightRear:GetChildren()
+						for i = 1, #children do
+							local thing = children[i]
+							if thing.ClassName == "Frame" then
+								thing.Visible = true
+							end
+						end
+						frame.SightFront.Visible = true
+						sightRear.ImageTransparency = 0
+					end
+				end)]]
+
+				hook:Add("RenderStepped", "BBOT:Weapons.ScopeBorders", function()
+					local new = config:GetValue("Main", "Visuals", "Camera Visuals", "No Scope Border")
+					if not frame then return end
+					local sightRear = frame:FindFirstChild("SightRear")
+					if not sightRear then return end
+					if new then
+						local children = sightRear:GetChildren()
+						for i = 1, #children do
+							local thing = children[i]
+							if thing.ClassName == "Frame" then
+								thing.Visible = false
+							end
+						end
+						frame.SightFront.Visible = false
+						sightRear.ImageTransparency = 1
+					else
+						local children = sightRear:GetChildren()
+						for i = 1, #children do
+							local thing = children[i]
+							if thing.ClassName == "Frame" then
+								thing.Visible = true
+							end
+						end
+						frame.SightFront.Visible = true
+						sightRear.ImageTransparency = 0
+					end
+				end)
+			end
 
 			-- Skins
 			do
