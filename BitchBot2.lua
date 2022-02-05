@@ -453,6 +453,7 @@ Menu.Cursor[1].ZIndex = 10000 --lol
 
 Draw:Poly(true, {PointOffset.new(Menu.CursorPoint2D, 1, 1), PointOffset.new(Menu.CursorPoint2D, 1, 16), PointOffset.new(Menu.CursorPoint2D, 6, 11), PointOffset.new(Menu.CursorPoint2D, 11, 11)}, RGB(0, 0, 0), 255, false, false, Menu.Cursor)
 Menu.Cursor[2].ZIndex = 10001 --lol
+--Menu.Cursor[2]:ReTriangulate()
 
 function Menu:SetVisible(visible)
 	Menu.Cursor[1].Visible = visible
@@ -1140,6 +1141,7 @@ function Menu:Create(menuname, menuprops, menutable)
 		return temptable
 	end
 
+	
 	function mDraw:Slider(name, stradd, value, minvalue, maxvalue, customvals, rounded, x, y, length, tab) -- this code is so shit,,,, but it works :)
 		mDraw:Text(true, name, "norm", Vec2(x + 1, y - 3), false, RGB(255, 255, 255), 255, true, tab)
 
@@ -1147,6 +1149,8 @@ function Menu:Create(menuname, menuprops, menutable)
 
 		local temptable = {}
 		table.insert(temptable, mDraw:Gradient(true, Vec2(x + 2, y + 14), Vec2((length - 4) * ((value - minvalue) / (maxvalue - minvalue)), 8), RGB(unpack(Menu.mc)), 255, RGB(addunpack(Menu.mc, -40)), 255, tab))
+
+		mDraw:Text(true, "- +", "small", Vec2(x + length - Draw:FontSize("small", "- +").x, y - 3), false, RGB(255, 255, 255), 255, true, tab)
 
 		mDraw:OutlinedRect(true, Vec2(x, y + 12), Vec2(length, 12), RGB(30, 30, 30), 255, tab)
 		mDraw:OutlinedRect(true, Vec2(x + 1, y + 13), Vec2(length - 2, 10), RGB(0, 0, 0), 255, tab)
@@ -1159,14 +1163,14 @@ function Menu:Create(menuname, menuprops, menutable)
 		else
 			textstr = stradd and tostring(value) .. stradd or tostring(value)
 		end
-
+			
 		if customvals ~= nil then
 			if customvals[value] then
 				textstr = customvals[value]
 			end
 		end
 
-		local text = mDraw:Text(true, textstr, "small", Vec2(math.floor(x + (length * 0.5)), y + 21), true, RGB(255, 255, 255), 255, true, tab)
+		local text = mDraw:Text(true, textstr, "small", Vec2(math.floor(x + (length * 0.5)), y + 19), true, RGB(255, 255, 255), 255, true, tab)
 		
 		table.insert(temptable, text)
 
@@ -1186,7 +1190,7 @@ function Menu:Create(menuname, menuprops, menutable)
 
 	mDraw:FilledRect(true, Vec2(2, 25), Vec2(curmenu.w - 4, curmenu.h -27), RGB(35, 35, 35), 255, bbmenu)
 
-	mDraw:Text(true, menuprops.name, "norm", Vec2(6, 6), false, RGB(255, 255, 255), 255, true, bbmenu)
+	mDraw:Text(true, menuprops.name, "norm", Vec2(6, 7), false, RGB(255, 255, 255), 255, true, bbmenu)
 
 	mDraw:OutlinedRect(true, Vec2(8, 22), Vec2(curmenu.w - 16, curmenu.h - 30), RGB(0, 0, 0), 255, bbmenu)
 	mDraw:OutlinedRect(true, Vec2(9, 23), Vec2(curmenu.w - 18, curmenu.h - 32), RGB(20, 20, 20), 255, bbmenu)
@@ -1327,11 +1331,11 @@ function Menu:Create(menuname, menuprops, menutable)
 				logtotable = curmenu.hitboxes[tab_num].content[group_box.name].group_drawn
 				mDraw:CoolBox(group_box.noname and " " or group_box.replacename or group_box.name, group_box.relval.x, group_box.relval.y, group_box.relval.w, group_box.relval.h, drawtab)
 
-				if not group_box.dontscroll then -- TODO FINISH SCROLLING SHIT
+				-- if not group_box.dontscroll then -- TODO FINISH SCROLLING SHIT
 		
-					curmenu.hitboxes[tab_num].content[group_box.name].scrolltop = mDraw:ScrollMore(1, group_box.relval.x + 2, group_box.relval.y + 18, group_box.relval.w - 4, drawtab)
-					curmenu.hitboxes[tab_num].content[group_box.name].scrollbottom = mDraw:ScrollMore(2, group_box.relval.x + 2, group_box.relval.y + group_box.relval.h - 12, group_box.relval.w - 4, drawtab)
-				end
+				-- 	curmenu.hitboxes[tab_num].content[group_box.name].scrolltop = mDraw:ScrollMore(1, group_box.relval.x + 2, group_box.relval.y + 18, group_box.relval.w - 4, drawtab)
+				-- 	curmenu.hitboxes[tab_num].content[group_box.name].scrollbottom = mDraw:ScrollMore(2, group_box.relval.x + 2, group_box.relval.y + group_box.relval.h - 12, group_box.relval.w - 4, drawtab)
+				-- end
 				logtotable = nil
 			end
 			
