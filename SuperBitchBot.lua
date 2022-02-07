@@ -9,6 +9,12 @@
 	Seems that synapse X has another bug with drawings
 	They tend to... Crash... A lot...
 	Reloading is still fine thought...
+
+	PLEASE READ:
+		The structure that each module should be loaded
+		in the exact same order when file separation is done.
+
+		DO NOT LEAVE THIS TO THE LAST MINUTE
 ]]
 --[[
 	Next on da list
@@ -29,7 +35,7 @@ end
 	digit 3. Major Patch
 	letter 4. Minor Patch
 ]]
-local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.4.5b", __init = true } -- I... um... fuck off ok?
+local BBOT = BBOT or { username = (username or "dev"), alias = "Bitch Bot", version = "3.4.6d", __init = true } -- I... um... fuck off ok?
 BBOT.Changelogs = [[N/A]]
 _G.BBOT = BBOT
 
@@ -495,8 +501,6 @@ do
 	local err = 1.0E-10;
 	local _1_3 = 1/3;
 	local _sqrt_3 = math.sqrt(3);
-	
-
 
 	-- ax + b (real roots)
 	function math.linear(a, b) -- do I even need this? -- yea probably lol
@@ -613,7 +617,6 @@ do
 		end
 		return str
 	end
-
 
 	local _string_rep = string.rep
 	local _string_len = string.len
@@ -1025,6 +1028,9 @@ do
 						break
 					end
 				end
+				if (BBOT.notification) then
+					BBOT.notification:Create("!!!ERROR!!!\nAn error has occured in hook library.\nPlease check Synapse console!", 30):SetType("error")
+				end
 			elseif ret[2] then
 				table.remove(ret, 1)
 				return unpack(ret)
@@ -1049,6 +1055,9 @@ do
 							log(LOG_ERROR, ret[2])
 							log(LOG_WARN, "Removing to prevent cascade!")
 							table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
+							if (BBOT.notification) then
+								BBOT.notification:Create("!!!ERROR!!!\nAn error has occured in hook library.\nPlease check Synapse console!", 30):SetType("error")
+							end
 						elseif ret[2] then
 							table.remove(ret, 1)
 							return unpack(ret)
@@ -1141,11 +1150,19 @@ do
 		- Post: ran after the function, use this for post stuff
 	]]
 
+	local syn_error_bind = syn.on_error_report:Connect(function(thread, error_str, call_stack, options)
+		if hook.binding_trace > 0 then
+			hook.binding_trace = hook.binding_trace - 1
+		end
+	end)
+
 	hook.bindings = {}
+	hook.binding_trace = 0
 	function hook:BindFunction(func, name, metafunction, ...)
 		local t = {self, func, name, metafunction, {...}}
 		t[2] = hookfunction(func, function(...)
-			if t[1].killed then return t[2](...) end
+			local hook = t[1]
+			if hook.killed then return t[2](...) end
 			local extra_add = {}
 			local extra_len = #t[5]
 			for i=1, extra_len do
@@ -1158,8 +1175,10 @@ do
 			if t[4] then
 				table.remove(extra_add, 1)
 			end
-			t[1]:CallP("Pre" .. t[3], unpack(extra_add))
+			hook:CallP("Pre" .. t[3], unpack(extra_add))
+			hook.binding_trace = hook.binding_trace + 1
 			local args = {t[2](...)}
+			hook.binding_trace = hook.binding_trace - 1
 			if t[5] ~= nil then
 				table.insert(args, 1, t[5])
 			end
@@ -1172,7 +1191,7 @@ do
 			if t[4] then
 				table.remove(args, 1)
 			end
-			t[1]:CallP("Post" .. t[3], unpack(args))
+			hook:CallP("Post" .. t[3], unpack(args))
 			return unpack(args)
 		end)
 		self.bindings[#self.bindings+1] = {name, func}
@@ -1205,12 +1224,19 @@ do
 				if s then return end
 			end
 			local override = {hook:CallP("Pre" .. t[3], unpack(extra_add))}
-			if override[1] == nil then
+			local overwrite = override[1] == nil
+			if overwrite then
 				override = vararg
 			elseif self_meta ~= nil then
 				table.insert(override, 1, self_meta)
 			end
+			if overwrite then
+				hook.binding_trace = hook.binding_trace + 1
+			end
 			local args = {t[2](unpack(override))}
+			if overwrite then
+				hook.binding_trace = hook.binding_trace - 1
+			end
 			local len = #override
 			for i=1, len do
 				table.insert(args, 1, override[len-i+1])
@@ -1321,6 +1347,14 @@ do
 		lastMousePos = Vector2.new(x, y)
 	end)
 
+	hook:bindEvent(userinputservice.InputChanged, "InputChanged")
+
+	hook:Add("InputChanged", "InputChanged", function(userinput)
+		if userinput.UserInputType.Name == "MouseMovement" then
+			hook:Call("Mouse.OnMove", userinput.Delta)
+		end
+	end)
+
 	local camera = BBOT.service:GetService("CurrentCamera")
 	local vport = camera.ViewportSize
 	hook:Add("RenderStep.First", "ViewportSize.Changed", function()
@@ -1403,7 +1437,10 @@ do
 						local ran, err = xpcall(func, debug.traceback, ...)
 						if not ran then
 							loops[name].destroy = true
-							log(LOG_ERROR, "Error in loop library - ", err)
+							log(LOG_ERROR, "Error in loop library - " .. tostring(name), err)
+							if (BBOT.notification) then
+								BBOT.notification:Create("!!!ERROR!!!\nAn error has occured in loop library.\nPlease check Synapse console!", 30):SetType("error")
+							end
 							break
 						end
 					end
@@ -1430,7 +1467,10 @@ do
 		loops[name].running = true
 		local succ, out = coroutine.resume(loops[name].Loop, unpack(loops[name].varargs))
 		if not succ then
-			log(LOG_ERROR, "Error in loop service - " .. tostring(name) .. " ERROR: " .. tostring(out))
+			log(LOG_ERROR, "Error in loop library - " .. tostring(name) .. "\n" .. tostring(out))
+			if (BBOT.notification) then
+				BBOT.notification:Create("!!!ERROR!!!\nAn error has occured in timer library.\nPlease check Synapse console!", 30):SetType("error")
+			end
 		end
 	end
 	function loop:Stop(name)
@@ -1455,7 +1495,7 @@ do
 end
 
 -- Timers
-do  
+do
 	local timer = {
 		registry = {}
 	}
@@ -1558,13 +1598,13 @@ do
 			t.paused = tick()
 		end
 	end
-	
+
 	function timer:TimeLeft(ident)
 		local t = self:Get(ident)
 		if not t then return end
 		return (t.ticks + t.delay - tick())
 	end
-	
+
 	function timer:RepsLeft(ident)
 		local t = self:Get(ident)
 		if not t then return end
@@ -1597,6 +1637,9 @@ do
 						log(LOG_ERROR, "Error in timer library! - ", err)
 						table.remove(timers, i-c)
 						c = c + 1
+						if (BBOT.notification) then
+							BBOT.notification:Create("!!!ERROR!!!\nAn error has occured in timer library.\nPlease check Synapse console!", 30):SetType("error")
+						end
 					end
 				end
 			end
@@ -1645,13 +1688,19 @@ do
 	-- registers a folder with an extensions whitelist
 	function asset:Register(class, extensions)
 		if not self.registry[class] then
-			local invert = {}
-			for i=1, #extensions do
-				invert[extensions[i]] = true
+			if not extensions then
+				self.registry[class] = {
+					__extensions = true
+				}
+			else
+				local invert = {}
+				for i=1, #extensions do
+					invert[extensions[i]] = true
+				end
+				self.registry[class] = {
+					__extensions = invert
+				}
 			end
-			self.registry[class] = {
-				__extensions = invert
-			}
 		end
 		local path = self.path .. "/" .. class
 		if not isfolder(path) then
@@ -1664,7 +1713,7 @@ do
 		if not self.registry[class] then return end
 		local reg = self.registry[class]
 		local extension = string.match(path, "^.+(%..+)$")
-		if not reg.__extensions[extension] then return false end
+		if reg.__extensions ~= true and not reg.__extensions[extension] then return false end
 		if not reg[path] then
 			if isfile(self.path .. "/" .. class .. "/" .. path) then
 				reg[path] = getsynasset(self.path .. "/" .. class .. "/" .. path)
@@ -1698,21 +1747,29 @@ do
 		return isfile(self.path .. "/" .. class .. "/" .. path)
 	end
 
+	-- makes a god damn folder
+	function asset:MakeFolder(class, path)
+		if not isfolder(self.path .. "/" .. class .. "/" .. path) then
+			makefolder(self.path .. "/" .. class .. "/" .. path)
+			return true
+		end
+		return false
+	end
+
 	-- get's the raw data of a file
-	function asset:Get(class, path)
+	function asset:Read(class, path)
 		if not self.registry[class] then return end
 		local reg = self.registry[class]
-		local extensions = reg.__extensions
 		local extension = string.match(path, "^.+(%..+)$")
-		if not reg.__extensions[extension] then return false end
+		if reg.__extensions ~= true and not reg.__extensions[extension] then return false end
 		if isfile(self.path .. "/" .. class .. "/" .. path) then
 			return readfile(self.path .. "/" .. class .. "/" .. path)
 		end
 	end
 
 	-- get's and converts a file to a table from j son format
-	function asset:GetJSON(class, path)
-		local data = asset:Get(class, path)
+	function asset:ReadJSON(class, path)
+		local data = asset:Read(class, path)
 		if not data then return end
 		return httpservice:JSONDecode(data)
 	end
@@ -1722,7 +1779,7 @@ do
 		if not self.registry[class] then return end
 		local reg = self.registry[class]
 		local extension = string.match(path, "^.+(%..+)$")
-		if not extension or not reg.__extensions[extension] then
+		if not extension or (reg.__extensions ~= true and not reg.__extensions[extension]) then
 			BBOT.log(LOG_ERROR, "Asset - Invalid extensions '" .. (extension or "UNK") .. "'\n" .. debug.traceback())
 			return
 		end
@@ -1749,7 +1806,7 @@ do
 			local filename = string.Explode("\\", file)
 			filename = filename[#filename]
 			local extension = string.match(filename, "^.+(%..+)$")
-			if extensions[extension] then
+			if extensions == true or extensions[extension] then
 				files[#files+1] = (ispath and path .. "/" or "") .. filename
 			end
 		end
@@ -1761,6 +1818,8 @@ do
 		asset:Register("textures", {".png", ".jpg"})
 		asset:Register("images", {".png", ".jpg"})
 		asset:Register("sounds", {".ogg", ".mp3"})
+		asset:Register("configs", {".json"})
+		asset:Register("data")
 	end)
 end
 
@@ -1790,7 +1849,7 @@ do
 		end
 
 		if asset:IsFile("scripts", "autoexec.json") then
-			local autoexec = asset:GetJSON("scripts", "autoexec.json")
+			local autoexec = asset:ReadJSON("scripts", "autoexec.json")
 
 			local c = 0
 			for i=1, #autoexec do
@@ -1838,7 +1897,7 @@ do
 	-- get's a script from with-in bitchbot/[gamehere]/scripts/*
 	function scripts:Get(name)
 		if asset:IsFile("scripts", name) then
-			return asset:Get("scripts", name)
+			return asset:Read("scripts", name)
 		end
 	end
 
@@ -1865,12 +1924,12 @@ do
 			else
 				log(LOG_NORMAL, "Running script -> " .. name)
 			end
-			local script = asset:Get("scripts", name)
+			local script = asset:Read("scripts", name)
 			local func, err = loadstring(self.pre_run .. script)
 			if not func then
 				local msg = "An error occured executing script \"" .. name .. "\",\n" .. (err or "Unknown Error!")
 				log(LOG_ERROR, msg)
-				BBOT.notification:Create(msg)
+				BBOT.notification:Create(msg, 20):SetType("error")
 				self.registry[name] = {callback = func, state = "Compile Error"}
 				hook:CallP("Scripts.Run", name, func, "Compile Error")
 				return
@@ -1881,7 +1940,7 @@ do
 				hook:CallP(name .. ".Unload")
 				local msg = "An error occured running script \"" .. name .. "\",\n" .. (err or "Unknown Error!")
 				log(LOG_ERROR, msg)
-				BBOT.notification:Create(msg)
+				BBOT.notification:Create(msg, 20):SetType("error")
 				self.registry[name] = {callback = func, state = "Execution Error"}
 				hook:CallP("Scripts.Run", name, func, "Execution Error")
 				return
@@ -1929,7 +1988,7 @@ end
 do
 	local hook = BBOT.hook
 	local service = BBOT.service
-	local httpservice = service:GetService("HttpService")
+	local asset = BBOT.asset
 	local loop = BBOT.loop
 	local log = BBOT.log
 	local statistics = {
@@ -1938,24 +1997,21 @@ do
 	BBOT.statistics = statistics
 
 	function statistics:Read()
-		if isfile(self.path) then
-			self.registry = httpservice:JSONDecode(readfile(self.path))
-		else
-			writefile(self.path, "[]")
+		if asset:IsFile("data", self.path) then
+			self.registry = asset:ReadJSON("data", self.path)
 		end
 	end
 
 	function statistics:Write()
-		writefile(self.path, httpservice:JSONEncode(self.registry))
+		asset:WriteJSON("data", self.path, self.registry)
 	end
 
 	function statistics:Initialize()
 		self.game = BBOT.game
 		self.session = BBOT.account
-		self.path = "bitchbot/"..self.game.."/data/"..self.session.."/statistics.json"
-		if not isfolder("bitchbot/"..self.game.."/data/"..self.session) then
-			makefolder("bitchbot/"..self.game.."/data/"..self.session)
-		end
+
+		self.path = self.session.."/statistics.json"
+		asset:MakeFolder("data", self.session)
 
 		self:Read()
 	end
@@ -1995,7 +2051,7 @@ do
 
 	function statistics:Save()
 		self.modified = false
-		writefile(self.path, httpservice:JSONEncode(self.registry))
+		asset:WriteJSON("data", self.path, self.registry)
 	end
 
 	loop:Run("Statistics.Save", function(statistics)
@@ -2024,7 +2080,6 @@ do
 		return current_latency
 	end
 end
-
 
 -- Draw-Dyn - A sub-library to the drawing dynamic library with it's own referencing system
 -- Similar to drawing depreciated for them OG people.
@@ -2247,22 +2302,17 @@ do
 		["Font"] = 2,
 		["XAlignment"] = 2,
 		["YAlignment"] = 2,
+		["TextXAlignment"] = 2,
 	})
 	draw:Register(CircleDynamic.new, "Circle", {
 		["Thickness"] = 2,
 		["Radius"] = 2,
 		["NumSides"] = 2,
+		["Edge"] = 2,
 		["Filled"] = 2,
 		["Position"] = 2,
 		["XAlignment"] = 2,
 		["YAlignment"] = 2,
-	})
-	draw:Register(Circle2PDynamic.new, "Circle2P", {
-		["Thickness"] = 2,
-		["NumSides"] = 2,
-		["Filled"] = 2,
-		["CenterPoint"] = 2,
-		["EdgePoint"] = 2,
 	})
 	draw:Register(RectDynamic.new, "Rect", {
 		["Thickness"] = 2,
@@ -2314,6 +2364,7 @@ do
             uniqueid = point_uniqueid,
             class = class,
 			ispoint = true,
+			traceback = debug.traceback()
         }, {
             __index = function(self, key)
 				if rawget(self, "__INVALID") then return end
@@ -2324,7 +2375,12 @@ do
 			__newindex = function(self, key, value)
 				if rawget(self, "__INVALID") then return end
 				local point = rawget(self, "point")
-				if point and (properties[key] == 1 or properties[key] == 2) then point[key] = value end
+				if point and (properties[key] == 1 or properties[key] == 2) then
+					if typeof(value) == "Vector2" and (value.X ~= value.X or value.Y ~= value.Y) then -- value validation to prevent inf/nan cases
+						return
+					end
+					point[key] = value
+				end
 				if not properties[key] then
 					rawset(self, key, value)
 				end
@@ -2369,8 +2425,6 @@ do
 		line:Remove()
 	]]
 
-	draw.max_order = 5000
-
     local uniqueid = -1
     function draw:Create(class, ...)
         local class_object = self.classes[class]
@@ -2388,7 +2442,8 @@ do
             class = class,
 			properties = properties,
 			pointers = pointers,
-			isdraw = true
+			isdraw = true,
+			traceback = debug.traceback()
         }
 
 		local args = {...}
@@ -2869,14 +2924,15 @@ do
 	local table = BBOT.table
 	local string = BBOT.string
 	local timer = BBOT.timer
+	local asset = BBOT.asset
 	local userinputservice = BBOT.service:GetService("UserInputService")
-	local httpservice = BBOT.service:GetService("HttpService")
 	local localplayer = BBOT.service:GetService("LocalPlayer")
 	local config = {
 		registry = {}, -- storage of the current configuration
 		enums = {}
 	}
 	BBOT.config = config
+	config.storage_extension = ".json"
 
 	-- priorities are stored like so
 	-- ["player.UserId"] = -1 -> inf
@@ -2887,7 +2943,7 @@ do
 		local last = config:GetPriority(pl)
 		local new = tonumber(level)
 		self.priority[pl.UserId] = new
-		writefile(self.storage_pathway .. "/priorities.json", httpservice:JSONEncode(self.priority))
+		asset:WriteJSON("data", "priorities.json", self.priority)
 		hook:Call("OnPriorityChanged", pl, last, config:GetPriority(pl))
 	end
 
@@ -3297,31 +3353,11 @@ do
 	end
 
 	function config:Discover()
-		local list = listfiles(self.storage_pathway)
+		local list = asset:ListFiles("configs")
 		local c=0
 		for i=1, #list do
 			local v = list[i-c]
-			if string.match(v, "^.+(%..+)$") ~= self.storage_extension then
-				table.remove(list, i-c)
-				c=c+1
-				continue
-			end
-			local check1 = string.match(v, "^.+\\(.+)$")
-			if not check1 then
-				table.remove(list, i-c)
-				c=c+1
-				continue
-			end
-			local check2 = string.match(check1, "(.+)%..+")
-			if not check2 then
-				table.remove(list, i-c)
-				c=c+1
-				continue
-			end
-			local file = check2
-			if string.find(file, "\\") then
-				file = string.Explode("\\", file)[2]
-			end
+			local file = string.Explode(".", v)[1]
 			list[i-c]=file
 		end
 		return list
@@ -3331,7 +3367,7 @@ do
 		local reg = table.deepcopy( self.registry )
 		reg["Main"]["Settings"]["Saves"]["Configs"] = nil
 		reg = self:ConfigToSaveable(reg)
-		writefile(self.storage_pathway .. "/" .. file .. self.storage_extension, httpservice:JSONEncode(reg))
+		asset:WriteJSON("configs", file .. self.storage_extension, reg)
 		hook:Call("OnConfigSaved", file)
 	end
 
@@ -3418,11 +3454,11 @@ do
 	end
 
 	function config:Open(file)
-		local path = config.storage_pathway .. "/" .. file .. self.storage_extension
-		if isfile(path) then
+		local path = file .. self.storage_extension
+		if asset:IsFile("configs", path) then
 			local configsection = self.registry["Main"]["Settings"]["Saves"]["Configs"]
 			local old = table.deepcopy(self.registry)
-			local newconfig = httpservice:JSONDecode(readfile(path))
+			local newconfig = asset:ReadJSON("configs", path)
 			self.Opening = true
 			local ran, err = self:ProcessOpen(self.registry, nil, newconfig)
 			if not ran then
@@ -3440,14 +3476,14 @@ do
 	function config:SaveBase()
 		local reg = table.deepcopy( self.registry["Main"]["Settings"]["Saves"]["Configs"] )
 		reg = self:ConfigToSaveable(reg)
-		writefile(self.internal_pathway .. "/configs.json", httpservice:JSONEncode(reg))
+		asset:WriteJSON("data", "configs.json", reg)
 	end
 
 	function config:OpenBase()
-		local path = self.internal_pathway .. "/configs.json"
-		if isfile(path) then
+		local path = "configs.json"
+		if asset:IsFile("data", path) then
 			local old = table.deepcopy(self.registry["Main"]["Settings"]["Saves"]["Configs"])
-			local newconfig = httpservice:JSONDecode(readfile(path))
+			local newconfig = asset:ReadJSON("data", path)
 			self.Opening = true
 			local ran, err = self:ProcessOpen(self.registry["Main"]["Settings"]["Saves"]["Configs"], {"Main", "Settings", "Saves", "Configs"}, newconfig)
 			if not ran then
@@ -3514,15 +3550,10 @@ do
 
 
 	hook:Add("PreInitialize", "BBOT:config.setup", function()
-		config.storage_pathway = "bitchbot/" .. BBOT.game .. "/configs"
-		config.internal_pathway = "bitchbot/" .. BBOT.game .. "/data"
-		config.storage_main = "bitchbot"
-		config.storage_extension = ".json"
-
 		config:Setup(BBOT.configuration)
 
-		if isfile(config.storage_pathway .. "/priorities.json") then
-			local tbl = httpservice:JSONDecode(readfile(config.storage_pathway .. "/priorities.json"))
+		if asset:IsFile("data", "priorities.json") then
+			local tbl = asset:ReadJSON("data", "priorities.json")
 			for k, v in pairs(tbl) do
 				config.priority[tonumber(k)] = v
 			end
@@ -3569,6 +3600,7 @@ do
 		dbgtext.Outlined = true
 		dbgtext.XAlignment = XAlignment.Right
 		dbgtext.YAlignment = YAlignment.Bottom
+		dbgtext.TextXAlignment = XAlignment.Left
 		dbgtext.OutlineColor = Color3.fromRGB(0,0,0)
 		dbgtext.OutlineThickness = 2
 		dbgtext.Visible = false
@@ -3581,6 +3613,7 @@ do
 		dbgtext.Outlined = true
 		dbgtext.XAlignment = XAlignment.Right
 		dbgtext.YAlignment = YAlignment.Bottom
+		dbgtext.TextXAlignment = XAlignment.Left
 		dbgtext.OutlineColor = Color3.fromRGB(0,0,0)
 		dbgtext.OutlineThickness = 2
 		dbgtext.Visible = true
@@ -4071,6 +4104,7 @@ do
 			isgui = true,
 			mouseinputs = true,
 			class = class,
+			traceback = debug.traceback(),
 
 			-- If only there was a better way of inheriting variables
 			enabled = true,
@@ -4612,7 +4646,7 @@ do
 		local registered = false
 		local list = asset:ListFiles("fonts", "")
 		for i=1, #list do
-			local fontdata = asset:Get("fonts", list[i])
+			local fontdata = asset:Read("fonts", list[i])
 			local name = asset:GetFileName(list[i])
 			if font:CanRegister(name, fontdata) then
 				font:Register(name, fontdata)
@@ -4637,8 +4671,7 @@ do
 	local hook = BBOT.hook
 
 	hook:Add("Startup", "BBOT:Icons.Load", function()
-		if BBOT.game == "phantom forces" then
-			icons.registry = {
+		icons.registry = {
 				-- MENU
 				["PISTOL"] = {"iVBORw0KGgoAAAANSUhEUgAAADQAAAAeCAYAAABjTz27AAACXUlEQVR4nNXYS6hNURzH8c9xLzeSR6SQgVIXA4k8SkhKSlHKAKUMjDBRZkZGSibKwISJUkqMiEylJMr7NZC886Z78/wbrHvrdJxz7ln77utc39qd3Vl7/fb/t57/tSsRYQAm4Dm24mzV/90Y26DOD9wcSLhEZuAovnYO8GAHdmEMTuEwRmEpFjWp18jQKxzHJzzGtD7tXHrwArMwHvswH58rTXqoE6exvsALW6EXXRhRoO4vfMfo2oJmho5he4GXtZVGhibjtWKt11aqA96A5X33q/2HZkjzpAM7cRCBHdjUzqAGwcdKRGyUJn8/gd+S0f+NA/1zaCwWYz+WtTWk4nzDzE5swx7MQ+UfB9BTgs5XvMFFvKxExBlpp+2nC3MMbsidwzOMxBpMryp7jL04L5kql4iod3VHxPXI43dE9EbE/YjoqNKaFBF3+555GBFTGryzlKvR0vwAm/Ezo20uSF1/UtrJ+3knDWl9v28y2zyLZnvNA1zL0LojDdP3dcqu4ItkekgZaPP8kqG1AJexsE7ZT6mnfmToFaKZoRHSytcqq/BUyp6n1pRNlI4hQ06z5HQ+bmTqPZGGXu1yPBsfsDJTL5tm56HcTHs3jkiZRtto1EPduCXtI61wDuvKCmowNJpDh7RuBi6VEEsp1DM0V35r3y4hllKoZ2hNAZ1bgw2kLOoZWp2p8Vb6+DEsqDXUiRWZGsOmd/jb0BKMy9QYNvOHvw3NLqAxrA0VOeA9LyOQsqg19KiAxpIyAimLWkNX5af4W/zbo3tTag31Yq20F51oof496Vt1W/O3av4ARjQk0oC+k4cAAAAASUVORK5CYII=", 52, 30},
 				["RIFLE"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAdCAYAAABcz8ldAAAD+klEQVR4nO3aS2hcVRjA8d+MRqTahqj4bIUujIKPBitasQsfUXHTouhGMKLiTjeCoKCIDwTduPIFKoq1IFQXFS2iLVGoaNWmlmqVKloNihvTGG0yscm4+O4wk8nMeCfzTOofLpd7zp1zzpzvfI/znZvJ5/OWGMdgLfqxH3/hZKzBCchiM86ro80pjODvpo6UIbyGa/EhHNvkDtJyC64Sk9cKVuBqRWH0ltRNY1BMQlryeAkHMF6hfiy578LBOtq9Ibn3FAoyHdCQIbyKTLs7bjJTigu6cH8LN6f8fRZbMYMXsI32CuTEpNN1OqeZxGqfwSHsKSk/E2ck5T+UlJ8rtCwvhFBNQ87C6bgLr6QYxyVYhb3CvG6jvRPTj8va3GclMskYehVNDaxEHybLypcl1294TvifShwvVvzLwhw+jZ9qjGM9HkUOjwm/l83kG1eRI/hMOKVfS8p7xOo6HxfhlAb7OSpohkCOFnZgVJitSsyKBTiF1cnzOzXaW4EbhZn7GL/zv0Dq4Un1RVBpyArTuRm/0Hl73my24A/heCdxGNeLEJswr59iJ35M6qeSe07sM6ZFuPwPJpLf5JJ3Wk67NCQn/MwELsdJFd75Do/gXuHsxsRkDeB1fI2fFWP3SqxL+iklK4SyDNtFFNW1tFJDvsf7IpwbVtzljqgskAN4Exfgg5Ly0+roc8B8gcwmY1gUZJvUzhGxgjeJFX5Oct2Dd81NOTxcpY2Cpo6IFEc5U5L0Qg3Wpxxv17JQkzUmVv0OsSL3CZudhuX4s6xsAk/gRWH/+xT3AgO4Iulnt9C6wSptjwuNyqUcS9eRViCTwhFuT67dYre7EC4Uu9NShoSfWIVTy+oOik3XaPK8Fl/UaH+D2uFmV1NNIDP4UlEAO1WPv+vlITxe8jyKsxVN1n+REamN1VXqhxWjqkVHqVPfryiAYa2LRjaWPW+VXhiSd7fg/ir1V+J2kdZedGTy+fwgvjE37dEqVorQtTTTe525UVUaLhYaXI0xEa214z81laz5OahWstFcYRwS2lgvu9UWYh+eX0C7HadZYW9ays3Ve2JHvBDuUzua2oC7F9h2x2inQJYL+17Krgba2ydC5Vo8q3qI3JW0UyCHxQR+IjaSRAjcCE+JjWQ1esQp3jUN9tM2OnGES2hLP77V+IcDa/C5knPpCkzjTrzRYF8tp90+pMCEiJKa8RXHVyIZWYvjxMbzAV1+lt8pDWk2GZFHu1XsU6pN+iwuVTtk7iid0pBmkxcm6SO1NeAZXSwMlo6GFOjF2+KbrHL2Cu3o6sTjUtGQAuPiAGtTWXkOt+lyYbD0BEJEVEPmOvoHzc8wdyVLzWSVc4fIDtwkHHrX8y9c6Q6XYJwubQAAAABJRU5ErkJggg==", 100, 29},
@@ -4646,8 +4679,9 @@ do
 				["SMG"] = {"iVBORw0KGgoAAAANSUhEUgAAAE0AAAAeCAYAAABpE5PpAAADmklEQVR4nO3ZS4iVZRgH8N+Mk6FRNpXlQrPLBEVN2WUhJSUkXSgs6EZBSG0KWrQJIlu00YKgRSuJdrbKkDYVU9pNi2rRZVBrkyGWKQ4U5oxMXs7T4v2mvnPmO9+cc2bOnDnhH154r8/zfM/7fu9zeXsiQpdhJUaxuw20v8At6EVdxfS2gXE7sRAP4vZOCtHTZSdtOfZhf1afaTR00vrawLiduB4V9OOrrO/vmjl9mJdrV3CiZs589OTap3Ayow/v4v56QnSb0hZifa79Aha1gc+KssFuU9oqDOOPrH2yTXwuljbjSNFgN91pZ0pWM7/Rb0n320CuzNTJW4Uviwa66aRdZbK8b2JnTd9iXC4p8IpcfQDnN8Fv0P9AaYMFfbsK+kay8nXBWL/qUzmAtTi3QX5ISltTLuucwZ017T9xU4u0JhS7Ax9iE45hSW7OZfUW92Fbi4w7jX4zJ/sxHFCttLqOf7dFBHMCs3mn7cH4NNZfivNy7VEcnpZE/2Gx5APWYgkWqHaED/dEF/kcs4zfcIHk6gzjWilJsLmbrOdsY2mu3iudth4Mnj5pzeO70yetGJ/hI5wj+XB5gzk+V5RWwafYLBkM0q+wFs+oNgBleAnvZ/UBvCIZkGaxWopvHygcjc5iLCLWR8SyiFCnnB0ROxqg9UnB2sGIqLQo29Z6MnXaT3scL+PXkjlH8aySpGCG9wr6dmFryZrAB3gHQ1PQ/xed/D1/l5J9jWDP1FMmJRon8BAextsFYztxT679OW7N6nPyjeCsJuY+p9rBLMK9Uhy9omBsixRj1mKspj2aq89JpS2SLvoyzMPr2NgAvTukWPSNOuP7CvoOlNCb8o3gR8ly5bFSSZ68Diqa24hNOIRvCsZuxAbcVbL+IB6T7qUFWd91UuZ1f25eb0avFttLaNdV2oRzOyKFCnksxZUlRIswJJn5pyVzPb/Bdb9IL0Hj0m94M66eYs1fuA0/4KcaWYewTopNz5BckRdr1lek2HIk13c3lmX1vfi4iHE7090X4kk8hUtmmPZx6QLfLm3MUZM36Ah+xkWqQ6IJfI8bWuJe4h/NVOmNiDURsSUiTrToM+VRiYh1OfqDLdJ5NVr8ptlQWr4sj4iNEXGoxQ+NiHi+huajLdAYymTpCqVNlPkR8UhEHGziQ4cjYnUBrQ1N0NgbEfdNV/5OObfHJWfzCSlfVYRT+FYKnLcpfkSBaxrgNyYZqNdMLxEK/gEIMckYAgwqoQAAAABJRU5ErkJggg==", 77, 30},
 				["SNIPER"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAXCAYAAAD9VOo7AAADIklEQVR4nO3ZS2hdVRSA4e/mYa310VajlapYRQRtFScOfEFFcCIojhw4kIoVrQhSHSmIUwURHPmYqAOhA3HgQBQFURR0YBRRaw0+20SDL6y9sU27HKx9yU1Nbm5ubu4j6Q+bs/c+Z+29DuuctdZZpxIReph78DyOYA/u7K46y89AtxVYgH3lOFzXX9EMdXCvYTyJU8r4CMZxFH/jOZxWrvu1XDNWJ1/fP7vI/1FkLsc2bC3tDBwz+4Hbgc/bdjfLRKWDLmstDjU4/wPW42R8UeZOxaWlvx8Tpb8VU/gdF6LSxP7X4sPFKNwNeskgy01fGKTXY8iqo5MxZBovmYkh09LlrEcVj+Jl6aK2lGtOxyWlP44Dpf89vsIdZuLGFeW4DRvK+p28v7bQSZc1H7fLwAwP4HzsRMjAXM+ADNjP4kc8VebH8NGya9oBumGQs3CXfAtGcLN8E2ocw6fzyA7hyuPmpvC1zNbgHxyuO/+X/xu2Z+mGQZ7GQ53etF/ohI89D7fgGvl0b+zAnt3kM7zaqvB8b8ganItN0q2MlHGtv0m6lYcbrD2IR/AETmpVwT7kE1zdqvBcBhmWQfPeBWRDZjVfznFui8yYrmtVsT7mkExSWopbQ3gFF+McmcGc2aRsBbtx93HzO/CMmcxptVGVHqbainAlIl7HrS1ufhgXybLGCF5osNZv0uBLjVsTeF9+a9yEP+Xb2gtMyZT9jZZXiIhdsTTei4j7I2KiwTVjEXFBRGyOiD0R8VhEbIyIDXXtxYj4ron93owIEbEmIh6PiEoZr4g2hI+X+FTcUNp8jGE7firjD/AOLiv9GuN4V7q8ZvhXJgwrigEzFdTl4FuzjQF7sVkaoEZFftDVl9hXJZWIqAWgZkrYi2EfbsTPc5y7TVZ/p8t4EKO4Dw8usO4ormqHgr1ILe2tyv8Q7eIbaYz9i5S7Xn7jNOIoXmtFqX6gEhHrcLBF+arMt9fVze2Vxjgwp8QJGjKk8XfH27JwN4lfSpssbVwacq0sFu4u6203Oz6cYBHUXNZbss40KaujB+U/h11m/PxCDMp/EaPtVnI18R9vKf2ssOnBPwAAAABJRU5ErkJggg==", 100, 23},
 				["SAVE"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMUSURBVGhD7ZrNitRAFIXTCQ2OiqLiz0YREVy5EXUrCG7FEV34BOJ7uNI3cOfWrW5UBFeCgqvBJxhXA4qC2jRtd3tO5d6ykqkkVbHTpNv54FC3Ur8n9dNhmGRdGEiazOdziZITk8lkQ+ICw+FwezAYzCTbKaPRaCPLspOSLYB5fEdCkTnmZCdPI2ehd1AdR6R650yn0xuz2WyuKvEbegrtk+o5eDCAPkJNHIfsKnYJjNz0GCiA8sdSPUklPQ9dYoByJlWwfoo62i6Ihj53IfWHJlMDttQdCa0Ru2VQKFFOaRIsjF4R9sl+tC83JuUyoXEc1D0koTUSSqtthQH1BXAL85Ebk11laZryEDNfiVuuRmyPTueFWOADHdRssRBJG6UQo7yqLJO0DjtBNVK4UtG5zwTRgdiOA4VKzcSqCUwzfxFqpI+EGLEsy4i7vL6YqUpx40b6siJRb9/Hsoy4E62Lq8oaUSO2Ea80VUdox27qUwh2+6kR78o0mHH3dZMIx6DYaTn1SdvZW9SVYAOvgVWkz0a4KsEs2ohd6gUQ1deijUS9xUWyd0b6xv9pBPf3GQmXwWlJgzCHExO8iuQ94zL88XF+GLehZ1DsX1Jib7Oj0F3osPPjV0DmtAOdQpx/yzcZIR1+slRSZYKUjTRuLTYom+AAPil1ZTHo2D4Jdv4aRG0Vp6MCVZOuqr8AUvRtBly7W6uzV7Ys1m5F2p3GGjo8F15arwgnWie3zjIwo+CmuYLkA+NFgn63YOSzZEO4AJ3LwyC+ov9jEpsBL0OtcP/0X9Z4PL4nQwSB7h7lvQbzRZruXb+dgDd8QMJo9q7fLsDB/SVhNL3aWqD1C+3VivwLa3dG+rK1WqNGtqCXebiaqJExdBt6ZXIriHtGRtAm9NrkVozyYaeZW9Abk+s/PyW1X78mxQ+SuYaR34/kOXSd+TpQV6K/8NOdz/Hh+DDLspjt+gCK+dB8grHuMygYUWgIHET4ArpmHnrwmfBBYx3wFtpE39+YUSNMCPP2Pw7EzEWTKcIGMbMLcxzOD+gTX3ieXRuS5A+l9l54jQJiowAAAABJRU5ErkJggg==", 50, 50},
-				["LUA"] = {"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", 50, 69},
+				["LUA"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADN0AAAzdAb7pMRcAAAPwSURBVGhD7ZpLiBRXFIa7NVFQI0RBR9GQ4BhUBhEfKKJiHiooKAqz0ZUgiAiuFB9L0bWzMJCVa0EQH4wLTUIQA0mMgmbQEB9INMFBFBxf+Gy/v+6py+3pV3WYse5Af/BNnTrV011/9e2qWz1TqEepVNqBj3EweYlb7CX/N0VbVsCTj2NxH4fjC/UGgY9xBL7BdcVi8YyaAwpBpulwwVUsDpK7MaUP59nLN80wW9aFI1UaDHlqmfIJnibM5261OTIF+YBMwm7CfOpWsxNbEDELjxNmpFvNRoxBxHI8QpjM+xdrELERD7iyMTEHEXt4V7ZaXZfYg+g6d5gwa9xqbWIPIj7Co4Spe40ZCkHEGDxFmNFutZK8g/yBj/FlA3XhnIxt2Byk91MUa+WG9sHtSmmatSoYKkOrIa0gsVFxP8I4VG8iTsfz+BeuxDw5izNwGd7AXps9V4cQHdijT1Xk/IkdttsJ/h1hg4ZZD85MGvFzHTt4Z95pJQwylcU/bs3zM2poiTm4yJUVdONdVxYW42xXei7j764s6BS6wpWe13gEw+GyASe4siafESR9XQdB2rE/m22ztu9yraqssofpcYdcq4yDtlnbO12rjJ9ss4del9tUl3Z7eDRnrVP6wY6FJ5+TtsxEVEFgNmG+sPoCPnRlY2II0sM4v231EvxaBT19bjJ/PRRDkPTdELrF/caVCZmHVzRBGFK67/gKV1otdCHM9OVg3kH+Q03lxQIcby5Ug+H1hEXFGa0aAxUkfJ5qU4ewFz62m519a/Uo/N4Mb6AyDa+BCqJvCVN0o9SfPluKsbYU/vNBoB9xm6khlXIa07A1GaggmmCm/GbLkIu2FJr8iafohw2fi7Gh1lZAfZGezgpq0kwQHdU7VdTRCmfHOprhcDiGmuqkF7zVquEHdvK5Cvqatuid9NILJ4XZL478Yt0pSi14zAN8h0utlewwzsIZqq2t/iZMCac/21yrjL22Wdv1PNXwUxSPmm5bGVmDiHvYf7LoYdsafKIHwhv0E0LqE0m3nF9scwLr1127DB8kPFpq6qYl5DhecmVN9mF6lnmFGkrn8F/U9UDPuxa/xfT1HmCXKxP2YHjCEBqy+1F/BBLrcb4rPdMZnjdVhEGmsCifEsfPVILcUxF+2HUEr7hySKB91T4n+CAk00WrE39F3XWFFzHVeZqiWvumfey0fU7wQyuEYaYx/yXqzu4aalaaJ5rS6w9Ac/FvAjxTMxOEaX3TmAetILHRChIbrSCxUfWCKOycrQlZL36nXo5sR/2FoJ2L4a2k0496QdJ/c9K/IsWAvudqI8gjt1pOzaFlv7ATw/vtvNA+7KwVolAoFN4DMgQTmSrqJqYAAAAASUVORK5CYII=", 50, 50},
 				["PLAYERS"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAS+SURBVGhD7ZpbiFVVGMdnRk3TpCxLLEXzWlpWair1YJkkqEgYpQ0oeAETexCMHjIfJggfRXqRHowgCIOIBG8gmGAUIoxiUYhMBeUlZbzgdXQcf/+1vz3WeM7Z69tntkxwfvBj7bXc37rsy1prn7GuRo0eQEdHRz32VWpF3U5hbVBhH1yO+/AS3rJUeZX3sVNzozqsrmLaoIKx2IyVOIxjLcQNsWOwuDYIHIknVEsEOm+khUajGIuNwd8GAXpOv1e0g/0Y/VzrXCy0DTUyO4T5mW1VZMK5ryUhbkq20WBpV96y1IsnrlvbKDeQZy31MsnSGPK2UTKu3ED6W+ql3VI9Og04HVfh+7gUx9g/i8/xWnLoYoCl2dDgbvTyKw61+EY8rsIuaH3QCz7FzpuJl9HDbsVGwcnrk5hoLuBo1F3YooIMruMSa2txKIlnfehkDJw8HK+GsDjWWtzHSTaKGzjL4raHkmzUp+GKiYaADSE0m7N4P47HNhU4OIbanswIuWw2WPfiIagXfhHCK6OXVudvSrJu5qMWxz9CrjzqS7nJqTIEqoH3UFe9FGcwLFCkR0OJn00Wvy3J3oXaVh8qruhRyz2VPEAyF6fhQ9iKB3FnfX39FWvkHD6IXr6ljoXUoSl/Hr6Ij6DqS9u4RFqRkgOh0kEkb6Ou9jjUQEqd24FraEjT9RmOB4dSH18Tv4j4Tzh+Jyn6D2pDAzmGe1Hna5DlobLeqKn3IsayzmIPJFk3TRa/K8lmor6pj70Vdxf8wyD07kbFdxb/QZJ1MxU1c50LuXjUVz05d6BAn5Z5r+g1HIK6EP+owEFYpUnfTLJu1Oe+YRCCzMZQnJ9PrZ4FeDOUZHMKR6DuxhEV5GRjOohhqKtaDer8HKtPL66+tyuhfdhEO7/ai6i+D9MCswzv3J58aBc7jwobmFG2cfwMfoaaplM0+7TgR/gc5/3C+UM4fgFvYV7U92Va8A5w8HIo8qNt+xZsomNaHDVFj8BRqO22ZhblNX1rej6J6vR5/I2Ys6S6K/qO0cIY9l45+EGVtGIeFPe6aiF9GJuwBWPR43gQ9XOPpn3tnD/EdvTSqk7kCTyPk20Qb6DuRjXo56CnrL53Q4mPdgV60cfRAmt0Nea5EKXQHdb2RPVuDiUO8gzkS2tsDsZOtbGcxKGozwLPY+oeiDquL0E19KcKCuAru1Arkmwc3oHssUb0g0JR6FEdhwMwes/n/VDZaWmjpUWgPi1mar5Muj+UROAdiGYXrQ36LimSlyxttjQT70C0oD2G/UKuONIfGE5YmokGshK/Qa22WVzHarczMaQXqs3Scmjb8yM2dn718cjojylTcQZOx+fxSbwPU7Td6IXaMxVJC++IZkftA7cmRQF1/C88hPtwB+eFvpT81E2hIg1Cf5N4HLXB24GP4r0ayASOdVG1+dQAfqf83xvRTioOpBRUrrt0TwZix1F4X/YeS20gPY08A9GUeCU5LAy92C7cL7vghdfX36uo7/RXULNLtXdX65j2ctpd7+Jl7/yjUQy5BtIVBqbfl/THG32yPo2acZ5A7QIGYjpIfeZexdP4N+rXw5/xJ2ym81kLYFm6ZSCVYJAaRPo/F9rorBa1GjX+H9TV3QbNg/HZu3wRkgAAAABJRU5ErkJggg==", 50, 50},
+				["SORTARROW"] = {"iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAU0lEQVQYlX2PUQ7AIAhDi9lxuP/1WB4C0X2sCaZpaVW5+xMRksQxg8ZYmTKDDsc0+ErlB2zt2O6dhkYutPEFi3nFmZhkaasfc9UWx7t+cTZkUNILeVMshrLlQ3UAAAAASUVORK5CYII=", 8, 8},
 
 				-- WEAPONS
 				["1858 CARBINE"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAJCAYAAABwgn/fAAABHUlEQVR4nNXUTyuEURQG8N/LSEiSv7GzseMjkI/B3sqSvY/hYxBJsZCVwUIRamRnMyl/R2ia1+K+Y2YxmsHL5Knbvfd07j3Pec7pRHEcSwkjGMVSla0dByhW2frQg1sU8JZC7IkoxURacY1BRImtiEwN3wfcIMYmnn8avFaQr6IFk5jDkIrCbVjAPHI4w4lQiWPcpRD7A9UV6cAAhpO9v+pePndiJSE1jRlMoVdQN48dvGAVu3hKk/BniOI4XsQyur75Rw6H2BKUvhd6/9UfJUFIJMI5xht8k8cG9oRe30/2Arrx+As86yIjtEShjt8p1pOVRSmxtwvKl9GUJAgVGcOlyqQp4UIgnMU2rppDr3FkMIs1Yd5ncSS0yr/CO58sURmvjH21AAAAAElFTkSuQmCC", 50, 9},
@@ -4869,19 +4903,6 @@ do
 				["ZIRCON TRIDENT"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAICAYAAAC73qx6AAABG0lEQVR4nM2UsS5FQRCGvz3u2StUwhuISqH0BgrxAirvQELFO5B4A4ncXiWhVBGFUqsVHXEc51ecf282N/eIgjiTTHZ3/szszsz+EyTRI1kCRsA+cGfbBrAHDAEB79Yr4GTsKakvWkq6VysvkpYlbUp6U7fsJP+B84nAFrAIPAMXwKexmSmVa6yDKZiAGig7qv5hvzBhz23R+yNg1vFOgQKYM14Cl95XQdIhsA2sOFgNPHpNiURrDVR+DA4cadve0La8MhYyjAxrJrAiw1azxJ6AeWDB54cs4ZRIbd/zoqNqP5HvyPXXxAvW8T3BZO/L17oB1oBXr2fAOt1fa9fvrf6b4L9G9tSRvkgavwfArW1p/Eaf0/i9Bo6T4xdM44pWBHcfuQAAAABJRU5ErkJggg==", 50, 8},
 				["ZWEIHANDER"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAOCAYAAABth09nAAAA7ElEQVR4nM3UPUpDQRTF8Z8mRBQUrBKwiJDWHdi4DXtrV+HCbFxBasFSLRIRMX4gz+I9IYYRfXcmPP8wMHOGC+cwc+9GVVVaMsIZLtoWrpPNQM0YR6WN5BIJcofb0kZyiQa5L20kl0iQBa5LG8klEmSA44Q+yfSSRR8n2G/2sIUd7KHXrI/mbhcznKqn1xcHzXm+pD0u1f1EhYeE/ornhP6OJ7yof8Zc/c2nqRf5yyutzuzfDK+dPi5b1gxwiPMVfaLD3on0yBuuEnqnAyASZFvHjZ0iEmSEYWkjuUSCDH2fWP+CSJAbTAv7yOYTCAcjy7oQ9i0AAAAASUVORK5CYII=", 50, 14},
 			}
-		else
-			icons.registry = {
-				-- MENU
-				["PISTOL"] = {"iVBORw0KGgoAAAANSUhEUgAAADQAAAAeCAYAAABjTz27AAACXUlEQVR4nNXYS6hNURzH8c9xLzeSR6SQgVIXA4k8SkhKSlHKAKUMjDBRZkZGSibKwISJUkqMiEylJMr7NZC886Z78/wbrHvrdJxz7ln77utc39qd3Vl7/fb/t57/tSsRYQAm4Dm24mzV/90Y26DOD9wcSLhEZuAovnYO8GAHdmEMTuEwRmEpFjWp18jQKxzHJzzGtD7tXHrwArMwHvswH58rTXqoE6exvsALW6EXXRhRoO4vfMfo2oJmho5he4GXtZVGhibjtWKt11aqA96A5X33q/2HZkjzpAM7cRCBHdjUzqAGwcdKRGyUJn8/gd+S0f+NA/1zaCwWYz+WtTWk4nzDzE5swx7MQ+UfB9BTgs5XvMFFvKxExBlpp+2nC3MMbsidwzOMxBpMryp7jL04L5kql4iod3VHxPXI43dE9EbE/YjoqNKaFBF3+555GBFTGryzlKvR0vwAm/Ezo20uSF1/UtrJ+3knDWl9v28y2zyLZnvNA1zL0LojDdP3dcqu4ItkekgZaPP8kqG1AJexsE7ZT6mnfmToFaKZoRHSytcqq/BUyp6n1pRNlI4hQ06z5HQ+bmTqPZGGXu1yPBsfsDJTL5tm56HcTHs3jkiZRtto1EPduCXtI61wDuvKCmowNJpDh7RuBi6VEEsp1DM0V35r3y4hllKoZ2hNAZ1bgw2kLOoZWp2p8Vb6+DEsqDXUiRWZGsOmd/jb0BKMy9QYNvOHvw3NLqAxrA0VOeA9LyOQsqg19KiAxpIyAimLWkNX5af4W/zbo3tTag31Yq20F51oof496Vt1W/O3av4ARjQk0oC+k4cAAAAASUVORK5CYII=", 52, 30},
-				["RIFLE"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAdCAYAAABcz8ldAAAD+klEQVR4nO3aS2hcVRjA8d+MRqTahqj4bIUujIKPBitasQsfUXHTouhGMKLiTjeCoKCIDwTduPIFKoq1IFQXFS2iLVGoaNWmlmqVKloNihvTGG0yscm4+O4wk8nMeCfzTOofLpd7zp1zzpzvfI/znZvJ5/OWGMdgLfqxH3/hZKzBCchiM86ro80pjODvpo6UIbyGa/EhHNvkDtJyC64Sk9cKVuBqRWH0ltRNY1BMQlryeAkHMF6hfiy578LBOtq9Ibn3FAoyHdCQIbyKTLs7bjJTigu6cH8LN6f8fRZbMYMXsI32CuTEpNN1OqeZxGqfwSHsKSk/E2ck5T+UlJ8rtCwvhFBNQ87C6bgLr6QYxyVYhb3CvG6jvRPTj8va3GclMskYehVNDaxEHybLypcl1294TvifShwvVvzLwhw+jZ9qjGM9HkUOjwm/l83kG1eRI/hMOKVfS8p7xOo6HxfhlAb7OSpohkCOFnZgVJitSsyKBTiF1cnzOzXaW4EbhZn7GL/zv0Dq4Un1RVBpyArTuRm/0Hl73my24A/heCdxGNeLEJswr59iJ35M6qeSe07sM6ZFuPwPJpLf5JJ3Wk67NCQn/MwELsdJFd75Do/gXuHsxsRkDeB1fI2fFWP3SqxL+iklK4SyDNtFFNW1tFJDvsf7IpwbVtzljqgskAN4Exfgg5Ly0+roc8B8gcwmY1gUZJvUzhGxgjeJFX5Oct2Dd81NOTxcpY2Cpo6IFEc5U5L0Qg3Wpxxv17JQkzUmVv0OsSL3CZudhuX4s6xsAk/gRWH/+xT3AgO4Iulnt9C6wSptjwuNyqUcS9eRViCTwhFuT67dYre7EC4Uu9NShoSfWIVTy+oOik3XaPK8Fl/UaH+D2uFmV1NNIDP4UlEAO1WPv+vlITxe8jyKsxVN1n+REamN1VXqhxWjqkVHqVPfryiAYa2LRjaWPW+VXhiSd7fg/ir1V+J2kdZedGTy+fwgvjE37dEqVorQtTTTe525UVUaLhYaXI0xEa214z81laz5OahWstFcYRwS2lgvu9UWYh+eX0C7HadZYW9ays3Ve2JHvBDuUzua2oC7F9h2x2inQJYL+17Krgba2ydC5Vo8q3qI3JW0UyCHxQR+IjaSRAjcCE+JjWQ1esQp3jUN9tM2OnGES2hLP77V+IcDa/C5knPpCkzjTrzRYF8tp90+pMCEiJKa8RXHVyIZWYvjxMbzAV1+lt8pDWk2GZFHu1XsU6pN+iwuVTtk7iid0pBmkxcm6SO1NeAZXSwMlo6GFOjF2+KbrHL2Cu3o6sTjUtGQAuPiAGtTWXkOt+lyYbD0BEJEVEPmOvoHzc8wdyVLzWSVc4fIDtwkHHrX8y9c6Q6XYJwubQAAAABJRU5ErkJggg==", 100, 29},
-				["SHOTGUN"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAbCAYAAACKlipAAAADgklEQVR4nO3aS2hcZRTA8V/StKYtEbGxLdr6QFsfUBHRhWhRqCiI2qAVXLkRurG4EVwpiK66caGg+Ni5UxeiFJQqiAaUFotB8bGoRRc+sLRFm1eT9Lg495rJdCaZZKYzaTt/uMw333fud8+d853vnHPv9ESEs8Q27MQQrscvuLkYGyn6+nEEa7Eex/E3ttaYbwx/NnjtF/DO0tTuMBHRqmNFRNwdES9HxOGYy1Ah81ZEvF60d0XEzxGxMiIGI2IiIrZERE9EDEdz7GnhfbX16GvSnmtwv/SEB7Gujtzl6JNeMI0VRd9aXIwNFX1/4Oom9Vpu9OASjGNiXsklWHF9RDwZER9GxNgiVu1onfZkREwX7ZmIGK8YOxkRuyPi9CKuE7H8PGSw0OuNhWQb9ZAtMhbsxB3obeCcGQzjAE4vIPtIcY1eGVdKLsJuucJqcQpf4WBxvZJR3NuAjovhS0wu8dyVxed9Cwn2xNygvglXSLfql0Z4GDctUZHzia9xcpHnrMFGDOCyom8Eq6ntDJUGGcDjCDwts6Qubaa00g687fwLpuccpYcM484O67LcGcOLcuuZlBnlqMwaDy9innVyN6qMw98Xc3YNsky4VhbODWVLXdpIGUNGO6rFucW/+EdmUKcwhb+anPP/dLo0yOcayJEr+AS/Fu3tuLGGzF68N88cq2R1Pyir/asqxo7gR7MevFHm8jfIir6TPIEPivZqWX23jDKGbMAreEz9ImxK5uLHZCFXFntXmjVOye/YbOGCsORRXNeA3Etmi6xOsV3G3LNCdWF4Fz6Sz12qmcYzsmh8s2psUq74kldlLdNqRqU3f4wfpHH65TZSPi86XsheKhdP2VbIbJNp/u3OLM7G5Y/9mSLIVjGGfU3fxTxUKzSM/dJTasmecGatMiT30oP4Bofwfgt1rGSH9NJmeBfPy63ylqLvkCyIR+W9dIxqgwxIL6nFAbkiT8i9/Cf5SKVPrsyZOue1kmaNUclRfNrC+VpC9Za1F8/WkJvBbfi2+H4rrsFv0jO6tIhKg2zFd+bGgpLX8FS7lLqQqTTIPjxQQ+aYfN16tF1KXciUef5DahsDntM1RtvoiYhVcquq9ceCCZkytrT46VKfXuxR2xjwha4x2kovds0zvr9dinRJeiJiSp3XibJwGmmfOl16zR+wN7VLkS5JL+6RDwNrsbl9qnSB/wBF8j6LJlmzYQAAAABJRU5ErkJggg==", 100, 27},
-				["SMG"] = {"iVBORw0KGgoAAAANSUhEUgAAAE0AAAAeCAYAAABpE5PpAAADmklEQVR4nO3ZS4iVZRgH8N+Mk6FRNpXlQrPLBEVN2WUhJSUkXSgs6EZBSG0KWrQJIlu00YKgRSuJdrbKkDYVU9pNi2rRZVBrkyGWKQ4U5oxMXs7T4v2mvnPmO9+cc2bOnDnhH154r8/zfM/7fu9zeXsiQpdhJUaxuw20v8At6EVdxfS2gXE7sRAP4vZOCtHTZSdtOfZhf1afaTR00vrawLiduB4V9OOrrO/vmjl9mJdrV3CiZs589OTap3Ayow/v4v56QnSb0hZifa79Aha1gc+KssFuU9oqDOOPrH2yTXwuljbjSNFgN91pZ0pWM7/Rb0n320CuzNTJW4Uviwa66aRdZbK8b2JnTd9iXC4p8IpcfQDnN8Fv0P9AaYMFfbsK+kay8nXBWL/qUzmAtTi3QX5ISltTLuucwZ017T9xU4u0JhS7Ax9iE45hSW7OZfUW92Fbi4w7jX4zJ/sxHFCttLqOf7dFBHMCs3mn7cH4NNZfivNy7VEcnpZE/2Gx5APWYgkWqHaED/dEF/kcs4zfcIHk6gzjWilJsLmbrOdsY2mu3iudth4Mnj5pzeO70yetGJ/hI5wj+XB5gzk+V5RWwafYLBkM0q+wFs+oNgBleAnvZ/UBvCIZkGaxWopvHygcjc5iLCLWR8SyiFCnnB0ROxqg9UnB2sGIqLQo29Z6MnXaT3scL+PXkjlH8aySpGCG9wr6dmFryZrAB3gHQ1PQ/xed/D1/l5J9jWDP1FMmJRon8BAextsFYztxT679OW7N6nPyjeCsJuY+p9rBLMK9Uhy9omBsixRj1mKspj2aq89JpS2SLvoyzMPr2NgAvTukWPSNOuP7CvoOlNCb8o3gR8ly5bFSSZ68Diqa24hNOIRvCsZuxAbcVbL+IB6T7qUFWd91UuZ1f25eb0avFttLaNdV2oRzOyKFCnksxZUlRIswJJn5pyVzPb/Bdb9IL0Hj0m94M66eYs1fuA0/4KcaWYewTopNz5BckRdr1lek2HIk13c3lmX1vfi4iHE7090X4kk8hUtmmPZx6QLfLm3MUZM36Ah+xkWqQ6IJfI8bWuJe4h/NVOmNiDURsSUiTrToM+VRiYh1OfqDLdJ5NVr8ptlQWr4sj4iNEXGoxQ+NiHi+huajLdAYymTpCqVNlPkR8UhEHGziQ4cjYnUBrQ1N0NgbEfdNV/5OObfHJWfzCSlfVYRT+FYKnLcpfkSBaxrgNyYZqNdMLxEK/gEIMckYAgwqoQAAAABJRU5ErkJggg==", 77, 30},
-				["SNIPER"] = {"iVBORw0KGgoAAAANSUhEUgAAAGQAAAAXCAYAAAD9VOo7AAADIklEQVR4nO3ZS2hdVRSA4e/mYa310VajlapYRQRtFScOfEFFcCIojhw4kIoVrQhSHSmIUwURHPmYqAOhA3HgQBQFURR0YBRRaw0+20SDL6y9sU27HKx9yU1Nbm5ubu4j6Q+bs/c+Z+29DuuctdZZpxIReph78DyOYA/u7K46y89AtxVYgH3lOFzXX9EMdXCvYTyJU8r4CMZxFH/jOZxWrvu1XDNWJ1/fP7vI/1FkLsc2bC3tDBwz+4Hbgc/bdjfLRKWDLmstDjU4/wPW42R8UeZOxaWlvx8Tpb8VU/gdF6LSxP7X4sPFKNwNeskgy01fGKTXY8iqo5MxZBovmYkh09LlrEcVj+Jl6aK2lGtOxyWlP44Dpf89vsIdZuLGFeW4DRvK+p28v7bQSZc1H7fLwAwP4HzsRMjAXM+ADNjP4kc8VebH8NGya9oBumGQs3CXfAtGcLN8E2ocw6fzyA7hyuPmpvC1zNbgHxyuO/+X/xu2Z+mGQZ7GQ53etF/ohI89D7fgGvl0b+zAnt3kM7zaqvB8b8ganItN0q2MlHGtv0m6lYcbrD2IR/AETmpVwT7kE1zdqvBcBhmWQfPeBWRDZjVfznFui8yYrmtVsT7mkExSWopbQ3gFF+McmcGc2aRsBbtx93HzO/CMmcxptVGVHqbainAlIl7HrS1ufhgXybLGCF5osNZv0uBLjVsTeF9+a9yEP+Xb2gtMyZT9jZZXiIhdsTTei4j7I2KiwTVjEXFBRGyOiD0R8VhEbIyIDXXtxYj4ron93owIEbEmIh6PiEoZr4g2hI+X+FTcUNp8jGE7firjD/AOLiv9GuN4V7q8ZvhXJgwrigEzFdTl4FuzjQF7sVkaoEZFftDVl9hXJZWIqAWgZkrYi2EfbsTPc5y7TVZ/p8t4EKO4Dw8usO4ormqHgr1ILe2tyv8Q7eIbaYz9i5S7Xn7jNOIoXmtFqX6gEhHrcLBF+arMt9fVze2Vxjgwp8QJGjKk8XfH27JwN4lfSpssbVwacq0sFu4u6203Oz6cYBHUXNZbss40KaujB+U/h11m/PxCDMp/EaPtVnI18R9vKf2ssOnBPwAAAABJRU5ErkJggg==", 100, 23},
-				["SAVE"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMUSURBVGhD7ZrNitRAFIXTCQ2OiqLiz0YREVy5EXUrCG7FEV34BOJ7uNI3cOfWrW5UBFeCgqvBJxhXA4qC2jRtd3tO5d6ykqkkVbHTpNv54FC3Ur8n9dNhmGRdGEiazOdziZITk8lkQ+ICw+FwezAYzCTbKaPRaCPLspOSLYB5fEdCkTnmZCdPI2ehd1AdR6R650yn0xuz2WyuKvEbegrtk+o5eDCAPkJNHIfsKnYJjNz0GCiA8sdSPUklPQ9dYoByJlWwfoo62i6Ihj53IfWHJlMDttQdCa0Ru2VQKFFOaRIsjF4R9sl+tC83JuUyoXEc1D0koTUSSqtthQH1BXAL85Ebk11laZryEDNfiVuuRmyPTueFWOADHdRssRBJG6UQo7yqLJO0DjtBNVK4UtG5zwTRgdiOA4VKzcSqCUwzfxFqpI+EGLEsy4i7vL6YqUpx40b6siJRb9/Hsoy4E62Lq8oaUSO2Ea80VUdox27qUwh2+6kR78o0mHH3dZMIx6DYaTn1SdvZW9SVYAOvgVWkz0a4KsEs2ohd6gUQ1deijUS9xUWyd0b6xv9pBPf3GQmXwWlJgzCHExO8iuQ94zL88XF+GLehZ1DsX1Jib7Oj0F3osPPjV0DmtAOdQpx/yzcZIR1+slRSZYKUjTRuLTYom+AAPil1ZTHo2D4Jdv4aRG0Vp6MCVZOuqr8AUvRtBly7W6uzV7Ys1m5F2p3GGjo8F15arwgnWie3zjIwo+CmuYLkA+NFgn63YOSzZEO4AJ3LwyC+ov9jEpsBL0OtcP/0X9Z4PL4nQwSB7h7lvQbzRZruXb+dgDd8QMJo9q7fLsDB/SVhNL3aWqD1C+3VivwLa3dG+rK1WqNGtqCXebiaqJExdBt6ZXIriHtGRtAm9NrkVozyYaeZW9Abk+s/PyW1X78mxQ+SuYaR34/kOXSd+TpQV6K/8NOdz/Hh+DDLspjt+gCK+dB8grHuMygYUWgIHET4ArpmHnrwmfBBYx3wFtpE39+YUSNMCPP2Pw7EzEWTKcIGMbMLcxzOD+gTX3ieXRuS5A+l9l54jQJiowAAAABJRU5ErkJggg==", 50, 50},
-				["LUA"] = {"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", 50, 69},
-				["PLAYERS"] = {"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAS+SURBVGhD7ZpbiFVVGMdnRk3TpCxLLEXzWlpWair1YJkkqEgYpQ0oeAETexCMHjIfJggfRXqRHowgCIOIBG8gmGAUIoxiUYhMBeUlZbzgdXQcf/+1vz3WeM7Z69tntkxwfvBj7bXc37rsy1prn7GuRo0eQEdHRz32VWpF3U5hbVBhH1yO+/AS3rJUeZX3sVNzozqsrmLaoIKx2IyVOIxjLcQNsWOwuDYIHIknVEsEOm+khUajGIuNwd8GAXpOv1e0g/0Y/VzrXCy0DTUyO4T5mW1VZMK5ryUhbkq20WBpV96y1IsnrlvbKDeQZy31MsnSGPK2UTKu3ED6W+ql3VI9Og04HVfh+7gUx9g/i8/xWnLoYoCl2dDgbvTyKw61+EY8rsIuaH3QCz7FzpuJl9HDbsVGwcnrk5hoLuBo1F3YooIMruMSa2txKIlnfehkDJw8HK+GsDjWWtzHSTaKGzjL4raHkmzUp+GKiYaADSE0m7N4P47HNhU4OIbanswIuWw2WPfiIagXfhHCK6OXVudvSrJu5qMWxz9CrjzqS7nJqTIEqoH3UFe9FGcwLFCkR0OJn00Wvy3J3oXaVh8qruhRyz2VPEAyF6fhQ9iKB3FnfX39FWvkHD6IXr6ljoXUoSl/Hr6Ij6DqS9u4RFqRkgOh0kEkb6Ou9jjUQEqd24FraEjT9RmOB4dSH18Tv4j4Tzh+Jyn6D2pDAzmGe1Hna5DlobLeqKn3IsayzmIPJFk3TRa/K8lmor6pj70Vdxf8wyD07kbFdxb/QZJ1MxU1c50LuXjUVz05d6BAn5Z5r+g1HIK6EP+owEFYpUnfTLJu1Oe+YRCCzMZQnJ9PrZ4FeDOUZHMKR6DuxhEV5GRjOohhqKtaDer8HKtPL66+tyuhfdhEO7/ai6i+D9MCswzv3J58aBc7jwobmFG2cfwMfoaaplM0+7TgR/gc5/3C+UM4fgFvYV7U92Va8A5w8HIo8qNt+xZsomNaHDVFj8BRqO22ZhblNX1rej6J6vR5/I2Ys6S6K/qO0cIY9l45+EGVtGIeFPe6aiF9GJuwBWPR43gQ9XOPpn3tnD/EdvTSqk7kCTyPk20Qb6DuRjXo56CnrL53Q4mPdgV60cfRAmt0Nea5EKXQHdb2RPVuDiUO8gzkS2tsDsZOtbGcxKGozwLPY+oeiDquL0E19KcKCuAru1Arkmwc3oHssUb0g0JR6FEdhwMwes/n/VDZaWmjpUWgPi1mar5Muj+UROAdiGYXrQ36LimSlyxttjQT70C0oD2G/UKuONIfGE5YmokGshK/Qa22WVzHarczMaQXqs3Scmjb8yM2dn718cjojylTcQZOx+fxSbwPU7Td6IXaMxVJC++IZkftA7cmRQF1/C88hPtwB+eFvpT81E2hIg1Cf5N4HLXB24GP4r0ayASOdVG1+dQAfqf83xvRTioOpBRUrrt0TwZix1F4X/YeS20gPY08A9GUeCU5LAy92C7cL7vghdfX36uo7/RXULNLtXdX65j2ctpd7+Jl7/yjUQy5BtIVBqbfl/THG32yPo2acZ5A7QIGYjpIfeZexdP4N+rXw5/xJ2ym81kLYFm6ZSCVYJAaRPo/F9rorBa1GjX+H9TV3QbNg/HZu3wRkgAAAABJRU5ErkJggg==", 50, 50},
-			}
-		end
 
 		for k, v in pairs(icons.registry) do
 			icons.registry[k][1] = ImageRef.new(syn.crypt.base64.decode(v[1]))
@@ -4921,15 +4942,19 @@ do
 	end
 
 	local function default_panel_objects(self)
+
+		-- create a rect with a Vector2 based point
 		local border = draw:Create("Rect", "2V")
 		border.Color = gui:GetColor("Border")
 		border.Filled = true
 		border.XAlignment = XAlignment.Right
 		border.YAlignment = YAlignment.Bottom
 
+		-- Clone from border (only properties not point data)
 		local outline = draw:Clone(border)
 		outline.Color = gui:GetColor("Outline")
 
+		-- Clone again...
 		local background = draw:Clone(border)
 		background.Color = gui:GetColor("Background")
 
@@ -5355,6 +5380,7 @@ do
 			text.Outlined = true
 			text.OutlineColor = Color3.fromRGB(0,0,0)
 			text.OutlineThickness = 1
+			text.TextXAlignment = XAlignment.Left
 			self.text = self:Cache(text)
 			self.font = font:GetDefault()
 			self.textsize = 16
@@ -5384,6 +5410,10 @@ do
 		function GUI:SetYAlignment(align)
 			self.text.YAlignment = align
 			self:ProcessClipping()
+		end
+
+		function GUI:SetTextXAlignment(align)
+			self.text.TextXAlignment = align
 		end
 
 		function GUI:SetFont(font)
@@ -5826,6 +5856,7 @@ do
 			text.Outlined = true
 			text.XAlignment = XAlignment.Right
 			text.YAlignment = YAlignment.Bottom
+			text.TextXAlignment = XAlignment.Left
 			text.OutlineColor = Color3.fromRGB(0,0,0)
 			text.OutlineThickness = 2
 			self.text = self:Cache(text)
@@ -5843,16 +5874,20 @@ do
 
 			local cursor = draw:Create("Rect", "2V")
 			cursor.Color = gui:GetColor("Border")
+			cursor.Visible = false
 			cursor.Filled = true
 			cursor.XAlignment = XAlignment.Right
 			cursor.YAlignment = YAlignment.Center
 			cursor.Color = Color3.fromRGB(127, 72, 163)
 			cursor.ZIndex = 4
+
 			local cursor_outline = draw:Clone(cursor)
-			cursor_outline.Color = gui:GetColor("Border")
+			cursor_outline.Color = Color3.new(0,0,0)
 			cursor_outline.ZIndex = 3
-			self.cursor_outline = cursor_outline
-			self.cursor = cursor
+
+			self.cursor = self:Cache(cursor)
+			self.cursor_outline = self:Cache(cursor_outline)
+
 
 			self.editable = true
 			self.highlightable = true
@@ -5963,9 +5998,10 @@ do
 			if not bool then
 				self.editing = nil
 				self.text.Color = Color3.fromRGB(255, 255, 255)
-				self.cursor.Opacity = 0
-				self.cursor_outline.Opacity = 0
+				self.cursor.Visible = false
+				self.cursor_outline.Visible = false
 				self:Cache(self.cursor)
+				self:Cache(self.cursor_outline)
 			end
 		end
 
@@ -6008,6 +6044,10 @@ do
 			if not self.editable or not self._enabled then return end
 			if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
 				self.editing = true
+				self.cursor.Visible = true
+				self.cursor_outline.Visible = true
+				self:Cache(self.cursor)
+				self:Cache(self.cursor_outline)
 				self.text.Color = self.texthighlight
 				self.cursor_position = self:DetermineTextCursorPosition(mouse.X - self.absolutepos.X)
 				self:ProcessClipping()
@@ -6015,9 +6055,10 @@ do
 				if input.UserInputType == Enum.UserInputType.MouseButton1 and (not self:IsHovering() or (input.UserInputType == Enum.UserInputType.Keyboard and input.UserInputType == Enum.KeyCode.Return)) then
 					self.editing = nil
 					self.text.Color = Color3.fromRGB(255, 255, 255)
-					self.cursor.Opacity = 0
-					self.cursor_outline.Opacity = 0
+					self.cursor.Visible = false
+					self.cursor_outline.Visible = false
 					self:Cache(self.cursor)
+					self:Cache(self.cursor_outline)
 					if self:GetText() == "" then
 						self.text.Text = self.placeholder
 					end
@@ -7748,6 +7789,7 @@ do
 		end
 
 		local GUI = {}
+		local icons = BBOT.icons
 
 		function GUI:Init()
 			default_panel_objects(self)
@@ -7760,14 +7802,85 @@ do
 			self.title = gui:Create("Text", self)
 			self.title:SetXAlignment(XAlignment.Center)
 			self.title:SetYAlignment(YAlignment.Center)
-			self.title:SetPos(.5,0,.5,0)
+			self.title:SetPos(.5,0,.5,-1)
 			self.title:SetText("")
+
+			local sort_arrow = draw:Create("Image", "2V")
+			sort_arrow.Image = icons:NameToIcon("SORTARROW")[1]
+			sort_arrow.Color = Color3.fromRGB(127, 72, 163)
+			sort_arrow.Size = sort_arrow.ImageSize
+			sort_arrow.XAlignment = XAlignment.Right
+			sort_arrow.YAlignment = YAlignment.Center
+			sort_arrow.Visible = false
+			sort_arrow.ZIndex = 2
+			self.sort_arrow = self:Cache(sort_arrow)
+
+			local sort_none = draw:Create("Rect", "2V")
+			sort_none.XAlignment = XAlignment.Right
+			sort_none.YAlignment = YAlignment.Center
+			sort_none.Filled = true
+			sort_none.Color = Color3.fromRGB(127, 72, 163)
+			sort_none.Size = Vector2.new(6,2)
+			sort_none.ZIndex = 2
+			sort_none.Outlined = true
+			sort_none.OutlineThickness = 1
+			sort_none.OutlineColor = Color3.new(0,0,0)
+			self.sort_none = self:Cache(sort_none)
+
+			if config:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Menu Accent") then
+				local col = config:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Menu Accent", "Accent")
+				sort_arrow.Color = col
+				sort_none.Color = col
+			end
+
+			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
+				sort_arrow.Color = col
+				sort_none.Color = col
+			end)
+		end
+
+		function GUI:PreRemove()
+			hook:Remove("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid)
 		end
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
 			self.gradient.Offset = pos
 			self.gradient.Size = Vector2.new(size.X, 20)
+			local ww, hh = self.title:GetTextSize()
+			self.sort_arrow.Offset = pos + (size/2) + Vector2.new((ww/2) + 3, 0)
+			self.sort_none.Offset = pos + (size/2) + Vector2.new((ww/2) + 4, 0)
+		end
+
+		function GUI:InputBegan(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and self:IsHovering() then
+				local descending = false
+				if self.last_sorting == self.position then
+					if self.last_decending then
+						descending = false
+					else
+						descending = true
+					end
+				end
+				self.parent:ChangeSorting(self.position, descending)
+			end
+		end
+
+		function GUI:OnSortingChanged(position, descending)
+			self.last_sorting = position
+			self.last_decending = descending
+			if self.position ~= position then
+				self.sort_arrow.Visible = false
+				self.sort_none.Visible = true
+			elseif descending then
+				self.sort_arrow.Visible = true
+				self.sort_none.Visible = false
+				self.sort_arrow.Size = Vector2.new(self.sort_arrow.ImageSize.X, -self.sort_arrow.ImageSize.Y)
+			else
+				self.sort_arrow.Visible = true
+				self.sort_none.Visible = false
+				self.sort_arrow.Size = Vector2.new(self.sort_arrow.ImageSize.X, self.sort_arrow.ImageSize.Y)
+			end
 		end
 
 		gui:Register(GUI, "ListColumn")
@@ -7901,6 +8014,9 @@ do
 				self:OnSelected(s)
 			end
 			self.scrollpanel:Add(row)
+			if self.sort_position then
+				self:ChangeSorting(self.sort_position, self.sort_descending)
+			end
 			return row
 		end
 
@@ -7919,6 +8035,22 @@ do
 			self.columns[#self.columns+1] = newcolumn
 			self:Recalibrate()
 			return newcolumn
+		end
+
+		function GUI:ChangeSorting(position, descending)
+			self.sort_position = position
+			self.sort_descending = descending
+			table.sort(self.scrollpanel.canvas.children, function(a, b)
+				if descending then
+					return a.children[position].text:GetText() > b.children[position].text:GetText()
+				else
+					return a.children[position].text:GetText() < b.children[position].text:GetText()
+				end
+			end)
+			self.scrollpanel:PerformOrganization()
+			for i=1, #self.columns do
+				self.columns[i]:OnSortingChanged(position, descending)
+			end
 		end
 
 		gui:Register(GUI, "List")
@@ -9034,7 +9166,7 @@ do
 				image:SetImage(menu.images[5])
 				if #img > 4 then
 					if asset:IsFile("images", img) then
-						local data = asset:Get("images", img)
+						local data = asset:Read("images", img)
 						image:SetImage(ImageRef.new(data))
 					else
 						thread:Create(function(img, image)
@@ -9433,7 +9565,7 @@ do
 					image:SetImage(menu.images[5])
 					if #new > 4 then
 						if asset:IsFile("images", new) then
-							local data = asset:Get("images", new)
+							local data = asset:Read("images", new)
 							image:SetImage(ImageRef.new(data))
 						else
 							thread:Create(function(img, image)
@@ -9537,6 +9669,7 @@ do
 			text.Outlined = true
 			text.XAlignment = XAlignment.Right
 			text.YAlignment = YAlignment.Bottom
+			text.TextXAlignment = XAlignment.Left
 			text.OutlineColor = Color3.fromRGB(0,0,0)
 			text.OutlineThickness = 1
 			text.Font = font:GetFont(font:GetDefault())
@@ -9579,6 +9712,10 @@ do
 			self:Step(self.pos.Y, 1)
 		end
 
+		function meta:SetType(type)
+			self.type = type
+		end
+
 		local v1, v2, v3 = Vector2.new(1,1), Vector2.new(2,2), Vector2.new(4,4)
 		local v0 = Vector2.new()
 		function meta:Step(offset, deltatime)
@@ -9587,10 +9724,11 @@ do
 			local size = self.size
 
 			-- animations
+			local t = tick()
 			local pos = Vector2.new(1, offset) + Vector2.new(51, 11 + 20 + 6)
-			local fraction = math.timefraction(self.starttime, self.endtime, tick())
-			local tend = self.endtime - tick()
-			local tstart = tick() - self.starttime
+			local fraction = math.timefraction(self.starttime, self.endtime, t)
+			local tend = self.endtime - t
+			local tstart = t - self.starttime
 			if tstart < .5 then -- ease in
 				local scale = math.clamp(tstart/.5, 0, 1)
 				for i=1, #self.objects do
@@ -9639,6 +9777,22 @@ do
 
 			self.gradient.Offset = pos + Vector2.new(5,0)
 			self.gradient.Size = Vector2.new(size.X-5, 15)
+
+			if self.type == "error" then
+				local alert_color = Color3.fromHSV(0, 1, (math.sin(t * 6)+1)/2)
+				self.asthetic_line.Color = alert_color
+				local hue, saturation, darkness = Color3.toHSV(alert_color)
+				darkness = darkness / 2
+				local dark_accent = Color3.fromHSV(hue, saturation, darkness)
+				self.asthetic_line_dark.Color = dark_accent
+			elseif self.type == "alert" then
+				local alert_color = Color3.fromHSV(42.5/255, 1, (math.sin(t * 6)+1)/2)
+				self.asthetic_line.Color = alert_color
+				local hue, saturation, darkness = Color3.toHSV(alert_color)
+				darkness = darkness / 2
+				local dark_accent = Color3.fromHSV(hue, saturation, darkness)
+				self.asthetic_line_dark.Color = dark_accent
+			end
 		end
 
 		function meta:Remove()
@@ -9663,6 +9817,8 @@ do
 		construct:Setup(message, Color3.new(1,1,1), duration)
 
 		self.registry[#self.registry+1] = construct
+
+		return construct
 	end
 
 	hook:Add("RenderStepped", "BBOT:Notification.Process", function(deltatime)
@@ -9826,12 +9982,12 @@ do
 					end
 				end;
 				waited = waited + 1
-				if waited > 7 then
+				if waited > 12 then
 					BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
-				elseif waited > 5 then
+				elseif waited > 8 then
 					BBOT:SetLoadingStatus("What the hell is taking so long?")
 				end
-				wait(5)
+				wait(1)
 			end;
 		else
 			local waited = 0
@@ -9840,12 +9996,12 @@ do
 					break
 				end;
 				waited = waited + 1
-				if waited > 7 then
+				if waited > 12 then
 					BBOT:SetLoadingStatus("Something may be wrong... Contact the Demvolopers")
-				elseif waited > 5 then
+				elseif waited > 8 then
 					BBOT:SetLoadingStatus("What the hell is taking so long?")
 				end
-				wait(5)
+				wait(1)
 			end;
 		end
 	end
@@ -10314,6 +10470,7 @@ do
 						type = "Toggle",
 						name = "Enabled",
 						value = false,
+						unsafe = true,
 					},
 					{
 						type = "Toggle",
@@ -11019,21 +11176,14 @@ do
 										},
 										{
 											type = "Toggle",
-											name = "Skeleton",
-											value = false,
-											extra = {
-												{
-													type = "ColorPicker",
-													name = "Enemy skeleton",
-													color = { 255, 255, 255, 120 },
-												},
-											},
-										},
-										{
-											type = "Toggle",
 											name = "Out of View",
 											value = true,
 											extra = {
+												{
+													type = "ColorPicker",
+													name = "Outline Color",
+													color = { 0, 0, 0, 255 },
+												},
 												{
 													type = "ColorPicker",
 													name = "Arrow Color",
@@ -11053,7 +11203,31 @@ do
 										{
 											type = "Toggle",
 											name = "Dynamic Arrow Size",
-											value = true,
+											value = false,
+										},
+										{
+											type = "Toggle",
+											name = "Sound Arrows",
+											value = false,
+											tooltip = "These arrows only appear when certain audio is played."
+										},
+										{
+											type = "Toggle",
+											name = "Sound Dots",
+											value = false,
+											tooltip = "Shows where the sound was played from on screen.",
+											extra = {
+												{
+													type = "ColorPicker",
+													name = "Outline Color",
+													color = { 0, 0, 0, 255 },
+												},
+												{
+													type = "ColorPicker",
+													name = "Dot Color",
+													color = { 255, 0, 0, 255 },
+												},
+											},
 										},
 									},
 								},
@@ -13784,42 +13958,6 @@ do
 							},
 						}
 					},
-					{
-						name = "Fonts",
-						pos = UDim2.new(.5,4,1/2+2/10,8),
-						size = UDim2.new(.5,-4,1-(1/2+2/10),-12),
-						type = "Panel",
-						content = {
-							{
-								type = "DropBox",
-								name = "Title Font",
-								value = font_index,
-								values = font:GetFonts(),
-								onopen = function(dropbox)
-									font:RegisterAssets()
-									local fonts = font:GetFonts()
-									local cfgdata = config:GetRaw(unpack(dropbox.path))
-									cfgdata.values = fonts
-									dropbox:SetOptions(fonts)
-								end,
-								extra = {},
-							},
-							{
-								type = "DropBox",
-								name = "Body Font",
-								value = font_index,
-								values = font:GetFonts(),
-								onopen = function(dropbox)
-									font:RegisterAssets()
-									local fonts = font:GetFonts()
-									local cfgdata = config:GetRaw(unpack(dropbox.path))
-									cfgdata.values = fonts
-									dropbox:SetOptions(fonts)
-								end,
-								extra = {},
-							},
-						}
-					}
 				}
 			},
 			{
@@ -13843,7 +13981,7 @@ do
 							search:SetSize(1,0,0,16)
 							search:SetPlaceholder("Search Here")
 
-							local playerbox_size = 100
+							local playerbox_size = 115
 							local playerlist = gui:Create("List", container)
 							playerlist:SetPos(0,0,0,16+6)
 							playerlist:SetSize(1,0,1,-16-6-playerbox_size-8)
@@ -14031,6 +14169,20 @@ do
 								button.OnClick = function()
 									if not target then return end
 									votekick:Call(target, "Cheating")
+								end
+								Y=Y+16+7
+							end
+
+							-- Get UID
+							do
+								local button = gui:Create("Button", options_container)
+								button:SetPos(0, 0, 0, Y)
+								button:SetSize(1, 0, 0, 16)
+								button:SetText("Get UserId")
+								button:SetConfirmation("Are you sure?")
+								button.OnClick = function()
+									if not target then return end
+									setclipboard(tostring(target.UserId))
 								end
 								Y=Y+16+7
 							end
@@ -15093,6 +15245,7 @@ if not BBOT.Debug.menu then
 				end
 				local msgquery = self.buffer
 				msgquery[#msgquery+1] = msg .. spaces
+				chat:BufferStep()
 			end
 			
 			function chat:CheckIfValid(msg)
@@ -15406,15 +15559,19 @@ if not BBOT.Debug.menu then
 				chat.last_say = tick()
 			end)
 
-			hook:Add("RenderStepped", "BBOT:Chat.Query", function()
-				if chat.last_say + 2 > tick() then return end
-				local msg = chat.buffer[1]
+			function chat:BufferStep()
+				if self.last_say + 2 > tick() then return end
+				local msg = self.buffer[1]
 				if not msg then return end
-				table.remove(chat.buffer, 1)
+				table.remove(self.buffer, 1)
 				local vkinprogress = BBOT.votekick:IsCalling()
 				if not vkinprogress or vkinprogress > 5 then
-					chat:Say(msg)
+					self:Say(msg)
 				end
+			end
+
+			hook:Add("RenderStepped", "BBOT:Chat.Query", function()
+				chat:BufferStep()
 			end)
 		end
 
@@ -15654,6 +15811,7 @@ if not BBOT.Debug.menu then
 			local table = BBOT.table
 			local notification = BBOT.notification
 			local statistics = BBOT.statistics
+			local asset = BBOT.asset
 			local TeleportService = game:GetService("TeleportService")
 			local localplayer = BBOT.service:GetService("LocalPlayer")
 			local httpservice = BBOT.service:GetService("HttpService")
@@ -15665,13 +15823,13 @@ if not BBOT.Debug.menu then
 				interacted = {}
 			})
 
-			serverhopper.file = "bitchbot/" .. BBOT.game .. "/data/server-blacklist.json"
+			serverhopper.file = "server-blacklist.json"
 			serverhopper.blacklist = {}
 			serverhopper.UserId = tostring(localplayer.UserId)
 
 			hook:Add("PostInitialize", "BBOT:ServerHopper.Load", function()
-				if isfile(serverhopper.file) then
-					serverhopper.blacklist = httpservice:JSONDecode(readfile(serverhopper.file))
+				if asset:IsFile("data", serverhopper.file) then
+					serverhopper.blacklist = asset:ReadJSON("data", serverhopper.file) or {}
 					local otime = os.time()
 					for _, userblacklist in pairs(serverhopper.blacklist) do
 						for k, v in pairs(userblacklist) do
@@ -15681,7 +15839,7 @@ if not BBOT.Debug.menu then
 							end
 						end
 					end
-					writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+					asset:WriteJSON("data", serverhopper.file, serverhopper.blacklist)
 					local plbllist = serverhopper.blacklist[serverhopper.UserId]
 					if plbllist then
 						local c = 0
@@ -15697,7 +15855,7 @@ if not BBOT.Debug.menu then
 
 			function serverhopper:ClearBlacklist()
 				serverhopper.blacklist = {}
-				writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+				asset:WriteJSON("data", serverhopper.file, serverhopper.blacklist)
 				notification:Create("Server hop blacklist cleared!")
 			end
 
@@ -15762,14 +15920,14 @@ if not BBOT.Debug.menu then
 			end
 
 			function serverhopper:AddToBlacklist(id, removaltime)
-				self.blacklist = httpservice:JSONDecode(readfile(serverhopper.file)) or self.blacklist
+				self.blacklist = asset:ReadJSON("data", self.file) or self.blacklist
 				local plbllist = self.blacklist[self.UserId]
 				if not plbllist then
 					plbllist = {}
 					self.blacklist[self.UserId] = plbllist
 				end
 				plbllist[id] = (removaltime and removaltime + os.time() or -1)
-				writefile(serverhopper.file, httpservice:JSONEncode(serverhopper.blacklist))
+				asset:WriteJSON("data", serverhopper.file, serverhopper.blacklist)
 				log(LOG_NORMAL, "Added " .. game.JobId .. " to server-hop blacklist")
 				notification:Create("Added " .. game.JobId .. " to server-hop blacklist")
 			end
@@ -15906,7 +16064,7 @@ if not BBOT.Debug.menu then
 				["Kill"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Kill") or ""),
 				["Headshot"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Headshot") or ""),
 				["Hit"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Hit") or ""),
-				["Fire"] = "rbxassetid://" .. (config:GetValue("Main", "Misc", "Sounds", "Fire") or ""),
+				["Fire"] = "",
 			}
 
 			hook:Add("OnConfigChanged", "BBOT:Sounds.Cache", function(path, old, new)
@@ -17704,6 +17862,7 @@ if not BBOT.Debug.menu then
 			local replication = BBOT.aux.replication
 			local menu = BBOT.menu
 			local aux_camera = BBOT.aux.camera
+			local vector = BBOT.aux.vector
 			local particle = BBOT.aux.particle
 			local runservice = BBOT.service:GetService("RunService")
 			local players = BBOT.service:GetService("Players")
@@ -17746,7 +17905,7 @@ if not BBOT.Debug.menu then
 			end)
 
 			hook:Add("PreupdateStep", "BBOT:Spectator.RenderAll", function(player, controller, renderscale, shouldrender)
-				if spectator:IsSpectating() then
+				if spectator:IsSpectating() or spectator.freecam_enabled then
 					return 3, true
 				end
 			end)
@@ -17841,34 +18000,95 @@ if not BBOT.Debug.menu then
 
 			spectator.lookangle = Vector2.new()
 			spectator.position = Vector3.new()
+			spectator.freecam_angles = Vector3.new()
+			spectator.freecam_position = Vector3.new()
+			spectator.freecam_cframe = CFrame.new()
+			spectator.freecam_enabled = false
+			spectator.camera_final = CFrame.new()
+
+			local l__CFrame_Angles__14 = CFrame.Angles;
+			hook:Add("Mouse.OnMove", "BBOT:Spectator.FreeCam", function(mouse_delta)
+				if config:GetValue("Main", "Visuals", "Camera Visuals", "FreeCam") and config:GetValue("Main", "Visuals", "Camera Visuals", "FreeCam", "KeyBind") then
+					local sensitivity = aux_camera.sensitivity * aux_camera.sensitivitymult * math.atan(math.tan(aux_camera.basefov * (math.pi / 180) / 2) / 2.718281828459045 ^ aux_camera.magspring.p) / (32 * math.pi);
+					local pitch_cos = math.cos(spectator.freecam_angles.x);
+					local delta = Vector3.new(-sensitivity * mouse_delta.y * aux_camera.xinvert, -(sensitivity * (1 - (1 - pitch_cos) ^ (aux_camera.sensitivity * aux_camera.sensitivitymult * math.atan(math.tan(aux_camera.basefov * (math.pi / 180) / 2)) / (32 * math.pi) / sensitivity)) / pitch_cos) * mouse_delta.x, 0);
+					
+					local pitch = math.clamp(spectator.freecam_angles.x + delta.x, aux_camera.minangle, aux_camera.maxangle);
+					local yaw = spectator.freecam_angles.y + delta.y
+					spectator.freecam_angles = Vector3.new(pitch, yaw)
+				end
+			end)
+
+			local userinputservice = BBOT.service:GetService("UserInputService")
+			local localplayer = BBOT.service:GetService("LocalPlayer")
 			function spectator.step()
 				local self = spectator
-				if not self.spectating then return end
-				local target = self.spectating
-				local updater = replication.getupdater(target)
-				if not updater or not updater.alive then return end
+				if config:GetValue("Main", "Visuals", "Camera Visuals", "FreeCam") and config:GetValue("Main", "Visuals", "Camera Visuals", "FreeCam", "KeyBind") then
+					if not self.freecam_enabled then
+						self.freecam_angles = Vector3.new(self.camera_final:ToEulerAnglesXYZ())
+						self.freecam_position = self.camera_final.p
+					end
+					self.freecam_enabled = true
+					userinputservice.MouseBehavior = Enum.MouseBehavior.LockCenter
+					local look_cframe = CFrame.Angles(0, self.freecam_angles.Y, 0) * CFrame.Angles(self.freecam_angles.X, 0, 0)
 
-				local stance = updater.__stance or "stand"
-				local offset = vector_blank
-				if stance == "stand" then
-					offset = stand
-				elseif stance == "crouch" then
-					offset = crouch
+					local LookVector = look_cframe.LookVector
+					local RightVector = look_cframe.RightVector
+					if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
+						LookVector = LookVector * 2
+						RightVector = RightVector * 2
+					end
+					if userinputservice:IsKeyDown(Enum.KeyCode.W) then
+						self.freecam_position += LookVector
+					end
+					if userinputservice:IsKeyDown(Enum.KeyCode.S) then
+						self.freecam_position -= LookVector
+					end
+					if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+						self.freecam_position += RightVector
+					end
+					if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+						self.freecam_position -= RightVector
+					end
+
+					local new_cframe = look_cframe + self.freecam_position
+					spectator.freecam_cframe = new_cframe
+					aux_camera.basecframe = new_cframe
+					aux_camera.cframe = new_cframe
+					camera.CFrame = new_cframe
 				else
-					offset = prone
+					self.freecam_enabled = false
+					if not self.spectating then return end
+					local target = self.spectating
+					local updater = replication.getupdater(target)
+					if not updater or not updater.alive then return end
+
+					local stance = updater.__stance or "stand"
+					local offset = vector_blank
+					if stance == "stand" then
+						offset = stand
+					elseif stance == "crouch" then
+						offset = crouch
+					else
+						offset = prone
+					end
+					if self.repupdate_position and self.repupdate_angles then
+						local renderstep_tick = BBOT.renderstepped_rate
+						self.position = math.lerp(renderstep_tick*25, self.position, self.repupdate_position+offset)
+						camera.CFrame = CFrame.new(self.position)
+						self.lookangle = math.lerp(renderstep_tick*25, self.lookangle, self.repupdate_angles)
+						camera.CFrame *= CFrame.fromOrientation(self.lookangle.X,self.lookangle.Y,0)
+					end
+					aux_camera.basecframe = camera.CFrame
+					aux_camera.cframe = camera.CFrame
 				end
-				if self.repupdate_position and self.repupdate_angles then
-					local renderstep_tick = BBOT.renderstepped_rate
-					self.position = math.lerp(renderstep_tick*25, self.position, self.repupdate_position+offset)
-					camera.CFrame = CFrame.new(self.position)
-					self.lookangle = math.lerp(renderstep_tick*25, self.lookangle, self.repupdate_angles)
-					camera.CFrame *= CFrame.fromOrientation(self.lookangle.X,self.lookangle.Y,0)
-				end
-				aux_camera.basecframe = camera.CFrame
-				aux_camera.cframe = camera.CFrame
 			end
 
 			hook:Add("PreScreenCullStep", "BBOT:Spectator.Spectate", spectator.step)
+
+			hook:Add("PostScreenCullStep", "BBOT:Spectator.Spectate", function()
+				spectator.camera_final = aux_camera.cframe
+			end)
 		end
 
 		-- Aimbot (Conversion In Progress)
@@ -17910,12 +18130,12 @@ if not BBOT.Debug.menu then
 					if table.quicksearch(const, "firepos") and table.quicksearch(const, "bullets") and table.quicksearch(const, "bulletcolor") and table.quicksearch(const, "penetrationdepth") then
 						hook:Add("PreNetworkReceive", "BBOT:NewBullets.Network", function(netname, ...)
 							if netname == netindex then
-								hook:Call("PreNewBullets", ...)
+								hook:CallP("PreNewBullets", ...)
 							end
 						end)
 						hook:Add("PostNetworkReceive", "BBOT:NewBullets.Network", function(netname, ...)
 							if netname == netindex then
-								hook:Call("PostNewBullets", ...)
+								hook:CallP("PostNewBullets", ...)
 							end
 						end)
 					end
@@ -18022,7 +18242,7 @@ if not BBOT.Debug.menu then
 			function aimbot:BarrelPrediction(target, dir, gun)
 				local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
 				if part then
-					return ((dir - part.CFrame.LookVector) * math.pi) - (dir - (target - part.CFrame.Position).Unit)
+					return (((dir - part.CFrame.LookVector) * math.pi) - (dir - (target - part.CFrame.Position).Unit))
 				end
 			end
 
@@ -18130,7 +18350,7 @@ if not BBOT.Debug.menu then
 					local parts = self:GetParts(v)
 					if not parts then continue end
 				
-					if v.Team and v.Team == localplayer.Team then
+					if v.Team and v.Team == localplayer.Team or config:GetPriority(v) < 0 then
 						continue
 					end
 
@@ -18321,13 +18541,14 @@ if not BBOT.Debug.menu then
 						local X, Y = self:GetLegitConfig("Ballistics", "Barrel Comp X")/100, self:GetLegitConfig("Ballistics", "Barrel Comp Y")/100
 						local correction_dir = self:BarrelPrediction(position, dir, gun)
 						dir = dir + Vector3.new(correction_dir.X * X, correction_dir.Y * Y, 0)
+						dir = dir.Unit
 					end
 
 					local pos, onscreen = camera:WorldToViewportPoint(cam_position + (dir*magnitude))
 					if onscreen then
 						local randMag = self:GetLegitConfig("Aim Assist", "Randomization")
 						local smoothing = smoothing_incrimental * 5 + 5
-						local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - (36*2) - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
+						local inc = Vector2.new((pos.X - mouse.X + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing, (pos.Y - 36 - mouse.Y + (math.noise(time() * 0.1, 0.1) * randMag)) / smoothing)
 						Move_Mouse(inc)
 					end
 				end
@@ -19095,6 +19316,7 @@ if not BBOT.Debug.menu then
 				end)
 
 				local blank_vector = Vector3.new()
+				local vecdown = Vector3.new(0,1.55,0)
 				function aimbot:GetRageTarget(fov, gun)
 					if self.tp_target then
 						return self.tp_target
@@ -19254,13 +19476,31 @@ if not BBOT.Debug.menu then
 											-- this is the point selection thingy
 											-- if point is a vector3 it's a static offset
 											-- while a cframe is a relative offset
-											if fp_name == "Random" then
+											--[[if fp_name == "Random" then
 												local offset = vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance))
 												newcf = targetcframe + offset + stanceoffset
 											elseif typeof(firepos_points[i]) == "Vector3" then
 												newcf = targetcframe + firepos_points[i] + stanceoffset
 											else
 												newcf = targetcframe * lookatme * firepos_points[i] + stanceoffset
+											end]]
+
+											if fp_name == "Random" then
+												local offset = vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance))
+												newcf = targetcframe + offset
+												if offset.Y < -8.5 then
+													newcf = targetcframe + Vector3.new(offset.X, -8.5, offset.Z)
+												end
+											elseif typeof(firepos_points[i]) == "Vector3" then
+												newcf = targetcframe + firepos_points[i]
+												if firepos_points[i].Y < -8.5 then
+													newcf = targetcframe + firepos_points[i] + Vector3.new(firepos_points[i].X, -8.5, firepos_points[i].Z)
+												end
+											else
+												newcf = targetcframe * lookatme * firepos_points[i]
+												if newcf.p.Y < targetcframe.p.Y and math.abs(newcf.p.Y - targetcframe.p.Y) > 8.5 then
+													newcf = targetcframe * lookatme * CFrame.new(Vector3.new(firepos_points[i].p.X, -8.5, firepos_points[i].p.Z))
+												end
 											end
 										else
 											-- this is for TP scanning points also relative btw
@@ -19277,14 +19517,18 @@ if not BBOT.Debug.menu then
 											end
 											local new, position, dir = repupdate:FindMinimumMoveTo(cam_position)
 											if not repupdate:CanMoveTo(position) then continue end
-											if new and tp_scan_shift then
-												tp_scanning_shift_dir = dir
-											end
 											cam_position = position
+											if new and tp_scan_shift then
+												local dir_mul = (dir*firepos_shift_distance)
+												if dir_mul.Y < -8.5 then
+													dir_mul = Vector3.new(dir_mul.X, dir_mul.Y+1.5, dir_mul.Z)
+												end
+												tp_scanning_shift_dir = dir_mul
+											end
 										end
 										local u = i
 										do
-											local aim_position = (tp_scanning_shift_dir and (tp_scanning_shift_dir*firepos_shift_distance)+cam_position or cam_position)
+											local aim_position = (tp_scanning_shift_dir and tp_scanning_shift_dir + cam_position or cam_position)
 											local lookatme = CFrame.new(blank_vector, aim_position-pos)
 											local targetcframe = CFrame.new(pos)
 											for i=1, #hitbox_points do
@@ -19646,6 +19890,7 @@ if not BBOT.Debug.menu then
 							_sfov = camera.FieldOfView / char.unaimedfov * _sfov
 							_tfov = camera.FieldOfView / char.unaimedfov * _tfov
 						end
+
 						local yport = camera.ViewportSize.y
 						fov.Radius = _fov / camera.FieldOfView  * yport
 						dzfov.Radius = _dzfov / camera.FieldOfView  * yport
@@ -19688,10 +19933,16 @@ if not BBOT.Debug.menu then
 					if enabled and curgun ~= gamelogic.currentgun or set then
 						curgun = gamelogic.currentgun
 						if curgun and curgun.data and curgun.data.bulletspeed then
-							fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist")
-							dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone")
-							sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect")
-							tfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Trigger Bot")
+							aimbot:SetCurrentType(curgun)
+
+							local _fov_enabled = aimbot:GetLegitConfig("Aim Assist", "Enabled")
+							local _sfov_enabled = aimbot:GetLegitConfig("Bullet Redirect", "Enabled")
+							local _tfov_enabled = aimbot:GetLegitConfig("Trigger Bot", "Enabled")
+
+							fov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist") and _fov_enabled
+							dzfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Aim Assist Deadzone") and _fov_enabled
+							sfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Bullet Redirect") and _sfov_enabled
+							tfov.Visible = config:GetValue("Main", "Visuals", "FOV", "Trigger Bot") and _tfov_enabled
 						else
 							local bool = false
 							fov.Visible = bool
@@ -19809,21 +20060,15 @@ if not BBOT.Debug.menu then
 							local raycastdata = self:raycastbullet(camera.CFrame.Position,part.CFrame.Position-camera.CFrame.Position)
 							if raycastdata and raycastdata.Position then
 								local point, onscreen = camera:WorldToViewportPoint(raycastdata.Position)
-								if onscreen then
-									positionoverride = point
-								end
+								positionoverride = point
 							else
 								raycastdata = self:raycastbullet(part.CFrame.Position,part.CFrame.LookVector * 10000)
 								if raycastdata and raycastdata.Position then
 									local point, onscreen = camera:WorldToViewportPoint(raycastdata.Position)
-									if onscreen then
-										positionoverride = point
-									end
+									positionoverride = point
 								else
 									local point, onscreen = camera:WorldToViewportPoint(part.CFrame.Position + part.CFrame.LookVector * 10000)
-									if onscreen then
-										positionoverride = point
-									end
+									positionoverride = point
 								end
 							end
 							if positionoverride then
@@ -20211,7 +20456,6 @@ if not BBOT.Debug.menu then
 
 			esp.container = Instance.new("Folder")
 			esp.container.Name = string.random(8, 14) -- you gonna try that GetChildren attack anytime soon?
-			syn.protect_gui(esp.container) -- for chams only!
 			esp.container.Parent = playergui.MainGui
 
 			-- Adds an ESP object to the rendering query
@@ -20325,6 +20569,9 @@ if not BBOT.Debug.menu then
 							table.remove(controllers, i-c)
 							c = c + 1
 							errors = errors + 1
+							if (BBOT.notification) then
+								BBOT.notification:Create("!!!ERROR!!!\nAn error has occured in ESP library.\nPlease check Synapse console!", 30):SetType("error")
+							end
 						elseif destroy then
 							table.remove(controllers, i-c)
 							c = c + 1
@@ -20377,6 +20624,7 @@ if not BBOT.Debug.menu then
 				local hud = BBOT.aux.hud
 				local aimbot = BBOT.aimbot
 				local color = BBOT.color
+				local vector = BBOT.vector
 				local camera_aux = BBOT.aux.camera
 				local updater = replication.getupdater
 				local player_registry = replication.player_registry
@@ -20400,24 +20648,6 @@ if not BBOT.Debug.menu then
 
 					function player_meta:CanRender()
 						local alive = hud:isplayeralive(self.player)
-						local flags = self:GetConfig("Flags")
-						local priority_level = config:GetPriority(self.player)
-						if flags["Friends Only"] and flags["Priority Only"] then
-							if priority_level == 0 then
-								alive = false
-							end
-						elseif (flags["Friends Only"] and priority_level >= 0) then
-							alive = false
-						elseif (flags["Priority Only"] and priority_level <= 0) then
-							alive = false
-						end
-
-						local spectating = spectator:IsSpectating()
-						if spectating == self.player then
-							alive = false
-						elseif spectating and hud:isplayeralive(self.player) then
-							alive = true
-						end
 
 						if alive ~= self.alive then
 							self.alive = alive
@@ -20467,8 +20697,17 @@ if not BBOT.Debug.menu then
 						"rleg"
 					}
 
+					-- for outofview stuff
+					local size = math.floor(camera.ViewportSize.x * 0.0078125)
+					local big_size = math.floor(camera.ViewportSize.x * 0.0260416666667)
+
+					hook:Add("Camera.ViewportChanged", "BBOT:ESP.Players.OutofView", function(newport)
+						size = math.floor(newport.x * 0.0078125)
+						big_size = math.floor(newport.x * 0.0240416666667)
+					end)
+
+					local dot = Vector3.new().Dot
 					function player_meta:Render(points)
-						if not self:GetConfig("Enabled") then return end
 						if not self.parts and not points then return end
 
 						local flags = self:GetConfig("Flags")
@@ -20606,6 +20845,11 @@ if not BBOT.Debug.menu then
 							bounding_box.h = math.floor(bottom - top)
 						end
 
+						local vectest, vectest2 = Vector2.new(bounding_box.x, bounding_box.y), Vector2.new(bounding_box.w, bounding_box.h)
+						if vectest ~= vectest or vectest2 ~= vectest2 then
+							return
+						end
+
 						local lefty, righty = 0, 0
 
 						if self.box and self.box_enabled then
@@ -20657,10 +20901,10 @@ if not BBOT.Debug.menu then
 										color = self:GetConfig("Health Bar", "Color Max"),
 									},
 								})
-								self.healthbar.Offset = Vector2.new(bounding_box.x - 6, bounding_box.y + (bounding_box.h * math.clamp(1-(self.health_lerp/100), 0, 1)))
-								self.healthbar.Size = Vector2.new(2, bounding_box.h * math.clamp(self.health_lerp/100, 0, 1))
-								self.healthbar_outline.Offset = Vector2.new(bounding_box.x - 6 - 1, bounding_box.y-1)
-								self.healthbar_outline.Size = Vector2.new(2+2, bounding_box.h+2)
+								self.healthbar.Offset = Vector2.new(bounding_box.x - 6, bounding_box.y + (bounding_box.h * math.clamp(1-(self.health_lerp/100), 0, 1))+1)
+								self.healthbar.Size = Vector2.new(2, bounding_box.h * math.clamp(self.health_lerp/100, 0, 1)-2)
+								self.healthbar_outline.Offset = Vector2.new(bounding_box.x - 6 - 1, bounding_box.y)
+								self.healthbar_outline.Size = Vector2.new(2+2, bounding_box.h)
 							end
 						end
 
@@ -20737,7 +20981,178 @@ if not BBOT.Debug.menu then
 								end
 							end
 						end
+
+						if self.outofview and self.outofview_enabled then
+							local soundsteps = self:GetConfig("Sound Arrows")
+							local arrow_dist = self:GetConfig("Arrow Distance")
+							if fail and self.controller.receivedPosition and arrow_dist then
+								self.outofview.Visible = true
+								self.outofview_outline.Visible = true
+								local position = self.controller.receivedPosition
+								if soundsteps then
+									if self.footstep_time and self.weaponstep_time then
+										if self.footstep_time > self.weaponstep_time then
+											position = self.footstep_position
+										else
+											position = self.weaponstep_position
+										end
+									elseif self.footstep_time then
+										position = self.footstep_position
+									elseif self.weaponstep_time then
+										position = self.weaponstep_position
+									end
+								end
+								if position then
+									local relativePos = camera.CFrame:PointToObjectSpace(position)
+									local angle = math.atan2(-relativePos.Y, relativePos.X)
+
+									local distance = dot(relativePos.Unit, relativePos)
+									local arrow_size = self:GetConfig("Dynamic Arrow Size") and math.remap(distance, 1, 100, big_size, size) or size
+									arrow_size = arrow_size > big_size and big_size or arrow_size < size and size or arrow_size
+
+									local direction = Vector2.new(math.cos(angle), math.sin(angle))
+									local SCREEN_SIZE = camera.ViewportSize
+									local pos
+									if arrow_dist ~= 101 then
+										pos = (direction * SCREEN_SIZE.X * arrow_dist / 200) + (SCREEN_SIZE * 0.5)
+									end
+									if not pos or pos.Y > SCREEN_SIZE.Y - 5 or pos.Y < 5 then
+										pos = camera:AngleToEdge(angle, 5)
+									end
+
+									self.outofview.Offset1 = pos
+									self.outofview.Offset2 = pos - vector.rotate(direction, 0.5) * arrow_size
+									self.outofview.Offset3 = pos - vector.rotate(direction, -0.5) * arrow_size
+
+									self.outofview_outline.Offset1 = pos + direction * 2
+									self.outofview_outline.Offset2 = pos - vector.rotate(direction, 0.52) * (arrow_size+2)
+									self.outofview_outline.Offset3 = pos - vector.rotate(direction, -0.52) * (arrow_size+2)
+
+									if soundsteps then
+										local mul_opacity = 0
+										if self.footstep_time then
+											mul_opacity = (1-math.clamp(math.timefraction(self.footstep_time, self.footstep_time+.25, tick()), 0, 1))
+											mul_opacity = mul_opacity * (1-math.clamp(self.footstep_distance/(128/1.25), 0, 1))
+										end
+
+										if self.weaponstep_time then
+											local _mul_opacity = 0
+											_mul_opacity = (1-math.clamp(math.timefraction(self.weaponstep_time, self.weaponstep_time+.3, tick()), 0, 1))
+											_mul_opacity = _mul_opacity * (1-math.clamp(self.weaponstep_distance/(512/1.75), 0, 1)) * self.weaponstep_volume
+											mul_opacity = mul_opacity + _mul_opacity
+										end
+
+										mul_opacity = math.clamp(mul_opacity, 0, 1)
+
+										local color, color_transparency = self:GetConfig("Out of View", "Arrow Color")
+										color_transparency = color_transparency or 0
+										self.outofview.Opacity = color_transparency * mul_opacity
+										self.outofview.OutlineOpacity = color_transparency * mul_opacity
+										self:Cache(self.outofview)
+				
+										color, color_transparency = self:GetConfig("Out of View", "Outline Color")
+										color_transparency = color_transparency or 0
+										self.outofview_outline.Opacity = color_transparency * mul_opacity
+										self.outofview_outline.OutlineOpacity = color_transparency * mul_opacity
+										self:Cache(self.outofview_outline)
+									end
+								end
+							else
+								self.outofview.Visible = false
+								self.outofview_outline.Visible = false
+							end
+						end
+
+						if self.sounddot and self.sounddot_enabled then
+							if self.controller.receivedPosition and (self.footstep_time or self.weaponstep_time) then
+								self.sounddot.Visible = true
+								local mul_opacity = 0
+								if self.footstep_time then
+									mul_opacity = (1-math.clamp(math.timefraction(self.footstep_time, self.footstep_time+.25, tick()), 0, 1))
+									mul_opacity = mul_opacity * (1-math.clamp(self.footstep_distance/(128/1.25), 0, 1))
+								end
+
+								if self.weaponstep_time then
+									local _mul_opacity = 0
+									_mul_opacity = (1-math.clamp(math.timefraction(self.weaponstep_time, self.weaponstep_time+.3, tick()), 0, 1))
+									_mul_opacity = _mul_opacity * (1-math.clamp(self.weaponstep_distance/(512/1.75), 0, 1)) * self.weaponstep_volume
+									mul_opacity = mul_opacity + _mul_opacity
+								end
+
+								mul_opacity = math.clamp(mul_opacity, 0, 1)
+
+								local position = self.controller.receivedPosition
+								if self.footstep_time and self.weaponstep_time then
+									if self.footstep_time > self.weaponstep_time then
+										position = self.footstep_position
+									else
+										position = self.weaponstep_position
+									end
+								elseif self.footstep_time then
+									position = self.footstep_position
+								elseif self.weaponstep_time then
+									position = self.weaponstep_position
+								end
+
+								if position then
+									local dist = (position - camera.CFrame.p).Magnitude
+									self.sounddot.Radius = math.clamp(math.remap(dist, 256, 0, 4, 10), 3, 12)
+									self.sounddot.Point = position
+								end
+
+								local color, color_transparency = self:GetConfig("Sound Dots", "Dot Color")
+								color_transparency = color_transparency or 0
+								self.sounddot.Opacity = color_transparency * mul_opacity
+								local color, color_transparency = self:GetConfig("Sound Dots", "Outline Color")
+								color_transparency = color_transparency or 0
+								self.sounddot.OutlineOpacity = color_transparency * mul_opacity
+								self:Cache(self.sounddot)
+							else
+								self.sounddot.Visible = false
+							end
+						end
 					end
+
+					hook:Add("SuppressSound", "BBOT:ESP.Players.soundsteps", function(name, soundgroup, volume, pitch, pitchmin, pitchmax, part, max_distance, emitter_size, rolloffmode, playonremove, loop)
+						if not part then return end
+						local iswalk, isrun = string.find(name, "walk"), string.find(name, "run")
+						if not iswalk and not isrun then return end
+						for i, player in next, players:GetPlayers() do
+							if player == localplayer then continue end
+							local parts = replication.getbodyparts(player)
+							if not parts then continue end
+							local found = false
+							for k, v in next, parts do
+								if v == part then
+									found = true
+									break
+								end
+							end
+							if found then
+								local object = esp:Find("PLAYER_" .. player.UserId)
+								if object and object.alive and object.parts and object.parts.torso and (object.parts.torso.CFrame.p - camera.CFrame.p).Magnitude < 128 then
+									object.footstep_time = tick()
+									object.footstep_volume = volume
+									object.footstep_distance = (object.parts.torso.CFrame.p - camera.CFrame.p).Magnitude
+									object.footstep_position = object.parts.torso.CFrame.p
+								end
+								break
+							end
+						end
+					end)
+
+					hook:Add("PreNewBullets", "BBOT:ESP.Players.WeaponSounds", function(data)
+						if not data.player or spectator:IsSpectating() == data.player then return end
+						local updater = replication.getupdater(data.player)
+						if not updater or not updater.alive then return end
+						local object = esp:Find("PLAYER_" .. data.player.UserId)
+						if object and object.alive and object.parts and object.parts.torso then
+							object.weaponstep_time = tick()
+							object.weaponstep_volume = data.volume
+							object.weaponstep_distance = (object.parts.torso.CFrame.p - camera.CFrame.p).Magnitude
+							object.weaponstep_position = object.parts.torso.CFrame.p
+						end
+					end)
 
 					function player_meta:GetConfig(...)
 						local lp = localplayer
@@ -20844,6 +21259,35 @@ if not BBOT.Debug.menu then
 						local resolved = draw:Clone(resolved_background)
 						resolved.Radius = 3
 						self.resolved = self:Cache(resolved)
+
+						color, color_transparency = self:GetConfig("Out of View", "Outline Color")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
+						local outofview_outline = draw:Create("PolyLine", "2V", "2V", "2V")
+						outofview_outline.Color = color
+						outofview_outline.Opacity = color_transparency
+						outofview_outline.OutlineOpacity = color_transparency
+						outofview_outline.FillType = PolyLineFillType.ConvexFilled
+						self.outofview_outline = self:Cache(outofview_outline)
+
+						color, color_transparency = self:GetConfig("Out of View", "Arrow Color")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
+						local outofview = draw:Create("PolyLine", "2V", "2V", "2V")
+						outofview.Color = color
+						outofview.Opacity = color_transparency
+						outofview.OutlineOpacity = color_transparency
+						outofview.FillType = PolyLineFillType.ConvexFilled
+						self.outofview = self:Cache(outofview)
+
+						local sounddot = draw:Create("Circle", "3D")
+						sounddot.Radius = 4
+						sounddot.NumSides = 10
+						sounddot.Filled = true
+						sounddot.Color = Color3.new(0,0,0)
+						sounddot.Outlined = true
+						sounddot.OutlineThickness = 1
+						self.sounddot = self:Cache(sounddot)
 					end
 
 					function player_meta:GetColor(...)
@@ -20868,8 +21312,26 @@ if not BBOT.Debug.menu then
 						self.model = parts.head.Parent
 						self.parts = parts
 						local esp_enabled = self:GetConfig("Enabled")
+						local priority_level = config:GetPriority(self.player)
+						if flags["Friends Only"] and flags["Priority Only"] then
+							if priority_level == 0 then
+								esp_enabled = false
+							end
+						elseif (flags["Friends Only"] and priority_level >= 0) then
+							esp_enabled = false
+						elseif (flags["Priority Only"] and priority_level <= 0) then
+							esp_enabled = false
+						end
+						local spectating = spectator:IsSpectating()
+						if spectating == self.player then
+							esp_enabled = false
+						elseif spectating and hud:isplayeralive(self.player) then
+							esp_enabled = true
+						end
 						
 						local color, color_transparency = self:GetColor("Name", "Color")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
 						self.name_enabled = (esp_enabled and self:GetConfig("Name") or false)
 						self.name.Visible = self.name_enabled
 						self.name.Color = color
@@ -20883,14 +21345,20 @@ if not BBOT.Debug.menu then
 						self.box.Visible = self.box_enabled
 
 						color, color_transparency = self:GetColor("Box", "Color Fill")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
 						self.box_fill.Color = color
 						self.box_fill.Opacity = color_transparency
 
 						color, color_transparency = self:GetConfig("Box", "Color Outline")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
 						self.box_outline.Color = color
 						self.box_outline.Opacity = color_transparency
 
 						color, color_transparency = self:GetColor("Box", "Color Box")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
 						self.box.Color = color
 						self.box.Opacity = color_transparency
 						self.box_outline.Opacity = color_transparency
@@ -20899,6 +21367,8 @@ if not BBOT.Debug.menu then
 						self:Cache(self.box_fill)
 						
 						color, color_transparency = self:GetConfig("Health Bar", "Color Max")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
 						self.healthbar_enabled = (esp_enabled and self:GetConfig("Health Bar") or false)
 						self.healthbar.Color = color
 						self.healthbar.Opacity = color_transparency
@@ -20910,6 +21380,8 @@ if not BBOT.Debug.menu then
 						self:Cache(self.healthbar_outline)
 						
 						color, color_transparency = self:GetConfig("Health Number", "Color")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
 						self.healthtext_enabled = (esp_enabled and self:GetConfig("Health Number") or false)
 						self.healthtext.Visible = self.healthtext_enabled
 						self.healthtext.Color = color
@@ -20932,6 +21404,8 @@ if not BBOT.Debug.menu then
 						self:Cache(self.frozen)
 
 						color, color_transparency = self:GetColor("Box", "Color Box")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
 						self.resolved_enabled = (esp_enabled and flags.Resolved or false)
 						self.resolved.Visible = self.resolved_enabled
 						self.resolved_background.Visible = self.resolved_enabled
@@ -20939,6 +21413,39 @@ if not BBOT.Debug.menu then
 						self.resolved.Opacity = color_transparency
 						self.resolved.OutlineOpacity = color_transparency
 						self:Cache(self.resolved)
+
+						color, color_transparency = self:GetConfig("Out of View", "Arrow Color")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
+						self.outofview_enabled = self:GetConfig("Out of View")
+						self.outofview.Visible = false
+						self.outofview.Color = color
+						self.outofview.Opacity = color_transparency
+						self.outofview.OutlineOpacity = color_transparency
+						self:Cache(self.outofview)
+
+						color, color_transparency = self:GetConfig("Out of View", "Outline Color")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
+						self.outofview_outline.Visible = false
+						self.outofview_outline.Color = color
+						self.outofview_outline.Opacity = color_transparency
+						self.outofview_outline.OutlineOpacity = color_transparency
+						self:Cache(self.outofview_outline)
+
+						self.sounddot_enabled = self:GetConfig("Sound Dots")
+						color, color_transparency = self:GetConfig("Sound Dots", "Dot Color")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
+						self.sounddot.Visible = false
+						self.sounddot.Color = color
+						self.sounddot.Opacity = color_transparency
+						color, color_transparency = self:GetConfig("Sound Dots", "Outline Color")
+						color = color or Color3.new(1,1,1)
+						color_transparency = color_transparency or 0
+						self.sounddot.OutlineColor = color
+						self.sounddot.OutlineOpacity = color_transparency
+						self:Cache(self.sounddot)
 
 						if flags["Visible Only"] then
 							for i=1, #self.draw_cache do
@@ -21066,6 +21573,8 @@ if not BBOT.Debug.menu then
 
 							self:RemoveInstances()
 						else
+							self:Render(self._points)
+
 							fraction = math.remap(fraction, 0, 1, 1, 0)
 							for i=1, #self.draw_cache do
 								local v = self.draw_cache[i]
@@ -21083,8 +21592,6 @@ if not BBOT.Debug.menu then
 									end
 								end
 							end
-
-							self:Render(self._points)
 						end
 					end
 
@@ -23057,11 +23564,11 @@ do
 		end
 
 		if #dbgfeatures > 0 then
-			BBOT.notification:Create("!!! WARNING !!!\nThe following debugging features are enabled:\n" .. table.concat(dbgfeatures, "\n"), 60)
+			BBOT.notification:Create("!!! WARNING !!!\nThe following debugging features are enabled:\n" .. table.concat(dbgfeatures, "\n"), 30):SetType("alert")
 		end
 
-		BBOT.notification:Create("!!! IMPORTANT !!!\nThis is the Synapse 3.0 version,\nthere may be a lot of internal issues!\nReport any issues to WholeCream!", 60)
-		BBOT.notification:Create("!!! IMPORTANT !!!\nScripts system has been enabled, you have full access to the bitch bot environment!", 10)
+		BBOT.notification:Create("!!! IMPORTANT !!!\nThis is the Synapse 3.0 version,\nthere may be a lot of internal issues!\nReport any issues to WholeCream!", 30):SetType("alert")
+		BBOT.notification:Create("!!! IMPORTANT !!!\nScripts system has been enabled, you have full access to the bitch bot environment!", 10):SetType("alert")
 		if _BBOT then
 			BBOT.notification:Create("There was an already active version of bbot running, this has been unloaded")
 		end
