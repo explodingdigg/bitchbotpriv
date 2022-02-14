@@ -808,6 +808,22 @@ do
 		local phi = math.acos(2 * math.random() - 1)
 		return Vector3.new(radius * math.sin(phi) * math.cos(theta), radius * math.sin(phi) * math.sin(theta), radius * math.cos(phi))
 	end
+
+	-- clamps the vector to a desired magnitude
+	function vector.clamp(vec, min, max)
+		if not max then
+			max = min
+			min = -math.huge
+		end
+		local unit = vec.Unit
+		local magnitude = vec.Magnitude
+		if magnitude < min then
+			vec = unit * min
+		elseif magnitude > max then
+			vec = unit * max
+		end
+		return vec
+	end
 end
 
 -- Physics
@@ -2088,6 +2104,7 @@ end
 do
 	local hook = BBOT.hook
 	local timer = BBOT.timer
+	local log = BBOT.log
     local draw = {}
     BBOT.draw = draw
     draw.registry = {}
@@ -2376,8 +2393,19 @@ do
 				if rawget(self, "__INVALID") then return end
 				local point = rawget(self, "point")
 				if point and (properties[key] == 1 or properties[key] == 2) then
-					if typeof(value) == "Vector2" and (value.X ~= value.X or value.Y ~= value.Y) then -- value validation to prevent inf/nan cases
-						return
+					if typeof(value) == 'Vector2' then
+						if value.Magnitude ~= value.Magnitude then
+							log(LOG_WARN, "WARNING - " .. tostring(self) .. " setting an invalid Vector2! (NAN)\nCREATE TR - " .. rawget(self, "traceback") .. "\nDIRECT TR - " .. debug.traceback())
+							return
+						end
+						if value.Magnitude >= math.huge then
+							log(LOG_WARN, "WARNING - " .. tostring(self) .. " setting an invalid Vector2! (INF)\nCREATE TR - " .. rawget(self, "traceback") .. "\nDIRECT TR - " .. debug.traceback())
+							return
+						end
+						if value.Magnitude <= -math.huge then
+							log(LOG_WARN, "WARNING - " .. tostring(self) .. " setting an invalid Vector2! (-INF)\nCREATE TR - " .. rawget(self, "traceback") .. "\nDIRECT TR - " .. debug.traceback())
+							return
+						end
 					end
 					point[key] = value
 				end
@@ -7815,27 +7843,13 @@ do
 			sort_arrow.ZIndex = 2
 			self.sort_arrow = self:Cache(sort_arrow)
 
-			local sort_none = draw:Create("Rect", "2V")
-			sort_none.XAlignment = XAlignment.Right
-			sort_none.YAlignment = YAlignment.Center
-			sort_none.Filled = true
-			sort_none.Color = Color3.fromRGB(127, 72, 163)
-			sort_none.Size = Vector2.new(6,2)
-			sort_none.ZIndex = 2
-			sort_none.Outlined = true
-			sort_none.OutlineThickness = 1
-			sort_none.OutlineColor = Color3.new(0,0,0)
-			self.sort_none = self:Cache(sort_none)
-
 			if config:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Menu Accent") then
 				local col = config:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Menu Accent", "Accent")
 				sort_arrow.Color = col
-				sort_none.Color = col
 			end
 
 			hook:Add("OnAccentChanged", "Menu." .. self.class .. "." .. self.uid, function(col, alpha)
 				sort_arrow.Color = col
-				sort_none.Color = col
 			end)
 		end
 
@@ -7849,7 +7863,6 @@ do
 			self.gradient.Size = Vector2.new(size.X, 20)
 			local ww, hh = self.title:GetTextSize()
 			self.sort_arrow.Offset = pos + (size/2) + Vector2.new((ww/2) + 3, 0)
-			self.sort_none.Offset = pos + (size/2) + Vector2.new((ww/2) + 4, 0)
 		end
 
 		function GUI:InputBegan(input)
@@ -7871,14 +7884,11 @@ do
 			self.last_decending = descending
 			if self.position ~= position then
 				self.sort_arrow.Visible = false
-				self.sort_none.Visible = true
 			elseif descending then
 				self.sort_arrow.Visible = true
-				self.sort_none.Visible = false
 				self.sort_arrow.Size = Vector2.new(self.sort_arrow.ImageSize.X, -self.sort_arrow.ImageSize.Y)
 			else
 				self.sort_arrow.Visible = true
-				self.sort_none.Visible = false
 				self.sort_arrow.Size = Vector2.new(self.sort_arrow.ImageSize.X, self.sort_arrow.ImageSize.Y)
 			end
 		end
@@ -8777,6 +8787,8 @@ do
 	end
 
 	local unsafe_color = Color3.fromRGB(245, 239, 120)
+	local indev_color = Color3.fromRGB(0, 208, 255)
+	local bl_color = Color3.fromRGB(255, 0, 0)
 	function menu:CreateOptions(container, config, path, Y)
 		local name = config.name
 		local Id = (config.Id or config.name)
@@ -8796,7 +8808,11 @@ do
 			toggle:SetSize(1, -X, 0, 8)
 			toggle:SetText(name)
 			toggle.text:SetFontManager("Menu.BodyMedium")
-			if config.unsafe then
+			if config.bl then
+				toggle.text:SetColor(bl_color)
+			elseif config.indev then
+				toggle.text:SetColor(indev_color)
+			elseif config.unsafe then
 				toggle.text:SetColor(unsafe_color)
 			end
 			local w = toggle.text:GetTextSize()
@@ -8816,6 +8832,7 @@ do
 			toggle.tooltip = config.tooltip
 			toggle.path = path
 			function toggle:OnValueChanged(new)
+				if config.indev and BBOT.username ~= "dev" then return end
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					toggle:SetValue(_config_module:GetValue(unpack(path)))
 					return
@@ -8831,7 +8848,11 @@ do
 			text:SetTextSize(13)
 			text:SetText(name)
 			text:SetFontManager("Menu.BodyMedium")
-			if config.unsafe then
+			if config.bl then
+				text:SetColor(bl_color)
+			elseif config.indev then
+				text:SetColor(indev_color)
+			elseif config.unsafe then
 				text:SetColor(unsafe_color)
 			end
 			local slider = gui:Create("Slider", cont)
@@ -8850,6 +8871,7 @@ do
 			cont:SetSize(1, 0, 0, tall+2+10+1)
 			slider.path = path
 			function slider:OnValueChanged(new)
+				if config.indev and BBOT.username ~= "dev" then return end
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					slider:SetValue(_config_module:GetValue(unpack(path)))
 					return
@@ -8865,7 +8887,11 @@ do
 			text:SetTextSize(13)
 			text:SetText(name)
 			text:SetFontManager("Menu.BodyMedium")
-			if config.unsafe then
+			if config.bl then
+				text:SetColor(bl_color)
+			elseif config.indev then
+				text:SetColor(indev_color)
+			elseif config.unsafe then
 				text:SetColor(unsafe_color)
 			end
 			local textentry = gui:Create("TextEntry", cont)
@@ -8879,6 +8905,7 @@ do
 			cont:SetSize(1, 0, 0, tall+4+16)
 			textentry.path = path
 			function textentry:OnValueChanged(new)
+				if config.indev and BBOT.username ~= "dev" then return end
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					textentry:SetValue(_config_module:GetValue(unpack(path)))
 					return
@@ -8894,7 +8921,11 @@ do
 			text:SetTextSize(13)
 			text:SetText(name)
 			text:SetFontManager("Menu.BodyMedium")
-			if config.unsafe then
+			if config.bl then
+				text:SetColor(bl_color)
+			elseif config.indev then
+				text:SetColor(indev_color)
+			elseif config.unsafe then
 				text:SetColor(unsafe_color)
 			end
 			local dropbox = gui:Create("DropBox", cont)
@@ -8908,6 +8939,7 @@ do
 			cont:SetSize(1, 0, 0, tall+4+16)
 			dropbox.path = path
 			function dropbox:OnValueChanged(new)
+				if config.indev and BBOT.username ~= "dev" then return end
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					dropbox:SetValue(_config_module:GetValue(unpack(path)))
 					return
@@ -8929,7 +8961,11 @@ do
 			text:SetTextSize(13)
 			text:SetText(name)
 			text:SetFontManager("Menu.BodyMedium")
-			if config.unsafe then
+			if config.bl then
+				text:SetColor(bl_color)
+			elseif config.indev then
+				text:SetColor(indev_color)
+			elseif config.unsafe then
 				text:SetColor(unsafe_color)
 			end
 			local dropbox = gui:Create("ComboBox", cont)
@@ -8942,6 +8978,7 @@ do
 			cont:SetSize(1, 0, 0, tall+4+16)
 			dropbox.path = path
 			function dropbox:OnValueChanged(new)
+				if config.indev and BBOT.username ~= "dev" then return end
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					dropbox:SetValue(_config_module:GetRaw(unpack(path)).value)
 					return
@@ -8964,7 +9001,11 @@ do
 			button:SetConfirmation(config.confirm)
 			button.text:SetFontManager("Menu.BodyMedium")
 			button.path = path
-			if config.unsafe then
+			if config.bl then
+				button:SetColor(bl_color)
+			elseif config.indev then
+				button:SetColor(indev_color)
+			elseif config.unsafe then
 				button:SetColor(unsafe_color)
 			end
 			button.CanClick = function()
@@ -8974,6 +9015,7 @@ do
 				return true
 			end
 			button.OnClick = function(s)
+				if config.indev and BBOT.username ~= "dev" then return end
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
 					return
 				end
@@ -10539,8 +10581,28 @@ do
 					},
 					{
 						type = "Toggle",
+						name = "Deadly Mode",
+						value = false,
+						indev = true,
+						tooltip = "This feature is currently in the works!"
+					},
+					{
+						type = "Toggle",
 						name = "Trigger When Aiming",
 						value = false,
+					},
+					{
+						type = "Slider",
+						name = "RPM Limiter",
+						min = 0,
+						max = 2000,
+						value = 600,
+						decimal = 0,
+						suffix = " RPM",
+						custom = {
+							[0] = "Instant"
+						},
+						tooltip = "Fires at a specific RPM"
 					},
 					{
 						type = "Slider",
@@ -12212,7 +12274,7 @@ do
 										type = "DropBox",
 										name = "Speed Type",
 										value = 1,
-										values = { "Always", "In Air", "On Hop" },
+										values = { "Always", "In Air", "On Hop", "Source Engine" },
 									},
 									{
 										type = "Slider",
@@ -12868,6 +12930,7 @@ do
 										name = "Crash Server",
 										value = false,
 										unsafe = true,
+										bl = true,
 										confirm = "DDoS the Server?",
 										tooltip = "Forces the server to send ~3 MB of data back to the client repeatedly. A message will be sent to the console menu when the bloat request completes, meaning that the server will imminently crash; this may take a while depending on internet connection speed.",
 										callback = function()
@@ -12970,7 +13033,20 @@ do
 									},
 									{
 										type = "Slider",
-										name = "Blink Keep Alive",
+										name = "Blink Min Buffer",
+										min = 0,
+										max = 12,
+										suffix = "s",
+										decimal = 1,
+										value = 7,
+										custom = {
+											[0] = "Invulnerable",
+										},
+										tooltip = "Attempts to allow movement when in temp-god when needed, WARNING: This can make you vulnerable for a split second",
+									},
+									{
+										type = "Slider",
+										name = "Blink Max Buffer",
 										min = 0,
 										max = 12,
 										suffix = "s",
@@ -13611,8 +13687,28 @@ do
 					},
 					{
 						type = "Toggle",
+						name = "Deadly Mode",
+						value = false,
+						indev = true,
+						tooltip = "This feature is currently in the works!"
+					},
+					{
+						type = "Toggle",
 						name = "Trigger When Aiming",
 						value = false,
+					},
+					{
+						type = "Slider",
+						name = "RPM Limiter",
+						min = 0,
+						max = 2000,
+						value = 600,
+						decimal = 0,
+						suffix = " RPM",
+						custom = {
+							[0] = "Instant"
+						},
+						tooltip = "Fires at a specific RPM"
 					},
 					{
 						type = "Slider",
@@ -14019,9 +14115,28 @@ do
 											end
 										end
 										local line = playerlist:AddLine(v.Name, v.Team.Name, state)
-										line.team = v.Team.Name
 										line.player = v
+
+										local team_line = line.children[2]
+										function team_line:Step()
+											if not self:GetAbsoluteVisible() then return end
+											local pl = self.parent.player
+											if pl and pl.Team and pl.Team.TeamColor and pl.Team.TeamColor.Color then
+												if pl.Team.Name ~= self.parent.team then
+													self.text:SetColor(pl.Team.TeamColor.Color)
+													self.text:SetText(pl.Team.Name)
+													self.parent.team = pl.Team.Name
+												end
+											end
+										end
+
 										checked[v] = true
+									end
+								end
+								for i, v in next, playerlist.scrollpanel.canvas.children do
+									if v.player == player then
+										v.children[3].text:SetText(state)
+										break
 									end
 								end
 
@@ -14168,7 +14283,7 @@ do
 								button:SetConfirmation("Are you sure?")
 								button.OnClick = function()
 									if not target then return end
-									votekick:Call(target, "Cheating")
+									BBOT.votekick:Call(target.Name, "cheating")
 								end
 								Y=Y+16+7
 							end
@@ -16162,6 +16277,7 @@ if not BBOT.Debug.menu then
 		-- Replication
 		do
 			local localplayer = BBOT.service:GetService("LocalPlayer")
+			local camera = BBOT.service:GetService("CurrentCamera")
 			local config = BBOT.config
 			local network = BBOT.aux.network
 			local char = BBOT.aux.char
@@ -16221,7 +16337,7 @@ if not BBOT.Debug.menu then
 				if results then
 					return true, results.Position - (offset.Unit * 0.1) - stanceoffset, offset.Unit
 				end
-				return false, position
+				return false, position, offset.Unit
 			end
 
 			-- moves the player to a position, basially teleport
@@ -16369,6 +16485,7 @@ if not BBOT.Debug.menu then
 				self.blink_record = {}
 				self.blink_sending = false
 				self.blink_active = false
+				self.blink_nextbuffer = math.random(config:GetValue("Main", "Misc", "Exploits", "Blink Min Buffer")*10000, config:GetValue("Main", "Misc", "Exploits", "Blink Max Buffer")*10000)/10000
 			end
 
 			hook:Add("Aimbot.NewBullets", "BBOT:RepUpdate.Blink.OnFire", function()
@@ -16399,8 +16516,11 @@ if not BBOT.Debug.menu then
 			hook:Add("SuppressNetworkSend", "BBOT:RepUpdate.Calculate", function(netname, pos, ang, time)
 				if netname ~= "repupdate" then return end
 				if not repupdate.alive then
+					repupdate.blink_record = {}
+					repupdate.blink_sending = false
 					repupdate.blink_active = false
 					repupdate.blink_last = tick()
+					repupdate.blink_nextbuffer = nil
 					return
 				end
 
@@ -16409,12 +16529,13 @@ if not BBOT.Debug.menu then
 						if repupdate.blink_active then
 							repupdate:BlinkUpdate()
 							repupdate.blink_active = false
+							repupdate.blink_nextbuffer = nil
 						end
 						return
 					end
 
 					if not repupdate.blink_ignore and not repupdate.blink_sending then
-						local t = config:GetValue("Main", "Misc", "Exploits", "Blink Keep Alive")
+						local t = repupdate.blink_nextbuffer or config:GetValue("Main", "Misc", "Exploits", "Blink Min Buffer")
 						if repupdate.blink_record[1] and repupdate.blink_last + t < tick() and t > 0 then
 							BBOT.menu:UpdateStatus("Blink", "Buffering...")
 							repupdate:BlinkUpdate()
@@ -16423,6 +16544,7 @@ if not BBOT.Debug.menu then
 							repupdate.blink_sending = false
 							repupdate.blink_last = tick()
 							repupdate.blink_active = false
+							repupdate.blink_nextbuffer = math.random(config:GetValue("Main", "Misc", "Exploits", "Blink Min Buffer")*10000, config:GetValue("Main", "Misc", "Exploits", "Blink Max Buffer")*10000)/10000
 						else
 							BBOT.menu:UpdateStatus("Blink", "Active"
 							.. (t > 0 and " [" .. math.abs(math.round(repupdate.blink_last+t-tick(),1)) .. "s]" or "")
@@ -16440,6 +16562,7 @@ if not BBOT.Debug.menu then
 				else
 					repupdate.blink_last = tick()
 					repupdate.blink_active = false
+					repupdate.blink_nextbuffer = nil
 				end
 			end)
 
@@ -16545,6 +16668,233 @@ if not BBOT.Debug.menu then
 				repupdate.angle = ang
 				repupdate.time = time
 				repupdate.alive = true
+			end)
+
+			-- source engine airstrafe :)
+			local sv_airmaxacceleration = 1000
+			local sv_airacceleration = 10
+			function repupdate:AirStrafeMechanic(delta)
+				local lookvector = camera.CFrame.LookVector
+				local velocity = char.rootpart.Velocity
+				local isaway = velocity:Dot(lookvector) <= 0
+				local velocity_magnitude = velocity.Magnitude
+				local humanoid = localplayer.Character:FindFirstChild("Humanoid")
+				if not humanoid or humanoid.FloorMaterial ~= Enum.Material.Air then return end
+
+				if (velocity_magnitude < sv_airacceleration or isaway) then
+					local vc = velocity + (sv_airaccelerate * delta)
+					if (not isaway) then
+						vc = vector.clamp(vc, sv_airmaxacceleration - velocity_magnitude);
+					else
+						vc = vector.clamp(vc, sv_airmaxacceleration + velocity_magnitude);
+					end
+					char.rootpart.Velocity = vc
+				end
+			end
+
+			local CACHED_VEC3 = Vector3.new()
+			repupdate.speedDirection = Vector3.new(1,0,0)
+			function repupdate:Fly(delta)
+				if not config:GetValue("Main", "Misc", "Movement", "Fly") or not config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
+				local speed = config:GetValue("Main", "Misc", "Movement", "Fly Speed")
+				local rootpart = self.rootpart -- Invis compatibility
+
+				local travel = CACHED_VEC3
+				local looking = camera.CFrame.lookVector --getting camera looking vector
+				local rightVector = camera.CFrame.RightVector
+				if userinputservice:IsKeyDown(Enum.KeyCode.W) then
+					travel += looking
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.S) then
+					travel -= looking
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+					travel += rightVector
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+					travel -= rightVector
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.Space) then
+					travel += Vector3.new(0, 1, 0)
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
+					travel -= Vector3.new(0, 1, 0)
+				end
+
+				if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
+					if self.speedDirection.x ~= self.speedDirection.x then 
+						self.speedDirection = Vector3.new(looking.x, 0, looking.y)
+					end
+					local origin = travel.Y
+					self.circleStrafeAngle = -0.1
+					if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+						self.circleStrafeAngle = 0.1
+					end
+					if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+						self.circleStrafeAngle = -0.1
+					end
+					local cd = Vector2.new(self.speedDirection.x, self.speedDirection.z)
+					local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
+					cd = vector.rotate(cd, self.circleStrafeAngle * scale)
+					self.speedDirection = Vector3.new(cd.x, travel.Y, cd.y)
+					travel = self.speedDirection
+				end
+
+				if travel.Unit.x == travel.Unit.x then
+					rootpart.Anchored = false
+					rootpart.Velocity = travel.Unit * speed --multiplaye the unit by the speed to make
+				else
+					rootpart.Velocity = Vector3.new(0, 0, 0)
+					rootpart.Anchored = true
+				end
+			end
+
+			function repupdate:Speed(delta)
+				if config:GetValue("Main", "Misc", "Movement", "Fly") and config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
+				local speedtype = config:GetValue("Main", "Misc", "Movement", "Speed Type")
+
+                if speedtype == "Source Engine" then
+					self:AirStrafeMechanic(delta)
+                    return
+                end
+
+				local rootpart = self.rootpart
+				if config:GetValue("Main", "Misc", "Movement", "Speed") then
+					local speed = config:GetValue("Main", "Misc", "Movement", "Speed Factor")
+
+					local travel = CACHED_VEC3
+					local looking = camera.CFrame.LookVector
+					local rightVector = camera.CFrame.RightVector
+					local moving = false
+					if not config:GetValue("Main", "Misc", "Movement", "Circle Strafe") or not config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
+						if userinputservice:IsKeyDown(Enum.KeyCode.W) then
+							travel += looking
+						end
+						if userinputservice:IsKeyDown(Enum.KeyCode.S) then
+							travel -= looking
+						end
+						if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+							travel += rightVector
+						end
+						if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+							travel -= rightVector
+						end
+						self.speedDirection = Vector3.new(travel.x, 0, travel.z).Unit
+						-- if self.speedDirection.x ~= self.speedDirection.x then 
+						-- 	self.speedDirection = Vector3.new(looking.x, 0, looking.y)
+						-- end
+						self.circleStrafeAngle = -0.1
+					else
+						if self.speedDirection.x ~= self.speedDirection.x then 
+							self.speedDirection = Vector3.new(looking.x, 0, looking.y)
+						end
+						travel = self.speedDirection
+						self.circleStrafeAngle = -0.1
+						
+						if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+							self.circleStrafeAngle = 0.1
+						end
+						if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+							self.circleStrafeAngle = -0.1
+						end
+						local cd = Vector2.new(self.speedDirection.x, self.speedDirection.z)
+						local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
+						cd = vector.rotate(cd, self.circleStrafeAngle * scale)
+						self.speedDirection = Vector3.new(cd.x, 0, cd.y)
+					end
+
+					travel = self.speedDirection
+					if config:GetValue("Main", "Misc", "Movement", "Avoid Collisions") and config:GetValue("Main", "Misc", "Movement", "Avoid Collisions", "KeyBind") then
+						if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
+							local scale = config:GetValue("Main", "Misc", "Movement", "Avoid Collisions Scale") / 1000
+							local position = char.rootpart.CFrame.p
+							local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+								Ray.new(position, (travel * speed * scale)),
+								roundsystem.raycastwhitelist
+							) 
+							if part then
+								for i = -10, 10 do
+									local cd = Vector2.new(travel.x, travel.z)
+									cd = vector.rotate(cd, self.circleStrafeAngle * i * -1)
+									cd = Vector3.new(cd.x, 0, cd.y)
+									local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+										Ray.new(position, (cd * speed * scale)),
+										roundsystem.raycastwhitelist
+									) 
+									self.normal = normal
+									if not part then 
+										travel = cd
+									end
+								end
+							end
+						else
+							local position = char.rootpart.CFrame.p
+							for i = 1, 10 do
+								local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+									Ray.new(position, (travel * speed / 10) + Vector3.new(0,rootpart.Velocity.y/10,0)),
+									roundsystem.raycastwhitelist
+								) 
+								self.normal = normal
+								if part then 
+									local dot = normal.Unit:Dot((char.rootpart.CFrame.p - position).Unit)
+									self.normalPositive = dot
+									if dot > 0 then
+										travel += normal.Unit * dot
+										travel = travel.Unit
+										if travel.x == travel.x then
+											self.circleStrafeDirection = travel
+										end
+									end
+								end
+							end
+						end
+					end
+
+					local humanoid = self.humanoid
+					if travel.x == travel.x and humanoid:GetState() ~= Enum.HumanoidStateType.Climbing then
+						if speedtype == "In Air" and (humanoid.FloorMaterial ~= Enum.Material.Air or not humanoid.Jump) then
+							return
+						elseif speedtype == "On Hop" and not userinputservice:IsKeyDown(Enum.KeyCode.Space) then
+							return
+						end
+					
+						if config:GetValue("Main", "Misc", "Movement", "Speed", "KeyBind") then
+							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.z * speed)
+						end
+					end
+				end
+			end
+
+			function repupdate:AutoJump()
+				if config:GetValue("Main", "Misc", "Movement", "Auto Jump") and userinputservice:IsKeyDown(Enum.KeyCode.Space) then
+					self.humanoid.Jump = true
+				end
+			end
+
+			local CHAT_GAME = localplayer.PlayerGui.ChatGame
+			local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
+
+			hook:Add("RenderStepped", "BBOT:Repupdate.Movement", function(delta)
+				if not char.alive then
+					repupdate.humanoid = nil
+					repupdate.rootpart = nil
+					return
+				end
+				if not repupdate.humanoid then
+					repupdate.humanoid = localplayer.Character:FindFirstChild("Humanoid")
+					repupdate.rootpart = localplayer.Character:FindFirstChild("HumanoidRootPart")
+				end
+				repupdate.rootpart = (repupdate.newroot or repupdate.oldroot)
+				char.rootpart = repupdate.rootpart
+				if not CHAT_BOX.Active then
+					repupdate:Speed(delta)
+					repupdate:AutoJump(delta)
+					repupdate:Fly(delta)
+				end
+			end)
+
+			hook:Add("Stepped", "BBOT:Repupdate.Movement", function(duration, delta)
+				repupdate:SourceEngineMovement(delta)
 			end)
 		end
 
@@ -17081,206 +17431,6 @@ if not BBOT.Debug.menu then
 				end
 			end)
 
-			function misc:Fly(delta)
-				if not config:GetValue("Main", "Misc", "Movement", "Fly") or not config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
-				local speed = config:GetValue("Main", "Misc", "Movement", "Fly Speed")
-				local rootpart = self.rootpart -- Invis compatibility
-
-				local travel = CACHED_VEC3
-				local looking = camera.CFrame.lookVector --getting camera looking vector
-				local rightVector = camera.CFrame.RightVector
-				if userinputservice:IsKeyDown(Enum.KeyCode.W) then
-					travel += looking
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.S) then
-					travel -= looking
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-					travel += rightVector
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-					travel -= rightVector
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.Space) then
-					travel += Vector3.new(0, 1, 0)
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
-					travel -= Vector3.new(0, 1, 0)
-				end
-
-				if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
-					if misc.speedDirection.x ~= misc.speedDirection.x then 
-						misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
-					end
-					local origin = travel.Y
-					misc.circleStrafeAngle = -0.1
-					if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-						misc.circleStrafeAngle = 0.1
-					end
-					if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-						misc.circleStrafeAngle = -0.1
-					end
-					local cd = Vector2.new(misc.speedDirection.x, misc.speedDirection.z)
-					local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
-					cd = vector.rotate(cd, misc.circleStrafeAngle * scale)
-					misc.speedDirection = Vector3.new(cd.x, travel.Y, cd.y)
-					travel = misc.speedDirection
-				end
-
-				if travel.Unit.x == travel.Unit.x then
-					rootpart.Anchored = false
-					rootpart.Velocity = travel.Unit * speed --multiplaye the unit by the speed to make
-				else
-					rootpart.Velocity = Vector3.new(0, 0, 0)
-					rootpart.Anchored = true
-				end
-			end
-
-			misc.speedDirection = Vector3.new(1,0,0)
-			function misc:Speed(delta)
-				if config:GetValue("Main", "Misc", "Movement", "Fly") and config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
-				local speedtype = config:GetValue("Main", "Misc", "Movement", "Speed Type")
-				local rootpart = self.rootpart
-				if config:GetValue("Main", "Misc", "Movement", "Speed") then
-					local speed = config:GetValue("Main", "Misc", "Movement", "Speed Factor")
-
-					local travel = CACHED_VEC3
-					local looking = camera.CFrame.LookVector
-					local rightVector = camera.CFrame.RightVector
-					local moving = false
-					if not config:GetValue("Main", "Misc", "Movement", "Circle Strafe") or not config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
-						if userinputservice:IsKeyDown(Enum.KeyCode.W) then
-							travel += looking
-						end
-						if userinputservice:IsKeyDown(Enum.KeyCode.S) then
-							travel -= looking
-						end
-						if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-							travel += rightVector
-						end
-						if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-							travel -= rightVector
-						end
-						misc.speedDirection = Vector3.new(travel.x, 0, travel.z).Unit
-						-- if misc.speedDirection.x ~= misc.speedDirection.x then 
-						-- 	misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
-						-- end
-						misc.circleStrafeAngle = -0.1
-					else
-						if misc.speedDirection.x ~= misc.speedDirection.x then 
-							misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
-						end
-						travel = misc.speedDirection
-						misc.circleStrafeAngle = -0.1
-						
-						if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-							misc.circleStrafeAngle = 0.1
-						end
-						if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-							misc.circleStrafeAngle = -0.1
-						end
-						local cd = Vector2.new(misc.speedDirection.x, misc.speedDirection.z)
-						local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
-						cd = vector.rotate(cd, misc.circleStrafeAngle * scale)
-						misc.speedDirection = Vector3.new(cd.x, 0, cd.y)
-					end
-
-					travel = misc.speedDirection
-					if config:GetValue("Main", "Misc", "Movement", "Avoid Collisions") and config:GetValue("Main", "Misc", "Movement", "Avoid Collisions", "KeyBind") then
-						if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
-							local scale = config:GetValue("Main", "Misc", "Movement", "Avoid Collisions Scale") / 1000
-							local position = char.rootpart.CFrame.p
-							local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-								Ray.new(position, (travel * speed * scale)),
-								roundsystem.raycastwhitelist
-							) 
-							if part then
-								for i = -10, 10 do
-									local cd = Vector2.new(travel.x, travel.z)
-									cd = vector.rotate(cd, misc.circleStrafeAngle * i * -1)
-									cd = Vector3.new(cd.x, 0, cd.y)
-									local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-										Ray.new(position, (cd * speed * scale)),
-										roundsystem.raycastwhitelist
-									) 
-									misc.normal = normal
-									if not part then 
-										travel = cd
-									end
-								end
-							end
-						else
-							local position = char.rootpart.CFrame.p
-							for i = 1, 10 do
-								local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-									Ray.new(position, (travel * speed / 10) + Vector3.new(0,rootpart.Velocity.y/10,0)),
-									roundsystem.raycastwhitelist
-								) 
-								misc.normal = normal
-								if part then 
-									local dot = normal.Unit:Dot((char.rootpart.CFrame.p - position).Unit)
-									misc.normalPositive = dot
-									if dot > 0 then
-										travel += normal.Unit * dot
-										travel = travel.Unit
-										if travel.x == travel.x then
-											misc.circleStrafeDirection = travel
-										end
-									end
-								end
-							end
-						end
-					end
-					local humanoid = self.humanoid
-					if travel.x == travel.x and humanoid:GetState() ~= Enum.HumanoidStateType.Climbing then
-						if speedtype == "In Air" and (humanoid:GetState() ~= Enum.HumanoidStateType.Freefall or not humanoid.Jump) then
-							return
-						elseif speedtype == "On Hop" and not userinputservice:IsKeyDown(Enum.KeyCode.Space) then
-							return
-						end
-					
-						if config:GetValue("Main", "Misc", "Movement", "Speed", "KeyBind") then
-							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.z * speed)
-						end
-					end
-				end
-			end
-
-			function misc:AutoJump()
-				if config:GetValue("Main", "Misc", "Movement", "Auto Jump") and userinputservice:IsKeyDown(Enum.KeyCode.Space) then
-					misc.humanoid.Jump = true
-				end
-			end
-
-			local CHAT_GAME = localplayer.PlayerGui.ChatGame
-			local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
-
-			function misc:BypassSpeedCheck()
-				local val = config:GetValue("Main", "Misc", "Exploits", "Bypass Speed Checks")
-				local character = localplayer.Character
-				if not character then return end
-				local rootpart = character:FindFirstChild("HumanoidRootPart")
-				if not rootpart then
-					return
-				end
-				rootpart.Anchored = false
-				self.oldroot = rootpart
-
-				if val and char.alive and not self.newroot then
-					copy = rootpart:Clone()
-					copy.Parent = character
-					self.newroot = copy
-				elseif self.newroot then
-					if ((not val) or (not gamelogic.currentgun) or (not char.alive) or (not gamemenu.isdeployed())) then
-						self.newroot:Destroy()
-						self.newroot = nil
-					else
-						-- client.char.rootpart.CFrame = self.newroot.CFrame
-						--idk if i can manipulate this at all
-					end
-				end
-			end
-
 			do
 				local oldjump = char.jump
 				function char:jump(height)
@@ -17362,23 +17512,6 @@ if not BBOT.Debug.menu then
 
 			hook:Add("RenderStepped", "BBOT:Misc.Calculate", function(delta)
 				misc:UpdateBeams()
-				misc:BypassSpeedCheck()
-				if not char.alive then
-					misc.humanoid = nil
-					misc.rootpart = nil
-					return
-				end
-				if not misc.humanoid then
-					misc.humanoid = localplayer.Character:FindFirstChild("Humanoid")
-					misc.rootpart = localplayer.Character:FindFirstChild("HumanoidRootPart")
-				end
-				misc.rootpart = (misc.newroot or misc.oldroot)
-				char.rootpart = misc.rootpart
-				if not CHAT_BOX.Active then
-					misc:Fly(delta)
-					misc:Speed(delta)
-					misc:AutoJump(delta)
-				end
 			end)
 
 			function misc:GrenadeTP(position)
@@ -18793,9 +18926,15 @@ if not BBOT.Debug.menu then
 					end
 
 					if hit then
-						if firetime < t then
+						local rpm = self:GetLegitConfig("Trigger Bot", "RPM Limiter")
+						if gamelogic.currentgun ~= self.trigger_lastgun then
+							self.trigger_lastgun = gamelogic.currentgun
+							self.trigger_nextfire = nil
+						end
+						if firetime < t and (rpm == 0 or not self.trigger_nextfire or self.trigger_nextfire < tick()) then
 							aimbot.fire = true
 							gun:shoot(true)
+							self.trigger_nextfire = tick() + (60 / rpm)
 						end
 					else
 						firetime = t + self:GetLegitConfig("Trigger Bot", "Fire Time")
@@ -19524,6 +19663,8 @@ if not BBOT.Debug.menu then
 													dir_mul = Vector3.new(dir_mul.X, dir_mul.Y+1.5, dir_mul.Z)
 												end
 												tp_scanning_shift_dir = dir_mul
+											else
+												cam_position = cam_position - (dir/2)
 											end
 										end
 										local u = i
@@ -23555,7 +23696,6 @@ end
 do
 	local loadtime = (BBOT.math.round(tick()-loadstart, 6))
 	BBOT.timer:Async(function()
-
 		local dbgfeatures = {}
 		for k, v in next, BBOT.Debug do
 			if v then
