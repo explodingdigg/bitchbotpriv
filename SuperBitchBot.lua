@@ -824,6 +824,10 @@ do
 		end
 		return vec
 	end
+
+	function vector.floor(vec, spacing)
+		return Vector3.new(vec.x - (vec.x % spacing), vec.y - (vec.y % spacing), vec.z - (vec.z % spacing))
+	end
 end
 
 -- Physics
@@ -872,6 +876,179 @@ do
 			return;
 		end;
 		return g * r_4 / 2 + delta_d / r_4, r_4
+	end
+end
+
+-- Pathing
+do
+	local vector = BBOT.vector
+	local pathing = {}
+	BBOT.pathing = pathing
+
+	function pathing.distance(a, b)
+		local d = b - a
+		return math.max(math.abs(d.x), math.abs(d.y), math.abs(d.z))
+	end
+
+	function pathing.sortbygoal(l, r)
+		return l.globalGoal < r.globalGoal
+	end
+
+	function pathing.raycast(origin, direction, parameter, callback)
+		local filter = parameter.FilterDescendantsInstances
+		local whitelist = {}
+		for i=1, #filter do
+			whitelist[i] = filter[i]
+		end
+		local results
+		local calls = 0
+		while calls < 2000 do
+			results = workspace:Raycast(origin, direction, parameter)
+			if not results then break end
+			if callback and not callback(results) then break end
+			table.insert(whitelist, results.Instance)
+			parameter.FilterDescendantsInstances = whitelist
+			calls = calls + 1
+		end
+		parameter.FilterDescendantsInstances = filter
+		return results
+	end
+
+	do
+		local blank_vector = Vector3.new()
+		local meta = {}
+		pathing.meta = {__index = meta}
+	
+		function meta:Init()
+			self.path = {}
+			self.success = false
+			self.directions = {
+				Vector3.xAxis,
+				-Vector3.xAxis,
+				Vector3.zAxis,
+				-Vector3.zAxis,
+				Vector3.yAxis,
+				-Vector3.yAxis,
+			}
+			self.radius = 8
+			self.limit = 256
+			self.from = blank_vector
+			self.to = blank_vector
+			self.node_query = {}
+			self.node_recursion = {}
+			self.raycast_parameter = RaycastParams.new()
+		end
+	
+		function meta:Calculate()
+			local raycast_parameter = self.raycast_parameter
+			local raycast_callback = self.raycast_callback
+			local node_recursion = self.node_recursion
+			local node_query = self.node_query
+			local directions = self.directions
+			local radius = self.radius
+			local to = self.to
+	
+			node_query = {
+				{ pos = self.from, visited = false, local_goal = 0, global_goal = pathing.distance(self.from, to), parent = nil }
+			}
+			node_recursion = {}
+	
+			self.node_query = node_query
+			self.node_recursion = node_recursion
+			self.success = false
+	
+			local path = {}
+			for steps = 1, self.limit do
+				if #node_query == 0 then
+					break
+				end
+				table.sort(node_query, pathing.sortbygoal)
+	
+				local node = table.remove(node_query, 1)
+				node.visited = true
+	
+				if pathing.distance(node.pos, to) <= radius then
+					local path = {}
+					while node.parent do
+						table.insert(path, 1, node.pos)
+						node = node.parent
+					end
+					table.insert(path, 1, node.pos)
+					self.success = true
+					break
+				end
+	
+				local node_pos = node.pos
+				for i = 1, #directions do
+					local dir = directions[i]
+					--local result = raycast.cast(node_pos, dir * radius, IGNORE_LIST, collisionFilter)
+					local result = pathing.raycast(node_pos, dir * radius, raycast_parameter, raycast_callback)
+					if not result then
+						local neighbor_pos = node_pos + radius * dir
+						local floored = vector.floor(neighbor_pos, radius)
+						local node_neighbor = node_recursion[floored]
+						if not node_neighbor then
+							local global = pathing.distance(neighbor_pos, to)
+							local localg = pathing.distance(node_pos, to)
+							node_neighbor = { pos = neighbor_pos, visited = false, local_goal = localg, global_goal = global, parent = node }
+							node_recursion[floored] = node_neighbor
+						end
+						if not node_neighbor.visited then
+							table.insert(node_query, node_neighbor)
+						end
+					end
+				end
+			end
+	
+			self.path = path
+			return path, self.success
+		end
+	
+		-- acessors
+		function meta:GetPath()
+			return self.path, self.success
+		end
+	
+		-- mutators
+		function meta:SetRadius(radi)
+			self.radius = radi
+		end
+	
+		function meta:SetFrom(from)
+			self.from = from
+		end
+	
+		function meta:SetTo(to)
+			self.to = to
+		end
+
+		function meta:SetLimit(limit)
+			self.limit = limit
+		end
+	
+		function meta:SetRaycastParameter(param)
+			self.raycast_parameter = param
+		end
+	
+		function meta:SetRaycastCallback(func)
+			self.raycast_callback = func
+		end
+	end
+
+	function pathing.new(from, to)
+		local pather = setmetatable({}, self.meta)
+		pather:Init()
+		if from then pather:SetFrom(from) end
+		if to then pather:SetTo(to) end
+		return pather
+	end
+
+	function pathing.instant(from, to, radius, parameter, parameter_callback)
+		local pather = pathing.new(from, to)
+		pather:SetRadius(radius)
+		pather:SetRaycastParameter(parameter)
+		pather:SetRaycastCallback(parameter_callback)
+		return pather:Calculate()
 	end
 end
 
@@ -2260,11 +2437,13 @@ do
 		else
 			metamethods = self.base_metamethods
 		end
-		self.point_classes[class] = {
+		local class_information = {
 			generator = generator,
 			metamethods = metamethods,
 			properties = properties
 		}
+		self.point_classes[class] = class_information
+		return class_information
 	end
 
 	-- If you want a class to have specific metamethods:
@@ -2384,8 +2563,18 @@ do
 			traceback = debug.traceback()
         }, {
             __index = function(self, key)
-				if rawget(self, "__INVALID") then return end
-				if meta[key] then return meta[key] end
+				if in_index or rawget(self, "__INVALID") then return end
+
+				local accessor = "get" .. key
+				if meta[accessor] then
+					if (properties[key] == 0 or properties[key] == 2) then
+						local ret = {meta[accessor](self, 0)}
+						return meta[accessor](self, 0)
+					end
+				elseif meta[key] then
+					return meta[key]
+				end
+
 				local point = rawget(self, "point")
 				if point and (properties[key] == 0 or properties[key] == 2) then return point[key] end
             end,
@@ -2407,7 +2596,12 @@ do
 							return
 						end
 					end
-					point[key] = value
+					local mutator = "set".. key
+					if meta[mutator] then
+						meta[mutator](self, value)
+					else
+						point[key] = value
+					end
 				end
 				if not properties[key] then
 					rawset(self, key, value)
@@ -2511,7 +2705,17 @@ do
         object = setmetatable(object, {
 			__index = function(self, key)
 				if rawget(self, "__INVALID") then return end
-				if meta[key] then return meta[key] end
+
+				local accessor = "get" .. key
+				if meta[accessor] then
+					if (properties[key] == 0 or properties[key] == 2) then
+						local ret = {meta[accessor](self, 0)}
+						return meta[accessor](self, 0)
+					end
+				elseif meta[key] then
+					return meta[key]
+				end
+
 				local dynamic = rawget(self, "dynamic")
 				if dynamic and (properties[key] == 0 or properties[key] == 2) then return dynamic[key] end
 				local point
@@ -2527,7 +2731,12 @@ do
 				if rawget(self, "__INVALID") then return end
 				local dynamic = rawget(self, "dynamic")
 				if dynamic and (properties[key] == 1 or properties[key] == 2) then
-					dynamic[key] = value
+					local mutator = "set".. key
+					if meta[mutator] then
+						meta[mutator](self, value)
+					else
+						dynamic[key] = value
+					end
 					return
 				end
 				local point
@@ -12274,7 +12483,7 @@ do
 										type = "DropBox",
 										name = "Speed Type",
 										value = 1,
-										values = { "Always", "In Air", "On Hop", "Source Engine" },
+										values = { "Always", "In Air", "On Hop" },
 									},
 									{
 										type = "Slider",
@@ -16669,233 +16878,6 @@ if not BBOT.Debug.menu then
 				repupdate.time = time
 				repupdate.alive = true
 			end)
-
-			-- source engine airstrafe :)
-			local sv_airmaxacceleration = 1000
-			local sv_airacceleration = 10
-			function repupdate:AirStrafeMechanic(delta)
-				local lookvector = camera.CFrame.LookVector
-				local velocity = char.rootpart.Velocity
-				local isaway = velocity:Dot(lookvector) <= 0
-				local velocity_magnitude = velocity.Magnitude
-				local humanoid = localplayer.Character:FindFirstChild("Humanoid")
-				if not humanoid or humanoid.FloorMaterial ~= Enum.Material.Air then return end
-
-				if (velocity_magnitude < sv_airacceleration or isaway) then
-					local vc = velocity + (sv_airaccelerate * delta)
-					if (not isaway) then
-						vc = vector.clamp(vc, sv_airmaxacceleration - velocity_magnitude);
-					else
-						vc = vector.clamp(vc, sv_airmaxacceleration + velocity_magnitude);
-					end
-					char.rootpart.Velocity = vc
-				end
-			end
-
-			local CACHED_VEC3 = Vector3.new()
-			repupdate.speedDirection = Vector3.new(1,0,0)
-			function repupdate:Fly(delta)
-				if not config:GetValue("Main", "Misc", "Movement", "Fly") or not config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
-				local speed = config:GetValue("Main", "Misc", "Movement", "Fly Speed")
-				local rootpart = self.rootpart -- Invis compatibility
-
-				local travel = CACHED_VEC3
-				local looking = camera.CFrame.lookVector --getting camera looking vector
-				local rightVector = camera.CFrame.RightVector
-				if userinputservice:IsKeyDown(Enum.KeyCode.W) then
-					travel += looking
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.S) then
-					travel -= looking
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-					travel += rightVector
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-					travel -= rightVector
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.Space) then
-					travel += Vector3.new(0, 1, 0)
-				end
-				if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
-					travel -= Vector3.new(0, 1, 0)
-				end
-
-				if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
-					if self.speedDirection.x ~= self.speedDirection.x then 
-						self.speedDirection = Vector3.new(looking.x, 0, looking.y)
-					end
-					local origin = travel.Y
-					self.circleStrafeAngle = -0.1
-					if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-						self.circleStrafeAngle = 0.1
-					end
-					if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-						self.circleStrafeAngle = -0.1
-					end
-					local cd = Vector2.new(self.speedDirection.x, self.speedDirection.z)
-					local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
-					cd = vector.rotate(cd, self.circleStrafeAngle * scale)
-					self.speedDirection = Vector3.new(cd.x, travel.Y, cd.y)
-					travel = self.speedDirection
-				end
-
-				if travel.Unit.x == travel.Unit.x then
-					rootpart.Anchored = false
-					rootpart.Velocity = travel.Unit * speed --multiplaye the unit by the speed to make
-				else
-					rootpart.Velocity = Vector3.new(0, 0, 0)
-					rootpart.Anchored = true
-				end
-			end
-
-			function repupdate:Speed(delta)
-				if config:GetValue("Main", "Misc", "Movement", "Fly") and config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
-				local speedtype = config:GetValue("Main", "Misc", "Movement", "Speed Type")
-
-                if speedtype == "Source Engine" then
-					self:AirStrafeMechanic(delta)
-                    return
-                end
-
-				local rootpart = self.rootpart
-				if config:GetValue("Main", "Misc", "Movement", "Speed") then
-					local speed = config:GetValue("Main", "Misc", "Movement", "Speed Factor")
-
-					local travel = CACHED_VEC3
-					local looking = camera.CFrame.LookVector
-					local rightVector = camera.CFrame.RightVector
-					local moving = false
-					if not config:GetValue("Main", "Misc", "Movement", "Circle Strafe") or not config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
-						if userinputservice:IsKeyDown(Enum.KeyCode.W) then
-							travel += looking
-						end
-						if userinputservice:IsKeyDown(Enum.KeyCode.S) then
-							travel -= looking
-						end
-						if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-							travel += rightVector
-						end
-						if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-							travel -= rightVector
-						end
-						self.speedDirection = Vector3.new(travel.x, 0, travel.z).Unit
-						-- if self.speedDirection.x ~= self.speedDirection.x then 
-						-- 	self.speedDirection = Vector3.new(looking.x, 0, looking.y)
-						-- end
-						self.circleStrafeAngle = -0.1
-					else
-						if self.speedDirection.x ~= self.speedDirection.x then 
-							self.speedDirection = Vector3.new(looking.x, 0, looking.y)
-						end
-						travel = self.speedDirection
-						self.circleStrafeAngle = -0.1
-						
-						if userinputservice:IsKeyDown(Enum.KeyCode.D) then
-							self.circleStrafeAngle = 0.1
-						end
-						if userinputservice:IsKeyDown(Enum.KeyCode.A) then
-							self.circleStrafeAngle = -0.1
-						end
-						local cd = Vector2.new(self.speedDirection.x, self.speedDirection.z)
-						local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
-						cd = vector.rotate(cd, self.circleStrafeAngle * scale)
-						self.speedDirection = Vector3.new(cd.x, 0, cd.y)
-					end
-
-					travel = self.speedDirection
-					if config:GetValue("Main", "Misc", "Movement", "Avoid Collisions") and config:GetValue("Main", "Misc", "Movement", "Avoid Collisions", "KeyBind") then
-						if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
-							local scale = config:GetValue("Main", "Misc", "Movement", "Avoid Collisions Scale") / 1000
-							local position = char.rootpart.CFrame.p
-							local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-								Ray.new(position, (travel * speed * scale)),
-								roundsystem.raycastwhitelist
-							) 
-							if part then
-								for i = -10, 10 do
-									local cd = Vector2.new(travel.x, travel.z)
-									cd = vector.rotate(cd, self.circleStrafeAngle * i * -1)
-									cd = Vector3.new(cd.x, 0, cd.y)
-									local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-										Ray.new(position, (cd * speed * scale)),
-										roundsystem.raycastwhitelist
-									) 
-									self.normal = normal
-									if not part then 
-										travel = cd
-									end
-								end
-							end
-						else
-							local position = char.rootpart.CFrame.p
-							for i = 1, 10 do
-								local part, position, normal = workspace:FindPartOnRayWithWhitelist(
-									Ray.new(position, (travel * speed / 10) + Vector3.new(0,rootpart.Velocity.y/10,0)),
-									roundsystem.raycastwhitelist
-								) 
-								self.normal = normal
-								if part then 
-									local dot = normal.Unit:Dot((char.rootpart.CFrame.p - position).Unit)
-									self.normalPositive = dot
-									if dot > 0 then
-										travel += normal.Unit * dot
-										travel = travel.Unit
-										if travel.x == travel.x then
-											self.circleStrafeDirection = travel
-										end
-									end
-								end
-							end
-						end
-					end
-
-					local humanoid = self.humanoid
-					if travel.x == travel.x and humanoid:GetState() ~= Enum.HumanoidStateType.Climbing then
-						if speedtype == "In Air" and (humanoid.FloorMaterial ~= Enum.Material.Air or not humanoid.Jump) then
-							return
-						elseif speedtype == "On Hop" and not userinputservice:IsKeyDown(Enum.KeyCode.Space) then
-							return
-						end
-					
-						if config:GetValue("Main", "Misc", "Movement", "Speed", "KeyBind") then
-							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.z * speed)
-						end
-					end
-				end
-			end
-
-			function repupdate:AutoJump()
-				if config:GetValue("Main", "Misc", "Movement", "Auto Jump") and userinputservice:IsKeyDown(Enum.KeyCode.Space) then
-					self.humanoid.Jump = true
-				end
-			end
-
-			local CHAT_GAME = localplayer.PlayerGui.ChatGame
-			local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
-
-			hook:Add("RenderStepped", "BBOT:Repupdate.Movement", function(delta)
-				if not char.alive then
-					repupdate.humanoid = nil
-					repupdate.rootpart = nil
-					return
-				end
-				if not repupdate.humanoid then
-					repupdate.humanoid = localplayer.Character:FindFirstChild("Humanoid")
-					repupdate.rootpart = localplayer.Character:FindFirstChild("HumanoidRootPart")
-				end
-				repupdate.rootpart = (repupdate.newroot or repupdate.oldroot)
-				char.rootpart = repupdate.rootpart
-				if not CHAT_BOX.Active then
-					repupdate:Speed(delta)
-					repupdate:AutoJump(delta)
-					repupdate:Fly(delta)
-				end
-			end)
-
-			hook:Add("Stepped", "BBOT:Repupdate.Movement", function(duration, delta)
-				repupdate:SourceEngineMovement(delta)
-			end)
 		end
 
 		-- Misc
@@ -17163,19 +17145,16 @@ if not BBOT.Debug.menu then
 
 					isteleporting = tick()
 					local t = tick()
-					local height = 3
-					local vheight = Vector3.new(0,height,0)
 					local points
-					local down = Vector3.new(0,-500,0)
 					for i=1, #players do
 						local player = players[i]
 						if not char.alive or not player[2].alive then continue end
 						if tick()-t > 2 then break end
-						local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(player[3], down), roundsystem.raycastwhitelist)
-						path:ComputeAsync(root_position, part and position or player[3])
-						if path.Status ~= Enum.PathStatus.Success then continue end
-						points = path:GetWaypoints()
-						break
+						local path, success = BBOT.pathing.instant(root_position, player[3], 8, roundsystem.raycastwhitelist)
+						if success then
+							points = path
+							break
+						end
 					end
 
 					if tick()-t > 2 then return end
@@ -17431,6 +17410,206 @@ if not BBOT.Debug.menu then
 				end
 			end)
 
+			function misc:Fly(delta)
+				if not config:GetValue("Main", "Misc", "Movement", "Fly") or not config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
+				local speed = config:GetValue("Main", "Misc", "Movement", "Fly Speed")
+				local rootpart = self.rootpart -- Invis compatibility
+
+				local travel = CACHED_VEC3
+				local looking = camera.CFrame.lookVector --getting camera looking vector
+				local rightVector = camera.CFrame.RightVector
+				if userinputservice:IsKeyDown(Enum.KeyCode.W) then
+					travel += looking
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.S) then
+					travel -= looking
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+					travel += rightVector
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+					travel -= rightVector
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.Space) then
+					travel += Vector3.new(0, 1, 0)
+				end
+				if userinputservice:IsKeyDown(Enum.KeyCode.LeftShift) then
+					travel -= Vector3.new(0, 1, 0)
+				end
+
+				if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
+					if misc.speedDirection.x ~= misc.speedDirection.x then 
+						misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
+					end
+					local origin = travel.Y
+					misc.circleStrafeAngle = -0.1
+					if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+						misc.circleStrafeAngle = 0.1
+					end
+					if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+						misc.circleStrafeAngle = -0.1
+					end
+					local cd = Vector2.new(misc.speedDirection.x, misc.speedDirection.z)
+					local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
+					cd = vector.rotate(cd, misc.circleStrafeAngle * scale)
+					misc.speedDirection = Vector3.new(cd.x, travel.Y, cd.y)
+					travel = misc.speedDirection
+				end
+
+				if travel.Unit.x == travel.Unit.x then
+					rootpart.Anchored = false
+					rootpart.Velocity = travel.Unit * speed --multiplaye the unit by the speed to make
+				else
+					rootpart.Velocity = Vector3.new(0, 0, 0)
+					rootpart.Anchored = true
+				end
+			end
+
+			misc.speedDirection = Vector3.new(1,0,0)
+			function misc:Speed(delta)
+				if config:GetValue("Main", "Misc", "Movement", "Fly") and config:GetValue("Main", "Misc", "Movement", "Fly", "KeyBind") then return end
+				local speedtype = config:GetValue("Main", "Misc", "Movement", "Speed Type")
+				local rootpart = self.rootpart
+				if config:GetValue("Main", "Misc", "Movement", "Speed") then
+					local speed = config:GetValue("Main", "Misc", "Movement", "Speed Factor")
+
+					local travel = CACHED_VEC3
+					local looking = camera.CFrame.LookVector
+					local rightVector = camera.CFrame.RightVector
+					local moving = false
+					if not config:GetValue("Main", "Misc", "Movement", "Circle Strafe") or not config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
+						if userinputservice:IsKeyDown(Enum.KeyCode.W) then
+							travel += looking
+						end
+						if userinputservice:IsKeyDown(Enum.KeyCode.S) then
+							travel -= looking
+						end
+						if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+							travel += rightVector
+						end
+						if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+							travel -= rightVector
+						end
+						misc.speedDirection = Vector3.new(travel.x, 0, travel.z).Unit
+						-- if misc.speedDirection.x ~= misc.speedDirection.x then 
+						-- 	misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
+						-- end
+						misc.circleStrafeAngle = -0.1
+					else
+						if misc.speedDirection.x ~= misc.speedDirection.x then 
+							misc.speedDirection = Vector3.new(looking.x, 0, looking.y)
+						end
+						travel = misc.speedDirection
+						misc.circleStrafeAngle = -0.1
+						
+						if userinputservice:IsKeyDown(Enum.KeyCode.D) then
+							misc.circleStrafeAngle = 0.1
+						end
+						if userinputservice:IsKeyDown(Enum.KeyCode.A) then
+							misc.circleStrafeAngle = -0.1
+						end
+						local cd = Vector2.new(misc.speedDirection.x, misc.speedDirection.z)
+						local scale = delta * config:GetValue("Main", "Misc", "Movement", "Circle Strafe Scale")
+						cd = vector.rotate(cd, misc.circleStrafeAngle * scale)
+						misc.speedDirection = Vector3.new(cd.x, 0, cd.y)
+					end
+
+					travel = misc.speedDirection
+					if config:GetValue("Main", "Misc", "Movement", "Avoid Collisions") and config:GetValue("Main", "Misc", "Movement", "Avoid Collisions", "KeyBind") then
+						if config:GetValue("Main", "Misc", "Movement", "Circle Strafe") and config:GetValue("Main", "Misc", "Movement", "Circle Strafe", "KeyBind") then
+							local scale = config:GetValue("Main", "Misc", "Movement", "Avoid Collisions Scale") / 1000
+							local position = char.rootpart.CFrame.p
+							local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+								Ray.new(position, (travel * speed * scale)),
+								roundsystem.raycastwhitelist
+							) 
+							if part then
+								for i = -10, 10 do
+									local cd = Vector2.new(travel.x, travel.z)
+									cd = vector.rotate(cd, misc.circleStrafeAngle * i * -1)
+									cd = Vector3.new(cd.x, 0, cd.y)
+									local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+										Ray.new(position, (cd * speed * scale)),
+										roundsystem.raycastwhitelist
+									) 
+									misc.normal = normal
+									if not part then 
+										travel = cd
+									end
+								end
+							end
+						else
+							local position = char.rootpart.CFrame.p
+							for i = 1, 10 do
+								local part, position, normal = workspace:FindPartOnRayWithWhitelist(
+									Ray.new(position, (travel * speed / 10) + Vector3.new(0,rootpart.Velocity.y/10,0)),
+									roundsystem.raycastwhitelist
+								) 
+								misc.normal = normal
+								if part then 
+									local dot = normal.Unit:Dot((char.rootpart.CFrame.p - position).Unit)
+									misc.normalPositive = dot
+									if dot > 0 then
+										travel += normal.Unit * dot
+										travel = travel.Unit
+										if travel.x == travel.x then
+											misc.circleStrafeDirection = travel
+										end
+									end
+								end
+							end
+						end
+					end
+					local humanoid = self.humanoid
+					if travel.x == travel.x and humanoid:GetState() ~= Enum.HumanoidStateType.Climbing then
+						if speedtype == "In Air" and (humanoid:GetState() ~= Enum.HumanoidStateType.Freefall or not humanoid.Jump) then
+							return
+						elseif speedtype == "On Hop" and not userinputservice:IsKeyDown(Enum.KeyCode.Space) then
+							return
+						end
+					
+						if config:GetValue("Main", "Misc", "Movement", "Speed", "KeyBind") then
+							rootpart.Velocity = Vector3.new(travel.x * speed, rootpart.Velocity.y, travel.z * speed)
+						end
+					end
+				end
+			end
+
+			function misc:AutoJump()
+				if config:GetValue("Main", "Misc", "Movement", "Auto Jump") and userinputservice:IsKeyDown(Enum.KeyCode.Space) then
+					misc.humanoid.Jump = true
+				end
+			end
+
+			local CHAT_GAME = localplayer.PlayerGui.ChatGame
+			local CHAT_BOX = CHAT_GAME:FindFirstChild("TextBox")
+
+			function misc:BypassSpeedCheck()
+				local val = config:GetValue("Main", "Misc", "Exploits", "Bypass Speed Checks")
+				local character = localplayer.Character
+				if not character then return end
+				local rootpart = character:FindFirstChild("HumanoidRootPart")
+				if not rootpart then
+					return
+				end
+				rootpart.Anchored = false
+				self.oldroot = rootpart
+
+				if val and char.alive and not self.newroot then
+					copy = rootpart:Clone()
+					copy.Parent = character
+					self.newroot = copy
+				elseif self.newroot then
+					if ((not val) or (not gamelogic.currentgun) or (not char.alive) or (not gamemenu.isdeployed())) then
+						self.newroot:Destroy()
+						self.newroot = nil
+					else
+						-- client.char.rootpart.CFrame = self.newroot.CFrame
+						--idk if i can manipulate this at all
+					end
+				end
+			end
+
 			do
 				local oldjump = char.jump
 				function char:jump(height)
@@ -17512,6 +17691,23 @@ if not BBOT.Debug.menu then
 
 			hook:Add("RenderStepped", "BBOT:Misc.Calculate", function(delta)
 				misc:UpdateBeams()
+				misc:BypassSpeedCheck()
+				if not char.alive then
+					misc.humanoid = nil
+					misc.rootpart = nil
+					return
+				end
+				if not misc.humanoid then
+					misc.humanoid = localplayer.Character:FindFirstChild("Humanoid")
+					misc.rootpart = localplayer.Character:FindFirstChild("HumanoidRootPart")
+				end
+				misc.rootpart = (misc.newroot or misc.oldroot)
+				char.rootpart = misc.rootpart
+				if not CHAT_BOX.Active then
+					misc:Fly(delta)
+					misc:Speed(delta)
+					misc:AutoJump(delta)
+				end
 			end)
 
 			function misc:GrenadeTP(position)
@@ -21350,7 +21546,7 @@ if not BBOT.Debug.menu then
 						local box = draw:Clone(box_outline)
 						box.Color = color
 						box.Opacity = color_transparency
-						box.Thickness = 0
+						box.Thickness = 1
 						self.box = self:Cache(box)
 						
 						color, color_transparency = self:GetConfig("Health Bar", "Color Max")
