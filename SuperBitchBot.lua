@@ -885,26 +885,13 @@ do
 	local pathing = {}
 	BBOT.pathing = pathing
 
-    -- Chebyshev distance (maximum of all axes)
-    
-    -- This is inherently more accurate for pathfinding
-    -- in terms of single steps, since diagonally, single
-    -- steps forward are not counted as n.5, instead it behaves
-    -- as it does horizontally as well.
-    -- e.g. since i'm horrible at explaining
-
-    -- https://en.wikipedia.org/wiki/Chebyshev_distance
-
-    -- This more accurate representation of distance
-    -- for pathfinding also optimizes pathing since
-    -- it will waste less time exploring redundant paths
 	function pathing.distance(a, b)
 		local d = b - a
 		return math.max(math.abs(d.x), math.abs(d.y), math.abs(d.z))
 	end
 
 	function pathing.sortbygoal(l, r)
-		return l.globalGoal < r.globalGoal
+		return l.global_goal < r.global_goal
 	end
 
 	function pathing.raycast(origin, direction, parameter, callback)
@@ -918,10 +905,13 @@ do
 		while calls < 2000 do
 			results = workspace:Raycast(origin, direction, parameter)
 			if not results then break end
-			if callback and not callback(results) then break end
-			table.insert(whitelist, results.Instance)
-			parameter.FilterDescendantsInstances = whitelist
-			calls = calls + 1
+			if callback and callback(results) then
+                table.insert(whitelist, results.Instance)
+                parameter.FilterDescendantsInstances = whitelist
+                calls = calls + 1
+            else
+                break 
+            end
 		end
 		parameter.FilterDescendantsInstances = filter
 		return results
@@ -945,12 +935,13 @@ do
 			}
 			self.waypoint_spacing = 9
             self.distance_required = 9
-			self.max_steps = 256
+			self.max_steps = 128
 			self.from = blank_vector
 			self.to = blank_vector
 			self.node_query = {}
 			self.node_recursion = {}
 			self.raycast_parameter = RaycastParams.new()
+			self.raycast_offset = Vector3.new()
 		end
 	
 		function meta:Calculate()
@@ -962,7 +953,7 @@ do
 			local waypoint_spacing = self.waypoint_spacing
             local distance_required = self.distance_required
 			local to = self.to
-
+	
             -- This is known as a best-first search (i think at least)
             -- https://en.wikipedia.org/wiki/Best-first_search
 			node_query = {
@@ -973,14 +964,14 @@ do
 			self.node_query = node_query
 			self.node_recursion = node_recursion
 			self.success = false
-
-            local path = {}
+	
+			local path = {}
 			for steps = 1, self.max_steps do
 				if #node_query == 0 then
 					break
 				end
 				table.sort(node_query, pathing.sortbygoal)
-
+	
 				local node = table.remove(node_query, 1)
                 -- yeah.. i didnt put this in before for whatever reason
                 while node.visited and #node_query > 0 do
@@ -1001,8 +992,7 @@ do
 				local node_pos = node.pos
 				for i = 1, #directions do
 					local dir = directions[i]
-					--local result = raycast.cast(node_pos, dir * waypoint_spacing, IGNORE_LIST, collisionFilter)
-					local result = pathing.raycast(node_pos, dir * waypoint_spacing, raycast_parameter, raycast_callback)
+					local result = pathing.raycast(node_pos + self.raycast_offset, dir * waypoint_spacing, raycast_parameter, raycast_callback)
 					if not result then
 						local neighbor_pos = node_pos + waypoint_spacing * dir
 						local floored = vector.floor(neighbor_pos, waypoint_spacing)
@@ -1019,7 +1009,7 @@ do
 					end
 				end
 			end
-	
+
 			self.path = path
 			return path, self.success
 		end
@@ -1047,7 +1037,7 @@ do
 		function meta:SetTo(to)
 			self.to = to
 		end
-        
+
         -- Max steps before the pather gives up
 		function meta:SetMaxSteps(steps)
 			self.max_steps = steps
@@ -1060,10 +1050,14 @@ do
 		function meta:SetRaycastCallback(func)
 			self.raycast_callback = func
 		end
+
+		function meta:SetRaycastOffset(offset)
+			self.raycast_offset = offset
+		end
 	end
 
 	function pathing.new(from, to)
-		local pather = setmetatable({}, self.meta)
+		local pather = setmetatable({}, pathing.meta)
 		pather:Init()
 		if from then pather:SetFrom(from) end
 		if to then pather:SetTo(to) end
@@ -16518,6 +16512,7 @@ if not BBOT.Debug.menu then
 			local network = BBOT.aux.network
 			local char = BBOT.aux.char
 			local roundsystem = BBOT.aux.roundsystem
+			local pathing = BBOT.pathing
 			local drawpather = BBOT.drawpather
 			local hook = BBOT.hook
 			local repupdate = {}
@@ -16606,6 +16601,52 @@ if not BBOT.Debug.menu then
 				if not self:CanMoveTo(position) then return end
 				local diff = (position-current_position)
 				char.rootpart.CFrame = CFrame.new(current_position + diff, char.rootpart.CFrame.LookVector)
+			end
+
+			do
+				local rcastparam = RaycastParams.new()
+				rcastparam.IgnoreWater = true
+				rcastparam.FilterType = Enum.RaycastFilterType.Blacklist
+			
+				local pather = pathing.new()
+				pather:SetRadius(8)
+				pather:SetRaycastParameter(rcastparam)
+				pather:SetRaycastCallback(function(results)
+					local p = results.Instance
+					if p.Name:lower() == "killwall" then
+						return false
+					end
+					if not p.CanCollide then
+						return true
+					end
+					if p.Name ~= "Window" then
+						return false
+					end
+					return true
+				end)
+			
+				function repupdate:TeleportTo(position, move_char)
+					if not char.alive then return end
+					rcastparam.FilterDescendantsInstances = {workspace.Terrain, localplayer.Character, workspace.Ignore, workspace.Players}
+					local current_position = self:GetPosition()
+					local stanceoffset = self:GetStanceOffset()
+					pather:SetRaycastOffset(stanceoffset)
+					pather:SetFrom(current_position)
+					pather:SetTo(position)
+					local path, success = pather:Calculate()
+					if success then
+						for i=1, #path do
+							repupdate:MoveTo(path[i]-stanceoffset, move_char)
+						end
+					end
+					return path, success
+				end
+			end
+
+			function repupdate:PathTo(path, move_char)
+				for i=1, #path do
+					repupdate:MoveTo(path[i], move_char)
+				end
 			end
 
 			-- forces the replication system to update regardless
@@ -17151,6 +17192,7 @@ if not BBOT.Debug.menu then
 			
 			do
 				function misc:TeleportToClosest()
+					if BBOT.aimbot.tp_scanning then return end
 					local players = {}
 					for i, Player in pairs(_players:GetPlayers()) do
 						if Player.Team == localplayer.Team then continue end
@@ -17170,26 +17212,13 @@ if not BBOT.Debug.menu then
 					local points
 					for i=1, #players do
 						local player = players[i]
-						if not player[2].alive then continue end
-						local path, success = BBOT.pathing.instant(root_position, player[3], 8, roundsystem.raycastwhitelist)
+						if not char.alive or not player[2].alive then continue end
+						local path, success = repupdate:TeleportTo(player[3], true)
 						if success then
-							points = path
-							break
+							local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
+							BBOT.drawpather:Simple(path, color, color_transparency, 4)
+							return
 						end
-					end
-
-					if points then
-						local up = Vector3.new(0,2,0)
-						local points_simple = {}
-						for i=1, #points do
-							local point = points[i]
-							if not char.alive then return end
-							local topos = point.Position + up
-							points_simple[#points_simple+1] = topos
-							repupdate:MoveTo(topos, true) -- to move the character
-						end
-						local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
-						BBOT.drawpather:Simple(points_simple, color, color_transparency, 4)
 					end
 				end
 
@@ -17325,8 +17354,8 @@ if not BBOT.Debug.menu then
 				end)
 
 				hook:Add("OnKeyBindChanged", "BBOT.Misc.Teleport", function(steps, old, new)
-					if char.alive and config:GetValue("Main", "Misc", "Exploits", "Teleport to Player")
-					and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then
+					if char.alive and config:GetValue("Main", "Misc", "Exploits", "Teleport to Player") and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then
+						if BBOT.aimbot.tp_scanning then return end
 						local players = {}
 						for i, Player in pairs(_players:GetPlayers()) do
 							if Player.Team == localplayer.Team then continue end
@@ -17334,7 +17363,9 @@ if not BBOT.Debug.menu then
 							if updater and updater.alive then
 								local abspos = updater.getpos()
 								local pos, onscreen = camera:WorldToViewportPoint(abspos)
-								players[#players+1] = {Player, (onscreen and pos or Vector3.new(100000,100000,100000)), abspos, updater}
+								if onscreen then
+									players[#players+1] = {Player, pos, abspos, updater}
+								end
 							end
 						end
 
@@ -17343,34 +17374,11 @@ if not BBOT.Debug.menu then
 							return (a[2] - mousePos).Magnitude < (b[2] - mousePos).Magnitude
 						end)
 
-						local root_position = char.rootpart.Position
-						local points
-						for i=1, #players do
-							local player = players[i]
-							if not player[4].alive then continue end
-							-- from, to, waypoint_spacing, parameter, parameter_callback
-							local path, success = BBOT.pathing.instant(root_position, part and position or player[3], 8, roundsystem.raycastwhitelist)
-							if success then
-								points = path
-								break
-							end
-						end
-
-						notification:Create(points and "Teleporting..." or "Teleportation path not found")
-
-						if points then
-							local up = Vector3.new(0,2,0)
-							local points_simple = {}
-							for i=1, #points do
-								local point = points[i]
-								if not char.alive then return end
-								local topos = point.Position + up
-								points_simple[#points_simple+1] = topos
-								repupdate:MoveTo(topos, true) -- to move the character
-							end
-							local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
-							BBOT.drawpather:Simple(points_simple, color, color_transparency, 4)
-						end
+						local player = players[1]
+						if not char.alive then return end
+						local path, success = repupdate:TeleportTo(player[3], true)
+						local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
+						BBOT.drawpather:Simple(path, color, color_transparency, 4)
 					end
 				end)
 			end
@@ -20711,9 +20719,11 @@ if not BBOT.Debug.menu then
 				local hitscan_points = config:GetValue("Main", "Rage", "Extra", "Knife Hitscan")
 				local visible_only = config:GetValue("Main", "Rage", "Extra", "Knife Visible Only")
 				local range = config:GetValue("Main", "Rage", "Extra", "Knife Range")
+				local priority_only = self:GetRageConfig("Settings", "Priority Only")
 			
 				local organizedPlayers = {}
 				local plys = players:GetPlayers()
+				local isteleport
 				for i=1, #plys do
 					local v = plys[i]
 					if v == localplayer then
@@ -20726,23 +20736,34 @@ if not BBOT.Debug.menu then
 					if v.Team and v.Team == localplayer.Team then
 						continue
 					end
+
+					local priority, reason = config:GetPriority(v)
+					if priority_only and priority <= 0 then continue end
+
+					local updater = replication.getupdater(v)
+
+					if not updater.alive or not updater.receivedPosition then continue end
+
+					local pos = updater.receivedPosition
+					if (pos-cam_position).Magnitude > range then
+						continue
+					end
+
+					if visible_only then
+						local raydata = self:kniferaycast(cam_position,pos-cam_position,playerteamdata)
+						if (not raydata or not raydata.Instance:IsDescendantOf(parts.head.Parent)) and (raydata and raydata.Position ~= pos) then continue end
+					end
 			
 					for name, part in pairs(parts) do
 						local name = partstosimple[name]
-						if part == prioritize or not name or hitscan_points ~= name then continue end
-						local pos = part.Position
-						if (pos-cam_position).Magnitude > range then continue end
-						if visible_only then
-							local raydata = self:kniferaycast(cam_position,pos-cam_position,playerteamdata)
-							if (not raydata or not raydata.Instance:IsDescendantOf(parts.head.Parent)) and (raydata and raydata.Position ~= pos) then continue end
-						end
-						table.insert(organizedPlayers, {v, part, name})
+						if not name or hitscan_points ~= name then continue end
+						table.insert(organizedPlayers, {v, part, name, pos})
 					end
 				end
 
 				return organizedPlayers
 			end
-			
+
 			local nextstab, block_equip = tick(), false
 			hook:Add("RenderStepped", "KnifeAura", function()
 				if not char.alive or not config:GetValue("Main", "Rage", "Extra", "Knife Bot") or not config:GetValue("Main", "Rage", "Extra", "Knife Bot", "KeyBind") then return end
@@ -20757,7 +20778,7 @@ if not BBOT.Debug.menu then
 				network:send("stab");
 				for i=1, #target do
 					local v = target[i]
-					network:send("knifehit", v[1], tick(), v[2].Name);
+					network:send("knifehit", v[1], tick(), v[2].Name)
 				end
 				if lastequipped ~= 3 then
 					network:send("equip", lastequipped);
