@@ -999,8 +999,18 @@ do
 						local node_neighbor = node_recursion[floored]
 						if not node_neighbor then
 							local global = pathing.distance(neighbor_pos, to)
-							local localg = pathing.distance(node_pos, to)
-							node_neighbor = { pos = neighbor_pos, visited = false, local_goal = localg, global_goal = global, parent = node }
+							-- This was not being used, and I have already
+							-- fiddled with this before and it doesn't seem
+							-- to change the contour of paths at all (at least,
+							-- not in this implementation.)
+
+							-- I'll leave it commented out for now, but
+							-- generally the algorithm I implemented for
+							-- pathfinding here is behaving as it should,
+							-- so I don't think we'll need the local goal
+							
+							--local localg = pathing.distance(node_pos, to)
+							node_neighbor = { pos = neighbor_pos, visited = false, --[[local_goal = localg]], global_goal = global, parent = node }
 							node_recursion[floored] = node_neighbor
 						end
 						if not node_neighbor.visited then
