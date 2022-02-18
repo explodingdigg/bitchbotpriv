@@ -885,6 +885,19 @@ do
 	local pathing = {}
 	BBOT.pathing = pathing
 
+    -- Chebyshev distance (maximum of all axes)
+    
+    -- This is inherently more accurate for pathfinding
+    -- in terms of single steps, since diagonally, single
+    -- steps forward are not counted as n.5, instead it behaves
+    -- as it does horizontally as well.
+    -- e.g. since i'm horrible at explaining
+
+    -- https://en.wikipedia.org/wiki/Chebyshev_distance
+
+    -- This more accurate representation of distance
+    -- for pathfinding also optimizes pathing since
+    -- it will waste less time exploring redundant paths
 	function pathing.distance(a, b)
 		local d = b - a
 		return math.max(math.abs(d.x), math.abs(d.y), math.abs(d.z))
@@ -930,8 +943,9 @@ do
 				Vector3.yAxis,
 				-Vector3.yAxis,
 			}
-			self.radius = 8
-			self.limit = 256
+			self.waypoint_spacing = 9
+            self.distance_required = 9
+			self.max_steps = 256
 			self.from = blank_vector
 			self.to = blank_vector
 			self.node_query = {}
@@ -945,9 +959,12 @@ do
 			local node_recursion = self.node_recursion
 			local node_query = self.node_query
 			local directions = self.directions
-			local radius = self.radius
+			local waypoint_spacing = self.waypoint_spacing
+            local distance_required = self.distance_required
 			local to = self.to
-	
+
+            -- This is known as a best-first search (i think at least)
+            -- https://en.wikipedia.org/wiki/Best-first_search
 			node_query = {
 				{ pos = self.from, visited = false, local_goal = 0, global_goal = pathing.distance(self.from, to), parent = nil }
 			}
@@ -956,19 +973,22 @@ do
 			self.node_query = node_query
 			self.node_recursion = node_recursion
 			self.success = false
-	
-			local path = {}
-			for steps = 1, self.limit do
+
+            local path = {}
+			for steps = 1, self.max_steps do
 				if #node_query == 0 then
 					break
 				end
 				table.sort(node_query, pathing.sortbygoal)
-	
+
 				local node = table.remove(node_query, 1)
+                -- yeah.. i didnt put this in before for whatever reason
+                while node.visited and #node_query > 0 do
+                    node = table.remove(node_query, 1)
+                end
 				node.visited = true
 	
-				if pathing.distance(node.pos, to) <= radius then
-					local path = {}
+				if pathing.distance(node.pos, to) <= distance_required then
 					while node.parent do
 						table.insert(path, 1, node.pos)
 						node = node.parent
@@ -981,11 +1001,11 @@ do
 				local node_pos = node.pos
 				for i = 1, #directions do
 					local dir = directions[i]
-					--local result = raycast.cast(node_pos, dir * radius, IGNORE_LIST, collisionFilter)
-					local result = pathing.raycast(node_pos, dir * radius, raycast_parameter, raycast_callback)
+					--local result = raycast.cast(node_pos, dir * waypoint_spacing, IGNORE_LIST, collisionFilter)
+					local result = pathing.raycast(node_pos, dir * waypoint_spacing, raycast_parameter, raycast_callback)
 					if not result then
-						local neighbor_pos = node_pos + radius * dir
-						local floored = vector.floor(neighbor_pos, radius)
+						local neighbor_pos = node_pos + waypoint_spacing * dir
+						local floored = vector.floor(neighbor_pos, waypoint_spacing)
 						local node_neighbor = node_recursion[floored]
 						if not node_neighbor then
 							local global = pathing.distance(neighbor_pos, to)
@@ -1010,9 +1030,15 @@ do
 		end
 	
 		-- mutators
-		function meta:SetRadius(radi)
-			self.radius = radi
+		function meta:SetWaypointSpacing(spacing)
+			self.waypoint_spacing = spacing
 		end
+
+        -- Distance to target required for the pather
+        -- to assume a valid path was found
+        function meta:SetDistanceRequired(dist)
+            self.distance_required = dist
+        end
 	
 		function meta:SetFrom(from)
 			self.from = from
@@ -1021,9 +1047,10 @@ do
 		function meta:SetTo(to)
 			self.to = to
 		end
-
-		function meta:SetLimit(limit)
-			self.limit = limit
+        
+        -- Max steps before the pather gives up
+		function meta:SetMaxSteps(steps)
+			self.max_steps = steps
 		end
 	
 		function meta:SetRaycastParameter(param)
@@ -1043,9 +1070,9 @@ do
 		return pather
 	end
 
-	function pathing.instant(from, to, radius, parameter, parameter_callback)
+	function pathing.instant(from, to, waypoint_spacing, parameter, parameter_callback)
 		local pather = pathing.new(from, to)
-		pather:SetRadius(radius)
+		pather:SetWaypointSpacing(waypoint_spacing)
 		pather:SetRaycastParameter(parameter)
 		pather:SetRaycastCallback(parameter_callback)
 		return pather:Calculate()
@@ -17123,10 +17150,7 @@ if not BBOT.Debug.menu then
 			end)
 			
 			do
-				local path = pathfinder:CreatePath({AgentRadius = .75, AgentHeight = 2, AgentCanJump = true, WaypointSpacing = math.huge})
-				local isteleporting = false
 				function misc:TeleportToClosest()
-					if isteleporting and tick()-isteleporting < 2 then return end
 					local players = {}
 					for i, Player in pairs(_players:GetPlayers()) do
 						if Player.Team == localplayer.Team then continue end
@@ -17143,21 +17167,16 @@ if not BBOT.Debug.menu then
 						return (a[3] - root_position).Magnitude < (b[3] - root_position).Magnitude
 					end)
 
-					isteleporting = tick()
-					local t = tick()
 					local points
 					for i=1, #players do
 						local player = players[i]
-						if not char.alive or not player[2].alive then continue end
-						if tick()-t > 2 then break end
+						if not player[2].alive then continue end
 						local path, success = BBOT.pathing.instant(root_position, player[3], 8, roundsystem.raycastwhitelist)
 						if success then
 							points = path
 							break
 						end
 					end
-
-					if tick()-t > 2 then return end
 
 					if points then
 						local up = Vector3.new(0,2,0)
@@ -17172,7 +17191,6 @@ if not BBOT.Debug.menu then
 						local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
 						BBOT.drawpather:Simple(points_simple, color, color_transparency, 4)
 					end
-					isteleporting = false
 				end
 
 				function misc:IsPointInsidePart(part, point)
@@ -17309,10 +17327,6 @@ if not BBOT.Debug.menu then
 				hook:Add("OnKeyBindChanged", "BBOT.Misc.Teleport", function(steps, old, new)
 					if char.alive and config:GetValue("Main", "Misc", "Exploits", "Teleport to Player")
 					and config:IsPathwayEqual(steps, "Main", "Misc", "Exploits", "Teleport to Player", "KeyBind") then
-						if isteleporting and tick()-isteleporting < 2 then
-							notification:Create("Teleporter is busy")
-							return
-						end
 						local players = {}
 						for i, Player in pairs(_players:GetPlayers()) do
 							if Player.Team == localplayer.Team then continue end
@@ -17329,23 +17343,19 @@ if not BBOT.Debug.menu then
 							return (a[2] - mousePos).Magnitude < (b[2] - mousePos).Magnitude
 						end)
 
-						isteleporting = tick()
-						local t = tick()
 						local root_position = char.rootpart.Position
 						local points
-						local down = Vector3.new(0,-500,0)
 						for i=1, #players do
 							local player = players[i]
-							if not char.alive or not player[4].alive then continue end
-							if tick()-t > 2 then break end
-							local part, position, normal = workspace:FindPartOnRayWithWhitelist(Ray.new(player[3], down), roundsystem.raycastwhitelist)
-							path:ComputeAsync(root_position, part and position or player[3])
-							if path.Status ~= Enum.PathStatus.Success then continue end
-							points = path:GetWaypoints()
-							break
+							if not player[4].alive then continue end
+							-- from, to, waypoint_spacing, parameter, parameter_callback
+							local path, success = BBOT.pathing.instant(root_position, part and position or player[3], 8, roundsystem.raycastwhitelist)
+							if success then
+								points = path
+								break
+							end
 						end
-					
-						if tick()-t > 2 then return end
+
 						notification:Create(points and "Teleporting..." or "Teleportation path not found")
 
 						if points then
@@ -17361,7 +17371,6 @@ if not BBOT.Debug.menu then
 							local color, color_transparency = config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "Path Color")
 							BBOT.drawpather:Simple(points_simple, color, color_transparency, 4)
 						end
-						isteleporting = false
 					end
 				end)
 			end
