@@ -13029,6 +13029,36 @@ do
 										end,
 										tooltip = "Yeets you to the banlands private server, (DOING THIS WILL BAN YOUR ACCOUNT)"
 									},
+                                    {
+                                        type = "Button",
+                                        name = "Roll All Cases",
+                                        confirm = "Are you sure?",
+                                        callback = function()
+                                            BBOT.misc:RollCases()
+                                        end,
+                                        tooltip = "Automatically rolls all cases in your inventory that has case keys for it. This could lag your game if you have many cases in your inventory!"
+                                    },
+                                    {
+                                        type = "Button",
+                                        name = "Sell All Skins",
+                                        confirm = "Are you sure?",
+                                        callback = function()
+                                            BBOT.misc:SellSkins()
+                                        end,
+                                        tooltip = "Sells all skins in your inventory. Use this with caution, as it rolls *any and all* skins. While this is a quick way to gain some easy money, this could lag your game if you have many skins in your inventory!"
+                                    },
+                                    { -- TODO: Auto Roll Cases & Auto Sell Skins
+                                        type = "Toggle",
+                                        name = "Auto Roll Cases",
+                                        tooltip = "Automatically rolls cases when you receive them.",
+                                        indev = true
+                                    },
+                                    {
+                                        type = "Toggle",
+                                        name = "Auto Sell Skins",
+                                        tooltip = "Automatically sells skins when they are rolled.",
+                                        indev = true
+                                    }
 								}},
 								{content = {
 									{
@@ -15053,7 +15083,7 @@ if not BBOT.Debug.menu then
 				{
 					Name = "GunDataGetter",
 					Keys = {"getGunModule", "getGunModel", "getGunList"}
-				}
+				},
 			}
 
 			-- fetches by function name
@@ -15104,7 +15134,7 @@ if not BBOT.Debug.menu then
 					local data = aux_tables[_]
 					local name = data.Name
 					local sources = data.Sources
-					data.IgnoreSyn = true
+					data.IgnoreSyn = true -- This should already be set to true[?] (as-per synv3 docs)
 					local gc = filtergc("table", data)
 					for i=1, #gc do
 						local gc_data = gc[i]
@@ -15124,7 +15154,7 @@ if not BBOT.Debug.menu then
 								BBOT.log(LOG_WARN, 'Warning: Auxillary overload for "' .. name .. '"')
 								for kk, vv in pairs(core_aux[name]) do
 									if vv ~= rawget(gc_data, kk) then
-										return "Duplicate auxillary \"" .. ax .. "\""
+										return "Duplicate auxillary \"" .. name .. "\""
 									end
 								end
 								core_aux[name] = gc_data
@@ -17770,6 +17800,70 @@ if not BBOT.Debug.menu then
 					end
 				end
 			end
+
+            function misc:RollCases()
+                local inventoryData = BBOT.aux.playerdata.getdata().settings.inventorydata
+                local availableCases = {}
+                local availableCaseKeys = {}
+
+                for i = 1, #inventoryData do
+                    local data = inventoryData[i]
+                    local type = data.Type
+                    if type:match("^Case") then
+                        local dataName = data.Name
+                        local isKey = type:match("Key$") ~= nil
+                        local insertingInto = isKey and availableCaseKeys or availableCases
+                        if not insertingInto[dataName] then
+                            insertingInto[dataName] = {}
+                        end
+                        local array = insertingInto[dataName]
+                        array[#array + 1] = data
+                    end
+                end
+
+                local casesRolled = {}
+
+                for caseName, cases in next, availableCases do
+                    local caseKeys = availableCaseKeys[caseName]
+                    local keyAmount = caseKeys and #caseKeys or 0
+                    if keyAmount > 0 then
+                        casesRolled[caseName] = keyAmount
+                    end
+                end
+
+                local casesRolledNum = 0
+                for caseName, caseRollAmount in next, casesRolled do
+                    casesRolledNum += caseRollAmount
+                    for _ = 1, caseRollAmount do
+                        BBOT.aux.network:send("startrollrequest", caseName)
+                    end
+                end
+
+                if casesRolledNum > 0 then
+                    BBOT.notification:Create(string.format("Rolled %d case%s from inventory", casesRolledNum, casesRolledNum > 1 and "s" or ""), 10)
+                else
+                    BBOT.notification:Create("No cases available", 5)
+                end
+            end
+
+            function misc:SellSkins()
+                local inventoryData = BBOT.aux.playerdata.getdata().settings.inventorydata
+                
+                local skinsSold = 0
+                for i = 1, #inventoryData do 
+                    local data = inventoryData[i]
+                    if data.Type == "Skin" then
+                    	BBOT.aux.network:send("sellskinrequest", data.Name, data.Wep)
+                    	skinsSold += 1
+                    end
+                end
+
+                if skinsSold > 0 then
+                	BBOT.notification:Create(string.format("Sold %d skin%s", skinsSold, skinsSold > 1 and "s" or ""), 10)
+                else
+                	BBOT.notification:Create("You don't seem to have skins on this account!", 5)
+                end
+            end
 
 			local bullet_query = {}
 			hook:Add("PostNetworkSend", "BBOT:Misc.BulletTracer", function(networkname, ...)
