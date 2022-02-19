@@ -1718,6 +1718,31 @@ do
 	end
 end
 
+-- Iterators
+do
+	local iterators = {}
+	BBOT.iterators = iterators
+
+	function iterators.Wrapback(a, i, amt)
+	    -- a = the array being passed into the iterator
+	    -- i = current index to start at
+	    -- amt = the amount of times to return shit
+	    i -= 1
+	    local j = 0
+	    local s = #a
+	    return function()
+	    	-- TODO: optimize this into a for loop instead
+	    	-- idk why its a while loop rn lol
+	        while j < amt do
+	            i = i % s + 1
+	            j = j + 1
+	            return i, a[i]
+	        end
+	        return nil
+	    end
+	end
+end
+
 -- Timers
 do
 	local timer = {
@@ -11085,7 +11110,7 @@ do
 										min = 1,
 										max = 12,
 										suffix = " studs",
-										tooltip = "As of PF update 5.6.2k, I suggest you use 4.1-4.5 shift for the best hit chances",
+										tooltip = "As of PF update 5.6.2k, I suggest you use 4-5 shift for the best hit chances",
 									},
 									{
 										type = "ComboBox",
@@ -11104,11 +11129,11 @@ do
 									{
 										type = "Slider",
 										name = "FirePos Shift Distance",
-										value = 4,
+										value = 9,
 										min = 1,
 										max = 12,
 										suffix = " studs",
-										tooltip = "As of PF update 5.6.2k, I suggest you use 8.5-9.8 shift for the best hit chances",
+										tooltip = "As of PF update 5.6.2k, I suggest you use 8-10 shift for the best hit chances",
 									},
 									{
 										type = "Slider",
@@ -11118,7 +11143,7 @@ do
 										max = 10,
 										decimal = 0,
 										suffix = "x",
-										tooltip = "Adds multiple of the same points at different distances from the fire position",
+										tooltip = "Checks 'x' amount of points in between the origin and the shift position",
 									},
 									{
 										type = "ComboBox",
@@ -16593,7 +16618,7 @@ if not BBOT.Debug.menu then
 
 				-- this is the raycasting for replication, kinda like the server-side version
 				function repupdate:Raycast(origin, offset, extra, callback)
-					local whitelist = {workspace.Terrain, localplayer.Character, workspace.Ignore, workspace.Players, extra}
+					local whitelist = { workspace.Ignore, workspace.Players, extra }
 					local results
 					local calls = 0
 					rcastparam.FilterDescendantsInstances = whitelist;
@@ -16710,8 +16735,8 @@ if not BBOT.Debug.menu then
 				end
 			end
 
-			function repupdate:PathTo(path, move_char)
-				for i=1, #path do
+			function repupdate:PathTo(path, move_char, reverse)
+				for i = (reverse and #path or 1), (reverse and 1 or #path), (reverse and -1 or 1) do
 					repupdate:MoveTo(path[i], move_char)
 				end
 			end
@@ -17023,7 +17048,6 @@ if not BBOT.Debug.menu then
 			local camera = BBOT.service:GetService("CurrentCamera")
 			local localplayer = BBOT.service:GetService("LocalPlayer")
 			local _players = BBOT.service:GetService("Players")
-			local pathfinder = game:GetService("PathfindingService")
 			local hook = BBOT.hook
 			local math = BBOT.math
 			local timer = BBOT.timer
@@ -18575,7 +18599,7 @@ if not BBOT.Debug.menu then
 							break;
 						end;
 						table.insert(p9, v3.Instance);
-						v4.FilterDescendantsInstances = p9;
+						--v4.FilterDescendantsInstances = p9;
 						calls = calls + 1
 					end;
 					return v3;
@@ -19222,39 +19246,6 @@ if not BBOT.Debug.menu then
 				end
 			end
 
-			local dot = Vector3.new().Dot
-			local rcaster = BBOT.aux.raycast
-			function aimbot:raycastbullet_rage(start, dir, depth, raytracepenetration)
-				local trace_amount = 0
-				local function bulletcb(p1)
-					local instance = p1.Instance
-					if instance.Name == "Window" then return true end
-					if instance.Name == "killbullet" then return false end
-					local cancollide = not instance.CanCollide or instance.Transparency == 1
-					if raytracepenetration and depth and not cancollide then
-						local position = p1.Position
-						local instance = p1.Instance
-						local dirunit = dir.Unit
-						local v21 = rcaster.raycastSingleExit(position, instance.Size.magnitude * dirunit, instance);
-						if v21 then
-							local l__Position__22 = v21.Position;
-							local l__Normal__23 = v21.Normal;
-							local v24 = dot(dirunit, l__Position__22 - position);
-							if v24 < depth then
-								depth = depth - v24
-								trace_amount = trace_amount + v24
-								return true
-							else
-								return false
-							end
-						end
-					else
-						return cancollide
-					end
-				end
-				return self:raycastbullet(start,dir,nil,bulletcb), trace_amount
-			end
-
 			local Resolver_NewBullet = {}
 			hook:Add("PreNewBullets", "BBOT:Aimbot.Resolver", function(data)
 				local firepos, player = data.firepos, data.player
@@ -19327,108 +19318,110 @@ if not BBOT.Debug.menu then
 				return (distance < r0 and d0 or distance < r1 and (d1 - d0) / (r1 - r0) * (distance - r0) + d0 or d1)  * (headshot and data.multhead or 1)
 			end
 
-			aimbot.predictedDamageDealt = {}
-			aimbot.predictedLastHealth = {}
-			aimbot.predictedDamageUpdate = {}
-			aimbot.BulletQuery = {}
-			hook:Add("PostNetworkSend", "BBOT:RageBot.DamagePrediction", function(netname, ...)
-				if netname == "bullethit" then
-					local curthread = syn.get_thread_identity()
-					syn.set_thread_identity(1)
-					local a = {...}
-					local Entity, HitPos, Part, bulletID = a[1], a[2], a[3], a[4]
-					if Entity and Entity:IsA("Player") and aimbot:GetRageConfig("Settings", "Damage Prediction") and aimbot.BulletQuery[bulletID] then
-						local bullet_data = aimbot.BulletQuery[bulletID]
-						local damageDealt = aimbot:GetDamage(bullet_data[1], (HitPos-bullet_data[2]).Magnitude, Part == "Head")
-						if not aimbot.predictedDamageDealt[Entity] then
-							aimbot.predictedDamageDealt[Entity] = (100-hud:getplayerhealth(Entity))
-						end
-						local limit = aimbot:GetRageConfig("Settings", "Damage Prediction Limit")
-						aimbot.predictedDamageDealt[Entity] += damageDealt
-						aimbot.predictedDamageUpdate[Entity] = tick() + (extras:getLatency() * 5)
-						if aimbot.predictedDamageDealt[Entity] >= limit then
-							hook:Call("RageBot.DamagePredictionKilled", Entity)
-						end
-					end
-					syn.set_thread_identity(curthread)
-				elseif netname == "newbullets" and gamelogic.currentgun and gamelogic.currentgun.data then
-					local args = {...}
-					local bullettable = args[1]
-					local dataset = {gamelogic.currentgun.data, bullettable.firepos}
-					for i=1, #bullettable.bullets do
-						local v = bullettable.bullets[i]
-						aimbot.BulletQuery[v[2]] = dataset
-					end
-					timer:Simple(1.5, function()
-						for i=1, #bullettable.bullets do
-							local v = bullettable.bullets[i]
-							aimbot.BulletQuery[v[2]] = nil
-						end
-					end)
-				end
-			end)
+			-- This is broken because of the new ragebot... cba to fix this rn
 
-			hook:Add("OnConfigChanged", "BBOT:RageBot.DamagePredictionReset", function(steps, old, new)
-				if config:IsPathwayEqual(steps, "Main", "Rage", "Settings", "Damage Prediction Limit") then
-					for k, v in next, players:GetPlayers() do
-						aimbot.predictedDamageDealt[v] = (100-hud:getplayerhealth(v))
-						aimbot.predictedLastHealth[v] = hud:getplayerhealth(v)
-					end
-				end
-			end)
-
-			hook:Add("OnAliveChanged", "BBOT:RageBot.DamagePredictionReset", function()
-				for k, v in next, players:GetPlayers() do
-					aimbot.predictedDamageDealt[v] = (100-hud:getplayerhealth(v))
-					aimbot.predictedLastHealth[v] = hud:getplayerhealth(v)
-				end
-			end)
-
-			hook:Add("Postupdatespawn", "BBOT:RageBot.DamagePredictionReset", function(player, controller)
-				aimbot.predictedLastHealth[player] = 100
-				aimbot.predictedDamageDealt[player] = 0
-				aimbot.predictedDamageUpdate[player] = tick() + (extras:getLatency() * 5)
-			end)
-
-			hook:Add("PlayerAdded", "BBOT:RageBot.DamagePredictionReset", function(player, controller)
-				aimbot.predictedLastHealth[player] = 100
-				aimbot.predictedDamageDealt[player] = 0
-				aimbot.predictedDamageUpdate[player] = tick() + (extras:getLatency() * 5)
-			end)
-
-			hook:Add("PlayerRemoving", "BBOT:RageBot.DamagePredictionReset", function(player, controller)
-				aimbot.predictedLastHealth[player] = nil
-				aimbot.predictedDamageDealt[player] = nil
-				aimbot.predictedDamageUpdate[player] = nil
-			end)
-
-			local dmg_last = 0
-
-			hook:Add("RenderStepped", "BBOT:RageBot.DamagePrediction", function()
-				for index, time in next, aimbot.predictedDamageUpdate do
-					if time < tick() then
-						aimbot.predictedDamageDealt[index] = (100-hud:getplayerhealth(index))
-						aimbot.predictedLastHealth[index] = hud:getplayerhealth(index)
-						aimbot.predictedDamageUpdate[index] = nil
-					end
-				end
-
-				for index, time in next, aimbot.predictedDamageDealt do
-					local hpnew = hud:getplayerhealth(index)
-					if not aimbot.predictedLastHealth[index] then
-						aimbot.predictedLastHealth[index] = hpnew
-					end
-					if hpnew > aimbot.predictedLastHealth[index] then
-						aimbot.predictedLastHealth[index] = hpnew
-						if not aimbot.predictedDamageUpdate[index] then
-							aimbot.predictedDamageUpdate[index] = tick() + (extras:getLatency() * 5)
-						end
-					elseif hpnew < aimbot.predictedLastHealth[index] then
-						aimbot.predictedLastHealth[index] = hpnew
-						aimbot.predictedDamageUpdate[index] = tick() + (extras:getLatency() * 5)
-					end
-				end
-			end)
+			--aimbot.predictedDamageDealt = {}
+			--aimbot.predictedLastHealth = {}
+			--aimbot.predictedDamageUpdate = {}
+			--aimbot.BulletQuery = {}
+			--hook:Add("PostNetworkSend", "BBOT:RageBot.DamagePrediction", function(netname, ...)
+			--	if netname == "bullethit" then
+			--		local curthread = syn.get_thread_identity()
+			--		syn.set_thread_identity(1)
+			--		local a = {...}
+			--		local Entity, HitPos, Part, bulletID = a[1], a[2], a[3], a[4]
+			--		if Entity and Entity:IsA("Player") and aimbot:GetRageConfig("Settings", "Damage Prediction") and aimbot.BulletQuery[bulletID] then
+			--			local bullet_data = aimbot.BulletQuery[bulletID]
+			--			local damageDealt = aimbot:GetDamage(bullet_data[1], (HitPos-bullet_data[2]).Magnitude, Part == "Head")
+			--			if not aimbot.predictedDamageDealt[Entity] then
+			--				aimbot.predictedDamageDealt[Entity] = (100-hud:getplayerhealth(Entity))
+			--			end
+			--			local limit = aimbot:GetRageConfig("Settings", "Damage Prediction Limit")
+			--			aimbot.predictedDamageDealt[Entity] += damageDealt
+			--			aimbot.predictedDamageUpdate[Entity] = tick() + (extras:getLatency() * 5)
+			--			if aimbot.predictedDamageDealt[Entity] >= limit then
+			--				hook:Call("RageBot.DamagePredictionKilled", Entity)
+			--			end
+			--		end
+			--		syn.set_thread_identity(curthread)
+			--	elseif netname == "newbullets" and gamelogic.currentgun and gamelogic.currentgun.data then
+			--		local args = {...}
+			--		local bullettable = args[1]
+			--		local dataset = {gamelogic.currentgun.data, bullettable.firepos}
+			--		for i=1, #bullettable.bullets do
+			--			local v = bullettable.bullets[i]
+			--			aimbot.BulletQuery[v[2]] = dataset
+			--		end
+			--		timer:Simple(1.5, function()
+			--			for i=1, #bullettable.bullets do
+			--				local v = bullettable.bullets[i]
+			--				aimbot.BulletQuery[v[2]] = nil
+			--			end
+			--		end)
+			--	end
+			--end)
+--
+			--hook:Add("OnConfigChanged", "BBOT:RageBot.DamagePredictionReset", function(steps, old, new)
+			--	if config:IsPathwayEqual(steps, "Main", "Rage", "Settings", "Damage Prediction Limit") then
+			--		for k, v in next, players:GetPlayers() do
+			--			aimbot.predictedDamageDealt[v] = (100-hud:getplayerhealth(v))
+			--			aimbot.predictedLastHealth[v] = hud:getplayerhealth(v)
+			--		end
+			--	end
+			--end)
+--
+			--hook:Add("OnAliveChanged", "BBOT:RageBot.DamagePredictionReset", function()
+			--	for k, v in next, players:GetPlayers() do
+			--		aimbot.predictedDamageDealt[v] = (100-hud:getplayerhealth(v))
+			--		aimbot.predictedLastHealth[v] = hud:getplayerhealth(v)
+			--	end
+			--end)
+--
+			--hook:Add("Postupdatespawn", "BBOT:RageBot.DamagePredictionReset", function(player, controller)
+			--	aimbot.predictedLastHealth[player] = 100
+			--	aimbot.predictedDamageDealt[player] = 0
+			--	aimbot.predictedDamageUpdate[player] = tick() + (extras:getLatency() * 5)
+			--end)
+--
+			--hook:Add("PlayerAdded", "BBOT:RageBot.DamagePredictionReset", function(player, controller)
+			--	aimbot.predictedLastHealth[player] = 100
+			--	aimbot.predictedDamageDealt[player] = 0
+			--	aimbot.predictedDamageUpdate[player] = tick() + (extras:getLatency() * 5)
+			--end)
+--
+			--hook:Add("PlayerRemoving", "BBOT:RageBot.DamagePredictionReset", function(player, controller)
+			--	aimbot.predictedLastHealth[player] = nil
+			--	aimbot.predictedDamageDealt[player] = nil
+			--	aimbot.predictedDamageUpdate[player] = nil
+			--end)
+--
+			--local dmg_last = 0
+--
+			--hook:Add("RenderStepped", "BBOT:RageBot.DamagePrediction", function()
+			--	for index, time in next, aimbot.predictedDamageUpdate do
+			--		if time < tick() then
+			--			aimbot.predictedDamageDealt[index] = (100-hud:getplayerhealth(index))
+			--			aimbot.predictedLastHealth[index] = hud:getplayerhealth(index)
+			--			aimbot.predictedDamageUpdate[index] = nil
+			--		end
+			--	end
+--
+			--	for index, time in next, aimbot.predictedDamageDealt do
+			--		local hpnew = hud:getplayerhealth(index)
+			--		if not aimbot.predictedLastHealth[index] then
+			--			aimbot.predictedLastHealth[index] = hpnew
+			--		end
+			--		if hpnew > aimbot.predictedLastHealth[index] then
+			--			aimbot.predictedLastHealth[index] = hpnew
+			--			if not aimbot.predictedDamageUpdate[index] then
+			--				aimbot.predictedDamageUpdate[index] = tick() + (extras:getLatency() * 5)
+			--			end
+			--		elseif hpnew < aimbot.predictedLastHealth[index] then
+			--			aimbot.predictedLastHealth[index] = hpnew
+			--			aimbot.predictedDamageUpdate[index] = tick() + (extras:getLatency() * 5)
+			--		end
+			--	end
+			--end)
 
 			local last_repupdate_position
 			hook:Add("PostNetworkSend", "BBOT:RageBot.LastPosition", function(netname, pos, ang, t)
@@ -19728,412 +19721,633 @@ if not BBOT.Debug.menu then
 						return 10, "Auto"
 					end
 				end)
-
-				local check = {}
-				hook:Add("RenderStep.Last", "BBOT:Aimbot.Cache", function()
-					check = {}
-				end)
-
-				local blank_vector = Vector3.new()
-				local vecdown = Vector3.new(0,1.55,0)
-				function aimbot:GetRageTarget(fov, gun)
-					if self.tp_target then
-						return self.tp_target
-					end
-					local mousePos = Vector3.new(mouse.x, mouse.y - 36, 0)
-					local cam_position
-					do
-						--[[local future = char.rootpart.Position
-						local current = last_repupdate_position
-						if current then
-							cam_position = current
-						else
-							cam_position = future
-						end]]
-						if self.tp_scanning then
-							cam_position = self.tp_scanning
-						else
-							cam_position = char.rootpart.Position
-						end
-					end
-					local specific = self.calc_target
-					local wall_scale = self:GetRageConfig("Aimbot", "Auto Wallbang Scale")
-					local penetration_depth = gun.data.penetrationdepth * wall_scale/100
-				
-					local damage_prediction = self:GetRageConfig("Settings", "Damage Prediction")
-					local damage_prediction_limit = self:GetRageConfig("Settings", "Damage Prediction Limit")
-					local damage_spare = self:GetRageConfig("Settings", "Damage Prediction Spare")
-					local priority_only = self:GetRageConfig("Settings", "Priority Only")
-					local latency = extras:getLatency()
-				
-					local plys = {} -- the table of players we are going to scan for
-					local target_priority_found = {} -- the players we found from the priority list array
-					local target_found = {} -- the players we found from the normal list array
-					if specific then -- scanning for 1 player, like when they spawn
-						local reg, index
-						local len = #self.ragebot_prioritynext
-						for i=1, len do
-							local v = self.ragebot_prioritynext[i]
-							if v == specific then
-								reg = target_priority_found
-								index = i
-								break
-							end
-						end
-				
-						local len = #self.ragebot_next
-						for i=1, len do
-							local v = self.ragebot_next[i]
-							if v == specific then
-								reg = target_found
-								index = i
-								break
-							end
-						end
-						
-						if reg then
-							local v = specific
-							if not v.Team or v.Team == localplayer.Team then return end
-							if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then return end
-							local updater = replication.getupdater(v)
-							if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then return end
-							if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then return end
-							plys[#plys+1] = v
-							reg[v] = index
-						end
-					else -- here we determine who should be added to table "plys"
-						-- think of this as a regulator to scan a certain number of players per frame
-						-- default it's 1 player per frame
-						do
-							local count, c = 0, 0
-							local len = #self.ragebot_prioritynext
-							for i=1, len do
-								local v = self.ragebot_prioritynext[i-c]
-								if check[v] or not v.Team or v.Team == localplayer.Team then continue end
-								if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
-								local updater = replication.getupdater(v)
-								if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
-								if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
-								plys[#plys+1] = v
-								table.remove(self.ragebot_prioritynext, i-c)
-								c=c+1
-								self.ragebot_prioritynext[#self.ragebot_prioritynext+1] = v
-								target_priority_found[v] = i-c
-								count = count + 1
-								if count >= max_players then
-									break
-								end
-							end
-						end
-				
-						if not priority_only then
-							local count, c = 0, 0
-							local len = #self.ragebot_next
-							for i=1, len do
-								local v = self.ragebot_next[i-c]
-								if check[v] or not v.Team or v.Team == localplayer.Team then continue end
-								if damage_prediction and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] > damage_prediction_limit then continue end
-								local updater = replication.getupdater(v)
-								if not updater or not updater.alive or ((updater.__t_received and updater.__t_received + (latency*2)+.25 < tick())) then continue end
-								if updater.__spawn_time and updater.__spawn_time > tick() - (latency/4) then continue end
-								plys[#plys+1] = v
-								table.remove(self.ragebot_next, i-c)
-								c=c+1
-								self.ragebot_next[#self.ragebot_next+1] = v
-								target_found[v] = i
-								count = count + 1
-								if count >= max_players then
-									break
-								end
-							end
-						end
-					end
-				
-					--.75
-					local stanceoffset = repupdate:GetStanceOffset()
-					local targeted = {}
-					for i=1, #plys do -- here we calculate if they are hittable using the points the config has setup for us
-						-- players we find is hittable we insert into targeted
-						-- here's the structure
-						--[[
-							{
-								v, -- the player
-								part, -- the part we are hitting
-								pos, -- the position we are hitting
-								cam_position, -- the firing position
-								(u > tp_scanning_points), -- are we TP scanning to them?
-								traceamount -- the length of the penetration we had to go through
-							}
-						]]
-				
-						local v = plys[i]
-						local updater = replication.getupdater(v)
-						local parts = self:GetParts(v)
-						if not parts then continue end
-						local part
-						if hitscan_priority == "Head" then
-							part = updater.gethead()
-						elseif hitscan_priority == "Body" then
-							part = parts.torso
-						end
-						local main_part = updater.gethead().Parent
-						local resolver_offset, isabsolute = self:GetResolvedPosition(v)
-						local abspos = updater.getpos()
-						local tp_hit = false
-						if part then
-							local pos = (isabsolute and resolver_offset or abspos + resolver_offset)
-							if (aimbot_fov >= 180 or not fov or vector.dist2d(fov.Position, point) <= fov.Radius) then
-								if wall_scale > 120 then
-									table.insert(targeted, {v, part, pos, cam_position, false, false})
-								else
-									local lookatme = CFrame.new(blank_vector, pos-cam_position)
-									local targetcframe = CFrame.new(cam_position)
-									for i=1, #firepos_points do
-										local fp_name = firepos_points_name[i]
-										local newcf
-										if not (i > tp_scanning_points) then
-											-- this is the point selection thingy
-											-- if point is a vector3 it's a static offset
-											-- while a cframe is a relative offset
-											--[[if fp_name == "Random" then
-												local offset = vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance))
-												newcf = targetcframe + offset + stanceoffset
-											elseif typeof(firepos_points[i]) == "Vector3" then
-												newcf = targetcframe + firepos_points[i] + stanceoffset
-											else
-												newcf = targetcframe * lookatme * firepos_points[i] + stanceoffset
-											end]]
-
-											if fp_name == "Random" then
-												local offset = vector.randomspherepoint(math.random(-firepos_shift_distance, firepos_shift_distance))
-												newcf = targetcframe + offset
-												if offset.Y < -8.5 then
-													newcf = targetcframe + Vector3.new(offset.X, -8.5, offset.Z)
-												end
-											elseif typeof(firepos_points[i]) == "Vector3" then
-												newcf = targetcframe + firepos_points[i]
-												if firepos_points[i].Y < -8.5 then
-													newcf = targetcframe + firepos_points[i] + Vector3.new(firepos_points[i].X, -8.5, firepos_points[i].Z)
-												end
-											else
-												newcf = targetcframe * lookatme * firepos_points[i]
-												if newcf.p.Y < targetcframe.p.Y and math.abs(newcf.p.Y - targetcframe.p.Y) > 8.5 then
-													newcf = targetcframe * lookatme * CFrame.new(Vector3.new(firepos_points[i].p.X, -8.5, firepos_points[i].p.Z))
-												end
-											end
-										else
-											-- this is for TP scanning points also relative btw
-											if tp_hit then
-												continue
-											end
-											newcf = targetcframe * lookatme * firepos_points[i]
-										end
-										local tp_scanning_shift_dir
-										local cam_position = newcf.p
-										if i > tp_scanning_points then
-											if self.tp_scanning_cooldown then
-												continue
-											end
-											local new, position, dir = repupdate:FindMinimumMoveTo(cam_position)
-											if not repupdate:CanMoveTo(position) then continue end
-											cam_position = position
-											if new and tp_scan_shift then
-												local dir_mul = (dir*firepos_shift_distance)
-												if dir_mul.Y < -8.5 then
-													dir_mul = Vector3.new(dir_mul.X, dir_mul.Y+1.5, dir_mul.Z)
-												end
-												tp_scanning_shift_dir = dir_mul
-											else
-												cam_position = cam_position - (dir/2)
-											end
-										end
-										local u = i
-										do
-											local aim_position = (tp_scanning_shift_dir and tp_scanning_shift_dir + cam_position or cam_position)
-											local lookatme = CFrame.new(blank_vector, aim_position-pos)
-											local targetcframe = CFrame.new(pos)
-											for i=1, #hitbox_points do
-												local hb_name = hitbox_points_name[i]
-												-- relative only goes like this, only points with an UP and UP can hit
-												-- cross relative is UP and DOWN can hit
-												if (relative_only or cross_relative_only) and fp_name ~= "Any" and hb_name ~= "Any" then
-													if relative_only and fp_name ~= hb_name then
-														if cross_relative_only and cross_relatives[fp_name] ~= hb_name then
-															continue
-														elseif not cross_relative_only then
-															continue
-														end
-													elseif not relative_only and cross_relative_only and cross_relatives[fp_name] ~= hb_name then
-														continue
-													end
-												end
-												-- this is the point selection thingy
-												-- if point is a vector3 it's a static offset
-												-- while a cframe is a relative offset
-												local newcf
-												if hb_name == "Random" then
-													newcf = targetcframe * CFrame.new(vector.randomspherepoint(math.random(-hitbox_shift_distance, hitbox_shift_distance)))
-												elseif typeof(hitbox_points[i]) == "Vector3" then
-													newcf = targetcframe + hitbox_points[i]
-												else
-													newcf = targetcframe * lookatme * hitbox_points[i]
-												end
-												local pos = newcf.p
-												local raydata = self:raycastbullet_rage(aim_position,pos-aim_position,penetration_depth,auto_wall)
-												if not raydata or raydata.Position == pos then
-													
-													local damageDealt = self:GetDamage(gun.data, (pos-cam_position).Magnitude, hitscan_priority == "Head")
-													if damage_prediction and damage_spare and self.predictedDamageDealt[v] and self.predictedDamageDealt[v] + damageDealt > damage_prediction_limit then continue end
-
-													if not (u > tp_scanning_points) then
-														tp_hit = true
-													end
-													-- ey we hit, let's add it to the list
-													table.insert(targeted, {v, part, pos, cam_position, (u > tp_scanning_points), (tp_scanning_shift_dir and (tp_scanning_shift_dir*firepos_shift_distance) or nil)})
-												end
-											end
-										end
-									end
-								end
-							end
-						end
-					end
-				
-					return targeted[1]
-				end
 			end
 
+			-------------------------------------
+			-- Ragebot
+			-------------------------------------
 			do
-				function aimbot:RageChanged(target)
-					if (target == nil and self.rage_target) or (self.rage_target == nil and target) or (target and self.rage_target and target[1] ~= self.rage_target[1]) then
-						self.rage_target = target
-						hook:Call("RageBot.Changed", (target and unpack(target) or nil))
+				local replication   = BBOT.aux.replication
+				local char          = BBOT.aux.char
+				local caster        = BBOT.aux.raycast
+				local network       = BBOT.aux.network
+				local sound         = BBOT.aux.sound
+
+				local localplayer   = BBOT.service:GetService("LocalPlayer")
+				local repupdate     = BBOT.repupdate
+				local pathing       = BBOT.pathing
+				local vector        = BBOT.vector
+				local wrapback      = BBOT.iterators.Wrapback
+
+				local phantoms      = game.Teams.Phantoms
+				local ghosts        = game.Teams.Ghosts
+
+				local charsbyplayer = getupvalue(replication.getallparts, 1)
+
+				local dot = Vector3.zero.Dot
+
+				-- a better implementation for profiling should be made later lol
+				--[[profiles = {};]] 
+				local pather = pathing.new()
+				pather:SetRaycastCallback(function(data) -- collision filter
+					local p = data.Instance
+					if p.Name:lower() == "killwall" then
+						return false
+					end
+					if not p.CanCollide then
+						return true
+					end
+					if p.Name ~= "Window" then
+						return false
+					end
+					return true
+				end)
+				local ragebot = { tpmethods = {}; hitboxshiftmethods = {}; next_shot = -1;
+								  pather = pathing.new() }
+
+				local cardinals = {
+					-- Used for cardinal scanning
+					Vector3.yAxis, -Vector3.yAxis,
+					Vector3.xAxis, -Vector3.xAxis,
+					-Vector3.zAxis, Vector3.zAxis
+					--[[
+						The cardinals covered
+						(pretend the slashes next to the vertical bars are z-axis)
+
+						 \|/
+						----
+						/|\
+					]]
+				}
+
+				local function bullet_filter(p)
+					if not p.CanCollide then
+					    return true
+					end
+					if p.Transparency == 1 then
+					    return true
+					end
+					if p.Name ~= "Window" then
+					    return
+					end
+					return true
+				end
+
+				-- Does not use destination
+				function aimbot:BulletCheck(origin, init_velocity, time, acceleration, penetration, step)
+					if --[[coolmath.isNaN(time, true) or]] time > 1.5 then
+						return
+					end
+
+					local ignore_env = { workspace.Players, workspace.Ignore }
+					local reaches_target = true
+					local passed = 0
+					local step = step or (1 / 30)
+					local bullet_pos = origin
+					local bullet_vel = init_velocity
+					local pen_power = penetration
+
+					while passed < time do
+						local dt = math.min(step, time - passed)
+						local step_vel = dt * bullet_vel + 0.5 * acceleration * dt * dt
+						-- vec, dir, extra, cb
+						local enter_data = caster.raycast(bullet_pos, step_vel, ignore_env, bullet_filter, true)
+
+						if enter_data then
+							local unit = step_vel.Unit
+							local enter = enter_data.Position
+							local hit = enter_data.Instance
+
+							local exit_data = caster.raycastSingleExit(enter, hit.Size.magnitude * unit, hit)
+							if exit_data then
+								local dist = dot(unit, exit_data.Position - enter)
+								pen_power = pen_power - dist
+								if pen_power < 0 then
+									reaches_target = false
+									break
+								end
+							end
+							
+							local true_dt = dot(step_vel, enter - bullet_pos) / dot(step_vel, step_vel) * dt
+							bullet_pos = enter + 0.01 * unit
+							bullet_vel = bullet_vel + true_dt * acceleration
+							passed = passed + true_dt
+							ignore_env[#ignore_env + 1] = hit
+						else
+							bullet_pos = bullet_pos + step_vel
+							bullet_vel = bullet_vel + dt * acceleration
+							passed = passed + dt
+						end
+					end
+
+					return reaches_target
+				end
+
+				-------------------------------------
+				-- TP scan methods
+				-------------------------------------
+
+				-- All TP method functions should
+				-- at the very least take two arguments:
+				-- from: Vector3, to: Vector3
+
+				-- This ensures that they will work in compliance
+				-- with the ragebot system
+				do
+					function ragebot.tpmethods.pathfinding(from, to)
+						pather:SetFrom(from)
+						pather:SetTo(to)
+						return pather:Calculate()
+					end
+
+					-- I'm not sure how configurating the "resolution"
+					-- of Frisbee scanning is going to work, but for
+					-- all intents and purposes 5 is generally enough,
+					-- plus the randomization...
+					local angles = {}
+
+					do
+						local frisbee_res = 5
+						-- horizontal
+					    for angle = -math.pi, math.pi, math.pi/frisbee_res do
+					        angles[#angles + 1] = Vector3.new(math.sin(angle), 0, math.cos(angle))
+					    end
+					    -- vertical	
+					    for angle = -math.pi, math.pi, math.pi/frisbee_res do
+					        angles[#angles + 1] = Vector3.new(0, math.sin(angle))
+					    end
+					end
+
+					-- This is called "frisbee" since it behaves somewhat
+					-- like a frisbee: you toss the frisbee into multiple
+					-- directions and measure how far the frisbee traveled
+					-- in each direction, and choose the direction which
+					-- ran the furthest distance.  
+
+					-- This works very well for peeking outdoors and for
+					-- moving to random locations on the map
+					function ragebot.tpmethods.frisbee(from, to, steps)
+						local path = { from }
+						local last_dir
+						for step = 1, (steps or 8) do
+						    local best_dist = -1/0
+						    local best_pos
+						    local rand_dist = math.random(9, 500)
+						    local cur_pos = path[#path]
+						    for i = 1, #angles do
+						        local unit = angles[i] + 0.08 * vector.randomspherepoint(1)
+						        if (not last_dir) or dot(unit, last_dir) > -0.5 then
+						            local hit = repupdate:Raycast(cur_pos, unit * rand_dist)
+						            local next_pos = hit and hit.Position - 0.1 * unit or cur_pos + (rand_dist - 5) * unit
+						            local diff = next_pos - cur_pos
+						            local dist_sq = dot(diff, diff)
+						            if dist_sq > best_dist then
+						                best_dist = dist_sq
+						                best_pos = next_pos
+						                last_dir = unit
+						            end
+						        end
+						    end
+						    if best_pos then
+						    	path[#path + 1] = best_pos
+						    end
+						end
+						return path
+					end
+
+					--[[function ragebot.tpmethods.spiralUpwards(from, to)
+						local path = { from }
+
+						local angle = 2 * math.random() * tau
+						local yAngle = 0
+
+						do
+						    local unit = Vector3.new(sin(angle), 0, cos(angle))
+						    local initialDirection = unit * 2048
+						    local cast = raycast.cast(from, initialDirection, {workspace.Players, workspace.Ignore}, collisionFilter)
+						    if not cast then
+						        return
+						    end
+						    path[#path + 1] = cast.Position - 0.01 * unit
+						end
+
+						for i = 1, 16 do
+						    angle += rad(65)
+						    yAngle += 0.02
+						    local unit = Vector3.new(sin(angle), yAngle, cos(angle))
+						    local direction = unit * 4096
+						    local cast = raycast.cast(path[#path], direction, {workspace.Players, workspace.Ignore}, collisionFilter)
+						    path[#path + 1] = cast and cast.Position - unit or path[#path] + direction
+						end
+
+						return path
+					end]]
+				end
+
+				-------------------------------------
+				-- Hitbox shift methods
+				-------------------------------------
+
+				-- All hitbox shift method functions should
+				-- at the very least take three arguments:
+				-- from: Vector3, to: Vector3, dist: number
+				do
+					-- This attempts to return the closest position of visibility
+					-- so that the first obstructing wall from "to" to "from"
+					-- is visible to a potential second wall, or visible to "from"
+					function ragebot.hitboxshiftmethods.raycasting(from, to, dist)
+					    local dir = from - to
+					    local cast = caster.raycast(to, dir, { workspace.Players, workspace.Ignore }, bullet_filter)
+					    return cast and to - dist * cast.Normal or to - dist * dir.Unit
+					end
+
+					-- Theres probably a better name for this one(?)
+					function ragebot.hitboxshiftmethods.clamping(from, to, dist)
+					    local diff = from - to
+					    local shift = Vector3.new(diff.x > 0 and 1 or -1, diff.y > 0 and 1 or -1, diff.z > 0 and 1 or -1)
+					    return to + dist * shift.unit
+					end
+
+					function ragebot.hitboxshiftmethods.random(from, to, dist)
+					    return to + dist * vector.randomspherepoint(1)
+					end
+
+					local cardinal_cursor = 1
+					function ragebot.hitboxshiftmethods.cardinals(from, to, dist)
+					    local offset = cardinals[cardinal_cursor]
+					    cardinal_cursor = (cardinal_cursor - 1) % #cardinals + 1
+					    return to + dist * offset
+					end
+
+					-- Pushes "to" towards "from" by "dist" studs
+					function ragebot.hitboxshiftmethods.push(from, to, dist)
+						return to + dist * (from - to).unit
 					end
 				end
 
-				hook:Add("SuppressNetworkSend", "BBOT:Aimbot.RageBot.TPScanning", function(netname)
-					if netname == "repupdate" and aimbot.tp_scanning_blockrep then
-						return true
-					end
-				end)
+				-- This WILL BE REQUIRED for ensuring players do not go outside
+				-- of the map bounds (the default method preventing people from
+				-- getting extremely far from the map)
 
-				--[[hook:Add("PostupdateReplication", "BBOT:Aimbot.Find", function(player)
-					if gamelogic.currentgun and gamelogic.currentgun.step and config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
-						aimbot.calc_target = player
-						gamelogic.currentgun.step(0)
-						aimbot.calc_target = nil
-					end
-				end)]]
+				-- This method is present on every map in the game, so we will need
+				-- to set this up later.
 
-				hook:Add("Postupdatespawn", "BBOT:Aimbot.RageBot.Calc", function(player)
-					if char.alive and player ~= localplayer and gamelogic.currentgun and gamelogic.currentgun.firestep and config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
-						aimbot.calc_target = player
-						gamelogic.currentgun.firestep(0)
-						aimbot.calc_target = nil
-					end
-				end)
-
-				local runservice = BBOT.service:GetService("RunService")
-				function aimbot:RageStep(gun)
-					if not self:GetRageConfig("Aimbot", "Rage Bot", "KeyBind") then
-						self:RageChanged(nil)
-						self.rage_target = nil
-						return
-					end
-					if BBOT.misc.inblink and not config:GetValue("Main", "Misc", "Exploits", "Blink On Fire") then
-						local a, b = BBOT.misc:BlinkPosition()
-						if a and b and (a-b).Magnitude > 9 then
-							self:RageChanged(nil)
-							self.rage_target = nil
-							return
+				--[[function ragebot.fixPath(path)
+					for i = 1, #path do
+						local pos = path[i]
+						if not util:IsPointWithinAABB(pos, MAP_MIN, MAP_MAX) then
+							path[i] = util:ClosestPointAABB(pos, MAP_MIN, MAP_MAX)
 						end
 					end
-					if self.tp_ignore then return end
-					self.in_ragebot = true
+				end]]
 
-					local part = (gun.isaiming() and BBOT.weapons.GetToggledSight(gun).sightpart or gun.barrel)
+				-------------------------------------
+				-- Method management
+				-------------------------------------
 
-					local target = self:GetRageTarget(aimbot.rfov_circle_last, gun)
-					if target and target[5] and not self.tp_scanning then
-						local original_position = char.rootpart.Position
-						local target_pos = target[4]
-						repupdate:BlinkUpdate() -- obivously don't want to fake lagging during this
-						self.tp_scanning = target_pos
-						self.tp_ignore = true
-						self.tp_scanning_cooldown = true
-						-- we move this so that server-side our humanoid root part will appear in the exact position as the repupdate
-						repupdate:MoveCharTo(target_pos) -- move our humanoid root part (not repupdate)
-						self.tp_scanning_blockrep = true
-						char.rootpart.Anchored = true
-						local heartbeat_ticks = 1
-						-- here we let roblox's part replication tell the server we moved
-						hook:Add("Stepped", "BBOT:RageBot.TPScan", function()
-							if heartbeat_ticks > 0 then
-								heartbeat_ticks = heartbeat_ticks - 1
-								return
+				local tp_method_order = {}
+				local hb_shift_method_order = {}
+
+				for name, func in next, ragebot.tpmethods do
+					tp_method_order[#tp_method_order + 1] = { name = name; func = func; success = false; successfulattempts = 0 }
+				end
+
+				for name, func in next, ragebot.hitboxshiftmethods do
+					hb_shift_method_order[#hb_shift_method_order + 1] = { name = name; func = func; success = false; successfulattempts = 0 }
+				end
+
+				-- The above is done to minimize wasting time using
+				-- methods that are not expedient to use at a given position.
+				-- (implementation for sorting is in scanTargetSingle)
+
+				-- Ex: one method may work better indoors than the other, so
+				-- this will make sure that method will be used more supremely
+				-- The moment a method fails, another method may be used which could work more often
+
+				local function method_sort_predicate(l, r)
+					local left_score = (l.success and 2 or 1) * l.successfulattempts
+					local right_score = (r.success and 2 or 1) * r.successfulattempts
+					return left_score > right_score
+				end
+
+				local function rage_target_sort_predicate(l, r)
+					local server_pos = repupdate:GetPosition()
+
+					local left_pos, right_pos = l.position, r.position
+
+					local l_delta = left_pos  - server_pos
+					local r_delta = right_pos - server_pos
+
+					-- On most maps, getting very high in the sky means
+					-- less walls will be obstructing the target, so we 
+					-- want to make sure we are getting rid of these idiots first
+
+					-- However, we still prefer also having the closest
+					-- people in the list first, so we also consider
+					-- horizontal distance
+					local left_score  = math.abs( l_delta.x * l_delta.x  +  l_delta.z * l_delta.z ) + math.abs( l_delta.y ^ 4 )
+					local right_score = math.abs( r_delta.x * r_delta.x  +  r_delta.z * r_delta.z ) + math.abs( r_delta.y ^ 4 )
+
+					-- TODO: Add spawn time as a heuristic to maximize spawn-killing
+					-- TODO: Add priority
+
+					return right_score > left_score
+				end
+
+				-- Start actual ragebot scanning stuff
+
+				-- Cream, do your organization magic (make this not super weird)
+				local cardinal_cursor     = 1 -- Used for wrapback iteration
+				local tp_method_cursor    = 1
+				local hb_method_cursor    = 1
+				local ticket              = -1 -- Used for sending bullets
+				local next_teleport       = -1 -- Used for throttling teleport scanning
+				local flip                = true -- Used for other things that occur every other frame or check (?) i guess
+
+				function aimbot:ScanRageTargetSingle(origin, gun, target, target_data)
+					--[[
+					    Target information structure
+					 	{
+					 		firepos = <Vector3> position
+					 		waypoints = Array<Vector3>? waypoints
+					    	targets = {
+					    		an array of these kinds of tables
+								{
+							    	player = <Player> player
+							    	hitpos = <Vector3> position
+							    	launchvelocity = <Vector3> velocity
+									traveltime = <number> duration
+								}, ...
+					    	}
+					    }
+					]]
+
+					local multipoint_amt           = 3
+					local tp_methods_per_player    = 2
+					local max_teleports_per_second = 8
+					local waypoint_skip            = 2
+
+					local data = gun.data
+
+					local hb_shift_method              = hb_shift_method_order[hb_method_cursor]
+					local hitbox_pos                   = flip and hb_shift_method.func(origin, target.position, 5) or target.position
+					-- This is corrected for the bullet congruency check
+					local firepos                      = target_data and target_data.firepos or origin + 0.01 * (hitbox_pos - origin).unit
+					-- Check normally
+					local launch_velocity, travel_time = physics.trajectory(firepos, self.bullet_gravity, hitbox_pos, data.bulletspeed)
+					local reaches_target               = self:BulletCheck(firepos, launch_velocity, travel_time, self.bullet_gravity, data.penetrationdepth)
+					if reaches_target then
+						if target_data then
+							target_data.targets[#target_data.targets + 1] = {
+								player         = target.player,
+								hitpos         = hitbox_pos,
+								launchvelocity = launch_velocity,
+								traveltime     = travel_time
+							}
+						end
+
+						return target_data or {
+							firepos = firePos,
+							targets = {
+								{
+									player         = target.player,
+									hitpos         = hitbox_pos,
+									launchvelocity = launch_velocity,
+									traveltime     = travel_time
+								}
+							}
+						}
+					elseif not target_data then
+						-- Proceed with alternative techniques
+
+						-- This is where the ragebot becomes unsafe to use without being banned
+						if flip then
+							-- Try a bunch of random points
+
+							-- Cream - you'll probably just condense these into something
+							-- like the old loop over the points setup in the rage config
+							for i = 1, multipoint_amt do
+								local new_firepos = origin + 9.9 * vector.randomspherepoint(1)
+								local new_hitpos = flip and hb_shift_method.func(new_firepos, target.position, 5) or hitbox_pos
+								local launch_velocity, travel_time = physics.trajectory(new_firepos, self.bullet_gravity, new_hitpos, data.bulletspeed)
+								local reaches_target = self:BulletCheck(new_firepos, launch_velocity, travel_time, self.bullet_gravity, data.penetrationdepth)
+								if reaches_target then
+									return {
+										firepos = new_firepos,
+										hitboxmethod = flip and hb_shift_method.name or nil,
+										targets = {
+											{
+												player = target.player,
+												hitpos = new_hitpos,
+												launchvelocity = launch_velocity,
+												traveltime = travel_time
+											}
+										}
+									}
+								end
 							end
-							hook:Remove("Stepped", "BBOT:RageBot.TPScan")
-							hook:Add("Heartbeat", "BBOT:RageBot.TPScan", function()
-								hook:Remove("Heartbeat", "BBOT:RageBot.TPScan")
-								if not char.alive then
-									self.tp_scanning = false
-									self.tp_scanning_cooldown = false
-									self.tp_ignore = false
-									self.tp_scanning_blockrep = false
-									if char.rootpart then
-										char.rootpart.Anchored = false
+						else
+							-- Good old cardinal scanning
+							for j, vec in wrapback(cardinals, cardinal_cursor, multipoint_amt) do
+								local new_firepos = origin + 9.9 * vec
+								local new_hitpos = flip and hb_shift_method.func(new_firepos, target.position, 5) or hitbox_pos
+								local launch_velocity, travel_time = physics.trajectory(new_firepos, self.bullet_gravity, new_hitpos, data.bulletspeed)
+								local reaches_target = self:BulletCheck(new_firepos, launch_velocity, travel_time, self.bullet_gravity, data.penetrationdepth)
+								if reaches_target then
+									return {
+										firepos = new_firepos,
+										hitboxmethod = flip and hb_shift_method.name or nil,
+										targets = {
+											{
+												player = target.player,
+												hitpos = new_hitpos,
+												launchvelocity = launch_velocity,
+												traveltime = travel_time
+											}
+										}
+									}
+								end
+							end
+
+							cardinal_cursor += multipoint_amt -- not wrapped around
+						end
+
+						-- It probably still didn't hit, lets teleport scan
+						-- Are we on a cooldown?
+						local now = os.clock()
+						if now > next_teleport then
+							table.sort(tp_method_order, method_sort_predicate) -- sort first
+
+							for j, method_data in wrapback(tp_method_order, tp_method_cursor, tp_methods_per_player) do
+								local path = method_data.func(origin, hitbox_pos)
+								if (not path) or #path == 0 then
+									method_data.success = false
+									continue
+								end
+								-- ragebot.fixPath(path) -- fucking annoying that i have to do this
+								for k = 2, #path, waypoint_skip + 1 do
+									local new_firepos = path[k]
+									local new_hitpos = flip and hb_shift_method.func(new_firepos, target.position, 5) or hitbox_pos
+									local launch_velocity, travel_time = physics.trajectory(new_firepos, self.bullet_gravity, new_hitpos, data.bulletspeed)
+									local reaches_target = self:BulletCheck(new_firepos, launch_velocity, travel_time, self.bullet_gravity, data.penetrationdepth)
+									method_data.success = reaches_target
+
+									if reaches_target then
+										method_data.successfulattempts += 1
+										if hb_shift_method then
+											hb_shift_method.successfulattempts += 1
+										end
+										next_teleport = now + (1/max_teleports_per_second)
+										return {
+											firepos = new_firepos,
+											waypoints = table.pack(table.unpack(path, 1, k)), -- Trimming the path from 1 to k (where we are on the path)
+											--[[method = method_data.name, 		This was just some debug stuff in my hack to see which methods were used
+											hitboxmethod = flip and hb_shift_method.name or nil,]]
+											targets = {
+												{
+													player = target.player,
+													hitpos = new_hitpos,
+													launchvelocity = launch_velocity,
+													traveltime = travel_time
+												}
+											}
+										}
+									else
+										if method_data.successfulattempts > 0 then
+											method_data.successfulattempts -= 1
+										end
+										if flip and hb_shift_method.successfulattempts > 0 then
+											hb_shift_method.successfulattempts -= 1
+										end
 									end
-									return
 								end
-								self.tp_ignore = false
-								self.tp_scanning_blockrep = false
-								-- now that our humanoid is exactly where we want it, we force repupdate to move
-								repupdate:MoveTo(target_pos, true)
-								-- then fire our bullet
-								self.tp_target = target
-								if gamelogic.currentgun and gamelogic.currentgun.firestep then
-									gamelogic.currentgun.firestep(0)
-								end
-								self.tp_target = nil
-								if char.rootpart then
-									char.rootpart.Anchored = false
-								end
-								-- then return our repupdate and our humanoid to where we were
-								repupdate:MoveTo(original_position, true)
-								self.tp_scanning = false
+							end
 
-								timer:Simple(.1, function()
-									self.tp_scanning_cooldown = false
-								end)
-							end)
-						end)
-						return
-					end
-
-					self:RageChanged(target)
-					if target then
-						self.rage_target = target
-						local position = target[3]
-						local part_pos = part.Position
-
-						local dir = self:DropPrediction(part_pos, position, gun.data.bulletspeed).Unit
-						local magnitude = (position-part_pos).Magnitude
-
-						self.silent_data = {part.Position, part.Orientation}
-
-						local X, Y = CFrame.new(part_pos, part_pos+dir):ToOrientation()
-						part.Orientation = Vector3.new(math.deg(X), math.deg(Y), 0)
-						part.Position = target[4]
-
-						if self:GetRageConfig("Aimbot", "Auto Shoot") then
-							self.fire = true
-							gun:shoot(true)
-							if not self.tp_scanning then
-								repupdate:Force()
+							tp_method_cursor += tp_methods_per_player
+							if flip then
+								hb_method_cursor = hb_method_cursor % #hb_shift_method_order + 1
 							end
 						end
+					end
+				end
 
-						self.silent = part
+				function aimbot:GetRageTargets(gun)
+					local valid_targets = {}
+					do
+						local other_team = localplayer.Team == phantoms and ghosts or phantoms
+						local p_list = other_team:GetPlayers()
+
+						for i = 1, #p_list do
+							local player = p_list[i]
+							local updater = replication.getupdater(player)
+
+							if updater and updater.alive then
+								-- TODO: change the backup position to something that will fail less
+								table.insert(valid_targets, {
+									player = player,
+									position = updater.receivedPosition or charsbyplayer[player].torso.Position,
+									updater = updater
+								})
+							end
+						end
+					end
+
+					if #valid_targets == 0 then
+						return
+					end
+					-- there's no real reason to sort when theres only one guy
+					if #valid_targets > 1 then
+					    -- sort the targets using the predicate
+					    table.sort(valid_targets, rage_target_sort_predicate)
+					end
+
+					--local playersScanned = math.min(#valid_targets, menu.flags.aimbot_ppf)
+
+					-- There is an exception to this value
+					-- which will be explained further down
+					-- in the targetting scheme
+					local players_scanned = #valid_targets -- fuck
+					local target_data
+					local origin = repupdate:GetPosition()
+					for i = 1, players_scanned do
+						local target = valid_targets[i]
+						target_data = self:ScanRageTargetSingle(origin, gun, target)
+
+						if target_data then
+							-- Might add this back later
+							--[[if (i + 1 + menu.flags.aimbot_maxbulktargets) <= #valid_targets then
+								for ii = i+1, i + 1 + menu.flags.aimbot_maxbulktargets do
+									local other_target = valid_targets[ii]
+									self:ScanRageTargetSingle(origin, gun, other_target, target_data)
+								end
+							end]]
+							break
+						end
+					end
+
+					return target_data
+				end
+
+				function aimbot:RageStep(gun)
+					local now = os.clock()
+					if now >= ragebot.next_shot then
+						local target_data = self:GetRageTargets(gun)
+						if target_data then
+							-- teleport if needs be
+							if target_data.waypoints then
+								local headheight_vec = Vector3.new(0, char.headheight)
+								-- I have to do this for now
+								for i = 1, #target_data.waypoints do
+									repupdate:MoveTo(target_data.waypoints[i] - headheight_vec)
+								end
+							end
+
+							local data = gun.data
+
+							local server_pos = repupdate:GetPosition()
+
+							-- shoot bullets
+							for i = 1, #target_data.targets do
+								local target_info = target_data.targets[i]
+								local bullets = {}
+								local packets = {}
+								local new_ticket = ticket - ((data.pelletcount or 1)-1)
+								for id = ticket, new_ticket, -1 do
+									bullets[#bullets + 1] = { target_info.launchvelocity, id }
+									packets[#packets + 1] = { target_info.player, target_info.hitpos, "Head", id }
+								end
+
+								network:send("newbullets", {
+									firepos = target_data.firepos,
+									camerapos = server_pos, -- If you don't do this you will just dump
+									bullets = bullets
+								}, tick())
+								-- Hit
+								for j = 1, #packets do
+									network:send("bullethit", unpack(packets[j]))
+								end
+								-- I'll send the timestamp even though
+								-- they don't really use it anymore(?)
+								-- better safe than sorry
+
+								ticket = new_ticket - 1
+							end
+
+							local firerate = typeof(data.firerate) == "number" and data.firerate or data.firerate[1]
+							ragebot.next_shot = now + (#target_data.targets * (60 / (firerate * 3)))
+
+							-- teleport back if needs be
+							if target_data.waypoints then
+								local headheight_vec = Vector3.new(0, char.headheight)
+								-- I have to do this for now
+								for i = #target_data.waypoints, 1, -1 do
+									repupdate:MoveTo(target_data.waypoints[i] - headheight_vec)	
+								end
+							end
+
+							-- Play fire sound just for auditory feedback
+							sound.PlaySoundId(data.firesoundid, data.firevolume, data.firepitch, nil, nil, 0, 0.05)
+						end
 					end
 				end
 			end
@@ -20673,8 +20887,6 @@ if not BBOT.Debug.menu then
 
 			-- Do aimbot stuff here
 			hook:Add("PreFireStep", "BBOT:Aimbot.Calculate", function(gun)
-				aimbot:RageChanged(nil)
-				aimbot.rage_target = nil
 				if config:GetValue("Main", "Rage", "Aimbot", "Rage Bot") then
 					aimbot:RageStep(gun)
 				else
@@ -20707,65 +20919,8 @@ if not BBOT.Debug.menu then
 					aimbot.fire = nil
 				end
 
-				if aimbot.in_ragebot then
-					aimbot.in_ragebot = false
-				end
-
 				aimbot:CrosshairStep(tick()-t, gun)
 				t = tick()
-			end)
-
-			local enque = {}
-			aimbot.silent_bullet_query = enque
-			-- Ta da magical right?
-			hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Slient.Prevent", function(networkname, Entity, HitPos, Part, bulletID, ...)
-				if networkname == "bullethit" then
-					if enque[bulletID] == Entity then
-						return true
-					end
-				end
-			end)
-
-			-- When silent aim isn't enough, resort to this, and make even cheaters rage that their config is garbage
-			hook:Add("SuppressNetworkSend", "BBOT:Aimbot.Silent", function(networkname, bullettable, timestamp)
-				if networkname == "newbullets" then
-					if not gamelogic.currentgun or not gamelogic.currentgun.data then return end
-					if aimbot.rage_target then -- who are we targeting today?
-						hook:Call("Aimbot.NewBullets")
-						local target = aimbot.rage_target
-						--local timescale = 0
-						local campos = camera.CFrame.p
-						local dir = target[3]-campos
-						local firepos = bullettable.firepos
-						local gundata = gamelogic.currentgun.data
-						local t = dir.Magnitude/gundata.bulletspeed
-						local targetpos = target[3]
-						bullettable.firepos = target[4] --campos + ((firepos-campos).Unit + ((targetpos-campos).Unit - (firepos-campos).Unit)) * (firepos-campos).Magnitude
-						if target[5] and target[6] then
-							bullettable.firepos = bullettable.firepos + target[6]
-						end
-						-- what the fuck is this??         ^^^^^^ wtf is this ??? gymnastics??? 🤸‍♂️🤸‍♂️ this isnt gymnastics class buddy
-
-						for i=1, #bullettable.bullets do
-							local bullet = bullettable.bullets[i]
-							bullet[1] = aimbot:DropPrediction(bullettable.firepos, targetpos, gundata.bulletspeed).Unit * bullet[1].Magnitude
-						end
-
-						network:send(networkname, bullettable, repupdate:Tick())
-
-						for i=1, #bullettable.bullets do
-							local bullet = bullettable.bullets[i]
-							if not hud:isplayeralive(target[1]) then continue end
-							timer:Simple(1.5, function()
-								enque[bullet[2]] = nil
-							end)
-							network:send("bullethit", target[1], targetpos, target[2].Name, bullet[2])
-							-- TODO: i want to implement Scan for Collaterals but i am fucking lost in this new paradigm
-							enque[bullet[2]] = target[1]
-						end
-						return true
-					end
-				end
 			end)
 
 			-- Knife Aura --
