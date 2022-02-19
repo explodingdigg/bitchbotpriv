@@ -1010,7 +1010,7 @@ do
 							-- so I don't think we'll need the local goal
 							
 							--local localg = pathing.distance(node_pos, to)
-							node_neighbor = { pos = neighbor_pos, visited = false, --[[local_goal = localg]], global_goal = global, parent = node }
+							node_neighbor = { pos = neighbor_pos, visited = false, --[[local_goal = localg,]] global_goal = global, parent = node }
 							node_recursion[floored] = node_neighbor
 						end
 						if not node_neighbor.visited then
@@ -16619,7 +16619,7 @@ if not BBOT.Debug.menu then
 				rcastparam.FilterType = Enum.RaycastFilterType.Blacklist
 			
 				local pather = pathing.new()
-				pather:SetRadius(8)
+				pather:SetWaypointSpacing(8)
 				pather:SetRaycastParameter(rcastparam)
 				pather:SetRaycastCallback(function(results)
 					local p = results.Instance
@@ -16731,9 +16731,9 @@ if not BBOT.Debug.menu then
 				end
 
 				local vec0 = Vector3.new(0,0,0)
-				local stand = Vector3.new(0,1.25,0)
+				local stand = Vector3.new(0,1.5,0) -- those values were not right bruh????????
 				local crouch = Vector3.new(0,0,0)
-				local prone = Vector3.new(0,-1.25,0)
+				local prone = Vector3.new(0,-1.5,0)
 				function repupdate:GetStanceOffset()
 					local stance = self:GetStance()
 					if stance == "stand" then
