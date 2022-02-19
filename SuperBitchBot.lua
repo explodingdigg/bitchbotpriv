@@ -3107,7 +3107,7 @@ do
 			end
 			local opacity = 1
 			if self.duration then
-				local deltat = math.timefraction(self.t0, self.t0 + self.duration, tick())
+				local deltat = math.clamp(math.timefraction(self.t0, self.t0 + self.duration, tick()), 0, 1)
 				opacity = math.remap(deltat,0,1,1,0) * self.opacity
 			end
 
