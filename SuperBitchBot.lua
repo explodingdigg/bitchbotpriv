@@ -14958,59 +14958,76 @@ if not BBOT.Debug.menu then
 			-- This is my automated way of fetching and finding shared modules pf uses
 			-- How to access -> BBOT.aux.replication
 			local aux_tables = {
-				["vector"] = {
-					indexes = {"random", "anglesyx"},
+				{
+					Name = "vector",
+					Keys = {"random", "anglesyx"},
 				},
-				["animation"] = {
-					indexes = {"player", "reset"},
+				{
+					Name = "animation",
+					Keys = {"player", "reset"},
 				},
-				["particle"] = {
-					sources = {
+				{
+					Name = "particle",
+					Sources = {
 						["new"] = "particle",
 					},
-					indexes = {"new", "step", "reset"},
+					Keys = {"new", "step", "reset"},
 				},
-				["gamelogic"] = {
-					indexes = {"controllerstep", "setsprintdisable"},
+				{
+					Name = "gamelogic",
+					Keys = {"controllerstep", "setsprintdisable"},
 				},
-				["camera"] = {
-					indexes = {"setaimsensitivity", "magnify"},
+				{
+					Name = "camera",
+					Keys = {"setaimsensitivity", "magnify"},
 				},
-				["network"] = {
-					indexes = {"servertick", "send"},
+				{
+					Name = "network",
+					Keys = {"servertick", "send"},
 				},
-				["hud"] = {
-					indexes = {"addnametag"},
+				{
+					Name = "hud",
+					Keys = {"addnametag"},
 				},
-				["roundsystem"] = {
-					indexes = {"lock", "raycastwhitelist"},
+				{
+					Name = "roundsystem",
+					Keys = {"lock", "raycastwhitelist"},
 				},
-				["playerdata"] = {
-					indexes = {"getattloadoutdata", "getgunattdata", "getattachdata", "updatesettings"},
+				{
+					Name = "playerdata",
+					Keys = {"getattloadoutdata", "getgunattdata", "getattachdata", "updatesettings"},
 				},
-				["char"] = {
-					indexes = {"unloadguns", "getslidecondition", "sprinting"},
+				{
+					Name = "char",
+					Keys = {"unloadguns", "getslidecondition", "sprinting"},
 				},
-				["replication"] = {
-					indexes = {"getplayerhit"},
+				{
+					Name = "replication",
+					Keys = {"getplayerhit"},
 				},
-				["cframe"] = {
-					indexes = {"fromaxisangle", "toaxisangle", "direct"},
+				{
+					Name = "cframe",
+					Keys = {"fromaxisangle", "toaxisangle", "direct"},
 				},
-				["sound"] = {
-					indexes = {"PlaySound", "play"},
+				{
+					Name = "sound",
+					Keys = {"PlaySound", "play"},
 				},
-				["raycast"] = {
-					indexes = {"raycast", "raycastSingleExit"},
+				{
+					Name = "raycast",
+					Keys = {"raycast", "raycastSingleExit"},
 				},
-				["menu"] = {
-					indexes = {"isdeployed"},
+				{
+					Name = "menu",
+					Keys = {"isdeployed"},
 				},
-				["ScreenCull"] = {
-					indexes = {"point", "sphere", "localSegment", "segment"},
+				{
+					Name = "ScreenCull",
+					Keys = {"point", "sphere", "localSegment", "segment"},
 				},
-				["GunDataGetter"] = {
-					indexes = {"getGunModule", "getGunModel", "getGunList"}
+				{
+					Name = "GunDataGetter",
+					Keys = {"getGunModule", "getGunModel", "getGunList"}
 				}
 			}
 
@@ -15019,122 +15036,107 @@ if not BBOT.Debug.menu then
 			-- value is where to put it in aux
 			-- true = aux.bulletcheck, replication = aux.replication.bulletcheck
 			local aux_functions = {
-				["bulletcheck"] = "raycast",
-				["rankcalculator"] = "playerdata",
-
-				-- Not sure where this is supposed to go but ok...
-				-- TODO: Nata/Bitch
-				["call"] = true,
-				["gunbob"] = true,
-				["gunsway"] = true,
-				["addplayer"] = true,
-				["removeplayer"] = true,
-				["loadplayer"] = true,
-				["updateplayernames"] = true,
+				{
+					Name = "bulletcheck",
+					Store = "raycast",
+				},
+				{
+					Name = "rankcalculator",
+					Store = "playerdata",
+				},
+				{
+					Name = "call",
+				},
+				{
+					Name = "gunbob",
+				},
+				{
+					Name = "gunsway",
+				},
+				{
+					Name = "addplayer",
+				},
+				{
+					Name = "removeplayer",
+				},
+				{
+					Name = "loadplayer",
+				},
+				{
+					Name = "updateplayernames",
+				},
 			}
 
 			function aux:_Scan()
 				local core_aux, core_aux_sub = {}, {}
 
-				function self._CheckTable(result) -- for now...
-					for k, v in next, aux_tables do
-						local failed = false
-						local indexes = v.indexes
-						local sources = v.sources
-						if indexes then
-							for i=1, #indexes do
-								local name = indexes[i]
-								local value = rawget(result, name) 
-								if value == nil then
-									failed = true
-									break
-								end
-								if sources and sources[name] then
-									if typeof(value) ~= "function" then
-										failed = true
-										break
-									end
-									if not string.find(debug.getinfo(value).source, sources[name], 1, true) then
-										failed = true
-										break
-									end
-								end
-							end
-						end
-						if not failed then
-							if core_aux[k] ~= result then
-								if core_aux[k] ~= nil then
-									BBOT.log(LOG_WARN, 'Warning: Auxillary overload for "' .. k .. '"')
-									for kk, vv in pairs(core_aux[k]) do
-										if vv ~= result[kk] then
-											return k
-										end
-									end
-									core_aux[k] = result
-									BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. k .. '"')
-								else
-									core_aux[k] = result
-									BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. k .. '"')
-								end
-							end
-						end
-					end
-				end
-
-				function self._CheckFunction(result)
-					local name = debug.getinfo(result).name
-					if aux_functions[name] then
-						local path = aux_functions[name]
-						BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"' .. (path ~= true and " sorted into " .. path or ""))
-						core_aux_sub[name] = result
-					end
-				end
-
 				BBOT.log(LOG_DEBUG, "Scanning...")
-				local reg = getgc(true)
-				for i=1, #reg do
-					local v = reg[i]
-					if(typeof(v) == 'table')then
-						local ax = self._CheckTable(v)
-						if ax then
-							return "Duplicate auxillary \"" .. ax .. "\""
-						end
-					elseif(typeof(v) == 'function')then
-						self._CheckFunction(v)
-					end
-				end
-
 				BBOT:SetLoadingStatus(nil, 30)
 
 				BBOT.log(LOG_DEBUG, "Scanning auxillaries...")
-				for k, v in next, core_aux do
-					for kk, vv in next, v do
-						if typeof(vv) == "function" then
-							local ups = debug.getupvalues(vv)
-							for kkk=1, #ups do
-								local vvv = ups[i]
-								if typeof(vvv) == "table" then
-									local ax = self._CheckTable(vvv)
-									if ax then
+
+				for _=1, #aux_tables do
+					local data = aux_tables[_]
+					local name = data.Name
+					local sources = data.Sources
+					data.IgnoreSyn = true
+					local gc = filtergc("table", data)
+					for i=1, #gc do
+						local gc_data = gc[i]
+						if sources then
+							local success = false
+							for fname, path in next, sources do
+								local value = rawget(gc_data, fname)
+								if typeof(value) == "function" and string.find(debug.getinfo(value).source, path, 1, true) then
+									success = true
+									break
+								end
+							end
+							if not success then continue end
+						end
+						if core_aux[name] ~= gc_data then
+							if core_aux[name] ~= nil then
+								BBOT.log(LOG_WARN, 'Warning: Auxillary overload for "' .. name .. '"')
+								for kk, vv in pairs(core_aux[name]) do
+									if vv ~= rawget(gc_data, kk) then
 										return "Duplicate auxillary \"" .. ax .. "\""
 									end
 								end
+								core_aux[name] = gc_data
+								BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. name .. '"')
+							else
+								core_aux[name] = gc_data
+								BBOT.log(LOG_DEBUG, 'Found Auxillary "' .. name .. '"')
 							end
 						end
+					end
+				end
+
+				for _=1, #aux_functions do
+					local data = aux_functions[_]
+					local name = data.Name
+					data.IgnoreSyn = true
+					local gc = filtergc("function", data)
+					for i=1, #gc do
+						local gc_data = gc[i]
+						BBOT.log(LOG_DEBUG, 'Found Auxillary Function "' .. name .. '"')
+						core_aux_sub[name] = gc_data
 					end
 				end
 
 				BBOT:SetLoadingStatus(nil, 40)
 
 				BBOT.log(LOG_DEBUG, "Checking auxillaries...")
-				for k, v in next, aux_tables do
-					if not core_aux[k] then
+				for _=1, #aux_tables do
+					local data = aux_tables[_]
+					if not core_aux[data.Name] then
 						return "Couldn't find auxillary \"" .. k ..  "\""
 					end
 				end
 
-				for k, v in next, aux_functions do
-					if not core_aux_sub[k] then
+				for _=1, #aux_functions do
+					local data = aux_functions[_]
+					if not core_aux_sub[data.Name] then
 						return "Couldn't find auxillary \"" .. k ..  "\""
 					end
 				end
@@ -15143,11 +15145,11 @@ if not BBOT.Debug.menu then
 					self[k] = v
 				end
 
-				for k, v in next, core_aux_sub do
-					local saveas = aux_functions[k]
-					if saveas == true then
-						self[k] = v
-					else
+				for _=1, #aux_functions do
+					local data = aux_functions[_]
+					local k, v = data.Name, core_aux_sub[data.Name]
+					local saveas = data.Store
+					if saveas then
 						if not self[saveas] then
 							self[saveas] = {}
 						end
@@ -15156,9 +15158,13 @@ if not BBOT.Debug.menu then
 						hook:Add("Unload", "BBOT:Aux.RemoveAuxSub-" .. k, function()
 							rawset(t, k, nil)
 						end)
+						BBOT.log(LOG_DEBUG, 'Auxillary Function "' .. k .. '" sorted into ' .. saveas)
+					else
+						self[k] = v
 					end
 				end
 
+				local reg = getgc()
 				for i=1, #reg do
 					local v = reg[i]
 					if typeof(v) == "function" then
