@@ -3788,7 +3788,7 @@ do
 		if typeof(reg) == "table" then
 			if reg.self ~= nil then
 				local s = reg.self
-				if typeof(s) == "table" and reg.type and reg.type ~= "Button" then
+				if typeof(s) == "table" and s.type and s.type ~= "Button" then
 					return s.value
 				end
 				return s
@@ -5661,6 +5661,7 @@ do
 			self:SetXAlignment(XAlignment.Right)
 			self:SetYAlignment(YAlignment.Bottom)
 			self:SetFontManager("Menu.BodyMedium")
+			self.mouseinputs = false
 		end
 
 		function GUI:SetClipping(clipping)
@@ -5758,21 +5759,26 @@ do
 
 		function GUI:ProcessClipping()
 			local text = self.content
-			if self.parent and self.clipping then
+			local cursize = self.absolutesize
+			local useparent = cursize.X <= 2
+			if (self.parent or not useparent) and self.clipping then
 				self:GetOffsets()
 				local x = self:GetTextSize(self.content)
 				local localpos = self:GetLocalTranslation()
-				local psize = self.parent.absolutesize
-				if x + localpos.X + self.offset.X - 4 >= psize.X then
-					text = ""
-					for i=1, #self.content do
-						local v = string.sub(self.content, i, i)
-						local pretext = text .. v
-						local prex = self:GetTextSize(pretext .. " ")
-						if prex + localpos.X + self.offset.X - 4 > psize.X then
-							break 
+				local psize = (useparent and self.parent.absolutesize or cursize)
+				local posx = (useparent and localpos.X + self.offset.X or self.offset.X)
+				text = ""
+				local pretext = ""
+				for i=1, #self.content do
+					local v = string.sub(self.content, i, i)
+					pretext = pretext .. v
+					local prex = self:GetTextSize(pretext .. " ")
+					if prex + posx - 4 < psize.X then
+						if prex + posx - 12 < 0 then
+							text = text .. " "
+						else
+							text = text .. v
 						end
-						text = pretext
 					end
 				end
 			end
@@ -6063,6 +6069,51 @@ do
 		end
 
 		gui:Register(GUI, "ScrollPanel")
+	end
+
+	-- Scrolling Text
+	do
+		local GUI = {}
+
+		function GUI:Step()
+			self:ProcessClipping()
+		end
+
+		function GUI:GetOffsets()
+			local offset_x, offset_y = 0, 0
+			local w, h = self:GetTextSize()
+			if self.text.XAlignment == XAlignment.Center then
+				local extra = self:GetTextScale()
+				offset_x = (-w/2) + (extra/2)
+			elseif self.text.XAlignment == XAlignment.Left then
+				offset_x = -w
+			end
+
+			if self.text.YAlignment == YAlignment.Center then
+				offset_y = -h/2
+			elseif self.text.YAlignment == YAlignment.Top then
+				offset_y = -h
+			end
+
+			local sweep = 0
+			if self.parent then
+				local psize = self.parent.absolutesize
+				local wide = psize.X
+				if wide < w then
+					sweep = (math.sin(tick() / 1.5) * (6 + (w - wide)/2))
+					if self.text.XAlignment == XAlignment.Left then
+						sweep = sweep + ((w-wide)/2) + 1
+					elseif self.text.XAlignment == XAlignment.Right then
+						sweep = sweep - ((w-wide)/2) - 1
+					end
+					offset_x = sweep
+				end
+			end
+			self.offset = Vector2.new(offset_x, offset_y)
+			self.text.Offset = self.absolutepos + Vector2.new(sweep, 0)
+		end
+
+		gui:Register(GUI, "ScrollingText", "Text")
 	end
 
 	-- Text Entry
@@ -6565,9 +6616,10 @@ do
 			gradient.Size = Vector2.new(0,10)
 			self.gradient = self:Cache(gradient)
 
-			local text = gui:Create("Text", self)
+			local text = gui:Create("ScrollingText", self)
 			self.text = text
-			text:SetPos(0, 6, .5, 0)
+			text:SetPos(0, 4, .5, 0)
+			text:SetSize(1, 0, 1, 0)
 			text:SetXAlignment(XAlignment.Right)
 			text:SetYAlignment(YAlignment.Center)
 			text:SetText("")
@@ -6755,9 +6807,10 @@ do
 
 			self.textcontainer = gui:Create("Container", self)
 
-			local text = gui:Create("Text", self.textcontainer)
+			local text = gui:Create("ScrollingText", self.textcontainer)
 			self.text = text
-			text:SetPos(0, 6, .5, 0)
+			text:SetPos(0, 4, .5, 0)
+			text:SetSize(1, 0, 1, 0)
 			text:SetXAlignment(XAlignment.Right)
 			text:SetYAlignment(YAlignment.Center)
 			text:SetText("")
@@ -6798,12 +6851,12 @@ do
 			local opt = self.options[num]
 			if not opt then return end
 			opt[2] = value
-			self:Refresh()
 			self:OnValueChanged(self.options)
+			self:Refresh()
 		end
 
 		function GUI:SetOptions(options)
-			self.options = options
+			self.options = table.deepcopy(options)
 			self:Refresh()
 		end
 
@@ -9053,6 +9106,7 @@ do
 				toggle.text:SetColor(unsafe_color)
 			end
 			local w = toggle.text:GetTextSize()
+			w = w + 8
 			toggle:SetSize(0, 14 + w, 0, 8)
 			function toggle.text:OnFontChanged(old, new)
 				self:InvalidateLayout()
@@ -9178,7 +9232,7 @@ do
 			function dropbox:OnValueChanged(new)
 				if config.indev and BBOT.username ~= "dev" then return end
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
-					dropbox:SetValue(_config_module:GetValue(unpack(path)))
+					self:SetValue(_config_module:GetValue(unpack(path)))
 					return
 				end
 				menu:ConfigSetValue(new, path)
@@ -9217,7 +9271,7 @@ do
 			function dropbox:OnValueChanged(new)
 				if config.indev and BBOT.username ~= "dev" then return end
 				if config.unsafe and not _config_module:GetValue("Main", "Settings", "Saves", "Cheat Settings", "Allow Unsafe Features") then
-					dropbox:SetValue(_config_module:GetRaw(unpack(path)).value)
+					self:SetValue(_config_module:GetRaw(unpack(path)).value)
 					return
 				end
 				menu:ConfigSetValue(new, path)
