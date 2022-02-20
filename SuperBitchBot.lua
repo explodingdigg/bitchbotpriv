@@ -20177,8 +20177,8 @@ if not BBOT.Debug.menu then
 					    		an array of these kinds of tables
 								{
 							    	player = <Player> player
-							    	hitpos = <Vector3> position
 							    	launchvelocity = <Vector3> velocity
+							    	hitpos = <Vector3> position
 									traveltime = <number> duration
 								}, ...
 					    	}
@@ -20237,7 +20237,7 @@ if not BBOT.Debug.menu then
 								if reaches_target then
 									return {
 										firepos = new_firepos,
-										hitboxmethod = flip and hb_shift_method.name or nil,
+										--hitboxmethod = flip and hb_shift_method.name or nil,
 										targets = {
 											{
 												player = target.player,
@@ -20259,7 +20259,7 @@ if not BBOT.Debug.menu then
 								if reaches_target then
 									return {
 										firepos = new_firepos,
-										hitboxmethod = flip and hb_shift_method.name or nil,
+										--hitboxmethod = flip and hb_shift_method.name or nil,
 										targets = {
 											{
 												player = target.player,
@@ -20409,6 +20409,32 @@ if not BBOT.Debug.menu then
 
 							local server_pos = repupdate:GetPosition()
 
+							--[[
+							-- Visual Debug shit
+
+							local server_pos_vis = CircleDynamic.new(Point3D.new(server_pos))
+							server_pos_vis.Thickness = 2
+							server_pos_vis.NumSides = 10
+							server_pos_vis.Radius = 16
+							server_pos_vis.Filled = false
+							server_pos_vis.Visible = true
+							server_pos_vis.Color = Color3.new(0.960784, 0.262745, 0.262745)
+
+							local fire_pos_vis = CircleDynamic.new(Point3D.new(target_data.firepos))
+							fire_pos_vis.Thickness = 2
+							fire_pos_vis.NumSides = 10
+							fire_pos_vis.Radius = 16
+							fire_pos_vis.Filled = false
+							fire_pos_vis.Visible = true
+							fire_pos_vis.Color = Color3.new(0.262745, 0.623529, 0.960784)
+
+							BBOT.timer:Create("BBOT.Aimbot:RageRemoveShit", 2, 0, function()
+								server_pos_vis:Remove()
+								fire_pos_vis:Remove()
+							end)]]
+
+							-- ident, delay, reps, func
+
 							-- shoot bullets
 							for i = 1, #target_data.targets do
 								local target_info = target_data.targets[i]
@@ -20457,7 +20483,7 @@ if not BBOT.Debug.menu then
 
 			function aimbot:LegitStep(gun)
 				if not gun or gun.knife or not gun.data.bulletspeed then return end
-				local profilename = "BBOT.Aimbot:LegitStep[" .. gun.name .. "]"
+				--local profilename = "BBOT.Aimbot:LegitStep[" .. gun.name .. "]"
 				--debug.profilebegin(profilename)
 
 				--debug.profilebegin("SetCurrentType")
