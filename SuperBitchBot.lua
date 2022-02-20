@@ -1201,12 +1201,14 @@ do
 	function hook:Call(name, ...) -- Calls an array of hooks, and returns anything if needed
 		if self.killed then return end
 		if not self.registry[name] then return end
+		--debug.profilebegin(name)
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
 	
 		if tbln[name] then
 			local func = tbln[name]
 			local ret = {func(...)}
 			if ret[1] ~= nil then
+				--debug.profileend()
 				return unpack(ret)
 			end
 		end
@@ -1225,19 +1227,22 @@ do
 					else
 						local ret = {func(...)}
 						if ret[1] then
+							--debug.profileend()
 							return unpack(ret)
 						end
 					end
 				end
 			end
 		end
+		--debug.profileend()
 	end
 
 	function hook:CallP(name, ...) -- Same as @hook:Call, put with error isolation
 		if self.killed then return end
 		if not self.registry[name] then return end
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
-	
+		--debug.profilebegin(name)
+
 		if tbln[name] then
 			local func = tbln[name]
 			local ret = {xpcall(func, debug.traceback, ...)}
@@ -1257,6 +1262,7 @@ do
 				end
 			elseif ret[2] then
 				table.remove(ret, 1)
+				--debug.profileend()
 				return unpack(ret)
 			end
 		end
@@ -1273,7 +1279,9 @@ do
 					if not _name then 
 						table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
 					else
+						--debug.profilebegin(name .. "::" .. _name)
 						local ret = {xpcall(func, debug.traceback, ...)}
+						--debug.profileend()
 						if not ret[1] then
 							log(LOG_ERROR, "Hook Error - ", name, " - ", _name)
 							log(LOG_ERROR, ret[2])
@@ -1284,12 +1292,14 @@ do
 							end
 						elseif ret[2] then
 							table.remove(ret, 1)
+							--debug.profileend()
 							return unpack(ret)
 						end
 					end
 				end
 			end
 		end
+		--debug.profileend()
 	end
 
 	-- Uses parallelization to make things run smoother
@@ -1299,7 +1309,6 @@ do
 		if self.killed then return end
 		if not self.registry[name] then return end
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
-
 		if tbln[name] then
 			local func = tbln[name]
 			local ran, a, b, c, d, e, f = xpcall(func, debug.traceback, ...)
@@ -18693,7 +18702,7 @@ if not BBOT.Debug.menu then
 							break;
 						end;
 						table.insert(p9, v3.Instance);
-						--v4.FilterDescendantsInstances = p9;
+						v4.FilterDescendantsInstances = p9;
 						calls = calls + 1
 					end;
 					return v3;
@@ -20447,11 +20456,27 @@ if not BBOT.Debug.menu then
 			end
 
 			function aimbot:LegitStep(gun)
-				if not gun or not gun.data.bulletspeed then return end
+				if not gun or gun.knife or not gun.data.bulletspeed then return end
+				local profilename = "BBOT.Aimbot:LegitStep[" .. gun.name .. "]"
+				--debug.profilebegin(profilename)
+
+				--debug.profilebegin("SetCurrentType")
 				self:SetCurrentType(gun)
+				--debug.profileend()
+
+				--debug.profilebegin("MouseStep")
 				self:MouseStep(gun)
+				--debug.profileend()
+
+				--debug.profilebegin("TriggerBotStep")
 				self:TriggerBotStep(gun)
+				--debug.profileend()
+
+				--debug.profilebegin("RedirectionStep")
 				self:RedirectionStep(gun)
+				--debug.profileend()
+
+				--debug.profileend()
 			end
 
 			do
