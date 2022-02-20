@@ -8499,8 +8499,8 @@ do
 			default_panel_borders(self, pos, size)
 			self.color_fade.Offset = pos
 			self.color_fade.Size = size
-			self.white_black_fade.Offset = pos
-			self.white_black_fade.Size = size
+			self.white_black_fade.Offset = pos - Vector2.new(1,1)
+			self.white_black_fade.Size = size + Vector2.new(1,1)
 			self:MoveCursor()
 		end
 
@@ -8601,8 +8601,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.color_fade.Offset = pos
-			self.color_fade.Size = size
+			self.color_fade.Offset = pos - Vector2.new(1,1)
+			self.color_fade.Size = size + Vector2.new(1,1)
 			self:MoveCursor()
 		end
 
@@ -8698,8 +8698,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.color_fade.Offset = pos
-			self.color_fade.Size = size
+			self.color_fade.Offset = pos - Vector2.new(1,1)
+			self.color_fade.Size = size + Vector2.new(1,1)
 			self:MoveCursor()
 		end
 
@@ -8762,8 +8762,8 @@ do
 
 		function GUI:PerformLayout(pos, size, shiftpos, shiftsize)
 			default_panel_borders(self, pos, size)
-			self.transparency_background.Offset = pos
-			self.transparency_background.Size = size
+			self.transparency_background.Offset = pos - Vector2.new(1,1)
+			self.transparency_background.Size = size + Vector2.new(1,1)
 		end
 
 		gui:Register(GUI, "ColorPreview")
@@ -8932,8 +8932,8 @@ do
 			self.background.Size = size - Vector2.new(4, 4)
 			self.background_outline.Offset = pos
 			self.background_outline.Size = size
-			self.background_nocolor.Offset = pos
-			self.background_nocolor.Size = size
+			self.background_nocolor.Offset = pos - Vector2.new(1,1)
+			self.background_nocolor.Size = size + Vector2.new(1,1)
 			self.background_border.Offset = pos - Vector2.new(1, 1)
 			self.background_border.Size = size + Vector2.new(2, 2)
 		end
