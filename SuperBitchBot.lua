@@ -6169,7 +6169,7 @@ do
 			local sweep = 0
 			local wide = size.X
 			if wide < w then
-				sweep = (math.sin(tick() / 1.5) * (2 + (w - wide)/2))
+				sweep = (math.sin(tick() / ((w - wide)/50)) * (2 + (w - wide)/2))
 				if self.text.XAlignment == XAlignment.Left then
 					sweep = sweep + ((w-wide)/2) + 1
 				elseif self.text.XAlignment == XAlignment.Right then
