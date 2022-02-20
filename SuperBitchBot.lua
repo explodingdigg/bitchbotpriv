@@ -5604,8 +5604,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos + Vector2.new(0,2)
-			self.gradient.Size = Vector2.new(size.X, math.min(20, size.Y - 3))
+			self.gradient.Offset = pos + Vector2.new(-1,2)
+			self.gradient.Size = Vector2.new(size.X+1, math.min(20, size.Y - 3))
 		end
 
 		function GUI:SetSizable(bool)
@@ -6362,8 +6362,8 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size, poschanged, sizechanged)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 10)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = size + Vector2.new(1, 1)
 			local w, h = self:GetTextSize(self.content)
 			self.text.Offset = Vector2.new(pos.X+3,pos.Y - (h/2) + (size.Y/2))
 			self.cursor.Size = Vector2.new(1,size.Y-4)
@@ -6747,8 +6747,8 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 10)
+			self.gradient.Offset = pos + Vector2.new(-1, -1)
+			self.gradient.Size = size + Vector2.new(1, 1)
 			default_panel_borders(self, pos, size)
 		end
 
@@ -6936,8 +6936,8 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 10)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 11)
 			default_panel_borders(self, pos, size)
 		end
 
@@ -7077,7 +7077,7 @@ do
 			self.gradient = self:Cache(gradient)
 
 			self.text = gui:Create("Text", self)
-			self.text:SetPos(.5, 0, .5, 0)
+			self.text:SetPos(.5, -2, .5, 0)
 			self.text:SetClipping(false)
 			self.text:SetXAlignment(XAlignment.Center)
 			self.text:SetYAlignment(YAlignment.Center)
@@ -7121,8 +7121,8 @@ do
 			else
 				self.background.Size = size + (self.activated and Vector2.new(0,4) or Vector2.new())
 			end
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 20)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 21)
 		end
 
 		-- :Cache(object, opacity, outlineopacity, zindex, visible)
@@ -7241,8 +7241,8 @@ do
 			tablist.gradient = tablist:Cache(gradient)
 
 			function tablist:PerformLayout(pos, size)
-				self.gradient.Offset = pos
-				self.gradient.Size = Vector2.new(size.X, 20)
+				self.gradient.Offset = pos + Vector2.new(-1,-1)
+				self.gradient.Size = Vector2.new(size.X+1, 21)
 			end
 			
 			self.tablist = tablist
@@ -7266,8 +7266,8 @@ do
 			background:Cache(background.background)
 
 			local line = gui:Create("Container", tablist)
-			line:SetPos(0,0,1,-2)
-			line:SetSize(1,0,0,2)
+			line:SetPos(0,0,1,-1)
+			line:SetSize(1,0,0,1)
 			line.background = draw:Create("Rect", "2V")
 			function line:PerformLayout(pos, size)
 				self.background.Offset = pos
@@ -7471,8 +7471,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 15)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 16)
 		end
 
 		function GUI:SetColor(color)
@@ -7524,8 +7524,8 @@ do
 			self.button:SetSize(1,0,1,0)
 			function self.button:PerformLayout(pos, size, poschanged, sizechanged)
 				default_panel_borders(self, pos, size)
-				self.gradient.Offset = pos
-				self.gradient.Size = Vector2.new(size.X, 8)
+				self.gradient.Offset = pos + Vector2.new(-1,-1)
+				self.gradient.Size = Vector2.new(size.X+1, 9)
 				if not sizechanged then return end
 				self.parent.text:SetPos(0, self.absolutesize.X + 7, .5, -1)
 			end
@@ -7900,8 +7900,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X*self.percentage, size.Y)
+			self.gradient.Offset = pos + Vector2.new(-1, -1)
+			self.gradient.Size = Vector2.new((size.X+1)*self.percentage, size.Y+1)
 		end
 
 		gui:Register(GUI, "ProgressBar")
@@ -7936,12 +7936,12 @@ do
 			self.add = gui:Create("TextButton", self.buttoncontainer)
 			self.add:SetText("+")
 			self.add:SetClipping(false)
-			self.add:SetXAlignment(XAlignment.Center)
+			self.add:SetXAlignment(XAlignment.Left)
 			self.add:SetYAlignment(YAlignment.Center)
 			local w, h = 10, 12
 			self.add:SetPos(1, -w + 2, 0, 0)
 			self.add:SetSize(0, w, 0, h)
-			self.add.text:SetPos(0.5, 0, .5, 0)
+			self.add.text:SetPos(0.5, 2, .5, 0)
 			
 			function self.add.OnClick()
 				local value = 1
@@ -7966,12 +7966,12 @@ do
 			self.deduct = gui:Create("TextButton", self.buttoncontainer)
 			self.deduct:SetText("-")
 			self.deduct:SetClipping(false)
-			self.deduct:SetXAlignment(XAlignment.Center)
+			self.deduct:SetXAlignment(XAlignment.Left)
 			self.deduct:SetYAlignment(YAlignment.Center)
 			local ww, hh = 10, 12
 			self.deduct:SetPos(1, -w -ww + 2, 0, 0)
 			self.deduct:SetSize(0, w, 0, h)
-			self.deduct.text:SetPos(0.5, 0, .5, 0)
+			self.deduct.text:SetPos(0.5, 2, .5, 0)
 			self.deduct.Step = self.add.Step
 			function self.deduct.OnClick()
 				local value = 1
@@ -8068,7 +8068,7 @@ do
 			else
 				self.text:SetText(value .. self.suffix)
 			end
-			self.bar.Size = Vector2.new(self.absolutesize.X*self.percentage, 10)
+			self.bar.Size = Vector2.new((self.absolutesize.X+1)*self.percentage, self.absolutesize.Y+1)
 		end
 
 		function GUI:_SetValue(value)
@@ -8082,10 +8082,10 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 10)
-			self.bar.Offset = pos
-			self.bar.Size = Vector2.new(size.X*self.percentage, 10)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = size + Vector2.new(1,1)
+			self.bar.Offset = pos + Vector2.new(-1,-1)
+			self.bar.Size = Vector2.new((size.X+1)*self.percentage, size.Y+1)
 		end
 
 		function GUI:CalculateValue(X)
@@ -8223,8 +8223,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 20)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 21)
 			local ww, hh = self.title:GetTextSize()
 			self.sort_arrow.Offset = pos + (size/2) + Vector2.new((ww/2) + 3, 0)
 		end
@@ -8864,8 +8864,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 20)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 21)
 		end
 
 		function GUI:Close()
