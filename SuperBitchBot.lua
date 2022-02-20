@@ -6135,12 +6135,24 @@ do
 		local GUI = {}
 
 		function GUI:Step()
-			self:ProcessClipping()
+			local w, h = self:GetTextSize()
+			local size = self.absolutesize
+			if self.parent and size.X <= 2 then
+				size = self.parent.absolutesize
+			end
+			if w + 2 > size.X then
+				self:ProcessClipping()
+			end
 		end
 
 		function GUI:GetOffsets()
 			local offset_x, offset_y = 0, 0
 			local w, h = self:GetTextSize()
+			local size = self.absolutesize
+			if self.parent and size.X <= 2 then
+				size = self.parent.absolutesize
+			end
+
 			if self.text.XAlignment == XAlignment.Center then
 				local extra = self:GetTextScale()
 				offset_x = (-w/2) + (extra/2)
@@ -6155,18 +6167,15 @@ do
 			end
 
 			local sweep = 0
-			if self.parent then
-				local psize = self.parent.absolutesize
-				local wide = psize.X
-				if wide < w then
-					sweep = (math.sin(tick() / 1.5) * (6 + (w - wide)/2))
-					if self.text.XAlignment == XAlignment.Left then
-						sweep = sweep + ((w-wide)/2) + 1
-					elseif self.text.XAlignment == XAlignment.Right then
-						sweep = sweep - ((w-wide)/2) - 1
-					end
-					offset_x = sweep
+			local wide = size.X
+			if wide < w then
+				sweep = (math.sin(tick() / 1.5) * (2 + (w - wide)/2))
+				if self.text.XAlignment == XAlignment.Left then
+					sweep = sweep + ((w-wide)/2) + 1
+				elseif self.text.XAlignment == XAlignment.Right then
+					sweep = sweep - ((w-wide)/2) - 1
 				end
+				offset_x = sweep
 			end
 			self.offset = Vector2.new(offset_x, offset_y)
 			self.sweep = sweep
@@ -7941,7 +7950,7 @@ do
 			local w, h = 10, 12
 			self.add:SetPos(1, -w + 2, 0, 0)
 			self.add:SetSize(0, w, 0, h)
-			self.add.text:SetPos(0.5, 2, .5, 0)
+			self.add.text:SetPos(0.5, 1, .5, 0)
 			
 			function self.add.OnClick()
 				local value = 1
@@ -7971,7 +7980,7 @@ do
 			local ww, hh = 10, 12
 			self.deduct:SetPos(1, -w -ww + 2, 0, 0)
 			self.deduct:SetSize(0, w, 0, h)
-			self.deduct.text:SetPos(0.5, 2, .5, 0)
+			self.deduct.text:SetPos(0.5, 1, .5, 0)
 			self.deduct.Step = self.add.Step
 			function self.deduct.OnClick()
 				local value = 1
@@ -8292,8 +8301,8 @@ do
 			for i=1, #columns do
 				local child = self.children[i]
 				local col = columns[i]
-				child:SetPos(col.pos.X.Scale, -1*(i-2), 0, 0)
-				child:SetSize(col.size.X.Scale, 1*(i-2), 0, 20)
+				child:SetPos(col.pos.X.Scale, 0, 0, 0)
+				child:SetSize(col.size.X.Scale, 0, 0, 20)
 			end
 		end
 
@@ -8309,7 +8318,7 @@ do
 					container:SetRightVisible(false)
 				end
 
-				local row_column = gui:Create("Text", container)
+				local row_column = gui:Create("ScrollingText", container)
 				container.text = row_column
 				row_column:SetXAlignment(XAlignment.Right)
 				row_column:SetYAlignment(YAlignment.Center)
@@ -14478,6 +14487,7 @@ do
 							playerlist:SetSize(1,0,1,-16-6-playerbox_size-8)
 
 							playerlist:AddColumn("Name")
+							playerlist:AddColumn("State")
 							playerlist:AddColumn("Team")
 							playerlist:AddColumn("Priority")
 
@@ -14509,10 +14519,10 @@ do
 												state = "Friendly (" .. (-priority) .. ")"
 											end
 										end
-										local line = playerlist:AddLine(v.Name, v.Team.Name, state)
+										local line = playerlist:AddLine(v.Name, "Unknown", v.Team.Name, state)
 										line.player = v
 
-										local team_line = line.children[2]
+										local team_line = line.children[3]
 										function team_line:Step()
 											if not self:GetAbsoluteVisible() then return end
 											local pl = self.parent.player
@@ -14525,13 +14535,25 @@ do
 											end
 										end
 
+										local state_line = line.children[2]
+										function state_line:Step()
+											local pl = self.parent.player
+											if pl then
+												local updater = BBOT.aux.replication.getupdater(pl)
+												if updater.alive ~= self.alive then
+													self.alive = updater.alive
+													if self.alive then
+														self.text:SetColor(Color3.new(0,1,0))
+														self.text:SetText("Alive")
+													else
+														self.text:SetColor(Color3.new(1,0,0))
+														self.text:SetText("Dead")
+													end
+												end
+											end
+										end
+
 										checked[v] = true
-									end
-								end
-								for i, v in next, playerlist.scrollpanel.canvas.children do
-									if v.player == player then
-										v.children[3].text:SetText(state)
-										break
 									end
 								end
 
@@ -14747,13 +14769,6 @@ do
 							hook:Add("RenderStep.Last", "BBOT:PlayerManager.Tick", function()
 								if nextcheck > tick() then return end
 								nextcheck = tick() + .05
-								for i, v in next, playerlist.scrollpanel.canvas.children do
-									if v.Team and v.team ~= v.Team.Name then
-										v.team = v.Team.Name
-										v.children[2].text:SetText(v.Team.Name)
-									end
-								end
-
 								if not target then return end
 								local updater = BBOT.aux.replication.getupdater(target)
 								if updater.alive ~= wasalive then
@@ -14780,7 +14795,7 @@ do
 								end
 								for i, v in next, playerlist.scrollpanel.canvas.children do
 									if v.player == player then
-										v.children[3].text:SetText(state)
+										v.children[4].text:SetText(state)
 										break
 									end
 								end
@@ -16780,7 +16795,7 @@ if not BBOT.Debug.menu then
 				rcastparam.FilterType = Enum.RaycastFilterType.Blacklist
 			
 				local pather = pathing.new()
-				pather:SetWaypointSpacing(8)
+				pather:SetWaypointSpacing(7)
 				pather:SetRaycastParameter(rcastparam)
 				pather:SetRaycastCallback(function(results)
 					local p = results.Instance
