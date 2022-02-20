@@ -5691,6 +5691,7 @@ do
 			self.fontmanager = nil
 			self.offset = Vector2.new(0, 0)
 			self.clipping = true
+			self.clipping_offset = 0
 
 			self:SetXAlignment(XAlignment.Right)
 			self:SetYAlignment(YAlignment.Bottom)
@@ -5766,11 +5767,19 @@ do
 		function GUI:GetOffsets()
 			local offset_x, offset_y = 0, 0
 			local w, h = self:GetTextSize()
+
+			local size = self.absolutesize
+			if self.parent and size.X <= 2 then
+				size = self.parent.absolutesize
+			end
+
+			local extra = self:GetTextScale()
 			if self.text.XAlignment == XAlignment.Center then
-				local extra = self:GetTextScale()
-				offset_x = (-w/2) + (extra/2)
+				offset_x = - (w/2) - (extra/2)
 			elseif self.text.XAlignment == XAlignment.Left then
-				offset_x = -w
+				offset_x = size.X - w - (extra/2)
+			elseif self.text.XAlignment == XAlignment.Right then
+				offset_x = 0
 			end
 
 			if self.text.YAlignment == YAlignment.Center then
@@ -5786,15 +5795,28 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size, poschanged, sizechanged)
-			self.text.Offset = pos
+			self:ProcessPosition()
 			if not sizechanged then return end
 			self:ProcessClipping()
+		end
+
+		function GUI:ProcessPosition()
+			local clipping_offset = self.clipping_offset
+			if self.text.XAlignment == XAlignment.Center then
+				clipping_offset = 0
+			elseif self.text.XAlignment == XAlignment.Left then
+				clipping_offset = -clipping_offset
+			elseif self.text.XAlignment == XAlignment.Right then
+				clipping_offset = clipping_offset
+			end
+			self.text.Offset = self.absolutepos + Vector2.new(clipping_offset, 0)
 		end
 
 		function GUI:ProcessClipping()
 			local text = self.content
 			local cursize = self.absolutesize
 			local useparent = cursize.X <= 2
+			local clipping_offset = 0
 			if (self.parent or not useparent) and self.clipping then
 				self:GetOffsets()
 				local x = self:GetTextSize(self.content)
@@ -5805,17 +5827,20 @@ do
 				local pretext = ""
 				for i=1, #self.content do
 					local v = string.sub(self.content, i, i)
+					local incsize = self:GetTextSize(v)
 					pretext = pretext .. v
 					local prex = self:GetTextSize(pretext .. " ")
 					if prex + posx - 4 < psize.X then
 						if prex + posx - 12 < 0 then
-							text = text .. " "
+							clipping_offset = clipping_offset + incsize
 						else
 							text = text .. v
 						end
 					end
 				end
 			end
+			self.clipping_offset = clipping_offset
+			self:ProcessPosition()
 			self.text.Text = text
 		end
 
@@ -6144,7 +6169,19 @@ do
 				end
 			end
 			self.offset = Vector2.new(offset_x, offset_y)
-			self.text.Offset = self.absolutepos + Vector2.new(sweep, 0)
+			self.sweep = sweep
+		end
+
+		function GUI:ProcessPosition()
+			local clipping_offset = self.clipping_offset
+			if self.text.XAlignment == XAlignment.Center then
+				clipping_offset = 0
+			elseif self.text.XAlignment == XAlignment.Left then
+				clipping_offset = -clipping_offset
+			elseif self.text.XAlignment == XAlignment.Right then
+				clipping_offset = clipping_offset
+			end
+			self.text.Offset = self.absolutepos + Vector2.new(clipping_offset + (self.sweep or 0), 0)
 		end
 
 		gui:Register(GUI, "ScrollingText", "Text")
@@ -7592,6 +7629,7 @@ do
 			self.text:SetXAlignment(XAlignment.Center)
 			self.text:SetYAlignment(YAlignment.Center)
 			self.text:SetPos(.5, 0, .5, -1)
+			self.text:SetClipping(true)
 			self.text:SetTextSize(13)
 			self.text:SetText("None")
 
@@ -7897,6 +7935,7 @@ do
 
 			self.add = gui:Create("TextButton", self.buttoncontainer)
 			self.add:SetText("+")
+			self.add:SetClipping(false)
 			self.add:SetXAlignment(XAlignment.Center)
 			self.add:SetYAlignment(YAlignment.Center)
 			local w, h = 10, 12
@@ -7926,6 +7965,7 @@ do
 
 			self.deduct = gui:Create("TextButton", self.buttoncontainer)
 			self.deduct:SetText("-")
+			self.deduct:SetClipping(false)
 			self.deduct:SetXAlignment(XAlignment.Center)
 			self.deduct:SetYAlignment(YAlignment.Center)
 			local ww, hh = 10, 12
