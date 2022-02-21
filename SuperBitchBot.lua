@@ -4210,10 +4210,16 @@ do
 			return self.ishovering == true
 		end
 
+		function base:IsAbsoluteHovering() -- absolute disregards priorities of ZIndexes
+			return self.absoluteishovering == true
+		end
+
 		-- Called when a mouse enters the panel's bounds
 		function base:OnMouseEnter() end
+		function base:OnAbsoluteMouseEnter() end -- absolute disregards priorities of ZIndexes
 		-- Called when a mouse leaves the panel's bounds
 		function base:OnMouseExit() end
+		function base:OnAbsoluteMouseExit() end -- absolute disregards priorities of ZIndexes
 
 		-- Called the same way as "RenderStepped"
 		function base:Step() end
@@ -4600,10 +4606,9 @@ do
 		return mouse.X > object.absolutepos.X and mouse.X < object.absolutepos.X + object.absolutesize.X and mouse.Y > object.absolutepos.Y - 36 and mouse.Y < object.absolutepos.Y + object.absolutesize.Y - 36
 	end
 
-	local ishoveringuniversal
 	-- Check is the mouse is hovering any panel
 	function gui:IsHoveringAnObject()
-		return ishoveringuniversal
+		return #gui.objects_hovering > 0
 	end
 
 	local function V2ToString(vec)
@@ -4614,37 +4619,74 @@ do
 		return "D(".. udim.X.Scale ..",".. udim.X.Offset ..",".. udim.Y.Scale ..",".. udim.Y.Offset ..")"
 	end
 
+	gui.objects_hovering = {}
+	gui.objects_keyhovering = {}
 	hook:Add("RenderStep.Input", "BBOT:GUI.Hovering", function()
-		ishoveringuniversal = nil
+		local objects_hovering = gui.objects_hovering
+		local objects_keyhovering = gui.objects_keyhovering
 		local reg = gui.active
-		local inhover = {}
-		for i=1, #reg do
-			local v = reg[i]
-			if v and not v.__INVALID and v.class ~= "Mouse" and gui:IsHovering(v) then
-				if v.mouseinputs then
-					inhover[#inhover+1] = v
+		local changed = false
+		local c = 0
+		for i=1, #objects_hovering do
+			local k = i - c
+			local v = objects_hovering[k]
+			if (not v or v.__INVALID or not gui:IsHovering(v)) then
+				if v.absoluteishovering ~= false then
+					v.absoluteishovering = false
+					if v.OnAbsoluteMouseExit then
+						v:OnAbsoluteMouseExit(mouse.X, mouse.Y)
+					end
 				end
-				ishoveringuniversal = true
+				objects_keyhovering[v] = nil
+				table.remove(objects_hovering, k)
+				c=c+1
+				changed = true
 			end
 		end
-		
-		table.sort(inhover, function(a, b) return a._zindex > b._zindex end)
 
-		local result = inhover[1]
+		for i=1, #reg do
+			local v = reg[i]
+			if v and not objects_keyhovering[v] and not v.__INVALID and v.class ~= "Mouse" and v.class ~= "Container" and gui:IsHovering(v) then
+				if v.absoluteishovering ~= true then
+					v.absoluteishovering = true
+					if v.OnAbsoluteMouseEnter then
+						v:OnAbsoluteMouseEnter(mouse.X, mouse.Y)
+					end
+				end
+				objects_keyhovering[v] = true
+				objects_hovering[#objects_hovering+1] = v
+				changed = true
+			end
+		end
 
-		if gui.drawing_debugger then
-			local reg = gui.active
-			local inhover = {}
-			for i=1, #reg do
-				local v = reg[i]
-				if v and not v.__INVALID and v.class ~= "Mouse" and v.class ~= "Container" and gui:IsHovering(v) then
-					inhover[#inhover+1] = v
+		if changed then
+			table.sort(objects_hovering, function(a, b) return a._zindex > b._zindex end)
+
+			for i=1, #objects_hovering do
+				local v = objects_hovering[i]
+				if v.mouseinputs then
+					if v ~= gui.hovering then
+						if gui.hovering then
+							gui.hovering.ishovering = false
+							if gui.hovering.OnMouseExit then
+								gui.hovering:OnMouseExit(mouse.X, mouse.Y)
+							end
+						end
+						gui.hovering = v
+						if gui.hovering then
+							gui.hovering.ishovering = true
+							if gui.hovering.OnMouseEnter then
+								gui.hovering:OnMouseEnter(mouse.X, mouse.Y)
+							end
+						end
+					end
+					break
 				end
 			end
-			
-			table.sort(inhover, function(a, b) return a._zindex > b._zindex end)
+		end
 
-			local result = inhover[1]
+		if gui.drawing_debugger then
+			local result = objects_hovering[1]
 
 			if result then
 				gui.drawing_debugger.Visible = true
@@ -4666,22 +4708,6 @@ do
 				gui.drawing_debugger.Visible = false
 				gui.drawing_debugger_text.Visible = false
 				gui.drawing_debugger_actives.Visible = true
-			end
-		end
-
-		if result ~= gui.hovering then
-			if gui.hovering then
-				gui.hovering.ishovering = false
-				if gui.hovering.OnMouseExit then
-					gui.hovering:OnMouseExit(mouse.X, mouse.Y)
-				end
-			end
-			gui.hovering = result
-			if gui.hovering then
-				gui.hovering.ishovering = true
-				if gui.hovering.OnMouseEnter then
-					gui.hovering:OnMouseEnter(mouse.X, mouse.Y)
-				end
 			end
 		end
 	end)
@@ -5605,8 +5631,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos + Vector2.new(0,2)
-			self.gradient.Size = Vector2.new(size.X, math.min(20, size.Y - 3))
+			self.gradient.Offset = pos + Vector2.new(-1,2)
+			self.gradient.Size = Vector2.new(size.X+1, math.min(20, size.Y - 3))
 		end
 
 		function GUI:SetSizable(bool)
@@ -5692,6 +5718,7 @@ do
 			self.fontmanager = nil
 			self.offset = Vector2.new(0, 0)
 			self.clipping = true
+			self.clipping_offset = 0
 
 			self:SetXAlignment(XAlignment.Right)
 			self:SetYAlignment(YAlignment.Bottom)
@@ -5767,11 +5794,19 @@ do
 		function GUI:GetOffsets()
 			local offset_x, offset_y = 0, 0
 			local w, h = self:GetTextSize()
+
+			local size = self.absolutesize
+			if self.parent and size.X <= 2 then
+				size = self.parent.absolutesize
+			end
+
+			local extra = self:GetTextScale()
 			if self.text.XAlignment == XAlignment.Center then
-				local extra = self:GetTextScale()
-				offset_x = (-w/2) + (extra/2)
+				offset_x = - (w/2) - (extra/2)
 			elseif self.text.XAlignment == XAlignment.Left then
-				offset_x = -w
+				offset_x = size.X - w - (extra/2)
+			elseif self.text.XAlignment == XAlignment.Right then
+				offset_x = 0
 			end
 
 			if self.text.YAlignment == YAlignment.Center then
@@ -5787,9 +5822,21 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size, poschanged, sizechanged)
-			self.text.Offset = pos
+			self:ProcessPosition()
 			if not sizechanged then return end
 			self:ProcessClipping()
+		end
+
+		function GUI:ProcessPosition()
+			local clipping_offset = self.clipping_offset
+			if self.text.XAlignment == XAlignment.Center then
+				clipping_offset = 0
+			elseif self.text.XAlignment == XAlignment.Left then
+				clipping_offset = -clipping_offset
+			elseif self.text.XAlignment == XAlignment.Right then
+				clipping_offset = clipping_offset
+			end
+			self.text.Offset = self.absolutepos + Vector2.new(clipping_offset, 0)
 		end
 
 		function GUI:ProcessClipping()
@@ -5807,17 +5854,20 @@ do
 				local pretext = ""
 				for i=1, #self.content do
 					local v = string.sub(self.content, i, i)
+					local incsize = self:GetTextSize(v)
 					pretext = pretext .. v
 					local prex = self:GetTextSize(pretext .. " ")
 					if prex + posx - 4 < psize.X then
 						if prex + posx - 12 < 0 then
-							text = text .. " "
+							clipping_offset = clipping_offset + incsize
 						else
 							text = text .. v
 						end
 					end
 				end
 			end
+			self.clipping_offset = clipping_offset
+			self:ProcessPosition()
 			self.text.Text = text
 		end
 
@@ -6112,29 +6162,35 @@ do
 		local GUI = {}
 
 		function GUI:Step()
-			self:ProcessClipping()
+			local w, h = self:GetTextSize()
+			local size = self.absolutesize
+			if self.parent and size.X <= 2 then
+				size = self.parent.absolutesize
+			end
+			if w + 2 > size.X then
+				self:ProcessClipping()
+			end
 		end
 
 		function GUI:GetOffsets()
 			self.super.GetOffsets(self)
 			local w, h = self:GetTextSize()
 			local size = self.absolutesize
+			local object = self
 			if self.parent and size.X <= 2 then
 				size = self.parent.absolutesize
+				object = self.parent
 			end
 
 			local sweep = 0
-			if self.parent then
-				local psize = self.parent.absolutesize
-				local wide = psize.X
-				if wide < w then
-					sweep = (math.sin(tick() / 1.5) * (6 + (w - wide)/2))
-					if self.text.XAlignment == XAlignment.Left then
-						sweep = sweep + ((w-wide)/2) + 1
-					elseif self.text.XAlignment == XAlignment.Right then
-						sweep = sweep - ((w-wide)/2) - 1
-					end
-					offset_x = sweep
+			local wide = size.X
+			if wide < w and object:IsAbsoluteHovering() then
+				local speed = math.max((w - wide)/50, 1.5)
+				sweep = (math.sin(tick() / speed) * (5 + (w - wide)/2))
+				if self.text.XAlignment == XAlignment.Left then
+					sweep = sweep + ((w-wide)/2) + 4
+				elseif self.text.XAlignment == XAlignment.Right then
+					sweep = sweep - ((w-wide)/2) - 4
 				end
 				self.offset = Vector2.new(sweep, self.offset.Y)
 			end
@@ -6144,6 +6200,17 @@ do
 		function GUI:ProcessPosition()
 			self.super.ProcessPosition(self)
 			self.text.Offset = self.text.Offset + Vector2.new(self.sweep or 0, 0)
+		end
+
+		-- this only is called if this object is above everything else & has MouseInputs enabled
+		function GUI:OnMouseEnter(X, Y)
+			self:IsHovering() -- same idea here, just returns a boolean
+		end
+
+		-- this is called regardless of zindex and mouseinputs flags
+		function GUI:OnAbsoluteMouseEnter(X, Y)
+			self:IsAbsoluteHovering() -- same idea here, just returns a boolean
+			local hovered = gui.objects_hovering -- every object hovered (has a mix of both MouseInputs flagged and non-inputs)
 		end
 
 		gui:Register(GUI, "SlidingText", "Text")
@@ -6324,8 +6391,8 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size, poschanged, sizechanged)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 10)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = size + Vector2.new(1, 1)
 			local w, h = self:GetTextSize(self.content)
 			self.text.Offset = Vector2.new(pos.X+3,pos.Y - (h/2) + (size.Y/2))
 			self.cursor.Size = Vector2.new(1,size.Y-4)
@@ -6687,8 +6754,8 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 10)
+			self.gradient.Offset = pos + Vector2.new(-1, -1)
+			self.gradient.Size = size + Vector2.new(1, 1)
 			default_panel_borders(self, pos, size)
 		end
 
@@ -6876,8 +6943,8 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 10)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 11)
 			default_panel_borders(self, pos, size)
 		end
 
@@ -7017,7 +7084,7 @@ do
 			self.gradient = self:Cache(gradient)
 
 			self.text = gui:Create("Text", self)
-			self.text:SetPos(.5, 0, .5, 0)
+			self.text:SetPos(.5, -2, .5, 0)
 			self.text:SetClipping(false)
 			self.text:SetXAlignment(XAlignment.Center)
 			self.text:SetYAlignment(YAlignment.Center)
@@ -7061,8 +7128,8 @@ do
 			else
 				self.background.Size = size + (self.activated and Vector2.new(0,4) or Vector2.new())
 			end
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 20)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 21)
 		end
 
 		-- :Cache(object, opacity, outlineopacity, zindex, visible)
@@ -7181,8 +7248,8 @@ do
 			tablist.gradient = tablist:Cache(gradient)
 
 			function tablist:PerformLayout(pos, size)
-				self.gradient.Offset = pos
-				self.gradient.Size = Vector2.new(size.X, 20)
+				self.gradient.Offset = pos + Vector2.new(-1,-1)
+				self.gradient.Size = Vector2.new(size.X+1, 21)
 			end
 			
 			self.tablist = tablist
@@ -7206,8 +7273,8 @@ do
 			background:Cache(background.background)
 
 			local line = gui:Create("Container", tablist)
-			line:SetPos(0,0,1,-2)
-			line:SetSize(1,0,0,2)
+			line:SetPos(0,0,1,-1)
+			line:SetSize(1,0,0,1)
 			line.background = draw:Create("Rect", "2V")
 			function line:PerformLayout(pos, size)
 				self.background.Offset = pos
@@ -7411,8 +7478,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 15)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 16)
 		end
 
 		function GUI:SetColor(color)
@@ -7464,8 +7531,8 @@ do
 			self.button:SetSize(1,0,1,0)
 			function self.button:PerformLayout(pos, size, poschanged, sizechanged)
 				default_panel_borders(self, pos, size)
-				self.gradient.Offset = pos
-				self.gradient.Size = Vector2.new(size.X, 8)
+				self.gradient.Offset = pos + Vector2.new(-1,-1)
+				self.gradient.Size = Vector2.new(size.X+1, 9)
 				if not sizechanged then return end
 				self.parent.text:SetPos(0, self.absolutesize.X + 7, .5, -1)
 			end
@@ -7569,6 +7636,7 @@ do
 			self.text:SetXAlignment(XAlignment.Center)
 			self.text:SetYAlignment(YAlignment.Center)
 			self.text:SetPos(.5, 0, .5, -1)
+			self.text:SetClipping(true)
 			self.text:SetTextSize(13)
 			self.text:SetText("None")
 
@@ -7839,8 +7907,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X*self.percentage, size.Y)
+			self.gradient.Offset = pos + Vector2.new(-1, -1)
+			self.gradient.Size = Vector2.new((size.X+1)*self.percentage, size.Y+1)
 		end
 
 		gui:Register(GUI, "ProgressBar")
@@ -8007,7 +8075,7 @@ do
 			else
 				self.text:SetText(value .. self.suffix)
 			end
-			self.bar.Size = Vector2.new(self.absolutesize.X*self.percentage, 10)
+			self.bar.Size = Vector2.new((self.absolutesize.X+1)*self.percentage, self.absolutesize.Y+1)
 		end
 
 		function GUI:_SetValue(value)
@@ -8021,10 +8089,10 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 10)
-			self.bar.Offset = pos
-			self.bar.Size = Vector2.new(size.X*self.percentage, 10)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = size + Vector2.new(1,1)
+			self.bar.Offset = pos + Vector2.new(-1,-1)
+			self.bar.Size = Vector2.new((size.X+1)*self.percentage, size.Y+1)
 		end
 
 		function GUI:CalculateValue(X)
@@ -8162,8 +8230,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 20)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 21)
 			local ww, hh = self.title:GetTextSize()
 			self.sort_arrow.Offset = pos + (size/2) + Vector2.new((ww/2) + 3, 0)
 		end
@@ -8231,8 +8299,8 @@ do
 			for i=1, #columns do
 				local child = self.children[i]
 				local col = columns[i]
-				child:SetPos(col.pos.X.Scale, -1*(i-2), 0, 0)
-				child:SetSize(col.size.X.Scale, 1*(i-2), 0, 20)
+				child:SetPos(col.pos.X.Scale, 0, 0, 0)
+				child:SetSize(col.size.X.Scale, 0, 0, 20)
 			end
 		end
 
@@ -8438,8 +8506,8 @@ do
 			default_panel_borders(self, pos, size)
 			self.color_fade.Offset = pos
 			self.color_fade.Size = size
-			self.white_black_fade.Offset = pos
-			self.white_black_fade.Size = size
+			self.white_black_fade.Offset = pos - Vector2.new(1,1)
+			self.white_black_fade.Size = size + Vector2.new(1,1)
 			self:MoveCursor()
 		end
 
@@ -8540,8 +8608,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.color_fade.Offset = pos
-			self.color_fade.Size = size
+			self.color_fade.Offset = pos - Vector2.new(1,1)
+			self.color_fade.Size = size + Vector2.new(1,1)
 			self:MoveCursor()
 		end
 
@@ -8637,8 +8705,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.color_fade.Offset = pos
-			self.color_fade.Size = size
+			self.color_fade.Offset = pos - Vector2.new(1,1)
+			self.color_fade.Size = size + Vector2.new(1,1)
 			self:MoveCursor()
 		end
 
@@ -8701,8 +8769,8 @@ do
 
 		function GUI:PerformLayout(pos, size, shiftpos, shiftsize)
 			default_panel_borders(self, pos, size)
-			self.transparency_background.Offset = pos
-			self.transparency_background.Size = size
+			self.transparency_background.Offset = pos - Vector2.new(1,1)
+			self.transparency_background.Size = size + Vector2.new(1,1)
 		end
 
 		gui:Register(GUI, "ColorPreview")
@@ -8803,8 +8871,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos
-			self.gradient.Size = Vector2.new(size.X, 20)
+			self.gradient.Offset = pos + Vector2.new(-1,-1)
+			self.gradient.Size = Vector2.new(size.X+1, 21)
 		end
 
 		function GUI:Close()
@@ -8871,8 +8939,8 @@ do
 			self.background.Size = size - Vector2.new(4, 4)
 			self.background_outline.Offset = pos
 			self.background_outline.Size = size
-			self.background_nocolor.Offset = pos
-			self.background_nocolor.Size = size
+			self.background_nocolor.Offset = pos - Vector2.new(1,1)
+			self.background_nocolor.Size = size + Vector2.new(1,1)
 			self.background_border.Offset = pos - Vector2.new(1, 1)
 			self.background_border.Size = size + Vector2.new(2, 2)
 		end
