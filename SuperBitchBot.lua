@@ -4385,6 +4385,7 @@ do
 		if not base then base = self.base end
 		setmetatable(tbl, {__index = base})
 		tbl.class = class
+		tbl.super = base
 		self.classes[class] = tbl
 	end
 
@@ -5795,7 +5796,8 @@ do
 			local text = self.content
 			local cursize = self.absolutesize
 			local useparent = cursize.X <= 2
-			if (self.parent or not useparent) and self.clipping then
+			local clipping_offset = 0
+			if self.content and (self.parent or not useparent) and self.clipping then
 				self:GetOffsets()
 				local x = self:GetTextSize(self.content)
 				local localpos = self:GetLocalTranslation()
@@ -6105,7 +6107,7 @@ do
 		gui:Register(GUI, "ScrollPanel")
 	end
 
-	-- Scrolling Text
+	-- Sliding Text
 	do
 		local GUI = {}
 
@@ -6114,19 +6116,11 @@ do
 		end
 
 		function GUI:GetOffsets()
-			local offset_x, offset_y = 0, 0
+			self.super.GetOffsets(self)
 			local w, h = self:GetTextSize()
-			if self.text.XAlignment == XAlignment.Center then
-				local extra = self:GetTextScale()
-				offset_x = (-w/2) + (extra/2)
-			elseif self.text.XAlignment == XAlignment.Left then
-				offset_x = -w
-			end
-
-			if self.text.YAlignment == YAlignment.Center then
-				offset_y = -h/2
-			elseif self.text.YAlignment == YAlignment.Top then
-				offset_y = -h
+			local size = self.absolutesize
+			if self.parent and size.X <= 2 then
+				size = self.parent.absolutesize
 			end
 
 			local sweep = 0
@@ -6142,12 +6136,17 @@ do
 					end
 					offset_x = sweep
 				end
+				self.offset = Vector2.new(sweep, self.offset.Y)
 			end
-			self.offset = Vector2.new(offset_x, offset_y)
-			self.text.Offset = self.absolutepos + Vector2.new(sweep, 0)
+			self.sweep = sweep
 		end
 
-		gui:Register(GUI, "ScrollingText", "Text")
+		function GUI:ProcessPosition()
+			self.super.ProcessPosition(self)
+			self.text.Offset = self.text.Offset + Vector2.new(self.sweep or 0, 0)
+		end
+
+		gui:Register(GUI, "SlidingText", "Text")
 	end
 
 	-- Text Entry
@@ -6523,30 +6522,8 @@ do
 		local GUI = {}
 
 		function GUI:Init()
-			self.text = gui:Create("Text", self)
-			self.text:SetXAlignment(XAlignment.Right)
-			self.text:SetYAlignment(YAlignment.Center)
-			self.text:SetPos(0, 0, .5, 0)
-			self.mouseinput = true
-		end
-
-		function GUI:PerformLayout(pos, size)
-		end
-
-		function GUI:SetText(txt)
-			self.text:SetText(txt)
-		end
-
-		function GUI:SetXAlignment(txt)
-			self.text:SetXAlignment(txt)
-		end
-
-		function GUI:SetYAlignment(txt)
-			self.text:SetYAlignment(txt)
-		end
-
-		function GUI:SetTextColor(col)
-			self.text:SetColor(col)
+			self.super.Init(self)
+			self.mouseinputs = true
 		end
 
 		function GUI:OnClick() end
@@ -6606,7 +6583,7 @@ do
 				local v = options[i]
 				local button = gui:Create("TextButton")
 				self.buttons[#self.buttons+1] = button
-				local _, scaley = button.text:GetTextSize(v)
+				local _, scaley = button:GetTextSize(v)
 				button:SetPos(0, 0, 0, 0)
 				button:SetSize(1, 0, 0, scaley)
 				button:SetText(v)
@@ -6634,7 +6611,7 @@ do
 			self.Id = Id
 			local button = self.buttons[Id]
 			if not button then return end
-			button:SetTextColor(self.selectcolor)
+			button:SetColor(self.selectcolor)
 		end
 
 		gui:Register(GUI, "DropBoxSelection")
@@ -6650,7 +6627,7 @@ do
 			gradient.Size = Vector2.new(0,10)
 			self.gradient = self:Cache(gradient)
 
-			local text = gui:Create("ScrollingText", self)
+			local text = gui:Create("SlidingText", self)
 			self.text = text
 			text:SetPos(0, 4, .5, 0)
 			text:SetSize(1, 0, 1, 0)
@@ -6804,14 +6781,14 @@ do
 				local v = options[i]
 				local button = gui:Create("TextButton", self)
 				self.buttons[#self.buttons+1] = button
-				local _, scaley = button.text:GetTextSize(v[1])
+				local _, scaley = button:GetTextSize(v[1])
 				button:SetPos(0, 0, 0, 0)
 				button:SetSize(1, 0, 0, scaley)
 				button:SetText(v[1])
-				button:SetTextColor(v[2] and self.selectcolor or Color3.new(1,1,1))
+				button:SetColor(v[2] and self.selectcolor or Color3.new(1,1,1))
 				function button.OnClick()
 					self.parent:SetOption(i, not v[2])
-					button:SetTextColor(v[2] and self.selectcolor or Color3.new(1,1,1))
+					button:SetColor(v[2] and self.selectcolor or Color3.new(1,1,1))
 				end
 				self.scrollpanel:Add(button)
 			end
@@ -6841,7 +6818,7 @@ do
 
 			self.textcontainer = gui:Create("Container", self)
 
-			local text = gui:Create("ScrollingText", self.textcontainer)
+			local text = gui:Create("SlidingText", self.textcontainer)
 			self.text = text
 			text:SetPos(0, 4, .5, 0)
 			text:SetSize(1, 0, 1, 0)
@@ -7897,12 +7874,13 @@ do
 
 			self.add = gui:Create("TextButton", self.buttoncontainer)
 			self.add:SetText("+")
-			self.add:SetXAlignment(XAlignment.Center)
-			self.add:SetYAlignment(YAlignment.Center)
+			self.add:SetClipping(true)
+			self.add:SetTextXAlignment(XAlignment.Right)
+			self.add:SetXAlignment(XAlignment.Right)
+			self.add:SetYAlignment(YAlignment.Bottom)
 			local w, h = 10, 12
 			self.add:SetPos(1, -w + 2, 0, 0)
 			self.add:SetSize(0, w, 0, h)
-			self.add.text:SetPos(0.5, 0, .5, 0)
 			
 			function self.add.OnClick()
 				local value = 1
@@ -7917,21 +7895,22 @@ do
 				if hover ~= self.hover then
 					self.hover = hover
 					if hover then
-						self:SetTextColor(onhover)
+						self:SetColor(onhover)
 					else
-						self:SetTextColor(idle)
+						self:SetColor(idle)
 					end
 				end
 			end
 
 			self.deduct = gui:Create("TextButton", self.buttoncontainer)
 			self.deduct:SetText("-")
-			self.deduct:SetXAlignment(XAlignment.Center)
-			self.deduct:SetYAlignment(YAlignment.Center)
+			self.deduct:SetClipping(false)
+			self.deduct:SetTextXAlignment(XAlignment.Right)
+			self.deduct:SetXAlignment(XAlignment.Right)
+			self.deduct:SetYAlignment(YAlignment.Bottom)
 			local ww, hh = 10, 12
 			self.deduct:SetPos(1, -w -ww + 2, 0, 0)
 			self.deduct:SetSize(0, w, 0, h)
-			self.deduct.text:SetPos(0.5, 0, .5, 0)
 			self.deduct.Step = self.add.Step
 			function self.deduct.OnClick()
 				local value = 1
@@ -8269,7 +8248,7 @@ do
 					container:SetRightVisible(false)
 				end
 
-				local row_column = gui:Create("Text", container)
+				local row_column = gui:Create("SlidingText", container)
 				container.text = row_column
 				row_column:SetXAlignment(XAlignment.Right)
 				row_column:SetYAlignment(YAlignment.Center)
