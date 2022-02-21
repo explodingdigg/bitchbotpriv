@@ -14485,6 +14485,7 @@ do
 							playerlist:SetSize(1,0,1,-16-6-playerbox_size-8)
 
 							playerlist:AddColumn("Name")
+							playerlist:AddColumn("State")
 							playerlist:AddColumn("Team")
 							playerlist:AddColumn("Priority")
 
@@ -14516,10 +14517,10 @@ do
 												state = "Friendly (" .. (-priority) .. ")"
 											end
 										end
-										local line = playerlist:AddLine(v.Name, v.Team.Name, state)
+										local line = playerlist:AddLine(v.Name, "Unknown", v.Team.Name, state)
 										line.player = v
 
-										local team_line = line.children[2]
+										local team_line = line.children[3]
 										function team_line:Step()
 											if not self:GetAbsoluteVisible() then return end
 											local pl = self.parent.player
@@ -14532,13 +14533,27 @@ do
 											end
 										end
 
+										local state_line = line.children[2]
+										function state_line:Step()
+											local pl = self.parent.player
+											if pl and BBOT.aux then
+												local updater = BBOT.aux.replication.getupdater(pl)
+												local hp = math.round(BBOT.aux.hud:getplayerhealth(self.player))
+												if updater.alive ~= self.alive or hp ~= self.hp then
+													self.alive = updater.alive
+													self.hp = hp
+													if self.alive then
+														self.text:SetColor(Color3.new(0,1,0))
+														self.text:SetText(math.round(hp) .. " HP")
+													else
+														self.text:SetColor(Color3.new(1,0,0))
+														self.text:SetText("Dead")
+													end
+												end
+											end
+										end
+
 										checked[v] = true
-									end
-								end
-								for i, v in next, playerlist.scrollpanel.canvas.children do
-									if v.player == player then
-										v.children[3].text:SetText(state)
-										break
 									end
 								end
 
@@ -14754,13 +14769,6 @@ do
 							hook:Add("RenderStep.Last", "BBOT:PlayerManager.Tick", function()
 								if nextcheck > tick() then return end
 								nextcheck = tick() + .05
-								for i, v in next, playerlist.scrollpanel.canvas.children do
-									if v.Team and v.team ~= v.Team.Name then
-										v.team = v.Team.Name
-										v.children[2].text:SetText(v.Team.Name)
-									end
-								end
-
 								if not target then return end
 								local updater = BBOT.aux.replication.getupdater(target)
 								if updater.alive ~= wasalive then
@@ -14787,7 +14795,7 @@ do
 								end
 								for i, v in next, playerlist.scrollpanel.canvas.children do
 									if v.player == player then
-										v.children[3].text:SetText(state)
+										v.children[4].text:SetText(state)
 										break
 									end
 								end
