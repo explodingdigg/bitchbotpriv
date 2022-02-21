@@ -5604,8 +5604,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos + Vector2.new(-1,2)
-			self.gradient.Size = Vector2.new(size.X+1, math.min(20, size.Y - 3))
+			self.gradient.Offset = pos + Vector2.new(0,2)
+			self.gradient.Size = Vector2.new(size.X, math.min(20, size.Y - 3))
 		end
 
 		function GUI:SetSizable(bool)
@@ -5691,7 +5691,6 @@ do
 			self.fontmanager = nil
 			self.offset = Vector2.new(0, 0)
 			self.clipping = true
-			self.clipping_offset = 0
 
 			self:SetXAlignment(XAlignment.Right)
 			self:SetYAlignment(YAlignment.Bottom)
@@ -5767,19 +5766,11 @@ do
 		function GUI:GetOffsets()
 			local offset_x, offset_y = 0, 0
 			local w, h = self:GetTextSize()
-
-			local size = self.absolutesize
-			if self.parent and size.X <= 2 then
-				size = self.parent.absolutesize
-			end
-
-			local extra = self:GetTextScale()
 			if self.text.XAlignment == XAlignment.Center then
-				offset_x = - (w/2) - (extra/2)
+				local extra = self:GetTextScale()
+				offset_x = (-w/2) + (extra/2)
 			elseif self.text.XAlignment == XAlignment.Left then
-				offset_x = size.X - w - (extra/2)
-			elseif self.text.XAlignment == XAlignment.Right then
-				offset_x = 0
+				offset_x = -w
 			end
 
 			if self.text.YAlignment == YAlignment.Center then
@@ -5795,28 +5786,15 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size, poschanged, sizechanged)
-			self:ProcessPosition()
+			self.text.Offset = pos
 			if not sizechanged then return end
 			self:ProcessClipping()
-		end
-
-		function GUI:ProcessPosition()
-			local clipping_offset = self.clipping_offset
-			if self.text.XAlignment == XAlignment.Center then
-				clipping_offset = 0
-			elseif self.text.XAlignment == XAlignment.Left then
-				clipping_offset = -clipping_offset
-			elseif self.text.XAlignment == XAlignment.Right then
-				clipping_offset = clipping_offset
-			end
-			self.text.Offset = self.absolutepos + Vector2.new(clipping_offset, 0)
 		end
 
 		function GUI:ProcessClipping()
 			local text = self.content
 			local cursize = self.absolutesize
 			local useparent = cursize.X <= 2
-			local clipping_offset = 0
 			if (self.parent or not useparent) and self.clipping then
 				self:GetOffsets()
 				local x = self:GetTextSize(self.content)
@@ -5827,20 +5805,17 @@ do
 				local pretext = ""
 				for i=1, #self.content do
 					local v = string.sub(self.content, i, i)
-					local incsize = self:GetTextSize(v)
 					pretext = pretext .. v
 					local prex = self:GetTextSize(pretext .. " ")
 					if prex + posx - 4 < psize.X then
 						if prex + posx - 12 < 0 then
-							clipping_offset = clipping_offset + incsize
+							text = text .. " "
 						else
 							text = text .. v
 						end
 					end
 				end
 			end
-			self.clipping_offset = clipping_offset
-			self:ProcessPosition()
 			self.text.Text = text
 		end
 
@@ -6135,24 +6110,12 @@ do
 		local GUI = {}
 
 		function GUI:Step()
-			local w, h = self:GetTextSize()
-			local size = self.absolutesize
-			if self.parent and size.X <= 2 then
-				size = self.parent.absolutesize
-			end
-			if w + 2 > size.X then
-				self:ProcessClipping()
-			end
+			self:ProcessClipping()
 		end
 
 		function GUI:GetOffsets()
 			local offset_x, offset_y = 0, 0
 			local w, h = self:GetTextSize()
-			local size = self.absolutesize
-			if self.parent and size.X <= 2 then
-				size = self.parent.absolutesize
-			end
-
 			if self.text.XAlignment == XAlignment.Center then
 				local extra = self:GetTextScale()
 				offset_x = (-w/2) + (extra/2)
@@ -6167,31 +6130,21 @@ do
 			end
 
 			local sweep = 0
-			local wide = size.X
-			if wide < w then
-				local speed = math.max((w - wide)/50, 1.5)
-				sweep = (math.sin(tick() / speed) * (5 + (w - wide)/2))
-				if self.text.XAlignment == XAlignment.Left then
-					sweep = sweep + ((w-wide)/2) + 4
-				elseif self.text.XAlignment == XAlignment.Right then
-					sweep = sweep - ((w-wide)/2) - 4
+			if self.parent then
+				local psize = self.parent.absolutesize
+				local wide = psize.X
+				if wide < w then
+					sweep = (math.sin(tick() / 1.5) * (6 + (w - wide)/2))
+					if self.text.XAlignment == XAlignment.Left then
+						sweep = sweep + ((w-wide)/2) + 1
+					elseif self.text.XAlignment == XAlignment.Right then
+						sweep = sweep - ((w-wide)/2) - 1
+					end
+					offset_x = sweep
 				end
-				offset_x = sweep
 			end
 			self.offset = Vector2.new(offset_x, offset_y)
-			self.sweep = sweep
-		end
-
-		function GUI:ProcessPosition()
-			local clipping_offset = self.clipping_offset
-			if self.text.XAlignment == XAlignment.Center then
-				clipping_offset = 0
-			elseif self.text.XAlignment == XAlignment.Left then
-				clipping_offset = -clipping_offset
-			elseif self.text.XAlignment == XAlignment.Right then
-				clipping_offset = clipping_offset
-			end
-			self.text.Offset = self.absolutepos + Vector2.new(clipping_offset + (self.sweep or 0), 0)
+			self.text.Offset = self.absolutepos + Vector2.new(sweep, 0)
 		end
 
 		gui:Register(GUI, "ScrollingText", "Text")
@@ -6372,8 +6325,8 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size, poschanged, sizechanged)
-			self.gradient.Offset = pos + Vector2.new(-1,-1)
-			self.gradient.Size = size + Vector2.new(1, 1)
+			self.gradient.Offset = pos
+			self.gradient.Size = Vector2.new(size.X, 10)
 			local w, h = self:GetTextSize(self.content)
 			self.text.Offset = Vector2.new(pos.X+3,pos.Y - (h/2) + (size.Y/2))
 			self.cursor.Size = Vector2.new(1,size.Y-4)
@@ -6757,8 +6710,8 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.gradient.Offset = pos + Vector2.new(-1, -1)
-			self.gradient.Size = size + Vector2.new(1, 1)
+			self.gradient.Offset = pos
+			self.gradient.Size = Vector2.new(size.X, 10)
 			default_panel_borders(self, pos, size)
 		end
 
@@ -6946,8 +6899,8 @@ do
 		end
 
 		function GUI:PerformLayout(pos, size)
-			self.gradient.Offset = pos + Vector2.new(-1,-1)
-			self.gradient.Size = Vector2.new(size.X+1, 11)
+			self.gradient.Offset = pos
+			self.gradient.Size = Vector2.new(size.X, 10)
 			default_panel_borders(self, pos, size)
 		end
 
@@ -7087,7 +7040,7 @@ do
 			self.gradient = self:Cache(gradient)
 
 			self.text = gui:Create("Text", self)
-			self.text:SetPos(.5, -2, .5, 0)
+			self.text:SetPos(.5, 0, .5, 0)
 			self.text:SetClipping(false)
 			self.text:SetXAlignment(XAlignment.Center)
 			self.text:SetYAlignment(YAlignment.Center)
@@ -7131,8 +7084,8 @@ do
 			else
 				self.background.Size = size + (self.activated and Vector2.new(0,4) or Vector2.new())
 			end
-			self.gradient.Offset = pos + Vector2.new(-1,-1)
-			self.gradient.Size = Vector2.new(size.X+1, 21)
+			self.gradient.Offset = pos
+			self.gradient.Size = Vector2.new(size.X, 20)
 		end
 
 		-- :Cache(object, opacity, outlineopacity, zindex, visible)
@@ -7251,8 +7204,8 @@ do
 			tablist.gradient = tablist:Cache(gradient)
 
 			function tablist:PerformLayout(pos, size)
-				self.gradient.Offset = pos + Vector2.new(-1,-1)
-				self.gradient.Size = Vector2.new(size.X+1, 21)
+				self.gradient.Offset = pos
+				self.gradient.Size = Vector2.new(size.X, 20)
 			end
 			
 			self.tablist = tablist
@@ -7276,8 +7229,8 @@ do
 			background:Cache(background.background)
 
 			local line = gui:Create("Container", tablist)
-			line:SetPos(0,0,1,-1)
-			line:SetSize(1,0,0,1)
+			line:SetPos(0,0,1,-2)
+			line:SetSize(1,0,0,2)
 			line.background = draw:Create("Rect", "2V")
 			function line:PerformLayout(pos, size)
 				self.background.Offset = pos
@@ -7481,8 +7434,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos + Vector2.new(-1,-1)
-			self.gradient.Size = Vector2.new(size.X+1, 16)
+			self.gradient.Offset = pos
+			self.gradient.Size = Vector2.new(size.X, 15)
 		end
 
 		function GUI:SetColor(color)
@@ -7534,8 +7487,8 @@ do
 			self.button:SetSize(1,0,1,0)
 			function self.button:PerformLayout(pos, size, poschanged, sizechanged)
 				default_panel_borders(self, pos, size)
-				self.gradient.Offset = pos + Vector2.new(-1,-1)
-				self.gradient.Size = Vector2.new(size.X+1, 9)
+				self.gradient.Offset = pos
+				self.gradient.Size = Vector2.new(size.X, 8)
 				if not sizechanged then return end
 				self.parent.text:SetPos(0, self.absolutesize.X + 7, .5, -1)
 			end
@@ -7639,7 +7592,6 @@ do
 			self.text:SetXAlignment(XAlignment.Center)
 			self.text:SetYAlignment(YAlignment.Center)
 			self.text:SetPos(.5, 0, .5, -1)
-			self.text:SetClipping(true)
 			self.text:SetTextSize(13)
 			self.text:SetText("None")
 
@@ -7910,8 +7862,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos + Vector2.new(-1, -1)
-			self.gradient.Size = Vector2.new((size.X+1)*self.percentage, size.Y+1)
+			self.gradient.Offset = pos
+			self.gradient.Size = Vector2.new(size.X*self.percentage, size.Y)
 		end
 
 		gui:Register(GUI, "ProgressBar")
@@ -7945,13 +7897,12 @@ do
 
 			self.add = gui:Create("TextButton", self.buttoncontainer)
 			self.add:SetText("+")
-			self.add:SetClipping(false)
-			self.add:SetXAlignment(XAlignment.Left)
+			self.add:SetXAlignment(XAlignment.Center)
 			self.add:SetYAlignment(YAlignment.Center)
 			local w, h = 10, 12
 			self.add:SetPos(1, -w + 2, 0, 0)
 			self.add:SetSize(0, w, 0, h)
-			self.add.text:SetPos(0.5, 1, .5, 0)
+			self.add.text:SetPos(0.5, 0, .5, 0)
 			
 			function self.add.OnClick()
 				local value = 1
@@ -7975,13 +7926,12 @@ do
 
 			self.deduct = gui:Create("TextButton", self.buttoncontainer)
 			self.deduct:SetText("-")
-			self.deduct:SetClipping(false)
-			self.deduct:SetXAlignment(XAlignment.Left)
+			self.deduct:SetXAlignment(XAlignment.Center)
 			self.deduct:SetYAlignment(YAlignment.Center)
 			local ww, hh = 10, 12
 			self.deduct:SetPos(1, -w -ww + 2, 0, 0)
 			self.deduct:SetSize(0, w, 0, h)
-			self.deduct.text:SetPos(0.5, 1, .5, 0)
+			self.deduct.text:SetPos(0.5, 0, .5, 0)
 			self.deduct.Step = self.add.Step
 			function self.deduct.OnClick()
 				local value = 1
@@ -8078,7 +8028,7 @@ do
 			else
 				self.text:SetText(value .. self.suffix)
 			end
-			self.bar.Size = Vector2.new((self.absolutesize.X+1)*self.percentage, self.absolutesize.Y+1)
+			self.bar.Size = Vector2.new(self.absolutesize.X*self.percentage, 10)
 		end
 
 		function GUI:_SetValue(value)
@@ -8092,10 +8042,10 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos + Vector2.new(-1,-1)
-			self.gradient.Size = size + Vector2.new(1,1)
-			self.bar.Offset = pos + Vector2.new(-1,-1)
-			self.bar.Size = Vector2.new((size.X+1)*self.percentage, size.Y+1)
+			self.gradient.Offset = pos
+			self.gradient.Size = Vector2.new(size.X, 10)
+			self.bar.Offset = pos
+			self.bar.Size = Vector2.new(size.X*self.percentage, 10)
 		end
 
 		function GUI:CalculateValue(X)
@@ -8233,8 +8183,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos + Vector2.new(-1,-1)
-			self.gradient.Size = Vector2.new(size.X+1, 21)
+			self.gradient.Offset = pos
+			self.gradient.Size = Vector2.new(size.X, 20)
 			local ww, hh = self.title:GetTextSize()
 			self.sort_arrow.Offset = pos + (size/2) + Vector2.new((ww/2) + 3, 0)
 		end
@@ -8302,8 +8252,8 @@ do
 			for i=1, #columns do
 				local child = self.children[i]
 				local col = columns[i]
-				child:SetPos(col.pos.X.Scale, 0, 0, 0)
-				child:SetSize(col.size.X.Scale, 0, 0, 20)
+				child:SetPos(col.pos.X.Scale, -1*(i-2), 0, 0)
+				child:SetSize(col.size.X.Scale, 1*(i-2), 0, 20)
 			end
 		end
 
@@ -8319,7 +8269,7 @@ do
 					container:SetRightVisible(false)
 				end
 
-				local row_column = gui:Create("ScrollingText", container)
+				local row_column = gui:Create("Text", container)
 				container.text = row_column
 				row_column:SetXAlignment(XAlignment.Right)
 				row_column:SetYAlignment(YAlignment.Center)
@@ -8509,8 +8459,8 @@ do
 			default_panel_borders(self, pos, size)
 			self.color_fade.Offset = pos
 			self.color_fade.Size = size
-			self.white_black_fade.Offset = pos - Vector2.new(1,1)
-			self.white_black_fade.Size = size + Vector2.new(1,1)
+			self.white_black_fade.Offset = pos
+			self.white_black_fade.Size = size
 			self:MoveCursor()
 		end
 
@@ -8611,8 +8561,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.color_fade.Offset = pos - Vector2.new(1,1)
-			self.color_fade.Size = size + Vector2.new(1,1)
+			self.color_fade.Offset = pos
+			self.color_fade.Size = size
 			self:MoveCursor()
 		end
 
@@ -8708,8 +8658,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.color_fade.Offset = pos - Vector2.new(1,1)
-			self.color_fade.Size = size + Vector2.new(1,1)
+			self.color_fade.Offset = pos
+			self.color_fade.Size = size
 			self:MoveCursor()
 		end
 
@@ -8772,8 +8722,8 @@ do
 
 		function GUI:PerformLayout(pos, size, shiftpos, shiftsize)
 			default_panel_borders(self, pos, size)
-			self.transparency_background.Offset = pos - Vector2.new(1,1)
-			self.transparency_background.Size = size + Vector2.new(1,1)
+			self.transparency_background.Offset = pos
+			self.transparency_background.Size = size
 		end
 
 		gui:Register(GUI, "ColorPreview")
@@ -8874,8 +8824,8 @@ do
 
 		function GUI:PerformLayout(pos, size)
 			default_panel_borders(self, pos, size)
-			self.gradient.Offset = pos + Vector2.new(-1,-1)
-			self.gradient.Size = Vector2.new(size.X+1, 21)
+			self.gradient.Offset = pos
+			self.gradient.Size = Vector2.new(size.X, 20)
 		end
 
 		function GUI:Close()
@@ -8942,8 +8892,8 @@ do
 			self.background.Size = size - Vector2.new(4, 4)
 			self.background_outline.Offset = pos
 			self.background_outline.Size = size
-			self.background_nocolor.Offset = pos - Vector2.new(1,1)
-			self.background_nocolor.Size = size + Vector2.new(1,1)
+			self.background_nocolor.Offset = pos
+			self.background_nocolor.Size = size
 			self.background_border.Offset = pos - Vector2.new(1, 1)
 			self.background_border.Size = size + Vector2.new(2, 2)
 		end
@@ -14488,7 +14438,6 @@ do
 							playerlist:SetSize(1,0,1,-16-6-playerbox_size-8)
 
 							playerlist:AddColumn("Name")
-							playerlist:AddColumn("State")
 							playerlist:AddColumn("Team")
 							playerlist:AddColumn("Priority")
 
@@ -14520,10 +14469,10 @@ do
 												state = "Friendly (" .. (-priority) .. ")"
 											end
 										end
-										local line = playerlist:AddLine(v.Name, "Unknown", v.Team.Name, state)
+										local line = playerlist:AddLine(v.Name, v.Team.Name, state)
 										line.player = v
 
-										local team_line = line.children[3]
+										local team_line = line.children[2]
 										function team_line:Step()
 											if not self:GetAbsoluteVisible() then return end
 											local pl = self.parent.player
@@ -14536,25 +14485,13 @@ do
 											end
 										end
 
-										local state_line = line.children[2]
-										function state_line:Step()
-											local pl = self.parent.player
-											if pl then
-												local updater = BBOT.aux.replication.getupdater(pl)
-												if updater.alive ~= self.alive then
-													self.alive = updater.alive
-													if self.alive then
-														self.text:SetColor(Color3.new(0,1,0))
-														self.text:SetText("Alive")
-													else
-														self.text:SetColor(Color3.new(1,0,0))
-														self.text:SetText("Dead")
-													end
-												end
-											end
-										end
-
 										checked[v] = true
+									end
+								end
+								for i, v in next, playerlist.scrollpanel.canvas.children do
+									if v.player == player then
+										v.children[3].text:SetText(state)
+										break
 									end
 								end
 
@@ -14770,6 +14707,13 @@ do
 							hook:Add("RenderStep.Last", "BBOT:PlayerManager.Tick", function()
 								if nextcheck > tick() then return end
 								nextcheck = tick() + .05
+								for i, v in next, playerlist.scrollpanel.canvas.children do
+									if v.Team and v.team ~= v.Team.Name then
+										v.team = v.Team.Name
+										v.children[2].text:SetText(v.Team.Name)
+									end
+								end
+
 								if not target then return end
 								local updater = BBOT.aux.replication.getupdater(target)
 								if updater.alive ~= wasalive then
@@ -14796,7 +14740,7 @@ do
 								end
 								for i, v in next, playerlist.scrollpanel.canvas.children do
 									if v.player == player then
-										v.children[4].text:SetText(state)
+										v.children[3].text:SetText(state)
 										break
 									end
 								end
@@ -16705,6 +16649,34 @@ if not BBOT.Debug.menu then
 			local repupdate = {}
 			BBOT.repupdate = repupdate
 
+            local map = BBOT.service:GetService("Workspace"):FindFirstChild("Map")
+            local map_center, map_min, map_max
+            if map then
+                local cf, bounds = map:GetBoundingBox()
+                map_center = cf.p
+                map_min = map_center - 0.5 * bounds
+                map_max = map_center + 0.5 * bounds
+            end
+
+            -- Detour 'newmap' for restricting repupdate to the inside of map bounds
+            hook:Add("Initialize", "BBOT:Newmap.Detour", function()
+                for hash, func in next, network.receivers do
+                    local consts = getconstants(func)
+                    if BBOT.table.quicksearch(consts, "AGMP") then
+                        -- we found newmap
+                        hook:BindFunction(func, "Newmap")
+                        -- hook onto it so we can do stuff
+                        hook:Add("PreNewmap", "BBOT:Newmap.SetBounds", function(map)
+                            local cf, bounds = map:GetBoundingBox()
+                            map_center = cf.p
+                            map_min = map_center - 0.5 * bounds
+                            map_max = map_center + 0.5 * bounds
+                        end)
+                        return
+                    end
+                end
+            end)
+
 			-- this is the raycasting for replication, kinda like the server-side version
 			-- function -> repupdate:Raycast(origin, offset)
 			do
@@ -16738,6 +16710,23 @@ if not BBOT.Debug.menu then
 				return self.position or char.rootpart.Position
 			end
 
+            -- check if position is within map bounds (used for teleporting and stuff)
+            function repupdate:IsPosWithinMapBounds(p)
+                p = p or self:GetPosition()
+                return p.x > map_min.x and p.x < map_max.x
+                   and p.y > map_min.y and p.y < map_max.y
+                   and p.z > map_min.z and p.z < map_max.z
+            end
+
+            -- return the closest point from 'p' to the map's bounding box
+            function repupdate:ClampPosToMapBounds(p)
+                p = p or self:GetPosition()
+                local x = p.x < map_min.x and map_min.x or math.min(p.x, map_max.x)
+                local y = p.y < map_min.y and map_min.y or math.min(p.y, map_max.y)
+                local z = p.z < map_min.z and map_min.z or math.min(p.z, map_max.z)
+                return Vector3.new(x, y, z)
+            end
+
 			-- can we move to this position?
 			function repupdate:CanMoveTo(position)
 				local lastpos = self:GetPosition()
@@ -16758,6 +16747,7 @@ if not BBOT.Debug.menu then
 				return false, position, offset.Unit
 			end
 
+            local dot = Vector3.zero.Dot
 			-- moves the player to a position, basially teleport
 			function repupdate:MoveTo(position, move_char)
 				if not char.alive then return end
@@ -16766,19 +16756,25 @@ if not BBOT.Debug.menu then
 
 				local diff = (position-current_position)
 
-				if diff.Magnitude > 8 then
-					local timescale = math.round(diff.Magnitude/8)+1
+				if dot(diff, diff) > 81 --[[ diff.Magnitude > 8]] then
+                    local mag = diff.magnitude
+                    local unit = diff / mag
+                    for dt = 9, mag, 9 do
+                        network:send("repupdate", current_position + dt * unit, repupdate.angle or Vector2.new(), tick())
+                    end
+					--[[local timescale = math.round(diff.Magnitude/8)+1
 					local tdiff = diff/timescale
 					for i=1, timescale do
 						network:send("repupdate", current_position + (tdiff*i), repupdate.angle or Vector2.new(), tick())
-					end
-				else
-					network:send("repupdate", current_position + diff, repupdate.angle or Vector2.new(), tick())
+					end]]
 				end
+
+                network:send("repupdate", position, repupdate.angle or Vector2.new(), tick())
 
 				if move_char then
 					char.rootpart.CFrame = CFrame.new(current_position + diff, char.rootpart.CFrame.LookVector)
 				end
+                self.position = position -- i cant believe this wasnt being set
 			end
 
 			-- this only moves the character (roblox) and not repupdate
@@ -16796,7 +16792,7 @@ if not BBOT.Debug.menu then
 				rcastparam.FilterType = Enum.RaycastFilterType.Blacklist
 			
 				local pather = pathing.new()
-				pather:SetWaypointSpacing(7)
+				pather:SetWaypointSpacing(8)
 				pather:SetRaycastParameter(rcastparam)
 				pather:SetRaycastCallback(function(results)
 					local p = results.Instance
@@ -20151,14 +20147,14 @@ if not BBOT.Debug.menu then
 				-- This method is present on every map in the game, so we will need
 				-- to set this up later.
 
-				--[[function ragebot.fixPath(path)
+				function ragebot.fixPath(path)
 					for i = 1, #path do
 						local pos = path[i]
-						if not util:IsPointWithinAABB(pos, MAP_MIN, MAP_MAX) then
-							path[i] = util:ClosestPointAABB(pos, MAP_MIN, MAP_MAX)
+						if not repupdate:IsPosWithinMapBounds(pos) then
+							path[i] = repupdate:ClampPosToMapBounds(pos)
 						end
 					end
-				end]]
+				end
 
 				-------------------------------------
 				-- Method management
@@ -20266,7 +20262,7 @@ if not BBOT.Debug.menu then
 						end
 
 						return target_data or {
-							firepos = firePos,
+							firepos = firepos,
 							targets = {
 								{
 									player         = target.player,
@@ -20343,7 +20339,7 @@ if not BBOT.Debug.menu then
 									method_data.success = false
 									continue
 								end
-								-- ragebot.fixPath(path) -- fucking annoying that i have to do this
+								ragebot.fixPath(path) -- fucking annoying that i have to do this
 								for k = 2, #path, waypoint_skip + 1 do
 									local new_firepos = path[k]
 									local new_hitpos = flip and hb_shift_method.func(new_firepos, target.position, 5) or hitbox_pos
@@ -20459,37 +20455,42 @@ if not BBOT.Debug.menu then
 								for i = 1, #target_data.waypoints do
 									repupdate:MoveTo(target_data.waypoints[i] - headheight_vec)
 								end
+                                --pathway, col, opacity, time
+                                BBOT.drawpather:Simple(target_data.waypoints, Color3.new(1, 1), 1, 5)
 							end
 
 							local data = gun.data
-
 							local server_pos = repupdate:GetPosition()
 
-							--[[
-							-- Visual Debug shit
+                            do
+                                local circ = BBOT.draw:Create("Circle", "3D")
+                                circ.Point = server_pos
+                                circ.Visible = true
+                                circ.Thickness = 2
+                                circ.Radius = 10
+                                circ.Opacity = 0.8
+                                circ.NumSides = 10
+                                circ.Filled = false
+                                circ.Color = Color3.new(0.262745, 0.960784, 0.262745)
 
-							local server_pos_vis = CircleDynamic.new(Point3D.new(server_pos))
-							server_pos_vis.Thickness = 2
-							server_pos_vis.NumSides = 10
-							server_pos_vis.Radius = 16
-							server_pos_vis.Filled = false
-							server_pos_vis.Visible = true
-							server_pos_vis.Color = Color3.new(0.960784, 0.262745, 0.262745)
+                                BBOT.timer:Simple(5, function()
+                                    circ:Remove()
+                                end)
 
-							local fire_pos_vis = CircleDynamic.new(Point3D.new(target_data.firepos))
-							fire_pos_vis.Thickness = 2
-							fire_pos_vis.NumSides = 10
-							fire_pos_vis.Radius = 16
-							fire_pos_vis.Filled = false
-							fire_pos_vis.Visible = true
-							fire_pos_vis.Color = Color3.new(0.262745, 0.623529, 0.960784)
+                                local circ = BBOT.draw:Create("Circle", "3D")
+                                circ.Point = target_data.firepos
+                                circ.Visible = true
+                                circ.Thickness = 2
+                                circ.Radius = 10
+                                circ.Opacity = 0.8
+                                circ.NumSides = 10
+                                circ.Filled = false
+                                circ.Color = Color3.new(1.0, 0.0, 0.298039)
 
-							BBOT.timer:Create("BBOT.Aimbot:RageRemoveShit", 2, 0, function()
-								server_pos_vis:Remove()
-								fire_pos_vis:Remove()
-							end)]]
-
-							-- ident, delay, reps, func
+                                BBOT.timer:Simple(5, function()
+                                    circ:Remove()
+                                end)
+                            end
 
 							-- shoot bullets
 							for i = 1, #target_data.targets do
@@ -20519,7 +20520,7 @@ if not BBOT.Debug.menu then
 							end
 
 							local firerate = typeof(data.firerate) == "number" and data.firerate or data.firerate[1]
-							ragebot.next_shot = now + (#target_data.targets * (60 / (firerate * 3)))
+							ragebot.next_shot = math.min(now + (#target_data.targets * (60 / (firerate * 3))), now + 1) -- cool
 
 							-- teleport back if needs be
 							if target_data.waypoints then
