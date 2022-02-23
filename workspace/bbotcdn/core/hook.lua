@@ -84,7 +84,7 @@ function hook.ProcessHook(hookdata, ...)
     local name_registry = hookdata.name_registry
     local len = #registry
 
-    if hookdata.index+1 < len then
+    if hookdata.index < len then
         local _c = 0
         for l=hookdata.index+1, len do
             local k = l-_c
