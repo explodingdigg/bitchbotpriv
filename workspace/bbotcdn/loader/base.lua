@@ -42,7 +42,8 @@ _G.BBOT = BBOT
 BBOT.Debug = {
 	internal = isfile("bbdbg.txt"),
 	menu = isfile("bbmdbg.txt"),
-	draw = isfile("bbddbg.txt")
+	draw = isfile("bbddbg.txt"),
+	libskip = isfile("bblsdbg.txt")
 }
 
 --[[while true do
@@ -59,6 +60,23 @@ end
 local localplayer = game:GetService("Players").LocalPlayer
 BBOT.account = localplayer.Name
 BBOT.accountId = tostring(localplayer.UserId)
+
+local supported_games = {
+	[113491250] = "phantom forces",
+	[1256867479] = "phantom forces",
+	[115272207] = "phantom forces",
+	[3701051397] = "phantom forces hub",
+	[1168263273] = "bad business",
+}
+
+if supported_games[game.GameId] then
+	BBOT.game = tostring(supported_games[game.GameId])
+else
+	BBOT.universal = true
+	BBOT.game = tostring(game.GameId)
+end
+
+BBOT.start_time = tick()
 
 -- This should always start before hand, this module is responsible for debugging
 -- Example usage: BBOT.log(LOG_NORMAL, "How do I even fucking make this work?")
@@ -271,9 +289,23 @@ do
 	log(LOG_NORMAL, "Loading up Bitch Bot...")
 end
 
-function BBOT.halt() -- use this if u wana but breaks in the code
-	BBOT.log(LOG_WARN, "Halted!")
-	error()
+do
+	local function round( num, idp )
+		local mult = 10 ^ ( idp or 0 )
+		return math.floor( num * mult + 0.5 ) / mult
+	end
+
+	if _BBOT then
+		BBOT.log(3, "Bitch Bot is already running")
+		if not _BBOT.Unloaded and _BBOT.hook and _BBOT.hook.CallP then
+			BBOT.log(3, "Unloading...")
+			local t = tick()
+			_BBOT.hook:CallP("Unload")
+			t = tick() - t
+			BBOT.log(3, "Unloading took " .. round(t, 5) .. "s")
+		end
+		_BBOT.Unloaded = true
+	end
 end
 
 -- core library adder
@@ -300,19 +332,20 @@ do
 			return
 		end
 
-		--[[BBOT.hook:Call("PreInitialize")
+		BBOT.hook:Call("PreInitialize")
 		BBOT.hook:Call("Initialize")
-		BBOT.hook:Call("PostInitialize")]]
+		BBOT.hook:Call("PostInitialize")
 	end
 
 	-- fetches all CDN & File based packages
 	function library:Request()
-		log(LOG_NORMAL, "Fetching libraries...")
+		log(LOG_NORMAL, "Fetching " .. #self.registry .. " libraries...")
 		local libs, types = self.registry, self.types
 		local alright = true
 		for i=1, #libs do
 			local lib = libs[i]
 			local errored = false
+
 			if lib.type == types.FILE then
 				if isfile(lib.path) then
 					lib.data = readfile(lib.path)
@@ -391,8 +424,20 @@ do
 
 	if BBOT.username == "dev" then
 		local types = library.types
-		--[[library:BulkAddPackage({
+        library:BulkAddPackage({
+			-- primitive libraries
+			{"table", "bbotcdn/core/table.lua", types.FILE},
+			{"math", "bbotcdn/core/math.lua", types.FILE},
+			{"debug", "bbotcdn/core/debug.lua", types.FILE},
+			{"string", "bbotcdn/core/string.lua", types.FILE},
+			{"color", "bbotcdn/core/color.lua", types.FILE},
+			{"vector", "bbotcdn/core/vector.lua", types.FILE},
+			{"physics", "bbotcdn/core/physics.lua", types.FILE},
+			{"pathing", "bbotcdn/core/pathing.lua", types.FILE},
+			{"service", "bbotcdn/core/service.lua", types.FILE},
 			{"thread", "bbotcdn/core/thread.lua", types.FILE},
+
+			-- non-primitive libraries
 			{"hook", "bbotcdn/core/hook.lua", types.FILE},
 			{"hookadditions", "bbotcdn/core/hookadditions.lua", types.FILE},
 			{"loop", "bbotcdn/core/loop.lua", types.FILE},
@@ -409,20 +454,36 @@ do
 			{"font", "bbotcdn/core/font.lua", types.FILE},
 			{"icons", "bbotcdn/core/icons.lua", types.FILE},
 			{"guiobjects", "bbotcdn/core/guiobjects.lua", types.FILE},
+			{"menu", "bbotcdn/core/menu.lua", types.FILE},
 			{"notification", "bbotcdn/core/notification.lua", types.FILE},
-		})]]
-
-        library:BulkAddPackage({
-			{"table", "bbotcdn/core/table.lua", types.FILE},
-			{"math", "bbotcdn/core/math.lua", types.FILE},
-			{"debug", "bbotcdn/core/debug.lua", types.FILE},
-			{"string", "bbotcdn/core/string.lua", types.FILE},
-			{"color", "bbotcdn/core/color.lua", types.FILE},
-			{"vector", "bbotcdn/core/vector.lua", types.FILE},
-			{"physics", "bbotcdn/core/physics.lua", types.FILE},
-			{"pathing", "bbotcdn/core/pathing.lua", types.FILE},
-			{"service", "bbotcdn/core/service.lua", types.FILE},
 		})
+
+		library:AddPackage("presetup", "bbotcdn/loader/presetup.lua", types.FILE)
+
+		if BBOT.game == "phantom forces" then
+			library:AddPackage("setup", "bbotcdn/phantom forces/setup.lua", types.FILE)
+		end
+
+		library:AddPackage("postsetup", "bbotcdn/loader/postsetup.lua", types.FILE)
+
+		if BBOT.game == "phantom forces" then
+			library:BulkAddPackage({
+				{"aux", "bbotcdn/phantom forces/auxillary.lua", types.FILE},
+				{"chat", "bbotcdn/phantom forces/chat.lua", types.FILE},
+				{"votekick", "bbotcdn/phantom forces/votekick.lua", types.FILE},
+				{"serverhopper", "bbotcdn/phantom forces/serverhopper.lua", types.FILE},
+				{"lighting", "bbotcdn/phantom forces/lighting.lua", types.FILE},
+				{"soundoverrides", "bbotcdn/phantom forces/soundoverrides.lua", types.FILE},
+				{"repupdate", "bbotcdn/phantom forces/replication.lua", types.FILE},
+				{"misc", "bbotcdn/phantom forces/misc.lua", types.FILE},
+				{"l3p_player", "bbotcdn/phantom forces/l3p.lua", types.FILE},
+				{"spectator", "bbotcdn/phantom forces/spectator.lua", types.FILE},
+				{"aimbot", "bbotcdn/phantom forces/aimbot.lua", types.FILE},
+				{"esp", "bbotcdn/phantom forces/esp.lua", types.FILE},
+				{"weapons", "bbotcdn/phantom forces/weapons.lua", types.FILE},
+				{"tracker", "bbotcdn/phantom forces/tracker.lua", types.FILE},
+			})
+		end
 	end
 end
 
