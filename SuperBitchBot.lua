@@ -1201,14 +1201,12 @@ do
 	function hook:Call(name, ...) -- Calls an array of hooks, and returns anything if needed
 		if self.killed then return end
 		if not self.registry[name] then return end
-		--debug.profilebegin(name)
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
 	
 		if tbln[name] then
 			local func = tbln[name]
 			local ret = {func(...)}
 			if ret[1] ~= nil then
-				--debug.profileend()
 				return unpack(ret)
 			end
 		end
@@ -1227,21 +1225,70 @@ do
 					else
 						local ret = {func(...)}
 						if ret[1] then
-							--debug.profileend()
 							return unpack(ret)
 						end
 					end
 				end
 			end
 		end
-		--debug.profileend()
+	end
+
+	function hook.ProcessHook(hookdata, ...)
+		local name = hookdata.name
+		local registry = hookdata.registry
+		local name_registry = hookdata.name_registry
+		local len = #registry
+
+		if hookdata.index+1 < len then
+			local _c = 0
+			for l=hookdata.index+1, len do
+				local k = l-_c
+				hookdata.index = k
+				local v = registry[k]
+				if v[1] ~= name then
+					local id, func = v[1], v[2]
+					if not func then 
+						table.remove(registry, k)
+						_c = _c + 1
+						name_registry[id] = nil
+					else
+						if not id then 
+							table.remove(registry, k)
+							_c = _c + 1
+							name_registry[id] = nil
+						else
+							hookdata.id = id
+							local ret = {func(...)}
+							if ret[1] then
+								hookdata.returns = ret
+								break
+							end
+						end
+					end
+				end
+			end
+		end
+
+		hookdata.finished = true
+	end
+
+	function hook.CatchHook(err)
+		local hookdata = hook.Processing
+		if not hookdata then return end
+		log(LOG_ERROR, "Hook Error - " .. hookdata.name .. " - " .. hookdata.id .. " ->\n" .. err)
+		log(LOG_ERROR, debug.traceback())
+		log(LOG_WARN, "Removing to prevent cascade!")
+		table.remove(hookdata.registry, hookdata.index)
+		hookdata.name_registry[hookdata.id] = nil
+		if (BBOT.notification) then
+			BBOT.notification:Create("!!!ERROR!!!\nAn error has occured in hook library.\nPlease check Synapse console!", 30):SetType("error")
+		end
 	end
 
 	function hook:CallP(name, ...) -- Same as @hook:Call, put with error isolation
 		if self.killed then return end
 		if not self.registry[name] then return end
 		local tbl, tbln = self._registry_qa[name], self.registry[name]
-		--debug.profilebegin(name)
 
 		if tbln[name] then
 			local func = tbln[name]
@@ -1262,96 +1309,33 @@ do
 				end
 			elseif ret[2] then
 				table.remove(ret, 1)
-				--debug.profileend()
 				return unpack(ret)
 			end
 		end
-		
-		local _c = 0
-		for l=1, #tbl do
-			local k = l-_c
-			local v = tbl[k]
-			if v[1] ~= name then
-				local _name, func = v[1], v[2]
-				if not func then 
-					table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
-				else
-					if not _name then 
-						table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
-					else
-						--debug.profilebegin(name .. "::" .. _name)
-						local ret = {xpcall(func, debug.traceback, ...)}
-						--debug.profileend()
-						if not ret[1] then
-							log(LOG_ERROR, "Hook Error - ", name, " - ", _name)
-							log(LOG_ERROR, ret[2])
-							log(LOG_WARN, "Removing to prevent cascade!")
-							table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
-							if (BBOT.notification) then
-								BBOT.notification:Create("!!!ERROR!!!\nAn error has occured in hook library.\nPlease check Synapse console!", 30):SetType("error")
-							end
-						elseif ret[2] then
-							table.remove(ret, 1)
-							--debug.profileend()
-							return unpack(ret)
-						end
-					end
-				end
-			end
-		end
-		--debug.profileend()
-	end
 
-	-- Uses parallelization to make things run smoother
-	-- Do note returns may not be possible in this as it's basically multitasking
-	-- Obviously for now this is xpcall even though it's still in-line with the current thread
-	function hook:AsyncCall(name, ...)
-		if self.killed then return end
-		if not self.registry[name] then return end
-		local tbl, tbln = self._registry_qa[name], self.registry[name]
-		if tbln[name] then
-			local func = tbln[name]
-			local ran, a, b, c, d, e, f = xpcall(func, debug.traceback, ...)
-			if not ran then
-				log(LOG_ERROR, "Hook Error - ", name, " - ", name)
-				log(LOG_ERROR, a)
-				log(LOG_WARN, "Removing to prevent cascade!")
-				for l=1, #tbl do
-					local v = tbl[l]
-					if v[1] == name then
-						table.remove(tbl, l); tbln[name] = nil
-						break
-					end
-				end
-			elseif a ~= nil then
-				return a, b, c, d, e, f
-			end
+		local hookdata = {
+			registry = tbl,
+			name_registry = tbln,
+			varargs = {...},
+			index = 0,
+			name = name,
+			id = "",
+		}
+		local already_processing = self.Processing
+		self.Processing = hookdata
+
+		local count, max = 0, #tbl
+		while true then
+			count = count + 1
+			xpcall(self.ProcessHook, self.CatchHook, hookdata, ...) -- instead of calling xpcall in a for loop, we invoke it only once
+			if count >= max or hookdata.finished == true then break end
 		end
 
-		local _c = 0
-		for l=1, #tbl do
-			local k = l-_c
-			local v = tbl[k]
-			if v[1] ~= name then
-				local _name, func = v[1], v[2]
-				if not func then 
-					table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
-				else
-					if not _name then 
-						table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
-					else
-						local ran, a, b, c, d, e, f = xpcall(func, debug.traceback, ...)
-						if not ran then
-							log(LOG_ERROR, "Hook Error - ", name, " - ", _name)
-							log(LOG_ERROR, a)
-							log(LOG_WARN, "Removing to prevent cascade!")
-							table.remove(tbl, k); _c = _c + 1; tbln[_name] = nil
-						elseif a ~= nil then
-							return a, b, c, d, e, f
-						end
-					end
-				end
-			end
+		local returns = self.Processing.returns
+		self.Processing = already_processing
+		hookdata = nil
+		if returns then
+			return unpack(returns)
 		end
 	end
 
@@ -1512,13 +1496,6 @@ do
 	local userinputservice = BBOT.service:GetService("UserInputService")
 	local mouse = BBOT.service:GetService("Mouse")
 	hook:Add("Unload", "Unload", function() -- Reloading the cheat? no problem.
-		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-First")
-		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Input")
-		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Camera")
-		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Character")
-		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-Last")
-		runservice:UnbindFromRenderStep("FW0a9kf0w2of0-R")
-
 		-- disconnect all rbx based connections
 		local connections = hook.connections
 		for i=1, #connections do
@@ -1529,7 +1506,7 @@ do
 		-- restore all hookfunction connections
 		local bindings = hook.bindings
 		for i=1, #bindings do
-			restorefunction(bindings[i])
+			restorefunction(bindings[i][2])
 		end
 		hook.bindings = {}
 
@@ -1574,7 +1551,7 @@ do
 	end
 
 	local lastMousePos = Vector2.new()
-	hook:Add("RenderStep.First", "Mouse.Move", function()
+	hook:Add("RenderStepped", "Mouse.Move", function()
 		local x, y = mouse.X, mouse.Y
 		hook:Call("Mouse.Move", lastMousePos ~= Vector2.new(x, y), x, y)
 		lastMousePos = Vector2.new(x, y)
@@ -1590,10 +1567,10 @@ do
 
 	local camera = BBOT.service:GetService("CurrentCamera")
 	local vport = camera.ViewportSize
-	hook:Add("RenderStep.First", "ViewportSize.Changed", function()
+	hook:Add("RenderStepped", "ViewportSize.Changed", function()
 		if camera.ViewportSize ~= vport then
 			vport = camera.ViewportSize
-			hook:CallP("Camera.ViewportChanged", vport)
+			hook:Call("Camera.ViewportChanged", vport)
 		end
 	end)
 
@@ -1602,22 +1579,6 @@ do
 
 	hook:bindEvent(runservice.Stepped, "Stepped")
 	hook:bindEvent(runservice.Heartbeat, "Heartbeat")
-
-	runservice:BindToRenderStep("FW0a9kf0w2of0-First", Enum.RenderPriority.First.Value, function(...)
-		hook:CallP("RenderStep.First", ...)
-	end)
-	runservice:BindToRenderStep("FW0a9kf0w2of0-Input", Enum.RenderPriority.Input.Value, function(...)
-		hook:CallP("RenderStep.Input", ...)
-	end)
-	runservice:BindToRenderStep("FW0a9kf0w2of0-Camera", Enum.RenderPriority.Camera.Value, function(...)
-		hook:CallP("RenderStep.Camera", ...)
-	end)
-	runservice:BindToRenderStep("FW0a9kf0w2of0-Character", Enum.RenderPriority.Character.Value, function(...)
-		hook:CallP("RenderStep.Character", ...)
-	end)
-	runservice:BindToRenderStep("FW0a9kf0w2of0-Last", Enum.RenderPriority.Last.Value, function(...)
-		hook:CallP("RenderStep.Last", ...)
-	end)
 	hook:bindEvent(runservice.RenderStepped, "RenderStepped")
 
 	local players = BBOT.service:GetService("Players")
@@ -2330,7 +2291,7 @@ do
 
 	local PingStat = BBOT.service:GetService("Stats").PerformanceStats.Ping
 	local current_latency = 0
-	hook:Add("RenderStep.Last", "BBOT:extras.getlatency", function()
+	hook:Add("RenderStepped", "BBOT:extras.getlatency", function()
 		current_latency = PingStat:GetValue() / 1000
 	end)
 
@@ -3201,7 +3162,7 @@ do
 		return pather
 	end
 
-	hook:Add("RenderStep.First", "BBOT:DrawPather.render", function(deltatime)
+	hook:Add("RenderStepped", "BBOT:DrawPather.render", function(deltatime)
 		local reg = drawpather.registry
 		local c = 0
 		for i=1, #reg do
@@ -4565,7 +4526,7 @@ do
 		end
 	end
 
-	hook:Add("RenderStep.First", "BBOT:GUI.Animation", function()
+	hook:Add("RenderStepped", "BBOT:GUI.Animation", function()
 		local c = 0
 		for a = 1, #ScheduledObjects do
 			local i = a-c
@@ -4621,7 +4582,7 @@ do
 
 	gui.objects_hovering = {}
 	gui.objects_keyhovering = {}
-	hook:Add("RenderStep.Input", "BBOT:GUI.Hovering", function()
+	hook:Add("RenderStepped", "BBOT:GUI.Hovering", function()
 		local objects_hovering = gui.objects_hovering
 		local objects_keyhovering = gui.objects_keyhovering
 		local reg = gui.active
@@ -4662,6 +4623,7 @@ do
 		if changed then
 			table.sort(objects_hovering, function(a, b) return a._zindex > b._zindex end)
 
+			local set = false
 			for i=1, #objects_hovering do
 				local v = objects_hovering[i]
 				if v.mouseinputs then
@@ -4680,7 +4642,20 @@ do
 							end
 						end
 					end
+					set = true
 					break
+				end
+			end
+
+			if not set then
+				if gui.hovering ~= nil then
+					if gui.hovering then
+						gui.hovering.ishovering = false
+						if gui.hovering.OnMouseExit then
+							gui.hovering:OnMouseExit(mouse.X, mouse.Y)
+						end
+					end
+					gui.hovering = nil
 				end
 			end
 		end
@@ -4746,7 +4721,7 @@ do
 		end
 	end)
 
-	hook:Add("RenderStep.Input", "BBOT:GUI.Render", function(delta)
+	hook:Add("RenderStepped", "BBOT:GUI.Render", function(delta)
 		
 		local tt = tick()
 		local mouse_reg = 0
@@ -5719,9 +5694,12 @@ do
 			self.offset = Vector2.new(0, 0)
 			self.clipping = true
 			self.clipping_offset = 0
+			self.internal_offset = Vector2.new()
 
 			self:SetXAlignment(XAlignment.Right)
 			self:SetYAlignment(YAlignment.Bottom)
+			self:SetTextXAlignment(XAlignment.Left)
+			self:SetTextYAlignment(YAlignment.Top)
 			self:SetFontManager("Menu.BodyMedium")
 			self.mouseinputs = false
 		end
@@ -5742,6 +5720,11 @@ do
 
 		function GUI:SetTextXAlignment(align)
 			self.text.TextXAlignment = align
+			self.TextXAlignment = align
+		end
+
+		function GUI:SetTextYAlignment(align)
+			self.TextYAlignment = align
 		end
 
 		function GUI:SetFont(font)
@@ -5804,7 +5787,7 @@ do
 			if self.text.XAlignment == XAlignment.Center then
 				offset_x = - (w/2) - (extra/2)
 			elseif self.text.XAlignment == XAlignment.Left then
-				offset_x = size.X - w - (extra/2)
+				offset_x = - w - (extra/2)
 			elseif self.text.XAlignment == XAlignment.Right then
 				offset_x = 0
 			end
@@ -5814,7 +5797,28 @@ do
 			elseif self.text.YAlignment == YAlignment.Top then
 				offset_y = -h
 			end
+
 			self.offset = Vector2.new(offset_x, offset_y)
+
+			offset_x, offset_y = 0, 0
+
+			if self.TextXAlignment == XAlignment.Center then
+				offset_x = (size.X/2) - (w/2)
+			elseif self.TextXAlignment == XAlignment.Left then
+				offset_x = 0
+			elseif self.TextXAlignment == XAlignment.Right then
+				offset_x = size.X - w
+			end
+
+			if self.TextYAlignment == YAlignment.Center then
+				offset_y = (size.Y/2) - (h/2)
+			elseif self.TextYAlignment == YAlignment.Top then
+				offset_y = 0
+			elseif self.TextYAlignment == YAlignment.Bottom then
+				offset_y = size.Y - h
+			end
+
+			self.internal_offset = Vector2.new(offset_x, offset_y)
 		end
 
 		function GUI:OnEnabledChanged()
@@ -5836,7 +5840,7 @@ do
 			elseif self.text.XAlignment == XAlignment.Right then
 				clipping_offset = clipping_offset
 			end
-			self.text.Offset = self.absolutepos + Vector2.new(clipping_offset, 0)
+			self.text.Offset = self.absolutepos + Vector2.new(clipping_offset, 0) + self.internal_offset
 		end
 
 		function GUI:ProcessClipping()
@@ -5849,7 +5853,7 @@ do
 				local x = self:GetTextSize(self.content)
 				local localpos = self:GetLocalTranslation()
 				local psize = (useparent and self.parent.absolutesize or cursize)
-				local posx = (useparent and localpos.X + self.offset.X or self.offset.X)
+				local posx = (useparent and localpos.X + self.offset.X or self.offset.X) + self.internal_offset.X
 				text = ""
 				local pretext = ""
 				for i=1, #self.content do
@@ -6202,17 +6206,6 @@ do
 			self.text.Offset = self.text.Offset + Vector2.new(self.sweep or 0, 0)
 		end
 
-		-- this only is called if this object is above everything else & has MouseInputs enabled
-		function GUI:OnMouseEnter(X, Y)
-			self:IsHovering() -- same idea here, just returns a boolean
-		end
-
-		-- this is called regardless of zindex and mouseinputs flags
-		function GUI:OnAbsoluteMouseEnter(X, Y)
-			self:IsAbsoluteHovering() -- same idea here, just returns a boolean
-			local hovered = gui.objects_hovering -- every object hovered (has a mix of both MouseInputs flagged and non-inputs)
-		end
-
 		gui:Register(GUI, "SlidingText", "Text")
 	end
 
@@ -6395,8 +6388,8 @@ do
 			self.gradient.Size = size + Vector2.new(1, 1)
 			local w, h = self:GetTextSize(self.content)
 			self.text.Offset = Vector2.new(pos.X+3,pos.Y - (h/2) + (size.Y/2))
-			self.cursor.Size = Vector2.new(1,size.Y-4)
-			self.cursor_outline.Size = Vector2.new(3,size.Y-2)
+			self.cursor.Size = Vector2.new(0,size.Y-4)
+			self.cursor_outline.Size = Vector2.new(2,size.Y-2)
 			default_panel_borders(self, pos, size)
 			if sizechanged then
 				self:ProcessClipping()
@@ -7774,7 +7767,7 @@ do
                         	menu:UpdateStatus(nick, (v.value and "Enabled" or "Disabled"), true)
 						end
                         config:GetRaw(unpack(v.config)).toggle = v.value
-                        hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
+                        hook:Call("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
 						if v.toggletype == 4 then
 							v.value = false
 						end
@@ -7809,7 +7802,7 @@ do
 						end
 						menu:UpdateStatus(nick, (v.value and "Enabled" or "Disabled"), true)
 						config:GetRaw(unpack(v.config)).toggle = v.value
-						hook:CallP("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
+						hook:Call("OnKeyBindChanged", v.config, last, v.value, v.toggletype)
 					end
 				end
 			end
@@ -10256,12 +10249,6 @@ end
 
 --! POST LIBRARIES !--
 -- WholeCream here, do remember to sort all of this in order for a possible module based loader
-
-do
-	local NetworkClient = BBOT.service:GetService("NetworkClient")
-	NetworkClient:SetOutgoingKBPSLimit(0)
-	BBOT.networksettings = settings().Network
-end
 
 local loadstart = tick()
 -- Setup, are we playing PF, Universal or... Bad Business 😉
@@ -14538,16 +14525,18 @@ do
 											local pl = self.parent.player
 											if pl and BBOT.aux then
 												local updater = BBOT.aux.replication.getupdater(pl)
-												local hp = math.round(BBOT.aux.hud:getplayerhealth(self.player))
-												if updater.alive ~= self.alive or hp ~= self.hp then
-													self.alive = updater.alive
-													self.hp = hp
-													if self.alive then
-														self.text:SetColor(Color3.new(0,1,0))
-														self.text:SetText(math.round(hp) .. " HP")
-													else
-														self.text:SetColor(Color3.new(1,0,0))
-														self.text:SetText("Dead")
+												if updater then
+													local hp = (updater.alive and math.round(BBOT.aux.hud:getplayerhealth(pl)) or 0)
+													if updater.alive ~= self.alive or hp ~= self.hp then
+														self.alive = updater.alive
+														self.hp = hp
+														if self.alive then
+															self.text:SetColor(Color3.new(0,1,0))
+															self.text:SetText(math.round(hp) .. " HP")
+														else
+															self.text:SetColor(Color3.new(1,0,0))
+															self.text:SetText("Dead")
+														end
 													end
 												end
 											end
@@ -14766,7 +14755,7 @@ do
 							end)
 
 							local wasalive, nextcheck = false, 0
-							hook:Add("RenderStep.Last", "BBOT:PlayerManager.Tick", function()
+							hook:Add("RenderStepped", "BBOT:PlayerManager.Tick", function()
 								if nextcheck > tick() then return end
 								nextcheck = tick() + .05
 								if not target then return end
@@ -15658,9 +15647,9 @@ if not BBOT.Debug.menu then
 
 				hook:Add("PostNetworkReceive", "BBOT:Chat.Network", function(netname, ...)
 					if netname == chat_netindex then
-						hook:CallP("Chatted", ...)
+						hook:Call("Chatted", ...)
 					elseif netname == console_netindex then
-						hook:CallP("Console", ...)
+						hook:Call("Console", ...)
 					end
 				end)
 			end
@@ -16052,7 +16041,7 @@ if not BBOT.Debug.menu then
 				--chat:SpamStep(true)
 			end)
 
-			hook:Add("RenderStep.Last", "BBOT:Chat.Spam", function()
+			hook:Add("RenderStepped", "BBOT:Chat.Spam", function()
 				if not config:GetValue("Main", "Misc", "Chat Spam", "Enabled") then return end
 				if config:GetValue("Main", "Misc", "Chat Spam", "Spam On Kills") then return end
 				chat:SpamStep()
@@ -16150,7 +16139,7 @@ if not BBOT.Debug.menu then
 
 				hook:Add("PostNetworkReceive", "BBOT:Votekick.Network", function(netname, ...)
 					if netname == startvotekick_netindex then
-						hook:CallP("Votekick.Start", ...)
+						hook:Call("Votekick.Start", ...)
 					end
 				end)
 			end
@@ -16159,12 +16148,12 @@ if not BBOT.Debug.menu then
 			hook:Add("Votekick.Start", "Votekick.Start", function(target, delay, votesrequired)
 				delay = tonumber(delay)
 				timer:Create("Votekick.Tick", delay, 1, function()
-					hook:Remove("RenderStep.First", "Votekick.Step")
+					hook:Remove("RenderStepped", "Votekick.Step")
 					hook:Call("Votekick.End", target, delay, votesrequired, false)
 				end)
-				hook:Add("RenderStep.First", "Votekick.Step", function()
+				hook:Add("RenderStepped", "Votekick.Step", function()
 					if votekick:GetVotes() >= votesrequired then
-						hook:Remove("RenderStep.First", "Votekick.Step")
+						hook:Remove("RenderStepped", "Votekick.Step")
 						timer:Remove("Votekick.Tick")
 						hook:Call("Votekick.End", target, delay, votesrequired, true)
 					end
@@ -16289,7 +16278,7 @@ if not BBOT.Debug.menu then
 			end)
 
 			local hop_called = 0
-			hook:Add("RenderStep.First", "BBOT:Votekick.AntiVotekick", function()
+			hook:Add("RenderStepped", "BBOT:Votekick.AntiVotekick", function()
 				if not config:GetValue("Main", "Misc", "Votekick", "Anti Votekick") then return end
 				if char.alive == true then
 					votekick.WasAlive = true
@@ -17635,7 +17624,7 @@ if not BBOT.Debug.menu then
 				end
 			end)
 
-			hook:Add("RenderStep.Last", "BBOT:Misc.AutoTeleport", function()
+			hook:Add("RenderStepped", "BBOT:Misc.AutoTeleport", function()
 				if char.alive and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport")["Enemies Alive"] and config:GetValue("Main", "Misc", "Exploits", "Auto Teleport", "KeyBind")  and next_teleport < tick() then
 					next_teleport = tick() + 1
 					misc:TeleportToClosest()
@@ -18132,7 +18121,7 @@ if not BBOT.Debug.menu then
 
 				hook:Add("PostNetworkReceive", "BBOT:LocalKilled.Network", function(netname, ...)
 					if netname == killed_netindex then
-						hook:CallP("LocalKilled", ...)
+						hook:Call("LocalKilled", ...)
 					end
 				end)
 			end
@@ -18397,7 +18386,7 @@ if not BBOT.Debug.menu then
 				end
 			}
 
-			hook:Add("RenderStep.Character", "BBOT:L3P.Render", function(delta)
+			hook:Add("RenderStepped", "BBOT:L3P.Render", function(delta)
 				if not l3p.controller or not l3p.controller.alive then return end
 				if config:GetValue("Main", "Visuals", "Camera Visuals", "Third Person Absolute") then
 					local l__angles__1304 = BBOT.aux.camera.angles;
@@ -18777,12 +18766,12 @@ if not BBOT.Debug.menu then
 					if table.quicksearch(const, "firepos") and table.quicksearch(const, "bullets") and table.quicksearch(const, "bulletcolor") and table.quicksearch(const, "penetrationdepth") then
 						hook:Add("PreNetworkReceive", "BBOT:NewBullets.Network", function(netname, ...)
 							if netname == netindex then
-								hook:CallP("PreNewBullets", ...)
+								hook:Call("PreNewBullets", ...)
 							end
 						end)
 						hook:Add("PostNetworkReceive", "BBOT:NewBullets.Network", function(netname, ...)
 							if netname == netindex then
-								hook:CallP("PostNewBullets", ...)
+								hook:Call("PostNewBullets", ...)
 							end
 						end)
 					end
@@ -21136,7 +21125,7 @@ if not BBOT.Debug.menu then
 			end
 
 			local t = 0
-			hook:Add("RenderStep.Last", "BBOT:Aimbot.CrosshairStep", function(DeltaTime)
+			hook:Add("RenderStepped", "BBOT:Aimbot.CrosshairStep", function(DeltaTime)
 				if gamelogic.currentgun and gamelogic.currentgun.data and gamelogic.currentgun.data.bulletspeed then return end
 				t = tick()
 				aimbot:CrosshairStep(DeltaTime)
@@ -23225,7 +23214,7 @@ if not BBOT.Debug.menu then
 							if netindex ~= k then return end
 							thingy = workspace.Ignore.Misc.DescendantAdded:Connect(function(descendant)
 								if descendant.Name ~= "Trigger" then return end
-								timer:Async(function() hook:CallP("GrenadeCreated", descendant, player, grenadename, animtable) end)
+								timer:Async(function() hook:Call("GrenadeCreated", descendant, player, grenadename, animtable) end)
 							end)
 						end)
 						hook:Add("PostNetworkReceive", "BBOT:Weapons.Grenades", function(netindex, player, grenadename, animtable)
@@ -23604,7 +23593,7 @@ if not BBOT.Debug.menu then
 
 					grenadedata.createnade = createnade
 
-					hook:CallP("MakeGrenade", grenadedata, grenadehandler)
+					hook:Call("MakeGrenade", grenadedata, grenadehandler)
 
 					hook:BindFunction(createnade, "ThrowGrenade", false, mainpart, grenadedata, grenadehandler)
 					hook:BindFunction(grenadehandler.step, "GrenadeStep", false, mainpart, grenadedata, grenadehandler)
@@ -24252,7 +24241,7 @@ if not BBOT.Debug.menu then
 						local slot1, slot2 = weapons:PrepareSkins(model)
 						local applied = weapons:ApplySkin(reg, nil, slot1, slot2)
 						
-						hook:Add("RenderStep.First", "Skin.Preview.Animations", function(delta)
+						hook:Add("RenderStepped", "Skin.Preview.Animations", function(delta)
 							if not reg.Enabled then return end
 							weapons:RenderAnimations(applied.slot1.animations, delta)
 							weapons:RenderAnimations(applied.slot2.animations, delta)
