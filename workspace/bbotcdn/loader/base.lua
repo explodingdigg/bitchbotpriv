@@ -310,6 +310,7 @@ end
 
 -- core library adder
 do
+	local httpservice = game:GetService("HttpService")
 	local log = BBOT.log
 	local library = {
 		registry = {},
@@ -349,7 +350,7 @@ do
 			if lib.type == types.FILE then
 				if isfile(lib.path) then
 					lib.data = readfile(lib.path)
-				else
+				elseif not lib.ignore then
 					log(LOG_ERROR, "[LIB] " .. lib.name .. " does not exist in workspace! (" .. lib.path .. ")")
 					errored = true
 				end
@@ -363,7 +364,7 @@ do
 
 			if lib.data then
 				lib.downloaded = true
-			elseif not errored then
+			elseif not errored and not lib.ignore then
 				log(LOG_ERROR, "[LIB] " .. lib.name .. " contains null data! (" .. lib.path .. ")")
 				errored = true
 			end
@@ -385,16 +386,17 @@ do
 			local lib = libs[i]
 			if lib.running then continue end
 			local data = lib.data
-			local func, err = loadstring(self.pre_run .. lib.data)
+			if not data then continue end
+			local func, err = loadstring(self.pre_run .. lib.data, "bbot/" .. lib.name)
 			if not func then
-				log(LOG_ERROR, "[LIB] An error occured compiling library \"" .. lib.name .. "\",\n" .. (err or "Unknown Error!"))
+				log(LOG_ERROR, "[LIB] An error occured compiling library \"" .. lib.name .. "\",\nErr: " .. (err or "Unknown Error!"))
 				return false
 			end
 			lib.compiled = true
 			setfenv(func, getfenv())
 			local ran, library_table = xpcall(func, debug.traceback, BBOT)
 			if not ran then
-				log(LOG_ERROR, "[LIB] An error occured executing library \"" .. lib.name .. "\",\n" .. (library_table or "Unknown Error!"))
+				log(LOG_ERROR, "[LIB] An error occured executing library \"" .. lib.name .. "\",\nErr: " .. (library_table or "Unknown Error!"))
 				return false
 			end
 			lib.ran = true
@@ -406,11 +408,12 @@ do
 	end
 
 	-- adds a package to loader
-	function library:AddPackage(name, path, type)
+	function library:AddPackage(name, path, type, ignore)
 		self.registry[#self.registry+1] = {
 			name = name,
 			path = path,
 			type = type,
+			ignore = ignore,
 		}
 	end
 
@@ -418,7 +421,7 @@ do
 	function library:BulkAddPackage(t)
 		for i=1, #t do
 			local v = t[i]
-			self:AddPackage(v[1], v[2], v[3])
+			self:AddPackage(v[1], v[2], v[3], v[4])
 		end
 	end
 
@@ -484,7 +487,7 @@ do
 				{"tracker", "bbotcdn/phantom forces/tracker.lua", types.FILE},
 			})
 		end
+
+		library:Initialize()
 	end
 end
-
-BBOT.library:Initialize()

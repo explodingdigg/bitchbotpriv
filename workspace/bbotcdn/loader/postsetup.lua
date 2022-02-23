@@ -219,7 +219,6 @@ main_panel[#main_panel+1] = {
                         playerlist:SetSize(1,0,1,-16-6-playerbox_size-8)
 
                         playerlist:AddColumn("Name")
-                        playerlist:AddColumn("State")
                         playerlist:AddColumn("Team")
                         playerlist:AddColumn("Priority")
 
@@ -251,10 +250,10 @@ main_panel[#main_panel+1] = {
                                             state = "Friendly (" .. (-priority) .. ")"
                                         end
                                     end
-                                    local line = playerlist:AddLine(v.Name, "Unknown", v.Team.Name, state)
+                                    local line = playerlist:AddLine(v.Name, v.Team.Name, state)
                                     line.player = v
 
-                                    local team_line = line.children[3]
+                                    local team_line = line.children[2]
                                     function team_line:Step()
                                         if not self:GetAbsoluteVisible() then return end
                                         local pl = self.parent.player
@@ -263,28 +262,6 @@ main_panel[#main_panel+1] = {
                                                 self.text:SetColor(pl.Team.TeamColor.Color)
                                                 self.text:SetText(pl.Team.Name)
                                                 self.parent.team = pl.Team.Name
-                                            end
-                                        end
-                                    end
-
-                                    local state_line = line.children[2]
-                                    function state_line:Step()
-                                        local pl = self.parent.player
-                                        if pl and BBOT.aux then
-                                            local updater = BBOT.aux.replication.getupdater(pl)
-                                            if updater then
-                                                local hp = (updater.alive and math.round(BBOT.aux.hud:getplayerhealth(pl)) or 0)
-                                                if updater.alive ~= self.alive or hp ~= self.hp then
-                                                    self.alive = updater.alive
-                                                    self.hp = hp
-                                                    if self.alive then
-                                                        self.text:SetColor(Color3.new(0,1,0))
-                                                        self.text:SetText(math.round(hp) .. " HP")
-                                                    else
-                                                        self.text:SetColor(Color3.new(1,0,0))
-                                                        self.text:SetText("Dead")
-                                                    end
-                                                end
                                             end
                                         end
                                     end
@@ -531,7 +508,7 @@ main_panel[#main_panel+1] = {
                             end
                             for i, v in next, playerlist.scrollpanel.canvas.children do
                                 if v.player == player then
-                                    v.children[4].text:SetText(state)
+                                    v.children[3].text:SetText(state)
                                     break
                                 end
                             end
